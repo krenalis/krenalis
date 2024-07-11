@@ -17,12 +17,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open2b/chichi/apis/postgres"
+	"github.com/meergo/meergo/apis/postgres"
 
 	"github.com/google/uuid"
 )
 
-const settingsEnvKey = "CHICHI_TEST_PATH_POSTGRESQL"
+const settingsEnvKey = "MEERGO_TEST_PATH_POSTGRESQL"
 
 func TestScan(t *testing.T) {
 
@@ -76,7 +76,7 @@ func TestScan(t *testing.T) {
 	defer db.Close()
 
 	// Create the table.
-	query := "CREATE TABLE test_chichi_scanner (\n\t"
+	query := "CREATE TABLE test_meergo_scanner (\n\t"
 	for i, c := range columns {
 		if i > 0 {
 			query += ",\n\t"
@@ -91,12 +91,12 @@ func TestScan(t *testing.T) {
 	defer func() {
 		r := recover()
 		_ = r
-		_, err := db.Exec(context.Background(), "DROP TABLE test_chichi_scanner")
+		_, err := db.Exec(context.Background(), "DROP TABLE test_meergo_scanner")
 		if err != nil {
-			t.Logf("cannot drop test_chichi_scanner table: %s", err)
+			t.Logf("cannot drop test_meergo_scanner table: %s", err)
 		}
 	}()
-	query = `INSERT INTO test_chichi_scanner (`
+	query = `INSERT INTO test_meergo_scanner (`
 	vals := ""
 	for i, c := range columns {
 		if i == 0 {
@@ -123,7 +123,7 @@ func TestScan(t *testing.T) {
 		}
 		query += fmt.Sprintf("c%d", i)
 	}
-	query += " FROM test_chichi_scanner"
+	query += " FROM test_meergo_scanner"
 	values := make([]any, len(columns))
 	for i, c := range columns {
 		values[i] = reflect.New(c.ScanType).Interface()
@@ -206,7 +206,7 @@ func TestScanToAny(t *testing.T) {
 	defer db.Close()
 
 	// Create the table.
-	query := "CREATE TABLE test_chichi_scanner (\n\t"
+	query := "CREATE TABLE test_meergo_scanner (\n\t"
 	for i, c := range columns {
 		if i > 0 {
 			query += ",\n\t"
@@ -219,12 +219,12 @@ func TestScanToAny(t *testing.T) {
 		t.Fatalf("cannot create table: %s", err)
 	}
 	defer func() {
-		_, err := db.Exec(context.Background(), "DROP TABLE test_chichi_scanner")
+		_, err := db.Exec(context.Background(), "DROP TABLE test_meergo_scanner")
 		if err != nil {
-			t.Logf("cannot drop test_chichi_scanner table: %s", err)
+			t.Logf("cannot drop test_meergo_scanner table: %s", err)
 		}
 	}()
-	query = `INSERT INTO test_chichi_scanner (`
+	query = `INSERT INTO test_meergo_scanner (`
 	vals := ""
 	for i, c := range columns {
 		if i == 0 {
@@ -251,7 +251,7 @@ func TestScanToAny(t *testing.T) {
 		}
 		query += fmt.Sprintf("c%d", i)
 	}
-	query += " FROM test_chichi_scanner"
+	query += " FROM test_meergo_scanner"
 	values := make([]any, len(columns))
 	for i := range values {
 		var v any

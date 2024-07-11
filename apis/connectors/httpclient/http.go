@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
 )
 
 // HTTP allows creating HTTP clients for connections and enables granting,

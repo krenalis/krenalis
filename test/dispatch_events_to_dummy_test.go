@@ -14,8 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
+
 	"github.com/segmentio/analytics-go/v3"
 )
 
@@ -41,17 +42,17 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create a connection that exports to Dummy
-	dummyID := c.AddDummyWithSettings("Dummy", chichitester.Destination, chichitester.DummySettings{
+	dummyID := c.AddDummyWithSettings("Dummy", meergotester.Destination, meergotester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
 	})
-	c.AddEventAction(dummyID, "send_identity", chichitester.ActionToSet{
+	c.AddEventAction(dummyID, "send_identity", meergotester.ActionToSet{
 		Name:    "Send events",
 		Enabled: true,
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "'dummy@email.example.com'",
 			},

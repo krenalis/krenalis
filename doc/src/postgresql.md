@@ -21,7 +21,7 @@ The table below provides a list of supported property types when using a Postgre
 | `JSON`                   | `jsonb`                       |
 | `Array(T)` [^5]          | `T[]`                         |
 
-[^1]: Numeric types with limited ranges are not supported. For more details, see the issue [#578](https://github.com/open2b/chichi/issues/578).
+[^1]: Numeric types with limited ranges are not supported. For more details, see the issue [#578](https://github.com/meergo/meergo/issues/578).
 
 [^2]: `Decimal(p,s)` is supported if `p` is in range [1, 76] and `s` is in range [0, 37].
 

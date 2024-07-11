@@ -1,10 +1,10 @@
 [book]
-title = "Chichi Documentation"
+title = "Meergo Documentation"
 language = "en"
 
 [output.html]
-additional-css = ["chichi.css"]
-git-repository-url = "https://github.com/open2b/chichi/tree/main/doc"
+additional-css = ["meergo.css"]
+git-repository-url = "https://github.com/meergo/meergo/tree/main/doc"
 
 [output.html.fold]
 enable = true

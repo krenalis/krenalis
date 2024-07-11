@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 func TestConvertibleTo(t *testing.T) {

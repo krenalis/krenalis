@@ -8,13 +8,13 @@ When initializing the JavaScript SDK, you have the flexibility to provide variou
 When utilizing the snippet, locate the following line at the end of the snippet:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>');
+meergoAnalytics.load('<write key>', '<endpoint>');
 ```
 
 Instead of `<write key>` and `<endpoint>`, you should already see your specific write key and endpoint, respectively. Following these two arguments, add a third argument of type object:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', { <options> });
+meergoAnalytics.load('<write key>', '<endpoint>', { <options> });
 ```
 
 Where `<options>` represent one or more of the options shown below.
@@ -24,7 +24,7 @@ Where `<options>` represent one or more of the options shown below.
 When importing the package using `import` or `require`, pass an additional argument to the `Analytics` constructor.  
 
 ```javascript
-const chichiAnalytics = new Analytics('<write key>', '<endpoint>', { <options> });
+const meergoAnalytics = new Analytics('<write key>', '<endpoint>', { <options> });
 ```
 
 Where `<options>` represent one or more of the options shown below.
@@ -66,7 +66,7 @@ If you prefer a different approach, you have options. You can set the domain to 
 #### Example:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
+meergoAnalytics.load('<write key>', '<endpoint>', {
     cookie: {
         domain: 'www.example.com',
         maxage: 365,
@@ -88,7 +88,7 @@ The `group` option has the following sub-option:
 #### Example:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
+meergoAnalytics.load('<write key>', '<endpoint>', {
 	group: {
 		storage: {
 			stores: ['cookies', 'memory']
@@ -109,7 +109,7 @@ The `session` option has the following sub-options:
 #### Example:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
+meergoAnalytics.load('<write key>', '<endpoint>', {
 	session: {
 		autoTrack: true, // enable the auto tracking
         timeout: 45 * 60 * 60000 // 45 minutes
@@ -132,7 +132,7 @@ Alternatively, you can keep it active but validate the Anonymous ID and User ID 
 #### Examples
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
+meergoAnalytics.load('<write key>', '<endpoint>', {
 	useQueryString: {
 		aid: /^[a-z0-9]+$/
     }
@@ -150,7 +150,7 @@ The `user` option has the following sub-option:
 #### Example:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
+meergoAnalytics.load('<write key>', '<endpoint>', {
 	user: {
 		storage: {
 			stores: ['cookies', 'memory']
@@ -176,7 +176,7 @@ See also [Storage&nbsp;Locations](storage-locations.md).
 #### Example:
 
 ```javascript
-chichiAnalytics.load('<write key>', '<endpoint>', {
+meergoAnalytics.load('<write key>', '<endpoint>', {
 	// Global storage locations.
 	storage: {
         stores: ['cookies', 'localStorage', 'memory'] 

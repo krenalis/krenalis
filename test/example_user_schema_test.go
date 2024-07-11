@@ -12,8 +12,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestExampleUserSchema(t *testing.T) {
@@ -22,7 +22,7 @@ func TestExampleUserSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t, chichitester.DoNotPopulateUserSchema)
+	c := meergotester.InitAndLaunch(t, meergotester.DoNotPopulateUserSchema)
 	defer c.Stop()
 
 	f, err := os.Open("example_user_schema.json")

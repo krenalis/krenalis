@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"golang.org/x/exp/maps"
@@ -726,7 +726,7 @@ func (per WebhooksPer) Value() (driver.Value, error) {
 
 // An OAuth represents OAuth data required to authenticate with a connector.
 type OAuth struct {
-	chichi.OAuth
+	meergo.OAuth
 	ClientID     string
 	ClientSecret string
 }

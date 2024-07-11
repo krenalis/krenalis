@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/apis"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/telemetry"
+	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/telemetry"
 
 	"golang.org/x/exp/maps"
 )
@@ -162,7 +162,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 					slog.Error("cannot get absolute filepath of 'panics.log'", "err", err)
 					return
 				}
-				slog.Error("a panic occurred, Chichi will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r, "panics.log filename", panicsFilename)
+				slog.Error("a panic occurred, Meergo will exit with status code 1. See the file 'panics.log' for the panic details", "panic reason", r, "panics.log filename", panicsFilename)
 				f, err := os.OpenFile(panicsFilename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 				if err != nil {
 					slog.Error("cannot open panic file", "err", err)

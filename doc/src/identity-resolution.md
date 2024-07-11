@@ -12,10 +12,10 @@ In particular, it performs these operations (not necessarily in this order):
 
 The Identity Resolution is executed:
 
-* arbitrarily by Chichi, for example when importing from a connection
+* arbitrarily by Meergo, for example when importing from a connection
 * explicitly by the user
 
->  We have a discussion on that, [#354](https://github.com/open2b/chichi/issues/354).
+>  We have a discussion on that, [#354](https://github.com/meergo/meergo/issues/354).
 
 ## Same User Criterion
 

@@ -15,9 +15,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 )
 
 // Database represents the database of a database connection.
@@ -25,7 +25,7 @@ type Database struct {
 	closed      bool
 	connector   string
 	timeLayouts *state.TimeLayouts
-	inner       chichi.Database
+	inner       meergo.Database
 	err         error
 }
 
@@ -41,7 +41,7 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 		connector:   connection.Connector().Name,
 		timeLayouts: &connector.TimeLayouts,
 	}
-	database.inner, database.err = chichi.RegisteredDatabase(connector.Name).New(&chichi.DatabaseConfig{
+	database.inner, database.err = meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseConfig{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
@@ -235,7 +235,7 @@ type databaseWriter struct {
 	columns []types.Property
 	rows    []map[string]any
 	ackIDs  []string
-	inner   chichi.Database
+	inner   meergo.Database
 	closed  bool
 }
 
@@ -275,14 +275,14 @@ func (w *databaseWriter) upsert(ctx context.Context) {
 
 // Rows is the result of a query.
 type Rows struct {
-	rows        chichi.Rows
+	rows        meergo.Rows
 	columns     []types.Property
 	timeLayouts *state.TimeLayouts
 	dst         []any
 	closed      bool
 }
 
-func newRows(rows chichi.Rows, columns []types.Property, layouts *state.TimeLayouts) *Rows {
+func newRows(rows meergo.Rows, columns []types.Property, layouts *state.TimeLayouts) *Rows {
 	rs := &Rows{
 		rows:        rows,
 		columns:     columns,
@@ -336,7 +336,7 @@ func (rs *Rows) Scan() (map[string]any, error) {
 
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
-	rows        chichi.Rows
+	rows        meergo.Rows
 	columns     []types.Property
 	action      *state.Action
 	timeLayouts *state.TimeLayouts
@@ -345,7 +345,7 @@ type databaseRecords struct {
 	closed      bool
 }
 
-func newDatabaseRecords(rows chichi.Rows, columns []types.Property, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
+func newDatabaseRecords(rows meergo.Rows, columns []types.Property, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
 	records := databaseRecords{
 		rows:        rows,
 		columns:     columns,

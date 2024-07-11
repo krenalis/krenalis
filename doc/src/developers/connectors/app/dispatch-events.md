@@ -1,18 +1,18 @@
 # Dispatching Events to Apps
 
-Chichi makes it easy to dispatch events to apps that can receive them. This involves implementing the `AppEvents` interface within the connector and adjusting the `Schema` method to also provide schema information for event types.
+Meergo makes it easy to dispatch events to apps that can receive them. This involves implementing the `AppEvents` interface within the connector and adjusting the `Schema` method to also provide schema information for event types.
 
 Here’s how to get started with setting up your connector to dispatch events:
 
 ```go
-chichi.RegisterApp(chichi.AppInfo{
+meergo.RegisterApp(meergo.AppInfo{
     ...
-    Targets: chichi.Users | chichi.Events,
+    Targets: meergo.Users | meergo.Events,
     ...
 })
 ```
 
-This piece of code registers your connector, telling Chichi that it's ready to manage events (as well as users). Next, you'll need to implement two key methods within your connector:
+This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users). Next, you'll need to implement two key methods within your connector:
 
 - `EventTypes`: Lists the types of events the app can work with.
 - `EventRequest`: Takes an event and turns it into an HTTP request for dispatching the event to the app.
@@ -21,10 +21,10 @@ Let's look more closely at what each part does.
 
 ## Understanding Event Types
 
-Your connector can be set up to handle different types of events. You'll use the `EventTypes` method to tell Chichi what these types are:
+Your connector can be set up to handle different types of events. You'll use the `EventTypes` method to tell Meergo what these types are:
 
 ```go
-EventTypes(ctx context.Context) ([]*chichi.EventType, error)
+EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 ```
 
 For every event type you support, you'll define a unique ID, a user-friendly name, and a description. Here's how you define an event type:

@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
 )
 
 // Query executes a query and returns the results as a Rows.

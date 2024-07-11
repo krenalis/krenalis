@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -26,12 +26,12 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the File and UIHandler interfaces.
 var _ interface {
-	chichi.File
-	chichi.UIHandler
+	meergo.File
+	meergo.UIHandler
 } = (*JSON)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.FileInfo{
+	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "JSON",
 		Icon:      icon,
 		Extension: "json",
@@ -39,7 +39,7 @@ func init() {
 }
 
 // New returns a new JSON connector instance.
-func New(conf *chichi.FileConfig) (*JSON, error) {
+func New(conf *meergo.FileConfig) (*JSON, error) {
 	c := JSON{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -51,7 +51,7 @@ func New(conf *chichi.FileConfig) (*JSON, error) {
 }
 
 type JSON struct {
-	conf     *chichi.FileConfig
+	conf     *meergo.FileConfig
 	settings *Settings
 }
 
@@ -68,7 +68,7 @@ func (j *JSON) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records chichi.RecordWriter) error {
+func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.RecordWriter) error {
 
 	columns := make([]types.Property, 0, len(j.settings.Properties))
 	for name, required := range j.settings.Properties {
@@ -158,7 +158,7 @@ Records:
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -170,23 +170,23 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role ch
 	case "save":
 		return nil, j.saveValues(ctx, values, role)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.KeyValue{
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.KeyValue{
 				Name:           "Properties",
 				Label:          "Properties",
 				KeyLabel:       "Name",
 				ValueLabel:     "Required",
-				KeyComponent:   &chichi.Input{Name: "Name", Placeholder: "Name", Rows: 1},
-				ValueComponent: &chichi.Select{Name: "Required", Label: "Required", Options: []chichi.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
-				Role:           chichi.Source,
+				KeyComponent:   &meergo.Input{Name: "Name", Placeholder: "Name", Rows: 1},
+				ValueComponent: &meergo.Select{Name: "Required", Label: "Required", Options: []meergo.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
+				Role:           meergo.Source,
 			},
-			&chichi.Switch{Name: "Indent", Label: "Indent the generated output", Role: chichi.Destination},
-			&chichi.Switch{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: chichi.Destination},
-			&chichi.Switch{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: chichi.Destination},
+			&meergo.Switch{Name: "Indent", Label: "Indent the generated output", Role: meergo.Destination},
+			&meergo.Switch{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: meergo.Destination},
+			&meergo.Switch{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: meergo.Destination},
 		},
 		Values: values,
 	}
@@ -195,7 +195,7 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role ch
 }
 
 // Write writes to w the records read from records.
-func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
+func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.RecordReader) error {
 	s := j.settings
 	enc := newEncoder(s.Indent, s.GenerateASCII, s.AllowSpecialFloats)
 	var err error
@@ -246,31 +246,31 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records chichi.
 }
 
 // saveValues saves the user-entered values as settings.
-func (j *JSON) saveValues(ctx context.Context, values []byte, role chichi.Role) error {
+func (j *JSON) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return err
 	}
 	// Validate Properties.
-	if role == chichi.Source {
+	if role == meergo.Source {
 		if len(s.Properties) == 0 {
-			return chichi.NewInvalidUIValuesError("must have at least one property")
+			return meergo.NewInvalidUIValuesError("must have at least one property")
 		}
 		hasName := map[string]struct{}{}
 		for name, required := range s.Properties {
 			if _, ok := hasName[name]; ok {
-				return chichi.NewInvalidUIValuesError(fmt.Sprintf("property name %q is repeated", name))
+				return meergo.NewInvalidUIValuesError(fmt.Sprintf("property name %q is repeated", name))
 			}
 			if name == "" {
-				return chichi.NewInvalidUIValuesError("a property name is empty")
+				return meergo.NewInvalidUIValuesError("a property name is empty")
 			}
 			if !types.IsValidPropertyName(name) {
-				return chichi.NewInvalidUIValuesError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
+				return meergo.NewInvalidUIValuesError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
 					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", name))
 			}
 			if required != "f" && required != "t" {
-				return chichi.NewInvalidUIValuesError("required is not valid")
+				return meergo.NewInvalidUIValuesError("required is not valid")
 			}
 			hasName[name] = struct{}{}
 		}

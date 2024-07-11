@@ -14,11 +14,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/open2b/chichi/apis/connectors"
-	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/statistics"
-	"github.com/open2b/chichi/apis/transformers"
+	"github.com/meergo/meergo/apis/connectors"
+	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/statistics"
+	"github.com/meergo/meergo/apis/transformers"
 )
 
 // importUsers imports the users of the action.

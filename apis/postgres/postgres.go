@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/telemetry"
+	"github.com/meergo/meergo/telemetry"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -59,7 +59,7 @@ func (stmt *Stmt) Close() error {
 	return nil
 }
 
-const preparedStmtName = "chichi-postgres-prep-stmt"
+const preparedStmtName = "meergo-postgres-prep-stmt"
 
 func (stmt *Stmt) Exec(ctx context.Context, args ...any) (*Result, error) {
 	if stmt.closed {

@@ -21,7 +21,7 @@ import (
 	"time"
 	_ "time/tzdata" // workaround for clickhouse-go issue #162
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"

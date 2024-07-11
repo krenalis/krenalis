@@ -3,7 +3,7 @@
 The `Group` class represents a group. An instance representing the current group is returned calling  the [`group`](methods.md#group) method of `Analytics`. For example:
 
 ```javascript
-const groupId = chichiAnalytics.group().id();
+const groupId = meergoAnalytics.group().id();
 ```
 
 ## id
@@ -40,15 +40,15 @@ id(id?: string | null): string | null
 #### Examples
 
 ```javascript
-const groupId = chichiAnalytics.group().id();
+const groupId = meergoAnalytics.group().id();
 ```
 
 ```javascript
-chichiAnalytics.group().id(null);
+meergoAnalytics.group().id(null);
 ```
 
 ```javascript
-chichiAnalytics.group().id('acme');
+meergoAnalytics.group().id('acme');
 ```
 
 ## traits
@@ -85,14 +85,14 @@ traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 #### Examples
 
 ```javascript
-const traits = chichiAnalytics.group().traits();
+const traits = meergoAnalytics.group().traits();
 ```
 
 ```javascript
-chichiAnalytics.group().traits(null);
+meergoAnalytics.group().traits(null);
 ```
 
 ```javascript
-chichiAnalytics.group().traits({ name: 'Acme Inc.' });
+meergoAnalytics.group().traits({ name: 'Acme Inc.' });
 ```
 

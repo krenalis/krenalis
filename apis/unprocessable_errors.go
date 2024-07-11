@@ -8,7 +8,7 @@
 package apis
 
 import (
-	"github.com/open2b/chichi/apis/errors"
+	"github.com/meergo/meergo/apis/errors"
 )
 
 const (

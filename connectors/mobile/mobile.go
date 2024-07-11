@@ -11,7 +11,7 @@ package mobile
 import (
 	_ "embed"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 // Connector icon.
@@ -21,7 +21,7 @@ var iconAndroid = "<svg></svg>"
 var iconApple = "<svg></svg>"
 
 func init() {
-	mobiles := []chichi.MobileInfo{
+	mobiles := []meergo.MobileInfo{
 		{
 			Name:              "Android",
 			SourceDescription: "import events, users and groups from an Android mobile device",
@@ -34,12 +34,12 @@ func init() {
 		},
 	}
 	for _, srv := range mobiles {
-		chichi.RegisterMobile(srv, New)
+		meergo.RegisterMobile(srv, New)
 	}
 }
 
 // New returns a new Mobile connector instance.
-func New(*chichi.MobileConfig) (*Mobile, error) {
+func New(*meergo.MobileConfig) (*Mobile, error) {
 	return &Mobile{}, nil
 }
 

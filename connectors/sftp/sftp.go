@@ -25,7 +25,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -36,19 +36,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
-	chichi.FileStorage
-	chichi.UIHandler
+	meergo.FileStorage
+	meergo.UIHandler
 } = (*SFTP)(nil)
 
 func init() {
-	chichi.RegisterFileStorage(chichi.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
 		Name: "SFTP",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new SFTP connector instance.
-func New(conf *chichi.FileStorageConfig) (*SFTP, error) {
+func New(conf *meergo.FileStorageConfig) (*SFTP, error) {
 	c := SFTP{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -60,7 +60,7 @@ func New(conf *chichi.FileStorageConfig) (*SFTP, error) {
 }
 
 type SFTP struct {
-	conf     *chichi.FileStorageConfig
+	conf     *meergo.FileStorageConfig
 	settings *Settings
 }
 
@@ -112,7 +112,7 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -128,19 +128,19 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte, role c
 	case "test":
 		return nil, sf.saveValues(ctx, values, role, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "ftp.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "22", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
-			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&chichi.Input{Name: "TempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: chichi.Destination},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "ftp.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "22", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 200},
+			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&meergo.Input{Name: "TempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: meergo.Destination},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
@@ -205,7 +205,7 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (sf *SFTP) saveValues(ctx context.Context, values []byte, role chichi.Role, test bool) error {
+func (sf *SFTP) saveValues(ctx context.Context, values []byte, role meergo.Role, test bool) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -213,27 +213,27 @@ func (sf *SFTP) saveValues(ctx context.Context, values []byte, role chichi.Role,
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-		return chichi.NewInvalidUIValuesError("username length must be in range [1,200]")
+		return meergo.NewInvalidUIValuesError("username length must be in range [1,200]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
+		return meergo.NewInvalidUIValuesError("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
-	if role == chichi.Destination {
+	if role == meergo.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
-			return chichi.NewInvalidUIValuesError("length of temporary directory path must be in range [1,1000]")
+			return meergo.NewInvalidUIValuesError("length of temporary directory path must be in range [1,1000]")
 		}
 	} else if s.TempPath != "" {
-		return chichi.NewInvalidUIValuesError("temporary directory path must be empty for source destinations")
+		return meergo.NewInvalidUIValuesError("temporary directory path must be empty for source destinations")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -368,7 +368,7 @@ func testConnection(ctx context.Context, settings *Settings) error {
 	defer client.close()
 	if settings.TempPath != "" {
 		if _, ok := client.sftp.HasExtension("posix-rename@openssh.com"); !ok {
-			return chichi.NewInvalidUIValuesError("temporary directory path must be empty because the server does not support posix-rename")
+			return meergo.NewInvalidUIValuesError("temporary directory path must be empty because the server does not support posix-rename")
 		}
 	}
 	return nil

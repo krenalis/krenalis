@@ -15,8 +15,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/types"
 )
 
 func TestDiff(t *testing.T) {
@@ -530,7 +530,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "https://github.com/open2b/chichi/issues/693 (1)",
+			name: "https://github.com/meergo/meergo/issues/693 (1)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Object([]types.Property{
@@ -554,7 +554,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "https://github.com/open2b/chichi/issues/693 (2)",
+			name: "https://github.com/meergo/meergo/issues/693 (2)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "e", Type: types.Text(), Nullable: true},

@@ -12,8 +12,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/types"
 )
 
 // Diff returns the differences between oldSchema and newSchema.

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo/apis/state"
 )
 
 // filterApplies reports whether the filter applies to props, which can be an

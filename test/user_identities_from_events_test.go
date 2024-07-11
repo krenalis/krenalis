@@ -11,8 +11,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 
 	"github.com/segmentio/analytics-go/v3"
 )
@@ -23,23 +23,23 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 	javaScriptKey := c.ConnectionKeys(javaScriptID)[0]
-	c.AddAction(javaScriptID, "Events", chichitester.ActionToSet{
+	c.AddAction(javaScriptID, "Events", meergotester.ActionToSet{
 		Name:    "JavaScript events",
 		Enabled: true,
 	})
-	importUsersAction := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+	importUsersAction := c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -81,14 +81,14 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Change the action to import identities through a constant mapping.
-	c.SetAction(javaScriptID, importUsersAction, chichitester.ActionToSet{
+	c.SetAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "'a@b'", // a constant email for every user
 			},
@@ -112,15 +112,15 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Change the action to import identities through a transformation function.
-	c.SetAction(javaScriptID, importUsersAction, chichitester.ActionToSet{
+	c.SetAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
-			Function: &chichitester.TransformationFunction{
+		Transformation: meergotester.Transformation{
+			Function: &meergotester.TransformationFunction{
 				Source: `import random
 
 def transform(event: dict) -> dict:

@@ -12,13 +12,13 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 func TestPathConvert(t *testing.T) {
 	fs := &Filesystem{settings: &Settings{Root: "/"}}
 	fs2 := &Filesystem{settings: &Settings{Root: "/root"}}
-	tests := []chichi.CompletePathTest{
+	tests := []meergo.CompletePathTest{
 		{Name: "a", Expected: "/a"},
 		{Name: "a.e", Expected: "/a.e"},
 		{Name: "a/b.e", Expected: "/a/b.e"},
@@ -33,7 +33,7 @@ func TestPathConvert(t *testing.T) {
 		{Name: "a", Expected: "/root/a", Storage: fs2},
 		{Name: "/a", Expected: "/root/a", Storage: fs2},
 	}
-	err := chichi.TestCompletePath(fs, tests)
+	err := meergo.TestCompletePath(fs, tests)
 	if err != nil {
 		t.Errorf("Filesystem connector: %s", err)
 	}

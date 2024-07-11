@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestImportObjectsIntoWarehouse(t *testing.T) {
@@ -21,11 +21,11 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	dummy := c.AddDummy("Dummy (source)", chichitester.Source)
-	importUsersID := c.AddAction(dummy, "Users", chichitester.ActionToSet{
+	dummy := c.AddDummy("Dummy (source)", meergotester.Source)
+	importUsersID := c.AddAction(dummy, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -37,8 +37,8 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 				{Name: "idfa", Type: types.Text()},
 			})},
 		}),
-		Transformation: chichitester.Transformation{
-			Function: &chichitester.TransformationFunction{
+		Transformation: meergotester.Transformation{
+			Function: &meergotester.TransformationFunction{
 				Source: `
 def transform(user: dict) -> dict:
 	email = user["email"]

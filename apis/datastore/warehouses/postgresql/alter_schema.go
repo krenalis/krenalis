@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/types"
 )
 
 // AlterSchema alters the user schema.
@@ -203,7 +203,7 @@ func typeToPostgresType(t types.Type) (string, bool) {
 		}
 	case types.DecimalKind:
 		// TODO(Gianluca): for decimal types specifying a minimum and a maximum
-		// value, see https://github.com/open2b/chichi/issues/578.
+		// value, see https://github.com/meergo/meergo/issues/578.
 		p := t.Precision()
 		s := t.Scale()
 		if p < 1 || p > 76 || s > 37 {

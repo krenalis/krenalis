@@ -27,7 +27,7 @@ https://example.com?ajs_aid=anon_3094671&ajs_uid=510375492&ajs_trait_name=Emily+
 automatically sets the Anonymous ID to `anon_3094671` and triggers the `identify` and `track` calls:   
 
 ```javascript
-chichiAnalytics.user().anonymousId('anon_3094671');
-chichiAnalytics.identify('510375492', { name: 'Emily Johnson' });
-chichiAnalytics.track('Subscribed', { edition: 'standard', monthly: 'yes' });
+meergoAnalytics.user().anonymousId('anon_3094671');
+meergoAnalytics.identify('510375492', { name: 'Emily Johnson' });
+meergoAnalytics.track('Subscribed', { edition: 'standard', monthly: 'yes' });
 ```

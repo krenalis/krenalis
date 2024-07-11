@@ -36,13 +36,13 @@ const useUsers = () => {
 
 		// compute the max number of users to show in the users list.
 		let lim = DEFAULT_USER_LIMIT;
-		const storageLimit = localStorage.getItem('chichi_ui_users_limit');
+		const storageLimit = localStorage.getItem('meergo_ui_users_limit');
 		if (storageLimit != null) {
 			try {
 				lim = Number(JSON.parse(storageLimit));
 			} catch (err) {
 				// the value of the limit in the storage is corrupted.
-				localStorage.removeItem('chichi_ui_users_limit');
+				localStorage.removeItem('meergo_ui_users_limit');
 			}
 		}
 		setLimit(lim);
@@ -60,14 +60,14 @@ const useUsers = () => {
 		}
 
 		// check if previous users properties are already saved in the storage.
-		const storageProperties = localStorage.getItem('chichi_ui_users_properties');
+		const storageProperties = localStorage.getItem('meergo_ui_users_properties');
 		let preferenceProperties: UserProperty[] = [];
 		if (storageProperties != null) {
 			try {
 				preferenceProperties = JSON.parse(storageProperties);
 			} catch (err) {
 				// the value of the properties in the storage is corrupted.
-				localStorage.removeItem('chichi_ui_users_properties');
+				localStorage.removeItem('meergo_ui_users_properties');
 			}
 		}
 
@@ -86,7 +86,7 @@ const useUsers = () => {
 		setUsersProperties(properties);
 
 		// update the value of the properties in the storage.
-		localStorage.setItem('chichi_ui_users_properties', JSON.stringify(properties));
+		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(properties));
 
 		// compute the names of the showed user properties to request
 		// only those properties when fetching the users.

@@ -10,7 +10,7 @@ class Storage {
 	#groupStore
 
 	constructor(writeKey, options) {
-		const prefix = `chichi.${writeKey.slice(0, 7)}.`
+		const prefix = `meergo.${writeKey.slice(0, 7)}.`
 		this.#key = {
 			anonymousId: prefix + 'anonymousId',
 			userId: prefix + 'userId',

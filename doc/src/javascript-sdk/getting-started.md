@@ -5,7 +5,7 @@ This guide provides clear instructions for installing the JavaScript SDK in web 
 
 ## Step 1: Create a Source JavaScript Connection
 
-To create a source JavaScript connection in ChiChi:
+To create a source JavaScript connection in Meergo:
 
 1. Click on **Connections**.
 2. Click on **Add a New Connection**.
@@ -33,16 +33,16 @@ The JavaScript SDK can be imported with `import` into TypeScript and JavaScript 
 1. In the new created JavaScript connection, navigate to **Settings**.
 2. Select **Write Key**.
 3. Copy the Write Key and the Endpoint.
-4. In your project, install the `chichi-javascript-sdk` npm package:
+4. In your project, install the `meergo-javascript-sdk` npm package:
     ```sh
-    $ npm install chichi-javascript-sdk --save
+    $ npm install meergo-javascript-sdk --save
     ```
 5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```javascript
-    import Analytics from 'chichi-javascript-sdk';
+    import Analytics from 'meergo-javascript-sdk';
    
-    const chichiAnalytics = new Analytics('<write key>', '<endpoint>');
-    chichiAnalytics.page('home');
+    const meergoAnalytics = new Analytics('<write key>', '<endpoint>');
+    meergoAnalytics.page('home');
     ```
 
 ### Import into an Application using `require`
@@ -52,16 +52,16 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
 1. In the new created JavaScript connection, navigate to **Settings**.
 2. Select **Write Key**.
 3. Copy the Write Key and the Endpoint.
-4. In your project, install the `chichi-javascript-sdk` npm package:
+4. In your project, install the `meergo-javascript-sdk` npm package:
     ```sh
-    $ npm install chichi-javascript-sdk --save
+    $ npm install meergo-javascript-sdk --save
     ```
 5. Import and use the SDK, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
     ```javascript
-    const { Analytics } = require('chichi-javascript-sdk');
+    const { Analytics } = require('meergo-javascript-sdk');
    
-    const chichiAnalytics = new Analytics('<write key>', '<endpoint>');
-    chichiAnalytics.page('home');
+    const meergoAnalytics = new Analytics('<write key>', '<endpoint>');
+    meergoAnalytics.page('home');
     ```
 
 ## Step 3: Add an Action

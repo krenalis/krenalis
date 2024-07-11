@@ -15,12 +15,12 @@ package postgresql
 import (
 	"context"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 func init() {
-	chichi.RegisterDatabase(chichi.DatabaseInfo{
+	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",
 		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
 	}, New)
@@ -31,7 +31,7 @@ type PostgreSQL struct {
 }
 
 // New returns a new PostgreSQL connector instance.
-func New(conf *chichi.FileConfig) (*PostgreSQL, error) {
+func New(conf *meergo.FileConfig) (*PostgreSQL, error) {
 	// ...
 }
 
@@ -53,7 +53,7 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	// ...
 }
 
@@ -92,7 +92,7 @@ This information is passed to the `RegisterDatabase` function that, executed dur
 
 ```go
 func init() {
-    chichi.RegisterDatabase(chichi.DatabaseInfo{
+    meergo.RegisterDatabase(meergo.DatabaseInfo{
         Name:        "PostgreSQL",
         SampleQuery: "SELECT * FROM users LIMIT ${limit}",
         Icon:        icon,
@@ -105,7 +105,7 @@ func init() {
 The second argument supplied to the `RegisterDatabase` function is the function utilized for creating a connector instance:
 
 ```go
-func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error)
+func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error)
 ```
 
 This function accepts a database configuration and yields a value representing your custom type.
@@ -115,7 +115,7 @@ The structure of `DatabaseConfig` is outlined as follows:
 ```go
 type DatabaseConfig struct {
     Settings    []byte
-    SetSettings chichi.SetSettingsFunc
+    SetSettings meergo.SetSettingsFunc
 }
 ```
 
@@ -128,7 +128,7 @@ type DatabaseConfig struct {
 Close() error
 ```
 
-The `Close` method is invoked by Chichi when no calls to the connector instance's methods are in progress and no more will be made, so the connector can close any connections eventually opened with the DBMS.
+The `Close` method is invoked by Meergo when no calls to the connector instance's methods are in progress and no more will be made, so the connector can close any connections eventually opened with the DBMS.
 
 ### Columns method
 
@@ -136,7 +136,7 @@ The `Close` method is invoked by Chichi when no calls to the connector instance'
 Columns(ctx context.Context, table string) ([]types.Property, error)
 ```
 
-Chichi invokes the `Columns` method when creating or updating a database destination action, retrieving the columns of the table to which data should be exported.
+Meergo invokes the `Columns` method when creating or updating a database destination action, retrieving the columns of the table to which data should be exported.
 
 The `Columns` method returns the table's columns as a slice of `Property` values, detailing the names and types of each column. 
 
@@ -146,7 +146,7 @@ The `Columns` method returns the table's columns as a slice of `Property` values
 LastChangeTimeCondition(column string, typ types.Type, value any) string
 ```
 
-Chichi calls the `LastChangeTimeCondition` method to construct the value for the `last_change_time` placeholder. The `last_change_time` placeholder is used in a query to implement a cursor, returning only the rows starting from a specified time.
+Meergo calls the `LastChangeTimeCondition` method to construct the value for the `last_change_time` placeholder. The `last_change_time` placeholder is used in a query to implement a cursor, returning only the rows starting from a specified time.
 
 The value of the `last_change_time` placeholder is a condition that can be used in a `WHERE` statement, like `"updated_at" >= '2024-03-16 09:26:33'`. `LastChangeTimeCondition` receives the name of the column, its type, and the value. The type can only be `DateTime`, `Date`, `JSON`, and `Text`. For the `DateTime` and `Date` types, the value is of type `time.Time` set to UTC, while for the `JSON` and `Text` types, the value is of type `string`. `LastChangeTimeCondition` must construct the condition based on these parameters.
 
@@ -197,10 +197,10 @@ LIMIT 1000
 ### Query method
 
 ```go
-Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error)
+Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error)
 ```
 
-Chichi invokes the `Query` method when previewing the rows returned by a query while creating or updating a database source action, and to get the data during an import. The query is provided after replacing any placeholders like `${limit}`.
+Meergo invokes the `Query` method when previewing the rows returned by a query while creating or updating a database source action, and to get the data during an import. The query is provided after replacing any placeholders like `${limit}`.
 
 The `Query` method runs the query and gives back two things: the rows themselves, which follow the `Rows` interface, and the columns as a slice of `Property` values. Here's what the `Rows` interface look like:
 
@@ -221,6 +221,6 @@ The standard Go library's `sql.Rows` type implements this interface. So, the con
 Upsert(ctx context.Context, table string, rows []map[string]any{}, columns []types.Property) error
 ```
 
-The `Upsert` method is called by Chichi during an export operation. It either creates new rows or updates existing ones in the specified table. The `columns` parameter defines the columns of the rows being processed, including a mandatory "id" column that acts as the table's primary key. If a column's value is absent in a row, the default column value should be applied.
+The `Upsert` method is called by Meergo during an export operation. It either creates new rows or updates existing ones in the specified table. The `columns` parameter defines the columns of the rows being processed, including a mandatory "id" column that acts as the table's primary key. If a column's value is absent in a row, the default column value should be applied.
 
 If the specified table or any column does not exist, the method should return an error.

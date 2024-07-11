@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestActionsCreation(t *testing.T) {
@@ -29,7 +29,7 @@ func TestActionsCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create some connections that will be used by the actions.
@@ -48,16 +48,16 @@ func TestActionsCreation(t *testing.T) {
 	dstFsID := c.AddDestinationFilesystem(storageDir)
 	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 	postgreSQLConnection := c.AddSourcePostgreSQL()
-	dummyExportConnection := c.AddDummy("Dummy (destination)", chichitester.Destination)
+	dummyExportConnection := c.AddDummy("Dummy (destination)", meergotester.Destination)
 
 	tests := []struct {
 		conn   int
-		action chichitester.ActionToSet
+		action meergotester.ActionToSet
 		err    string
 	}{
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from a CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -69,7 +69,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "Email",
 						"timestamp": "timestamp",
@@ -79,7 +79,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -87,7 +87,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -99,7 +99,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "__email__", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"__email__": "__email__",
 						"timestamp": "timestamp",
@@ -109,7 +109,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -118,7 +118,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: dstFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Export users to a CSV on Filesystem",
 				Path: "users.csv",
 				OutSchema: types.Object([]types.Property{
@@ -126,7 +126,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				Connector: "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -135,7 +135,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -147,7 +147,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -156,7 +156,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -165,7 +165,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -176,7 +176,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -185,7 +185,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -194,7 +194,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -205,7 +205,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -213,7 +213,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty: "- - invalid - -",
 				Connector:        "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -222,7 +222,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -232,7 +232,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -240,7 +240,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -248,14 +248,14 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:                   "Import users from CSV on Filesystem",
 				Path:                   "users.csv",
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -264,7 +264,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: srcFsID,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
@@ -274,7 +274,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -283,7 +283,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Connector:              "CSV",
-				UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -292,7 +292,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -302,7 +302,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -314,7 +314,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -325,7 +325,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -336,7 +336,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -347,7 +347,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -359,7 +359,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: postgreSQLConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "my_last_change_time" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
@@ -370,7 +370,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -381,14 +381,14 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: javaScriptConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:     "Import user identities from events",
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},
@@ -397,7 +397,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: javaScriptConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:    "Import user identities from events",
 				Enabled: true,
 				InSchema: types.Object([]types.Property{
@@ -408,7 +408,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},
@@ -418,7 +418,7 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: dummyExportConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name: "Export users to Dummy",
 				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -426,13 +426,13 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
 				},
-				ExportMode: chichitester.ExportModeCreateOrUpdate,
-				MatchingProperties: &chichitester.MatchingProperties{
+				ExportMode: meergotester.ExportModeCreateOrUpdate,
+				MatchingProperties: &meergotester.MatchingProperties{
 					Internal: "email",
 					External: types.Property{
 						Name: "email",
@@ -444,14 +444,14 @@ func TestActionsCreation(t *testing.T) {
 		},
 		{
 			conn: javaScriptConnection,
-			action: chichitester.ActionToSet{
+			action: meergotester.ActionToSet{
 				Name:     "Import user identities from events",
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},

@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/backoff"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/backoff"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -82,7 +82,7 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 		s = z.String()
 		for len(s) > 8000-maxIDLen-2 {
 			const k = 8000 - maxIDLen - 3
-			_, err = tx.Exec(ctx, "NOTIFY chichi, '+"+s[:k]+"'")
+			_, err = tx.Exec(ctx, "NOTIFY meergo, '+"+s[:k]+"'")
 			if err != nil {
 				return err
 			}
@@ -96,7 +96,7 @@ func (tx *Tx) Notify(ctx context.Context, n any) error {
 		id, tx.ack = tx.acks.create()
 		s += "@" + strconv.Itoa(id)
 	}
-	_, err = tx.Exec(ctx, "NOTIFY chichi, '"+s+"'")
+	_, err = tx.Exec(ctx, "NOTIFY meergo, '"+s+"'")
 	return err
 }
 
@@ -204,7 +204,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 			if err != nil {
 				continue
 			}
-			_, err = conn.Exec(ctx, "LISTEN chichi")
+			_, err = conn.Exec(ctx, "LISTEN meergo")
 			if err != nil {
 				continue
 			}
@@ -220,7 +220,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 					if bo != nil {
 						bo = nil
 					}
-					if n.Channel != "chichi" {
+					if n.Channel != "meergo" {
 						continue
 					}
 					if len(n.Payload) > 0 && n.Payload[0] == '+' {
@@ -264,7 +264,7 @@ func (state *State) listenToNotifications() (notifications <-chan notification, 
 				}
 			}()
 			if err != nil {
-				_, _ = conn.Exec(ctx, "UNLISTEN chichi")
+				_, _ = conn.Exec(ctx, "UNLISTEN meergo")
 				continue
 			}
 			conn.Release()

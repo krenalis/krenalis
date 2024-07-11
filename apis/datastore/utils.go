@@ -10,8 +10,8 @@ package datastore
 import (
 	"strings"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/types"
 )
 
 // An unflatRowFunc function unflats a row read from the data warehouse into a

@@ -11,8 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
+
 	"github.com/segmentio/analytics-go/v3"
 )
 
@@ -22,7 +23,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create a JavaScript connection and get its key.
@@ -35,21 +36,21 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	javaScriptKey = keys[0]
 
 	// Add a first action, with a filter.
-	action1 := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+	action1 := c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
 		Name:     "Action 1",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Filter: &chichitester.Filter{
+		Filter: &meergotester.Filter{
 			Logical: "any",
-			Conditions: []chichitester.FilterCondition{
+			Conditions: []meergotester.FilterCondition{
 				{Property: "messageId", Operator: "is", Value: "message1"}, // message of the anonymous identity
 				{Property: "messageId", Operator: "is", Value: "message3"}, // message of the not-anonymous identity
 			},
 		},
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -58,20 +59,20 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Add a second action, which imports identities from events with a
 	// different filter than the first action.
-	action2 := c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+	action2 := c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
 		Name:     "Action 2",
 		Enabled:  true,
 		InSchema: types.Type{},
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Filter: &chichitester.Filter{
+		Filter: &meergotester.Filter{
 			Logical: "any",
-			Conditions: []chichitester.FilterCondition{
+			Conditions: []meergotester.FilterCondition{
 				{Property: "messageId", Operator: "is", Value: "message2"}, // message of the anonymous identity
 			},
 		},
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -94,7 +95,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Wait for the 2 identities to be imported successfully.
 	attempts := 0
-	var identities []chichitester.UserIdentity
+	var identities []meergotester.UserIdentity
 	for {
 		var count int
 		identities, count = c.ConnectionIdentities(javaScriptID, 0, 100)

@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
@@ -34,11 +34,11 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the File interface.
 var _ interface {
-	chichi.File
+	meergo.File
 } = (*Parquet)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.FileInfo{
+	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "Parquet",
 		Icon:      icon,
 		Extension: "parquet",
@@ -46,7 +46,7 @@ func init() {
 }
 
 // New returns a new Parquet connector instance.
-func New(conf *chichi.FileConfig) (*Parquet, error) {
+func New(conf *meergo.FileConfig) (*Parquet, error) {
 	return &Parquet{}, nil
 }
 
@@ -58,7 +58,7 @@ func (pq *Parquet) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
+func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
 
 	// Copy data read from r to a temporary file.
 	dir := os.TempDir()
@@ -143,7 +143,7 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // Write writes to w the records read from records.
-func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
+func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
 	// TODO(marco)
 	return nil
 }
@@ -277,7 +277,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		return types.Text(), nil
 	}
 
-	return types.Type{}, chichi.NewNotSupportedTypeError(column, (*elem.Type).String())
+	return types.Type{}, meergo.NewNotSupportedTypeError(column, (*elem.Type).String())
 }
 
 // Convert an int96 type value to a time.Time value.

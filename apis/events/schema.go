@@ -7,7 +7,7 @@
 
 package events
 
-import "github.com/open2b/chichi/types"
+import "github.com/meergo/meergo/types"
 
 // Schema is the schema of an event. It does not include the user GID property.
 var Schema = types.Object([]types.Property{

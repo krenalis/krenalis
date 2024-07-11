@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestImportWithTransformation(t *testing.T) {
@@ -21,17 +21,17 @@ func TestImportWithTransformation(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", chichitester.Source)
+	dummyID := c.AddDummy("Dummy (source)", meergotester.Source)
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Add an action with a transformation function which imports users, then
 	// execute it.
-	importUsersID := c.AddAction(dummyID, "Users", chichitester.ActionToSet{
+	importUsersID := c.AddAction(dummyID, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -42,8 +42,8 @@ func TestImportWithTransformation(t *testing.T) {
 			{Name: "first_name", Type: types.Text()},
 			{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 		}),
-		Transformation: chichitester.Transformation{
-			Function: &chichitester.TransformationFunction{
+		Transformation: meergotester.Transformation{
+			Function: &meergotester.TransformationFunction{
 				Source: `
 def transform(user: dict) -> dict:
 	if user["firstName"] == "Jerad":

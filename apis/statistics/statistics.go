@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/backoff"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/backoff"
 )
 
 const numSteps = 6

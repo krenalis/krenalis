@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestDummyImportNotRequired(t *testing.T) {
@@ -21,12 +21,12 @@ func TestDummyImportNotRequired(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Import users from Dummy.
-	dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
-	importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+	dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
+	importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Required: true},
@@ -38,7 +38,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 				{Name: "title", Type: types.Text()},
 			})},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"favorite_movie.title": "favourite_movie",
 				"email":                "email",

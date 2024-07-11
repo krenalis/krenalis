@@ -1,6 +1,6 @@
 # Getting started
 
-In this section you will find indications and instructions for getting started with the use of Chichi.
+In this section you will find indications and instructions for getting started with the use of Meergo.
 
 ## Requirements
 
@@ -12,24 +12,24 @@ First of all, you will need:
 
 Various installation methods may then require additional requirements depending on the level of customization required, specified in the sections below.
 
-> Since the repository of Chichi is private, you may need to configure your local `GOPRIVATE` variable in order to test and develop some of the installation methods listed below.
-> It may be enough to add `github.com/open2b/chichi` to the paths listed in the `GOPRIVATE` values (which are separated by a comma `,`).
+> Since the repository of Meergo is private, you may need to configure your local `GOPRIVATE` variable in order to test and develop some of the installation methods listed below.
+> It may be enough to add `github.com/meergo/meergo` to the paths listed in the `GOPRIVATE` values (which are separated by a comma `,`).
 
 ## Installation
 
 > 🚧 Some installation methods are currently under development and may have some problems that still needs to be resolved. For now, a working method is [Locally cloning the repository](#locally-cloning-the-repository).
 
-There are several ways you can install Chichi. Choose the method that you deem most suitable for your needs and skills:
+There are several ways you can install Meergo. Choose the method that you deem most suitable for your needs and skills:
 
-- [Download a pre-built release](#download-a-pre-built-release). Recommended if you want to start using Chichi immediately without needing to compile or customize the executable.
+- [Download a pre-built release](#download-a-pre-built-release). Recommended if you want to start using Meergo immediately without needing to compile or customize the executable.
 - [Build with your custom connectors](#build-with-your-custom-connectors). Recommended if you wish to choose the connectors to include in the executable.
-- [Build from Git source](#build-from-git-source). Recommended if you want to work with Chichi's source code.
+- [Build from Git source](#build-from-git-source). Recommended if you want to work with Meergo's source code.
 
 ### Download a pre-built release
 
 > 🚧 Releases are not available yet, so this section is just a stub.
 
-You can download a build of Chichi from the [releases page of the repository](https://github.com/open2b/chichi/releases) or from the [Chichi's website](https://example.com).
+You can download a build of Meergo from the [releases page of the repository](https://github.com/meergo/meergo/releases) or from the [Meergo's website](https://example.com).
 
 Then you can proceed with the [configuration](#configuration).
 
@@ -44,17 +44,17 @@ Besides the requirements listed at the beginning of this page, for this installa
 1. **Create a new directory**
 
    ```sh
-   mkdir chichi
-   cd chichi 
+   mkdir meergo
+   cd meergo 
    ```
 
 2. **Copy the main.go file**
 
-   Obtain the `main.go` file from [Chichi's GitHub repository](https://github.com/open2b/chichi/blob/main/cmd/chichi/main.go) and place it in the directory you just created.
+   Obtain the `main.go` file from [Meergo's GitHub repository](https://github.com/meergo/meergo/blob/main/cmd/meergo/main.go) and place it in the directory you just created.
 
 3. **Import your connectors (Optional)**
 
-   Modify the `main.go` file to include imports for each connector you wish to integrate into Chichi:
+   Modify the `main.go` file to include imports for each connector you wish to integrate into Meergo:
 
    ```go
    import (
@@ -62,12 +62,12 @@ Besides the requirements listed at the beginning of this page, for this installa
    )
    ```
 
-   Optionally, replace the default imports from [`github.com/open2b/chichi/connectors`](https://github.com/open2b/chichi/tree/main/connectors/connectors.go) with specific imports of the connectors you need.
+   Optionally, replace the default imports from [`github.com/meergo/meergo/connectors`](https://github.com/meergo/meergo/tree/main/connectors/connectors.go) with specific imports of the connectors you need.
 
 4. **Initialize a Go module**
 
    ```sh
-   go mod init chichi
+   go mod init meergo
    go mod tidy
    ```
 
@@ -79,7 +79,7 @@ Besides the requirements listed at the beginning of this page, for this installa
    go generate
    ```
 
-   Note: Re-execute `go generate` if you change Chichi module version.
+   Note: Re-execute `go generate` if you change Meergo module version.
 
 6. **Build the executable**
 
@@ -87,7 +87,7 @@ Besides the requirements listed at the beginning of this page, for this installa
    go build
    ```
 
-   Check that the `chichi` executable (or `chichi.exe` on Windows) is created in the current directory.
+   Check that the `meergo` executable (or `meergo.exe` on Windows) is created in the current directory.
 
 Proceed with the [configuration](#configuration) after completing these steps.
 
@@ -103,13 +103,13 @@ Besides the requirements listed at the beginning of this page, for this installa
 1. **Clone the repository**
 
     ```sh
-   git clone https://github.com/open2b/chichi
+   git clone https://github.com/meergo/meergo
    ```
 
-2. **Change into the chichi/cmd/chichi directory**
+2. **Change into the meergo/cmd/meergo directory**
 
     ```sh
-   cd chichi/cmd/chichi
+   cd meergo/cmd/meergo
    ```
 
 3. **Generate the assets**
@@ -120,7 +120,7 @@ Besides the requirements listed at the beginning of this page, for this installa
    go generate
    ```
 
-   It must be re-executed if you pull a new version of Chichi.
+   It must be re-executed if you pull a new version of Meergo.
 
 4. **Build the executable**
 
@@ -128,30 +128,30 @@ Besides the requirements listed at the beginning of this page, for this installa
     go build
     ```
 
-   Verify that the executable `chichi` (or `chichi.exe` on Windows) has been created in the current directory.
+   Verify that the executable `meergo` (or `meergo.exe` on Windows) has been created in the current directory.
 
 Then you can proceed with the [configuration](#configuration).
 
 ## Configuration
 
-Now that you have obtained the executable file of `chichi`, it is necessary to proceed with the configuration.
+Now that you have obtained the executable file of `meergo`, it is necessary to proceed with the configuration.
 
-1. Choose a directory of the filesystem: it will be the directory in which you will start Chichi.
-2. Take [the example configuration file `config.example.yaml`](https://github.com/open2b/chichi/blob/main/cmd/chichi/config.example.yaml) and copy it into the chosen directory in a file named `config.yaml`
+1. Choose a directory of the filesystem: it will be the directory in which you will start Meergo.
+2. Take [the example configuration file `config.example.yaml`](https://github.com/meergo/meergo/blob/main/cmd/meergo/config.example.yaml) and copy it into the chosen directory in a file named `config.yaml`
 3. Modify `config.yaml` according to your needs.
 
 If the `https` configuration parameter is set to `true` in the configuration file, then proceed with the creation of the certificates; otherwise, proceed with the setup of the database.
 
 ## Certificates
 
-In the directory you have chosen to start Chichi, add the certificate files `cert.pem` (for the domain) and `key.pem` (for its key).
+In the directory you have chosen to start Meergo, add the certificate files `cert.pem` (for the domain) and `key.pem` (for its key).
 
 Now proceed with the setup of the database.
 
 ## Setup the database
 
-Set up the database you specified in the configuration file by executing the [`database/PostgreSQL.sql` script](https://github.com/open2b/chichi/blob/main/database/PostgreSQL.sql). This script is designed to configure the PostgreSQL database.
+Set up the database you specified in the configuration file by executing the [`database/PostgreSQL.sql` script](https://github.com/meergo/meergo/blob/main/database/PostgreSQL.sql). This script is designed to configure the PostgreSQL database.
 
-## Start Chichi
+## Start Meergo
 
-Run the `chichi` executable within the directory of your choice, containing the configuration file and the certificates.
+Run the `meergo` executable within the directory of your choice, containing the configuration file and the certificates.

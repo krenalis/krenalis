@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 
 	"github.com/shopspring/decimal"
 )
@@ -129,13 +129,13 @@ type Context struct {
 
 // ToConnectorEvent returns event as a connector event to be passed as an
 // argument to the SendEvent and PreviewSendEvent methods of an app connector.
-func (event *Event) ToConnectorEvent() *chichi.Event {
+func (event *Event) ToConnectorEvent() *meergo.Event {
 	// Keep in sync with the connector.EventI type.
 	groupId := event.GroupId
 	if event.GroupId == "" {
 		groupId = event.Context.GroupId
 	}
-	e := chichi.Event{}
+	e := meergo.Event{}
 	e.AnonymousId = event.AnonymousId
 	e.Category = event.Category
 	e.Context.App.Name = event.Context.App.Name

@@ -5,13 +5,13 @@
 // Copyright (c) 2022 Open2b
 //
 
-package chichi
+package meergo
 
 import (
 	"context"
 	"reflect"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 // DatabaseInfo represents a database connector info.

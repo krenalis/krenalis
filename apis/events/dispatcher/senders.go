@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/open2b/chichi/apis/connectors"
+	"github.com/meergo/meergo/apis/connectors"
 )
 
 // startSenders starts some senders that read from the events channel and write

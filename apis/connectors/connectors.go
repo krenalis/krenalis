@@ -24,11 +24,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/connectors/httpclient"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/connectors/httpclient"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 
 	"github.com/itchyny/timefmt-go"
 	"github.com/relvacode/iso8601"
@@ -65,14 +65,14 @@ type CommittableWriter interface {
 
 // An InvalidUIValuesError is returned by UI-related functions when the
 // user-entered values passed as an argument are not valid.
-type InvalidUIValuesError = chichi.InvalidUIValuesError
+type InvalidUIValuesError = meergo.InvalidUIValuesError
 
 var (
-	ErrEventTypeNotExist   = chichi.ErrEventTypeNotExist
+	ErrEventTypeNotExist   = meergo.ErrEventTypeNotExist
 	ErrNoColumns           = errors.New("file has no columns")
 	ErrNoWebhooks          = errors.New("app has no webhooks")
 	ErrSheetNotExist       = errors.New("sheet does not exist")
-	ErrUIEventNotExist     = chichi.ErrUIEventNotExist
+	ErrUIEventNotExist     = meergo.ErrUIEventNotExist
 	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
 )
 
@@ -127,8 +127,8 @@ func (err *SchemaError) Error() string {
 	return err.Msg
 }
 
-type Event = chichi.Event
-type EventType = chichi.EventType
+type Event = meergo.Event
+type EventType = meergo.EventType
 
 // Record represents a record. If an error occurs during the reading or
 // validation of the record, the Err field contains the specific error.
@@ -232,14 +232,14 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	app, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
+	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
 		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken),
-		Region:     chichi.PrivacyRegion(region),
+		Region:     meergo.PrivacyRegion(region),
 	})
 	if err != nil {
 		return nil, err
 	}
-	aa, ok := app.(chichi.AppOAuth)
+	aa, ok := app.(meergo.AppOAuth)
 	if !ok {
 		return nil, errors.New("connector does not implement the AppOAuth interface")
 	}
@@ -267,21 +267,21 @@ func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, r
 	if connector.WebhooksPer != state.WebhooksPerAccount {
 		return nil, ErrNoWebhooks
 	}
-	config := &chichi.AppConfig{
+	config := &meergo.AppConfig{
 		OAuthAccount: account.Code,
 	}
 	if connector.OAuth != nil {
 		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken)
 	}
-	config.Region = chichi.PrivacyRegion(account.Workspace().PrivacyRegion)
-	inner, err := chichi.RegisteredApp(connector.Name).New(config)
+	config.Region = meergo.PrivacyRegion(account.Workspace().PrivacyRegion)
+	inner, err := meergo.RegisteredApp(connector.Name).New(config)
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, chichi.Both)
+	if inner, ok := inner.(meergo.Webhooks); ok {
+		payload, err := inner.ReceiveWebhook(req, meergo.Both)
 		if err != nil {
-			if err == chichi.ErrWebhookUnauthorized {
+			if err == meergo.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
 			}
 			return nil, err
@@ -308,21 +308,21 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 		accountID = a.ID
 		accountCode = a.Code
 	}
-	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{
+	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
 		Settings:     connection.Settings,
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   connectors.http.ConnectionClient(connection.ID),
-		Region:       chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
+		Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:   webhookURL(connection, accountID),
 	})
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, chichi.Role(connection.Role))
+	if inner, ok := inner.(meergo.Webhooks); ok {
+		payload, err := inner.ReceiveWebhook(req, meergo.Role(connection.Role))
 		if err != nil {
-			if err == chichi.ErrWebhookUnauthorized {
+			if err == meergo.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
 			}
 			return nil, err
@@ -342,14 +342,14 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if connector.WebhooksPer != state.WebhooksPerConnector {
 		return nil, ErrNoWebhooks
 	}
-	inner, err := chichi.RegisteredApp(connector.Name).New(&chichi.AppConfig{})
+	inner, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{})
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(chichi.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, chichi.Both)
+	if inner, ok := inner.(meergo.Webhooks); ok {
+		payload, err := inner.ReceiveWebhook(req, meergo.Both)
 		if err != nil {
-			if err == chichi.ErrWebhookUnauthorized {
+			if err == meergo.ErrWebhookUnauthorized {
 				err = ErrWebhookUnauthorized
 			}
 			return nil, err
@@ -632,7 +632,7 @@ func setActionSettings(ctx context.Context, st *state.State, action int, setting
 
 // setActionSettingsFunc returns a connector.SetSettingsFunc function that sets
 // the settings for the action.
-func setActionSettingsFunc(st *state.State, a *state.Action) chichi.SetSettingsFunc {
+func setActionSettingsFunc(st *state.State, a *state.Action) meergo.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setActionSettings(ctx, st, a.ID, settings)
 	}
@@ -662,7 +662,7 @@ func setConnectionSettings(ctx context.Context, st *state.State, connection int,
 
 // setSettingsFunc returns a connector.SetSettingsFunc function that sets the
 // settings for the connection.
-func setConnectionSettingsFunc(st *state.State, c *state.Connection) chichi.SetSettingsFunc {
+func setConnectionSettingsFunc(st *state.State, c *state.Connection) meergo.SetSettingsFunc {
 	return func(ctx context.Context, settings []byte) error {
 		return setConnectionSettings(ctx, st, c.ID, settings)
 	}

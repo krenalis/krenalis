@@ -39,7 +39,7 @@ AS $$
                 AND i1.__identity_id__ = i2.__identity_id__
                 AND i1.__is_anonymous__ = i2.__is_anonymous__
             )
-            OR {{ same_user }} -- This placeholder will be replaced by Chichi:
+            OR {{ same_user }} -- This placeholder will be replaced by Meergo:
         ) as same_user
     FROM
         _user_identities i1
@@ -106,7 +106,7 @@ AS $$
 
     END $clustering$;
 
-    -- This placeholder will be replaced by Chichi:
+    -- This placeholder will be replaced by Meergo:
     {{ merge_users }};
 
     -- Update the GID of the user identities.

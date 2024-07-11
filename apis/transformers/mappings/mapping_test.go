@@ -12,7 +12,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 func TestInOutProperties(t *testing.T) {

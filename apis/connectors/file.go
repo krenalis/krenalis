@@ -23,9 +23,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 
 	"github.com/golang/snappy"
 )
@@ -38,7 +38,7 @@ type File struct {
 	state       *state.State
 	action      *state.Action
 	timeLayouts *state.TimeLayouts
-	inner       chichi.File
+	inner       meergo.File
 	err         error
 }
 
@@ -51,7 +51,7 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 		action:      action,
 		timeLayouts: &connector.TimeLayouts,
 	}
-	file.inner, file.err = chichi.RegisteredFile(connector.Name).New(&chichi.FileConfig{
+	file.inner, file.err = meergo.RegisteredFile(connector.Name).New(&meergo.FileConfig{
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -172,10 +172,10 @@ func (file *File) Writer(ctx context.Context, schema types.Type, ack AckFunc, pa
 }
 
 // storage returns the inner storage connection of the file.
-func (file *File) storage() (chichi.FileStorage, error) {
+func (file *File) storage() (meergo.FileStorage, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
-	return chichi.RegisteredFileStorage(connector.Name).New(&chichi.FileStorageConfig{
+	return meergo.RegisteredFileStorage(connector.Name).New(&meergo.FileStorageConfig{
 		Settings:    conn.Settings,
 		SetSettings: setConnectionSettingsFunc(file.state, conn),
 	})
@@ -202,14 +202,14 @@ func IsValidSheetName(name string) bool {
 // compressorStorage implements a storage capable of compressing and
 // decompressing data read from or written to a FileStorage.
 type compressorStorage struct {
-	storage     chichi.FileStorage
+	storage     meergo.FileStorage
 	compression state.Compression
 }
 
 // newCompressedStorage returns a compressor storage that wraps s and performs
 // file compression and decompression using c as the compression method.
 // If c is NoCompression, it does not perform any compression or decompression.
-func newCompressedStorage(s chichi.FileStorage, c state.Compression) *compressorStorage {
+func newCompressedStorage(s meergo.FileStorage, c state.Compression) *compressorStorage {
 	return &compressorStorage{s, c}
 }
 
@@ -448,7 +448,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  chichi.File
+	inner  meergo.File
 	err    error
 	closed bool
 }
@@ -472,7 +472,7 @@ func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 		if err != nil {
-			if err == chichi.ErrSheetNotExist {
+			if err == meergo.ErrSheetNotExist {
 				err = ErrSheetNotExist
 			}
 			r.err = err

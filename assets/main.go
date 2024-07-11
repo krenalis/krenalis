@@ -6,7 +6,7 @@
 //
 
 // This program builds and compresses the assets, storing them in a directory
-// named 'chichi-assets' within the current working directory. If a directory
+// named 'meergo-assets' within the current working directory. If a directory
 // with the same name already exists, it will be deleted.
 package main
 
@@ -41,7 +41,7 @@ func main() {
 func buildAssets() error {
 
 	// Create the directory used to build the assets.
-	buildDir, err := os.MkdirTemp("", "chichi-assets-build")
+	buildDir, err := os.MkdirTemp("", "meergo-assets-build")
 	if err != nil {
 		return fmt.Errorf("cannot create a temporary directory: %s", err)
 	}
@@ -185,11 +185,11 @@ func buildAssets() error {
 	}
 
 	// Copy the assets to the destination.
-	err = os.RemoveAll(filepath.Join(root, "chichi-assets"))
+	err = os.RemoveAll(filepath.Join(root, "meergo-assets"))
 	if err != nil {
 		return err
 	}
-	err = os.CopyFS(filepath.Join(root, "chichi-assets"), os.DirFS(dstDir))
+	err = os.CopyFS(filepath.Join(root, "meergo-assets"), os.DirFS(dstDir))
 	if err != nil {
 		return err
 	}

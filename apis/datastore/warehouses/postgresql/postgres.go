@@ -19,8 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/postgres"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/postgres"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

@@ -11,14 +11,14 @@ package website
 import (
 	_ "embed"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 // Connector icon.
 var iconJavaScript = "<svg></svg>"
 
 func init() {
-	websites := []chichi.WebsiteInfo{
+	websites := []meergo.WebsiteInfo{
 		{
 			Name:              "JavaScript",
 			SourceDescription: "import events, users and groups from a website using JavaScript",
@@ -26,12 +26,12 @@ func init() {
 		},
 	}
 	for _, ws := range websites {
-		chichi.RegisterWebsite(ws, New)
+		meergo.RegisterWebsite(ws, New)
 	}
 }
 
 // New returns a new Website connector instance.
-func New(*chichi.WebsiteConfig) (*Website, error) {
+func New(*meergo.WebsiteConfig) (*Website, error) {
 	return &Website{}, nil
 }
 

@@ -16,9 +16,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/transformers"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/types"
 )
 
 var testName = regexp.MustCompile(`(?m)^(GOOD: |BAD: )(\w+)/(\w+)/(\w+) - (.+)$`)
@@ -1779,7 +1779,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Groups,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.AppType,
-			err:                     "target Groups is not supported by this installation of Chichi",
+			err:                     "target Groups is not supported by this installation of Meergo",
 		},
 		{
 			name: "BAD: Source/App/Users - input schema cannot contain a property with a placeholder",

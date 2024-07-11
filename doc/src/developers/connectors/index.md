@@ -1,6 +1,6 @@
 # Build a Connector
 
-Chichi is easy to add new features to through connectors. Connectors are like plugins that help Chichi work with different kinds of programs and tools. These include:
+Meergo is easy to add new features to through connectors. Connectors are like plugins that help Meergo work with different kinds of programs and tools. These include:
 
    * Programs like HubSpot, Mixpanel, Stripe, and more.
    * Databases like PostgreSQL, MySQL, Snowflake, and more.
@@ -8,11 +8,11 @@ Chichi is easy to add new features to through connectors. Connectors are like pl
    * Places where files are stored like S3, SFTP, HTTP, and more.
    * Streams like Kafka, RabbitMQ, and more.
 
-Chichi can also connect with websites, mobile apps, and servers.
+Meergo can also connect with websites, mobile apps, and servers.
 
-To use Chichi, you should be good at the Go programming language.
+To use Meergo, you should be good at the Go programming language.
 
-That's all you need to get started with Chichi!
+That's all you need to get started with Meergo!
 
 # Connector Types
 

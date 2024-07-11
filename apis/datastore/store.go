@@ -16,9 +16,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 )
@@ -374,7 +374,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	//
 	//     duplicate key value violates unique constraint "pg_proc_proname_args_nsp_index" (SQLSTATE 23505)
 	//
-	// TODO(Gianluca): also take a look at https://github.com/open2b/chichi/issues/354.
+	// TODO(Gianluca): also take a look at https://github.com/meergo/meergo/issues/354.
 	store.runningIR <- struct{}{}
 	defer func() {
 		<-store.runningIR

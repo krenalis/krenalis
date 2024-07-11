@@ -19,8 +19,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"

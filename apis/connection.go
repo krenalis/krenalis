@@ -24,18 +24,18 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/connectors"
-	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/encoding"
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events"
-	"github.com/open2b/chichi/apis/events/collector"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/transformers"
-	"github.com/open2b/chichi/apis/transformers/mappings"
-	"github.com/open2b/chichi/telemetry"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/connectors"
+	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/encoding"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/events"
+	"github.com/meergo/meergo/apis/events/collector"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/apis/transformers/mappings"
+	"github.com/meergo/meergo/telemetry"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
@@ -111,7 +111,7 @@ type ActionSchemasMatchings struct {
 }
 
 // dummyGroupsSchema is a dummy "groups" schema, that is used until the groups
-// management is properly implemented in Chichi. For now, it serves only as a
+// management is properly implemented in Meergo. For now, it serves only as a
 // placeholder.
 var dummyGroupsSchema = types.Object([]types.Property{
 	{Name: "id", Type: types.Int(32)},

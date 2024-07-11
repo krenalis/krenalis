@@ -14,9 +14,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/open2b/chichi/apis/capture"
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo/apis/capture"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/state"
 )
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")

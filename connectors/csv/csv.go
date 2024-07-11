@@ -21,8 +21,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
 )
@@ -32,12 +32,12 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the File and UIHandler interfaces.
 var _ interface {
-	chichi.File
-	chichi.UIHandler
+	meergo.File
+	meergo.UIHandler
 } = (*CSV)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.FileInfo{
+	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "CSV",
 		Icon:      icon,
 		Extension: "csv",
@@ -45,7 +45,7 @@ func init() {
 }
 
 // New returns a new CSV connector instance.
-func New(conf *chichi.FileConfig) (*CSV, error) {
+func New(conf *meergo.FileConfig) (*CSV, error) {
 	c := CSV{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -57,7 +57,7 @@ func New(conf *chichi.FileConfig) (*CSV, error) {
 }
 
 type CSV struct {
-	conf     *chichi.FileConfig
+	conf     *meergo.FileConfig
 	settings *Settings
 }
 
@@ -77,7 +77,7 @@ func (c *CSV) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
+func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
 
 	// Create a CSV reader.
 	v := csv.NewReader(r)
@@ -107,7 +107,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chich
 			for i := range columns {
 				if c.settings.HasColumnNames {
 					header := record[i]
-					name := chichi.SuggestPropertyName(header)
+					name := meergo.SuggestPropertyName(header)
 					if name == "" {
 						return fmt.Errorf("column name %q cannot be converted to a valid property name", header)
 					}
@@ -154,7 +154,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chich
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -168,17 +168,17 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role chi
 	case "save":
 		return nil, c.saveValues(ctx, values, role)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
-			&chichi.Input{Name: "Comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: chichi.Source},
-			&chichi.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: chichi.Source},
-			&chichi.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: chichi.Source},
-			&chichi.Checkbox{Name: "UseCRLF", Label: "Use CRLF"},
-			&chichi.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Comma", Label: "Comma", Placeholder: ",", Type: "text", MinLength: 1, MaxLength: 1},
+			&meergo.Input{Name: "Comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: meergo.Source},
+			&meergo.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
+			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: meergo.Source},
+			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF"},
+			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
 		},
 		Values: values,
 	}
@@ -187,7 +187,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role chi
 }
 
 // Write writes to w the records read from records.
-func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records chichi.RecordReader) error {
+func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.RecordReader) error {
 
 	v := csv.NewWriter(w)
 	v.Comma, _ = utf8.DecodeRuneInString(c.settings.Comma)
@@ -234,7 +234,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records chichi.R
 }
 
 // saveValues saves the user-entered values as settings.
-func (c *CSV) saveValues(ctx context.Context, values []byte, role chichi.Role) error {
+func (c *CSV) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
@@ -242,27 +242,27 @@ func (c *CSV) saveValues(ctx context.Context, values []byte, role chichi.Role) e
 	}
 	// Validate Comma.
 	if utf8.RuneCountInString(s.Comma) != 1 {
-		return chichi.NewInvalidUIValuesError("comma must be a single character")
+		return meergo.NewInvalidUIValuesError("comma must be a single character")
 	}
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return chichi.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
+		return meergo.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
-	if role == chichi.Source {
+	if role == meergo.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {
-				return chichi.NewInvalidUIValuesError("comment, if provided, must be a single character")
+				return meergo.NewInvalidUIValuesError("comment, if provided, must be a single character")
 			}
 			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return chichi.NewInvalidUIValuesError("comment cannot be \\r, \\n, or the Unicode replacement character")
+				return meergo.NewInvalidUIValuesError("comment cannot be \\r, \\n, or the Unicode replacement character")
 			}
 			if c == s.Comma {
-				return chichi.NewInvalidUIValuesError("comment cannot be equal to the comma")
+				return meergo.NewInvalidUIValuesError("comment cannot be equal to the comma")
 			}
 		}
 		// Validate FieldsPerRecord.
 		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return chichi.NewInvalidUIValuesError("fields per record, if provided, must be in range [0,1000]")
+			return meergo.NewInvalidUIValuesError("fields per record, if provided, must be in range [0,1000]")
 		}
 	} else {
 		s.Comment = ""
@@ -322,7 +322,7 @@ func toString(v any, t types.Type) string {
 	case types.JSONKind:
 		return string(v.(json.RawMessage))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:
-		return string(chichi.MarshalJSON(v, t))
+		return string(meergo.MarshalJSON(v, t))
 	default:
 		panic(fmt.Sprintf("unexpected kind %s", k))
 	}

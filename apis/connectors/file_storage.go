@@ -15,18 +15,18 @@ import (
 	"slices"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 )
 
 // An InvalidPathError is returned when a path name is not valid.
-type InvalidPathError = chichi.InvalidPathError
+type InvalidPathError = meergo.InvalidPathError
 
 type FileStorage struct {
 	state   *state.State
 	storage *state.Connection
-	inner   chichi.FileStorage
+	inner   meergo.FileStorage
 	err     error
 }
 
@@ -37,7 +37,7 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 		state:   connectors.state,
 		storage: storage,
 	}
-	s.inner, s.err = chichi.RegisteredFileStorage(storage.Connector().Name).New(&chichi.FileStorageConfig{
+	s.inner, s.err = meergo.RegisteredFileStorage(storage.Connector().Name).New(&meergo.FileStorageConfig{
 		Settings:    storage.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, storage),
 	})
@@ -100,14 +100,14 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, fmt.Errorf("invalid timestamp returned by the storage: %s", err)
 	}
 
-	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
+	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileConfig{
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasUI {
-		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues, chichi.Role(storage.storage.Role))
+		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(storage.storage.Role))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -127,7 +127,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	err = _file.Read(ctx, r, sheet, rw)
 	rw.close()
 	if err != nil && err != errRecordStop {
-		if err == chichi.ErrSheetNotExist {
+		if err == meergo.ErrSheetNotExist {
 			err = ErrSheetNotExist
 		}
 		return nil, nil, err
@@ -157,20 +157,20 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, storage.err
 	}
 
-	_file, err := chichi.RegisteredFile(file.Name).New(&chichi.FileConfig{
+	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileConfig{
 		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasUI {
-		_, err = _file.(chichi.UIHandler).ServeUI(ctx, "save", uiValues, chichi.Role(storage.storage.Role))
+		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(storage.storage.Role))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	sheetsFile := _file.(chichi.Sheets)
+	sheetsFile := _file.(meergo.Sheets)
 	s := newCompressedStorage(storage.inner, compression)
 	r, _, err := s.Reader(ctx, name)
 	if err != nil {

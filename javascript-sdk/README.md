@@ -1,7 +1,7 @@
-# Chichi Analytics
+# Meergo Analytics
 
 - [Format files](#format-files)
-- [Build `dist/chichi.min.js`](#build-distchichiminjs)
+- [Build `dist/meergo.min.js`](#build-distmeergominjs)
 - [Minimum Supported Browsers](#minimum-supported-browsers)
 - [ES6 Module](#es6-module)
   - [ES6 Module Compatibility](#es6-module-compatibility)
@@ -29,7 +29,7 @@ Run:
 deno fmt
 ```
 
-## Build `dist/chichi.min.js`
+## Build `dist/meergo.min.js`
 
 Run:
 
@@ -45,9 +45,9 @@ deno task transpile
 deno task minify
 ```
 
-* `deno task bundle` bundles the `chichi.js` file and creates the `build/chichi.bundle.js` file.
-* `deno task transpile` transpiles the `build/chichi.bundle.js` file to ES5 and creates the `build/chichi.es5.js` file.
-* `deno task minify` minifies the `build/chichi.es5.js` file and creates the `dist/chichi.min.js` file.
+* `deno task bundle` bundles the `meergo.js` file and creates the `build/meergo.bundle.js` file.
+* `deno task transpile` transpiles the `build/meergo.bundle.js` file to ES5 and creates the `build/meergo.es5.js` file.
+* `deno task minify` minifies the `build/meergo.es5.js` file and creates the `dist/meergo.min.js` file.
 
 ## Minimum Supported Browsers
 
@@ -63,14 +63,14 @@ deno task minify
 To import the JavaScript SDK into an application as an ES6 module:
 
 ```javascript
-import Analytics from "../chichi/javascript-sdk";
+import Analytics from "../meergo/javascript-sdk";
 const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
 analytics.page("home");
 ```
 
 To import the JavaScript SDK into a browser as an ES6 module, follow these steps:
 
-1. Build the `dist/chichi.es6.min.js` module file:
+1. Build the `dist/meergo.es6.min.js` module file:
 
    ```sh
    deno task build:es6
@@ -80,7 +80,7 @@ To import the JavaScript SDK into a browser as an ES6 module, follow these steps
 
    ```html
    <script type="module">
-       import Analytics from "https://example.com/chichi.es6.min.js";
+       import Analytics from "https://example.com/meergo.es6.min.js";
        const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
        analytics.page("home");
    </script>
@@ -103,7 +103,7 @@ To import the JavaScript SDK into an application using CommonJS (CJS) using the 
 2. Import the module in the application:
 
     ```javascript
-    const { Analytics } = require("../chichi/javascript-sdk");
+    const { Analytics } = require("../meergo/javascript-sdk");
     const analytics = new Analytics("kxe7WIDDGvcfDEKgHePfHzuHQ6dTU2xc", "https://localhost:9090/api/v1/b");
     analytics.page("home");
     ```

@@ -16,10 +16,10 @@ For best results, it is recommended to make a group call in the following scenar
 
 ## How to Make a Group Call
 
-To make a group call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a group call in the following way:
+To make a group call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a group call in the following way:
 
 ```javascript
-chichiAnalytics.group('84s76y49tb28v1jxq', {
+meergoAnalytics.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",
 	industry: "Technology",
 	employeeCount: 100
@@ -28,7 +28,7 @@ chichiAnalytics.group('84s76y49tb28v1jxq', {
 
 The first argument, `'84s76y49tb28v1jxq'`, is the **Group ID**, which uniquely identifies the group in your website's database. The second argument consists of the **group's traits**, which are pieces of information you want to store with the event.
 
-The following is an example of how the previous group call would appear in Chichi once received and processed:
+The following is an example of how the previous group call would appear in Meergo once received and processed:
 ```json
 {
   "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",
@@ -52,19 +52,19 @@ The following is an example of how the previous group call would appear in Chich
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Chichi enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Traits
 
 As seen earlier, traits are pieces of information about the event's group that you wish to store along with the event. You can include whatever information you need.
 
-They are accessible in Chichi within a property of the event called `traits` as a JSON value.
+They are accessible in Meergo within a property of the event called `traits` as a JSON value.
 
 ### Prefilled Traits
 
-Chichi doesn't automatically forward a group's traits to a destination. Instead, the control lies in your hands to choose and specify the traits you want to send when configuring the mapping.
+Meergo doesn't automatically forward a group's traits to a destination. Instead, the control lies in your hands to choose and specify the traits you want to send when configuring the mapping.
 
-However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following traits when applicable:
+However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following traits when applicable:
 
 | Trait         | JSON&nbsp;Type | Description                                                                                                          |
 |---------------|----------------|----------------------------------------------------------------------------------------------------------------------|

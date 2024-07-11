@@ -15,9 +15,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/backoff"
+	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/backoff"
 )
 
 // backoffBase is the base used for the backoff.

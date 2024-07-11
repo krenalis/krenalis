@@ -21,8 +21,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Main is the function that executes Chichi. It is designed to be used in
-// executable packages that run Chichi's code, and should be utilized in the
+// Main is the function that executes Meergo. It is designed to be used in
+// executable packages that run Meergo's code, and should be utilized in the
 // following form:
 //
 //	func main() {
@@ -32,9 +32,9 @@ func Main(assets fs.FS) {
 
 	if assets != nil {
 		var err error
-		assets, err = fs.Sub(assets, "chichi-assets")
+		assets, err = fs.Sub(assets, "meergo-assets")
 		if err != nil {
-			panic("chichi: there is no directory 'chichi-assets' in assets")
+			panic("meergo: there is no directory 'meergo-assets' in assets")
 		}
 	}
 

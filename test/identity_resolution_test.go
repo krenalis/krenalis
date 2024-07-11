@@ -16,15 +16,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 // TestIdentityResolution tests the identity resolution by importing users and
 // retrieving the users from the APIs.
 //
 // This works by importing users through a JSON file, which is created (or
-// updated) every time a user is imported, then it's loaded into Chichi by
+// updated) every time a user is imported, then it's loaded into Meergo by
 // running the import action on the JSON.
 func TestIdentityResolution(t *testing.T) {
 
@@ -32,12 +32,12 @@ func TestIdentityResolution(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create a storage where the JSON files (containing the incoming users)
 	// will be created.
-	storageDir, err := os.MkdirTemp("", "chichi-test-identity-resolution")
+	storageDir, err := os.MkdirTemp("", "meergo-test-identity-resolution")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,31 +86,31 @@ func TestIdentityResolution(t *testing.T) {
 	}
 
 	// Add the action A.
-	actionA := c.AddAction(fsID, "Users", chichitester.ActionToSet{
+	actionA := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 		Name:      "Action A",
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
 		Connector:        "JSON",
-		UIValues:         chichitester.UIJSONProperties(properties),
+		UIValues:         meergotester.UIJSONProperties(properties),
 	})
 
 	// Add the action B.
-	actionB := c.AddAction(fsID, "Users", chichitester.ActionToSet{
+	actionB := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 		Name:      "Action B",
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
 		Connector:        "JSON",
-		UIValues:         chichitester.UIJSONProperties(properties),
+		UIValues:         meergotester.UIJSONProperties(properties),
 	})
 
 	// Define a function "expectUsers" which checks if the expected user

@@ -16,8 +16,8 @@ import (
 	"reflect"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/state"
 )
 
 // ServeActionUI serves the user interface of the provided file action and
@@ -28,16 +28,16 @@ import (
 // It returns an InvalidUIValuesError error value if the values are not valid.
 // It panics if the connector has no UI.
 func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values []byte) ([]byte, error) {
-	role := chichi.Role(action.Connection().Role)
+	role := meergo.Role(action.Connection().Role)
 	c := action.Connector()
-	inner, err := chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{
+	inner, err := meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values, role)
+	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, role)
 	if err != nil {
 		return nil, err
 	}
@@ -62,43 +62,43 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	var err error
 	switch c := connection.Connector(); c.Type {
 	case state.AppType:
-		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
+		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			Settings:     connection.Settings,
 			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 			OAuthAccount: accountCode,
 			HTTPClient:   connectors.http.ConnectionClient(connection.ID),
-			Region:       chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
+			Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 			WebhookURL:   webhookURL(connection, accountID)})
 	case state.DatabaseType:
-		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{
+		var database meergo.Database
+		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 		defer database.Close()
 		inner = database
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{
+		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{
+		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{
+		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{
+		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{
+		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
@@ -106,11 +106,11 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values, chichi.Role(connection.Role))
+	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, meergo.Role(connection.Role))
 	if err != nil {
 		return nil, err
 	}
-	return marshalUI(ui, chichi.Role(connection.Role))
+	return marshalUI(ui, meergo.Role(connection.Role))
 }
 
 type ConnectorConfig struct {
@@ -135,37 +135,37 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	var err error
 	switch c := connector; c.Type {
 	case state.AppType:
-		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
+		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
-			Region:       chichi.PrivacyRegion(conf.Region),
+			Region:       meergo.PrivacyRegion(conf.Region),
 		})
 	case state.DatabaseType:
-		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{})
+		var database meergo.Database
+		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{})
 		defer database.Close()
 		inner = database
 	case state.FileType:
-		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{})
+		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{})
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{})
+		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{})
+		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{})
+		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{})
+		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{})
+		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{})
 	}
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(chichi.UIHandler).ServeUI(ctx, event, values, chichi.Role(conf.Role))
+	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, meergo.Role(conf.Role))
 	if err != nil {
 		return nil, err
 	}
-	return marshalUI(ui, chichi.Role(conf.Role))
+	return marshalUI(ui, meergo.Role(conf.Role))
 }
 
 // UpdatedSettings returns the settings, for the given connector, updated with
@@ -189,33 +189,33 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	}
 	switch c := connector; c.Type {
 	case state.AppType:
-		inner, err = chichi.RegisteredApp(c.Name).New(&chichi.AppConfig{
+		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			SetSettings:  setSettings,
 		})
 	case state.DatabaseType:
-		var database chichi.Database
-		database, err = chichi.RegisteredDatabase(c.Name).New(&chichi.DatabaseConfig{SetSettings: setSettings})
+		var database meergo.Database
+		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{SetSettings: setSettings})
 		defer database.Close()
 		inner = database
 	case state.FileType:
-		inner, err = chichi.RegisteredFile(c.Name).New(&chichi.FileConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{SetSettings: setSettings})
 	case state.MobileType:
-		inner, err = chichi.RegisteredMobile(c.Name).New(&chichi.MobileConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{SetSettings: setSettings})
 	case state.ServerType:
-		inner, err = chichi.RegisteredServer(c.Name).New(&chichi.ServerConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{SetSettings: setSettings})
 	case state.FileStorageType:
-		inner, err = chichi.RegisteredFileStorage(c.Name).New(&chichi.FileStorageConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{SetSettings: setSettings})
 	case state.StreamType:
-		inner, err = chichi.RegisteredStream(c.Name).New(&chichi.StreamConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{SetSettings: setSettings})
 	case state.WebsiteType:
-		inner, err = chichi.RegisteredWebsite(c.Name).New(&chichi.WebsiteConfig{SetSettings: setSettings})
+		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{SetSettings: setSettings})
 	}
 	if err != nil {
 		return nil, err
 	}
-	_, err = inner.(chichi.UIHandler).ServeUI(ctx, "save", uiValues, chichi.Role(conf.Role))
+	_, err = inner.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(conf.Role))
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 
 // marshalUI marshals the provided UI, in the given role, into JSON format.
 // If ui is nil, it is serialized as "null".
-func marshalUI(ui *chichi.UI, role chichi.Role) ([]byte, error) {
+func marshalUI(ui *meergo.UI, role meergo.Role) ([]byte, error) {
 
 	if ui == nil {
 		return []byte("null"), nil
@@ -296,10 +296,10 @@ func marshalUI(ui *chichi.UI, role chichi.Role) ([]byte, error) {
 
 // marshalUIComponent marshals component with the provided role in JSON format.
 // If comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi.Role, values map[string]any, comma bool) (bool, error) {
+func marshalUIComponent(b *bytes.Buffer, component meergo.Component, role meergo.Role, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
-	if r := chichi.Role(rv.FieldByName("Role").Int()); r != chichi.Both && r != role {
+	if r := meergo.Role(rv.FieldByName("Role").Int()); r != meergo.Both && r != role {
 		return false, nil
 	}
 	if comma {
@@ -319,9 +319,9 @@ func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi
 		b.WriteString(`":`)
 		var err error
 		switch field := field.Interface().(type) {
-		case chichi.Component:
+		case meergo.Component:
 			_, err = marshalUIComponent(b, field, role, values, false)
-		case []chichi.FieldSet:
+		case []meergo.FieldSet:
 			b.WriteByte('[')
 			comma = false
 			for _, set := range field {
@@ -345,8 +345,8 @@ func marshalUIComponent(b *bytes.Buffer, component chichi.Component, role chichi
 
 // marshalUIFieldSet marshals fieldSet with the provided role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIFieldSet(b *bytes.Buffer, fieldSet chichi.FieldSet, role chichi.Role, values map[string]any, comma bool) (bool, error) {
-	if fieldSet.Role != chichi.Both && fieldSet.Role != role {
+func marshalUIFieldSet(b *bytes.Buffer, fieldSet meergo.FieldSet, role meergo.Role, values map[string]any, comma bool) (bool, error) {
+	if fieldSet.Role != meergo.Both && fieldSet.Role != role {
 		return false, nil
 	}
 	if comma {

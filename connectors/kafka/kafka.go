@@ -20,7 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
@@ -31,19 +31,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the Stream and the UIHandler interfaces.
 var _ interface {
-	chichi.Stream
-	chichi.UIHandler
+	meergo.Stream
+	meergo.UIHandler
 } = (*Kafka)(nil)
 
 func init() {
-	chichi.RegisterStream(chichi.StreamInfo{
+	meergo.RegisterStream(meergo.StreamInfo{
 		Name: "Kafka",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new Kafka connector instance.
-func New(conf *chichi.StreamConfig) (*Kafka, error) {
+func New(conf *meergo.StreamConfig) (*Kafka, error) {
 	c := Kafka{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -55,7 +55,7 @@ func New(conf *chichi.StreamConfig) (*Kafka, error) {
 }
 
 type Kafka struct {
-	conf     *chichi.StreamConfig
+	conf     *meergo.StreamConfig
 	settings *Settings
 	client   *kgo.Client
 	iter     *fetchesRecordIter
@@ -95,7 +95,7 @@ func (kafka *Kafka) Receive(ctx context.Context) ([]byte, func(), error) {
 }
 
 // Send sends an event to the stream.
-func (kafka *Kafka) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
+func (kafka *Kafka) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
 	err := kafka.connect()
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (kafka *Kafka) Send(ctx context.Context, event []byte, options chichi.SendO
 }
 
 // ServeUI serves the connector's user interface.
-func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -135,38 +135,38 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte, ro
 	case "test":
 		return nil, kafka.saveValues(ctx, values, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.AlternativeFieldSets{
-				Sets: []chichi.FieldSet{
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.AlternativeFieldSets{
+				Sets: []meergo.FieldSet{
 					{
 						Name:  "Kafka",
 						Label: "Kafka",
-						Fields: []chichi.Component{
-							&chichi.Input{Name: "Host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "Port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-							&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
-							&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
+						Fields: []meergo.Component{
+							&meergo.Input{Name: "Host", Label: "Host", Placeholder: "kafka.example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&meergo.Input{Name: "Port", Label: "Port", Placeholder: "9092", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+							&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1},
+							&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1},
 						},
 					},
 					{
 						Name:  "Confluent",
 						Label: "Confluent",
-						Fields: []chichi.Component{
-							&chichi.Input{Name: "Server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
-							&chichi.Input{Name: "Key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
-							&chichi.Input{Name: "Secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
+						Fields: []meergo.Component{
+							&meergo.Input{Name: "Server", Label: "Bootstrap server", Placeholder: "12345.aws.confluent.cloud:9092", Type: "text", MinLength: 1, MaxLength: 258},
+							&meergo.Input{Name: "Key", Label: "Key", Placeholder: "AAAAAAAAAAAAAAAA", Type: "text", MinLength: 16, MaxLength: 16},
+							&meergo.Input{Name: "Secret", Label: "Secret", Placeholder: "secret", Type: "password", MinLength: 1},
 						},
 					},
 				},
 			},
-			&chichi.Input{Name: "Topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Topic", Label: "Topic", Placeholder: "topic-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
@@ -186,35 +186,35 @@ func (kafka *Kafka) saveValues(ctx context.Context, values []byte, test bool) er
 	case s.Kafka != nil:
 		// Validate Host.
 		if n := len(s.Kafka.Host); n == 0 || n > 253 {
-			return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+			return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 		}
 		// Validate Port.
 		if s.Kafka.Port < 1 || s.Kafka.Port > 65536 {
-			return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+			return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 		}
 	case s.Confluent != nil:
 		// Validate Server.
 		host, port, err := net.SplitHostPort(s.Confluent.Server)
 		if err != nil {
-			return chichi.NewInvalidUIValuesError("server is not a valid host:port")
+			return meergo.NewInvalidUIValuesError("server is not a valid host:port")
 		}
 		if n := len(host); n == 0 || n > 253 {
-			return chichi.NewInvalidUIValuesError("server host length in bytes must be in range [1,253]")
+			return meergo.NewInvalidUIValuesError("server host length in bytes must be in range [1,253]")
 		}
 		if p, _ := strconv.Atoi(port); p < 1 || p > 65536 {
-			return chichi.NewInvalidUIValuesError("server port must be in range [1,65536]")
+			return meergo.NewInvalidUIValuesError("server port must be in range [1,65536]")
 		}
 		// Validate Key.
 		if utf8.RuneCountInString(s.Confluent.Key) != 16 {
-			return chichi.NewInvalidUIValuesError("key must be long 16 characters")
+			return meergo.NewInvalidUIValuesError("key must be long 16 characters")
 		}
 	}
 	// Validate Topic.
 	if n := len(s.Topic); n == 0 || n > 255 {
-		return chichi.NewInvalidUIValuesError("topic length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("topic length must be in range [1,255]")
 	}
 	if !validTopicName(s.Topic) {
-		return chichi.NewInvalidUIValuesError("topic name can contain only [A-Za-z0-9_.-]")
+		return meergo.NewInvalidUIValuesError("topic name can contain only [A-Za-z0-9_.-]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {

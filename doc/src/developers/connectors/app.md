@@ -16,18 +16,18 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Klaviyo",
-		Targets:                chichi.Events | chichi.Users,
+		Targets:                meergo.Events | meergo.Users,
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and dispatch events to Klaviyo",
 		TermForUsers:           "clients",
-		SendingMode:            chichi.Cloud,
+		SendingMode:            meergo.Cloud,
 	}, New)
 }
 
@@ -36,42 +36,42 @@ type Klaviyo struct {
 }
 
 // New returns a new Klaviyo connector instance.
-func New(conf *chichi.AppConfig) (*Klaviyo, error) {
+func New(conf *meergo.AppConfig) (*Klaviyo, error) {
 	// ...
 }
 
 // Create creates a record for the specified target with the given properties.
-func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
+func (ky *Klavyio) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
 	// ...
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *chichi.Event, extra map[string]any, schema types.Type, redacted bool) (*chichi.EventRequest, error) {
+func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *meergo.Event, extra map[string]any, schema types.Type, redacted bool) (*meergo.EventRequest, error) {
 	// ...
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
+func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	// ...
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]chichi.WebhookPayload, error) {
+func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, error) {
 	// ...
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (ky *Klavyio) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
 	// ...
 }
 
 // Schema returns the schema of the specified target in the specified role
-func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	// ...
 }
 
 // Update updates a record of the specified target.
-func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
+func (ky *Klavyio) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 	// ...
 }
 ```
@@ -113,13 +113,13 @@ This information is passed to the `RegisterApp` function that, executed during p
 
 ```go
 func init() {
-    chichi.RegisterApp(chichi.AppInfo{
+    meergo.RegisterApp(meergo.AppInfo{
         Name:                   "Klaviyo",
-        Targets:                chichi.Events | chichi.Users,
+        Targets:                meergo.Events | meergo.Users,
         SourceDescription:      "import clients as users from Klaviyo",
         DestinationDescription: "export users as clients and dispatch events to Klaviyo",
         TermForUsers:           "clients",
-        SendingMode:            chichi.Cloud,
+        SendingMode:            meergo.Cloud,
         Icon:                   icon,
     }, New)
 }
@@ -130,7 +130,7 @@ func init() {
 The second argument supplied to the `RegisterApp` function is the function utilized for creating an app instance:
 
 ```go
-func New(conf *chichi.AppConfig) (*Klaviyo, error)
+func New(conf *meergo.AppConfig) (*Klaviyo, error)
 ```
 
 This function accepts an app configuration and yields a value representing your custom type.
@@ -140,10 +140,10 @@ The structure of `AppConfig` is defined as follows:
 ```go
 type AppConfig struct {
     Settings     []byte
-    SetSettings  chichi.SetSettingsFunc
+    SetSettings  meergo.SetSettingsFunc
     OAuthAccount string
-    HTTPClient   chichi.HTTPClient
-    Region       chichi.PrivacyRegion
+    HTTPClient   meergo.HTTPClient
+    Region       meergo.PrivacyRegion
     WebhookURL   string
 }
 ```

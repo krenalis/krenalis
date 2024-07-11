@@ -20,8 +20,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -31,12 +31,12 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
-	chichi.Database
-	chichi.UIHandler
+	meergo.Database
+	meergo.UIHandler
 } = (*MySQL)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.DatabaseInfo{
+	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "MySQL",
 		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
 		Icon:        icon,
@@ -44,7 +44,7 @@ func init() {
 }
 
 // New returns a new MySQL connector instance.
-func New(conf *chichi.DatabaseConfig) (*MySQL, error) {
+func New(conf *meergo.DatabaseConfig) (*MySQL, error) {
 	c := MySQL{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,7 +56,7 @@ func New(conf *chichi.DatabaseConfig) (*MySQL, error) {
 }
 
 type MySQL struct {
-	conf     *chichi.DatabaseConfig
+	conf     *meergo.DatabaseConfig
 	settings *Settings
 	db       *sql.DB
 }
@@ -107,12 +107,12 @@ func (my *MySQL) LastChangeTimeCondition(column string, typ types.Type, value an
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (my *MySQL) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	return my.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -128,19 +128,19 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role 
 	case "test":
 		return nil, my.saveValues(ctx, values, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
-			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
-			&chichi.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "3306", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 16},
+			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
+			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
@@ -228,7 +228,7 @@ func (my *MySQL) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (my *MySQL) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	if err := my.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -271,23 +271,23 @@ func (my *MySQL) saveValues(ctx context.Context, values []byte, test bool) error
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-		return chichi.NewInvalidUIValuesError("username length must be in range [1,16]")
+		return meergo.NewInvalidUIValuesError("username length must be in range [1,16]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return chichi.NewInvalidUIValuesError("password length must be in range [1,200]")
+		return meergo.NewInvalidUIValuesError("password length must be in range [1,200]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-		return chichi.NewInvalidUIValuesError("database length must be in range [1,64]")
+		return meergo.NewInvalidUIValuesError("database length must be in range [1,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -411,5 +411,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "YEAR":
 		return types.Year(), nil
 	}
-	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+	return types.Type{}, meergo.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 }

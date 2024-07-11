@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -30,27 +30,27 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the App, AppEvents, AppRecords, and UIHandler interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppEvents
-	chichi.UIHandler
-	chichi.AppRecords
+	meergo.App
+	meergo.AppEvents
+	meergo.UIHandler
+	meergo.AppRecords
 } = (*Dummy)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Dummy",
-		Targets:                chichi.Events | chichi.Users,
+		Targets:                meergo.Events | meergo.Users,
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
 		TermForUsers:           "users",
 		IdentityIDLabel:        "Dummy Unique ID",
 		Icon:                   icon,
-		SendingMode:            chichi.Combined,
+		SendingMode:            meergo.Combined,
 	}, New)
 }
 
 // New returns a new Dummy connector instance.
-func New(conf *chichi.AppConfig) (*Dummy, error) {
+func New(conf *meergo.AppConfig) (*Dummy, error) {
 	c := Dummy{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -62,7 +62,7 @@ func New(conf *chichi.AppConfig) (*Dummy, error) {
 }
 
 type Dummy struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
@@ -86,7 +86,7 @@ func newUserID() string {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (dummy *Dummy) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
+func (dummy *Dummy) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -117,12 +117,12 @@ func (dummy *Dummy) Create(ctx context.Context, target chichi.Targets, propertie
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (dummy *Dummy) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
+func (dummy *Dummy) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	url := "https://example.com/"
 	if dummy.settings.URLForDispatchingEvents != "" {
 		url = dummy.settings.URLForDispatchingEvents
 	}
-	req := &chichi.EventRequest{
+	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    url,
 		Header: http.Header{},
@@ -138,8 +138,8 @@ func (dummy *Dummy) EventRequest(ctx context.Context, event *chichi.Event, event
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	return []*chichi.EventType{
+func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return []*meergo.EventType{
 		{
 			ID:          "send_add_to_cart",
 			Name:        "Send Add to Cart",
@@ -169,7 +169,7 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -177,12 +177,12 @@ func (dummy *Dummy) Records(ctx context.Context, target chichi.Targets, properti
 	}
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	users := make([]chichi.Record, 0, len(allUsers))
+	users := make([]meergo.Record, 0, len(allUsers))
 	for id, props := range allUsers {
 		if usersLastChangeTimes[id].Before(cursor.LastChangeTime) {
 			continue
 		}
-		users = append(users, chichi.Record{
+		users = append(users, meergo.Record{
 			ID:             id,
 			Properties:     props,
 			LastChangeTime: usersLastChangeTimes[id],
@@ -221,8 +221,8 @@ type Settings struct {
 }
 
 // Schema returns the schema of the specified target.
-func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
-	if target == chichi.Users {
+func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+	if target == meergo.Users {
 		return types.Object([]types.Property{
 			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole, Required: true},
 			{Name: "email", Type: types.Text(), Required: true},
@@ -262,11 +262,11 @@ func (dummy *Dummy) Schema(ctx context.Context, target chichi.Targets, role chic
 	case "send_event_with_no_schema":
 		return types.Type{}, nil
 	}
-	return types.Type{}, chichi.ErrEventTypeNotExist
+	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -278,12 +278,12 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, ro
 	case "save":
 		return nil, dummy.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "URLForDispatchingEvents", Label: "URL for dispatching events", Role: chichi.Destination, Placeholder: "https://example.com"},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "URLForDispatchingEvents", Label: "URL for dispatching events", Role: meergo.Destination, Placeholder: "https://example.com"},
 		},
 		Values: values,
 	}
@@ -292,7 +292,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, ro
 }
 
 // Update updates a record of the specified target.
-func (dummy *Dummy) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
+func (dummy *Dummy) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():

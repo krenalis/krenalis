@@ -11,18 +11,18 @@ type Settings struct {
 }
 ```
 
-Defining a specific type for settings is convenient because settings are exchanged in JSON format between the connector and Chichi. Therefore, having a dedicated data structure allows for easier serialization and deserialization into JSON. For instance, the settings for an instance of the Google Analytics connector could be serialized like this:
+Defining a specific type for settings is convenient because settings are exchanged in JSON format between the connector and Meergo. Therefore, having a dedicated data structure allows for easier serialization and deserialization into JSON. For instance, the settings for an instance of the Google Analytics connector could be serialized like this:
 
 ```json
 {"MeasurementID":"G-2XYZBEB6AB","APISecret":"ZuHCHFZbRBi8V7u8crWFUz"}
 ```
 
-Chichi does not impose any constraints on how settings are serialized, except that they must be in JSON format.
+Meergo does not impose any constraints on how settings are serialized, except that they must be in JSON format.
 
-When Chichi creates an instance of a connector, it passes the current settings through the `Settings` field and a function through the `SetSettings` field, which the connector can use to update the settings. For example, the constructor of the Google Analytics connector stores the configuration passed as an argument and the `SetSettings` function, and deserializes the settings:
+When Meergo creates an instance of a connector, it passes the current settings through the `Settings` field and a function through the `SetSettings` field, which the connector can use to update the settings. For example, the constructor of the Google Analytics connector stores the configuration passed as an argument and the `SetSettings` function, and deserializes the settings:
 
 ```go
-func New(conf *chichi.AppConfig) (*Analytics, error) {
+func New(conf *meergo.AppConfig) (*Analytics, error) {
     c := Analytics{conf: conf}
     if len(conf.Settings) > 0 {
         err := json.Unmarshal(conf.Settings, &c.settings)
@@ -51,14 +51,14 @@ if err != nil {
 
 ## User Interface
 
-If the connector requires all or part of the settings to be configurable by the user, it can define a user interface (UI) that will be integrated into Chichi's interface. Various components are available to create the interface for a connector: `Input`, `Select`, `Checkbox`, `ColorPicker`, `Radios`, `Range`, `Switch`, `KeyValue`, `FieldSet`, `AlternativeFieldSets`, `Text`, `Button`, and `Alert`.
+If the connector requires all or part of the settings to be configurable by the user, it can define a user interface (UI) that will be integrated into Meergo's interface. Various components are available to create the interface for a connector: `Input`, `Select`, `Checkbox`, `ColorPicker`, `Radios`, `Range`, `Switch`, `KeyValue`, `FieldSet`, `AlternativeFieldSets`, `Text`, `Button`, and `Alert`.
 
 For example, for the previous two settings of Google Analytics, the interface could be defined as follows:
 
 ```go
-&chichi.UI{
-    Fields: []chichi.Component{
-        &chichi.Input{
+&meergo.UI{
+    Fields: []meergo.Component{
+        &meergo.Input{
 			Name:        "MeasurementID",
 			Label:       "Measurement ID",
 			Placeholder: "G-2XYZBEB6AB",
@@ -67,7 +67,7 @@ For example, for the previous two settings of Google Analytics, the interface co
 			MaxLength:   20,
 			HelpText:    "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID",
 		},
-        &chichi.Input{
+        &meergo.Input{
 			Name:        "APISecret",
 			Label:       "API Secret",
 			Placeholder: "ZuHCHFZbRBi8V7u8crWFUz",
@@ -80,7 +80,7 @@ For example, for the previous two settings of Google Analytics, the interface co
 }
 ```
 
-Two `Input` components are present, "MeasurementID" and "APISecret," and a `Button` component with an event named "save." A `Button` component with the "save" event must always be present, as it ensures to Chichi that the values of the interface fields have been saved in the connector's settings.
+Two `Input` components are present, "MeasurementID" and "APISecret," and a `Button` component with an event named "save." A `Button` component with the "save" event must always be present, as it ensures to Meergo that the values of the interface fields have been saved in the connector's settings.
 
 The `Values` field, of type `[]byte`, contains the values of the interface components in JSON format. For example, `Values` could have the following value:
 
@@ -95,7 +95,7 @@ Sure, here's the updated part of the documentation translated into English:
 To provide the interface to the user and respond to events triggered by user interaction, the connector must implement the `ServeUI` method:
 
 ```go
-ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error)
+ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error)
 ```
 
 - `ctx`: Context, it's never `nil`.
@@ -110,14 +110,14 @@ The `ServeUI` method must serve the `"load"` and `"save"` events:
 
 It must also serve any other event associated with the buttons present in the interface. When called for one of these events, `values` are in JSON-serialized format of the user-entered values. If the method returns a non-`nil` interface, the UI is updated with the returned interface.
 
-If the event is not among those expected, the method should return the `ErrUIEventNotExist` error. If the values passed as arguments are not valid, it should return an error of type `InvalidUIValuesError`. You can use the `chichi.NewInvalidUIValuesError` function for this purpose.
+If the event is not among those expected, the method should return the `ErrUIEventNotExist` error. If the values passed as arguments are not valid, it should return an error of type `InvalidUIValuesError`. You can use the `meergo.NewInvalidUIValuesError` function for this purpose.
 
 #### Example
 
 The following is the `ServeUI` method of the Google Analytics connector:
 
 ```go
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -135,13 +135,13 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, r
 		}
 		return nil, ga.conf.SetSettings(ctx, s)
 	default:
-		return nil, chichi.ErrEventNotExist
+		return nil, meergo.ErrEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&chichi.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+			&meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Values: values,
 	}

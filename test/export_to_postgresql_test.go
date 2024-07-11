@@ -11,8 +11,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestExportToPostgreSQL(t *testing.T) {
@@ -21,13 +21,13 @@ func TestExportToPostgreSQL(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+		dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -40,7 +40,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "last_name", Type: types.Text()},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":      "coalesce(email, 'default.email@example.com')",
 					"first_name": "firstName",
@@ -79,7 +79,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportAction := c.AddAction(pgsql, "Users", chichitester.ActionToSet{
+	exportAction := c.AddAction(pgsql, "Users", meergotester.ActionToSet{
 		Name:             "Export users to PostgreSQL",
 		TableName:        "test_export_to_db",
 		TableKeyProperty: "email",
@@ -92,7 +92,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.Text(), Required: true},
 			{Name: "full_name", Type: types.Text(), Required: true},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"full_name": `first_name " " last_name`,
@@ -113,7 +113,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Change the action to export the empty string for full_name.
-	c.SetAction(pgsql, exportAction, chichitester.ActionToSet{
+	c.SetAction(pgsql, exportAction, meergotester.ActionToSet{
 		Name:             "Export users to PostgreSQL",
 		TableName:        "test_export_to_db",
 		TableKeyProperty: "email",
@@ -124,7 +124,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.Text(), Required: true},
 			{Name: "full_name", Type: types.Text(), Required: true},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"full_name": `""`,

@@ -18,8 +18,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/open2b/chichi/apis/connectors"
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo/apis/connectors"
+	"github.com/meergo/meergo/apis/state"
 )
 
 // WebhooksPer values indicates if webhooks are per account, connection, or

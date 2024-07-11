@@ -34,7 +34,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	useEffect(() => {
 		let tab: string;
 		try {
-			tab = localStorage.getItem('chichi_ui_users_tab');
+			tab = localStorage.getItem('meergo_ui_users_tab');
 		} catch (err) {
 			setSelectedTab('traits');
 			return;
@@ -48,7 +48,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 
 	useEffect(() => {
 		try {
-			localStorage.setItem('chichi_ui_users_tab', selectedTab);
+			localStorage.setItem('meergo_ui_users_tab', selectedTab);
 		} catch (err) {
 			console.error(`cannot write the user tab preference on local storage: ${err}`);
 			return;

@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/open2b/chichi/apis"
-	"github.com/open2b/chichi/test/chichitester"
+	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/test/meergotester"
 )
 
 func TestConnections(t *testing.T) {
@@ -21,7 +21,7 @@ func TestConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Ensure that there are no connections.
@@ -32,7 +32,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Create a Dummy (source) connection.
-	dummyID := c.AddDummy("Dummy (source)", chichitester.Source)
+	dummyID := c.AddDummy("Dummy (source)", meergotester.Source)
 
 	// Check if the Dummy connection has been created successfully.
 	connections = nil

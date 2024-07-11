@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestReimport(t *testing.T) {
@@ -21,18 +21,18 @@ func TestReimport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// First of all, create a Dummy connection.
-	dummy := c.AddDummy("Dummy", chichitester.Source)
+	dummy := c.AddDummy("Dummy", meergotester.Source)
 
 	// Add an action that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the first name
 	//
-	dummyAction := c.AddAction(dummy, "Users", chichitester.ActionToSet{
+	dummyAction := c.AddAction(dummy, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -42,7 +42,7 @@ func TestReimport(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 			{Name: "first_name", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -78,7 +78,7 @@ func TestReimport(t *testing.T) {
 	// - the email
 	// - the last name (instead of the first name)
 	//
-	c.SetAction(dummy, dummyAction, chichitester.ActionToSet{
+	c.SetAction(dummy, dummyAction, meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -88,7 +88,7 @@ func TestReimport(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 			{Name: "last_name", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"last_name": "lastName",
@@ -109,10 +109,10 @@ func TestReimport(t *testing.T) {
 		t.Fatalf("expecting a total of %d users, got %d", expectedCount, count)
 	}
 	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
-	//assertEq("first  user first name", nil, users[0].Properties["first_name"])    // <- now is nil (see issue https://github.com/open2b/chichi/issues/767)
+	//assertEq("first  user first name", nil, users[0].Properties["first_name"])    // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)
 	assertEq("first  user last name", "Benois", users[0].Properties["last_name"]) // <- now has a value
 	assertEq("second user email", "bdroghan5@example.com", users[1].Properties["email"])
-	//assertEq("second user first name", nil, users[1].Properties["first_name"])     // <- now is nil (see issue https://github.com/open2b/chichi/issues/767)
+	//assertEq("second user first name", nil, users[1].Properties["first_name"])     // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)
 	assertEq("second user last name", "Droghan", users[1].Properties["last_name"]) // <- now has a value
 
 }

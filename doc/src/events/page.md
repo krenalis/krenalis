@@ -10,19 +10,19 @@ The page call is used when loading a new page. In Single Page Applications (SPAs
 
 ## How to Make a Page Call
 
-To make a page call, you can use a Chichi SDK. Refer to its documentation for more details.
+To make a page call, you can use a Meergo SDK. Refer to its documentation for more details.
 
 For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a page call (apart from the automatic page call triggered by the snippet on page load) in the following way:
 
 ```javascript
-chichiAnalytics.page('Product View', {
+meergoAnalytics.page('Product View', {
 	productId: 308263,
 });
 ```
 
 The argument, `'Sign Up'`, is the name of the page. The second argument contains the properties of the event, offering additional context to track page views. This extra information enhances the comprehension of your users' actions and is stored along with the event.
 
-The following is an example of how the previous page call would appear in Chichi once received and processed:
+The following is an example of how the previous page call would appear in Meergo once received and processed:
 ```json
 {
   "anonymousId": "3a8b2c9f6e107d5e8b1c0f47",
@@ -45,19 +45,19 @@ The following is an example of how the previous page call would appear in Chichi
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Chichi enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Properties
 
 Properties are like extra details that tell you more about the page. You can include whatever information you need.
 
-They are accessible in Chichi within a property of the event called `properties` as a JSON value.
+They are accessible in Meergo within a property of the event called `properties` as a JSON value.
 
 ### Prefilled Properties
 
-Chichi doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
+Meergo doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
-However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following properties when applicable:
+However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following properties when applicable:
 
 | Property   | JSON&nbsp;Type      | Description                                                                                                                                                                                                                                |
 |------------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

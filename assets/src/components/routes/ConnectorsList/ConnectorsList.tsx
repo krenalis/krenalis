@@ -32,8 +32,8 @@ const ConnectorsList = () => {
 	}, [connectionRole]);
 
 	const authorizeWithOAuth = async (connectorName: string, role: Role) => {
-		localStorage.setItem('chichi_ui_add_connector_name', connectorName);
-		localStorage.setItem('chichi_ui_add_connection_role', connectionRole);
+		localStorage.setItem('meergo_ui_add_connector_name', connectorName);
+		localStorage.setItem('meergo_ui_add_connection_role', connectionRole);
 		let res: authCodeURLResponse;
 		try {
 			res = await api.connectors.authCodeURL(connectorName, role);

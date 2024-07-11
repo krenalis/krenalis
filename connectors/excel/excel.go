@@ -18,8 +18,8 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -29,13 +29,13 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the File, Sheets, and UIHandler interfaces.
 var _ interface {
-	chichi.File
-	chichi.Sheets
-	chichi.UIHandler
+	meergo.File
+	meergo.Sheets
+	meergo.UIHandler
 } = (*Excel)(nil)
 
 func init() {
-	chichi.RegisterFile(chichi.FileInfo{
+	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "Excel",
 		Icon:      icon,
 		Extension: "xlsx",
@@ -43,7 +43,7 @@ func init() {
 }
 
 // New returns a new Excel connector instance.
-func New(conf *chichi.FileConfig) (*Excel, error) {
+func New(conf *meergo.FileConfig) (*Excel, error) {
 	c := Excel{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -55,7 +55,7 @@ func New(conf *chichi.FileConfig) (*Excel, error) {
 }
 
 type Excel struct {
-	conf     *chichi.FileConfig
+	conf     *meergo.FileConfig
 	settings *Settings
 }
 
@@ -69,7 +69,7 @@ func (exel *Excel) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
+func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
 
 	f, err := excelize.OpenReader(r, excelize.Options{
 		RawCellValue: true,
@@ -85,7 +85,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 	rows, err := f.Rows(sheet)
 	if err != nil {
 		if _, ok := err.(excelize.ErrSheetNotExist); ok {
-			return chichi.ErrSheetNotExist
+			return meergo.ErrSheetNotExist
 		}
 		return err
 	}
@@ -106,7 +106,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 			for i := range columns {
 				if exel.settings.HasColumnNames {
 					header := record[i]
-					name := chichi.SuggestPropertyName(header)
+					name := meergo.SuggestPropertyName(header)
 					if name == "" {
 						return fmt.Errorf("header %q, of column %s, cannot be converted to a valid property name", header, columnNumberToName(i+1))
 					}
@@ -153,7 +153,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -165,12 +165,12 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte, rol
 	case "save":
 		return nil, exel.saveValues(ctx, values, role)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: chichi.Source},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
 		},
 		Values: values,
 	}
@@ -193,7 +193,7 @@ func (exel *Excel) Sheets(ctx context.Context, r io.Reader) ([]string, error) {
 }
 
 // Write writes to w the records read from records.
-func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
+func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
 
 	f := excelize.NewFile()
 	defer f.Close()
@@ -250,13 +250,13 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 }
 
 // saveValues saves the user-entered values as settings.
-func (exel *Excel) saveValues(ctx context.Context, values []byte, role chichi.Role) error {
+func (exel *Excel) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
 	var s Settings
 	err := json.Unmarshal(values, &s)
 	if err != nil {
 		return err
 	}
-	if role != chichi.Source {
+	if role != meergo.Source {
 		s.HasColumnNames = false
 	}
 	b, err := json.Marshal(s)

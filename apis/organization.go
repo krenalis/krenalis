@@ -26,10 +26,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 
 	"github.com/jordan-wright/email"
 	"golang.org/x/crypto/bcrypt"
@@ -124,7 +124,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
 	emailToSend := &emailToSend{
 		From:     this.apis.smtp.User,
-		Subject:  "You have been invited to Chichi",
+		Subject:  "You have been invited to Meergo",
 		To:       email,
 		BodyHTML: []byte(t),
 	}

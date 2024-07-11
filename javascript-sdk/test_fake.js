@@ -326,7 +326,7 @@ class HTMLDocument {
 	#visibilityState = 'visible'
 
 	referrer = ''
-	title = 'Hello from Chichi'
+	title = 'Hello from Meergo'
 
 	get visibilityState() {
 		return this.#visibilityState

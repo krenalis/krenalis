@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 // quoteColumn quotes a column name.

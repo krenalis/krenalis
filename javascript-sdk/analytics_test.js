@@ -160,8 +160,8 @@ Deno.test('Analytics', async (t) => {
 			}
 		}
 		assert(hasQueueKey)
-		assert(localStorage.getItem(`chichi.rq6JJg5.leader.beat`) != null)
-		assert(localStorage.getItem(`chichi.rq6JJg5.leader.election`) != null)
+		assert(localStorage.getItem(`meergo.rq6JJg5.leader.beat`) != null)
+		assert(localStorage.getItem(`meergo.rq6JJg5.leader.election`) != null)
 		a.close()
 	})
 

@@ -14,12 +14,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/datastore/warehouses/clickhouse"
-	"github.com/open2b/chichi/apis/datastore/warehouses/postgresql"
-	"github.com/open2b/chichi/apis/datastore/warehouses/snowflake"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/datastore/warehouses/clickhouse"
+	"github.com/meergo/meergo/apis/datastore/warehouses/postgresql"
+	"github.com/meergo/meergo/apis/datastore/warehouses/snowflake"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 )
 
 type (

@@ -1,16 +1,16 @@
 # Telemetry
 
-Telemetry in Chichi consists in **four** major **components**:
+Telemetry in Meergo consists in **four** major **components**:
 
-* this Go package (`chichi/telemetry`)
+* this Go package (`meergo/telemetry`)
 * the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) – for collecting **traces, logs and metrics**
 * [Jaeger](https://www.jaegertracing.io/) – for handling and querying **traces and logs**
 * [Prometheus](https://prometheus.io/) – for handling and querying **metrics**
 
 ```mermaid
 flowchart TD
-    chichi["The package
-    <pre>chichi/telemetry</pre>"]
+    meergo["The package
+    <pre>meergo/telemetry</pre>"]
     collector["<b>Open Telemetry Collector</b>
       Listens on port 4317.
     "]
@@ -22,7 +22,7 @@ flowchart TD
     prometheus_ui["Prometheus Web UI
     <a href='http://localhost:9095'>➡️ http://localhost:9095/</a>"]
 
-    chichi -- Traces, Logs and Metrics --> collector
+    meergo -- Traces, Logs and Metrics --> collector
 
     collector -- Traces and Logs --> jaeger <--> jaeger_ui
     collector -- Metrics --> prometheus <--> prometheus_ui
@@ -46,7 +46,7 @@ flowchart TD
 ## Abstract
 
 The following sections indicate how to **install** and **run** the three
-components necessary to enable telemetry in Chichi, that are:
+components necessary to enable telemetry in Meergo, that are:
 
 * the **OpenTelemetry Collector**
 * **Jaeger**
@@ -164,7 +164,7 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 
 > We execute the web UI of Prometheus on the port **9095** (through the option
 > `--web.listen-address="0.0.0.0:9095"`) because the port **9090** is usually
-> used by Chichi.
+> used by Meergo.
 
 ### Accessing the Prometheus UI
 

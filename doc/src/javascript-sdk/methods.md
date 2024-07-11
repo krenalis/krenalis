@@ -79,7 +79,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichiAnalytics.page('Shirt', {
+meergoAnalytics.page('Shirt', {
     productId: 308263,
 }).then(() => console.log('event queued'));
 ```
@@ -142,7 +142,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichiAnalytics.screen('Order Completed', {
+meergoAnalytics.screen('Order Completed', {
 	items: 3,
     total: 274.99,
 }).then(() => console.log('event queued'));
@@ -190,7 +190,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichiAnalytics.screen('Order Completed', {
+meergoAnalytics.screen('Order Completed', {
 	items: 3,
 	total: 274.99,
 });
@@ -244,7 +244,7 @@ It returns a `Promise` that resolve when the event has queued. If the browser do
 #### Example
 
 ```javascript
-chichiAnalytics.identify('59a20n37ec82', {
+meergoAnalytics.identify('59a20n37ec82', {
 	firstName: 'Emily',
 	lastName: 'Johnson',
 	email: 'emma.johnson@example.com',
@@ -323,11 +323,11 @@ If no arguments are provided, it returns an instance of the [Group class](group-
 #### Example
 
 ```javascript
-const groupId = chichiAnalytics.group().id();
+const groupId = meergoAnalytics.group().id();
 ```
 
 ```javascript
-chichiAnalytics.group('84s76y49tb28v1jxq', {
+meergoAnalytics.group('84s76y49tb28v1jxq', {
 	name: "AcmeTech",
 	industry: "Technology",
 	employeeCount: 100
@@ -362,7 +362,7 @@ Returns an instance of the [`User class`](user-class.md) representing the user.
 #### Example
 
 ```javascript
-const traits = chichiAnalytics.user().traits();
+const traits = meergoAnalytics.user().traits();
 ```
 
 ## setAnonymousId
@@ -403,7 +403,7 @@ It returns the Anonymous ID, if called after `Analytics` is ready.
 #### Example
 
 ```javascript
-chichiAnalytics.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
+meergoAnalytics.setAnonymousId('cd320a46-0642-468c-9f03-c8647faa8ac4');
 ```
 
 ## getSessionId
@@ -432,7 +432,7 @@ There are no parameters. Returns a `Number` representing the current session ide
 #### Example
 
 ```javascript
-const sessionId = chichiAnalytics.getSessionId();
+const sessionId = meergoAnalytics.getSessionId();
 ```
 
 ## startSession
@@ -463,7 +463,7 @@ startSession(id?: number): void
 #### Example
 
 ```javascript
-chichiAnalytics.startSession();
+meergoAnalytics.startSession();
 ```
 
 ## endSession
@@ -492,7 +492,7 @@ There are no parameters.
 #### Example
 
 ```javascript
-chichiAnalytics.endSession();
+meergoAnalytics.endSession();
 ```
 
 ## ready
@@ -525,13 +525,13 @@ It returns a `Promise` that resolves or rejects when Analytics finishes initiali
 #### Example
 
 ```javascript
-chichiAnalytics.ready(() => console.log('Analytics has been inizialized'));
+meergoAnalytics.ready(() => console.log('Analytics has been inizialized'));
 ```
 
 ```javascript
-import Analytics from 'chichi-javascript-sdk';
-const chichiAnalytics = new Analytics('<write key>', '<endpoint>');
-await chichiAnalytics.ready();
+import Analytics from 'meergo-javascript-sdk';
+const meergoAnalytics = new Analytics('<write key>', '<endpoint>');
+await meergoAnalytics.ready();
 ```
 
 ## reset
@@ -570,16 +570,16 @@ reset(all?: boolean): void
 #### Example
 
 ```javascript
-chichiAnalytics.reset();  // same as chichiAnalytics.reset(false)
+meergoAnalytics.reset();  // same as meergoAnalytics.reset(false)
 ```
 
 #### Segment Compatibility
 
-To align with Segment's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Chichi. Note that `reset(true)` is not available in Segment.
+To align with Segment's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Meergo. Note that `reset(true)` is not available in Segment.
 
 #### RudderStack Compatibility
 
-To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Chichi. The only difference is that RudderStack clears the current session and starts a new one, while Chichi does not. In Chichi, `reset(true)` works the same way as it does in RudderStack for all strategies.
+To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Meergo. The only difference is that RudderStack clears the current session and starts a new one, while Meergo does not. In Meergo, `reset(true)` works the same way as it does in RudderStack for all strategies.
 
 ## debug
 
@@ -610,7 +610,7 @@ debug(on: boolean): void
 #### Example
 
 ```javascript
-chichiAnalytics.debug(true);
+meergoAnalytics.debug(true);
 ```
 
 ## close
@@ -639,5 +639,5 @@ There are no parameters.
 #### Example
 
 ```javascript
-chichiAnalytics.close();
+meergoAnalytics.close();
 ```

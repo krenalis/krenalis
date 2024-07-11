@@ -33,8 +33,8 @@ func (state *State) keepElections() {
 
 	state.close.Add(1)
 
-	// Check if the CHICHI_DEBUG_ELECTION variable is set.
-	if v := os.Getenv("CHICHI_DEBUG_ELECTION"); v == "true" {
+	// Check if the MEERGO_DEBUG_ELECTION variable is set.
+	if v := os.Getenv("MEERGO_DEBUG_ELECTION"); v == "true" {
 		debugElection = true
 	}
 

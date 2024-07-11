@@ -10,7 +10,7 @@ package apis
 import (
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 func Test_isMetaProperty(t *testing.T) {

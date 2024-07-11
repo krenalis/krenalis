@@ -13,18 +13,18 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Make sure it implements the App and UIHandler interfaces.
 var _ interface {
-	chichi.App
-	chichi.UIHandler
+	meergo.App
+	meergo.UIHandler
 } = (*UISample)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:              "UISample",
 		SourceDescription: "test the UI components",
 		Icon:              "",
@@ -32,7 +32,7 @@ func init() {
 }
 
 // New returns a new UISample connector instance.
-func New(conf *chichi.AppConfig) (*UISample, error) {
+func New(conf *meergo.AppConfig) (*UISample, error) {
 	c := UISample{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -44,17 +44,17 @@ func New(conf *chichi.AppConfig) (*UISample, error) {
 }
 
 type UISample struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
 // Schema returns the schema of the specified target.
-func (uiSample *UISample) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
-	return types.Type{}, chichi.ErrEventTypeNotExist
+func (uiSample *UISample) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -66,57 +66,57 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 	case "save":
 		return nil, uiSample.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "MyInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
-			&chichi.Input{Name: "MyTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
-			&chichi.Select{Name: "MySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []chichi.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
-			&chichi.Checkbox{Name: "MyCheckbox", Label: "Checkbox"},
-			&chichi.ColorPicker{Name: "MyColorPicker", Label: "ColorPicker"},
-			&chichi.Radios{Name: "MyRadios", Label: "Radios", Options: []chichi.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
-			&chichi.Range{Name: "MyRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
-			&chichi.Switch{Name: "MySwitch", Label: "Switch"},
-			&chichi.KeyValue{
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "MyInput", Label: "Input", Placeholder: "Insert Text", HelpText: "Help text of the input component", Rows: 1},
+			&meergo.Input{Name: "MyTextarea", Label: "Textarea", Placeholder: "Insert Text", HelpText: "Help text of the textarea component", Rows: 5},
+			&meergo.Select{Name: "MySelect", Label: "Select", Placeholder: "Choose an option", HelpText: "Help text of the select component", Options: []meergo.Option{{Text: "First select option", Value: "firstOption"}, {Text: "Second select option", Value: "secondOption"}, {Text: "Third select option", Value: "thirdOption"}}},
+			&meergo.Checkbox{Name: "MyCheckbox", Label: "Checkbox"},
+			&meergo.ColorPicker{Name: "MyColorPicker", Label: "ColorPicker"},
+			&meergo.Radios{Name: "MyRadios", Label: "Radios", Options: []meergo.Option{{Text: "First radio option", Value: "firstOption"}, {Text: "Second radio option", Value: "secondOption"}, {Text: "Third radio option", Value: "thirdOption"}}},
+			&meergo.Range{Name: "MyRange", Label: "Range", HelpText: "Help text of the range component", Min: 1, Max: 1000, Step: 10},
+			&meergo.Switch{Name: "MySwitch", Label: "Switch"},
+			&meergo.KeyValue{
 				Name:       "MyKeyValue",
 				Label:      "KeyValue",
 				KeyLabel:   "Key label",
 				ValueLabel: "Value label",
-				KeyComponent: &chichi.Input{
+				KeyComponent: &meergo.Input{
 					Name:        "MyKeyValueKey",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
-				ValueComponent: &chichi.Input{
+				ValueComponent: &meergo.Input{
 					Name:        "MyKeyValueValue",
 					Placeholder: "Insert Text",
 					Rows:        1,
 				},
 			},
-			&chichi.Text{Text: "lorem ipsum dolor sit amet consecuctur", Label: "Text"},
-			&chichi.AlternativeFieldSets{
+			&meergo.Text{Text: "lorem ipsum dolor sit amet consecuctur", Label: "Text"},
+			&meergo.AlternativeFieldSets{
 				Label:    "AlternativeFieldSets",
 				HelpText: "Help text of the alternativeFieldSets component",
-				Sets: []chichi.FieldSet{
+				Sets: []meergo.FieldSet{
 					{
 						Name:  "FirstSet",
 						Label: "First Set",
-						Fields: []chichi.Component{
-							&chichi.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "MyFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "MyFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
+						Fields: []meergo.Component{
+							&meergo.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&meergo.Input{Name: "MyFirstSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&meergo.Input{Name: "MyFirstSetTextarea", Label: "Textarea", Placeholder: "Insert Text", Rows: 5},
 						},
 					},
 					{
 						Name:  "SecondSet",
 						Label: "Second Set",
-						Fields: []chichi.Component{
-							&chichi.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "MySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
-							&chichi.Input{Name: "MySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
-							&chichi.Checkbox{Name: "MySecondSetCheckbox", Label: "Set Checkbox"},
+						Fields: []meergo.Component{
+							&meergo.Input{Name: "MySharedInput", Label: "Shared input", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+							&meergo.Input{Name: "MySecondSetInput", Label: "Input", Placeholder: "Insert Text", Type: "text", MinLength: 1, MaxLength: 253},
+							&meergo.Input{Name: "MySecondSetTextarea", Label: "Textarea", Placeholder: "Insert Text ", Rows: 5},
+							&meergo.Checkbox{Name: "MySecondSetCheckbox", Label: "Set Checkbox"},
 						},
 					},
 				},

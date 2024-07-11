@@ -10,7 +10,7 @@ package events
 import (
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 func Test_Schema(t *testing.T) {

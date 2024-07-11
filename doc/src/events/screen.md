@@ -10,9 +10,9 @@ Use the screen call when there is a change in the displayed content or when a us
 
 ## How to Make a Screen Call
 
-To make a screen call, you can use a Chichi SDK. Refer to its documentation for more details.
+To make a screen call, you can use a Meergo SDK. Refer to its documentation for more details.
 
-The following is an example of how a screen call would appear in Chichi once received and processed:
+The following is an example of how a screen call would appear in Meergo once received and processed:
 
 ```json
 {
@@ -45,13 +45,13 @@ The following is an example of how a screen call would appear in Chichi once rec
 
 Properties are like extra details that tell you more about the screen. You can include whatever information you need.
 
-They are accessible in Chichi within a property of the event called `properties` as a JSON value.
+They are accessible in Meergo within a property of the event called `properties` as a JSON value.
 
 ### Prefilled Properties
 
-Chichi doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
+Meergo doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
-However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following properties when applicable:
+However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following properties when applicable:
 
 | Property   | JSON&nbsp;Type      | Description                                      |
 |------------|---------------------|--------------------------------------------------|

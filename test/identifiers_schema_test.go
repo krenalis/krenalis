@@ -10,8 +10,8 @@ package test
 import (
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestIdentifiersSchema(t *testing.T) {
@@ -20,7 +20,7 @@ func TestIdentifiersSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Retrieve the identifiers schema and ensure it has the correct number of

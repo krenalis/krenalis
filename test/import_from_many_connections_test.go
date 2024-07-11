@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/segmentio/analytics-go/v3"
@@ -28,7 +28,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	ctx := context.Background()
@@ -38,8 +38,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy, dummyAction int
 	{
 
-		dummy = c.AddDummy("Dummy", chichitester.Source)
-		dummyAction = c.AddAction(dummy, "Users", chichitester.ActionToSet{
+		dummy = c.AddDummy("Dummy", meergotester.Source)
+		dummyAction = c.AddAction(dummy, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -51,7 +51,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "first_name", Type: types.Text()},
 				{Name: "last_name", Type: types.Text()},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",
@@ -86,7 +86,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
 		fs = c.AddSourceFilesystem(storageDir)
-		csvAction = c.AddAction(fs, "Users", chichitester.ActionToSet{
+		csvAction = c.AddAction(fs, "Users", meergotester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
 			InSchema: types.Object([]types.Property{
@@ -99,7 +99,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":  "email",
 					"gender": "gender",
@@ -109,7 +109,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			LastChangeTimeProperty: "timestamp",
 			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 			Connector:              "CSV",
-			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 				"Comma":          ",",
 				"HasColumnNames": true,
 			}),
@@ -138,18 +138,18 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				t.Fatalf("expecting one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
-			c.AddAction(javaScript, "Events", chichitester.ActionToSet{
+			c.AddAction(javaScript, "Events", meergotester.ActionToSet{
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			javascriptUsersAction = c.AddAction(javaScript, "Users", chichitester.ActionToSet{
+			javascriptUsersAction = c.AddAction(javaScript, "Users", meergotester.ActionToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
 				}),
-				Transformation: chichitester.Transformation{
+				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},
@@ -208,7 +208,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	if count != 3 {
 		t.Fatalf("expecting user %s to have 3 identities associated, got %d", kBuessenGid, count)
 	}
-	assertEqualIdentity := func(got, expected chichitester.UserIdentity) {
+	assertEqualIdentity := func(got, expected meergotester.UserIdentity) {
 		if !reflect.DeepEqual(got, expected) {
 			t.Fatalf("expecting identity %#v, got %#v", expected, got)
 		}
@@ -216,7 +216,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		dummyIdentity := identities[0]
 		dummyIdentity.LastChangeTime = time.Time{}
-		assertEqualIdentity(dummyIdentity, chichitester.UserIdentity{
+		assertEqualIdentity(dummyIdentity, meergotester.UserIdentity{
 			Connection:     dummy, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
 			Action:         dummyAction,
 			ID:             "dummy1",
@@ -227,7 +227,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	t.Log("identity imported from Dummy is ok")
 	{
 		csvIdentity := identities[1]
-		assertEqualIdentity(csvIdentity, chichitester.UserIdentity{
+		assertEqualIdentity(csvIdentity, meergotester.UserIdentity{
 			Connection:     fs, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
 			Action:         csvAction,
 			ID:             "1",
@@ -239,7 +239,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	{
 		eventIdentity := identities[2]
 		eventIdentity.LastChangeTime = time.Time{}
-		assertEqualIdentity(eventIdentity, chichitester.UserIdentity{
+		assertEqualIdentity(eventIdentity, meergotester.UserIdentity{
 			Connection:     javaScript, // TODO(Gianluca): remove when the Connection field is removed from the UserIdentity.
 			Action:         javascriptUsersAction,
 			ID:             "f4ca124298",

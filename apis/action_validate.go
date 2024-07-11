@@ -16,14 +16,14 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/connectors"
-	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/transformers"
-	"github.com/open2b/chichi/apis/transformers/mappings"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/connectors"
+	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/events"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/apis/transformers/mappings"
+	"github.com/meergo/meergo/types"
 
 	"golang.org/x/exp/maps"
 )
@@ -65,8 +65,8 @@ type validationState struct {
 func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
 	if target == state.Groups {
-		// TODO(Gianluca): https://github.com/open2b/chichi/issues/895.
-		return errors.BadRequest("target Groups is not supported by this installation of Chichi")
+		// TODO(Gianluca): https://github.com/meergo/meergo/issues/895.
+		return errors.BadRequest("target Groups is not supported by this installation of Meergo")
 	}
 
 	inSchema := action.InSchema

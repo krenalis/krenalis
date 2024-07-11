@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package chichi
+package meergo
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 // ErrSheetNotExist indicates that a file does not contain a sheet.

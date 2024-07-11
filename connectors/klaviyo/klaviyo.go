@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -29,26 +29,26 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the App, AppEvents, AppRecords, and UIHandler interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppEvents
-	chichi.AppRecords
-	chichi.UIHandler
+	meergo.App
+	meergo.AppEvents
+	meergo.AppRecords
+	meergo.UIHandler
 } = (*Klavyio)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Klaviyo",
-		Targets:                chichi.Events | chichi.Users,
+		Targets:                meergo.Events | meergo.Users,
 		SourceDescription:      "import clients as users from Klaviyo",
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "clients",
 		Icon:                   icon,
-		SendingMode:            chichi.Cloud,
+		SendingMode:            meergo.Cloud,
 	}, New)
 }
 
 // New returns a new Klaviyo connector instance.
-func New(conf *chichi.AppConfig) (*Klavyio, error) {
+func New(conf *meergo.AppConfig) (*Klavyio, error) {
 	c := Klavyio{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -60,7 +60,7 @@ func New(conf *chichi.AppConfig) (*Klavyio, error) {
 }
 
 type Klavyio struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
@@ -69,13 +69,13 @@ type Settings struct {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (ky *Klavyio) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
+func (ky *Klavyio) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ky *Klavyio) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
-	req := &chichi.EventRequest{
+func (ky *Klavyio) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    "https://a.klaviyo.com/api/events/",
 		Header: http.Header{},
@@ -118,8 +118,8 @@ func (ky *Klavyio) EventRequest(ctx context.Context, event *chichi.Event, eventT
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	return []*chichi.EventType{
+func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return []*meergo.EventType{
 		{
 			ID:          "create_event",
 			Name:        "Create Event",
@@ -129,7 +129,7 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*chichi.EventType, error) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
 
 	var hasUpdatedProperty bool
 
@@ -174,9 +174,9 @@ func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []s
 		return nil, "", io.EOF
 	}
 
-	users := make([]chichi.Record, len(response.Data))
+	users := make([]meergo.Record, len(response.Data))
 	for i, data := range response.Data {
-		users[i] = chichi.Record{
+		users[i] = meergo.Record{
 			ID: data.ID,
 		}
 		updated, _ := data.Attributes["updated"].(string)
@@ -200,11 +200,11 @@ func (ky *Klavyio) Records(ctx context.Context, _ chichi.Targets, properties []s
 }
 
 // Schema returns the schema of the specified target.
-func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 
-	if target == chichi.Events {
+	if target == meergo.Events {
 		if eventType != "create_event" {
-			return types.Type{}, chichi.ErrUIEventNotExist
+			return types.Type{}, meergo.ErrUIEventNotExist
 		}
 		return types.Object([]types.Property{
 			{Name: "email", Type: types.Text(), Required: true},
@@ -381,7 +381,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target chichi.Targets, role chich
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -393,12 +393,12 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, rol
 	case "save":
 		return nil, ky.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
 		Values: values,
 	}
@@ -407,7 +407,7 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, rol
 }
 
 // Update updates a record of the specified target.
-func (ky *Klavyio) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
+func (ky *Klavyio) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -419,15 +419,15 @@ func (ky *Klavyio) saveValues(ctx context.Context, values []byte) error {
 		return err
 	}
 	if n := len(s.PrivateAPIKey); n < 37 {
-		return chichi.NewInvalidUIValuesError("private API key must be at least 37 characters long")
+		return meergo.NewInvalidUIValuesError("private API key must be at least 37 characters long")
 	}
 	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return chichi.NewInvalidUIValuesError("private API key must begin with 'pk_'")
+		return meergo.NewInvalidUIValuesError("private API key must begin with 'pk_'")
 	}
 	for i := 3; i < len(s.PrivateAPIKey); i++ {
 		c := s.PrivateAPIKey[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return chichi.NewInvalidUIValuesError("private API key after 'pk_' must contain only alphanumeric characters")
+			return meergo.NewInvalidUIValuesError("private API key after 'pk_' must contain only alphanumeric characters")
 		}
 	}
 	b, err := json.Marshal(s)

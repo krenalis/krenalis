@@ -1,5 +1,5 @@
 {
-	"name": "chichi-javascript-sdk",
+	"name": "meergo-javascript-sdk",
 	"version": "0.0.1",
 	"main": "analytics.cjs",
 	"module": "analytics.js",

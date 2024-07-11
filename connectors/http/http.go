@@ -23,7 +23,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 // Connector icon.
@@ -31,19 +31,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
-	chichi.FileStorage
-	chichi.UIHandler
+	meergo.FileStorage
+	meergo.UIHandler
 } = (*HTTP)(nil)
 
 func init() {
-	chichi.RegisterFileStorage(chichi.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
 		Name: "HTTP",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new HTTP connection.
-func New(conf *chichi.FileStorageConfig) (*HTTP, error) {
+func New(conf *meergo.FileStorageConfig) (*HTTP, error) {
 	c := HTTP{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -55,7 +55,7 @@ func New(conf *chichi.FileStorageConfig) (*HTTP, error) {
 }
 
 type HTTP struct {
-	conf     *chichi.FileStorageConfig
+	conf     *meergo.FileStorageConfig
 	settings *Settings
 }
 
@@ -75,10 +75,10 @@ func (h *HTTP) CompletePath(ctx context.Context, name string) (string, error) {
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
-			return "", chichi.InvalidPathErrorf("path cannot contains “#“, and control characters")
+			return "", meergo.InvalidPathErrorf("path cannot contains “#“, and control characters")
 		}
 		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
-			return "", chichi.InvalidPathErrorf("path contains an invalid escape sequence")
+			return "", meergo.InvalidPathErrorf("path contains an invalid escape sequence")
 		}
 		if c == '?' && !parsingQuery {
 			path, query = name[:i], name[i+1:]
@@ -122,7 +122,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -136,16 +136,16 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, values []byte, role ch
 	case "save":
 		return nil, h.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.KeyValue{Name: "Headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
-				KeyComponent:   &chichi.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
-				ValueComponent: &chichi.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "443", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&meergo.KeyValue{Name: "Headers", Label: "Headers", KeyLabel: "Key", ValueLabel: "Value",
+				KeyComponent:   &meergo.Input{Label: "Key", Placeholder: "Key", Type: "text", MinLength: 1, MaxLength: 100},
+				ValueComponent: &meergo.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
 		Values: values,
@@ -189,19 +189,19 @@ func (h *HTTP) saveValues(ctx context.Context, values []byte) error {
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Headers.
 	for k, v := range s.Headers {
 		if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
-			return chichi.NewInvalidUIValuesError("header key length must be in range [1,100]")
+			return meergo.NewInvalidUIValuesError("header key length must be in range [1,100]")
 		}
 		if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
-			return chichi.NewInvalidUIValuesError("header value length must be in range [1,10000]")
+			return meergo.NewInvalidUIValuesError("header value length must be in range [1,10000]")
 		}
 	}
 	b, err := json.Marshal(s)

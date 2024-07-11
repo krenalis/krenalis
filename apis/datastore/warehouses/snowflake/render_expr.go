@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
 )
@@ -175,10 +175,10 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 			}
 			quoteString(&s, v)
 		case types.ArrayKind:
-			// Snowflake allows comparison between arrays, but we currently do not support it in Chichi.
+			// Snowflake allows comparison between arrays, but we currently do not support it in Meergo.
 			return "", errors.New("cannot apply operators on Array type")
 		case types.MapKind:
-			// Snowflake allows comparison between objects, but we currently do not support it in Chichi.
+			// Snowflake allows comparison between objects, but we currently do not support it in Meergo.
 			return "", errors.New("cannot apply operators on Map type")
 		default:
 			return "", fmt.Errorf("unexpected column with type %q", k)

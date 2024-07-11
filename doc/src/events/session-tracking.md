@@ -1,10 +1,10 @@
 # Session Tracking
 
-A user session is a series of interactions that a user has with a website or application within a specific time frame. All events recorded within a session will be associated with the same Session ID. Chichi provides the necessary feature to manage user sessions.
+A user session is a series of interactions that a user has with a website or application within a specific time frame. All events recorded within a session will be associated with the same Session ID. Meergo provides the necessary feature to manage user sessions.
 
 Session tracking is vital for understanding user behavior and optimizing product workflows. By combining event tracking metrics with session metadata, businesses can gather insights into the user's product journey, identify issues, and seize optimization opportunities, enabling data-driven decision-making for an enhanced online experience.
 
-Chichi SDKs provide a comprehensive set of functions for session management:
+Meergo SDKs provide a comprehensive set of functions for session management:
 
 * Automatic and manual session creation.
 * Inclusion of a session identifier with each event.
@@ -15,7 +15,7 @@ Additionally, you can start a session with a specific identifier.
 
 ### Session in the JSON Body
 
-When a Chichi SDK sends an event, it includes two session fields. Here's an example of how a session appears in Chichi upon receiving an event:
+When a Meergo SDK sends an event, it includes two session fields. Here's an example of how a session appears in Meergo upon receiving an event:
 
 ```json
 {
@@ -45,7 +45,7 @@ In your data warehouse, Session ID and Session Start are stored respectively in 
 
 The session management functions depend on the specific SDK. The example below uses the [JavaScript SDK](../javascript-sdk.md), but consult the SDK documentation for comprehensive details.
 
-The Chichi [JavaScript SDK](../javascript-sdk.md) automatically manages sessions unless specified otherwise. When a user visits your website for the first time, a session starts with a default timeout of 30 minutes.
+The Meergo [JavaScript SDK](../javascript-sdk.md) automatically manages sessions unless specified otherwise. When a user visits your website for the first time, a session starts with a default timeout of 30 minutes.
 
 Every time an event is recorded, the timeout resets, defaulting back to 30 minutes. However, if the timeout elapses, the current session expires. Upon the next event, a new session with a new Session ID will be created.
 
@@ -54,7 +54,7 @@ Every time an event is recorded, the timeout resets, defaulting back to 30 minut
 To prematurely end a session, even before the timeout elapses, you can call the `endSession` function. The next session will automatically start with the subsequent event.
 
 ```javascript
-chichiAnalytics.endSession();
+meergoAnalytics.endSession();
 ```
 
 ### Start a Session
@@ -62,7 +62,7 @@ chichiAnalytics.endSession();
 Alternatively, to promptly initiate a new session, expiring the current one if still ongoing, use the `startSession` function. Optionally, you can pass the desired Session ID as an argument to the function.
 
 ```javascript
-chichiAnalytics.startSession(sessionId);
+meergoAnalytics.startSession(sessionId);
 ```
 
 The Session ID passed as an argument must be an integer and should have the `Number` type.  
@@ -72,7 +72,7 @@ The Session ID passed as an argument must be an integer and should have the `Num
 Retrieve the Session ID of the current session with the `getSessionId` function.
 
 ```javascript
-let sessionId = chichiAnalytics.getSessionId();
+let sessionId = meergoAnalytics.getSessionId();
 ```
 
 ### Disable Automatic Session Tracking
@@ -82,7 +82,7 @@ With automatic session tracking, a session expires when the timeout period concl
 This behavior is the default setting. To disable it, set the `autoTrack` option to `false` when loading the [JavaScript SDK](../javascript-sdk.md):
 
 ```javascript
-chichiAnalytics.load(writeKey, endpoint, {
+meergoAnalytics.load(writeKey, endpoint, {
     sessions: {
 		autoTrack: false // disable the automatic session tracking
     }
@@ -95,7 +95,7 @@ When automatic session tracking is disabled, you can still use the `startSession
 The default session timeout is 30 minutes. If you wish to set a different timeout, specify the `timeout` option with a value in milliseconds when loading the [JavaScript SDK](../javascript-sdk.md):
 
 ```javascript
-chichiAnalytics.load(writeKey, endpoint, {
+meergoAnalytics.load(writeKey, endpoint, {
     sessions: {
 		timeout: 15 * 60000 // set the timeout to 15 minutes
     }

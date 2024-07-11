@@ -38,13 +38,13 @@ const UsersList = () => {
 			}
 			updatedProps.push(cp);
 		}
-		localStorage.setItem('chichi_ui_users_properties', JSON.stringify(updatedProps));
+		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(updatedProps));
 		fetchUsers(pagination.current);
 	};
 
 	const onLimitChange = (e) => {
 		const value = e.currentTarget.value;
-		localStorage.setItem('chichi_ui_users_limit', value);
+		localStorage.setItem('meergo_ui_users_limit', value);
 		fetchUsers(pagination.current);
 	};
 

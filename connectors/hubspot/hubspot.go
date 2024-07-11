@@ -25,8 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -35,24 +35,24 @@ var icon = "<svg></svg>"
 // Make sure it implements the App, AppOAuth, AppRecords, and Webhooks
 // interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppOAuth
-	chichi.AppRecords
-	chichi.Webhooks
+	meergo.App
+	meergo.AppOAuth
+	meergo.AppRecords
+	meergo.Webhooks
 } = (*HubSpot)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "HubSpot",
-		Targets:                chichi.Users,
+		Targets:                meergo.Users,
 		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
 		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
 		TermForUsers:           "contacts",
 		TermForGroups:          "companies",
 		IdentityIDLabel:        "HubSpot ID",
 		Icon:                   icon,
-		WebhooksPer:            chichi.WebhooksPerConnector,
-		OAuth: chichi.OAuth{
+		WebhooksPer:            meergo.WebhooksPerConnector,
+		OAuth: meergo.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",
 			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
@@ -62,7 +62,7 @@ func init() {
 }
 
 // New returns a new HubSpot connector instance.
-func New(conf *chichi.AppConfig) (*HubSpot, error) {
+func New(conf *meergo.AppConfig) (*HubSpot, error) {
 	c := HubSpot{
 		setSettings: conf.SetSettings,
 		httpClient:  conf.HTTPClient,
@@ -71,15 +71,15 @@ func New(conf *chichi.AppConfig) (*HubSpot, error) {
 }
 
 type HubSpot struct {
-	setSettings chichi.SetSettingsFunc
-	httpClient  chichi.HTTPClient
+	setSettings meergo.SetSettingsFunc
+	httpClient  meergo.HTTPClient
 	buf         bytes.Buffer
 }
 
 // Create creates a record for the specified target with the given properties.
-func (hs *HubSpot) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
+func (hs *HubSpot) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
 
-	if target == chichi.Groups {
+	if target == meergo.Groups {
 		return nil
 	}
 
@@ -111,11 +111,11 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
-	if target == chichi.Users {
+	if target == meergo.Users {
 		path += "contacts/search"
 		propertyName = "lastmodifieddate"
 	} else {
@@ -163,9 +163,9 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 		return nil, "", io.EOF
 	}
 
-	records := make([]chichi.Record, len(response.Results))
+	records := make([]meergo.Record, len(response.Results))
 	for i, result := range response.Results {
-		records[i] = chichi.Record{
+		records[i] = meergo.Record{
 			ID: result.ID,
 		}
 		updatedAt, err := time.Parse(time.RFC3339, result.UpdatedAt)
@@ -177,7 +177,7 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 		records[i].LastChangeTime = updatedAt.UTC()
 	}
 
-	if target == chichi.Groups {
+	if target == meergo.Groups {
 		for _, object := range records {
 			contacts, err := hs.companyContacts(ctx, object.ID)
 			if err != nil {
@@ -195,7 +195,7 @@ func (hs *HubSpot) Records(ctx context.Context, target chichi.Targets, propertie
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.WebhookPayload, error) {
+func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
 	// See https://developers.hubspot.com/docs/api/webhooks.
 
 	// Check if the webhook is valid.
@@ -204,10 +204,10 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 		return nil, err
 	}
 	if !isValidWebhook(clientSecret, r) {
-		return nil, chichi.ErrWebhookUnauthorized
+		return nil, meergo.ErrWebhookUnauthorized
 	}
 
-	var events []chichi.WebhookPayload
+	var events []meergo.WebhookPayload
 
 	// Read the requests.
 	var requests []struct {
@@ -223,12 +223,12 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 		return nil, err
 	}
 	for _, req := range requests {
-		var event chichi.WebhookPayload
+		var event meergo.WebhookPayload
 		timestamp := time.UnixMilli(req.OccurredAt).UTC()
 		account := strconv.Itoa(req.PortalId)
 		switch req.SubscriptionType {
 		case "company.propertyChange":
-			event = chichi.GroupPropertyChangeEvent{
+			event = meergo.GroupPropertyChangeEvent{
 				Timestamp: timestamp,
 				Account:   account,
 				Group:     strconv.Itoa(req.ObjectId),
@@ -236,7 +236,7 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 				Value:     req.PropertyValue,
 			}
 		case "contact.propertyChange":
-			event = chichi.UserPropertyChangeEvent{
+			event = meergo.UserPropertyChangeEvent{
 				Timestamp: timestamp,
 				Account:   account,
 				User:      strconv.Itoa(req.ObjectId),
@@ -244,13 +244,13 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 				Value:     req.PropertyValue,
 			}
 		case "company.creation":
-			event = chichi.GroupCreateEvent{
+			event = meergo.GroupCreateEvent{
 				Timestamp: timestamp,
 				Account:   account,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.creation":
-			event = chichi.UserCreateEvent{
+			event = meergo.UserCreateEvent{
 				Timestamp: timestamp,
 				Account:   account,
 				User:      strconv.Itoa(req.ObjectId),
@@ -259,13 +259,13 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 				},
 			}
 		case "company.deletion":
-			event = chichi.GroupDeleteEvent{
+			event = meergo.GroupDeleteEvent{
 				Timestamp: timestamp,
 				Account:   account,
 				Group:     strconv.Itoa(req.ObjectId),
 			}
 		case "contact.deletion":
-			event = chichi.UserDeleteEvent{
+			event = meergo.UserDeleteEvent{
 				Timestamp: timestamp,
 				Account:   account,
 				User:      strconv.Itoa(req.ObjectId),
@@ -278,7 +278,7 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.W
 }
 
 // Schema returns the schema of the specified target.
-func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -357,9 +357,9 @@ func (hs *HubSpot) Schema(ctx context.Context, target chichi.Targets, role chich
 }
 
 // Update updates a record of the specified target.
-func (hs *HubSpot) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
+func (hs *HubSpot) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 
-	if target == chichi.Groups {
+	if target == meergo.Groups {
 		return nil
 	}
 
@@ -517,5 +517,5 @@ func propertyType(c, t string) (types.Type, bool, error) {
 	case "string", "phone_number":
 		return types.Text(), false, nil
 	}
-	return types.Type{}, false, chichi.NewNotSupportedTypeError(c, t)
+	return types.Type{}, false, meergo.NewNotSupportedTypeError(c, t)
 }

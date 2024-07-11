@@ -10,8 +10,8 @@ package test
 import (
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestImportFromDatabase(t *testing.T) {
@@ -20,12 +20,12 @@ func TestImportFromDatabase(t *testing.T) {
 		t.Skip()
 	}
 
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	pgSQL := c.AddSourcePostgreSQL()
 
-	importUsers := c.AddAction(pgSQL, "Users", chichitester.ActionToSet{
+	importUsers := c.AddAction(pgSQL, "Users", meergotester.ActionToSet{
 		Name: "Import users",
 		InSchema: types.Object([]types.Property{
 			{Name: "id", Type: types.Int(32), Required: true},
@@ -34,7 +34,7 @@ func TestImportFromDatabase(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},

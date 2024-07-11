@@ -43,7 +43,7 @@ func makeVendor() error {
 	nodeModulesDir := filepath.Join(root, "assets", "node_modules") + string(os.PathSeparator)
 
 	// Create the out directory used by esbuild.
-	outDir, err := os.MkdirTemp("", "chichi-ui-make-vendor-*")
+	outDir, err := os.MkdirTemp("", "meergo-ui-make-vendor-*")
 	if err != nil {
 		panic(err)
 	}

@@ -18,10 +18,10 @@ Here are some common scenarios when you might want to use a track call:
 
 ## How to Make a Track Call
 
-To make a track call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a track call in the following way:
+To make a track call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a track call in the following way:
 
 ```javascript
-chichiAnalytics.track('Product Viewed', {
+meergoAnalytics.track('Product Viewed', {
 	productId: 'ABC123',
 	category: 'Electronics'
 });
@@ -29,7 +29,7 @@ chichiAnalytics.track('Product Viewed', {
 
 The first argument, `'Product Viewed'`, represents the event, which is essentially the user's action. The second argument contains the properties of the event, offering additional context to track events. This extra information enhances the comprehension of your users' actions and is stored along with the event.
 
-The following is an example of how the previous track call would appear in Chichi once received and processed:
+The following is an example of how the previous track call would appear in Meergo once received and processed:
 
 ```json
 {
@@ -53,19 +53,19 @@ The following is an example of how the previous track call would appear in Chich
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Chichi enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Properties
 
 As seen earlier, properties are pieces of information about the user's action that you wish to store along with the event. You can include whatever information you need.
 
-They are accessible in Chichi within a property of the event called `properties` as a JSON value.
+They are accessible in Meergo within a property of the event called `properties` as a JSON value.
 
 ### Prefilled Properties
 
-Chichi doesn't automatically forward the properties of an event to a destination location. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
+Meergo doesn't automatically forward the properties of an event to a destination location. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
-However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following properties when applicable:
+However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following properties when applicable:
 
 | Property      | JSON&nbsp;Type | Description                                                                                                                                                            |
 |---------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

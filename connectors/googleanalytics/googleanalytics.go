@@ -18,8 +18,8 @@ import (
 	_url "net/url"
 	"strings"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -27,9 +27,9 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the App, AppEvents, and UIHandler interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppEvents
-	chichi.UIHandler
+	meergo.App
+	meergo.AppEvents
+	meergo.UIHandler
 } = (*Analytics)(nil)
 
 // sendToDebugServer controls whether the events should be sent to the debug
@@ -40,17 +40,17 @@ var _ interface {
 const sendToDebugServer = false
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Google Analytics",
-		Targets:                chichi.Events,
+		Targets:                meergo.Events,
 		DestinationDescription: "send events to Google Analytics",
 		Icon:                   icon,
-		SendingMode:            chichi.Cloud,
+		SendingMode:            meergo.Cloud,
 	}, New)
 }
 
 // New returns a new Google Analytics connector instance.
-func New(conf *chichi.AppConfig) (*Analytics, error) {
+func New(conf *meergo.AppConfig) (*Analytics, error) {
 	c := Analytics{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -62,7 +62,7 @@ func New(conf *chichi.AppConfig) (*Analytics, error) {
 }
 
 type Analytics struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
@@ -72,8 +72,8 @@ type Settings struct {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ga *Analytics) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
-	req := &chichi.EventRequest{
+func (ga *Analytics) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
 		Header: http.Header{},
@@ -123,8 +123,8 @@ func (ga *Analytics) EventRequest(ctx context.Context, event *chichi.Event, even
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (ga *Analytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	return []*chichi.EventType{
+func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return []*meergo.EventType{
 		// https://developers.google.com/analytics/devguides/collection/ga4/views?client_type=gtag#manually_send_page_view_events
 		{
 			ID:          "page_view",
@@ -141,7 +141,7 @@ func (ga *Analytics) EventTypes(ctx context.Context) ([]*chichi.EventType, error
 }
 
 // Schema returns the schema of the specified target.
-func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (ga *Analytics) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	switch eventType {
 	case "page_view":
 		return types.Type{}, nil
@@ -152,11 +152,11 @@ func (ga *Analytics) Schema(ctx context.Context, target chichi.Targets, role chi
 			{Name: "item_id", Type: types.Text()},
 		}), nil
 	}
-	return types.Type{}, chichi.ErrEventTypeNotExist
+	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -168,13 +168,13 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, r
 	case "save":
 		return nil, ga.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
-			&chichi.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
+			&meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
 		Values: values,
 	}
@@ -191,18 +191,18 @@ func (ga *Analytics) saveValues(ctx context.Context, values []byte) error {
 		return err
 	}
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return chichi.NewInvalidUIValuesError("Measurement ID length must be in [2,20]")
+		return meergo.NewInvalidUIValuesError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return chichi.NewInvalidUIValuesError("Measurement ID must begin with 'G-' or 'AW-'")
+		return meergo.NewInvalidUIValuesError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	if n := len(s.APISecret); n < 1 || n > 40 {
-		return chichi.NewInvalidUIValuesError("API Secret length must be in [1,40]")
+		return meergo.NewInvalidUIValuesError("API Secret length must be in [1,40]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return chichi.NewInvalidUIValuesError("API secret must contain only alphanumeric characters")
+			return meergo.NewInvalidUIValuesError("API secret must contain only alphanumeric characters")
 		}
 	}
 	b, err := json.Marshal(s)

@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 // TestIdentityResolution2 tests the behavior of Identity Resolution for arrays
@@ -27,7 +27,7 @@ func TestIdentityResolution2(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t, chichitester.DoNotPopulateUserSchema)
+	c := meergotester.InitAndLaunch(t, meergotester.DoNotPopulateUserSchema)
 	defer c.Stop()
 
 	// Add properties to the user schema.
@@ -44,7 +44,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// share the same email.
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
-	storage := chichitester.NewTempStorage(t)
+	storage := meergotester.NewTempStorage(t)
 
 	sourceA := c.AddSourceFilesystem(storage.Root())
 	sourceB := c.AddSourceFilesystem(storage.Root())
@@ -102,7 +102,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Create and execute the actions.
 
 	addJSONAction := func(source int, filename string, properties map[string]bool) int {
-		return c.AddAction(source, "Users", chichitester.ActionToSet{
+		return c.AddAction(source, "Users", meergotester.ActionToSet{
 			Name: "Action",
 			Path: filename,
 			InSchema: types.Object([]types.Property{
@@ -113,13 +113,13 @@ func TestIdentityResolution2(t *testing.T) {
 				{Name: "last_change_time", Type: types.JSON(), Nullable: true},
 			}),
 			OutSchema: schema,
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				// This transformation functions returns the user without the
 				// properties that are "null".
-				Function: &chichitester.TransformationFunction{
+				Function: &meergotester.TransformationFunction{
 					Source: strings.Join([]string{
 						// TODO(Gianluca): if the proposal
-						// https://github.com/open2b/chichi/issues/877 is
+						// https://github.com/meergo/meergo/issues/877 is
 						// implemented, remove the call to 'json.loads'.
 						`import json`,
 						`def transform(user: dict) -> dict:`,
@@ -134,7 +134,7 @@ func TestIdentityResolution2(t *testing.T) {
 			LastChangeTimeProperty: "last_change_time",
 			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 			Connector:              "JSON",
-			UIValues:               chichitester.UIJSONProperties(properties),
+			UIValues:               meergotester.UIJSONProperties(properties),
 		})
 	}
 

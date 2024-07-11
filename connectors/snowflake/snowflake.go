@@ -19,8 +19,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -30,12 +30,12 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
-	chichi.Database
-	chichi.UIHandler
+	meergo.Database
+	meergo.UIHandler
 } = (*Snowflake)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.DatabaseInfo{
+	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "Snowflake",
 		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
 		Icon:        icon,
@@ -43,7 +43,7 @@ func init() {
 }
 
 // New returns a new Snowflake connector instance.
-func New(conf *chichi.DatabaseConfig) (*Snowflake, error) {
+func New(conf *meergo.DatabaseConfig) (*Snowflake, error) {
 	c := Snowflake{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -55,7 +55,7 @@ func New(conf *chichi.DatabaseConfig) (*Snowflake, error) {
 }
 
 type Snowflake struct {
-	conf     *chichi.DatabaseConfig
+	conf     *meergo.DatabaseConfig
 	settings *Settings
 	db       *sql.DB
 }
@@ -96,12 +96,12 @@ func (sf *Snowflake) LastChangeTimeCondition(column string, typ types.Type, valu
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (sf *Snowflake) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	return sf.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -115,21 +115,21 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, r
 	case "test":
 		return nil, sf.saveValues(ctx, values, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "Database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "Schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
-			&chichi.Input{Name: "Role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Schema", Label: "Schema", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 			{Event: "save", Text: "Save", Variant: "primary"},
 		},
@@ -179,7 +179,7 @@ func (sf *Snowflake) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (sf *Snowflake) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	if err := sf.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -220,31 +220,31 @@ func (sf *Snowflake) saveValues(ctx context.Context, values []byte, test bool) e
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("account length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("account length must be in range [1,255]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("username length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("password length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("password length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("warehouse length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("warehouse length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("database length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("schema length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("schema length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return chichi.NewInvalidUIValuesError("role length must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("role length must be in range [1,255]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -311,5 +311,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "VARIANT":
 		return types.JSON(), nil
 	}
-	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+	return types.Type{}, meergo.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 }

@@ -122,7 +122,7 @@ const FileConnector = () => {
 									</SlButton>
 								}
 							/>
-							{/* // TODO(Gianluca: https://github.com/open2b/chichi/issues/895
+							{/* // TODO(Gianluca: https://github.com/meergo/meergo/issues/895
 							<ListTile
 								key={'groups-action-type'}
 								icon={getConnectorLogo(file.icon)}

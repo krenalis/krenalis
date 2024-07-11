@@ -16,12 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/apis/connectors"
-	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/statistics"
-	"github.com/open2b/chichi/apis/transformers"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/connectors"
+	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/statistics"
+	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/types"
 )
 
 // exportUsers exports the users for the action.
@@ -54,7 +54,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 					u1, u2, action.MatchingProperties.External.Name)}
 			}
 		}
-		// Check if there are duplicated users within Chichi.
+		// Check if there are duplicated users within Meergo.
 		{
 			u1, u2, ok, err := store.DuplicatedUsers(ctx, action.MatchingProperties.Internal)
 			if err != nil {

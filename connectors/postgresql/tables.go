@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -59,7 +59,7 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 
 	// TODO(Gianluca): enum are not supported when alter schemas in the
 	// PostgreSQL driver. Should we keep the support here? This must be
-	// reviewed along with https://github.com/open2b/chichi/issues/582.
+	// reviewed along with https://github.com/meergo/meergo/issues/582.
 
 	query := "SELECT pg_type.typname, pg_enum.enumlabel FROM pg_type JOIN pg_enum ON pg_enum.enumtypid = pg_type.oid"
 	rows, err := tx.Query(ctx, query)

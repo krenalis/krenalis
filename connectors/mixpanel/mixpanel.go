@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -32,23 +32,23 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the App, AppEvents and UIHandler interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppEvents
-	chichi.UIHandler
+	meergo.App
+	meergo.AppEvents
+	meergo.UIHandler
 } = (*Mixpanel)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Mixpanel",
-		Targets:                chichi.Events,
+		Targets:                meergo.Events,
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
-		SendingMode:            chichi.Cloud,
+		SendingMode:            meergo.Cloud,
 	}, New)
 }
 
 type Mixpanel struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
@@ -59,7 +59,7 @@ type Settings struct {
 }
 
 // New returns a new Mixpanel connector instance.
-func New(conf *chichi.AppConfig) (*Mixpanel, error) {
+func New(conf *meergo.AppConfig) (*Mixpanel, error) {
 	c := Mixpanel{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -71,19 +71,19 @@ func New(conf *chichi.AppConfig) (*Mixpanel, error) {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (mp *Mixpanel) EventRequest(ctx context.Context, event *chichi.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*chichi.EventRequest, error) {
+func (mp *Mixpanel) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 
 	if properties["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
 	}
 
-	req := &chichi.EventRequest{
+	req := &meergo.EventRequest{
 		Endpoint: "api",
 		Method:   "POST",
 		URL:      "https://api.mixpanel.com/",
 		Header:   http.Header{},
 	}
-	if mp.conf.Region == chichi.PrivacyRegionEurope {
+	if mp.conf.Region == meergo.PrivacyRegionEurope {
 		req.Endpoint = "api-eu"
 		req.URL = "https://api-eu.mixpanel.com/"
 	}
@@ -174,8 +174,8 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, event *chichi.Event, event
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error) {
-	return []*chichi.EventType{
+func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	return []*meergo.EventType{
 		{
 			ID:          "track",
 			Name:        "Send track events",
@@ -195,7 +195,7 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*chichi.EventType, error)
 }
 
 // Schema returns the schema of the specified target.
-func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (mp *Mixpanel) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {
 		return types.Object([]types.Property{
 			{Name: "event", Label: "Event Name", Placeholder: placeholder, Type: types.Text().WithCharLen(255), Required: true},
@@ -210,11 +210,11 @@ func (mp *Mixpanel) Schema(ctx context.Context, target chichi.Targets, role chic
 	case "screen":
 		return schema(`"Screen View"`), nil
 	}
-	return types.Type{}, chichi.ErrEventTypeNotExist
+	return types.Type{}, meergo.ErrEventTypeNotExist
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -226,14 +226,14 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte, ro
 	case "save":
 		return nil, mp.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
-			&chichi.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
-			&chichi.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
+			&meergo.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
+			&meergo.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
 		},
 		Values: values,
 	}
@@ -244,7 +244,7 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte, ro
 func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
 
 	u := "https://api.mixpanel.com"
-	if mp.conf.Region == chichi.PrivacyRegionEurope {
+	if mp.conf.Region == meergo.PrivacyRegionEurope {
 		u = "https://api-eu.mixpanel.com"
 	}
 	u += path + "?strict=0&project_id=" + mp.settings.ProjectID
@@ -285,13 +285,13 @@ func (mp *Mixpanel) saveValues(ctx context.Context, values []byte) error {
 		return err
 	}
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return chichi.NewInvalidUIValuesError("project ID must be a positive number")
+		return meergo.NewInvalidUIValuesError("project ID must be a positive number")
 	}
 	if n := len(s.Username); n < 20 || n > 100 {
-		return chichi.NewInvalidUIValuesError("username length must be in range [20, 100]")
+		return meergo.NewInvalidUIValuesError("username length must be in range [20, 100]")
 	}
 	if n := len(s.Secret); n < 32 || n > 100 {
-		return chichi.NewInvalidUIValuesError("secret length must be in range [32, 100]")
+		return meergo.NewInvalidUIValuesError("secret length must be in range [32, 100]")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

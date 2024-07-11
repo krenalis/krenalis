@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"

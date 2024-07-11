@@ -18,15 +18,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/connectors/httpclient"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/connectors/httpclient"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/types"
 )
 
 type (
-	EventRequest   = chichi.EventRequest
-	WebhookPayload = chichi.WebhookPayload
+	EventRequest   = meergo.EventRequest
+	WebhookPayload = meergo.WebhookPayload
 )
 
 // ErrUnsupportedTarget indicates that a target is not supported.
@@ -40,7 +40,7 @@ type App struct {
 	httpClient  *httpclient.Client
 	users       schema
 	targets     state.ConnectorTargets
-	inner       chichi.App
+	inner       meergo.App
 	err         error
 }
 
@@ -62,12 +62,12 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		accountID = a.ID
 		accountCode = a.Code
 	}
-	app.inner, app.err = chichi.RegisteredApp(app.name).New(&chichi.AppConfig{
+	app.inner, app.err = meergo.RegisteredApp(app.name).New(&meergo.AppConfig{
 		Settings:     connection.Settings,
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   app.httpClient,
-		Region:       chichi.PrivacyRegion(connection.Workspace().PrivacyRegion),
+		Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:   webhookURL(connection, accountID),
 	})
 	return app
@@ -92,11 +92,11 @@ func (app *App) EventRequest(ctx context.Context, event *Event, eventType string
 	if app.err != nil {
 		return nil, app.err
 	}
-	appEvents, ok := app.inner.(chichi.AppEvents)
+	appEvents, ok := app.inner.(meergo.AppEvents)
 	if !ok {
 		panic("app does not support the Events target")
 	}
-	s, err := app.inner.Schema(ctx, chichi.Events, chichi.Destination, eventType)
+	s, err := app.inner.Schema(ctx, meergo.Events, meergo.Destination, eventType)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	return app.inner.(chichi.AppEvents).EventTypes(ctx)
+	return app.inner.(meergo.AppEvents).EventTypes(ctx)
 }
 
 // Schema returns the app's schema for the provided target. If target is
@@ -139,11 +139,11 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	}
 	switch target {
 	case state.Events:
-		return app.inner.Schema(ctx, chichi.Events, chichi.Role(role), eventType)
+		return app.inner.Schema(ctx, meergo.Events, meergo.Role(role), eventType)
 	case state.Users:
 		return app.userSchema(ctx, types.Role(role))
 	case state.Groups:
-		schema, err := app.inner.Schema(ctx, chichi.Groups, chichi.Role(role), "")
+		schema, err := app.inner.Schema(ctx, meergo.Groups, meergo.Role(role), "")
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -224,8 +224,8 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 	}
 	w := appWriter{
 		ack:     ack,
-		target:  chichi.Targets(target),
-		records: app.inner.(chichi.AppRecords),
+		target:  meergo.Targets(target),
+		records: app.inner.(meergo.AppRecords),
 	}
 	return &w, nil
 }
@@ -233,8 +233,8 @@ func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
 // appWriter implements the Writer interface for apps.
 type appWriter struct {
 	ack     AckFunc
-	target  chichi.Targets
-	records chichi.AppRecords
+	target  meergo.Targets
+	records meergo.AppRecords
 	closed  bool
 }
 
@@ -270,7 +270,7 @@ func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, er
 	if schema := app.users.schemas[role]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.Schema(ctx, chichi.Users, chichi.Role(role), "")
+	schema, err := app.inner.Schema(ctx, meergo.Users, meergo.Role(role), "")
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -291,7 +291,7 @@ type appRecords struct {
 	timeLayouts    *state.TimeLayouts
 	lastChangeTime time.Time
 	appName        string
-	inner          chichi.App
+	inner          meergo.App
 	last           bool
 	err            error
 	closed         bool
@@ -306,7 +306,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 
-		cursor := chichi.Cursor{
+		cursor := meergo.Cursor{
 			LastChangeTime: r.lastChangeTime,
 		}
 
@@ -319,7 +319,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 		for {
 
 			// Retrieve the users.
-			users, next, err := r.inner.(chichi.AppRecords).Records(ctx, chichi.Users, names, cursor)
+			users, next, err := r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, names, cursor)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = err

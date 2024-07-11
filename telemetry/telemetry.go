@@ -29,10 +29,10 @@ import (
 )
 
 const (
-	tracerName     = "ChichiTracer"
-	meterName      = "ChichiMeter"
+	tracerName     = "MeergoTracer"
+	meterName      = "MeergoMeter"
 	otlEndpoint    = "localhost:4317"
-	serviceNameKey = "Chichi"
+	serviceNameKey = "Meergo"
 )
 
 // Init initializes the telemetry.

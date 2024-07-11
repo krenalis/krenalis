@@ -51,9 +51,9 @@ The table below shows, for each data type, which Go type a connector can return.
 For example, when registering an app connector:
 
 ```go
-chichi.RegisterApp(chichi.AppInfo{
+meergo.RegisterApp(meergo.AppInfo{
     ...
-    TimeLayouts: chichi.TimeLayouts{
+    TimeLayouts: meergo.TimeLayouts{
         DateTime: "2006-01-02T15:04:05.999Z",
         Date:     "2006-01-02",
         Time:     "15:04:05.999Z",

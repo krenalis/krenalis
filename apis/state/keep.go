@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 )

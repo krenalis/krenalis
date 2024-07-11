@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open2b/chichi/apis"
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/types"
 )
 
 type workspace struct {

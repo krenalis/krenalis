@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/apis/datastore/warehouses"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 )

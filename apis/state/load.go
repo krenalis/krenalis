@@ -14,13 +14,13 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/postgres"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/postgres"
 )
 
 var (
-	sheetsType    = reflect.TypeOf((*chichi.Sheets)(nil)).Elem()
-	uiHandlerType = reflect.TypeOf((*chichi.UIHandler)(nil)).Elem()
+	sheetsType    = reflect.TypeOf((*meergo.Sheets)(nil)).Elem()
+	uiHandlerType = reflect.TypeOf((*meergo.UIHandler)(nil)).Elem()
 )
 
 // load loads the state.
@@ -40,32 +40,32 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 		}
 
 		// Read all connectors.
-		connectors := chichi.Connectors()
+		connectors := meergo.Connectors()
 		state.connectors = make(map[string]*Connector, len(connectors))
 		for name, connector := range connectors {
 			c := Connector{}
 			var ct reflect.Type
 			switch connector := connector.(type) {
-			case chichi.AppInfo:
+			case meergo.AppInfo:
 				c.Name = connector.Name
 				c.Type = AppType
 				c.Targets = ConnectorTargets(connector.Targets)
 				if c.Targets.Contains(Groups) {
-					// TODO(Gianluca): https://github.com/open2b/chichi/issues/895.
-					return errors.New("target Groups is not supported by this installation of Chichi")
+					// TODO(Gianluca): https://github.com/meergo/meergo/issues/895.
+					return errors.New("target Groups is not supported by this installation of Meergo")
 				}
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = connector.TermForUsers
 				c.TermForGroups = connector.TermForGroups
 				switch connector.SendingMode {
-				case chichi.Cloud:
+				case meergo.Cloud:
 					mode := Cloud
 					c.SendingMode = &mode
-				case chichi.Device:
+				case meergo.Device:
 					mode := Device
 					c.SendingMode = &mode
-				case chichi.Combined:
+				case meergo.Combined:
 					mode := Combined
 					c.SendingMode = &mode
 				}
@@ -85,7 +85,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					}
 				}
 				ct = connector.ReflectType()
-			case chichi.DatabaseInfo:
+			case meergo.DatabaseInfo:
 				c.Name = connector.Name
 				c.Type = DatabaseType
 				c.Targets = UsersFlag
@@ -93,7 +93,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.SampleQuery = connector.SampleQuery
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
-			case chichi.FileInfo:
+			case meergo.FileInfo:
 				c.Name = connector.Name
 				c.Type = FileType
 				c.FileExtension = connector.Extension
@@ -101,13 +101,13 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 				c.HasSheets = ct.Implements(sheetsType)
-			case chichi.FileStorageInfo:
+			case meergo.FileStorageInfo:
 				c.Name = connector.Name
 				c.Type = FileStorageType
 				c.Targets = UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
-			case chichi.MobileInfo:
+			case meergo.MobileInfo:
 				c.Name = connector.Name
 				c.Type = MobileType
 				c.SourceDescription = connector.SourceDescription
@@ -117,7 +117,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
-			case chichi.ServerInfo:
+			case meergo.ServerInfo:
 				c.Name = connector.Name
 				c.Type = ServerType
 				c.SourceDescription = connector.SourceDescription
@@ -127,7 +127,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
-			case chichi.StreamInfo:
+			case meergo.StreamInfo:
 				c.Name = connector.Name
 				c.Type = StreamType
 				c.SourceDescription = connector.SourceDescription
@@ -135,7 +135,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.Targets = EventsFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
-			case chichi.WebsiteInfo:
+			case meergo.WebsiteInfo:
 				c.Name = connector.Name
 				c.Type = WebsiteType
 				c.SourceDescription = connector.SourceDescription

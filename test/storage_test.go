@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestStorage(t *testing.T) {
@@ -25,7 +25,7 @@ func TestStorage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create a file storage connection.
@@ -44,7 +44,7 @@ func TestStorage(t *testing.T) {
 
 	// Test the "/sheets" method.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}
-	gotSheets := c.Sheets(storage, "Excel", "file_with_3_sheets.xlsx", chichitester.NoCompression, []byte("{}"))
+	gotSheets := c.Sheets(storage, "Excel", "file_with_3_sheets.xlsx", meergotester.NoCompression, []byte("{}"))
 	if !reflect.DeepEqual(expectedSheets, gotSheets) {
 		t.Fatalf("expected sheets %#v, got %#v", expectedSheets, gotSheets)
 	}
@@ -60,10 +60,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	// Test the "/records" method.
-	excelUIValues := chichitester.JSONEncodeUIValues(map[string]any{
+	excelUIValues := meergotester.JSONEncodeUIValues(map[string]any{
 		"HasColumnNames": true,
 	})
-	records, schema := c.Records(storage, "Excel", "storage_users.xlsx", "Sheet1", chichitester.NoCompression, excelUIValues, 100)
+	records, schema := c.Records(storage, "Excel", "storage_users.xlsx", "Sheet1", meergotester.NoCompression, excelUIValues, 100)
 
 	expectedRecords := []map[string]any{
 		{"customer_id": "1234", "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith"},

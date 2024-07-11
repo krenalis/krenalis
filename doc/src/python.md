@@ -19,9 +19,9 @@ def transform(user: dict) -> dict:
 
 ## Types
 
-The table below outlines the various Chichi types and their corresponding representations in the Python code for the transformation.
+The table below outlines the various Meergo types and their corresponding representations in the Python code for the transformation.
 
-| Chichi&nbsp;Type | Python&nbsp;Type    | Example                                        |
+| Meergo&nbsp;Type | Python&nbsp;Type    | Example                                        |
 |------------------|---------------------|------------------------------------------------|
 | `Boolean`        | `bool`              | `True`                                         |
 | `Int(n)`         | `int`               | `-2586`                                        |

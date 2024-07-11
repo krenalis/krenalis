@@ -4,7 +4,7 @@ Through an identify call, you can connect previous and upcoming events to a reco
 
 ## When to Use the Identify Call
 
-For optimal use, Chichi suggests making an identify call in the following situations:
+For optimal use, Meergo suggests making an identify call in the following situations:
 
 * Right after a user registers for the first time.
 
@@ -14,10 +14,10 @@ For optimal use, Chichi suggests making an identify call in the following situat
 
 ## How to Make an Identify Call
 
-To make an identify call, you can use a Chichi SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make an identify call in the following way:
+To make an identify call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make an identify call in the following way:
 
 ```javascript
-chichiAnalytics.identify('59a20n37ec82', {
+meergoAnalytics.identify('59a20n37ec82', {
 	firstName: 'Emily',
     lastName: 'Johnson',
     email: 'emma.johnson@example.com',
@@ -33,7 +33,7 @@ chichiAnalytics.identify('59a20n37ec82', {
 
 The first argument, `'59a20n37ec82'`, is the **User ID**, which uniquely identifies the user in your website's database. The second argument consists of the **user's traits**, which are pieces of information you want to store with the event and potentially unify with customer data taken from other sources.
 
-The following is an example of how the previous identify call would appear in Chichi once received and processed:
+The following is an example of how the previous identify call would appear in Meergo once received and processed:
 
 ```json
 {
@@ -65,19 +65,19 @@ The following is an example of how the previous identify call would appear in Ch
 }
 ```
 
-As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Chichi enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
+As you can see, there is much more information than what is provided in the JavaScript example. This is because both the SDK used to make the call and Meergo enrich the information by extracting it from the device where the event occurs. Refer to the SDK documentation for more details.
 
 ## Traits
 
 As seen earlier, traits are pieces of information about the event's user that you wish to store along with the event, and possibly integrate with customer data obtained from other sources. You can include whatever information you need.
 
-The traits can be passed to Chichi through the identify and track calls. They are accessible in Chichi within a property of the event called `traits` as a JSON value.
+The traits can be passed to Meergo through the identify and track calls. They are accessible in Meergo within a property of the event called `traits` as a JSON value.
 
 ### Prefilled Traits
 
-Chichi doesn't automatically forward a user's traits to a destination. Instead, the control lies in your hands to choose and specify the traits you want to send when configuring the mapping.
+Meergo doesn't automatically forward a user's traits to a destination. Instead, the control lies in your hands to choose and specify the traits you want to send when configuring the mapping.
 
-However, when you set up a mapping, Chichi automatically fills in the mapping expressions with the following traits when applicable:
+However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following traits when applicable:
 
 | Trait         | JSON&nbsp;Type | Description                                                                                                                                                                                    |
 |---------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

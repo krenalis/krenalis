@@ -16,9 +16,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/open2b/chichi/apis"
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestExportZeroUsers(t *testing.T) {
@@ -27,15 +27,15 @@ func TestExportZeroUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Test the export of zero users to an app (Dummy).
 	func() {
-		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination)
-		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
+		dummyDest := c.AddDummy("Dummy (destination)", meergotester.Destination)
+		exportUsersActionID := c.AddAction(dummyDest, "Users", meergotester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -45,14 +45,14 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 				{Name: "lastName", Type: types.Text()},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":    "email",
 					"lastName": "last_name",
 				},
 			},
-			ExportMode: chichitester.ExportModeCreateOrUpdate,
-			MatchingProperties: &chichitester.MatchingProperties{
+			ExportMode: meergotester.ExportModeCreateOrUpdate,
+			MatchingProperties: &meergotester.MatchingProperties{
 				Internal: "email",
 				External: types.Property{
 					Name: "email",
@@ -69,15 +69,15 @@ func TestExportZeroUsers(t *testing.T) {
 	func() {
 
 		// Create the temporary storage.
-		storage := chichitester.NewTempStorage(t)
+		storage := meergotester.NewTempStorage(t)
 
 		// Create the Filesystem connection.
-		fsID := c.AddConnection(chichitester.ConnectionToAdd{
+		fsID := c.AddConnection(meergotester.ConnectionToAdd{
 			Name:      "Filesystem",
-			Role:      chichitester.Destination,
+			Role:      meergotester.Destination,
 			Enabled:   true,
 			Connector: "Filesystem",
-			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 				"Root": storage.Root(),
 			}),
 		})
@@ -86,7 +86,7 @@ func TestExportZeroUsers(t *testing.T) {
 		exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
 		// Add an action to the Filesystem for exporting the users.
-		exportUsersActionID := c.AddAction(fsID, "Users", chichitester.ActionToSet{
+		exportUsersActionID := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 			Name: "Export users to the CSV on Filesystem",
 			Path: exportedFilename,
 			OutSchema: types.Object([]types.Property{
@@ -96,7 +96,7 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
 			}),
 			Connector: "CSV",
-			UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 				"Comma": ",",
 			}),
 			FileOrderingPropertyPath: "email",

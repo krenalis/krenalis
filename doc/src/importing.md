@@ -1,11 +1,11 @@
 # Importing
 
 > ⚠️⚠️⚠️ NOTE.
-> This part of Chichi is under active development, so the content of this page may be outdated in any moment.
+> This part of Meergo is under active development, so the content of this page may be outdated in any moment.
 
-When importing users from the action of a connection, be it an app, file, database or a connection that receives events, these users are imported into Chichi in the form of "user identities" and are associated with the importing action.
+When importing users from the action of a connection, be it an app, file, database or a connection that receives events, these users are imported into Meergo in the form of "user identities" and are associated with the importing action.
 
-The **Identity Resolution** procedure will then evaluate whether or not these user identities correspond to the same user, thus establishing and updating the actual users within Chichi.
+The **Identity Resolution** procedure will then evaluate whether or not these user identities correspond to the same user, thus establishing and updating the actual users within Meergo.
 
 ## Behavior
 
@@ -18,7 +18,7 @@ When a user identity is imported from a connection's action, the identities are 
 
 Identifying a user identity and understanding how this identification occurs is essential to ensure that the import occurs correctly.
 
-* when importing from **app**, the identifier provided by the app is used (thus this does not require any manual configuration by the user of Chichi);
+* when importing from **app**, the identifier provided by the app is used (thus this does not require any manual configuration by the user of Meergo);
 * when importing from a **file** or **database**, the [user identifier](#user-identifier) specified in the action's editing page is compared;
 * when importing from an **event**, the `userId` (for non-anonymous user identities) or the `anonymousId` (for anonymous user identities) is compared
 

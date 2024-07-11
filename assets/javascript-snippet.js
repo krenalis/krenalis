@@ -1,8 +1,8 @@
 // Minimize this code snippet by running: npm run minify-snippet
-var analytics = window.chichiAnalytics = window.chichiAnalytics || [];
+var analytics = window.meergoAnalytics = window.meergoAnalytics || [];
 if (analytics.load) {
   window.console && console.error &&
-    console.error("The ChiChi snippet is included twice");
+    console.error("The Meergo snippet is included twice");
 } else {
   analytics.load = function (key, url, options) {
     analytics.key = key;
@@ -11,7 +11,7 @@ if (analytics.load) {
     var script = document.createElement("script");
     script.async = !0;
     script.type = "text/javascript";
-    script.src = "/javascript-sdk/dist/chichi.min.js";
+    script.src = "/javascript-sdk/dist/meergo.min.js";
     var elem = document.getElementsByTagName("script")[0];
     elem.parentNode.insertBefore(script, elem);
   };
@@ -41,5 +41,5 @@ if (analytics.load) {
       };
     })(methods[i]);
   }
-  chichiAnalytics.load("writekey", "endpoint");
+  meergoAnalytics.load("writekey", "endpoint");
 }

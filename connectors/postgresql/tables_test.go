@@ -10,7 +10,7 @@ package postgresql
 import (
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 func TestTypes(t *testing.T) {

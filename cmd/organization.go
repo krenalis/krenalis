@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open2b/chichi/apis"
-	"github.com/open2b/chichi/apis/errors"
+	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/apis/errors"
 )
 
 type organization struct {

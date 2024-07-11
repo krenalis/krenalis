@@ -1,13 +1,13 @@
 # Changing User Schema
 
-The user schema associated with a newly created workspace contains only one property, `email`. This schema should be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Chichi.
+The user schema associated with a newly created workspace contains only one property, `email`. This schema should be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.
 
 ## How to change the user schema
 
 The user schema can be modified both: 
 
 * through the UI
-* by using the "chichi-cli" tool from the command line.
+* by using the "meergo-cli" tool from the command line.
 
 ## Supported operations
 
@@ -23,9 +23,9 @@ Any other operation (as changing a property type) is not supported.
 
 ## Properties and types limitations
 
-Here are the restrictions on properties and their types imposed directly by Chichi, which apply regardless of the data warehouse used. Each data warehouse may further restrict the supported types (see [Data Warehouse](./data-warehouse.md) and its subsections for more details on this).
+Here are the restrictions on properties and their types imposed directly by Meergo, which apply regardless of the data warehouse used. Each data warehouse may further restrict the supported types (see [Data Warehouse](./data-warehouse.md) and its subsections for more details on this).
 
-These are the limits imposed by Chichi:
+These are the limits imposed by Meergo:
 
 * Array types cannot have items of type Array, Object, or Map.
 * Map types cannot have values of type Array, Object, or Map.

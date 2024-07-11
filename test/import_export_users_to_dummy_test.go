@@ -10,8 +10,8 @@ package test
 import (
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestImportExportUsersToDummy(t *testing.T) {
@@ -20,15 +20,15 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+		dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -38,7 +38,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 				{Name: "first_name", Type: types.Text()},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",
@@ -51,8 +51,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Export the users to Dummy.
 	{
-		dummyDest := c.AddDummy("Dummy (destination)", chichitester.Destination)
-		exportUsersActionID := c.AddAction(dummyDest, "Users", chichitester.ActionToSet{
+		dummyDest := c.AddDummy("Dummy (destination)", meergotester.Destination)
+		exportUsersActionID := c.AddAction(dummyDest, "Users", meergotester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -61,14 +61,14 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 				{Name: "lastName", Type: types.Text()},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":    "email",
 					"lastName": "email", // this is intended.
 				},
 			},
-			ExportMode: chichitester.ExportModeCreateOrUpdate,
-			MatchingProperties: &chichitester.MatchingProperties{
+			ExportMode: meergotester.ExportModeCreateOrUpdate,
+			MatchingProperties: &meergotester.MatchingProperties{
 				Internal: "email",
 				External: types.Property{
 					Name: "email",
@@ -84,8 +84,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.AddDummy("Dummy (source 2)", chichitester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+		dummySrc := c.AddDummy("Dummy (source 2)", meergotester.Source)
+		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -97,7 +97,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "first_name", Type: types.Text()},
 				{Name: "last_name", Type: types.Text()},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",

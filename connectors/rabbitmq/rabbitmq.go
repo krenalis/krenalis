@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -28,19 +28,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the Stream and the UIHandler interfaces.
 var _ interface {
-	chichi.Stream
-	chichi.UIHandler
+	meergo.Stream
+	meergo.UIHandler
 } = (*RabbitMQ)(nil)
 
 func init() {
-	chichi.RegisterStream(chichi.StreamInfo{
+	meergo.RegisterStream(meergo.StreamInfo{
 		Name: "RabbitMQ",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new RabbitMQ connector instance.
-func New(conf *chichi.StreamConfig) (*RabbitMQ, error) {
+func New(conf *meergo.StreamConfig) (*RabbitMQ, error) {
 	c := RabbitMQ{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -52,7 +52,7 @@ func New(conf *chichi.StreamConfig) (*RabbitMQ, error) {
 }
 
 type RabbitMQ struct {
-	conf       *chichi.StreamConfig
+	conf       *meergo.StreamConfig
 	settings   *Settings
 	conn       *amqp.Connection
 	ch         *amqp.Channel
@@ -93,7 +93,7 @@ func (rmq *RabbitMQ) Receive(ctx context.Context) ([]byte, func(), error) {
 }
 
 // Send sends an event to the stream.
-func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options chichi.SendOptions, ack func(err error)) error {
+func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
 	err := rmq.connect(ctx, true)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options chichi.Send
 }
 
 // ServeUI serves the connector's user interface.
-func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -130,16 +130,16 @@ func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte, r
 	case "test":
 		return nil, rmq.saveValues(ctx, values, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "URL", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
-			&chichi.Input{Name: "Queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "URL", Label: "URL", Placeholder: "amqps://user:pass@example.com/vhost", Type: "text", MinLength: 7, MaxLength: 2048},
+			&meergo.Input{Name: "Queue", Label: "Queue", Placeholder: "queue-name", Type: "text", MinLength: 1, MaxLength: 255},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
@@ -221,17 +221,17 @@ func (rmq *RabbitMQ) saveValues(ctx context.Context, values []byte, test bool) e
 	}
 	// Validate URL.
 	if n := len(s.URL); n < 7 || n > 2048 {
-		return chichi.NewInvalidUIValuesError("URL length in bytes must be in range [7,2048]")
+		return meergo.NewInvalidUIValuesError("URL length in bytes must be in range [7,2048]")
 	}
 	if _, err := amqp.ParseURI(s.URL); err != nil {
-		return chichi.NewInvalidUIValuesError("URL is not a valid RabbitMQ URI")
+		return meergo.NewInvalidUIValuesError("URL is not a valid RabbitMQ URI")
 	}
 	// Validate Queue.
 	if n := len(s.Queue); n == 0 || n > 255 {
-		return chichi.NewInvalidUIValuesError("queue length in bytes must be in range [1,255]")
+		return meergo.NewInvalidUIValuesError("queue length in bytes must be in range [1,255]")
 	}
 	if strings.HasPrefix(s.Queue, "amq.") {
-		return chichi.NewInvalidUIValuesError("queue names starting with 'amq.' are reserved for internal use by the broker")
+		return meergo.NewInvalidUIValuesError("queue names starting with 'amq.' are reserved for internal use by the broker")
 	}
 	err = rmq.testConnection(ctx)
 	if err != nil || test {

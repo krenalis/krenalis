@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/events"
-	"github.com/open2b/chichi/apis/postgres"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/events"
+	"github.com/meergo/meergo/apis/postgres"
 
 	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"

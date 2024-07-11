@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -32,19 +32,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
-	chichi.FileStorage
-	chichi.UIHandler
+	meergo.FileStorage
+	meergo.UIHandler
 } = (*S3)(nil)
 
 func init() {
-	chichi.RegisterFileStorage(chichi.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
 		Name: "S3",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new S3 connector instance.
-func New(conf *chichi.FileStorageConfig) (*S3, error) {
+func New(conf *meergo.FileStorageConfig) (*S3, error) {
 	c := S3{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,7 +56,7 @@ func New(conf *chichi.FileStorageConfig) (*S3, error) {
 }
 
 type S3 struct {
-	conf     *chichi.FileStorageConfig
+	conf     *meergo.FileStorageConfig
 	settings *Settings
 }
 
@@ -70,7 +70,7 @@ type Settings struct {
 // CompletePath returns the complete representation of the given path name.
 func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
-		return "", chichi.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
+		return "", meergo.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
@@ -81,7 +81,7 @@ func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
-		return nil, time.Time{}, chichi.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
+		return nil, time.Time{}, meergo.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
 	}
 	client := ss3.client()
 	res, err := client.GetObject(ctx, &s3.GetObjectInput{
@@ -103,7 +103,7 @@ func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -115,14 +115,14 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role ch
 	case "save":
 		return nil, ss3.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "AccessKeyID", Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
-			&chichi.Input{Name: "SecretAccessKey", Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
-			&chichi.Select{Name: "Region", Label: "Region", Placeholder: "Region", Options: []chichi.Option{
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "AccessKeyID", Label: "Access Key ID", Placeholder: "Access Key ID", Type: "text", MinLength: 20, MaxLength: 20},
+			&meergo.Input{Name: "SecretAccessKey", Label: "Secret Access Key", Placeholder: "Secret Access Key", Type: "password", MinLength: 40, MaxLength: 200},
+			&meergo.Select{Name: "Region", Label: "Region", Placeholder: "Region", Options: []meergo.Option{
 				{Text: "US East (N. Virginia) us-east-1", Value: "us-east-1"},
 				{Text: "US East (Ohio) us-east-2", Value: "us-east-2"},
 				{Text: "US West (N. California) us-west-1", Value: "us-west-1"},
@@ -147,7 +147,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role ch
 				{Text: "Middle East (UAE) me-central-1", Value: "me-central-1"},
 				{Text: "South America (São Paulo) me-central-1", Value: "sa-east-1"},
 			}},
-			&chichi.Input{Name: "Bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
+			&meergo.Input{Name: "Bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
 		Values: values,
 	}
@@ -158,7 +158,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role ch
 // Write writes the data read from r into the file with the given path name.
 func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
-		return chichi.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
+		return meergo.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
@@ -195,26 +195,26 @@ func (ss3 *S3) saveValues(ctx context.Context, values []byte) error {
 	}
 	// Validate AccessKeyID.
 	if n := len(s.AccessKeyID); n != 20 {
-		return chichi.NewInvalidUIValuesError("access key id must be 20 bytes long")
+		return meergo.NewInvalidUIValuesError("access key id must be 20 bytes long")
 	}
 	// Validate SecretAccessKey.
 	if n := len(s.SecretAccessKey); n < 40 || n > 200 {
-		return chichi.NewInvalidUIValuesError("secret access key length in bytes must be in range [40,200]")
+		return meergo.NewInvalidUIValuesError("secret access key length in bytes must be in range [40,200]")
 	}
 	// Validate Region.
 	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
 		"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
 		"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
 	if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
-		return chichi.NewInvalidUIValuesError("region is not valid")
+		return meergo.NewInvalidUIValuesError("region is not valid")
 	}
 	// Validate Bucket.
 	if n := len(s.Bucket); n < 3 || n > 63 {
-		return chichi.NewInvalidUIValuesError("bucket length must be in range [3,63]")
+		return meergo.NewInvalidUIValuesError("bucket length must be in range [3,63]")
 	}
 	if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
 		strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
-		return chichi.NewInvalidUIValuesError("bucket value is not allowed")
+		return meergo.NewInvalidUIValuesError("bucket value is not allowed")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

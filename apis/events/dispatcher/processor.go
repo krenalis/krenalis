@@ -15,10 +15,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/open2b/chichi/apis/connectors"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/transformers"
+	"github.com/meergo/meergo/apis/connectors"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/transformers"
 )
 
 const pipeSize = 100

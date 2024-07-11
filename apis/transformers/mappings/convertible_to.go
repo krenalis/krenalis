@@ -8,7 +8,7 @@
 package mappings
 
 import (
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 // convertMatrix is a matrix which holds information about valid conversions.

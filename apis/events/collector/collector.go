@@ -31,14 +31,14 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi/apis/culture"
-	"github.com/open2b/chichi/apis/datastore"
-	"github.com/open2b/chichi/apis/events"
-	"github.com/open2b/chichi/apis/events/dispatcher"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/statistics"
-	"github.com/open2b/chichi/apis/transformers"
+	"github.com/meergo/meergo/apis/culture"
+	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/events"
+	"github.com/meergo/meergo/apis/events/dispatcher"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/statistics"
+	"github.com/meergo/meergo/apis/transformers"
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"
@@ -441,7 +441,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	_ = enc.Encode(map[string]any{
 		"strategy": strategy,
 		"integrations": map[string]any{
-			"Chichi": map[string]any{
+			"Meergo": map[string]any{
 				"apiKey": writeKey,
 			},
 		},

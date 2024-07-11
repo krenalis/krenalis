@@ -14,8 +14,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 
 	"golang.org/x/exp/maps"
 )
@@ -26,7 +26,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	ws := c.Workspace()
@@ -142,7 +142,7 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Set a primary source for the first property.
 	firstProperty := types.PropertyNames(file.Schema)[0]
-	primarySource := c.AddDummy("Primary Source", chichitester.Source)
+	primarySource := c.AddDummy("Primary Source", meergotester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
 	c.ChangeUserSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()

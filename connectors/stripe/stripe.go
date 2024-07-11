@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 const maxEventPayload = 1024 * 1024
@@ -36,10 +36,10 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the App, AppRecords, UI, and Webhooks interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppRecords
-	chichi.UIHandler
-	chichi.Webhooks
+	meergo.App
+	meergo.AppRecords
+	meergo.UIHandler
+	meergo.Webhooks
 } = (*Stripe)(nil)
 
 var baseURL = "https://api.stripe.com"
@@ -55,24 +55,24 @@ type Settings struct {
 }
 
 type Stripe struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Stripe",
-		Targets:                chichi.Users,
+		Targets:                meergo.Users,
 		SourceDescription:      "import customers as users",
 		DestinationDescription: "export users as customers",
 		TermForUsers:           "customers",
 		Icon:                   icon,
-		WebhooksPer:            chichi.WebhooksPerConnection,
+		WebhooksPer:            meergo.WebhooksPerConnection,
 	}, New)
 }
 
 // New returns a new Stripe connector instance.
-func New(conf *chichi.AppConfig) (*Stripe, error) {
+func New(conf *meergo.AppConfig) (*Stripe, error) {
 	c := Stripe{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -90,7 +90,7 @@ func New(conf *chichi.AppConfig) (*Stripe, error) {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (stripe *Stripe) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
+func (stripe *Stripe) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
 
 	var body bytes.Buffer
 	err := encodeRequest(&body, properties, nil)
@@ -102,7 +102,7 @@ func (stripe *Stripe) Create(ctx context.Context, target chichi.Targets, propert
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.WebhookPayload, error) {
+func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
 
 	// Extract signature from Stripe-Signature header.
 	var timestamp time.Time
@@ -113,7 +113,7 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chich
 			if strings.HasPrefix(part, "t=") {
 				ts, err := strconv.ParseInt(part[2:], 10, 64)
 				if err != nil {
-					return nil, chichi.ErrWebhookUnauthorized
+					return nil, meergo.ErrWebhookUnauthorized
 				}
 				timestamp = time.Unix(ts, 0)
 				continue
@@ -126,7 +126,7 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chich
 			}
 		}
 		if len(signatures) == 0 {
-			return nil, chichi.ErrWebhookUnauthorized
+			return nil, meergo.ErrWebhookUnauthorized
 		}
 	}
 
@@ -154,7 +154,7 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chich
 		}
 	}
 	if !isValidSignature {
-		return nil, chichi.ErrWebhookUnauthorized
+		return nil, meergo.ErrWebhookUnauthorized
 	}
 
 	var message struct {
@@ -172,25 +172,25 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chich
 		return nil, errors.New("webhook message is malformed")
 	}
 
-	var events []chichi.WebhookPayload
+	var events []meergo.WebhookPayload
 	tmp := time.UnixMilli(message.Created).UTC()
 	switch message.Type {
 	case "customer.created":
-		event := chichi.UserCreateEvent{
+		event := meergo.UserCreateEvent{
 			Timestamp:  tmp,
 			User:       message.Data.Object["id"].(string),
 			Properties: message.Data.Object,
 		}
 		events = append(events, event)
 	case "customer.deleted":
-		event := chichi.UserDeleteEvent{
+		event := meergo.UserDeleteEvent{
 			Timestamp: tmp,
 			User:      message.Data.Object["id"].(string),
 		}
 		events = append(events, event)
 	case "customer.updated":
 		for modifiedAttributeName := range message.Data.PreviousAttributes {
-			events = append(events, chichi.UserPropertyChangeEvent{
+			events = append(events, meergo.UserPropertyChangeEvent{
 				Timestamp: tmp,
 				User:      message.Data.Object["id"].(string),
 				Name:      modifiedAttributeName,
@@ -204,7 +204,7 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chich
 }
 
 // Records returns the records of the specified target.
-func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (stripe *Stripe) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
 
 	var body io.Reader
 	if cursor.Next != "" {
@@ -227,9 +227,9 @@ func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, proper
 		return nil, "", io.EOF
 	}
 
-	users := make([]chichi.Record, len(response.Data))
+	users := make([]meergo.Record, len(response.Data))
 	for i, customer := range response.Data {
-		users[i] = chichi.Record{
+		users[i] = meergo.Record{
 			ID:             customer["id"].(string),
 			Properties:     customer,
 			LastChangeTime: time.Now().UTC(),
@@ -241,7 +241,7 @@ func (stripe *Stripe) Records(ctx context.Context, target chichi.Targets, proper
 }
 
 // Schema returns the schema of the specified target.
-func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (stripe *Stripe) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object
 	//
 	// currently the user schema is the standard schema of the user returned
@@ -255,7 +255,7 @@ func (stripe *Stripe) Schema(ctx context.Context, target chichi.Targets, role ch
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -267,12 +267,12 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, 
 	case "save":
 		return nil, stripe.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
 		Values: values,
 	}
@@ -281,7 +281,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, 
 }
 
 // Update updates a record of the specified target.
-func (stripe *Stripe) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
+func (stripe *Stripe) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 
 	var body bytes.Buffer
 	err := encodeRequest(&body, properties, nil)
@@ -330,7 +330,7 @@ func (stripe *Stripe) saveValues(ctx context.Context, values []byte) error {
 		return err
 	}
 	if s.APIKey == "" {
-		return chichi.NewInvalidUIValuesError("API key cannot be empty")
+		return meergo.NewInvalidUIValuesError("API key cannot be empty")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

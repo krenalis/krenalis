@@ -12,7 +12,7 @@ package server
 import (
 	_ "embed"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 // Connector icon.
@@ -34,7 +34,7 @@ var iconPHP = "<svg></svg>"
 var iconPython = "<svg></svg>"
 
 func init() {
-	servers := []chichi.ServerInfo{
+	servers := []meergo.ServerInfo{
 		{
 			Name:              ".NET",
 			SourceDescription: "import events, users and groups from a server using .NET",
@@ -67,12 +67,12 @@ func init() {
 		},
 	}
 	for _, srv := range servers {
-		chichi.RegisterServer(srv, New)
+		meergo.RegisterServer(srv, New)
 	}
 }
 
 // New returns a new Server connector instance.
-func New(*chichi.ServerConfig) (*Server, error) {
+func New(*meergo.ServerConfig) (*Server, error) {
 	return &Server{}, nil
 }
 

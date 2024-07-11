@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package chichi
+package meergo
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 // ConnectorInfo is the interface implemented by connector infos.

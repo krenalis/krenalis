@@ -4,7 +4,7 @@
 
 ### The concept of "meta property"
 
-A meta property is a property that provides additional information about a record. There are meta properties whose presence is necessary for the functioning of Chichi; the list is indicated in the following sections.
+A meta property is a property that provides additional information about a record. There are meta properties whose presence is necessary for the functioning of Meergo; the list is indicated in the following sections.
 
 ### Meta property syntax
 
@@ -27,7 +27,7 @@ A driver must ensure that the data warehouse contains at least these tables with
 |--------------------|-----------------------------------------|---------------|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
 | `users`            | `__id__`                                | `UUID`        | -                              | GID of the user                                                                                                                          |
 | `users`            | `__last_change_time__`                  | `DateTime`    | not null                       | Datetime of last modification of the user                                                                                                |
-| `_user_identities` | `__pk__`                                | `Int(32)`     | auto-incrementing, primary key | It is used to refer a specific identity. It can probably then be removed, see issue [#687](https://github.com/open2b/chichi/issues/687). |
+| `_user_identities` | `__pk__`                                | `Int(32)`     | auto-incrementing, primary key | It is used to refer a specific identity. It can probably then be removed, see issue [#687](https://github.com/meergo/meergo/issues/687). |
 | `_user_identities` | `__action__`                            | `Int(32)`     | not null                       | Action from which the identity has been imported                                                                                         |
 | `_user_identities` | `__is_anonymous__`                      | `Boolean`     | not null, default false        | True for anonymous identities, false in any other case.                                                                                  |
 | `_user_identities` | `__identity_id__`                       | `Text`        | not null                       | Identifier for the identity. For anonymous identities, this is the anonymous ID.                                                         |

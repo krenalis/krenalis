@@ -22,8 +22,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5/stdlib"
 )
@@ -33,12 +33,12 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
-	chichi.Database
-	chichi.UIHandler
+	meergo.Database
+	meergo.UIHandler
 } = (*PostgreSQL)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.DatabaseInfo{
+	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",
 		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
 		Icon:        icon,
@@ -46,7 +46,7 @@ func init() {
 }
 
 // New returns a new PostgreSQL connector instance.
-func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error) {
+func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
 	c := PostgreSQL{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -58,7 +58,7 @@ func New(conf *chichi.DatabaseConfig) (*PostgreSQL, error) {
 }
 
 type PostgreSQL struct {
-	conf     *chichi.DatabaseConfig
+	conf     *meergo.DatabaseConfig
 	settings *Settings
 	db       *sql.DB
 }
@@ -121,7 +121,7 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	if err := ps.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -153,7 +153,7 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (chichi.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -169,19 +169,19 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte, 
 	case "test":
 		return nil, ps.saveValues(ctx, values, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
-			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&chichi.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "5432", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
+			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
@@ -291,23 +291,23 @@ func (ps *PostgreSQL) saveValues(ctx context.Context, values []byte, test bool) 
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return chichi.NewInvalidUIValuesError("username length in bytes must be in range [1,63]")
+		return meergo.NewInvalidUIValuesError("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return chichi.NewInvalidUIValuesError("password length must be in range [1,100]")
+		return meergo.NewInvalidUIValuesError("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return chichi.NewInvalidUIValuesError("database length in bytes must be in range [1,63]")
+		return meergo.NewInvalidUIValuesError("database length in bytes must be in range [1,63]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -387,5 +387,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "UUID":
 		return types.UUID(), nil
 	}
-	return types.Type{}, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+	return types.Type{}, meergo.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 }

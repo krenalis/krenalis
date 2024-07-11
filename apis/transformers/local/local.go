@@ -20,10 +20,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/transformers"
-	"github.com/open2b/chichi/apis/transformers/embed"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/apis/transformers/embed"
+	"github.com/meergo/meergo/types"
 )
 
 type function struct {

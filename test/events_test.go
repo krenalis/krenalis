@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/segmentio/analytics-go/v3"
@@ -27,12 +27,12 @@ func TestEvents(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Load some users in the data warehouse from Dummy.
-	dummySrc := c.AddDummy("Dummy (source)", chichitester.Source)
-	importUsersID := c.AddAction(dummySrc, "Users", chichitester.ActionToSet{
+	dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
+	importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -42,7 +42,7 @@ func TestEvents(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 			{Name: "first_name", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -63,18 +63,18 @@ func TestEvents(t *testing.T) {
 			t.Fatalf("expecting one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.AddAction(javaScriptID, "Events", chichitester.ActionToSet{
+		c.AddAction(javaScriptID, "Events", meergotester.ActionToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.AddAction(javaScriptID, "Users", chichitester.ActionToSet{
+		c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
 			InSchema: types.Type{},
 			OutSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 			}),
-			Transformation: chichitester.Transformation{
+			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
 					"email": "traits.email",
 				},
@@ -215,7 +215,7 @@ func TestEvents(t *testing.T) {
 	// Test importing a user identity with an action that has no mapping.
 	javaScript2ID := c.AddJavaScriptSource("JavaScript (source 2)", "example.com", nil)
 	javaScript2Key := c.ConnectionKeys(javaScript2ID)[0]
-	c.AddAction(javaScript2ID, "Users", chichitester.ActionToSet{
+	c.AddAction(javaScript2ID, "Users", meergotester.ActionToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})

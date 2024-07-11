@@ -10,18 +10,18 @@ package sftp
 import (
 	"testing"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 func TestPathConvert(t *testing.T) {
 	sf := &SFTP{settings: &Settings{Host: "example.com", Port: 22}}
-	tests := []chichi.CompletePathTest{
+	tests := []meergo.CompletePathTest{
 		{Name: "/a", Expected: "sftp://example.com:22/a"},
 		{Name: "/a/b", Expected: "sftp://example.com:22/a/b"},
 		{Name: "a", Expected: "sftp://example.com:22/a"},
 		{Name: "/\x00", Expected: "sftp://example.com:22/%00"},
 	}
-	err := chichi.TestCompletePath(sf, tests)
+	err := meergo.TestCompletePath(sf, tests)
 	if err != nil {
 		t.Errorf("SFTP connector: %s", err)
 	}

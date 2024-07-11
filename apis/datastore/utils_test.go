@@ -10,7 +10,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 var typ = types.Int(32)

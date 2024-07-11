@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestImportUsersFromFileWithTwoActions(t *testing.T) {
@@ -23,7 +23,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Determine the storage directory and assert that such directory exists.
@@ -43,7 +43,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	fsID := c.AddSourceFilesystem(storageDir)
 
 	// Add the first action to the CSV for importing "email" and "name".
-	actionFirstName := c.AddAction(fsID, "Users", chichitester.ActionToSet{
+	actionFirstName := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Import users' email and name from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
@@ -55,7 +55,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			{Name: "first_name", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "name",
 				"email":      "email",
@@ -63,14 +63,14 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		},
 		IdentityProperty: "identity",
 		Connector:        "CSV",
-		UIValues: chichitester.JSONEncodeUIValues(map[string]interface{}{
+		UIValues: meergotester.JSONEncodeUIValues(map[string]interface{}{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),
 	})
 
 	// Add the second action to the CSV for importing "email" and "lastName".
-	actionLastName := c.AddAction(fsID, "Users", chichitester.ActionToSet{
+	actionLastName := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Import users' email and lastName from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
@@ -82,7 +82,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 			{Name: "last_name", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"last_name": "lastname",
 				"email":     "email",
@@ -90,7 +90,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		},
 		IdentityProperty: "identity",
 		Connector:        "CSV",
-		UIValues: chichitester.JSONEncodeUIValues(map[string]interface{}{
+		UIValues: meergotester.JSONEncodeUIValues(map[string]interface{}{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),

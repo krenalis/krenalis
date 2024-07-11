@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
@@ -21,15 +21,15 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.AddDummy("Dummy 1", chichitester.Source)
-	dummy2 := c.AddDummy("Dummy 2", chichitester.Source)
+	dummy1 := c.AddDummy("Dummy 1", meergotester.Source)
+	dummy2 := c.AddDummy("Dummy 2", meergotester.Source)
 
 	// Add two identical actions on two different connections.
-	actionParams := chichitester.ActionToSet{
+	actionParams := meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -41,7 +41,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 			{Name: "first_name", Type: types.Text()},
 			{Name: "last_name", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",

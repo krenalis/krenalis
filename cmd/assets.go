@@ -11,7 +11,7 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/open2b/chichi/telemetry"
+	"github.com/meergo/meergo/telemetry"
 )
 
 type assets struct {

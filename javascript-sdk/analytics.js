@@ -20,7 +20,7 @@ const maxEventSize = 32 * 1024
 const maxSafeInteger = 9007199254740991
 
 // queueKeyReg is the regexp for storage queue keys.
-const queueKeyReg = /^chichi\.[a-zA-Z0-9]{7}\.[a-zA-Z0-9]{8}(?:-[a-zA-Z0-9]{4}){3}-[a-zA-Z0-9]{12}\.queue$/
+const queueKeyReg = /^meergo\.[a-zA-Z0-9]{7}\.[a-zA-Z0-9]{8}(?:-[a-zA-Z0-9]{4}){3}-[a-zA-Z0-9]{12}\.queue$/
 
 class EndpointURLError extends Error {
 	constructor(endpoint) {
@@ -78,7 +78,7 @@ class Analytics {
 			this.#options.sessions.timeout,
 			this.#options.debug,
 		)
-		this.#keysPrefix = `chichi.${writeKey.slice(0, 7)}`
+		this.#keysPrefix = `meergo.${writeKey.slice(0, 7)}`
 		this.#queue = new Queue(localStorage, `${this.#keysPrefix}.*.queue`, maxEventSize)
 		this.#queue.debug(this.#options.debug)
 		this.#user = new User(this.#storage)
@@ -457,7 +457,7 @@ class Analytics {
 		const n = navigator
 		event.context = {
 			library: {
-				name: 'chichi.js',
+				name: 'meergo.js',
 				version: version,
 			},
 			// According to caniuse.com, IE11 does not support the 'language' property but does support 'userLanguage'.

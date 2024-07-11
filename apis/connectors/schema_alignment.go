@@ -10,7 +10,7 @@ package connectors
 import (
 	"fmt"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 // checkSchemaAlignment checks whether the schema t1 is aligned with t2 and

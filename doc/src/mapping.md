@@ -2,7 +2,7 @@
 
 Mapping serves as an effortlessly simple data transformation method, designed with a focus on simplicity. It doesn't demand additional dependencies or mastery of programming languages like JavaScript or Python
 
-It's the quickest and most efficient method because it doesn't need to call external functions. Instead, it uses a fast expression engine built into Chichi.
+It's the quickest and most efficient method because it doesn't need to call external functions. Instead, it uses a fast expression engine built into Meergo.
 
 However, for much more complex use cases, a more powerful language is recommended, such as JavaScript and Python.
 

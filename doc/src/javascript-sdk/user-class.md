@@ -3,7 +3,7 @@
 The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods.md#user) method of `Analytics`. For example:
 
 ```javascript
-const userId = chichiAnalytics.user().id();
+const userId = meergoAnalytics.user().id();
 ```
 
 ## id
@@ -40,15 +40,15 @@ id(id?: string | null): string | null
 #### Examples
 
 ```javascript
-const userId = chichiAnalytics.user().id();
+const userId = meergoAnalytics.user().id();
 ```
 
 ```javascript
-chichiAnalytics.user().id(null);
+meergoAnalytics.user().id(null);
 ```
 
 ```javascript
-chichiAnalytics.user().id('509284521');
+meergoAnalytics.user().id('509284521');
 ```
 
 ## anonymousId
@@ -85,15 +85,15 @@ anonymousId(id?: string | null): string
 #### Examples
 
 ```javascript
-const anonymousId = chichiAnalytics.user().anonymousId();
+const anonymousId = meergoAnalytics.user().anonymousId();
 ```
 
 ```javascript
-chichiAnalytics.user().anonymousId(null);
+meergoAnalytics.user().anonymousId(null);
 ```
 
 ```javascript
-chichiAnalytics.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
+meergoAnalytics.user().anonymousId('e2984831-431d-44ad-b1ec-4b901392fb67');
 ```
 
 ## traits
@@ -130,14 +130,14 @@ traits(traits?: Record<string, unknown> | null): Record<string, unknown>
 #### Examples
 
 ```javascript
-const traits = chichiAnalytics.user().traits();
+const traits = meergoAnalytics.user().traits();
 ```
 
 ```javascript
-chichiAnalytics.user().traits(null);
+meergoAnalytics.user().traits(null);
 ```
 
 ```javascript
-chichiAnalytics.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
+meergoAnalytics.user().traits({ firstName: 'Emily', lastName: 'Johnson' });
 ```
 

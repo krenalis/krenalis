@@ -14,9 +14,9 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/open2b/chichi/apis/state"
-	"github.com/open2b/chichi/apis/transformers/mappings"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/transformers/mappings"
+	"github.com/meergo/meergo/types"
 )
 
 // Transformer represents a transformer.

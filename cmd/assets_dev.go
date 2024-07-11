@@ -61,7 +61,7 @@ type assetsHandler struct {
 func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 
 	// Create a temporary directory for the assets.
-	outDir, err := os.MkdirTemp("", "chichi-assets-")
+	outDir, err := os.MkdirTemp("", "meergo-assets-")
 	if err != nil {
 		return nil, err
 	}
@@ -124,9 +124,9 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer bw.Close()
 		w = brotliResponseWriter{bw, w}
 	}
-	if strings.HasPrefix(r.URL.Path, "/javascript-sdk/dist/chichi.min.js") {
+	if strings.HasPrefix(r.URL.Path, "/javascript-sdk/dist/meergo.min.js") {
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "chichi.min.js"))
+		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js"))
 		return
 	}
 	if r.URL.Path == "/javascript-sdk/mywebsite/" || r.URL.Path == "/javascript-sdk/mywebsite/index.html" {

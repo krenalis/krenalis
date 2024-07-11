@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func Test_UserIdentities(t *testing.T) {
@@ -22,7 +22,7 @@ func Test_UserIdentities(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	c.SetWorkspaceIdentifiers([]string{"email"})
@@ -34,7 +34,7 @@ func Test_UserIdentities(t *testing.T) {
 	fs1 := c.AddSourceFilesystem(storageDir)
 	fs2 := c.AddSourceFilesystem(storageDir)
 
-	action1 := c.AddAction(fs1, "Users", chichitester.ActionToSet{
+	action1 := c.AddAction(fs1, "Users", meergotester.ActionToSet{
 		Name: "CSV 1",
 		Path: "users1.csv",
 		InSchema: types.Object([]types.Property{
@@ -44,20 +44,20 @@ func Test_UserIdentities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		IdentityProperty: "identity",
 		Connector:        "CSV",
-		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),
 	})
 
-	action2 := c.AddAction(fs2, "Users", chichitester.ActionToSet{
+	action2 := c.AddAction(fs2, "Users", meergotester.ActionToSet{
 		Name: "CSV 2",
 		Path: "users2.csv",
 		InSchema: types.Object([]types.Property{
@@ -67,14 +67,14 @@ func Test_UserIdentities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
 		},
 		IdentityProperty: "identity",
 		Connector:        "CSV",
-		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),

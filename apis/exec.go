@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/errors"
-	"github.com/open2b/chichi/apis/postgres"
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
 )
 
 // addExecution adds an execution to the action.
@@ -99,7 +99,7 @@ func (this *Action) exec(ctx context.Context) {
 		default:
 			if e, ok := err.(actionExecutionError); ok {
 				errorMessage = errors.Abbreviate(e.Error(), 1000)
-				if _, ok := e.err.(*chichi.AccessDeniedError); ok {
+				if _, ok := e.err.(*meergo.AccessDeniedError); ok {
 					health = state.AccessDenied
 				}
 			} else {

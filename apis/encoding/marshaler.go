@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/shopspring/decimal"

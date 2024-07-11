@@ -1,14 +1,14 @@
 # OAuth
 
-For applications that need OAuth authentication to access an account's information, Chichi provides an OAuth implementation for connectors. The connector only needs to provide some information during registration and implement a method to retrieve the app's account that was connected through authentication.
+For applications that need OAuth authentication to access an account's information, Meergo provides an OAuth implementation for connectors. The connector only needs to provide some information during registration and implement a method to retrieve the app's account that was connected through authentication.
 
-After that, you just need to use the HTTP client provided to the constructor to make HTTP calls to the app. Chichi will automatically handle adding authentication information and keep it updated.
+After that, you just need to use the HTTP client provided to the constructor to make HTTP calls to the app. Meergo will automatically handle adding authentication information and keep it updated.
 
 The following example shows how the HubSpot connector provides some OAuth-specific information about HubSpot during registration:
 
 ```go
-chichi.RegisterApp(chichi.AppInfo{
-    OAuth:   chichi.OAuth{
+meergo.RegisterApp(meergo.AppInfo{
+    OAuth:   meergo.OAuth{
         AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
         TokenURL:          "https://api.hubapi.com/oauth/v1/token",
         SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
@@ -18,7 +18,7 @@ chichi.RegisterApp(chichi.AppInfo{
 }, New)
 ```
 
-The `chichi.OAuth` type contains this information:
+The `meergo.OAuth` type contains this information:
 
 - `AuthURL`: authorization endpoint, the URL where users are redirected to grant consent.
 - `TokenURL`: token endpoint, the URL used to retrieve the access token, refresh token, and token lifetime.
@@ -34,7 +34,7 @@ If `AuthURL` and `TokenURL` contain query string arguments, they will be preserv
 OAuthAccount(ctx context.Context) (string, error)
 ```
 
-The `OAuthAccount` method, part of the `AppOAuth` interface, is called by ChiChi after a successful OAuth authentication to obtain the app's account associated with the given authorization. The connector uses the HTTP client provided to the constructor to call the app's API to obtain the account. The account must be a non-empty UTF-8 encoded string.
+The `OAuthAccount` method, part of the `AppOAuth` interface, is called by Meergo after a successful OAuth authentication to obtain the app's account associated with the given authorization. The connector uses the HTTP client provided to the constructor to call the app's API to obtain the account. The account must be a non-empty UTF-8 encoded string.
 
 ## ClientSecret and AccessToken
 

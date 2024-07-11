@@ -10,13 +10,13 @@ package http
 import (
 	"testing"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 func TestCompletePath(t *testing.T) {
 	http := &HTTP{settings: &Settings{Host: "example.com", Port: 443}}
 	http2 := &HTTP{settings: &Settings{Host: "example.com", Port: 8080}}
-	tests := []chichi.CompletePathTest{
+	tests := []meergo.CompletePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},
 		{Name: "/a/b", Expected: "https://example.com/a/b"},
@@ -29,7 +29,7 @@ func TestCompletePath(t *testing.T) {
 		{Name: "/a/b?x=y#"},
 		{Name: "/a", Expected: "https://example.com:8080/a", Storage: http2},
 	}
-	err := chichi.TestCompletePath(http, tests)
+	err := meergo.TestCompletePath(http, tests)
 	if err != nil {
 		t.Errorf("HTTP connector: %s", err)
 	}

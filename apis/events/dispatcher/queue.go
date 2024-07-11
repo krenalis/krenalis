@@ -8,7 +8,7 @@
 package dispatcher
 
 import (
-	"github.com/open2b/chichi/backoff"
+	"github.com/meergo/meergo/backoff"
 )
 
 // queue represents an event queue.

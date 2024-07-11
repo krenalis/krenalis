@@ -10,17 +10,17 @@ package connectors
 import (
 	"context"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/apis/state"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/state"
 )
 
 // SendOptions are the stream's Send options.
-type SendOptions = chichi.SendOptions
+type SendOptions = meergo.SendOptions
 
 // Stream represents the stream of a stream connection.
 type Stream struct {
 	closed bool
-	inner  chichi.Stream
+	inner  meergo.Stream
 }
 
 // Stream returns a stream for the provided connection. It panics if connection
@@ -31,7 +31,7 @@ type Stream struct {
 func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, error) {
 	stream := &Stream{}
 	var err error
-	stream.inner, err = chichi.RegisteredStream(connection.Connector().Name).New(&chichi.StreamConfig{
+	stream.inner, err = meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamConfig{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})

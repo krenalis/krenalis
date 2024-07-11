@@ -17,11 +17,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 func init() {
-	chichi.RegisterFileStorage(chichi.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
 		Name: "S3",
 	}, New)
 }
@@ -31,7 +31,7 @@ type S3 struct {
 }
 
 // New returns a new S3 connector instance.
-func New(conf *chichi.FileStorageConfig) (*S3, error) {
+func New(conf *meergo.FileStorageConfig) (*S3, error) {
 	// ...
 }
 
@@ -79,7 +79,7 @@ This information is passed to the `RegisterFileStorage` function that, executed 
 
 ```go
 func init() {
-    chichi.RegisterFileStorage(chichi.FileStorageInfo{
+    meergo.RegisterFileStorage(meergo.FileStorageInfo{
         Name: "S3",
         Icon: icon,
     }, New)
@@ -91,7 +91,7 @@ func init() {
 The second argument supplied to the `RegisterFileStorage` function is the function utilized for creating a connector instance:
 
 ```go
-func New(conf *chichi.FileStorageConfig) (*S3, error)
+func New(conf *meergo.FileStorageConfig) (*S3, error)
 ```
 
 This function accepts a file storage configuration and yields a value representing your custom type.
@@ -101,7 +101,7 @@ The structure of `FileStorageConfig` is outlined as follows:
 ```go
 type FileStorageConfig struct {
     Settings    []byte
-    SetSettings chichi.SetSettingsFunc
+    SetSettings meergo.SetSettingsFunc
 }
 ```
 
@@ -114,7 +114,7 @@ type FileStorageConfig struct {
 CompletePath(ctx context.Context, name string) (string, error)
 ```
 
-The `CompletePath` method is invoked by Chichi to present the user with the full path of a file in the given storage, based on the path specified by the user.
+The `CompletePath` method is invoked by Meergo to present the user with the full path of a file in the given storage, based on the path specified by the user.
 
 The `name` parameter is always a UTF-8 encoded string with a length in runes ranging from 1 to 1024. It is the responsibility of the `CompletePath` method to validate the path based on its specific rules. If the path is invalid, it should return an `InvalidPathError` error; otherwise, it should return a UTF-8 encoded string representing the complete path. The returned path is intended solely for display to the user.
 
@@ -126,7 +126,7 @@ If the connector accepts paths with a slash (“/”) separator, the method shou
 Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 ```
 
-The `Reader` method is used by Chichi to read files, such as during previews or exports.
+The `Reader` method is used by Meergo to read files, such as during previews or exports.
 
 The `name` parameter represents the file path entered by the user, which has been validated with the `CompletePath` method. It also gives the last time the file was changed, if known; otherwise, it returns zero time.
 
@@ -136,7 +136,7 @@ The `name` parameter represents the file path entered by the user, which has bee
 Write(ctx context.Context, r io.Reader, name, contentType string) error
 ```
 
-The `Write` method is used by Chichi to save a file to the storage when exporting.
+The `Write` method is used by Meergo to save a file to the storage when exporting.
 
 `Write` reads the content from the provided `Reader`. The `name` parameter represents the file path specified by the user, which has been validated with the `CompletePath` method. The `contentType` parameter indicates the type of content in the file, obtained from the `ContentType` method of the file connector.
 

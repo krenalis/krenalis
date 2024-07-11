@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/open2b/chichi/test/chichitester"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
 func TestImportUsersFromFile(t *testing.T) {
@@ -22,7 +22,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	c := chichitester.InitAndLaunch(t)
+	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
 	// Determine the storage directory and assert that such directory exists.
@@ -44,7 +44,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	c.SetWorkspaceIdentifiers([]string{"email"})
 
 	// Add an action to the CSV for importing the users.
-	importUsersActionID := c.AddAction(fsID, "Users", chichitester.ActionToSet{
+	importUsersActionID := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Import users from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
@@ -56,7 +56,7 @@ func TestImportUsersFromFile(t *testing.T) {
 			{Name: "first_name", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
-		Transformation: chichitester.Transformation{
+		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "name",
 				"email":      "email",
@@ -64,7 +64,7 @@ func TestImportUsersFromFile(t *testing.T) {
 		},
 		IdentityProperty: "identity",
 		Connector:        "CSV",
-		UIValues: chichitester.JSONEncodeUIValues(map[string]any{
+		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),

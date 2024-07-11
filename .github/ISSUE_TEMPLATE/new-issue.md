@@ -1,6 +1,6 @@
 ---
 name: New issue
-about: Create a new issue for Chichi
+about: Create a new issue for Meergo
 title: "<topic>: <title>"
 labels: ''
 assignees: ''

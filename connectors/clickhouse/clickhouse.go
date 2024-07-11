@@ -19,8 +19,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -31,12 +31,12 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the Database and UIHandler interfaces.
 var _ interface {
-	chichi.Database
-	chichi.UIHandler
+	meergo.Database
+	meergo.UIHandler
 } = (*ClickHouse)(nil)
 
 func init() {
-	chichi.RegisterDatabase(chichi.DatabaseInfo{
+	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "ClickHouse",
 		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
 		Icon:        icon,
@@ -44,7 +44,7 @@ func init() {
 }
 
 // New returns a new ClickHouse connector instance.
-func New(conf *chichi.DatabaseConfig) (*ClickHouse, error) {
+func New(conf *meergo.DatabaseConfig) (*ClickHouse, error) {
 	c := ClickHouse{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -56,7 +56,7 @@ func New(conf *chichi.DatabaseConfig) (*ClickHouse, error) {
 }
 
 type ClickHouse struct {
-	conf     *chichi.DatabaseConfig
+	conf     *meergo.DatabaseConfig
 	settings *Settings
 	db       driver.Conn
 }
@@ -107,12 +107,12 @@ func (ch *ClickHouse) LastChangeTimeCondition(column string, typ types.Type, val
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ch *ClickHouse) Query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	return ch.query(ctx, query)
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -128,19 +128,19 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte, 
 	case "test":
 		return nil, ch.saveValues(ctx, values, true)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
-			&chichi.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
-			&chichi.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
-			&chichi.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
-			&chichi.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Input{Name: "Host", Label: "Host", Placeholder: "example.com", Type: "text", MinLength: 1, MaxLength: 253},
+			&meergo.Input{Name: "Port", Label: "Port", Placeholder: "9000", Type: "number", OnlyIntegerPart: true, MinLength: 1, MaxLength: 5},
+			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 64},
+			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
+			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
 		Values: values,
-		Buttons: []chichi.Button{
+		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test Connection", Variant: "neutral"},
 		},
 	}
@@ -210,7 +210,7 @@ func (ch *ClickHouse) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (ch *ClickHouse) query(ctx context.Context, query string) (chichi.Rows, []types.Property, error) {
+func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
 	if err := ch.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -246,23 +246,23 @@ func (ch *ClickHouse) saveValues(ctx context.Context, values []byte, test bool) 
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return chichi.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return chichi.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 64 {
-		return chichi.NewInvalidUIValuesError("username length in bytes must be in range [1,64]")
+		return meergo.NewInvalidUIValuesError("username length in bytes must be in range [1,64]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return chichi.NewInvalidUIValuesError("password length must be in range [1,100]")
+		return meergo.NewInvalidUIValuesError("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 64 {
-		return chichi.NewInvalidUIValuesError("database length in bytes must be in range [1,64]")
+		return meergo.NewInvalidUIValuesError("database length in bytes must be in range [1,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -305,7 +305,7 @@ func (s *Settings) options() *clickhouse.Options {
 func propertyType(t driver.ColumnType) (types.Type, bool, error) {
 	typ, nullable := columnType(t.DatabaseTypeName())
 	if !typ.Valid() {
-		return types.Type{}, false, chichi.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+		return types.Type{}, false, meergo.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
 	}
 	return typ, nullable, nil
 }

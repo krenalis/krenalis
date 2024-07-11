@@ -1,4 +1,4 @@
-module github.com/open2b/chichi
+module github.com/meergo/meergo
 
 go 1.23
 

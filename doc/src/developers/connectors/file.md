@@ -16,11 +16,11 @@ import (
 	"context"
 	"io"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 func init() {
-	chichi.RegisterFile(chichi.FileInfo{
+	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "CSV",
 		Extension: "csv",
 	}, New)
@@ -31,7 +31,7 @@ type CSV struct {
 }
 
 // New returns a new CSV connector instance.
-func New(conf *chichi.FileConfig) (*CSV, error) {
+func New(conf *meergo.FileConfig) (*CSV, error) {
 	// ...
 }
 
@@ -41,12 +41,12 @@ func (csv *CSV) ContentType(ctx context.Context) string {
 }
 
 // Read reads the records from r and writes them to records.
-func (csv *CSV) Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error {
+func (csv *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
 	// ...
 }
 
 // Write writes to w the records read from records.
-func (csv *CSV) Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error {
+func (csv *CSV) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
 	// ...
 }
 ```
@@ -80,7 +80,7 @@ This information is passed to the `RegisterFile` function that, executed during 
 
 ```go
 func init() {
-    chichi.RegisterFile(chichi.FileInfo{
+    meergo.RegisterFile(meergo.FileInfo{
         Name:      "CSV",
         Icon:      icon,
         Extension: "csv",
@@ -93,7 +93,7 @@ func init() {
 The second argument supplied to the `RegisterFile` function is the function utilized for creating a connector instance:
 
 ```go
-func New(conf *chichi.FileConfig) (*CSV, error)
+func New(conf *meergo.FileConfig) (*CSV, error)
 ```
 
 This function accepts a file configuration and yields a value representing your custom type.
@@ -103,7 +103,7 @@ The structure of `FileConfig` is outlined as follows:
 ```go
 type FileConfig struct {
     Settings    []byte
-    SetSettings chichi.SetSettingsFunc
+    SetSettings meergo.SetSettingsFunc
 }
 ```
 
@@ -116,15 +116,15 @@ type FileConfig struct {
 ContentType(ctx context.Context) string
 ```
 
-The `ContentType` method is used by Chichi to find out what type of content should be used when saving a file to a storage location. For example, the CSV connector always says it's "text/csv; charset=UTF-8". This method might always give the same answer or change depending on the settings.
+The `ContentType` method is used by Meergo to find out what type of content should be used when saving a file to a storage location. For example, the CSV connector always says it's "text/csv; charset=UTF-8". This method might always give the same answer or change depending on the settings.
 
 ### Read method
 
 ```go
-Read(ctx context.Context, r io.Reader, sheet string, records chichi.RecordWriter) error
+Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error
 ```
 
-The `Read` method is called by Chichi to read records from a file. This happens both when previewing the file and when performing an import.
+The `Read` method is called by Meergo to read records from a file. This happens both when previewing the file and when performing an import.
 
 The `Read` method takes an `io.Reader` as an argument from which to read the file's contents, and a `RecordWriter` onto which to write the read records. `RecordWriter` is defined as:
 
@@ -154,15 +154,15 @@ If a call to any of the `RecordWriter` methods returns an error, it must halt an
 
 Once it has finished writing all the read records, it simply returns without errors.
 
-The `sheet` parameter is only used if the connector supports multiple sheets, meaning if the files it reads can contain multiple sheets. In this case, Chichi passes the name of the sheet to read as an argument. See the [Sheets method](#sheets-method) for more details.
+The `sheet` parameter is only used if the connector supports multiple sheets, meaning if the files it reads can contain multiple sheets. In this case, Meergo passes the name of the sheet to read as an argument. See the [Sheets method](#sheets-method) for more details.
 
 ### Write method
 
 ```go
-Write(ctx context.Context, w io.Writer, sheet string, records chichi.RecordReader) error
+Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error
 ```
 
-The `Write` method is invoked by Chichi to write records to a new file. This occurs during an export process.
+The `Write` method is invoked by Meergo to write records to a new file. This occurs during an export process.
 
 The `Write` method takes an `io.Writer` as an argument to write the contents of the entire file and a `RecordReader` from which to read the records to be written. `RecordReader` is an interface defined as follows:
 

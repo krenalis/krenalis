@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/open2b/chichi"
+	"github.com/meergo/meergo"
 )
 
 // Connector icon.
@@ -28,19 +28,19 @@ var icon = "<svg></svg>"
 
 // Make sure it implements the FileStorage and the UIHandler interfaces.
 var _ interface {
-	chichi.FileStorage
-	chichi.UIHandler
+	meergo.FileStorage
+	meergo.UIHandler
 } = (*Filesystem)(nil)
 
 func init() {
-	chichi.RegisterFileStorage(chichi.FileStorageInfo{
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
 		Name: "Filesystem",
 		Icon: icon,
 	}, New)
 }
 
 // New returns a new Filesystem connector instance.
-func New(conf *chichi.FileStorageConfig) (*Filesystem, error) {
+func New(conf *meergo.FileStorageConfig) (*Filesystem, error) {
 	c := Filesystem{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -52,7 +52,7 @@ func New(conf *chichi.FileStorageConfig) (*Filesystem, error) {
 }
 
 type Filesystem struct {
-	conf     *chichi.FileStorageConfig
+	conf     *meergo.FileStorageConfig
 	settings *Settings
 }
 
@@ -66,15 +66,15 @@ func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (st
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
 		if name == "/" {
-			return "", chichi.InvalidPathErrorf("path name cannot be “" + originalName + "“")
+			return "", meergo.InvalidPathErrorf("path name cannot be “" + originalName + "“")
 		}
 		name = name[1:]
 	}
 	if name[len(name)-1] == '/' {
-		return "", chichi.InvalidPathErrorf("path name cannot end with a slash")
+		return "", meergo.InvalidPathErrorf("path name cannot end with a slash")
 	}
 	if name == "." || !fs.ValidPath(name) {
-		return "", chichi.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+		return "", meergo.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
 	}
 	return filepath.Join(filesystem.settings.Root, name), nil
 }
@@ -94,7 +94,7 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -106,13 +106,13 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values 
 	case "save":
 		return nil, filesystem.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Chichi for read and write operations. Use this with caution."},
-			&chichi.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Meergo for read and write operations. Use this with caution."},
+			&meergo.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
 		},
 		Values: values,
 	}
@@ -157,17 +157,17 @@ func (filesystem *Filesystem) saveValues(ctx context.Context, values []byte) err
 	// Validate Root.
 	root := s.Root
 	if n := len(root); n == 0 || n > 253 {
-		return chichi.NewInvalidUIValuesError("root path length in bytes must be in range [1,253]")
+		return meergo.NewInvalidUIValuesError("root path length in bytes must be in range [1,253]")
 	}
 	if !filepath.IsAbs(root) {
-		return chichi.NewInvalidUIValuesError(`root path must be absolute`)
+		return meergo.NewInvalidUIValuesError(`root path must be absolute`)
 	}
 	st, err := os.Stat(root)
 	if os.IsNotExist(err) {
-		return chichi.NewInvalidUIValuesError("root path does not exist")
+		return meergo.NewInvalidUIValuesError("root path does not exist")
 	}
 	if !st.IsDir() {
-		return chichi.NewInvalidUIValuesError("root path is not a directory")
+		return meergo.NewInvalidUIValuesError("root path is not a directory")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

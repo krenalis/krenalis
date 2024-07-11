@@ -28,7 +28,7 @@ Data is encoded in Base64, unless otherwise specified. Notably, in Internet Expl
 
 Below are the cookies that the SDK stores in the user browser.
 
-All cookie names are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents the first seven characters of the Write Key.
+All cookie names are prefixed with "`meergo.<writeKey>.`" where `<writeKey>` represents the first seven characters of the Write Key.
 
 | Name          | Description                         |
 |---------------|-------------------------------------|
@@ -39,7 +39,7 @@ All cookie names are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` rep
 | `userId`      | User ID.                            |
 | `userTraits`  | User traits.                        |
 
-Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is "`z43tavAOsBB8RY50nAtItXMMIipGKEOC`", the cookie names would be "`chichi.z43tavA.anonymousId`", "`chichi.z43tavA.groupId`", and so on.
+Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is "`z43tavAOsBB8RY50nAtItXMMIipGKEOC`", the cookie names would be "`meergo.z43tavA.anonymousId`", "`meergo.z43tavA.groupId`", and so on.
 
 When the SDK persists user data in cookies, you can use the [`cookie`](options.md#cookie-option) option to control some specific settings.
 
@@ -47,7 +47,7 @@ When the SDK persists user data in cookies, you can use the [`cookie`](options.m
 
 Below are the items that the SDK stores in the localStorage of the browser.
 
-All keys are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents the first seven characters of the Write Key.
+All keys are prefixed with "`meergo.<writeKey>.`" where `<writeKey>` represents the first seven characters of the Write Key.
 
 | Key               | Description                                                                                                      |
 |-------------------|------------------------------------------------------------------------------------------------------------------|
@@ -67,7 +67,7 @@ The values of the leader keys are not Base64 encoded.
 
 Below are the items that the SDK stores in the sessionStorage of the browser.
 
-All keys are prefixed with "`chichi.<writeKey>.`" where `<writeKey>` represents the first seven characters of the Write Key.
+All keys are prefixed with "`meergo.<writeKey>.`" where `<writeKey>` represents the first seven characters of the Write Key.
 
 | Key           | Description                         |
 |---------------|-------------------------------------|

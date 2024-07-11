@@ -3,7 +3,7 @@
 When defining data types and schemas in a connector or in a data warehouse driver, use the functions from the `types` package:
 
 ```go
-"github.com/open2b/chichi/types"
+"github.com/meergo/meergo/types"
 ```
 
 This package provides functions to construct data types to use in connectors and data warehouse drivers. For example, `types.Boolean()` returns a `Type` value representing the boolean type, and `types.Array(types.Int(32))` returns a `Type` value representing an array of 32-bit signed integers.

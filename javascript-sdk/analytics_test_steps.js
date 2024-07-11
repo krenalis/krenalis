@@ -6,11 +6,11 @@ const anonymousId = '1b82c7e4-00b7-45d1-bbe2-6375fa9f8fa7'
 const path = '/path'
 const referrer = ''
 const search = '?query=123'
-const title = 'Hello from Chichi'
+const title = 'Hello from Meergo'
 const url = 'https://example.com:8080/path?query=123'
 const properties = { path, referrer, search, title, url }
 const page = { path, referrer, search, title, url }
-const library = { name: 'chichi.js', version: '0.0.0' }
+const library = { name: 'meergo.js', version: '0.0.0' }
 const screen = { width: 2560, height: 1440, density: 1.25 }
 const userAgent =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
@@ -33,15 +33,15 @@ const steps = [
 	{
 		name: `page(name)`,
 		call: (analytics) => {
-			analytics.page('Chichi Home')
+			analytics.page('Meergo Home')
 		},
 		event: {
 			type: 'page',
 			timestamp,
 			messageId,
-			name: 'Chichi Home',
+			name: 'Meergo Home',
 			anonymousId,
-			properties: { name: 'Chichi Home', path, referrer, search, title, url },
+			properties: { name: 'Meergo Home', path, referrer, search, title, url },
 			context,
 			integrations,
 			userId,
@@ -193,13 +193,13 @@ const steps = [
 	{
 		name: `screen(name)`,
 		call: (analytics) => {
-			analytics.screen('Chichi Main')
+			analytics.screen('Meergo Main')
 		},
 		event: {
 			type: 'screen',
 			timestamp,
 			messageId,
-			name: 'Chichi Main',
+			name: 'Meergo Main',
 			anonymousId,
 			properties: {},
 			context,

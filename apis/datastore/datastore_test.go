@@ -10,7 +10,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo/types"
 )
 
 func Test_CanBeIdentifier(t *testing.T) {

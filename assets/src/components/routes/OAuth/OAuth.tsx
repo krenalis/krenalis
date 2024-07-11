@@ -10,7 +10,7 @@ const errorMessageByOauthErrorCode = {
 	invalid_request:
 		'An internal error has occurred. Please try again later and if the issue persists contact our support.',
 	unauthorized_client:
-		'It looks like something has been misconfigured in your Chichi instance. Please contact your Chichi administrator to solve the issue.',
+		'It looks like something has been misconfigured in your Meergo instance. Please contact your Meergo administrator to solve the issue.',
 	access_denied: 'Permission to complete the authentication has not been given.',
 	unsupported_response_type:
 		'An internal error has occurred. Please try again later and if the issue persists contact our support.',
@@ -28,7 +28,7 @@ const OAuth = () => {
 
 	useEffect(() => {
 		const fetchOAuthToken = async () => {
-			const connectorName = localStorage.getItem('chichi_ui_add_connector_name');
+			const connectorName = localStorage.getItem('meergo_ui_add_connector_name');
 			const connector = connectors.find((c) => c.name === connectorName);
 			if (connector == null) {
 				console.error(`connector with name ${connectorName} does not exist`);
@@ -57,9 +57,9 @@ const OAuth = () => {
 				setErrorMessage(`${connector.name} didn't respond with a valid authentication code.`);
 				return;
 			}
-			const connectionRole = localStorage.getItem('chichi_ui_add_connection_role');
-			localStorage.removeItem('chichi_ui_add_connection_id');
-			localStorage.removeItem('chichi_ui_add_connection_role');
+			const connectionRole = localStorage.getItem('meergo_ui_add_connection_role');
+			localStorage.removeItem('meergo_ui_add_connection_id');
+			localStorage.removeItem('meergo_ui_add_connection_role');
 			let oauthToken: string;
 			try {
 				oauthToken = await api.workspaces.oauthToken(connectorName, oauthCode);

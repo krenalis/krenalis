@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open2b/chichi"
-	"github.com/open2b/chichi/types"
+	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 // Connector icon.
@@ -36,23 +36,23 @@ var icon = "<svg></svg>"
 // Make sure it implements the App, AppOAuth, AppRecords, UI, and Webhooks
 // interfaces.
 var _ interface {
-	chichi.App
-	chichi.AppOAuth
-	chichi.AppRecords
-	chichi.UIHandler
-	chichi.Webhooks
+	meergo.App
+	meergo.AppOAuth
+	meergo.AppRecords
+	meergo.UIHandler
+	meergo.Webhooks
 } = (*MailChimp)(nil)
 
 func init() {
-	chichi.RegisterApp(chichi.AppInfo{
+	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Mailchimp",
-		Targets:                chichi.Users,
+		Targets:                meergo.Users,
 		SourceDescription:      "import contacts as users from Mailchimp",
 		DestinationDescription: "export users as contacts to Mailchimp",
 		TermForUsers:           "contacts",
 		Icon:                   icon,
-		WebhooksPer:            chichi.WebhooksPerConnection,
-		OAuth: chichi.OAuth{
+		WebhooksPer:            meergo.WebhooksPerConnection,
+		OAuth: meergo.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
@@ -61,7 +61,7 @@ func init() {
 }
 
 // New returns a new Mailchimp connector instance.
-func New(conf *chichi.AppConfig) (*MailChimp, error) {
+func New(conf *meergo.AppConfig) (*MailChimp, error) {
 	c := MailChimp{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Unmarshal(conf.Settings, &c.settings)
@@ -78,7 +78,7 @@ func New(conf *chichi.AppConfig) (*MailChimp, error) {
 }
 
 type MailChimp struct {
-	conf     *chichi.AppConfig
+	conf     *meergo.AppConfig
 	settings *Settings
 }
 
@@ -89,7 +89,7 @@ type Settings struct {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (mc *MailChimp) Create(ctx context.Context, target chichi.Targets, properties map[string]any) error {
+func (mc *MailChimp) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
 	panic("TODO: not implemented")
 }
 
@@ -101,7 +101,7 @@ func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (mc *MailChimp) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi.WebhookPayload, error) {
+func (mc *MailChimp) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
 
 	if mc.settings.WebhookSecret == "" {
 		// Webhooks are not set up.
@@ -129,24 +129,24 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi
 	user := r.Form.Get("data[id]")
 
 	// TODO(carlo): subscribe and unsubscribe events are important and should be handled as separate event types.
-	var events = make([]chichi.WebhookPayload, 1)
+	var events = make([]meergo.WebhookPayload, 1)
 	switch r.Form.Get("type") {
 	case "subscribe":
 		// User subscribed.
-		events[0] = chichi.UserCreateEvent{
+		events[0] = meergo.UserCreateEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
 	case "unsubscribe", "profile", "upemail":
 		// User profile updated.
-		events[0] = chichi.UserChangeEvent{
+		events[0] = meergo.UserChangeEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
 	case "cleaned":
 		// User profile deleted.
 		// TODO(carlo): couldn't trigger this webhook, so the effective content is unknown.
-		events[0] = chichi.UserDeleteEvent{
+		events[0] = meergo.UserDeleteEvent{
 			Timestamp: timestamp,
 			User:      user,
 		}
@@ -155,7 +155,7 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request, role chichi.Role) ([]chichi
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, properties []string, cursor chichi.Cursor) ([]chichi.Record, string, error) {
+func (mc *MailChimp) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
 
 	path := "/lists/" + mc.settings.List + "/members"
 	values := url.Values{
@@ -184,9 +184,9 @@ func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, propert
 		return nil, "", io.EOF
 	}
 
-	users := make([]chichi.Record, len(response.Members))
+	users := make([]meergo.Record, len(response.Members))
 	for i, member := range response.Members {
-		users[i] = chichi.Record{
+		users[i] = meergo.Record{
 			ID:             member.ID,
 			Properties:     member.Properties(),
 			LastChangeTime: member.LastChanged.UTC(),
@@ -208,7 +208,7 @@ func (mc *MailChimp) Records(ctx context.Context, target chichi.Targets, propert
 }
 
 // Schema returns the schema of the specified target.
-func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, role chichi.Role, eventType string) (types.Type, error) {
+func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
 	}
@@ -480,7 +480,7 @@ func (mc *MailChimp) Schema(ctx context.Context, target chichi.Targets, role chi
 }
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, role chichi.Role) (*chichi.UI, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -492,7 +492,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, r
 	case "save":
 		return nil, mc.saveValues(ctx, values)
 	default:
-		return nil, chichi.ErrUIEventNotExist
+		return nil, meergo.ErrUIEventNotExist
 	}
 
 	// Get the lists.
@@ -500,17 +500,17 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, r
 	if err != nil {
 		return nil, err
 	}
-	options := make([]chichi.Option, len(lists))
+	options := make([]meergo.Option, len(lists))
 	for i, list := range lists {
-		options[i] = chichi.Option{
+		options[i] = meergo.Option{
 			Text:  list.Name,
 			Value: list.ID,
 		}
 	}
 
-	ui := &chichi.UI{
-		Fields: []chichi.Component{
-			&chichi.Select{Name: "List", Label: "List", Options: options},
+	ui := &meergo.UI{
+		Fields: []meergo.Component{
+			&meergo.Select{Name: "List", Label: "List", Options: options},
 		},
 		Values: values,
 	}
@@ -519,7 +519,7 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, r
 }
 
 // Update updates a record of the specified target.
-func (mc *MailChimp) Update(ctx context.Context, target chichi.Targets, id string, properties map[string]any) error {
+func (mc *MailChimp) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`
@@ -579,7 +579,7 @@ func (mc *MailChimp) saveValues(ctx context.Context, values []byte) error {
 		return err
 	}
 	if list.List == "" || len(list.List) > 100 {
-		return chichi.NewInvalidUIValuesError("list length must be in range [1, 100]")
+		return meergo.NewInvalidUIValuesError("list length must be in range [1, 100]")
 	}
 	// Check if the list exists.
 	lists, err := mc.lists(ctx)
@@ -594,7 +594,7 @@ func (mc *MailChimp) saveValues(ctx context.Context, values []byte) error {
 		}
 	}
 	if !found {
-		return chichi.NewInvalidUIValuesError("list does not exist")
+		return meergo.NewInvalidUIValuesError("list does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {
