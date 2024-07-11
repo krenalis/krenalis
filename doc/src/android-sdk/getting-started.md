@@ -1,0 +1,80 @@
+
+# Getting Started
+
+This guide provides clear instructions for integrating the Android SDK into Android applications.
+
+## Step 1: Create a Source Android Connection
+
+To create a source Android connection in Meergo:
+
+1. Click on **Connections**.
+2. Click on **Add a New Connection**.
+3. From the list of connectors, select the **Android** connector.
+5. Click on **Save**.
+
+## Step 2: Import the SDK
+
+To import the Android SDK inside your application:
+
+1. Add the dependency to your `build.gradle`. Make sure to replace `<latest_version>` with the latest version of the SDK.
+
+    Kotlin
+    ```kotlin
+    repositories {
+      mavenCentral()
+    }
+    dependencies {
+      implementation 'com.meergo.analytics.kotlin:android:<latest_version>'
+    }
+    ```
+    Java
+    ```java
+    repositories {
+      mavenCentral()
+    }
+    dependencies {
+      implementation 'com.meergo.analytics.kotlin:android:<latest_version>'
+    }
+    ```
+2. Initialize and configure the client. You can find the write key in Meergo inside the Android connection in **Settings > API Keys**. See [Options](options.md) for the list of configuration options.
+
+    Kotlin
+    ```kotlin
+    import com.meergo.analytics.kotlin.android.Analytics
+    import com.meergo.analytics.kotlin.core.*
+
+    Analytics("YOUR_WRITE_KEY", applicationContext) {
+      trackApplicationLifecycleEvents = true
+      flushAt = 3
+      flushInterval = 10
+      // ...other config options
+    }
+    ```
+    Java
+    ```Java
+    AndroidAnalytics analytics = AndroidAnalyticsKt.Analytics(BuildConfig.YOUR_WRITE_KEY,  getApplicationContext(), configuration -> {
+      configuration.setFlushAt(1);
+      configuration.setCollectDeviceId(true);
+      configuration.setTrackApplicationLifecycleEvents(true);
+      configuration.setTrackDeepLinks(true);
+      //...other config options
+      return Unit.INSTANCE;
+    });
+
+    JavaAnalytics analyticsCompat = new JavaAnalytics(analytics);​
+    ```
+3. Add the required permissions to `AndroidManifest.xml` (if they are not yet present).
+    ```xml
+    <!-- Required for internet. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    ``` 
+
+## Step 3: Add an Action
+
+When the Android SDK is imported in your application, you can choose to collect only the events, or import the users, or both:
+
+1. Go to the Android connection you just created and click on **Actions**.
+2. Under the **Import Events** action, click on **Add**.
+3. Confirm by clicking **Add**.
+4. Enable the action by toggling the switch in the **Enable** column.
