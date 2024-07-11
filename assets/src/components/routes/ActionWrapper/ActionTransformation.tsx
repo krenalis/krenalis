@@ -11,6 +11,7 @@ import {
 	TransformedMapping,
 	doesLastChangeTimePropertyNeedFormat,
 	flattenSchema,
+	getTransformationFunctionParameterName,
 	transformInActionToSet,
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
@@ -54,12 +55,6 @@ import Workspace from '../../../lib/api/types/workspace';
 import { ActionToSet, TransformationFunction } from '../../../lib/api/types/action';
 import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
-
-const defaultTransformationParameterByTarget = {
-	Users: 'user',
-	Groups: 'group',
-	Events: 'event',
-};
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -187,7 +182,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			a.Transformation.Function = {
 				Source: RAW_TRANSFORMATION_FUNCTIONS[selectedLanguage].replace(
 					'$parameterName',
-					defaultTransformationParameterByTarget[actionType.Target],
+					getTransformationFunctionParameterName(connection, actionType),
 				),
 				Language: selectedLanguage,
 				InProperties: [],
@@ -590,6 +585,8 @@ const TransformationBox = ({
 	const pendingMode = useRef<string>();
 	const firstValue = useRef<TransformedMapping | TransformationFunction>();
 
+	const { connection } = useContext(ConnectionContext);
+
 	useEffect(() => {
 		if (mode === 'mappings') {
 			firstValue.current = JSON.parse(JSON.stringify(action.Transformation.Mapping));
@@ -629,7 +626,7 @@ const TransformationBox = ({
 				a.Transformation.Function = {
 					Source: RAW_TRANSFORMATION_FUNCTIONS[pendingMode.current].replace(
 						'$parameterName',
-						defaultTransformationParameterByTarget[actionType.Target],
+						getTransformationFunctionParameterName(connection, actionType),
 					),
 					Language: pendingMode.current,
 					InProperties: [],

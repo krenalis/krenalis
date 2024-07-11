@@ -14,7 +14,7 @@ import { Filter, ConnectorValues } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
 import API from '../api/api';
-import TransformedConnection from './connection';
+import TransformedConnection, { isSourceEventConnection } from './connection';
 
 const SCHEDULE_PERIODS = {
 	5: '5m',
@@ -735,6 +735,22 @@ const validateCustomLastChangeTimeFormat = (format: string) => {
 	}
 };
 
+const getTransformationFunctionParameterName = (
+	connection: TransformedConnection,
+	actionType: TransformedActionType,
+): String => {
+	if (isSourceEventConnection(connection.role, connection.type) && actionType.Target === 'Users') {
+		return 'event';
+	}
+	if (actionType.Target === 'Users') {
+		return 'user';
+	} else if (actionType.Target === 'Events') {
+		return 'event';
+	} else if (actionType.Target === 'Groups') {
+		return 'group';
+	}
+};
+
 export {
 	SCHEDULE_PERIODS,
 	EXPORT_MODE_OPTIONS,
@@ -745,6 +761,7 @@ export {
 	transformAction,
 	transformInActionToSet,
 	doesLastChangeTimePropertyNeedFormat,
+	getTransformationFunctionParameterName,
 };
 
 export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };

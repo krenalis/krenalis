@@ -191,6 +191,10 @@ const getConnectionStatus = (connection: Connection): ConnectionStatus => {
 	}
 };
 
+const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boolean => {
+	return role === 'Source' && (type === 'Website' || type === 'Server' || type === 'Mobile');
+};
+
 const isEventConnection = (
 	role: ConnectionRole,
 	type: ConnectorType,
@@ -217,5 +221,6 @@ export {
 	getConnectionStatus,
 	getFileStorageConnections,
 	isEventConnection,
+	isSourceEventConnection,
 };
 export type { ConnectionStatus };
