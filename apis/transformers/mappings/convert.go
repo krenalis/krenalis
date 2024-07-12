@@ -488,7 +488,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 	case types.ArrayKind:
 		switch spt {
 		default:
-			if dt.MinItems() > 1 {
+			if dt.MinElements() > 1 {
 				return nil, errInvalidConversion
 			}
 			it := dt.Elem()
@@ -505,7 +505,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
+			if len(s) < dt.MinElements() || len(s) > dt.MaxElements() {
 				return nil, errInvalidConversion
 			}
 			it2 := dt.Elem()
@@ -527,7 +527,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			return s, nil
 		case types.ArrayKind:
 			s := v.([]any)
-			if len(s) < dt.MinItems() || len(s) > dt.MaxItems() {
+			if len(s) < dt.MinElements() || len(s) > dt.MaxElements() {
 				return nil, errInvalidConversion
 			}
 			it1 := st.Elem()

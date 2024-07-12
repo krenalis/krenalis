@@ -71,7 +71,7 @@ var (
 const (
 	MaxDecimalPrecision = 76             // Maximum precision for a Decimal type
 	MaxDecimalScale     = 37             // Maximum scale for a Decimal type
-	MaxItems            = math.MaxInt32  // Maximum number of items of an Array type
+	MaxElements         = math.MaxInt32  // Maximum number of elements of an Array type
 	MaxTextLen          = math.MaxUint32 // Maximum length in bytes and characters for a Text type
 	MaxYear             = 9999           // Maximum year for DataTime, Date and Year types
 	MinYear             = 1              // Minimum year for DataTime, Date and Year types
@@ -204,7 +204,7 @@ type Type struct {
 
 	size int8 // size for Int, Uint and Float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
-	unique bool // unique reports whether the items of an Array must be unique.
+	unique bool // unique reports whether the elements of an Array must be unique.
 	real   bool // real reports whether NaN, +Inf and -Inf are not allowed for Float.
 
 	// p represents
@@ -231,7 +231,7 @@ type Type struct {
 	//   - *regexp.Regexp value for Text
 	//   - []string with the values for Text
 	//   - []Property for Object
-	//   - Type of the item for Array
+	//   - Type of the elements for Array
 	//   - Type of the value for Map
 	vl any
 
@@ -374,9 +374,9 @@ func Text() Type {
 	return Type{kind: TextKind}
 }
 
-// Array returns an Array type with items of type t.
+// Array returns an Array type with elements of type t.
 func Array(t Type) Type {
-	return Type{kind: ArrayKind, s: MaxItems, vl: t}
+	return Type{kind: ArrayKind, s: MaxElements, vl: t}
 }
 
 // Object returns an Object type with the given properties.
@@ -884,53 +884,53 @@ func (t Type) WithValues(values ...string) Type {
 	return t
 }
 
-// MinItems returns the minimum number of items of t. t must be an Array,
+// MinElements returns the minimum number of elements of t. t must be an Array,
 // otherwise it panics.
-func (t Type) MinItems() int {
+func (t Type) MinElements() int {
 	if t.kind != ArrayKind {
-		panic("cannot get the minimum number of items of a non-Array type")
+		panic("cannot get the minimum number of elements of a non-Array type")
 	}
 	return int(t.p)
 }
 
-// WithMinItems returns t but with the minimum number of items sets to min.
-// t must be an Array. Panics if t is not an Array type or min is not in
-// [0,max] where max is the maximum number of items of t.
-func (t Type) WithMinItems(min int) Type {
+// WithMinElements returns t but with the minimum number of elements sets to
+// min. t must be an Array. Panics if t is not an Array type or min is not in
+// [0,max] where max is the maximum number of elements of t.
+func (t Type) WithMinElements(min int) Type {
 	if t.kind != ArrayKind {
-		panic("cannot set the minimum number of items for a non-Array type")
+		panic("cannot set the minimum number of elements for a non-Array type")
 	}
 	if min < 0 || min > int(t.s) {
-		panic(fmt.Sprintf("minimum number of items not in [0,%d]", t.s))
+		panic(fmt.Sprintf("minimum number of elements not in [0,%d]", t.s))
 	}
 	t.p = int32(min)
 	return t
 }
 
-// MaxItems returns the maximum number of items of t. t must be an Array,
+// MaxElements returns the maximum number of elements of t. t must be an Array,
 // otherwise it panics.
-func (t Type) MaxItems() int {
+func (t Type) MaxElements() int {
 	if t.kind != ArrayKind {
-		panic("cannot get the maximum number of items of a non-Array type")
+		panic("cannot get the maximum number of elements of a non-Array type")
 	}
 	return int(t.s)
 }
 
-// WithMaxItems returns t but with the maximum number of items sets to max.
-// t must be an Array. Panics if t is not an Array type or max is not in
-// [min,MaxItems] where min is the minimum number of items of t.
-func (t Type) WithMaxItems(max int) Type {
+// WithMaxElements returns t but with the maximum number of elements sets to
+// max. t must be an Array. Panics if t is not an Array type or max is not in
+// range [min,MaxElements] where min is the minimum number of elements of t.
+func (t Type) WithMaxElements(max int) Type {
 	if t.kind != ArrayKind {
-		panic("cannot set the maximum number of items for a non-Array type")
+		panic("cannot set the maximum number of elements for a non-Array type")
 	}
-	if max < int(t.p) || max > MaxItems {
-		panic(fmt.Sprintf("maximum number of items not in [%d,%d]", t.p, MaxItems))
+	if max < int(t.p) || max > MaxElements {
+		panic(fmt.Sprintf("maximum number of elements not in [%d,%d]", t.p, MaxElements))
 	}
 	t.s = int32(max)
 	return t
 }
 
-// Unique reports whether the items of t are unique.
+// Unique reports whether the elements of t are unique.
 // Panics if t is not an Array.
 func (t Type) Unique() bool {
 	if t.kind != ArrayKind {
@@ -939,15 +939,16 @@ func (t Type) Unique() bool {
 	return t.unique
 }
 
-// WithUnique returns the type t but with unique items. t must be an Array and
-// its item type cannot be JSON, Array, Map, or Object.
-// Panics if t is not an Array or the item type is JSON, Array, Map, or Object.
+// WithUnique returns the type t but with unique elements. t must be an Array
+// and its element type cannot be JSON, Array, Map, or Object.
+// Panics if t is not an Array or the element type is JSON, Array, Map, or
+// Object.
 func (t Type) WithUnique() Type {
 	if t.kind != ArrayKind {
 		panic("cannot set unique of a non-Array type")
 	}
 	if k := t.vl.(Type).kind; k == JSONKind || k == ArrayKind || k == MapKind || k == ObjectKind {
-		panic("cannot set unique for an Array with items of type Array, Map, or Object")
+		panic("cannot set unique for an Array with elements of type Array, Map, or Object")
 	}
 	t.unique = true
 	return t

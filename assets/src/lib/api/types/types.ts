@@ -126,10 +126,10 @@ interface TextType {
 
 interface ArrayType {
 	name: 'Array';
-	minItems?: number;
-	maxItems?: number;
-	uniqueItems?: boolean;
-	itemType?: Type;
+	minElements?: number;
+	maxElements?: number;
+	uniqueElements?: boolean;
+	elementType?: Type;
 }
 
 interface ObjectType {

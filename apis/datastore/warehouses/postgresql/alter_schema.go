@@ -240,7 +240,7 @@ func typeToPostgresType(t types.Type) (string, bool) {
 		}
 		return typ, true
 	case types.ArrayKind:
-		if t.MinItems() > 0 || t.MaxItems() < types.MaxItems {
+		if t.MinElements() > 0 || t.MaxElements() < types.MaxElements {
 			return "", false
 		}
 		if t.Elem().Kind() == types.ArrayKind {

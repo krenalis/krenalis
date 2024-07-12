@@ -28,7 +28,7 @@
 }
 
 .property-dialog__bitsize,
-.property-dialog__itemtype,
+.property-dialog__elementtype,
 .property-dialog__valuetype {
 	width: 40%;
 }

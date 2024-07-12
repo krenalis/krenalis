@@ -93,9 +93,9 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 			return nil, err
 		}
 		n := len(v)
-		if n < typ.MinItems() || n > typ.MaxItems() {
-			return nil, fmt.Errorf("data warehouse returned an array with %d items for column %s, which is not within the expected range of [%d, %d]",
-				n, name, typ.MinItems(), typ.MaxItems())
+		if n < typ.MinElements() || n > typ.MaxElements() {
+			return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, which is not within the expected range of [%d, %d]",
+				n, name, typ.MinElements(), typ.MaxElements())
 		}
 		t := typ.Elem()
 		for i := 0; i < n; i++ {

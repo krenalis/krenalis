@@ -189,17 +189,17 @@ func marshalType(b *bytes.Buffer, t Type) {
 		}
 	case ArrayKind:
 		if t.p > 0 {
-			b.WriteString(`,"minItems":`)
+			b.WriteString(`,"minElements":`)
 			b.WriteString(strconv.Itoa(int(t.p)))
 		}
-		if t.s < MaxItems {
-			b.WriteString(`,"maxItems":`)
+		if t.s < MaxElements {
+			b.WriteString(`,"maxElements":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
 		}
 		if t.unique {
-			b.WriteString(`,"uniqueItems":true`)
+			b.WriteString(`,"uniqueElements":true`)
 		}
-		b.WriteString(`,"itemType":`)
+		b.WriteString(`,"elementType":`)
 		marshalType(b, t.vl.(Type))
 	case ObjectKind:
 		b.WriteString(`,"properties":[`)
@@ -212,7 +212,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 		}
 		b.WriteString("]")
 	case MapKind:
-		b.WriteString(`,"valueType":`)
+		b.WriteString(`,"elementType":`)
 		marshalType(b, t.vl.(Type))
 	}
 	b.WriteString(`}`)
@@ -297,7 +297,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		return Type{}, errors.New("invalid type syntax")
 	}
 
-	var hasReal, hasScale, hasMinItems, hasMaxItems, hasUniqueItems bool
+	var hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
 
 	var kind Kind
 	var bitSize int
@@ -306,11 +306,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	var precision, scale, byteLen, charLen int
 	var re *regexp.Regexp
 	var values []string
-	var itemType Type
-	var minItems, maxItems = 0, MaxItems
-	var uniqueItems bool
+	var elementType Type
+	var minElements, maxElements = 0, MaxElements
+	var uniqueElements bool
 	var properties []Property
-	var valueType Type
 
 	var ok bool
 
@@ -327,15 +326,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		key := tok.(string)
 
-		switch key {
-		case "itemType":
-			itemType, err = unmarshalType(dec)
-			if err != nil {
-				return Type{}, err
-			}
-			continue
-		case "valueType":
-			valueType, err = unmarshalType(dec)
+		if key == "elementType" {
+			elementType, err = unmarshalType(dec)
 			if err != nil {
 				return Type{}, err
 			}
@@ -488,41 +480,41 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if charLen <= 0 || charLen > MaxTextLen {
 				return Type{}, errors.New("invalid length in characters")
 			}
-		case "minItems":
-			if hasMinItems {
-				return Type{}, errors.New("repeated 'minItems' key")
+		case "minElements":
+			if hasMinElements {
+				return Type{}, errors.New("repeated 'minElements' key")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return Type{}, errors.New("invalid min items")
+				return Type{}, errors.New("invalid min elements")
 			}
-			minItems, _ = strconv.Atoi(string(n))
-			if minItems < 0 || minItems > MaxItems {
-				return Type{}, errors.New("invalid min items")
+			minElements, _ = strconv.Atoi(string(n))
+			if minElements < 0 || minElements > MaxElements {
+				return Type{}, errors.New("invalid min elements")
 			}
-			hasMinItems = true
-		case "maxItems":
-			if hasMaxItems {
-				return Type{}, errors.New("repeated 'maxItems' key")
+			hasMinElements = true
+		case "maxElements":
+			if hasMaxElements {
+				return Type{}, errors.New("repeated 'maxElements' key")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
-				return Type{}, errors.New("invalid max items")
+				return Type{}, errors.New("invalid max elements")
 			}
-			maxItems, _ = strconv.Atoi(string(n))
-			if maxItems < 0 || maxItems > MaxItems {
-				return Type{}, errors.New("invalid max items")
+			maxElements, _ = strconv.Atoi(string(n))
+			if maxElements < 0 || maxElements > MaxElements {
+				return Type{}, errors.New("invalid max elements")
 			}
-			hasMaxItems = true
-		case "uniqueItems":
-			if hasUniqueItems {
-				return Type{}, errors.New("repeated 'uniqueItems' key")
+			hasMaxElements = true
+		case "uniqueElements":
+			if hasUniqueElements {
+				return Type{}, errors.New("repeated 'uniqueElements' key")
 			}
-			uniqueItems, ok = tok.(bool)
+			uniqueElements, ok = tok.(bool)
 			if !ok {
-				return Type{}, errors.New("invalid unique items")
+				return Type{}, errors.New("invalid unique elements")
 			}
-			hasUniqueItems = true
+			hasUniqueElements = true
 		case "properties":
 			if properties != nil {
 				return Type{}, errors.New("repeated 'properties' key")
@@ -558,8 +550,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid empty properties")
 			}
 		default:
-			if key == "items" {
-				return Type{}, fmt.Errorf(`unknown key %q (maybe "itemType"?)`, key)
+			if key == "elements" {
+				return Type{}, fmt.Errorf(`unknown key %q (maybe "elementType"?)`, key)
 			}
 			return Type{}, fmt.Errorf("unknown key %q", key)
 		}
@@ -857,41 +849,41 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.s = int32(scale)
 	}
-	if itemType.Valid() {
-		if kind != ArrayKind {
-			return Type{}, errors.New("unexpected item type for non-Array type")
+	if elementType.Valid() {
+		if kind != ArrayKind && kind != MapKind {
+			return Type{}, errors.New("unexpected element type for non-Array and non-Map type")
 		}
-		t.vl = itemType
+		t.vl = elementType
 	} else {
-		if kind == ArrayKind {
-			return Type{}, errors.New("missing item type")
+		if kind == ArrayKind || kind == MapKind {
+			return Type{}, errors.New("missing element type")
 		}
 	}
-	if hasMinItems {
+	if hasMinElements {
 		if kind != ArrayKind {
-			return Type{}, errors.New("unexpected minItems for non-Array type")
+			return Type{}, errors.New("unexpected minElements for non-Array type")
 		}
-		t.p = int32(minItems)
+		t.p = int32(minElements)
 	}
-	if maxItems < MaxItems {
+	if maxElements < MaxElements {
 		if kind != ArrayKind {
-			return Type{}, errors.New("unexpected maxItems for non-Array type")
+			return Type{}, errors.New("unexpected maxElements for non-Array type")
 		}
-		if maxItems < minItems {
-			return Type{}, errors.New("maxItems must be greater or equal to minItems")
+		if maxElements < minElements {
+			return Type{}, errors.New("maxElements must be greater or equal to minElements")
 		}
 	}
 	if kind == ArrayKind {
-		t.s = int32(maxItems)
+		t.s = int32(maxElements)
 	}
-	if hasUniqueItems {
+	if hasUniqueElements {
 		if kind != ArrayKind {
-			return Type{}, errors.New("unexpected uniqueItems for non-Array type")
+			return Type{}, errors.New("unexpected uniqueElements for non-Array type")
 		}
 		if k := t.vl.(Type).kind; k == JSONKind || k == ArrayKind || k == MapKind || k == ObjectKind {
-			return Type{}, errors.New("unexpected uniqueItems for items with type JSON, Array, Map, or Object")
+			return Type{}, errors.New("unexpected uniqueElements for elements with type JSON, Array, Map, or Object")
 		}
-		t.unique = uniqueItems
+		t.unique = uniqueElements
 	}
 	if properties == nil {
 		if kind == ObjectKind {
@@ -902,16 +894,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected properties for non-Object type")
 		}
 		t.vl = properties
-	}
-	if valueType.Valid() {
-		if kind != MapKind {
-			return Type{}, errors.New("unexpected value type for non-Map type")
-		}
-		t.vl = valueType
-	} else {
-		if kind == MapKind {
-			return Type{}, errors.New("missing value type")
-		}
 	}
 
 	return t, nil

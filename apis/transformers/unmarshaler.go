@@ -120,7 +120,7 @@ var javaScriptDecoderOptions = decoderOptions{
 		"false":    "false",
 		"true":     "true",
 		"array":    "array",
-		"items":    "elements",
+		"elements": "elements",
 		"object":   "object",
 		"property": "property",
 	},
@@ -137,7 +137,7 @@ var pythonDecoderOptions = decoderOptions{
 		"false":    "False",
 		"true":     "True",
 		"array":    "list",
-		"items":    "items",
+		"elements": "items",
 		"object":   "dict",
 		"property": "key",
 	},
@@ -326,38 +326,38 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		if t.Kind() != types.ArrayKind {
 			return nil, newErrInvalidValue("cannot be an "+d.opts.terms["array"], "", d.opts.terms)
 		}
-		minItems, maxItems := t.MinItems(), t.MaxItems()
-		items := make([]any, 0, minItems)
+		minElements, maxElements := t.MinElements(), t.MaxElements()
+		elements := make([]any, 0, minElements)
 		for i := 0; d.peekKind() != ']'; i++ {
-			if i == maxItems {
-				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", maxItems, d.opts.terms["items"]), "", d.opts.terms)
+			if i == maxElements {
+				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", maxElements, d.opts.terms["elements"]), "", d.opts.terms)
 			}
-			item, err := d.unmarshal(t.Elem())
+			elem, err := d.unmarshal(t.Elem())
 			if err != nil {
 				if err, ok := err.(*functionValidationError); ok {
 					err.appendIndexToPath(i)
 				}
 				return nil, err
 			}
-			items = append(items, item)
+			elements = append(elements, elem)
 			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if len(items) < minItems {
-			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d %s", minItems, d.opts.terms["items"]), "", d.opts.terms)
+		if len(elements) < minElements {
+			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d %s", minElements, d.opts.terms["elements"]), "", d.opts.terms)
 		}
 		if t.Unique() {
-			for i, item := range items {
-				for _, item2 := range items[i+1:] {
-					if item == item2 {
-						return nil, newErrInvalidValue(fmt.Sprintf("contains a duplicated value: %v", item), "", d.opts.terms)
+			for i, elem := range elements {
+				for _, item2 := range elements[i+1:] {
+					if elem == item2 {
+						return nil, newErrInvalidValue(fmt.Sprintf("contains a duplicated value: %v", elem), "", d.opts.terms)
 					}
 				}
 			}
 		}
-		return items, nil
+		return elements, nil
 	case '{':
 		// Unmarshal an object.
 		defer func() {

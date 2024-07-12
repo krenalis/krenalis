@@ -260,14 +260,14 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Text","values":["a","b","c"]}`,
 			Type: Text().WithValues("b", "a", "c"),
 		}, {
-			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
+			Data: `{"name":"Array","elementType":{"name":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","itemType":{"name":"Int","bitSize":32}}`,
+			Data: `{"name":"Array","elementType":{"name":"Int","bitSize":32}}`,
 			Type: Array(Int(32)),
 		}, {
-			Data: `{"name":"Array","minItems":2,"maxItems":8,"uniqueItems":true,"itemType":{"name":"Decimal"}}`,
-			Type: Array(Decimal(0, 0)).WithMinItems(2).WithMaxItems(8).WithUnique(),
+			Data: `{"name":"Array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"name":"Decimal"}}`,
+			Type: Array(Decimal(0, 0)).WithMinElements(2).WithMaxElements(8).WithUnique(),
 		}, {
 			Data: `{"name":"Object","properties":[{"name":"email","label":"","type":{"name":"Text"},"note":""},{"name":"size","label":"","type":{"name":"Decimal"},"note":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(0, 0)}}),

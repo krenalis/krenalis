@@ -73,7 +73,7 @@ const PropertyDialog = ({
 	const nameInputRef = useRef<any>();
 	const bitSizeSelectRef = useRef<any>();
 	const precisionInputRef = useRef<any>();
-	const itemTypeSelectRef = useRef<any>();
+	const elementTypeSelectRef = useRef<any>();
 	const valueTypeSelectRef = useRef<any>();
 
 	const isEditing = useMemo(() => {
@@ -133,8 +133,8 @@ const PropertyDialog = ({
 			setTimeout(() => precisionInputRef.current?.focus(), 50);
 		}
 		if (typeName === 'Array') {
-			typ.itemType = { name: '' };
-			setTimeout(() => itemTypeSelectRef.current?.focus(), 50);
+			typ.elementType = { name: '' };
+			setTimeout(() => elementTypeSelectRef.current?.focus(), 50);
 		}
 		if (typeName === 'Map') {
 			typ.valueType = { name: '' };
@@ -178,10 +178,10 @@ const PropertyDialog = ({
 		}
 	};
 
-	const onChangeItemType = (e) => {
+	const onChangeElementType = (e) => {
 		const p = { ...property };
 		const typ = p.type as ArrayType;
-		typ.itemType.name = e.target.value;
+		typ.elementType.name = e.target.value;
 		p.type = typ;
 		setProperty(p);
 	};
@@ -360,12 +360,12 @@ const PropertyDialog = ({
 								)}
 								{property.type?.name === 'Array' && (
 									<SlSelect
-										className='property-dialog__itemtype'
-										ref={itemTypeSelectRef}
+										className='property-dialog__elementtype'
+										ref={elementTypeSelectRef}
 										size='small'
-										label='Item type'
-										value={property.type?.itemType?.name}
-										onSlChange={onChangeItemType}
+										label='Element type'
+										value={property.type?.elementType?.name}
+										onSlChange={onChangeElementType}
 										hoist={true}
 									>
 										{TYPE_NAMES.map((t) => {

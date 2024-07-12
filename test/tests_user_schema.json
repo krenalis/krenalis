@@ -111,7 +111,7 @@
                 "name": "phone_numbers",
                 "type": {
                     "name": "Array",
-                    "itemType": {
+                    "elementType": {
                         "name": "Text",
                         "charLen": 300
                     }

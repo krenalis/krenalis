@@ -218,7 +218,7 @@ func sameType(t1, t2 Type) error {
 	if t1.real != t2.real {
 		return fmt.Errorf("expected real %t, got %t", t1.real, t2.real)
 	}
-	// Precision, byte length or items minimum length.
+	// Precision, byte length or elements minimum length.
 	if t1.p != t2.p {
 		switch t1.kind {
 		case DecimalKind:
@@ -226,11 +226,11 @@ func sameType(t1, t2 Type) error {
 		case TextKind:
 			return fmt.Errorf("expected byte length %d, got %d", t1.p, t2.p)
 		case ArrayKind:
-			return fmt.Errorf("expected items minimum length %d, got %d", t1.p, t2.p)
+			return fmt.Errorf("expected elements minimum length %d, got %d", t1.p, t2.p)
 		}
 		return fmt.Errorf("expected p == 0, got %d", t2.p)
 	}
-	// Scale, character length or items maximum length.
+	// Scale, character length or elements maximum length.
 	if t1.s != t2.s {
 		switch t1.kind {
 		case DecimalKind:
@@ -238,7 +238,7 @@ func sameType(t1, t2 Type) error {
 		case TextKind:
 			return fmt.Errorf("expected character length %d, got %d", t1.s, t2.s)
 		case ArrayKind:
-			return fmt.Errorf("expected items maximum length %d, got %d", t1.s, t2.s)
+			return fmt.Errorf("expected elements maximum length %d, got %d", t1.s, t2.s)
 		}
 		return fmt.Errorf("expected s == 0, got %d", t2.s)
 	}
@@ -281,16 +281,16 @@ func sameType(t1, t2 Type) error {
 			}
 		}
 	}
-	// Unique items and item type.
+	// Unique elements and element type.
 	if t1.kind == ArrayKind {
 		if t1.unique != t2.unique {
 			if t1.unique {
-				return errors.New("expected unique items, got non-unique")
+				return errors.New("expected unique elements, got non-unique")
 			}
-			return errors.New("expected non-unique items, got unique")
+			return errors.New("expected non-unique elements, got unique")
 		}
 		if t2.vl == nil {
-			return errors.New("expected item type, got nil")
+			return errors.New("expected element type, got nil")
 		}
 		if err := sameType(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err

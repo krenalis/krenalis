@@ -274,29 +274,29 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		if t.Kind() != types.ArrayKind {
 			return nil, newErrInvalidValue("cannot be an array", "")
 		}
-		minItems, maxItems := t.MinItems(), t.MaxItems()
-		items := make([]any, 0, minItems)
+		minElements, maxElements := t.MinElements(), t.MaxElements()
+		elements := make([]any, 0, minElements)
 		for i := 0; d.peekKind() != ']'; i++ {
-			if i == maxItems {
-				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d items", maxItems), "")
+			if i == maxElements {
+				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d elements", maxElements), "")
 			}
-			item, err := d.unmarshal(t.Elem())
+			elem, err := d.unmarshal(t.Elem())
 			if err != nil {
 				if err, ok := err.(*SchemaValidationError); ok {
 					err.appendIndexToPath(i)
 				}
 				return nil, err
 			}
-			items = append(items, item)
+			elements = append(elements, elem)
 			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if len(items) < minItems {
-			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d items", minItems), "")
+		if len(elements) < minElements {
+			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d elements", minElements), "")
 		}
-		return items, nil
+		return elements, nil
 	case '{':
 		// Unmarshal an object.
 		if _, err := d.readToken(); err != nil {

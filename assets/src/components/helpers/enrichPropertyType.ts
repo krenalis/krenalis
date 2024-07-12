@@ -4,7 +4,7 @@ const enrichPropertyType = (type: Type) => {
 	let typeName: string = type.name;
 	if (typeName === 'Array') {
 		const typ = type as ArrayType;
-		typeName = 'Array(' + typ.itemType?.name + ')';
+		typeName = 'Array(' + typ.elementType?.name + ')';
 	}
 	if ('values' in type) {
 		const typ = type as TextType;

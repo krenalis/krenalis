@@ -104,9 +104,9 @@ func (warehouse *ClickHouse) Normalize(name string, typ types.Type, v any, nulla
 		}
 		var err error
 		n := rv.Len()
-		if n < typ.MinItems() || n > typ.MaxItems() {
-			return nil, fmt.Errorf("data warehouse returned an array with %d items for column %s, which is not within the expected range of [%d, %d]",
-				n, name, typ.MinItems(), typ.MaxItems())
+		if n < typ.MinElements() || n > typ.MaxElements() {
+			return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, which is not within the expected range of [%d, %d]",
+				n, name, typ.MinElements(), typ.MaxElements())
 		}
 		a := make([]any, n)
 		t := typ.Elem()

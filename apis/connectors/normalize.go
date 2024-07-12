@@ -507,8 +507,8 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if rv.Kind() == reflect.Slice {
 				var err error
 				n := rv.Len()
-				if n < typ.MinItems() || n > typ.MaxItems() {
-					return nil, newNormalizationErrorf(name, "is an array with %d items, but they must be in range [%d, %d]", n, typ.MinItems(), typ.MaxItems())
+				if n < typ.MinElements() || n > typ.MaxElements() {
+					return nil, newNormalizationErrorf(name, "is an array with %d elements, but they must be in range [%d, %d]", n, typ.MinElements(), typ.MaxElements())
 				}
 				a := make([]any, n)
 				t := typ.Elem()
