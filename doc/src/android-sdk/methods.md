@@ -1,6 +1,6 @@
 # Android SDK Methods
 
-The Android SDK is equipped to handle all essential event calls, including `screen`, `track`, `identify`, `group` and `alias`. Furthermore, it offers functionalities to efficiently manage session information.
+The Android SDK is equipped to handle all essential event calls, including `screen`, `track`, `identify`, and `group`. Furthermore, it offers functionalities to efficiently manage session information.
 
 With these capabilities, you can seamlessly track and analyze user interactions, facilitating a comprehensive understanding of user behavior and engagement.
 
@@ -10,7 +10,10 @@ Below the Android SDK methods:
 - [track](#track)
 - [identify](#identify)
 - [group](#group)
+- [userId](#userid)
+- [traits](#traits)
 - [alias](#alias)
+- [anonymousId](#anonymousid)
 - [reset](#reset)
 - [getSessionId](#getsessionid)
 - [startSession](#startsession)
@@ -30,11 +33,11 @@ screen(title: String, properties: JsonObject = emptyJsonObject, category: String
 
 #### Parameters
 
-| Name         | Type                | Required                               | Description                                               |
-|--------------|---------------------|----------------------------------------|-----------------------------------------------------------|
-| `title`      | `String`            | <div style="text-align:center">✓</div> | Title of the screen.                                      |
-| `properties` | `JsonObject`        |                                        | Properties of the screen.                                 |
-| `category`   | `String`            |                                        | Category to describe the screen.                          |
+| Name         | Type         | Required                               | Description                      |
+|--------------|--------------|----------------------------------------|----------------------------------|
+| `title`      | `String`     | <div style="text-align:center">✓</div> | Title of the screen.             |
+| `properties` | `JsonObject` |                                        | Properties of the screen.        |
+| `category`   | `String`     |                                        | Category to describe the screen. |
 
 #### Example
 
@@ -68,10 +71,10 @@ track(name: String, properties: JsonObject = emptyJsonObject): Unit
 
 #### Parameters
 
-| Name         | Type                | Required                               | Description                                               |
-|--------------|---------------------|----------------------------------------|-----------------------------------------------------------|
-| `name`       | `String`            | <div style="text-align:center">✓</div> | Name of the event.                                        |
-| `properties` | `JsonObject`        |                                        | Properties of the event.                                  |
+| Name         | Type         | Required                               | Description              |
+|--------------|--------------|----------------------------------------|--------------------------|
+| `name`       | `String`     | <div style="text-align:center">✓</div> | Name of the event.       |
+| `properties` | `JsonObject` |                                        | Properties of the event. |
 
 #### Example
 
@@ -102,10 +105,10 @@ identify(userId: String, traits: JsonObject = emptyJsonObject): Unit
 ```
 #### Parameters
 
-| Name         | Type                | Required                               | Description                                               |
-|--------------|---------------------|----------------------------------------|-----------------------------------------------------------|
-| `userId`     | `String`            | <div style="text-align:center">✓</div> | Identifier of the user.                                   |
-| `traits`     | `JsonObject`        |                                        | Traits to add to the user's traits.                       |
+| Name         | Type         | Required                               | Description                         |
+|--------------|--------------|----------------------------------------|-------------------------------------|
+| `userId`     | `String`     | <div style="text-align:center">✓</div> | Identifier of the user.             |
+| `traits`     | `JsonObject` |                                        | Traits to add to the user's traits. |
 
 #### Example
 
@@ -141,10 +144,10 @@ group(groupId: String, traits: JsonObject = emptyJsonObject): Unit
 
 #### Parameters
 
-| Name         | Type                | Required                               | Description                                               |
-|--------------|---------------------|----------------------------------------|-----------------------------------------------------------|
-| `groupId`    | `String`            | <div style="text-align:center">✓</div> | Identifier of the group.                                  |
-| `traits`     | `JsonObject`        |                                        | Traits of the group.                                      |
+| Name         | Type         | Required                               | Description              |
+|--------------|--------------|----------------------------------------|--------------------------|
+| `groupId`    | `String`     | <div style="text-align:center">✓</div> | Identifier of the group. |
+| `traits`     | `JsonObject` |                                        | Traits of the group.     |
 
 #### Example
 
@@ -166,9 +169,67 @@ analytics.group("84s76y49tb28v1jxq", Builders.buildJsonObject(o -> {
 }));
 ```
 
+## userId
+
+The `userId` method is used to get the identifier of the user. It always returns the user's identifier, or `null` if there is no identifier.
+
+To modify the user's identifier, use the [`identify`](#identify) method or the [`reset`](#reset) method.
+
+#### Syntax
+
+```kotlin
+userId(): String?
+```
+
+#### Parameters
+
+There are no parameters.
+
+#### Examples
+
+Kotlin
+```kotlin
+val userId = analytics.userId()
+```
+
+Java
+```java
+String userId = analytics.userId();
+```
+
+## traits
+
+The `traits` method is used to retrieve a user's traits. These traits are for the anonymous user if the user is anonymous, and for the non-anonymous user if non-anonymous.
+
+To modify the user's traits, use the [`identify`](methods.md#identify) method or the [`reset`](methods.md#reset) method.
+
+#### Syntax
+
+```kotlin
+traits(): jsonObject?
+```
+
+#### Parameters
+
+There are no parameters.
+
+#### Examples
+
+Kotlin
+```kotlin
+val traits = analytics.traits()
+```
+
+Java
+```java
+JsonObject traits = analytics.traits();
+```
+
 ## alias
 
-The `alias` method is used to merge two user identities, effectively connecting two sets of user data as one.
+The `alias` method is used to merge two user identities, effectively connecting two sets of user data as one. This method is applicable when the event is dispatched to a destination, such as Mixpanel.  
+
+> In Meergo, user merging is handled by Meergo's Identity Resolution. Therefore this method is not utilized in this process. 
 
 #### Syntax
 
@@ -178,9 +239,9 @@ alias(newId: String): Unit
 
 #### Parameters
 
-| Name         | Type                | Required                               | Description                                               |
-|--------------|---------------------|----------------------------------------|-----------------------------------------------------------|
-| `newId`      | `String`            | <div style="text-align:center">✓</div> | The new ID you want to alias the existing ID to.          |
+| Name         | Type     | Required                               | Description                                      |
+|--------------|----------|----------------------------------------|--------------------------------------------------|
+| `newId`      | `String` | <div style="text-align:center">✓</div> | The new ID you want to alias the existing ID to. |
 
 #### Example
 
@@ -194,16 +255,44 @@ Java
 analytics.alias("12r60m18ff04");
 ```
 
+## anonymousId
+
+The `anonymousId` method is used to retrieve the Anonymous ID.
+
+To modify the Anonymous ID, use the [`identify`](methods.md#identify) method or the [`reset`](methods.md#reset) method.
+
+#### Syntax
+
+```kotlin
+anonymousId(): String
+```
+
+#### Parameters
+
+There are no parameters.
+
+#### Examples
+
+Kotlin
+```kotlin
+val anonymousId = analytics.anonymousId()
+```
+
+Java
+```java
+String anonymousId = analytics.anonymousId();
+```
+
 ## reset
 
 The `reset` method resets the user identifier, and updates or removes the Anonymous ID and traits according to the strategy (as detailed in the table below). If `all` is true it always resets the Anonymous ID by generating a new one, and ends the session if one exists, regardless of the strategy.
 
-| Strategy | Behavior of `reset()`                                                                                                                               |
-|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| AB-C     | Removes User ID and user traits, and changes Anonymous ID and session.                                                                              |
-| ABC      | Removes User ID and user traits. Does not change Anonymous ID or session.                                                                           |
-| A-B-C    | Removes User ID and user traits and changes Anonymous ID and session.                                                                               |
-| AC-B     | Removes User ID. Restores Anonymous ID, user traits and session to their state before the latest [`identify`](#identify) call.                      |
+| Strategy | Behavior of `reset()`                                                                                                          |
+|----------|--------------------------------------------------------------------------------------------------------------------------------|
+| AB-C     | Removes User ID and user traits, and changes Anonymous ID and session.                                                         |
+| ABC      | Removes User ID and user traits. Does not change Anonymous ID or session.                                                      |
+| A-B-C    | Removes User ID and user traits and changes Anonymous ID and session.                                                          |
+| AC-B     | Removes User ID. Restores Anonymous ID, user traits and session to their state before the latest [`identify`](#identify) call. |
 
 
 #### Syntax
@@ -243,6 +332,7 @@ To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy
 The `getSessionId` method returns the current session identifier. It returns `null` if there is no session.
 
 #### Syntax
+
 ```kotlin
 getSessionId(): Long?
 ```
@@ -275,9 +365,9 @@ startSession(id: Long?): Unit
 
 #### Parameters
 
-| Name | Type     | Required                               | Description                           |
-|------|----------|----------------------------------------|---------------------------------------|
-| `id` | `Long?`  | <div style="text-align:center">✓</div> | Session identifier. Must be positive. |
+| Name | Type    | Required                               | Description                           |
+|------|---------|----------------------------------------|---------------------------------------|
+| `id` | `Long?` | <div style="text-align:center">✓</div> | Session identifier. Must be positive. |
 
 #### Example
 

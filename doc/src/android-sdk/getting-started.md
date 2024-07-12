@@ -14,11 +14,11 @@ To create a source Android connection in Meergo:
 
 ## Step 2: Import the SDK
 
-To import the Android SDK inside your application:
+To integrate the Android SDK inside your application:
 
 1. Add the dependency to your `build.gradle`. Make sure to replace `<latest_version>` with the latest version of the SDK.
 
-    Kotlin
+    #### Kotlin
     ```kotlin
     repositories {
       mavenCentral()
@@ -27,7 +27,8 @@ To import the Android SDK inside your application:
       implementation 'com.meergo.analytics.kotlin:android:<latest_version>'
     }
     ```
-    Java
+
+   #### Java
     ```java
     repositories {
       mavenCentral()
@@ -36,9 +37,10 @@ To import the Android SDK inside your application:
       implementation 'com.meergo.analytics.kotlin:android:<latest_version>'
     }
     ```
+
 2. Initialize and configure the client. You can find the write key in Meergo inside the Android connection in **Settings > API Keys**. See [Options](options.md) for the list of configuration options.
 
-    Kotlin
+    #### Kotlin
     ```kotlin
     import com.meergo.analytics.kotlin.android.Analytics
     import com.meergo.analytics.kotlin.core.*
@@ -50,9 +52,10 @@ To import the Android SDK inside your application:
       // ...other config options
     }
     ```
-    Java
+
+    #### Java
     ```Java
-    AndroidAnalytics analytics = AndroidAnalyticsKt.Analytics(BuildConfig.YOUR_WRITE_KEY,  getApplicationContext(), configuration -> {
+    AndroidAnalytics analytics = AndroidAnalyticsKt.Analytics(BuildConfig.YOUR_WRITE_KEY, getApplicationContext(), configuration -> {
       configuration.setFlushAt(1);
       configuration.setCollectDeviceId(true);
       configuration.setTrackApplicationLifecycleEvents(true);
@@ -61,8 +64,9 @@ To import the Android SDK inside your application:
       return Unit.INSTANCE;
     });
 
-    JavaAnalytics analyticsCompat = new JavaAnalytics(analytics);​
+    JavaAnalytics analyticsCompat = new JavaAnalytics(analytics);
     ```
+
 3. Add the required permissions to `AndroidManifest.xml` (if they are not yet present).
     ```xml
     <!-- Required for internet. -->
