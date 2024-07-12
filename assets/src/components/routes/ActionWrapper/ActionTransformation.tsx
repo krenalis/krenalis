@@ -902,10 +902,18 @@ const FullscreenTransformation = ({
 		const fetchSamples = async () => {
 			let samples: Sample[];
 			if (actionType.Target === 'Users') {
-				if (connection.isFile && connection.isSource) {
+				if (connection.isFileStorage && connection.isSource) {
 					let res: RecordsResponse;
 					try {
-						// res = await api.workspaces.connections.records(connection.id, action.Path, action.Sheet, 20);
+						res = await api.workspaces.connections.records(
+							connection.id,
+							action.Connector,
+							action.Path,
+							action.Sheet,
+							action.Compression,
+							values,
+							20,
+						);
 					} catch (err) {
 						handleError(err);
 						return;
@@ -1286,20 +1294,20 @@ const FullscreenTransformation = ({
 											<>
 												{idIdentifier.current && (
 													<div className='fullscreen-transformation__sample-id'>
-														{s[idIdentifier.current].value}
+														{removeQuotes(s[idIdentifier.current].value)}
 													</div>
 												)}
 												<div>
 													<div className='fullscreen-transformation__sample-full-name'>
 														{firstNameIdentifier.current && lastNameIdentifier.current
-															? s[firstNameIdentifier.current].value +
+															? removeQuotes(s[firstNameIdentifier.current].value) +
 																' ' +
-																s[lastNameIdentifier.current].value
+																removeQuotes(s[lastNameIdentifier.current].value)
 															: `Sample ${i}`}
 													</div>
 													{emailIdentifier.current && (
 														<div className='fullscreen-transformation__sample-email'>
-															{s[emailIdentifier.current].value}
+															{removeQuotes(s[emailIdentifier.current].value)}
 														</div>
 													)}
 												</div>
@@ -1783,6 +1791,10 @@ function removeTrailingS(str: string) {
 		return str.slice(0, -1);
 	}
 	return str;
+}
+
+function removeQuotes(str: string) {
+	return str.replace(/^"|"$/g, '');
 }
 
 export default ActionTransformation;
