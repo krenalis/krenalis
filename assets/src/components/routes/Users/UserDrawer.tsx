@@ -23,7 +23,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	const [selectedTab, setSelectedTab] = useState<UserTab>();
 
 	const { connections, workspaces, selectedWorkspace } = useContext(AppContext);
-	const { userIDList, fetchUsers, pagination } = useContext(UsersContext);
+	const { userIDList } = useContext(UsersContext);
 	const { isLoading, traits, events, identities } = useUserDrawer(selectedUser, selectedTab);
 
 	const workspace = useMemo(
@@ -60,33 +60,18 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 		let newUserID: string;
 		if (direction === 'previous') {
 			if (i - 1 < 0) {
-				// if the index is overflowing the start of the users list.
-				if (pagination.last === 1) {
-					// if there is only one page of users, select the last user.
-					newUserID = userIDList[userIDList.length - 1];
-				} else {
-					// otherwise fetch the previous page and select the last
-					// user.
-					const page = pagination.current === 1 ? pagination.last : pagination.current - 1;
-					const ids = await fetchUsers(page);
-					newUserID = ids[ids.length - 1];
-				}
+				// if the index is overflowing the start of the users list,
+				// select the last user.
+				newUserID = userIDList[userIDList.length - 1];
 			} else {
 				// select the previous user.
 				newUserID = userIDList[i - 1];
 			}
 		} else if (direction === 'next') {
-			// if the index is overflowing the end of the users list.
 			if (i + 1 >= userIDList.length) {
-				if (pagination.last === 1) {
-					// if there is only one page of users, select the first user.
-					newUserID = userIDList[0];
-				} else {
-					// otherwise fetch the next page and select the first user.
-					const page = pagination.current === pagination.last ? 1 : pagination.current + 1;
-					const ids = await fetchUsers(page);
-					newUserID = ids[0];
-				}
+				// if the index is overflowing the end of the users list, select
+				// the first user.
+				newUserID = userIDList[0];
 			} else {
 				// select the next user.
 				newUserID = userIDList[i + 1];

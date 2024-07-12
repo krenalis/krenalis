@@ -9,7 +9,6 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import { UserDrawer } from './UserDrawer';
 import { useUsersGrid } from './useUsersGrid';
 import { UserProperty } from './Users.types';
@@ -20,14 +19,10 @@ const UsersList = () => {
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
 
 	const { api, handleError, showStatus } = useContext(AppContext);
-	const { users, usersCount, limit, usersProperties, pagination, isLoading, fetchUsers } = useContext(UsersContext);
+	const { users, usersCount, usersProperties, isLoading, fetchUsers } = useContext(UsersContext);
 	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: string) =>
 		setSelectedUser(id),
 	);
-
-	const onPageChange = async (page: number) => {
-		await fetchUsers(page);
-	};
 
 	const onToggleColumn = (name: string) => {
 		const updatedProps: UserProperty[] = [];
@@ -39,13 +34,7 @@ const UsersList = () => {
 			updatedProps.push(cp);
 		}
 		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(updatedProps));
-		fetchUsers(pagination.current);
-	};
-
-	const onLimitChange = (e) => {
-		const value = e.currentTarget.value;
-		localStorage.setItem('meergo_ui_users_limit', value);
-		fetchUsers(pagination.current);
+		fetchUsers();
 	};
 
 	const onRunIdentityResolution = async () => {
@@ -62,7 +51,7 @@ const UsersList = () => {
 		setTimeout(() => {
 			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity resolution completed succesfully' });
 			setIsLoadingIdentityResolution(false);
-			fetchUsers(pagination.current);
+			fetchUsers();
 		}, 300);
 	};
 
@@ -102,63 +91,7 @@ const UsersList = () => {
 					<div className='users-list__footer'>
 						<div className='users-list__footer-total'>
 							<div className='users-list__footer-found'>Found {usersCount} users</div>
-							<div className='users-list__footer-limit'>
-								<span>Show:</span>
-								<SlSelect value={String(limit)} placeholder={String(limit)} onSlChange={onLimitChange}>
-									<SlOption value='15'>15</SlOption>
-									<SlOption value='30'>30</SlOption>
-									<SlOption value='50'>50</SlOption>
-									<SlOption value='70'>70</SlOption>
-									<SlOption value='100'>100</SlOption>
-								</SlSelect>
-							</div>
 						</div>
-						{usersCount > limit && (
-							<div className='users-list__pagination'>
-								<span
-									className='users-list__pagination-first'
-									onClick={() => {
-										onPageChange(1);
-									}}
-								>
-									<SlIcon slot='suffix' name='chevron-double-left' />
-								</span>
-								{pagination.current !== 1 && (
-									<span
-										className='users-list__pagination-previous'
-										onClick={() => {
-											onPageChange(pagination.current - 1);
-										}}
-									>
-										<SlIcon slot='suffix' name='chevron-left' />
-									</span>
-								)}
-								<div className='users-list__pagination-pages'>
-									Page
-									<span className='users-list__pagination-current'>{pagination.current}</span>
-									of
-									<span className='users-list__pagination-last'>{pagination.last}</span>
-								</div>
-								{pagination.current !== pagination.last && (
-									<span
-										className='users-list__pagination-next'
-										onClick={() => {
-											onPageChange(pagination.current + 1);
-										}}
-									>
-										<SlIcon slot='suffix' name='chevron-right' />
-									</span>
-								)}
-								<span
-									className='users-list__pagination-last'
-									onClick={() => {
-										onPageChange(pagination.last);
-									}}
-								>
-									<SlIcon slot='suffix' name='chevron-double-right' />
-								</span>
-							</div>
-						)}
 					</div>
 				</div>
 			</div>

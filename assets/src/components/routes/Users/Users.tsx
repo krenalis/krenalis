@@ -9,7 +9,7 @@ import { useUsers } from './useUsers';
 const Users = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { users, usersCount, limit, usersProperties, pagination, isLoading, userIDList, fetchUsers } = useUsers();
+	const { users, usersCount, usersProperties, isLoading, userIDList, fetchUsers } = useUsers();
 
 	useLayoutEffect(() => {
 		setTitle('Users');
@@ -20,9 +20,7 @@ const Users = () => {
 			value={{
 				users,
 				usersCount,
-				limit,
 				usersProperties,
-				pagination,
 				isLoading,
 				userIDList,
 				fetchUsers,

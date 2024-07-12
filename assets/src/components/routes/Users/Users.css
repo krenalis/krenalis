@@ -99,58 +99,6 @@
 	position: relative;
 }
 
-.users-list__footer-found::after {
-	content: '';
-	width: 2px;
-	height: 15px;
-	position: absolute;
-	background-color: var(--border-primary);
-	top: 50%;
-	transform: translate(15px, -50%);
-}
-
-.users-list__footer-limit {
-	display: flex;
-	gap: 5px;
-	align-items: center;
-	font-size: 14px;
-}
-
-.users-list__footer-limit sl-select::part(control) {
-	padding: 10px 0;
-	min-width: 150px;
-}
-
-.users-list__pagination {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	-webkit-user-select: none; /* Safari */
-	-ms-user-select: none; /* IE 10 and IE 11 */
-	user-select: none; /* Standard syntax */
-	background-color: var(--bg-gray);
-	padding: 10px 25px;
-	border-radius: 10px;
-}
-
-.users-list__pagination-pages {
-	display: flex;
-}
-
-.users-list__pagination-pages span {
-	margin: 0 5px;
-}
-
-.users-list__pagination-previous,
-.users-list__pagination-next,
-.users-list__pagination-first,
-.users-list__pagination-last {
-	cursor: pointer;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-}
-
 .user-drawer::part(title) {
 	display: none;
 }

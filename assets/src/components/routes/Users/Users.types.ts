@@ -6,9 +6,4 @@ interface UserProperty {
 	type: string;
 }
 
-interface UserPagination {
-	current: number;
-	last: number;
-}
-
-export type { UserProperty, UserPagination, UserTab };
+export type { UserProperty, UserTab };

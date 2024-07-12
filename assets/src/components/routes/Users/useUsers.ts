@@ -2,20 +2,18 @@ import { useEffect, useContext, useState } from 'react';
 import AppContext from '../../../context/AppContext';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import { UserProperty, UserPagination } from './Users.types';
+import { UserProperty } from './Users.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { FindUsersResponse, ResponseUser } from '../../../lib/api/types/responses';
 
-const DEFAULT_USER_LIMIT = 15;
+const DEFAULT_USER_LIMIT = 1000;
 
 const useUsers = () => {
 	const [users, setUsers] = useState<ResponseUser[]>([]);
 	const [usersCount, setUsersCount] = useState<number>(0);
 	const [usersProperties, setUsersProperties] = useState<UserProperty[]>([]);
 	const [userIDList, setUserIDList] = useState<string[]>([]);
-	const [pagination, setPagination] = useState<UserPagination>({} as UserPagination);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
-	const [limit, setLimit] = useState<number>(0);
 
 	const { api, handleError, redirect, selectedWorkspace, warehouse } = useContext(AppContext);
 
@@ -28,24 +26,11 @@ const useUsers = () => {
 			return;
 		}
 		// on mount, fetch the first page of users.
-		fetchUsers(1);
+		fetchUsers();
 	}, [selectedWorkspace]);
 
-	const fetchUsers = async (page: number): Promise<string[]> => {
+	const fetchUsers = async (): Promise<string[]> => {
 		setIsLoading(true);
-
-		// compute the max number of users to show in the users list.
-		let lim = DEFAULT_USER_LIMIT;
-		const storageLimit = localStorage.getItem('meergo_ui_users_limit');
-		if (storageLimit != null) {
-			try {
-				lim = Number(JSON.parse(storageLimit));
-			} catch (err) {
-				// the value of the limit in the storage is corrupted.
-				localStorage.removeItem('meergo_ui_users_limit');
-			}
-		}
-		setLimit(lim);
 
 		// fetch the user schema.
 		let schema: ObjectType;
@@ -98,10 +83,9 @@ const useUsers = () => {
 		}
 
 		// fetch the users.
-		const cursor = page * lim - lim;
 		let res: FindUsersResponse;
 		try {
-			res = await api.workspaces.users.find(propertiesNames, null, '', true, cursor, lim);
+			res = await api.workspaces.users.find(propertiesNames, null, '', true, 0, DEFAULT_USER_LIMIT);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);
@@ -115,7 +99,7 @@ const useUsers = () => {
 						case 'PropertyNotExist':
 							// one of the properties has been concurrently
 							// removed from the user schema. Try again.
-							fetchUsers(page);
+							fetchUsers();
 							return;
 						case 'DataWarehouseFailed':
 							handleError('An error occurred with the data warehouse');
@@ -140,7 +124,6 @@ const useUsers = () => {
 
 		setUsers(users);
 		setUsersCount(count);
-		setPagination({ current: page, last: Math.ceil(count / lim) });
 
 		// compute the list of users ids needed for navigating between users.
 		const ids: string[] = [];
@@ -159,9 +142,7 @@ const useUsers = () => {
 	return {
 		users,
 		usersCount,
-		limit,
 		usersProperties,
-		pagination,
 		isLoading,
 		userIDList,
 		fetchUsers,
