@@ -14,6 +14,7 @@ import (
 	"iter"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"unicode/utf8"
 
@@ -833,8 +834,8 @@ func (t Type) WithRegexp(re *regexp.Regexp) Type {
 	return t
 }
 
-// Values returns the values of t. Returns nil if t has no values.
-// Panics if t is not a Text type.
+// Values returns the values of t in ascending order. Returns nil if t has no
+// values. Panics if t is not a Text type.
 func (t Type) Values() []string {
 	if t.kind != TextKind {
 		panic("cannot get values for a non-Text type")
@@ -878,6 +879,7 @@ func (t Type) WithValues(values ...string) Type {
 		}
 		vl[i] = v
 	}
+	slices.Sort(vl)
 	t.vl = vl
 	return t
 }

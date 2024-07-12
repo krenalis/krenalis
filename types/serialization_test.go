@@ -163,22 +163,25 @@ func TestPropertyDeserialization(t *testing.T) {
 
 func TestPropertySerializationDeserialization(t *testing.T) {
 	tests := []struct {
-		JSON     string
+		InJSON   string
 		Property Property
+		OutJSON  string
 	}{
 		{
 			`{"name":"Apple","label":"","type":{"name":"Text"},"note":""}`,
 			Property{Name: "Apple", Type: Text()},
+			`{"name":"Apple","label":"","type":{"name":"Text"},"note":""}`,
 		},
 		{
-			`{"name":"Apple","label":"A label","type":{"name":"Text"},"note":"Some note..."}`,
-			Property{Name: "Apple", Label: "A label", Type: Text(), Note: "Some note..."},
+			`{"name":"Apple","label":"A label","type":{"name":"Text","values":["g","c"]},"note":"Some note..."}`,
+			Property{Name: "Apple", Label: "A label", Type: Text().WithValues("c", "g"), Note: "Some note..."},
+			`{"name":"Apple","label":"A label","type":{"name":"Text","values":["c","g"]},"note":"Some note..."}`,
 		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			var p Property
-			err := json.Unmarshal([]byte(test.JSON), &p)
+			err := json.Unmarshal([]byte(test.InJSON), &p)
 			if err != nil {
 				t.Fatalf("cannot unmarshal property: %s", err)
 			}
@@ -189,8 +192,8 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			if err != nil {
 				t.Fatalf("cannot marshal property: %s", err)
 			}
-			if test.JSON != string(got) {
-				t.Fatalf("expected %q, got %q", test.JSON, string(got))
+			if test.OutJSON != string(got) {
+				t.Fatalf("expected %q, got %q", test.OutJSON, string(got))
 			}
 		})
 	}
@@ -253,6 +256,9 @@ func TestTypeSerialization(t *testing.T) {
 		}, {
 			Data: `{"name":"Date"}`,
 			Type: Date(),
+		}, {
+			Data: `{"name":"Text","values":["a","b","c"]}`,
+			Type: Text().WithValues("b", "a", "c"),
 		}, {
 			Data: `{"name":"Array","itemType":{"name":"Text"}}`,
 			Type: Array(Text()),
