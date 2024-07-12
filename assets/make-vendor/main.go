@@ -246,9 +246,7 @@ func (f *resolveFile) Contains(path string) bool {
 }
 
 func (f *resolveFile) ResolvedPaths() []string {
-	values := slices.Collect(maps.Values(f.imports))
-	slices.Sort(values)
-	return values
+	return slices.Sorted(maps.Values(f.imports))
 }
 
 func (f *resolveFile) MarshalJSON() ([]byte, error) {
@@ -256,8 +254,7 @@ func (f *resolveFile) MarshalJSON() ([]byte, error) {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	b.WriteString("{")
-	paths := slices.Collect(maps.Keys(f.imports))
-	slices.Sort(paths)
+	paths := slices.Sorted(maps.Keys(f.imports))
 	for i, name := range paths {
 		if i > 0 {
 			b.WriteByte(',')

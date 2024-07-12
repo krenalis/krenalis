@@ -580,8 +580,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 			delete(unexpected, p.Name)
 		}
 		if len(unexpected) > 0 {
-			keys := slices.Collect(maps.Keys(unexpected))
-			slices.Sort(keys)
+			keys := slices.Sorted(maps.Keys(unexpected))
 			return fmt.Errorf("unexpected property %q", keys[0])
 		}
 		return nil
@@ -591,8 +590,7 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
-		names := slices.Collect(maps.Keys(m2))
-		slices.Sort(names)
+		names := slices.Sorted(maps.Keys(m2))
 		if len(m1) != len(m2) {
 			for _, name := range names {
 				if _, ok := m1[name]; !ok {

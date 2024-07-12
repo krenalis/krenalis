@@ -530,8 +530,7 @@ func equalValues(t types.Type, v1, v2 any) error {
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
-		names := slices.Collect(maps.Keys(m2))
-		slices.Sort(names)
+		names := slices.Sorted(maps.Keys(m2))
 		if len(m1) != len(m2) {
 			for _, name := range names {
 				if _, ok := m1[name]; !ok {
