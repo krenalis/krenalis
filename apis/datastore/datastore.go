@@ -299,16 +299,18 @@ func CanBeIdentifier(t types.Type) bool {
 	}
 }
 
-// CheckConflictingProperties checks if schema contains conflicting properties,
-// and returns an error in that case.
-// A property conflicts with another if their representation as columns on the
+// CheckConflictingProperties checks if schema contains conflicting properties
+// and returns an error if that case. io specifies whether the check relates
+// to "input", "output", or "users" schema.
+//
+// A property conflicts with another if their representation as columns in the
 // data warehouse has the same name.
-func CheckConflictingProperties(schema types.Type) error {
+func CheckConflictingProperties(io string, schema types.Type) error {
 	columns := propertiesToColumns(schema)
 	names := make(map[string]struct{})
 	for _, c := range columns {
 		if _, ok := names[c.Name]; ok {
-			return fmt.Errorf("two or more properties cannot have the same representation as column %q", c.Name)
+			return fmt.Errorf("two properties in the %s schema would have the same column name %q in the data warehouse", io, c.Name)
 		}
 		names[c.Name] = struct{}{}
 	}

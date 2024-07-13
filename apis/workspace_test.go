@@ -46,7 +46,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32)},
 				}), Nullable: true},
 			}),
-			err: "property cannot be 'nullable'",
+			err: "user schema properties cannot be nullable",
 		},
 		{
 			name: "Array with Object item",
@@ -67,7 +67,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "b", Type: types.Text()},
 				}))},
 			}),
-			err: "property with type Array cannot have element with type Object",
+			err: "user schema properties cannot have type 'Array(Object)'",
 		},
 		{
 			name: "Property with a placeholder",
@@ -84,7 +84,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32), Placeholder: "1234"},
 				})},
 			}),
-			err: "property cannot specify a placeholder",
+			err: "user schema properties cannot have a placeholder",
 		},
 		{
 			name: "Meta properties",
@@ -96,7 +96,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "number", Type: types.Int(32)},
 				})},
 			}),
-			err: "property cannot be a meta property",
+			err: "user schema cannot have meta properties",
 		},
 	}
 

@@ -105,7 +105,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"schema contains conflicting properties: two or more properties cannot have the same representation as column \"a_b\""}}`
+	expectedErr := `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"two properties in the users schema would have the same column name \"a_b\" in the data warehouse"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
@@ -127,7 +127,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"not allowed property in schema: property cannot be 'nullable'"}}`
+	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"user schema properties cannot be nullable"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}

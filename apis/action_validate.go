@@ -360,22 +360,15 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Second, do validations based on the workspace and the connection.
 
-	eventBasedConn := v.connection.connector.typ == state.MobileType ||
-		v.connection.connector.typ == state.ServerType ||
-		v.connection.connector.typ == state.WebsiteType
-
-	importingUsers := v.connection.role == state.Source && target == state.Users
-	exportingUsers := v.connection.role == state.Destination && target == state.Users
-
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() {
-		if err := validateActionSchema(inSchema, exportingUsers); err != nil {
-			return errors.BadRequest("input schema is not valid: %s", err)
+		if err := validateActionSchema("input", inSchema, v.connection.role, target); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 	}
 	if outSchema.Valid() {
-		if err := validateActionSchema(outSchema, importingUsers); err != nil {
-			return errors.BadRequest("output schema is not valid: %s", err)
+		if err := validateActionSchema("output", outSchema, v.connection.role, target); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 	}
 
@@ -620,6 +613,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		}
 	}
 
+	eventBasedConn := v.connection.connector.typ == state.MobileType ||
+		v.connection.connector.typ == state.ServerType ||
+		v.connection.connector.typ == state.WebsiteType
+
 	// Check the connections for which the transformation is prohibited.
 	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && target == state.Events) ||
 		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorageType && targetUsersOrGroups)
@@ -714,40 +711,46 @@ func unusedProperties(schema types.Type, used []string) []string {
 	return unused
 }
 
-// validateActionSchema validates the given action schema.
-// isUserSchema indicates if schema is the user schema within an action, and
-// therefore should be validated against the constraints imposed on the user
-// schema.
-// In case the schema is not valid, this function returns a generic 'error'
-// value, which can then be wrapped within errors.BadRequest by the caller.
-func validateActionSchema(schema types.Type, isUserSchema bool) error {
+// validateActionSchema validates an action schema, returning an error if it is
+// not valid.
+//
+// io specifies whether the validation relates to "input" or "output", schema is
+// the schema of the input or output action, role and target are the role and
+// target of the action.
+func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target) error {
+	isUserSchema := target == state.Users &&
+		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 	for path, p := range types.Walk(schema) {
 		if p.Placeholder != "" {
-			return fmt.Errorf("property %q cannot specify a placeholder", path)
+			return errors.New("properties of an action schema cannot have placeholders")
 		}
 		if p.Role != types.BothRole {
-			return fmt.Errorf("property %q cannot specify a role", path)
+			return errors.New("properties of an action schema can only have the Both role")
 		}
 		if isUserSchema {
 			if isMetaProperty(path) {
-				return fmt.Errorf("schema cannot contain meta properties")
+				return fmt.Errorf("%s actions with Users target cannot have meta properties in the %s schema",
+					strings.ToLower(role.String()), io)
 			}
 			if p.Required {
-				return fmt.Errorf("property %q cannot be required", path)
+				return fmt.Errorf("%s actions with Users target cannot have required properties in the %s schema",
+					strings.ToLower(role.String()), io)
 			}
 			if p.Nullable {
-				return fmt.Errorf("property %q cannot be nullable", path)
+				return fmt.Errorf("%s actions with Users target cannot have nullable properties in the %s schema",
+					strings.ToLower(role.String()), io)
 			}
 			if k := p.Type.Kind(); k == types.ArrayKind || k == types.MapKind {
 				elemK := p.Type.Elem().Kind()
 				if elemK == types.ArrayKind || elemK == types.ObjectKind || elemK == types.MapKind {
-					return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), elemK)
+					return fmt.Errorf("%s actions with Users target cannot have properties of type '%s(%s)' in the %s schema",
+						strings.ToLower(role.String()), k, elemK, io)
 				}
 			}
 		}
 	}
 	if isUserSchema {
-		if err := datastore.CheckConflictingProperties(schema); err != nil {
+		if err := datastore.CheckConflictingProperties(io, schema); err != nil {
 			return err
 		}
 	}

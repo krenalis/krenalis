@@ -447,11 +447,11 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 	}
 
 	if err := checkAllowedPropertyUserSchema(schema); err != nil {
-		return errors.BadRequest("not allowed property in schema: %s", err)
+		return errors.BadRequest("%s", err)
 	}
 
-	if err := datastore.CheckConflictingProperties(schema); err != nil {
-		return errors.BadRequest("schema contains conflicting properties: %s", err.Error())
+	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
@@ -586,10 +586,10 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
 	}
 	if err := checkAllowedPropertyUserSchema(schema); err != nil {
-		return nil, errors.BadRequest("not allowed property in schema: %s", err)
+		return nil, errors.BadRequest("%s", err)
 	}
-	if err := datastore.CheckConflictingProperties(schema); err != nil {
-		return nil, errors.BadRequest("schema contains conflicting properties: %s", err.Error())
+	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
@@ -1862,19 +1862,19 @@ func (this *Workspace) userIdentities(ctx context.Context, where *datastore.Wher
 func checkAllowedPropertyUserSchema(schema types.Type) error {
 	for _, p := range schema.Properties() {
 		if isMetaProperty(p.Name) {
-			return errors.New("property cannot be a meta property")
+			return errors.New("user schema cannot have meta properties")
 		}
 		if p.Placeholder != "" {
-			return errors.New("property cannot specify a placeholder")
+			return errors.New("user schema properties cannot have a placeholder")
 		}
 		if p.Role != types.BothRole {
-			return errors.New("property cannot specify a role")
+			return errors.New("user schema properties can only have the Both role")
 		}
 		if p.Required {
-			return errors.New("property cannot be 'required'")
+			return errors.New("user schema properties cannot be required")
 		}
 		if p.Nullable {
-			return fmt.Errorf("property cannot be 'nullable'")
+			return fmt.Errorf("user schema properties cannot be nullable")
 		}
 		switch p.Type.Kind() {
 		// Array types cannot have items of type Array, Object, or Map.
@@ -1882,7 +1882,7 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		case types.ArrayKind, types.MapKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("property with type %s cannot have element with type %s", p.Type.Kind(), k)
+				return fmt.Errorf("user schema properties cannot have type '%s(%s)'", p.Type.Kind(), k)
 			}
 		case types.ObjectKind:
 			err := checkAllowedPropertyUserSchema(p.Type)
