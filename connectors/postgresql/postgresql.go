@@ -142,8 +142,9 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []t
 			return nil, nil, err
 		}
 		columns[i] = types.Property{
-			Name: column.Name(),
-			Type: typ,
+			Name:     column.Name(),
+			Type:     typ,
+			Required: true,
 			// Nullable is always considered true, as the PostgreSQL driver does
 			// not have information about nullability of returned columns.
 			Nullable: true,
