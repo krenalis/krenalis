@@ -241,13 +241,12 @@ func SubsetFunc(t Type, f func(p Property) bool) Type {
 //
 // For example:
 //
-//	Walk(func(path string, p Property) bool {
-//	    fmt.Printf("%s: %s\n", path, p.Type.Kind)
-//	    return true
-//	})
+//	for path, property := range Walk(t) {
+//	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
+//	}
 //
-// If a property "x" has type Array(Object) or Map(Object) and the object has
-// the property "y", its path is "x.y".
+// If a property "x" has type Array(T) or Map(T) and T has the property "y", its
+// path is "x.y".
 //
 // It panics if t is not an Object.
 func Walk(t Type) iter.Seq2[string, Property] {
