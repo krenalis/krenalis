@@ -161,23 +161,23 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	}
 	defer writer.Close(ctx)
 
-	type userToProcess struct {
-		GID        string
-		ID         string
-		Properties map[string]any
+	// User represents a user to update or create.
+	type User struct {
+		ID     string           // External app identifier; is non-empty only for app users to update.
+		Record datastore.Record // User record.
 	}
 
 	var (
-		users  = make([]userToProcess, 0, 100)
+		users  = make([]User, 0, 100)
 		values = make([]map[string]any, 0, 100)
 	)
 
-	for user := range records.All(ctx) {
+	for record := range records.All(ctx) {
 
-		if user.Err != nil {
-			stats.Failed(statistics.Receiving, user.Err.Error())
+		if record.Err != nil {
+			stats.Failed(statistics.Receiving, record.Err.Error())
 			if connector.Type == state.FileStorage {
-				return user.Err
+				return record.Err
 			}
 			goto Next
 		}
@@ -187,7 +187,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 		if connector.Type == state.App {
 			// Resolve the external identities.
-			ids, err := this.resolveExternalIdentities(ctx, user)
+			ids, err := this.resolveExternalIdentities(ctx, record)
 			if err != nil {
 				if err == datastore.ErrMaintenanceMode {
 					return actionExecutionError{err}
@@ -203,24 +203,14 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			if existsOnApp {
 				// Update the user(s).
 				for _, id := range ids {
-					users = append(users, userToProcess{
-						GID:        user.ID.(string),
-						ID:         id,
-						Properties: user.Properties,
-					})
+					users = append(users, User{ID: id, Record: record})
 				}
 			} else {
 				// Create the user.
-				users = append(users, userToProcess{
-					GID:        user.ID.(string),
-					Properties: user.Properties,
-				})
+				users = append(users, User{Record: record})
 			}
 		} else {
-			users = append(users, userToProcess{
-				GID:        user.ID.(string),
-				Properties: user.Properties,
-			})
+			users = append(users, User{Record: record})
 		}
 
 	Next:
@@ -230,10 +220,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 			if transformer == nil {
 				for _, user := range users {
-					record := connectors.Record{
-						Properties: user.Properties,
-					}
-					if ok := writer.Write(ctx, record.ID, record.Properties, user.GID); !ok {
+					if ok := writer.Write(ctx, "", user.Record.Properties, user.Record.ID.(string)); !ok {
 						return writer.Close(ctx)
 					}
 				}
@@ -246,7 +233,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			clear(values)
 			values = values[0:len(users)]
 			for i, user := range users {
-				values[i] = user.Properties
+				values[i] = user.Record.Properties
 			}
 			results, err := transformer.Transform(ctx, values)
 			if err != nil {
@@ -271,12 +258,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 				if len(result.Value) == 0 {
 					continue
 				}
-				user.Properties = result.Value
-				record := connectors.Record{
-					ID:         user.ID,
-					Properties: user.Properties,
-				}
-				if ok := writer.Write(ctx, record.ID, record.Properties, user.GID); !ok {
+				if ok := writer.Write(ctx, user.ID, result.Value, user.Record.ID.(string)); !ok {
 					return writer.Close(ctx)
 				}
 			}
@@ -348,15 +330,15 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	return nil
 }
 
-// resolveExternalIdentities resolves the external identities of the user and
+// resolveExternalIdentities resolves the external identities of the record and
 // returns its external app identifiers, if resolved, or the empty slice if such
 // user does not exist on the remote app.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // datastore.ErrMaintenanceMode error.
-func (this *Action) resolveExternalIdentities(ctx context.Context, user datastore.Record) ([]string, error) {
+func (this *Action) resolveExternalIdentities(ctx context.Context, record datastore.Record) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
-	property, ok := user.Properties[internalPropName]
+	property, ok := record.Properties[internalPropName]
 	if !ok {
 		property = nil
 	}
