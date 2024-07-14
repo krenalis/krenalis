@@ -191,6 +191,48 @@ Rest:
 	return Property{}, PathNotExistError{path}
 }
 
+// PropertyExists reports whether property with the given path exists in the
+// Object t.
+//
+// If path is "x.y" and the property "x" has type Array(T) or Map(T), it reports
+// whether T has the property "y".
+//
+// It panics if t is not of type Object or if path is not a valid path.
+func PropertyExists(t Type, path string) bool {
+	if t.kind != ObjectKind {
+		panic("cannot check the properties of a non-Object type")
+	}
+	if !IsValidPropertyPath(path) {
+		panic("invalid property path")
+	}
+	var name string
+Object:
+	for {
+		name, path, _ = strings.Cut(path, ".")
+		properties := t.vl.([]Property)
+		for i := 0; i < len(properties); i++ {
+			if properties[i].Name != name {
+				continue
+			}
+			if path == "" {
+				return true
+			}
+			t = properties[i].Type
+			for {
+				switch t.kind {
+				case ObjectKind:
+					continue Object
+				case ArrayKind, MapKind:
+					t = t.Elem()
+				default:
+					return false
+				}
+			}
+		}
+		return false
+	}
+}
+
 // PropertyNames returns the names of the properties of the Object t.
 // Panics if t is not an Object type.
 func PropertyNames(t Type) []string {

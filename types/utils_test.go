@@ -352,6 +352,48 @@ func Test_PropertyByPath(t *testing.T) {
 	}
 }
 
+func Test_PropertyExists(t *testing.T) {
+	o := Object([]Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "c", Type: Array(Text())},
+		{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+		}))},
+	})
+	tests := []struct {
+		path   string
+		exists bool
+	}{
+		{"foo", false},
+		{"a.foo", false},
+		{"b.foo", false},
+		{"c.foo", false},
+		{"d.x.foo", false},
+		{"d.y.a.foo", false},
+		{"d.foo.y.a", false},
+		{"a", true},
+		{"b.x", true},
+		{"d.y", true},
+		{"d.y.a", true},
+		{"d.y.b", true},
+	}
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			got := PropertyExists(o, test.path)
+			if test.exists != got {
+				t.Fatalf("expected %t, got %t", test.exists, got)
+			}
+		})
+	}
+}
+
 func Test_SubsetFunc(t *testing.T) {
 	o := Object([]Property{
 		{Name: "a", Type: Text()},
