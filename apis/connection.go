@@ -472,8 +472,8 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	// Determine the input schema.
 	inSchema := action.InSchema
-	dispatchEventsToApps := dispatchesEventsToApps(connector.Type, this.connection.Role, state.Target(target))
-	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target))
+	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, this.connection.Role, state.Target(target))
+	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target))
 	if dispatchEventsToApps || importUserIdentitiesFromEvents {
 		// The input schema is the events schema without the GID, because both
 		// the actions that import user identities from events and the actions

@@ -94,8 +94,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		return errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
 	}
 
-	dispatchEventsToApps := dispatchesEventsToApps(v.connection.connector.typ, v.connection.role, target)
-	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
+	dispatchEventsToApps := isDispatchingEventsToApps(v.connection.connector.typ, v.connection.role, target)
+	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
 
 	// When dispatching events to apps or when importing user identities from
 	// events, the input schema must be the invalid schema.

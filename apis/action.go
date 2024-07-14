@@ -383,8 +383,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	// Determine the input schema.
 	inSchema := action.InSchema
-	dispatchEventsToApps := dispatchesEventsToApps(c.Connector().Type, c.Role, this.action.Target)
-	importUserIdentitiesFromEvents := importsUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target)
+	dispatchEventsToApps := isDispatchingEventsToApps(c.Connector().Type, c.Role, this.action.Target)
+	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target)
 	if dispatchEventsToApps || importUserIdentitiesFromEvents {
 		// The input schema is the events schema without the GID, because both
 		// the actions that import user identities from events and the actions
@@ -906,10 +906,17 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// importsUserIdentitiesFromEvents reports whether a connector with the given
-// type, on a connection with the given role, with an action with the given
-// target, imports user identities from events.
-func importsUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+// isDispatchingEventsToApps reports whether a connector of the given type,
+// on a connection with the given role, and an action with the given target,
+// is dispatching events to apps.
+func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Destination && target == state.Events && connectorType == state.AppType
+}
+
+// isImportingUserIdentitiesFromEvents reports whether a connector of the
+// given type, on a connection with the given role, and an action with the
+// given target, is importing user identities from events.
+func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	if role == state.Source && target == state.Users {
 		switch connectorType {
 		case state.MobileType, state.ServerType, state.WebsiteType:
@@ -917,13 +924,6 @@ func importsUserIdentitiesFromEvents(connectorType state.ConnectorType, role sta
 		}
 	}
 	return false
-}
-
-// dispatchesEventsToApps reports whether a connector with the given type, on a
-// connection with the given role, with an action with the given target,
-// dispatches events to apps.
-func dispatchesEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.Events && connectorType == state.AppType
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema
