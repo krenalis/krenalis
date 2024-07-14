@@ -204,7 +204,7 @@ func (c *Collector) actions() []*state.Action {
 			continue
 		}
 		c := action.Connection()
-		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.AppType {
+		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.App {
 			continue
 		}
 		actions = append(actions, action)
@@ -227,7 +227,7 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	conn, ok := c.state.ConnectionByKey(key)
 	if ok && conn.Enabled && conn.Role == state.Source {
 		switch conn.Connector().Type {
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.Mobile, state.Server, state.Website:
 			return conn, true
 		}
 	}

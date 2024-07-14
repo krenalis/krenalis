@@ -143,7 +143,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 
 	switch connector := c.Connector(); connector.Type {
 
-	case state.AppType:
+	case state.App:
 		switch target {
 		case Users:
 			var err error
@@ -193,7 +193,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
 		}
 
-	case state.DatabaseType:
+	case state.Database:
 		switch target {
 		case Users:
 			if c.Role == state.Source {
@@ -209,7 +209,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		}
 
-	case state.FileStorageType:
+	case state.FileStorage:
 		switch target {
 		case Users:
 			if c.Role == state.Source {
@@ -225,7 +225,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			}
 		}
 
-	case state.MobileType, state.ServerType, state.StreamType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Stream, state.Website:
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
@@ -268,7 +268,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	if targets.Contains(state.Users) {
 		switch typ := c.Connector().Type; typ {
 		case
-			state.AppType:
+			state.App:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForUsers
@@ -292,8 +292,8 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			}
 			actionTypes = append(actionTypes, at)
 		case
-			state.DatabaseType,
-			state.FileStorageType:
+			state.Database,
+			state.FileStorage:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import users"
@@ -309,9 +309,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			}
 			actionTypes = append(actionTypes, at)
 		case
-			state.MobileType,
-			state.ServerType,
-			state.WebsiteType:
+			state.Mobile,
+			state.Server,
+			state.Website:
 			if c.Role == state.Source {
 				at := ActionType{
 					Name:        "Import users",
@@ -325,7 +325,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	if targets.Contains(state.Groups) {
 		switch typ := c.Connector().Type; typ {
 		case
-			state.AppType:
+			state.App:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import " + connector.TermForGroups
@@ -349,8 +349,8 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			}
 			actionTypes = append(actionTypes, at)
 		case
-			state.DatabaseType,
-			state.FileStorageType:
+			state.Database,
+			state.FileStorage:
 			var name, description string
 			if c.Role == state.Source {
 				name = "Import groups"
@@ -366,9 +366,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			}
 			actionTypes = append(actionTypes, at)
 		case
-			state.MobileType,
-			state.ServerType,
-			state.WebsiteType:
+			state.Mobile,
+			state.Server,
+			state.Website:
 			if c.Role == state.Source {
 				at := ActionType{
 					Name:        "Import groups",
@@ -381,15 +381,15 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	}
 	if targets.Contains(state.Events) {
 		switch typ := c.Connector().Type; typ {
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.Mobile, state.Server, state.Website:
 			if c.Role == state.Source {
 				description := "Import events from the "
 				switch typ {
-				case state.MobileType:
+				case state.Mobile:
 					description += "mobile app"
-				case state.ServerType:
+				case state.Server:
 					description += "server"
-				case state.WebsiteType:
+				case state.Website:
 					description += "website"
 				}
 				at := ActionType{
@@ -399,7 +399,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				}
 				actionTypes = slices.Insert(actionTypes, 0, at)
 			}
-		case state.AppType:
+		case state.App:
 			if c.Role == state.Destination {
 				eventTypes, err := this.app().EventTypes(ctx)
 				if err != nil {
@@ -599,7 +599,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		switch n.Target {
 		case state.Events:
 			switch connector.Type {
-			case state.MobileType, state.ServerType, state.WebsiteType:
+			case state.Mobile, state.Server, state.Website:
 				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != sql.ErrNoRows {
 					if err == nil {
@@ -711,7 +711,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 
 	this.apis.mustBeOpen()
 
-	if this.connection.Connector().Type != state.AppType {
+	if this.connection.Connector().Type != state.App {
 		return nil, "", errors.BadRequest("connection %d is not an app connection", this.connection.ID)
 	}
 	if !schema.Valid() {
@@ -777,7 +777,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
-	if c.Connector().Type != state.FileStorageType {
+	if c.Connector().Type != state.FileStorage {
 		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 	if path == "" {
@@ -909,7 +909,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.DatabaseType {
+	if connector.Type != state.Database {
 		return nil, types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
 	}
 	if c.Role != state.Source {
@@ -982,7 +982,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	this.apis.mustBeOpen()
 
 	switch c := this.connection.Connector(); c.Type {
-	case state.AppType, state.DatabaseType, state.FileStorageType, state.StreamType:
+	case state.App, state.Database, state.FileStorage, state.Stream:
 	default:
 		return nil, errors.BadRequest("connection %d cannot have executions, it's a %s connection",
 			this.connection.ID, strings.ToLower(c.Type.String()))
@@ -1068,7 +1068,7 @@ func (this *Connection) Keys() ([]string, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
 	switch c.Connector().Type {
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 	default:
 		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
 	}
@@ -1089,7 +1089,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 	default:
 		return "", errors.NotFound("connection %d is not a mobile, server or website", c.ID)
 	}
@@ -1161,7 +1161,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 	c := this.connection
 
 	// Validate the connection type.
-	if c.Connector().Type != state.FileStorageType {
+	if c.Connector().Type != state.FileStorage {
 		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 	// Validate the path.
@@ -1183,7 +1183,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 	if !ok {
 		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", fileConnector)
 	}
-	if file.Type != state.FileType {
+	if file.Type != state.File {
 		return nil, types.Type{}, errors.BadRequest("connector %s is not a file connector", file.Name)
 	}
 
@@ -1338,7 +1338,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	c := this.connection
 	connector := c.Connector()
 	switch connector.Type {
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 	default:
 		return errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
 	}
@@ -1390,7 +1390,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	c := this.connection
 
-	if c.Connector().Type != state.AppType {
+	if c.Connector().Type != state.App {
 		return nil, errors.BadRequest("connection %d is not an app connection", c.ID)
 	}
 	if c.Role != state.Destination {
@@ -1604,7 +1604,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	// Validate the strategy.
 	if this.connection.Role == state.Source {
 		switch c.Type {
-		case state.MobileType, state.WebsiteType:
+		case state.Mobile, state.Website:
 			if connection.Strategy == nil {
 				return errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
@@ -1634,7 +1634,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 	}
 
 	// Validate the website host.
-	if n.WebsiteHost != "" && c.Type != state.WebsiteType {
+	if n.WebsiteHost != "" && c.Type != state.Website {
 		return errors.BadRequest("connector %s cannot have a website host, it's a %s",
 			c.Name, strings.ToLower(c.Type.String()))
 	}
@@ -1700,7 +1700,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 
 	c := this.connection
 
-	if c.Connector().Type != state.FileStorageType {
+	if c.Connector().Type != state.FileStorage {
 		return nil, errors.BadRequest("connection %d is not a file storage", c.ID)
 	}
 	if path == "" {
@@ -1718,7 +1718,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 	if !ok {
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", fileConnector)
 	}
-	if file.Type != state.FileType {
+	if file.Type != state.File {
 		return nil, errors.BadRequest("connector %s is not a file connector", file.Name)
 	}
 
@@ -1801,7 +1801,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	this.apis.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
-	if connector.Type != state.DatabaseType {
+	if connector.Type != state.Database {
 		return types.Type{}, errors.BadRequest("connection %d is not a database", c.ID)
 	}
 	if c.Role != state.Destination {
@@ -1866,13 +1866,13 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	connector := c.Connector()
 	var supported bool
 	switch connector.Type {
-	case state.AppType:
+	case state.App:
 		supported = c.Role == state.Destination || target != Events
-	case state.DatabaseType, state.FileStorageType:
+	case state.Database, state.FileStorage:
 		supported = target != Events
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 		supported = c.Role == state.Source
-	case state.StreamType:
+	case state.Stream:
 		supported = false
 	}
 	if !supported {

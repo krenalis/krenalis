@@ -61,7 +61,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	var inner any
 	var err error
 	switch c := connection.Connector(); c.Type {
-	case state.AppType:
+	case state.App:
 		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			Settings:     connection.Settings,
 			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
@@ -69,7 +69,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			HTTPClient:   connectors.http.ConnectionClient(connection.ID),
 			Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 			WebhookURL:   webhookURL(connection, accountID)})
-	case state.DatabaseType:
+	case state.Database:
 		var database meergo.Database
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{
 			Settings:    connection.Settings,
@@ -77,27 +77,27 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 		})
 		defer database.Close()
 		inner = database
-	case state.FileStorageType:
+	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.MobileType:
+	case state.Mobile:
 		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.ServerType:
+	case state.Server:
 		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.StreamType:
+	case state.Stream:
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-	case state.WebsiteType:
+	case state.Website:
 		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
@@ -134,28 +134,28 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	var inner any
 	var err error
 	switch c := connector; c.Type {
-	case state.AppType:
+	case state.App:
 		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			Region:       meergo.PrivacyRegion(conf.Region),
 		})
-	case state.DatabaseType:
+	case state.Database:
 		var database meergo.Database
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{})
 		defer database.Close()
 		inner = database
-	case state.FileType:
+	case state.File:
 		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{})
-	case state.FileStorageType:
+	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{})
-	case state.MobileType:
+	case state.Mobile:
 		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{})
-	case state.ServerType:
+	case state.Server:
 		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{})
-	case state.StreamType:
+	case state.Stream:
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{})
-	case state.WebsiteType:
+	case state.Website:
 		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{})
 	}
 	if err != nil {
@@ -188,28 +188,28 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 		return nil
 	}
 	switch c := connector; c.Type {
-	case state.AppType:
+	case state.App:
 		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			SetSettings:  setSettings,
 		})
-	case state.DatabaseType:
+	case state.Database:
 		var database meergo.Database
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{SetSettings: setSettings})
 		defer database.Close()
 		inner = database
-	case state.FileType:
+	case state.File:
 		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{SetSettings: setSettings})
-	case state.MobileType:
+	case state.Mobile:
 		inner, err = meergo.RegisteredMobile(c.Name).New(&meergo.MobileConfig{SetSettings: setSettings})
-	case state.ServerType:
+	case state.Server:
 		inner, err = meergo.RegisteredServer(c.Name).New(&meergo.ServerConfig{SetSettings: setSettings})
-	case state.FileStorageType:
+	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{SetSettings: setSettings})
-	case state.StreamType:
+	case state.Stream:
 		inner, err = meergo.RegisteredStream(c.Name).New(&meergo.StreamConfig{SetSettings: setSettings})
-	case state.WebsiteType:
+	case state.Website:
 		inner, err = meergo.RegisteredWebsite(c.Name).New(&meergo.WebsiteConfig{SetSettings: setSettings})
 	}
 	if err != nil {

@@ -41,14 +41,14 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	var records connectors.Records
 
 	switch connector.Type {
-	case state.AppType:
+	case state.App:
 		var lastChangeTime time.Time
 		if !execution.Reimport {
 			lastChangeTime = action.UserCursor
 		}
 		purge = lastChangeTime.IsZero()
 		records, err = this.app().Users(ctx, action.InSchema, lastChangeTime)
-	case state.DatabaseType:
+	case state.Database:
 		database := this.database()
 		defer database.Close()
 		replacer := func(name string) (string, bool) {
@@ -68,7 +68,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			return "", false
 		}
 		records, err = database.Records(ctx, action, replacer)
-	case state.FileStorageType:
+	case state.FileStorage:
 		var lastChangeTime time.Time
 		if !execution.Reimport && action.LastChangeTimeProperty != "" {
 			lastChangeTime = action.UserCursor

@@ -117,15 +117,15 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		return 0, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
 	}
 	switch c.Type {
-	case state.FileType:
+	case state.File:
 		return 0, errors.BadRequest("connections cannot have type file")
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 		if connection.Role == Destination {
 			return 0, errors.BadRequest("%s connections cannot be destinations", strings.ToLower(c.Type.String()))
 		}
 	}
 
-	if connection.WebsiteHost != "" && c.Type != state.WebsiteType {
+	if connection.WebsiteHost != "" && c.Type != state.Website {
 		return 0, errors.BadRequest("%s connections cannot have a website host", strings.ToLower(c.Type.String()))
 	}
 
@@ -154,7 +154,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	// Validate the strategy.
 	if connection.Role == Source {
 		switch c.Type {
-		case state.MobileType, state.WebsiteType:
+		case state.Mobile, state.Website:
 			if connection.Strategy == nil {
 				return 0, errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
 			}
@@ -183,7 +183,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 
 	// Validate the website host.
 	if n.WebsiteHost != "" {
-		if c.Type != state.WebsiteType {
+		if c.Type != state.Website {
 			return 0, errors.BadRequest("connector %s cannot have a website host, it's a %s",
 				c.Name, strings.ToLower(c.Type.String()))
 		}
@@ -265,7 +265,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 
 	// Generate a write key.
 	switch c.Type {
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 		n.Key, err = generateWriteKey()
 		if err != nil {
 			return 0, err
@@ -390,7 +390,7 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 			return "", err
 		}
 		switch typ {
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.Mobile, state.Server, state.Website:
 		default:
 			return "", errors.BadRequest("connection %d is not a mobile, server or website", source)
 		}

@@ -280,7 +280,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
 	connector := this.action.Connection().Connector()
-	if connector.Type != state.FileStorageType {
+	if connector.Type != state.FileStorage {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
 	if !connector.HasUI {
@@ -325,7 +325,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
 	switch typ := c.Connector().Type; typ {
-	case state.AppType, state.DatabaseType, state.FileStorageType:
+	case state.App, state.Database, state.FileStorage:
 	default:
 		return errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
 	}
@@ -910,7 +910,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 // on a connection with the given role, and an action with the given target,
 // is dispatching events to apps.
 func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.Events && connectorType == state.AppType
+	return role == state.Destination && target == state.Events && connectorType == state.App
 }
 
 // isImportingUserIdentitiesFromEvents reports whether a connector of the
@@ -919,7 +919,7 @@ func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Rol
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	if role == state.Source && target == state.Users {
 		switch connectorType {
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.Mobile, state.Server, state.Website:
 			return true
 		}
 	}

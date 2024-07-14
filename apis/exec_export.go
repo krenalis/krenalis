@@ -32,7 +32,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	store := this.connection.store
 	connector := action.Connection().Connector()
 
-	if connector.Type == state.AppType {
+	if connector.Type == state.App {
 		// Download the users from this connection to match the identities for the export.
 		err := this.downloadUsersForExportMatch(ctx)
 		if err != nil {
@@ -83,7 +83,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 	// Determine the "order by" property.
 	var orderBy string
-	if action.Connection().Connector().Type == state.FileStorageType {
+	if action.Connection().Connector().Type == state.FileStorage {
 		orderBy = action.FileOrderingPropertyPath
 	} else {
 		// For any other type of connector other than FileStorage, don't order
@@ -103,7 +103,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	}
 
 	schema := action.InSchema
-	if connector.Type == state.FileStorageType {
+	if connector.Type == state.FileStorage {
 		schema = action.OutSchema
 	}
 
@@ -142,11 +142,11 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 	// Get the writer.
 	switch connector.Type {
-	case state.AppType:
+	case state.App:
 		writer, err = this.app().Writer(state.Users, ack)
-	case state.DatabaseType:
+	case state.Database:
 		writer, err = this.database().Writer(action.TableName, action.TableKeyProperty, action.OutSchema, ack)
-	case state.FileStorageType:
+	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
 		writer, err = this.file().Writer(ctx, schema, ack, replacer)
 		if err, ok := err.(connectors.PlaceholderError); ok {
@@ -176,7 +176,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 		if user.Err != nil {
 			stats.Failed(statistics.Receiving, user.Err.Error())
-			if connector.Type == state.FileStorageType {
+			if connector.Type == state.FileStorage {
 				return user.Err
 			}
 			goto Next
@@ -185,7 +185,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		stats.Passed(statistics.Receiving)
 		stats.Passed(statistics.InputValidation)
 
-		if connector.Type == state.AppType {
+		if connector.Type == state.App {
 			// Resolve the external identities.
 			ids, err := this.resolveExternalIdentities(ctx, user)
 			if err != nil {

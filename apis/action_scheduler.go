@@ -341,7 +341,7 @@ func toSchedule(action *state.Action) bool {
 		return false
 	}
 	typ := action.Connection().Connector().Type
-	if typ != state.AppType && typ != state.DatabaseType && typ != state.FileStorageType {
+	if typ != state.App && typ != state.Database && typ != state.FileStorage {
 		return false
 	}
 	return true

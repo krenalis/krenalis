@@ -48,7 +48,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			switch connector := connector.(type) {
 			case meergo.AppInfo:
 				c.Name = connector.Name
-				c.Type = AppType
+				c.Type = App
 				c.Targets = ConnectorTargets(connector.Targets)
 				if c.Targets.Contains(Groups) {
 					// TODO(Gianluca): https://github.com/meergo/meergo/issues/895.
@@ -87,7 +87,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				ct = connector.ReflectType()
 			case meergo.DatabaseInfo:
 				c.Name = connector.Name
-				c.Type = DatabaseType
+				c.Type = Database
 				c.Targets = UsersFlag
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.SampleQuery = connector.SampleQuery
@@ -95,7 +95,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				ct = connector.ReflectType()
 			case meergo.FileInfo:
 				c.Name = connector.Name
-				c.Type = FileType
+				c.Type = File
 				c.FileExtension = connector.Extension
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.Icon = connector.Icon
@@ -103,13 +103,13 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.HasSheets = ct.Implements(sheetsType)
 			case meergo.FileStorageInfo:
 				c.Name = connector.Name
-				c.Type = FileStorageType
+				c.Type = FileStorage
 				c.Targets = UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 			case meergo.MobileInfo:
 				c.Name = connector.Name
-				c.Type = MobileType
+				c.Type = Mobile
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
@@ -119,7 +119,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				ct = connector.ReflectType()
 			case meergo.ServerInfo:
 				c.Name = connector.Name
-				c.Type = ServerType
+				c.Type = Server
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
@@ -129,7 +129,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				ct = connector.ReflectType()
 			case meergo.StreamInfo:
 				c.Name = connector.Name
-				c.Type = StreamType
+				c.Type = Stream
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.Targets = EventsFlag
@@ -137,7 +137,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				ct = connector.ReflectType()
 			case meergo.WebsiteInfo:
 				c.Name = connector.Name
-				c.Type = WebsiteType
+				c.Type = Website
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
@@ -284,7 +284,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					}
 					c.SendingMode = &mode
 				}
-				if c.connector.Type == ServerType {
+				if c.connector.Type == Server {
 					c.Keys = []string{}
 				}
 				connection, ok := state.connections[c.ID]

@@ -600,14 +600,14 @@ func (t ConnectorTargets) Contains(target Target) bool {
 type ConnectorType int
 
 const (
-	AppType ConnectorType = iota + 1
-	DatabaseType
-	FileType
-	FileStorageType
-	MobileType
-	ServerType
-	StreamType
-	WebsiteType
+	App ConnectorType = iota + 1
+	Database
+	File
+	FileStorage
+	Mobile
+	Server
+	Stream
+	Website
 )
 
 // Scan implements the sql.Scanner interface.
@@ -619,21 +619,21 @@ func (typ *ConnectorType) Scan(src any) error {
 	var t ConnectorType
 	switch s {
 	case "App":
-		t = AppType
+		t = App
 	case "Database":
-		t = DatabaseType
+		t = Database
 	case "File":
-		t = FileType
+		t = File
 	case "FileStorage":
-		t = FileStorageType
+		t = FileStorage
 	case "Mobile":
-		t = MobileType
+		t = Mobile
 	case "Server":
-		t = ServerType
+		t = Server
 	case "Stream":
-		t = StreamType
+		t = Stream
 	case "Website":
-		t = WebsiteType
+		t = Website
 	default:
 		return fmt.Errorf("invalid state.ConnectionType: %s", s)
 	}
@@ -655,21 +655,21 @@ func (typ ConnectorType) String() string {
 // It returns an error if typ is not a valid ConnectorType.
 func (typ ConnectorType) Value() (driver.Value, error) {
 	switch typ {
-	case AppType:
+	case App:
 		return "App", nil
-	case DatabaseType:
+	case Database:
 		return "Database", nil
-	case FileType:
+	case File:
 		return "File", nil
-	case FileStorageType:
+	case FileStorage:
 		return "FileStorage", nil
-	case MobileType:
+	case Mobile:
 		return "Mobile", nil
-	case ServerType:
+	case Server:
 		return "Server", nil
-	case StreamType:
+	case Stream:
 		return "Stream", nil
-	case WebsiteType:
+	case Website:
 		return "Website", nil
 	}
 	return nil, fmt.Errorf("not a valid ConnectorType: %d", typ)

@@ -75,16 +75,16 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	switch v.connection.role {
 	case state.Source:
 		switch v.connection.connector.typ {
-		case state.AppType, state.DatabaseType, state.FileStorageType:
+		case state.App, state.Database, state.FileStorage:
 			targetIsAllowed = target == state.Users || target == state.Groups
-		case state.MobileType, state.ServerType, state.WebsiteType:
+		case state.Mobile, state.Server, state.Website:
 			targetIsAllowed = true
 		}
 	case state.Destination:
 		switch v.connection.connector.typ {
-		case state.AppType:
+		case state.App:
 			targetIsAllowed = true
-		case state.DatabaseType, state.FileStorageType:
+		case state.Database, state.FileStorage:
 			targetIsAllowed = target == state.Users || target == state.Groups
 		}
 	}
@@ -114,7 +114,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Validate the action's connector.
-	actionOnFile := v.connection.connector.typ == state.FileStorageType
+	actionOnFile := v.connection.connector.typ == state.FileStorage
 	if actionOnFile && action.Connector == "" {
 		return errors.BadRequest("actions on file storage connections must have a connector")
 	}
@@ -125,7 +125,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if v.connector.typ == 0 {
 			return errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", action.Connector)
 		}
-		if v.connector.typ != state.FileType {
+		if v.connector.typ != state.File {
 			return errors.BadRequest("type of the action's connector must be File, got %v", v.connector.typ)
 		}
 	}
@@ -373,7 +373,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Check if the UI values are allowed and are a JSON Object.
-	if v.connection.connector.typ == state.FileStorageType {
+	if v.connection.connector.typ == state.FileStorage {
 		if action.UIValues == nil {
 			if v.connector.hasUI {
 				return errors.BadRequest("UI values must be provided because connector %s has a UI", action.Connector)
@@ -391,12 +391,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Check if the compression is allowed.
-	if action.Compression != NoCompression && v.connection.connector.typ != state.FileStorageType {
+	if action.Compression != NoCompression && v.connection.connector.typ != state.FileStorage {
 		return errors.BadRequest("%s actions cannot have compression", strings.ToLower(v.connection.connector.typ.String()))
 	}
 
 	// Check if the query is allowed.
-	if needsQuery := v.connection.connector.typ == state.DatabaseType && v.connection.role == state.Source; needsQuery {
+	if needsQuery := v.connection.connector.typ == state.Database && v.connection.role == state.Source; needsQuery {
 		if action.Query == "" {
 			return errors.BadRequest("query cannot be empty for database actions")
 		}
@@ -413,13 +413,13 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	targetUsersOrGroups := target == state.Users || target == state.Groups
 	var filtersAllowed bool
 	switch v.connection.connector.typ {
-	case state.AppType:
+	case state.App:
 		filtersAllowed = v.connection.role == state.Destination
-	case state.DatabaseType:
+	case state.Database:
 		filtersAllowed = v.connection.role == state.Destination
-	case state.FileStorageType:
+	case state.FileStorage:
 		filtersAllowed = targetUsersOrGroups && v.connection.role == state.Destination
-	case state.MobileType, state.ServerType, state.WebsiteType:
+	case state.Mobile, state.Server, state.Website:
 		filtersAllowed = targetUsersOrGroups && v.connection.role == state.Source
 	}
 	if action.Filter != nil && !filtersAllowed {
@@ -427,7 +427,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Check if the path and the sheet are allowed.
-	if v.connection.connector.typ == state.FileStorageType {
+	if v.connection.connector.typ == state.FileStorage {
 		if action.Path == "" {
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
@@ -448,7 +448,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Check the column for the identity property and for the timestamp.
 	importFromColumns := v.connection.role == state.Source &&
-		(v.connection.connector.typ == state.DatabaseType || v.connection.connector.typ == state.FileStorageType)
+		(v.connection.connector.typ == state.Database || v.connection.connector.typ == state.FileStorage)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
@@ -492,7 +492,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			if action.LastChangeTimeFormat == "" {
 				return errors.BadRequest("last change time format is required")
 			}
-			if v.connection.connector.typ == state.DatabaseType && action.LastChangeTimeFormat == "Excel" {
+			if v.connection.connector.typ == state.Database && action.LastChangeTimeFormat == "Excel" {
 				return errors.BadRequest("last change time format cannot be Excel for database actions")
 			}
 		}
@@ -509,7 +509,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Do some checks related to exporting users to files.
-	exportUsersToFile := v.connection.connector.typ == state.FileStorageType && v.connection.role == state.Destination && target == state.Users
+	exportUsersToFile := v.connection.connector.typ == state.FileStorage && v.connection.role == state.Destination && target == state.Users
 	if exportUsersToFile {
 		// When exporting users to file, ensure that the output schema is valid,
 		// as it contains the properties that will be exported to the file.
@@ -546,7 +546,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Do some checks related to exporting users to databases.
-	exportUsersToDatabase := v.connection.connector.typ == state.DatabaseType && v.connection.role == state.Destination && target == state.Users
+	exportUsersToDatabase := v.connection.connector.typ == state.Database && v.connection.role == state.Destination && target == state.Users
 	if exportUsersToDatabase {
 		if action.TableName == "" {
 			return errors.BadRequest("table name cannot be empty for destination database actions")
@@ -589,7 +589,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Check if the export options are needed.
-	needsExportOptions := v.connection.connector.typ == state.AppType &&
+	needsExportOptions := v.connection.connector.typ == state.App &&
 		v.connection.role == state.Destination && target == state.Users
 	if needsExportOptions {
 		if action.ExportMode == nil {
@@ -613,13 +613,13 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		}
 	}
 
-	eventBasedConn := v.connection.connector.typ == state.MobileType ||
-		v.connection.connector.typ == state.ServerType ||
-		v.connection.connector.typ == state.WebsiteType
+	eventBasedConn := v.connection.connector.typ == state.Mobile ||
+		v.connection.connector.typ == state.Server ||
+		v.connection.connector.typ == state.Website
 
 	// Check the connections for which the transformation is prohibited.
 	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && target == state.Events) ||
-		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorageType && targetUsersOrGroups)
+		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
 	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
 	if transformationProhibited && haveTransformation {
 		return errors.BadRequest("action cannot have a transformation")
@@ -628,8 +628,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// Check if the transformation is mandatory, with at least one input
 	// property.
 	transformationMandatory := targetUsersOrGroups &&
-		(v.connection.connector.typ == state.AppType || v.connection.connector.typ == state.DatabaseType ||
-			(v.connection.role == state.Source && v.connection.connector.typ == state.FileStorageType))
+		(v.connection.connector.typ == state.App || v.connection.connector.typ == state.Database ||
+			(v.connection.role == state.Source && v.connection.connector.typ == state.FileStorage))
 	if transformationMandatory && !haveTransformation {
 		return errors.BadRequest("action must have a transformation")
 	}
