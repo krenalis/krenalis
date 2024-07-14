@@ -196,19 +196,32 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 // properties must comply with it. It returns immediately, deferring the
 // validation of the properties and the actual write operation to a later time.
 //
-// If an error occurs during validation of the properties, it calls the ack
-// function with the value of ackID and the error.
-//
-// If the action of iw does not exist anymore, returns an error.
+// On error, it calls the ack function with:
+//   - the ErrInspectionMode error if the data warehouse is in inspection mode.
+//   - the ErrMaintenanceMode error if the data warehouse is in maintenance
+//     mode.
+//   - a *schemas.Error value, if the action output schema is not aligned with
+//     the user schema.
 //
 // When a batch of event identities has been written to the data warehouse, it
 // calls the ack function with the ackID of the written identities and a nil
 // error.
 //
+// If the action of iw does not exist anymore, returns an error.
+//
 // It panics if called on a closed writer.
 func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
+	}
+
+	switch iw.store.Mode() {
+	case state.Inspection:
+		iw.ack([]string{ackID}, ErrInspectionMode)
+		return nil
+	case state.Maintenance:
+		iw.ack([]string{ackID}, ErrMaintenanceMode)
+		return nil
 	}
 
 	key := identityKey{action: iw.action}
@@ -329,6 +342,7 @@ func (iw *EventIdentityWriter) onSetAction(n state.SetAction) {
 		// The action's out schema is invalid when importing identities from
 		// events without any transformation in the action.
 		flatter = newFlatter(n.OutSchema, identityColumns)
+
 	}
 	iw.mu.Lock()
 	iw.flatter = flatter

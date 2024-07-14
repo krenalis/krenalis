@@ -246,20 +246,11 @@ func (store *Store) DuplicatedUsers(ctx context.Context, property string) (uuid.
 //
 // Creating more than one EventIdentityWriter per action at the same time is not
 // supported.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc) (*EventIdentityWriter, error) {
 	store.mustBeOpen()
 
 	if ack == nil {
 		panic("nil ack function")
-	}
-	switch store.Mode() {
-	case state.Inspection:
-		return nil, ErrInspectionMode
-	case state.Maintenance:
-		return nil, ErrMaintenanceMode
 	}
 
 	// Initialize the EventIdentityWriter.
