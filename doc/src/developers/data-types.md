@@ -278,8 +278,6 @@ types.Object([]types.Property{
 })
 ```
 
-> Properties are described in detail in the dedicated Properties section. (TODO)
-
 You can also use the `types.ObjectOf` function to construct an `Object`. Unlike `types.Object`, it does not panic if a property is invalid but returns an error instead:
 
 ```go
@@ -288,6 +286,32 @@ if err != nil {
 	...
 }
 ```
+
+#### Properties
+
+An Object property is defined as follows:
+
+```go
+type Property struct {
+	Name        string
+	Label       string
+	Placeholder string
+	Role        Role
+	Type        Type
+	Required    bool
+	Nullable    bool
+	Note        string
+}
+```
+
+* `Name`: The name of the property. It must start with a letter `[A-Za-z_]` and can only contain alphanumeric characters and underscores `[A-Za-z0-9_]` after that. To check if a name is valid, use the `types.IsValidPropertyName` function.
+* `Label`: The label of the property, used for display purposes only. For example, if the property name is `"first_name"`, its label might be `"First Name"`. If empty, the name will be displayed instead of the label.
+* `Placeholder`: A placeholder to use in transformation mappings for events sent to applications. It pre-fills the input with the expression that evaluates to the property's value.
+* `Role`: The role of the property, which can be `types.Source`, `types.Destination`, or `types.Both`. If `Source`, the property is present only when the connector is used as a source. If `Destination`, it is present only when the connector is used as a destination. If `Both`, the property is present in both cases.
+* `Type`: The type of the property, which can be any [data type](#how-to-construct-data-types).
+* `Required`: Indicates whether the property is required.
+* `Nullable`: Indicates whether the property can be null. In Go, this means it can be `nil`. In JavaScript, it can be `null`, and in Python, it can be `None`.
+* `Note`: A note providing additional information about the property's usage.
 
 ### Map(T)
 
@@ -306,5 +330,3 @@ types.Map(types.Int(64))
 // Map with arrays of texts as values.
 types.Map(types.Array(types.Text()))
 ```
-
-## How to Represents Data Values
