@@ -255,6 +255,14 @@ func TestConvert(t *testing.T) {
 			nil,
 		},
 		{
+			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}, {Name: "boo", Type: types.Text()}}),
+			types.Object([]types.Property{{Name: "foo", Type: types.Int(32), Required: true}, {Name: "boo", Type: types.Text()}}),
+			map[string]any{"foo": 5},
+			map[string]any{"foo": 5},
+			true,
+			nil,
+		},
+		{
 			types.JSON(),
 			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}, {Name: "boo", Type: types.Text(), Nullable: true}}),
 			map[string]any{"foo": 5.0, "boo": nil},

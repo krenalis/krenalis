@@ -555,9 +555,10 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 
 		}
 	case types.ObjectKind:
+		var obj map[string]any
 		switch spt {
 		case types.ObjectKind:
-			obj := v.(map[string]any)
+			obj = v.(map[string]any)
 			if types.Equal(st, dt) {
 				return obj, nil
 			}
@@ -583,16 +584,16 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					return nil, err
 				}
 			}
-			return obj, nil
 		case types.JSONKind:
-			s, err := jsonToMap(v)
+			var err error
+			obj, err = jsonToMap(v)
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			for name, value := range s {
+			for name, value := range obj {
 				p2, ok := dt.Property(name)
 				if !ok {
-					delete(s, name)
+					delete(obj, name)
 					continue
 				}
 				if value == nil {
@@ -602,13 +603,20 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					continue
 				}
 				var err error
-				s[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, layouts)
+				obj[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, layouts)
 				if err != nil {
 					return nil, err
 				}
 			}
-			return s, nil
 		}
+		for _, p := range dt.Properties() {
+			if p.Required {
+				if _, ok := obj[p.Name]; !ok {
+					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}}
+				}
+			}
+		}
+		return obj, nil
 	case types.MapKind:
 		switch spt {
 		case types.MapKind:
