@@ -354,13 +354,10 @@ func (iw *EventIdentityWriter) onSetAction(n state.SetAction) {
 //
 // The notification is propagated by the Store.onSetWorkspaceUserSchema method.
 func (iw *EventIdentityWriter) onSetWorkspaceUserSchema(_ state.SetWorkspaceUserSchema) {
-	iw.mu.Lock()
-	actionID := iw.action
-	iw.mu.Unlock()
-	if actionID == 0 {
+	action, ok := iw.store.ds.state.Action(iw.action)
+	if !ok {
 		return
 	}
-	action, _ := iw.store.ds.state.Action(actionID)
 	identityColumns := iw.store.identityColumnByProperty()
 	var flatter *flatter
 	if action.OutSchema.Valid() {
