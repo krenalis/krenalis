@@ -1877,8 +1877,7 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 			return fmt.Errorf("user schema properties cannot be nullable")
 		}
 		switch p.Type.Kind() {
-		// Array types cannot have items of type Array, Object, or Map.
-		// Map types cannot have values of type Array, Object, or Map.
+		// An Array or Map element type cannot be an Array, Object, or Map.
 		case types.ArrayKind, types.MapKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
