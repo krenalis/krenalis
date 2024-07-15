@@ -949,7 +949,7 @@ const FullscreenTransformation = ({
 						for (let i = 0; i < inputSchema.properties.length; i++) {
 							const propertyName = inputSchema.properties[i].name;
 							sample[propertyName] = {
-								value: u.properties[propertyName],
+								value: u[propertyName],
 								property: inputSchema.properties[i],
 							};
 						}
