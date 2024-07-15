@@ -150,17 +150,33 @@ const PropertyDialog = ({
 
 	const onChangeBitSize = (e) => {
 		const p = { ...property };
-		const typ = p.type as IntType | UintType | FloatType;
-		typ.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
-		p.type = typ;
+		if (p.type.name === 'Array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as IntType | UintType | FloatType;
+			elementTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as IntType | UintType | FloatType;
+			typ.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
+			p.type = typ;
+		}
 		setProperty(p);
 	};
 
 	const onInputPrecision = (e) => {
 		const p = { ...property };
-		const typ = p.type as DecimalType;
-		typ.precision = Number(e.target.value);
-		p.type = typ;
+		if (p.type.name === 'Array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as DecimalType;
+			elementTyp.precision = Number(e.target.value);
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as DecimalType;
+			typ.precision = Number(e.target.value);
+			p.type = typ;
+		}
 		setProperty(p);
 		if (typeError !== '') {
 			setTypeError('');
@@ -169,9 +185,17 @@ const PropertyDialog = ({
 
 	const onInputScale = (e) => {
 		const p = { ...property };
-		const typ = p.type as DecimalType;
-		typ.scale = Number(e.target.value);
-		p.type = typ;
+		if (p.type.name === 'Array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as DecimalType;
+			elementTyp.scale = Number(e.target.value);
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as DecimalType;
+			typ.scale = Number(e.target.value);
+			p.type = typ;
+		}
 		setProperty(p);
 		if (typeError !== '') {
 			setTypeError('');
@@ -180,10 +204,26 @@ const PropertyDialog = ({
 
 	const onChangeElementType = (e) => {
 		const p = { ...property };
-		const typ = p.type as ArrayType;
-		typ.elementType.name = e.target.value;
-		p.type = typ;
+		const typeName = e.target.value as TypeName;
+		const typ: any = { name: typeName };
+		if (typeName === 'Int' || typeName === 'Uint') {
+			typ.bitSize = 32;
+			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
+		}
+		if (typeName === 'Float') {
+			typ.bitSize = 64;
+			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
+		}
+		if (typeName === 'Decimal') {
+			typ.scale = '';
+			typ.precision = '';
+			setTimeout(() => precisionInputRef.current?.focus(), 50);
+		}
+		(p.type as ArrayType).elementType = typ;
 		setProperty(p);
+		if (typeError !== '') {
+			setTypeError('');
+		}
 	};
 
 	const onChangeValueType = (e) => {
@@ -238,13 +278,16 @@ const PropertyDialog = ({
 			setTypeError('Type cannot be empty');
 			return;
 		}
-		if (property.type.name === 'Decimal') {
-			if (property.type.precision < 1 || property.type.precision > MAX_DECIMAL_PRECISION) {
-				setTypeError(`Precision must be in range [1, ${MAX_DECIMAL_PRECISION}]`);
-				return;
-			}
-			if (property.type.scale < 0 || property.type.scale > MAX_DECIMAL_SCALE) {
-				setTypeError(`Scale must be in range [0, ${MAX_DECIMAL_SCALE}]`);
+		if (
+			property.type.name === 'Decimal' ||
+			(property.type.name === 'Array' && (property.type as ArrayType).elementType.name === 'Decimal')
+		) {
+			const typ: DecimalType = (
+				property.type.name === 'Array' ? property.type.elementType : property.type
+			) as DecimalType;
+			const err = checkDecimalType(typ);
+			if (err) {
+				setTypeError(err);
 				return;
 			}
 		}
@@ -265,6 +308,76 @@ const PropertyDialog = ({
 		}
 		setPropertyToEdit(null);
 	};
+
+	let bitSizeSection = null;
+	if (property != null && property.type != null) {
+		const isArray = property.type.name === 'Array';
+		const hasBitSize =
+			hasBitSizeConstraint(property.type.name) ||
+			(isArray && hasBitSizeConstraint((property.type as ArrayType).elementType.name));
+		if (hasBitSize) {
+			const typ: any = isArray ? (property.type as ArrayType).elementType : property.type;
+			bitSizeSection = (
+				<SlSelect
+					className='property-dialog__bitsize'
+					ref={bitSizeSelectRef}
+					size='small'
+					label='Bit size'
+					value={String(typ.bitSize)}
+					onSlChange={onChangeBitSize}
+				>
+					{typ.name === 'Int' || typ.name === 'Uint'
+						? INT_BITSIZES.map((s) => (
+								<SlOption key={s} value={s}>
+									{s}
+								</SlOption>
+							))
+						: FLOAT_BITSIZES.map((s) => (
+								<SlOption key={s} value={s}>
+									{s}
+								</SlOption>
+							))}
+				</SlSelect>
+			);
+		}
+	}
+
+	let precisionSection = null;
+	let scaleSection = null;
+	if (property != null && property.type != null) {
+		const isArray = property.type.name === 'Array';
+		const hasDecimal =
+			property.type.name === 'Decimal' ||
+			(isArray && (property.type as ArrayType).elementType.name === 'Decimal');
+		if (hasDecimal) {
+			const typ: any = isArray ? (property.type as ArrayType).elementType : property.type;
+			precisionSection = (
+				<SlInput
+					className='property-dialog__precision'
+					ref={precisionInputRef}
+					size='small'
+					label='Precision'
+					value={String(typ.precision)}
+					type='number'
+					max={MAX_DECIMAL_PRECISION}
+					maxlength={2}
+					onSlInput={onInputPrecision}
+				/>
+			);
+			scaleSection = (
+				<SlInput
+					className='property-dialog__scale'
+					size='small'
+					label='Scale'
+					value={String(typ.scale)}
+					type='number'
+					max={MAX_DECIMAL_SCALE}
+					maxlength={2}
+					onSlInput={onInputScale}
+				/>
+			);
+		}
+	}
 
 	return (
 		<SlDialog
@@ -309,55 +422,6 @@ const PropertyDialog = ({
 										</SlOption>
 									))}
 								</SlSelect>
-								{(property.type?.name === 'Int' ||
-									property.type?.name === 'Uint' ||
-									property.type?.name === 'Float') && (
-									<SlSelect
-										className='property-dialog__bitsize'
-										ref={bitSizeSelectRef}
-										size='small'
-										label='Bit size'
-										value={String(property.type?.bitSize)}
-										onSlChange={onChangeBitSize}
-									>
-										{property.type?.name === 'Int' || property.type?.name === 'Uint'
-											? INT_BITSIZES.map((s) => (
-													<SlOption key={s} value={s}>
-														{s}
-													</SlOption>
-												))
-											: FLOAT_BITSIZES.map((s) => (
-													<SlOption key={s} value={s}>
-														{s}
-													</SlOption>
-												))}
-									</SlSelect>
-								)}
-								{property.type?.name === 'Decimal' && (
-									<>
-										<SlInput
-											className='property-dialog__precision'
-											ref={precisionInputRef}
-											size='small'
-											label='Precision'
-											value={String(property.type?.precision)}
-											type='number'
-											max={MAX_DECIMAL_PRECISION}
-											maxlength={2}
-											onSlInput={onInputPrecision}
-										/>
-										<SlInput
-											className='property-dialog__scale'
-											size='small'
-											label='Scale'
-											value={String(property.type?.scale)}
-											type='number'
-											max={MAX_DECIMAL_SCALE}
-											maxlength={2}
-											onSlInput={onInputScale}
-										/>
-									</>
-								)}
 								{property.type?.name === 'Array' && (
 									<SlSelect
 										className='property-dialog__elementtype'
@@ -379,6 +443,9 @@ const PropertyDialog = ({
 										})}
 									</SlSelect>
 								)}
+								{bitSizeSection}
+								{precisionSection}
+								{scaleSection}
 								{property.type?.name === 'Map' && (
 									<SlSelect
 										className='property-dialog__valuetype'
@@ -477,6 +544,19 @@ const PropertyDialog = ({
 			)}
 		</SlDialog>
 	);
+};
+
+const hasBitSizeConstraint = (name: string) => {
+	return name === 'Int' || name === 'Uint' || name === 'Float';
+};
+
+const checkDecimalType = (type: DecimalType) => {
+	if (type.precision < 1 || type.precision > MAX_DECIMAL_PRECISION) {
+		return `Precision must be in range [1, ${MAX_DECIMAL_PRECISION}]`;
+	}
+	if (type.scale < 0 || type.scale > MAX_DECIMAL_SCALE) {
+		return `Scale must be in range [0, ${MAX_DECIMAL_SCALE}]`;
+	}
 };
 
 export { PropertyDialog };
