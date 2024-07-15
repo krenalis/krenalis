@@ -158,7 +158,11 @@ func Properties(t Type) []Property {
 }
 
 // PropertyByPath returns the property with the given path in the Object t, or
-// a PathNotExistError if the property does not exist.
+// a PathNotExistError error if the property does not exist.
+//
+// Unlike Walk, it does not traverse through Arrays and Maps. If path is "x.y"
+// and the type of "x" is not an Object, it returns a PathNotExistError error.
+//
 // It panics if t is not of type Object or if path is not a valid path.
 func PropertyByPath(t Type, path string) (Property, error) {
 	if t.kind != ObjectKind {
