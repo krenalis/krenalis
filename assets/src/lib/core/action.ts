@@ -570,6 +570,48 @@ const transformInActionToSet = async (
 		}
 	}
 
+	const isDatabaseExportOnUsers =
+		connection.type === 'Database' && connection.role === 'Destination' && actionType.Target === 'Users';
+	if (action.TableKeyProperty != null && action.TableKeyProperty !== '') {
+		// the table key property must be empty for actions that are not
+		// database type actions that export users.
+		if (!isDatabaseExportOnUsers) {
+			throw new Error('Table key property must be empty for this kind of action');
+		}
+
+		// the table key property must be a valid property.
+		const property = flattenedOutputSchema[action.TableKeyProperty];
+		if (property == null) {
+			throw new Error('Table key property must be a valid property');
+		}
+
+		// the table key property must necessarily be transformed.
+		if (mapping != null) {
+			if (!Object.keys(mapping).includes(action.TableKeyProperty)) {
+				throw new Error('Table key property must be transformed');
+			}
+		} else if (func != null) {
+			if (!func.OutProperties.includes(action.TableKeyProperty)) {
+				throw new Error('Table key property must be transformed');
+			}
+		}
+
+		// ensure the table key property is 'required' in the out schema.
+		const i = outSchema.properties.findIndex((p) => p.name === action.TableKeyProperty);
+		if (i === -1) {
+			throw new Error('Table key property must be in the out schema of the action');
+		}
+		if (outSchema.properties[i].required === false) {
+			outSchema.properties[i].required = true;
+		}
+	} else {
+		// the table key property must be defined for database type actions that
+		// export users.
+		if (isDatabaseExportOnUsers) {
+			throw new Error('Table key property cannot be empty');
+		}
+	}
+
 	// Actions that dispatch events to apps and actions that import user
 	// identities from events must have an invalid input schema, that
 	// implicitly represents the event schema.

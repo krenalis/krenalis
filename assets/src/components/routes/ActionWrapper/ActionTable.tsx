@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useEffect } from 'react';
+import React, { useContext, useRef, useEffect, useMemo } from 'react';
 import Section from '../../base/Section/Section';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AppContext from '../../../context/AppContext';
@@ -8,6 +8,8 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
+import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
+import { getTableKeyComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 
 const ActionTable = () => {
 	const { handleError, api } = useContext(AppContext);
@@ -20,9 +22,12 @@ const ActionTable = () => {
 		transformationSectionRef,
 		setIsTableChanged,
 		isTransformationDisabled,
+		isTransformationHidden,
 	} = useContext(ActionContext);
 
 	const tableConfirmationButtonRef = useRef<any>();
+	const tableKeySectionRef = useRef<any>();
+	const tableKeyListRef = useRef<any>();
 	const tableRef = useRef({
 		lastConfirmation: '',
 		lastUpdate: '',
@@ -34,6 +39,10 @@ const ActionTable = () => {
 			lastUpdate: action.Table!,
 		};
 	}, []);
+
+	const tableKeyComboboxItems = useMemo(() => {
+		return getTableKeyComboboxItems(actionType.OutputSchema);
+	}, [actionType]);
 
 	const onUpdateTable = (e) => {
 		const value = e.target.value;
@@ -51,8 +60,14 @@ const ActionTable = () => {
 		setAction(a);
 	};
 
-	const onUpdateTableKeyProperty = (e) => {
+	const onTableKeyPropertyUpdate = (e) => {
 		const value = e.target.value;
+		const a = { ...action };
+		a.TableKeyProperty = value;
+		setAction(a);
+	};
+
+	const onTableKeyPropertySelect = (_, value) => {
 		const a = { ...action };
 		a.TableKeyProperty = value;
 		setAction(a);
@@ -79,8 +94,12 @@ const ActionTable = () => {
 			a.Transformation.Mapping = flattenSchema(schema);
 			setAction(a);
 			setTimeout(() => {
-				const top = transformationSectionRef.current!.getBoundingClientRect().top;
-				transformationSectionRef.current!.closest('.fullscreen').scrollBy({
+				let scrollSection = transformationSectionRef.current;
+				if (tableKeyListRef.current != null) {
+					scrollSection = tableKeySectionRef.current;
+				}
+				const top = scrollSection.getBoundingClientRect().top;
+				scrollSection.closest('.fullscreen').scrollBy({
 					top: top - 130,
 					left: 0,
 					behavior: 'smooth',
@@ -109,11 +128,28 @@ const ActionTable = () => {
 					/>
 				</div>
 			</Section>
-			<Section title='Table key' description='The property of the table that is used as key in export queries'>
-				<div className='action__table_key_property'>
-					<SlInput value={action.TableKeyProperty} onSlInput={onUpdateTableKeyProperty} />
-				</div>
-			</Section>
+			{actionType.Target === 'Users' && !isTransformationHidden && (
+				<Section
+					title='Table key'
+					description='The property of the table that is used as key in export queries'
+					ref={tableKeySectionRef}
+					className={`action__table-key-section${isTransformationDisabled ? ' action__table-key-section--disabled' : ''}`}
+				>
+					<div className='action__table-key-property'>
+						<ComboBoxInput
+							value={action.TableKeyProperty}
+							comboBoxListRef={tableKeyListRef}
+							onInput={onTableKeyPropertyUpdate}
+							disabled={isTransformationDisabled}
+						/>
+						<ComboBoxList
+							ref={tableKeyListRef}
+							items={tableKeyComboboxItems}
+							onSelect={onTableKeyPropertySelect}
+						/>
+					</div>
+				</Section>
+			)}
 		</>
 	);
 };

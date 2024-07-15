@@ -151,14 +151,22 @@
 	margin-left: -15px;
 }
 
-.action__table_key_property {
+.action__table-key-property {
 	display: flex;
 	align-items: center;
 	gap: 30px;
 }
 
-.action__table_key_property .popover {
+.action__table-key-property .popover {
 	margin-left: -15px;
+}
+
+.action__table-key-section--disabled {
+	opacity: 0.7;
+}
+
+.action__table-key-section--disabled * {
+	opacity: 1;
 }
 
 .action__transformation-identity-property {
