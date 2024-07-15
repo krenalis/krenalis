@@ -218,7 +218,7 @@ types.Text().WithByteLen(25).WithCharLen(20)
 
 ### Array(T)
 
-Represents an array of items of type `T`.
+Represents an array of elements of type `T`.
 
 ```go
 types.Array(T)
@@ -237,20 +237,20 @@ types.Array(types.Int(16))
 types.Array(types.Array(types.UUID()))
 ```
 
-Arrays can be limited in the minimum and maximum number of items:
+Arrays can be limited in the minimum and maximum number of elements:
 
 ```go
-// Array of 32-bit unsigned integers with at least 1 item.
-types.Array(types.Int(32)).WithMinItems(1)
+// Array of 32-bit unsigned integers with at least 1 element.
+types.Array(types.Int(32)).WithMinElements(1)
 
 // Array with a maximum of 10 decimal values.
-types.Array(types.Decimal(10, 2)).WithMaxItems(10)
+types.Array(types.Decimal(10, 2)).WithMaxElements(10)
 
 // Array with 5 to 15 text values.
-types.Array(types.Text()).WithMinItems(5).WithMaxItems(15)
+types.Array(types.Text()).WithMinElements(5).WithMaxElements(15)
 ```
 
-Arrays can also be constrained to have unique values for their items, except for arrays of `JSON`, `Array`, `Map`, and `Object`:
+Arrays can also be constrained to have unique values for their elements, except for arrays of `JSON`, `Array`, `Map`, and `Object`:
 
 ```go
 // Array of 64-bit signed integers with unique values.
