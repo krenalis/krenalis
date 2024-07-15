@@ -1793,7 +1793,10 @@ function removeTrailingS(str: string) {
 	return str;
 }
 
-function removeQuotes(str: string) {
+function removeQuotes(str: string | null) {
+	if (str == null) {
+		return null;
+	}
 	return str.replace(/^"|"$/g, '');
 }
 
