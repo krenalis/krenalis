@@ -561,14 +561,7 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 // ChangeUserSchemaQueries returns the queries that would be executed changing
 // the user schema to schema.
 //
-// schema cannot contain conflict properties, that are properties whose name,
-// once represented on the data warehouse as columns, would have the same name.
-//
-// rePaths is a mapping containing the renamed property paths, where the key is
-// the new property path and its value is the old property path. In case of new
-// properties created with the same name of already existent properties, the
-// value must be the untyped nil. rePaths cannot contain keys with the same path
-// as their value.
+// See the documentation of ChangeUserSchema for more details about this method.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - NoWarehouse, if the workspace does not have a data warehouse.
