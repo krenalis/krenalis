@@ -236,6 +236,9 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 		case "value":
 			value, err := d.unmarshal(schema)
 			if err != nil {
+				if err == errSyntaxInvalid {
+					return nil, err
+				}
 				result.Err = err
 			} else {
 				result.Value = value.(map[string]any)
