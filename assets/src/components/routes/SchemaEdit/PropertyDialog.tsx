@@ -433,7 +433,7 @@ const PropertyDialog = ({
 										hoist={true}
 									>
 										{TYPE_NAMES.map((t) => {
-											if (t !== 'Array' && t !== 'Map') {
+											if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
 												return (
 													<SlOption key={t} value={t}>
 														{t}
@@ -457,7 +457,7 @@ const PropertyDialog = ({
 										hoist={true}
 									>
 										{TYPE_NAMES.map((t) => {
-											if (t !== 'Array' && t !== 'Map') {
+											if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
 												return (
 													<SlOption key={t} value={t}>
 														{t}
