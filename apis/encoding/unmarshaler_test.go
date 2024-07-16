@@ -240,6 +240,10 @@ func Test_Unmarshal(t *testing.T) {
 			err:  ErrSyntaxInvalid,
 		},
 		{
+			data: `{"Object":{"a.b":true}}`,
+			err:  ErrSyntaxInvalid,
+		},
+		{
 			data: `[{"Boolean":true}]`,
 			err:  newErrInvalidValue(`cannot be an array`, "data"),
 		},

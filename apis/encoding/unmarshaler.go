@@ -315,8 +315,8 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 					return nil, err
 				}
 				name := tok.String()
-				if !types.IsValidPropertyPath(name) {
-					return nil, newErrPropertyNotExist(name)
+				if !types.IsValidPropertyName(name) {
+					return nil, ErrSyntaxInvalid
 				}
 				p, ok := t.Property(name)
 				if !ok {
