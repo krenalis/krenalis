@@ -128,9 +128,9 @@ const PropertyDialog = ({
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (typeName === 'Decimal') {
-			typ.scale = '';
-			typ.precision = '';
-			setTimeout(() => precisionInputRef.current?.focus(), 50);
+			typ.scale = '0';
+			typ.precision = '10';
+			setTimeout(() => precisionInputRef.current?.select(), 50);
 		}
 		if (typeName === 'Array') {
 			typ.elementType = { name: '' };
@@ -215,9 +215,9 @@ const PropertyDialog = ({
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (typeName === 'Decimal') {
-			typ.scale = '';
-			typ.precision = '';
-			setTimeout(() => precisionInputRef.current?.focus(), 50);
+			typ.scale = '0';
+			typ.precision = '10';
+			setTimeout(() => precisionInputRef.current?.select(), 50);
 		}
 		(p.type as ArrayType).elementType = typ;
 		setProperty(p);
