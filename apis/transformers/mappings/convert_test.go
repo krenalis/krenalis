@@ -286,6 +286,14 @@ func TestConvert(t *testing.T) {
 			true,
 			nil,
 		},
+		{
+			types.JSON(),
+			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}),
+			json.RawMessage(`{"@":7,"foo":8}`),
+			map[string]any{"foo": 8},
+			true,
+			nil,
+		},
 
 		// Map.
 		{types.Map(types.Boolean()), types.Map(types.Boolean()), map[string]any{"a": true, "b": false}, map[string]any{"a": true, "b": false}, true, nil},

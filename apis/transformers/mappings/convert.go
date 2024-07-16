@@ -591,6 +591,10 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				return nil, errInvalidConversion
 			}
 			for name, value := range obj {
+				if !types.IsValidPropertyName(name) {
+					delete(obj, name)
+					continue
+				}
 				p2, ok := dt.Property(name)
 				if !ok {
 					delete(obj, name)
