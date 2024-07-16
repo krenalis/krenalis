@@ -2,7 +2,7 @@
 
 > This page **may be obsolete**. See [this issue](https://github.com/meergo/meergo/issues/575).
 
-## Supported types
+## Data Types
 
 The table below provides a list of supported types in a Snowflake data warehouse along with their corresponding property types:
 
