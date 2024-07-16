@@ -24,7 +24,3 @@ Alias types are also supported:
 * `FLOAT4`, `FLOAT8`, `DOUBLE`, `DOUBLE PRECISION`, `REAL`, as aliases of `FLOAT`.
 * `CHAR`, `CHARACTER`, `STRING`, `TEXT`, as aliases of `VARCHAR`.
 * `DATETIME`, `TIMESTAMP`, as aliases of `TIMESTAMP_NTZ`.
-
-## NULL columns
-
-Properties of columns declared as `NULL` are nullable.
