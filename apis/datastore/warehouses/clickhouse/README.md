@@ -44,14 +44,3 @@ The table below provides a list of supported property types when using a ClickHo
 [^3]: `Map(key,value)` is supported only for `String` keys.
 
 [^4]: `Nullable(T)` is supported if `T` is supported. Properties of `Nullable(T)` columns are nullable.
-
-### Aliases
-
-Alias types are also supported:
-
-* `TINYINT`, `BOOL`, `BOOLEAN`, `INT1`,  as aliases of `Int8`.
-* `SMALLINT`, `INT2`,  as aliases of `Int16`.
-* `INT`, `INT4`, `INTEGER`, as aliases of `Int32`.
-* `FLOAT` as alias of `Float32`.
-* `DOUBLE` as alias of `Float64`.
-* `LONGTEXT`, `MEDIUMTEXT`, `TINYTEXT`, `TEXT`, `LONGBLOB`, `MEDIUMBLOB`, `TINYBLOB`, `BLOB`, `VARCHAR`, `CHAR`, as aliases of `String`.
