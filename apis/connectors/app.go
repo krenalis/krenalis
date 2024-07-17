@@ -340,7 +340,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 			// Normalize the returned users.
 
-			for i, appUser := range users {
+			for i, user := range users {
 
 				select {
 				case <-ctx.Done():
@@ -349,42 +349,42 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				default:
 				}
 
-				user := Record{
-					ID:           appUser.ID,
-					Associations: appUser.Associations,
+				record := Record{
+					ID:           user.ID,
+					Associations: user.Associations,
 				}
 
 				// Read the properties.
-				user.Properties = make(map[string]any, len(properties))
+				record.Properties = make(map[string]any, len(properties))
 				for _, p := range properties {
-					v, ok := appUser.Properties[p.Name]
+					v, ok := user.Properties[p.Name]
 					if !ok {
 						if p.Required {
-							user.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
+							record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
 							break
 						}
 						continue
 					}
 					v, err = normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
 					if err != nil {
-						user.Err = err
+						record.Err = err
 						break
 					}
-					user.Properties[p.Name] = v
+					record.Properties[p.Name] = v
 				}
 
 				// Read the last change time.
-				user.LastChangeTime = appUser.LastChangeTime.UTC()
-				if err = validateLastChangeTime(user.LastChangeTime); err != nil {
+				record.LastChangeTime = user.LastChangeTime.UTC()
+				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
 					return
 				}
-				if user.LastChangeTime.After(cursor.LastChangeTime) {
-					cursor.LastChangeTime = user.LastChangeTime
+				if record.LastChangeTime.After(cursor.LastChangeTime) {
+					cursor.LastChangeTime = record.LastChangeTime
 				}
 
 				r.last = i == last
 
-				if !yield(user) {
+				if !yield(record) {
 					return
 				}
 
