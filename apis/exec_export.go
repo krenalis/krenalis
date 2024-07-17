@@ -36,6 +36,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		// Download the users from this connection to match the identities for the export.
 		err := this.downloadUsersForExportMatch(ctx)
 		if err != nil {
+			if err, ok := err.(*connectors.SchemaError); ok {
+				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
+			}
 			return actionExecutionError{fmt.Errorf("cannot retrieve users information from app: %s", err)}
 		}
 		// If the export must be blocked in case of duplicated user on the
@@ -102,8 +105,10 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		}
 	}
 
+	io := "input"
 	schema := action.InSchema
 	if connector.Type == state.FileStorage {
+		io = "output"
 		schema = action.OutSchema
 	}
 
@@ -123,6 +128,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			ws := action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return err
+		case *connectors.SchemaError:
+			err.Msg = fmt.Sprintf("in the %s schema, %s. Please review and update the action before attempting to export the users.", io, err.Msg)
+			return actionExecutionError{err}
 		}
 		return err
 	}
