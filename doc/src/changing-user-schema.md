@@ -2,8 +2,6 @@
 
 The user schema associated with a newly created workspace contains only one property, `email`. This schema should be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.
 
-## How to change the user schema
-
 The user schema can be modified both: 
 
 * through the UI
@@ -11,7 +9,7 @@ The user schema can be modified both:
 
 ## Supported operations
 
-When changing the `users` schema, these operations are supported:
+When changing the users schema, these operations are supported:
 
 * **adding** properties **at any level**
 * **dropping** properties **at any level**
@@ -20,34 +18,3 @@ When changing the `users` schema, these operations are supported:
 * **changing labels** and **descriptions** of properties **at any level**
 
 Any other operation (as changing a property type) is not supported.
-
-## Properties and types limitations
-
-Here are the restrictions on properties and their types imposed directly by Meergo, which apply regardless of the data warehouse used. Each data warehouse may further restrict the supported types (see [Data Warehouse](./data-warehouse.md) and its subsections for more details on this).
-
-These are the limits imposed by Meergo:
-
-* Array types cannot have items of type Array, Object, or Map.
-* Map types cannot have values of type Array, Object, or Map.
-* Properties cannot be nullable (as the NULL value of a data warehouse column represents the fact that there is no value for that column)
-* Properties cannot specify a placeholder
-* Properties cannot be required
-* Properties cannot specify a role
-
-## Conflicting properties
-
-The "users" schema cannot contain conflicting properties, meaning properties whose representations as columns in the data warehouse would have the same column name.
-
-For example, this schema:
-
-```
-x {
-    a
-    b
-}
-x_a
-```
-
-is not valid because it contains two conflicting properties: `x.a` and `x_a`, as both should be represented by a column named `x_a` in the data warehouse, which would be impossible.
-
-For more details on how properties are represented as columns, see [the dedicated section](./data-warehouse.md#properties-to-columns-name).

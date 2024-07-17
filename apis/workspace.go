@@ -413,6 +413,22 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 // ChangeUserSchema changes the user schema and the primary sources of the
 // workspace. schema must be a valid schema.
 //
+// The properties within schema must meet the following requirements:
+//
+//   - properties with Array type cannot have elements of type Array, Object, or
+//     Map;
+//   - properties with Map type cannot have elements of type Array, Object, or
+//     Map;
+//   - properties cannot be nullable (as the NULL value of a data warehouse
+//     column represents the fact that there is no value for that column);
+//   - properties cannot specify a placeholder;
+//   - properties cannot be required;
+//   - properties cannot specify a role.
+//
+// Moreover, schema cannot contain conflicting properties, meaning properties
+// whose representations as columns in the data warehouse would have the same
+// column name.
+//
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
 // properties created with the same name of already existent properties, the
