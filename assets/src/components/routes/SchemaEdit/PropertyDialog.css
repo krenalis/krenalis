@@ -21,20 +21,35 @@
 	display: flex;
 	flex-flow: row wrap;
 	gap: 15px;
+	align-items: start;
 }
 
 .property-dialog__type-select {
 	width: 40%;
 }
 
+.property-dialog__elementtype-section,
+.property-dialog__valuetype-section {
+	margin-top: 30px;
+}
+
 .property-dialog__bitsize,
 .property-dialog__elementtype-section,
-.property-dialog__valuetype {
+.property-dialog__valuetype-section {
 	width: 40%;
 }
 
-.property-dialog__elementtype {
-	margin-bottom: 15px;
+.property-dialog__elementtype::part(form-control),
+.property-dialog__valuetype::part(form-control) {
+	display: flex;
+	align-items: end;
+	column-gap: 15px;
+}
+
+.property-dialog__elementtype::part(form-control-label),
+.property-dialog__valuetype::part(form-control-label) {
+	padding-bottom: 0;
+	font-weight: 400;
 }
 
 .property-dialog__precision,
@@ -49,6 +64,10 @@
 	grid-template-columns: 150px auto;
 	align-items: end;
 	row-gap: 10px;
+}
+
+.property-dialog__elementtype-section .property-dialog__length-section {
+	margin-top: 15px;
 }
 
 .property-dialog__byte-length-check,

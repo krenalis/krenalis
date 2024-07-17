@@ -568,7 +568,7 @@ const PropertyDialog = ({
 											className='property-dialog__elementtype'
 											ref={elementTypeSelectRef}
 											size='small'
-											label='Element type'
+											label='of'
 											value={property.type?.elementType?.name}
 											onSlChange={onChangeElementType}
 											hoist={true}
@@ -591,25 +591,27 @@ const PropertyDialog = ({
 								{scaleSection}
 								{property.type?.name !== 'Array' && lengthSection}
 								{property.type?.name === 'Map' && (
-									<SlSelect
-										className='property-dialog__valuetype'
-										ref={valueTypeSelectRef}
-										size='small'
-										label='Value type'
-										value={property.type?.valueType?.name}
-										onSlChange={onChangeValueType}
-										hoist={true}
-									>
-										{TYPE_NAMES.map((t) => {
-											if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
-												return (
-													<SlOption key={t} value={t}>
-														{t}
-													</SlOption>
-												);
-											}
-										})}
-									</SlSelect>
+									<span className='property-dialog__valuetype-section'>
+										<SlSelect
+											className='property-dialog__valuetype'
+											ref={valueTypeSelectRef}
+											size='small'
+											label='of'
+											value={property.type?.valueType?.name}
+											onSlChange={onChangeValueType}
+											hoist={true}
+										>
+											{TYPE_NAMES.map((t) => {
+												if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
+													return (
+														<SlOption key={t} value={t}>
+															{t}
+														</SlOption>
+													);
+												}
+											})}
+										</SlSelect>
+									</span>
 								)}
 							</div>
 							{typeError !== '' && (
