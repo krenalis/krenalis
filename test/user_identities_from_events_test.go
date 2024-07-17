@@ -147,7 +147,7 @@ def transform(event: dict) -> dict:
 	// Check that the user has been created.
 	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 3 {
-		t.Fatalf("expecting 2 users, got %d", count)
+		t.Fatalf("expecting 3 users, got %d", count)
 	}
 
 }
