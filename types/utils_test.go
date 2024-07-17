@@ -165,10 +165,10 @@ func Test_AsRole(t *testing.T) {
 				t.Fatal("unexpected invalid schema")
 			}
 			if !expectedValid && gotValid {
-				t.Fatalf("expecting an invalid schema, got %v", got)
+				t.Fatalf("expecting an invalid schema, got %#v", got)
 			}
 			if !Equal(cas.expected, got) {
-				t.Fatalf("expected schema %v != got %v", cas.expected, got)
+				t.Fatalf("expected schema %#v != got %#v", cas.expected, got)
 			}
 		})
 	}
