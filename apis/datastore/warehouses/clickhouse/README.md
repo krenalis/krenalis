@@ -1,4 +1,4 @@
-# ClickHouse
+# ClickHouse Driver
 
 > This page **may be obsolete**. See [this issue](https://github.com/meergo/meergo/issues/575).
 
