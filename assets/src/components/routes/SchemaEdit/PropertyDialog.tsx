@@ -11,6 +11,7 @@ import {
 	IntBitSize,
 	IntType,
 	MapType,
+	TextType,
 	TypeName,
 	UintType,
 } from '../../../lib/api/types/types';
@@ -19,6 +20,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
+import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
@@ -67,6 +69,8 @@ const PropertyDialog = ({
 	const [primarySource, setPrimarySource] = useState<number | null>(null);
 	const [nameError, setNameError] = useState<string>('');
 	const [typeError, setTypeError] = useState<string>('');
+	const [isByteLengthEnabled, setIsByteLengthEnabled] = useState<boolean>(false);
+	const [isCharLengthEnabled, setIsCharLengthEnabled] = useState<boolean>(false);
 
 	const { connections } = useContext(AppContext);
 
@@ -75,6 +79,8 @@ const PropertyDialog = ({
 	const precisionInputRef = useRef<any>();
 	const elementTypeSelectRef = useRef<any>();
 	const valueTypeSelectRef = useRef<any>();
+	const byteLengthInputRef = useRef<any>();
+	const charLengthInputRef = useRef<any>();
 
 	const isEditing = useMemo(() => {
 		if (propertyToEdit == null) {
@@ -146,6 +152,8 @@ const PropertyDialog = ({
 		if (typeError !== '') {
 			setTypeError('');
 		}
+		setIsByteLengthEnabled(false);
+		setIsCharLengthEnabled(false);
 	};
 
 	const onChangeBitSize = (e) => {
@@ -224,6 +232,80 @@ const PropertyDialog = ({
 		if (typeError !== '') {
 			setTypeError('');
 		}
+	};
+
+	const onToggleByteLength = () => {
+		setIsByteLengthEnabled(!isByteLengthEnabled);
+		if (isByteLengthEnabled) {
+			updateByteLength(null);
+		} else {
+			setTimeout(() => byteLengthInputRef.current?.focus(), 50);
+		}
+	};
+
+	const onToggleCharLength = () => {
+		setIsCharLengthEnabled(!isCharLengthEnabled);
+		if (isCharLengthEnabled) {
+			updateCharLength(null);
+		} else {
+			setTimeout(() => charLengthInputRef.current?.focus(), 50);
+		}
+	};
+
+	const onInputByteLength = (e) => {
+		updateByteLength(Number(e.target.value));
+	};
+
+	const updateByteLength = (length: number | null) => {
+		const p = { ...property };
+		if (p.type.name === 'Array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as TextType;
+			if (length == null) {
+				delete elementTyp.byteLen;
+			} else {
+				elementTyp.byteLen = length;
+			}
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as TextType;
+			if (length == null) {
+				delete typ.byteLen;
+			} else {
+				typ.byteLen = length;
+			}
+			p.type = typ;
+		}
+		setProperty(p);
+	};
+
+	const onInputCharLength = (e) => {
+		updateCharLength(Number(e.target.value));
+	};
+
+	const updateCharLength = (length: number | null) => {
+		const p = { ...property };
+		if (p.type.name === 'Array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as TextType;
+			if (length == null) {
+				delete elementTyp.charLen;
+			} else {
+				elementTyp.charLen = length;
+			}
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as TextType;
+			if (length == null) {
+				delete typ.charLen;
+			} else {
+				typ.charLen = length;
+			}
+			p.type = typ;
+		}
+		setProperty(p);
 	};
 
 	const onChangeValueType = (e) => {
@@ -379,6 +461,64 @@ const PropertyDialog = ({
 		}
 	}
 
+	let lengthSection = null;
+	if (property != null && property.type != null) {
+		const isArray = property.type.name === 'Array';
+		const hasText =
+			property.type.name === 'Text' || (isArray && (property.type as ArrayType).elementType.name === 'Text');
+		if (hasText) {
+			const typ: any = isArray ? (property.type as ArrayType).elementType : property.type;
+			const byteLengthSection = (
+				<>
+					<SlCheckbox
+						className='property-dialog__byte-length-check'
+						checked={isByteLengthEnabled}
+						onSlChange={onToggleByteLength}
+						size='small'
+					>
+						Max bytes:
+					</SlCheckbox>
+					<SlInput
+						className='property-dialog__byte-length'
+						ref={byteLengthInputRef}
+						size='small'
+						value={String(typ.byteLen)}
+						type='number'
+						onSlInput={onInputByteLength}
+						disabled={!isByteLengthEnabled}
+					/>
+				</>
+			);
+			const charLengthSection = (
+				<>
+					<SlCheckbox
+						className='property-dialog__char-length-check'
+						checked={isCharLengthEnabled}
+						onSlChange={onToggleCharLength}
+						size='small'
+					>
+						Max characters:
+					</SlCheckbox>
+					<SlInput
+						className='property-dialog__char-length'
+						ref={charLengthInputRef}
+						size='small'
+						value={String(typ.charLen)}
+						type='number'
+						onSlInput={onInputCharLength}
+						disabled={!isCharLengthEnabled}
+					/>
+				</>
+			);
+			lengthSection = (
+				<div className='property-dialog__length-section'>
+					{byteLengthSection}
+					{charLengthSection}
+				</div>
+			);
+		}
+	}
+
 	return (
 		<SlDialog
 			className='property-dialog'
@@ -423,29 +563,33 @@ const PropertyDialog = ({
 									))}
 								</SlSelect>
 								{property.type?.name === 'Array' && (
-									<SlSelect
-										className='property-dialog__elementtype'
-										ref={elementTypeSelectRef}
-										size='small'
-										label='Element type'
-										value={property.type?.elementType?.name}
-										onSlChange={onChangeElementType}
-										hoist={true}
-									>
-										{TYPE_NAMES.map((t) => {
-											if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
-												return (
-													<SlOption key={t} value={t}>
-														{t}
-													</SlOption>
-												);
-											}
-										})}
-									</SlSelect>
+									<span className='property-dialog__elementtype-section'>
+										<SlSelect
+											className='property-dialog__elementtype'
+											ref={elementTypeSelectRef}
+											size='small'
+											label='Element type'
+											value={property.type?.elementType?.name}
+											onSlChange={onChangeElementType}
+											hoist={true}
+										>
+											{TYPE_NAMES.map((t) => {
+												if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
+													return (
+														<SlOption key={t} value={t}>
+															{t}
+														</SlOption>
+													);
+												}
+											})}
+										</SlSelect>
+										{lengthSection}
+									</span>
 								)}
 								{bitSizeSection}
 								{precisionSection}
 								{scaleSection}
+								{property.type?.name !== 'Array' && lengthSection}
 								{property.type?.name === 'Map' && (
 									<SlSelect
 										className='property-dialog__valuetype'
