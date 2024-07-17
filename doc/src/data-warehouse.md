@@ -31,25 +31,3 @@ address_street_number
 address_city
 address_country
 ```
-
-#### Objects with "nullable" properties
-
-Properties of type Object can never be "nullable", but the properties of the Object may be.
-
-In such cases, "nullable" properties are represented in the data warehouse as "nullable" columns.
-
-For example, the `ios` property defined this way:
-
-```
-ios {
-    id (nullable)
-    idfa (nullable)
-}
-```
-
-is represented as:
-
-```
-ios_id (nullable)
-ios_idfa (nullable)
-```
