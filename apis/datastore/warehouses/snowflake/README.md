@@ -1,26 +1,19 @@
 # Snowflake Driver
 
-> This page **may be obsolete**. See [this issue](https://github.com/meergo/meergo/issues/575).
+## Supported Types
 
-## Data Types
+> This section **may be obsolete**. See [this issue](https://github.com/meergo/meergo/issues/575).
 
-The table below provides a list of supported types in a Snowflake data warehouse along with their corresponding property types:
+The table below provides a list of supported property types when using a Snowflake data warehouse, along with the corresponding column types that are generated on the data warehouse.
 
-| Column Type     | Property Type  |
-|-----------------|----------------|
-| `NUMBER(p,s)`   | `Decimal(p,s)` |
-| `FLOAT`         | `Float(64)`    |
-| `VARCHAR`       | `Text`         |
-| `BOOLEAN`       | `Boolean`      |
-| `DATE`          | `Date`         |
-| `TIME`          | `Time`         |
-| `TIMESTAMP_NTZ` | `DateTime`     |
-| `VARIANT`       | `JSON`         |
-| `ARRAY`         | `Array(JSON)`  |
-
-Alias types are also supported:
-
-* `DECIMAL`, `DEC`, `NUMERIC`, `INT`, `INTEGER`, `BIGINT`, `SMALLINT`, `TINYINT`, `BYTEINT`, as aliases of `NUMBER`.
-* `FLOAT4`, `FLOAT8`, `DOUBLE`, `DOUBLE PRECISION`, `REAL`, as aliases of `FLOAT`.
-* `CHAR`, `CHARACTER`, `STRING`, `TEXT`, as aliases of `VARCHAR`.
-* `DATETIME`, `TIMESTAMP`, as aliases of `TIMESTAMP_NTZ`.
+| Property Type  | Column Type     |
+| -------------- | --------------- |
+| `Decimal(p,s)` | `NUMBER(p,s)`   |
+| `Float(64)`    | `FLOAT`         |
+| `Text`         | `VARCHAR`       |
+| `Boolean`      | `BOOLEAN`       |
+| `Date`         | `DATE`          |
+| `Time`         | `TIME`          |
+| `DateTime`     | `TIMESTAMP_NTZ` |
+| `JSON`         | `VARIANT`       |
+| `Array(JSON)`  | `ARRAY`         |
