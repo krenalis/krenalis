@@ -1,9 +1,5 @@
 # Data Warehouse
 
-## Default values
-
-The columns created by Meergo always have a default value, that is `NULL` (in case of nullable properties) or the zero of the type otherwise.
-
 ## Supported types
 
 The types of Meergo supported by a certain data warehouse are those for which it is possible to define a column in the `users` table that ensures values cannot be written (and consequently returned) that do not conform to the Meergo type.
