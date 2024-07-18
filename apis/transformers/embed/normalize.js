@@ -25,7 +25,7 @@ function normalize(obj) {
 						obj[i] = String(v);
 					}
 				} else if (v === undefined) {
-					obj[i] = null;
+					delete(obj[i]);
 				} else if (typeof v === "object" && v !== null) {
 					norm(v, set);
 				} else if (typeof v === "bigint") {
@@ -41,7 +41,7 @@ function normalize(obj) {
 							obj[k] = String(v);
 						}
 					} else if (v === undefined) {
-						obj[k] = null;
+						delete(obj[k]);
 					} else if (typeof v === "object" && v !== null) {
 						norm(v, set);
 					} else if (typeof v === "bigint") {
