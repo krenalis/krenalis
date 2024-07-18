@@ -203,7 +203,6 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []ty
 		columns[i] = types.Property{
 			Name:     column.Name(),
 			Type:     typ,
-			Required: true,
 			Nullable: nullable || !ok,
 		}
 	}

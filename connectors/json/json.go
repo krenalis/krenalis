@@ -76,8 +76,8 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 			Name: name,
 			Type: types.JSON(),
 		}
-		if required == "t" {
-			c.Required = true
+		if required == "f" {
+			c.ReadOptional = true
 		}
 		columns = append(columns, c)
 	}

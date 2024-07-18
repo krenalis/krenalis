@@ -47,13 +47,13 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		Name: "Import users' email and name from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text(), Required: true},
+			{Name: "identity", Type: types.Text()},
 			{Name: "name", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "first_name", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
@@ -74,13 +74,13 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		Name: "Import users' email and lastName from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text(), Required: true},
+			{Name: "identity", Type: types.Text()},
 			{Name: "lastname", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "last_name", Type: types.Text()},
-			{Name: "email", Type: types.Text()},
+			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{

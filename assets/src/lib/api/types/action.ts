@@ -10,6 +10,8 @@ type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
 
 type Mapping = Record<string, string>;
 
+type TransformationPurpose = 'Create' | 'Update';
+
 interface Transformation {
 	Mapping: Mapping | null;
 	Function: TransformationFunction | null;
@@ -105,4 +107,5 @@ export type {
 	ActionToSet,
 	ExpressionToBeExtracted,
 	Mapping,
+	TransformationPurpose,
 };

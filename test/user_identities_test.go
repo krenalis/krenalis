@@ -38,11 +38,11 @@ func Test_UserIdentities(t *testing.T) {
 		Name: "CSV 1",
 		Path: "users1.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text(), Required: true},
-			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "identity", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
@@ -61,11 +61,11 @@ func Test_UserIdentities(t *testing.T) {
 		Name: "CSV 2",
 		Path: "users2.csv",
 		InSchema: types.Object([]types.Property{
-			{Name: "identity", Type: types.Text(), Required: true},
+			{Name: "identity", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{

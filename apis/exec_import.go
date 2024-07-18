@@ -16,6 +16,7 @@ import (
 
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
 	"github.com/meergo/meergo/apis/transformers"
@@ -79,8 +80,8 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		return fmt.Errorf("invalid connector type %s", connector.Type)
 	}
 	if err != nil {
-		if err, ok := err.(*connectors.SchemaError); ok {
-			err.Msg += ". Please review and update the action before attempting to import the users."
+		if err, ok := err.(*schemas.Error); ok {
+			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
 		}
 		return actionExecutionError{err}
 	}
@@ -98,14 +99,16 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
 		}
+		if err, ok := err.(*schemas.Error); ok {
+			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
+			return actionExecutionError{err}
+		}
 		return err
 	}
 	defer iw.Close(ctx)
 
-	var (
-		users  = make([]connectors.Record, 0, 100)
-		values = make([]map[string]any, 0, 100)
-	)
+	users := make([]connectors.Record, 0, 100)
+	transformationRecords := make([]transformers.Record, 0, 100)
 
 	var cursor time.Time
 
@@ -138,11 +141,11 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		if len(users) == 100 || records.Last() {
 
 			// Transform the users.
-			values = values[0:len(users)]
+			transformationRecords = transformationRecords[0:len(users)]
 			for i, user := range users {
-				values[i] = user.Properties
+				transformationRecords[i].Properties = user.Properties
 			}
-			results, err := transformer.Transform(ctx, values)
+			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
 					return actionExecutionError{err}
@@ -151,18 +154,18 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			}
 
 			// Set the identities into the data warehouse.
-			for i, result := range results {
+			for i, record := range transformationRecords {
 				user := users[i]
-				if result.Err != nil {
-					if _, ok := result.Err.(ValidationError); ok {
+				if record.Err != nil {
+					if _, ok := record.Err.(ValidationError); ok {
 						stats.Passed(statistics.Transformation)
-						stats.Failed(statistics.OutputValidation, result.Err.Error())
+						stats.Failed(statistics.OutputValidation, record.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.Transformation, result.Err.Error())
+					stats.Failed(statistics.Transformation, record.Err.Error())
 					continue
 				}
-				user.Properties = result.Value
+				user.Properties = record.Properties
 				stats.Passed(statistics.Transformation)
 				stats.Passed(statistics.OutputValidation)
 				err = iw.Write(datastore.Identity{
@@ -189,6 +192,9 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 
 	}
 	if err = records.Err(); err != nil {
+		if err, ok := err.(*schemas.Error); ok {
+			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
+		}
 		if err == connectors.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}

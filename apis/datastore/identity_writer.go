@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 )
@@ -164,6 +165,7 @@ type EventIdentityWriter struct {
 
 	mu      sync.Mutex       // for the 'actions' and 'flatter' fields.
 	actions map[int]struct{} // actions of the action's connection. Access using 'mu'. If nil, it means that the action does not exist anymore.
+	aligned bool             // indicates if the action's output schema is aligned with the user schema. access using 'mu'.
 	flatter *flatter         // access using 'mu'. nil for actions that import identities from events with no transformations.
 }
 
@@ -234,12 +236,15 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 
 	iw.mu.Lock()
 	actions := iw.actions
+	aligned := iw.aligned
 	flatter := iw.flatter
 	iw.mu.Unlock()
 
-	// Check if the action has been deleted.
 	if actions == nil {
 		return errors.New("action does not exist anymore")
+	}
+	if !aligned {
+		return &schemas.Error{Msg: "action output schema is no aligned with the user schema"}
 	}
 
 	if !key.isAnonymous {
@@ -336,15 +341,25 @@ func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 //
 // The notification is propagated by the Store.onSetAction method.
 func (iw *EventIdentityWriter) onSetAction(n state.SetAction) {
-	identityColumns := iw.store.identityColumnByProperty()
+	var aligned bool
 	var flatter *flatter
 	if n.OutSchema.Valid() {
+		workspace, ok := iw.store.ds.state.Workspace(iw.store.workspace)
+		if !ok {
+			return
+		}
+		err := schemas.CheckAlignment(n.OutSchema, workspace.UserSchema, nil)
+		if err == nil {
+			aligned = true
+			flatter = newFlatter(n.OutSchema, iw.store.identityColumnByProperty())
+		}
+	} else {
 		// The action's out schema is invalid when importing identities from
 		// events without any transformation in the action.
-		flatter = newFlatter(n.OutSchema, identityColumns)
-
+		aligned = true
 	}
 	iw.mu.Lock()
+	iw.aligned = aligned
 	iw.flatter = flatter
 	iw.mu.Unlock()
 }
@@ -358,14 +373,22 @@ func (iw *EventIdentityWriter) onSetWorkspaceUserSchema(_ state.SetWorkspaceUser
 	if !ok {
 		return
 	}
-	identityColumns := iw.store.identityColumnByProperty()
+	var aligned bool
 	var flatter *flatter
 	if action.OutSchema.Valid() {
+		workspace := action.Connection().Workspace()
+		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		if err == nil {
+			aligned = true
+			flatter = newFlatter(action.OutSchema, iw.store.identityColumnByProperty())
+		}
+	} else {
 		// The action's out schema is invalid when importing identities from
 		// events without any transformation in the action.
-		flatter = newFlatter(action.OutSchema, identityColumns)
+		aligned = true
 	}
 	iw.mu.Lock()
+	iw.aligned = aligned
 	iw.flatter = flatter
 	iw.mu.Unlock()
 }

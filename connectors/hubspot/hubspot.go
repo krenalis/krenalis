@@ -315,7 +315,6 @@ func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meerg
 			Name:     r.Name,
 			Label:    r.Label,
 			Type:     typ,
-			Required: true,
 			Nullable: true,
 			Note:     r.Description,
 		}

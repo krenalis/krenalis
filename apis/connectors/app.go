@@ -20,6 +20,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors/httpclient"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 )
@@ -84,7 +85,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 //
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
 // If the schema is not aligned to the event type's schema, it returns a
-// *SchemaError error.
+// *schemas.Error error.
 //
 // It panics if the app does not support the Events target, or if schema is
 // valid but not an Object.
@@ -96,12 +97,14 @@ func (app *App) EventRequest(ctx context.Context, event *Event, eventType string
 	if !ok {
 		panic("app does not support the Events target")
 	}
-	s, err := app.inner.Schema(ctx, meergo.Events, meergo.Destination, eventType)
+	eventTypeSchema, err := app.inner.Schema(ctx, meergo.Events, meergo.Destination, eventType)
 	if err != nil {
 		return nil, err
 	}
-	// Check compatibility between the schema of the properties and the schema of the event type.
-	if err = verifySchemaCompatibilityForSendEvents(schema, s); err != nil {
+	// Check that schema is aligned with the event type's schema.
+	createOnly := state.CreateOnly
+	err = schemas.CheckAlignment(schema, eventTypeSchema, &createOnly)
+	if err != nil {
 		return nil, err
 	}
 	// Return the event request.
@@ -176,8 +179,8 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 // lastChangeTime is the most recent lastChangeTime value read from the previous
 // import.
 //
-// If the provided schema, that must be valid, does not conform with the app's
-// source user schema, it returns a *SchemaError error.
+// If the provided schema, that must be valid, does not align with the app's
+// source schema, it returns a *schemas.Error error.
 func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
@@ -190,7 +193,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	if err != nil {
 		return nil, fmt.Errorf("cannot get user schema: %s", err)
 	}
-	err = checkSchemaAlignment(schema, userSchema)
+	err = schemas.CheckAlignment(schema, userSchema, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -204,27 +207,28 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	return records, nil
 }
 
-// Writer returns a Writer to create and update records of the provided target.
-// The target can be either Users or Groups.
-//
-// If the app does not support the provided target, it returns an
-// ErrUnsupportedTarget error.
-func (app *App) Writer(target state.Target, ack AckFunc) (Writer, error) {
+// Writer returns a Writer to create and update records of the provided action.
+// If the action's output schema does not align with the app's destination
+// schema, it returns a *schemas.Error error.
+func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (Writer, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	if target != state.Users && target != state.Groups {
-		return nil, fmt.Errorf("target must be either Users or Groups")
+	appSchema, err := app.SchemaAsRole(ctx, state.Destination, state.Users, "")
+	if err != nil {
+		return nil, err
 	}
-	if !app.targets.Contains(target) {
-		return nil, ErrUnsupportedTarget
+	// Check that the action's output schema is aligned with the app destination schema.
+	err = schemas.CheckAlignment(action.OutSchema, appSchema, action.ExportMode)
+	if err != nil {
+		return nil, err
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
 	w := appWriter{
 		ack:     ack,
-		target:  meergo.Targets(target),
+		target:  meergo.Targets(action.Target),
 		records: app.inner.(meergo.AppRecords),
 	}
 	return &w, nil
@@ -359,8 +363,8 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				for _, p := range properties {
 					v, ok := user.Properties[p.Name]
 					if !ok {
-						if p.Required {
-							record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
+						if !p.ReadOptional {
+							record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
 							break
 						}
 						continue
@@ -416,184 +420,4 @@ func (r *appRecords) Last() bool {
 type schema struct {
 	lock    chan struct{}
 	schemas [3]types.Type
-}
-
-// verifySchemaCompatibilityForSendEvents verifies whether t1 and t2 are
-// compatible for sending events. If they are compatible, values satisfying t1
-// can be safely passed to the SendEvent and PreviewSendEvent methods, where t2
-// represents the schema of the event type to send. In such cases, it guarantees
-// that the values also satisfy t2.
-//
-// An invalid schema is handled as if it were an object without properties.
-//
-// It returns a *SchemaError error if t1 and t2 are not compatible. It panics if
-// the schema is invalid.
-//
-// It panics if t1 and t2 are valid but non-Object.
-func verifySchemaCompatibilityForSendEvents(t1, t2 types.Type) error {
-	if !t1.Valid() || !t2.Valid() {
-		switch {
-		case t1.Valid():
-			for _, p1 := range t1.Properties() {
-				return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, p1.Name)}
-			}
-		case t2.Valid():
-			for _, p2 := range t2.Properties() {
-				if p2.Required {
-					return &SchemaError{Msg: fmt.Sprintf(`there is a new required property %q`, p2.Name)}
-				}
-			}
-		}
-		return nil
-	}
-	if t1.Kind() != types.ObjectKind || t2.Kind() != types.ObjectKind {
-		panic("t1 and t2 must be invalid or objects")
-	}
-	// t1 and t2 are valid.
-	var verify func(name string, t1, t2 types.Type) error
-	verify = func(name string, t1, t2 types.Type) error {
-		if types.Equal(t1, t2) {
-			return nil
-		}
-		pt1 := t1.Kind()
-		pt2 := t2.Kind()
-		if pt1 != pt2 {
-			return &SchemaError{Msg: fmt.Sprintf("type of the %q property has changed from %s to %s", name, t1, t2)}
-		}
-		switch pt1 {
-		case types.IntKind:
-			min1, max1 := t1.IntRange()
-			min2, max2 := t2.IntRange()
-			if min1 < min2 {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; minimum value is changed from %d to %d", name, min1, min2)}
-			}
-			if max2 < max1 {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; maximum value is changed from %d to %d", name, max1, max2)}
-			}
-			return nil
-		case types.UintKind:
-			min1, max1 := t1.UintRange()
-			min2, max2 := t2.UintRange()
-			if min1 < min2 {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; minimum value is changed from %d to %d", name, min1, min2)}
-			}
-			if max2 < max1 {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; maximum value is changed from %d to %d", name, max1, max2)}
-			}
-			return nil
-		case types.FloatKind:
-			if t2.BitSize() < t1.BitSize() {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; bit size is changed from 64 to 32", name)}
-			}
-			min1, max1 := t1.FloatRange()
-			min2, max2 := t2.FloatRange()
-			if min1 < min2 {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; minimum value is changed from %g to %g", name, min1, min2)}
-			}
-			if max2 < max1 {
-				return &SchemaError{Msg: fmt.Sprintf("type of the %q property is changed; maximum value is changed from %g to %g", name, max1, max2)}
-			}
-			return nil
-		case types.DecimalKind:
-			s1 := t1.Scale()
-			s2 := t2.Scale()
-			if s1 > s2 || t1.Precision()-s1 > t2.Precision()-s2 {
-				return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed from %s to %s`, name, t1, t2)}
-			}
-			min1, max1 := t1.DecimalRange()
-			min2, max2 := t2.DecimalRange()
-			if min1.LessThan(min2) {
-				return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; minimum value is changed from %s to %s`, name, min1, min2)}
-			}
-			if max2.LessThan(max1) {
-				return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; maximum value is changed from %s to %s`, name, max1, max2)}
-			}
-			return nil
-		case types.TextKind:
-			if values1 := t1.Values(); values1 != nil {
-				values2 := t2.Values()
-				if values2 == nil {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it is no longer limited to specific values`, name)}
-				}
-				for _, v1 := range values1 {
-					found := false
-					for _, v2 := range values2 {
-						if v1 == v2 {
-							found = true
-							break
-						}
-					}
-					if !found {
-						return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; value %q is no longer allowed`, name, v1)}
-					}
-				}
-				return nil
-			}
-			if rx1 := t1.Regexp(); rx1 != nil {
-				rx2 := t2.Regexp()
-				if rx2 == nil {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it no longer validates against a regular expression`, name)}
-				}
-				if rx1.String() != rx2.String() {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it validates against a different regular expression`, name)}
-				}
-				return nil
-			}
-			if max2, ok := t2.ByteLen(); ok {
-				max1, ok := t1.ByteLen()
-				if !ok {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it is now restricted in byte length`, name)}
-				}
-				if max1 > max2 {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; maximum length in bytes has changed from %d to %d`, name, max1, max2)}
-				}
-			}
-			if max2, ok := t2.CharLen(); ok {
-				max1, ok := t1.CharLen()
-				if !ok {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; it is now restricted in character length`, name)}
-				}
-				if max1 > max2 {
-					return &SchemaError{Msg: fmt.Sprintf(`type of property %q has changed; maximum length in characters has changed from %d to %d`, name, max1, max2)}
-				}
-			}
-			return nil
-		case types.ArrayKind:
-			return verify(name+"[]", t1.Elem(), t2.Elem())
-		case types.ObjectKind:
-			for _, p1 := range t1.Properties() {
-				path := p1.Name
-				if name != "" {
-					path = name + "." + path
-				}
-				p2, ok := t2.Property(p1.Name)
-				if !ok {
-					return &SchemaError{Msg: fmt.Sprintf(`property %q is no longer present`, path)}
-				}
-				if !p1.Required && p2.Required {
-					return &SchemaError{Msg: fmt.Sprintf(`property %q has become required`, path)}
-				}
-				err := verify(path, p1.Type, p2.Type)
-				if err != nil {
-					return err
-				}
-			}
-			for _, p2 := range t2.Properties() {
-				if p2.Required {
-					if _, ok := t1.Property(p2.Name); !ok {
-						path2 := p2.Name
-						if name != "" {
-							path2 = name + "." + path2
-						}
-						return &SchemaError{Msg: fmt.Sprintf(`there is a new required property %q`, path2)}
-					}
-				}
-			}
-			return nil
-		case types.MapKind:
-			return verify(name, t1.Elem(), t2.Elem())
-		}
-		return nil
-	}
-	return verify("", t1, t2)
 }

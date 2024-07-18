@@ -60,18 +60,18 @@ func New(settings Settings) transformers.Provider {
 	return &function{settings: settings}
 }
 
-// Call calls the function with the given name and version for each value and
-// returns the result of each invocation. Each element of values is supposed to
-// conform to inSchema. Each result conforms to outSchema unless a
-// transformation error occurred, and in that case, the error is stored in the
-// Err field of the result.
+// Call calls the function with the given name and version for each record
+// updating its Properties field with the result of each invocation. Record
+// properties are supposed to conform to inSchema. After the transformation,
+// Record properties conform to outSchema unless a transformation error
+// occurred, and in that case, the error is stored in the Record's Err field.
 //
 // It returns the ErrFunctionNotExist error if the function does not exist, and
-// a FunctionExecutionError error if the function execution fails.
-func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+// a FunctionExecutionError if the execution fails.
+func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []transformers.Record) error {
 
 	if !transformers.ValidFunctionName(name) {
-		return nil, errors.New("function name is not valid")
+		return errors.New("function name is not valid")
 	}
 	ext := path.Ext(name)
 	var language state.Language
@@ -81,20 +81,20 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	case ".py":
 		language = state.Python
 	default:
-		return nil, errors.New("language is not supported")
+		return errors.New("language is not supported")
 	}
 
 	client, err := fn.connect(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
 	payload = append(payload, '"')
-	payload, err = transformers.Marshal(payload, inSchema, values, language)
+	payload, err = transformers.Marshal(payload, inSchema, records, language)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	payload = append(payload, '"')
 
@@ -112,7 +112,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		if err != nil {
 			if status, ok := httpStatusCode(err); ok {
 				if status == 404 {
-					return nil, transformers.ErrFunctionNotExist
+					return transformers.ErrFunctionNotExist
 				}
 				if status == 409 {
 					// The function is pending.
@@ -127,12 +127,12 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 					continue
 				}
 			}
-			return nil, err
+			return err
 		}
 		break
 	}
 	if err = ctx.Err(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Unmarshal the results.
@@ -143,9 +143,9 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		}{}
 		err = dec.Decode(&payload)
 		if err != nil {
-			return nil, fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
+			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
 		}
-		return nil, transformers.FunctionExecutionError(payload.ErrorMessage)
+		return transformers.FunctionExecutionError(payload.ErrorMessage)
 	}
 	var r io.Reader
 	switch ext {
@@ -155,18 +155,11 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		var s string
 		err = json.Unmarshal(out.Payload, &s)
 		if err != nil {
-			return nil, fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
+			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
 		}
 		r = strings.NewReader(s)
 	}
-	results, err := transformers.Unmarshal(r, outSchema, language)
-	if err != nil {
-		return nil, err
-	}
-	if len(results) != len(values) {
-		return nil, fmt.Errorf("transformers/lambda: expected %d results from function %q, got %d", len(values), name, len(results))
-	}
-	return results, nil
+	return transformers.Unmarshal(r, records, outSchema, language)
 }
 
 // Close closes the function.

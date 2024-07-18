@@ -293,14 +293,16 @@ An Object property is defined as follows:
 
 ```go
 type Property struct {
-	Name        string
-	Label       string
-	Placeholder string
-	Role        Role
-	Type        Type
-	Required    bool
-	Nullable    bool
-	Note        string
+	Name           string
+	Label          string
+	Placeholder    string
+	Role           Role
+	Type           Type
+	CreateRequired bool
+	UpdateRequired bool
+	ReadOptional   bool
+	Nullable       bool
+	Note           string
 }
 ```
 
@@ -309,7 +311,9 @@ type Property struct {
 * `Placeholder`: A placeholder to use in transformation mappings for events sent to applications. It pre-fills the input with the expression that evaluates to the property's value.
 * `Role`: The role of the property, which can be `types.Source`, `types.Destination`, or `types.Both`. If `Source`, the property is present only when the connector is used as a source. If `Destination`, it is present only when the connector is used as a destination. If `Both`, the property is present in both cases.
 * `Type`: The type of the property, which can be any [data type](#how-to-construct-data-types).
-* `Required`: Indicates whether the property is required.
+* `CreateRequired`: Indicates whether the property is required for creation. It can be only used if the `Role` is `Destination` or `Both`.
+* `UpdateRequired`: Indicates whether the property is required for the update. It can only be used if the `Role` is `Destination` or `Both`.
+* `ReadOptional`: Indicates whether the property may not be present when reading. It can only be used if the `Role` is `Source` or `Both`.
 * `Nullable`: Indicates whether the property can be null. In Go, this means it can be `nil`. In JavaScript, it can be `null`, and in Python, it can be `None`.
 * `Note`: A note providing additional information about the property's usage.
 

@@ -52,7 +52,7 @@ import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import { ActionToSet, TransformationFunction } from '../../../lib/api/types/action';
+import { ActionToSet, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
 import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
 
@@ -256,7 +256,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					value,
 					actionType.InputSchema.properties,
 					action.Transformation.Mapping![name].full.type,
-					action.Transformation.Mapping![name].full.required,
 					action.Transformation.Mapping![name].full.nullable,
 					signal,
 				);
@@ -662,6 +661,8 @@ const TransformationBox = ({
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.Transformation.Mapping) {
+			const isRequired =
+				action.Transformation.Mapping[k].createRequired || action.Transformation.Mapping[k].updateRequired;
 			mappings.push(
 				<div
 					key={k}
@@ -684,7 +685,7 @@ const TransformationBox = ({
 						error={action.Transformation.Mapping[k].error}
 						autocompleteExpressions={true}
 					>
-						{action.Transformation.Mapping[k].required && (
+						{isRequired && (
 							<div className='action__transformation-property-icon' slot='prefix'>
 								<SlTooltip content='Required' hoist>
 									<SlIcon name='asterisk' className='action__transformation-property-icon-required' />
@@ -1106,7 +1107,7 @@ const FullscreenTransformation = ({
 			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
 		} catch (err) {
 			setTimeout(() => {
-				handleError(err);
+				setOutputError(err.message);
 				setIsExecuting(false);
 			}, 300);
 			return;
@@ -1121,9 +1122,17 @@ const FullscreenTransformation = ({
 			}
 		}
 
+		let purpose: TransformationPurpose =
+			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
 		let res: TransformDataResponse;
 		try {
-			res = await api.transformData(s, actionToSet.inSchema, actionToSet.outSchema, actionToSet.transformation);
+			res = await api.transformData(
+				s,
+				actionToSet.inSchema,
+				actionToSet.outSchema,
+				actionToSet.transformation,
+				purpose,
+			);
 		} catch (err) {
 			setOutput('');
 			if (err instanceof UnprocessableError && err.code === 'TransformationFailed') {
@@ -1157,7 +1166,7 @@ const FullscreenTransformation = ({
 			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
 		} catch (err) {
 			setTimeout(() => {
-				handleError(err);
+				setOutputError(err.message);
 				setIsExecuting(false);
 			}, 300);
 			return;
@@ -1265,10 +1274,18 @@ const FullscreenTransformation = ({
 								property={p}
 								language={selectedLanguage}
 								nesting={0}
+								side='input'
 							/>
 						);
 					} else {
-						return <TransformationProperty key={p.name} language={selectedLanguage} property={p} />;
+						return (
+							<TransformationProperty
+								key={p.name}
+								language={selectedLanguage}
+								property={p}
+								side='input'
+							/>
+						);
 					}
 				})}
 			</div>
@@ -1485,6 +1502,7 @@ const FullscreenTransformation = ({
 														property={p}
 														language={selectedLanguage}
 														nesting={0}
+														side='output'
 													/>
 												);
 											} else {
@@ -1493,6 +1511,7 @@ const FullscreenTransformation = ({
 														key={p.name}
 														property={p}
 														language={selectedLanguage}
+														side='output'
 													/>
 												);
 											}
@@ -1570,6 +1589,7 @@ interface TransformationNestedPropertiesProps {
 	language: string;
 	nesting: number;
 	parentName?: string;
+	side: 'input' | 'output';
 }
 
 const TransformationNestedProperties = ({
@@ -1577,6 +1597,7 @@ const TransformationNestedProperties = ({
 	language,
 	nesting,
 	parentName,
+	side,
 }: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -1594,7 +1615,7 @@ const TransformationNestedProperties = ({
 						setIsExpanded(!isExpanded);
 					}}
 				/>
-				<TransformationProperty property={property} language={language} isParent={true} />
+				<TransformationProperty property={property} language={language} isParent={true} side={side} />
 			</div>
 			<div className='fullscreen-transformation__sub-properties'>
 				{isExpanded &&
@@ -1607,6 +1628,7 @@ const TransformationNestedProperties = ({
 									language={language}
 									nesting={nesting + 1}
 									parentName={parentName ? parentName + '.' + property.name : property.name}
+									side={side}
 								/>
 							);
 						} else {
@@ -1616,6 +1638,7 @@ const TransformationNestedProperties = ({
 									property={p}
 									language={language}
 									parentName={parentName ? parentName + '.' + property.name : property.name}
+									side={side}
 								/>
 							);
 						}
@@ -1630,9 +1653,10 @@ interface TransformationPropertyProps {
 	language: string;
 	isParent?: boolean;
 	parentName?: string;
+	side: 'input' | 'output';
 }
 
-const TransformationProperty = ({ property, language, isParent, parentName }: TransformationPropertyProps) => {
+const TransformationProperty = ({ property, language, isParent, parentName, side }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
 	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
@@ -1651,11 +1675,6 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 						<SlIcon className='fullscreen-transformation__property-identifier-icon' name='person-check' />
 					</SlTooltip>
 				)}
-				{property.required && (
-					<SlTooltip content='Required'>
-						<SlIcon className='fullscreen-transformation__property-required-icon' name='asterisk' />
-					</SlTooltip>
-				)}
 				{property.name}
 				<SlCopyButton
 					className='fullscreen-transformation__property-copy'
@@ -1668,12 +1687,21 @@ const TransformationProperty = ({ property, language, isParent, parentName }: Tr
 			{property.label != null && property.label !== '' && (
 				<span className='fullscreen-transformation__property-label'>{property.label}</span>
 			)}
-			<div className='fullscreen-transformation__property-type'>
-				{language === ''
-					? property.type.name
-					: language === 'Python'
-						? fromKindToPythonType(property.type)
-						: fromKindToJavascriptType(property.type)}
+			<div className='fullscreen-transformation__property-type-and-required'>
+				<span>
+					{language === ''
+						? property.type.name
+						: language === 'Python'
+							? fromKindToPythonType(property.type)
+							: fromKindToJavascriptType(property.type)}
+				</span>
+				{side === 'input' ? (
+					property.readOptional && <span>- Optional</span>
+				) : property.createRequired ? (
+					<span>- Required for creation</span>
+				) : property.updateRequired ? (
+					<span>- Required for the update</span>
+				) : null}
 			</div>
 		</div>
 	);

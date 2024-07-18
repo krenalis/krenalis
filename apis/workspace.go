@@ -1879,8 +1879,14 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		if p.Role != types.BothRole {
 			return errors.New("user schema properties can only have the Both role")
 		}
-		if p.Required {
-			return errors.New("user schema properties cannot be required")
+		if p.CreateRequired {
+			return errors.New("user schema properties cannot be required for creation")
+		}
+		if p.UpdateRequired {
+			return errors.New("user schema properties cannot be required for the update")
+		}
+		if !p.ReadOptional {
+			return errors.New("user schema properties must be optional")
 		}
 		if p.Nullable {
 			return fmt.Errorf("user schema properties cannot be nullable")

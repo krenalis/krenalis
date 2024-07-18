@@ -28,11 +28,11 @@ func TestImportFromDatabase(t *testing.T) {
 	importUsers := c.AddAction(pgSQL, "Users", meergotester.ActionToSet{
 		Name: "Import users",
 		InSchema: types.Object([]types.Property{
-			{Name: "id", Type: types.Int(32), Required: true},
-			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "id", Type: types.Int(32), Nullable: true},
+			{Name: "email", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{

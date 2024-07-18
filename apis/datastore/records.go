@@ -38,16 +38,11 @@ type Records struct {
 }
 
 // records executes a query on the data warehouse and returns an iterator to
-// iterate on the resulting records. schema is the schema of the properties in
-// Properties and Filter of query, idProperty specifies the property whose value
-// is returned as ID, columnByProperty is the mapping from the path of a
+// iterate on the resulting records. idProperty specifies the property whose
+// value is returned as ID, columnByProperty is the mapping from the path of a
 // property to the relative column, and omitNil indicates whether properties
 // with a nil value should be omitted from each record.
-func (store *Store) records(ctx context.Context, query Query, schema types.Type, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool) (*Records, error) {
-
-	if err := checkSchemaAlignment(schema, columnByProperty); err != nil {
-		return nil, err
-	}
+func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 	columns = append(columns, columnByProperty[idProperty])
@@ -208,23 +203,4 @@ type SchemaError struct {
 
 func (err *SchemaError) Error() string {
 	return err.Msg
-}
-
-// checkSchemaAlignment checks whether schema is aligned with the properties and
-// types of columnByProperty. It returns a *SchemaError error if it is not
-// aligned. It panics if a schema is not valid.
-func checkSchemaAlignment(schema types.Type, columnByProperty map[string]warehouses.Column) error {
-	for path, p := range types.Walk(schema) {
-		if p.Type.Kind() == types.ObjectKind {
-			continue
-		}
-		c, ok := columnByProperty[path]
-		if !ok {
-			return &SchemaError{Msg: fmt.Sprintf(`%q property no longer exists`, path)}
-		}
-		if !types.Equal(p.Type, c.Type) {
-			return &SchemaError{Msg: fmt.Sprintf(`type of the %q property has been changed from %s to %s`, path, c.Type, p.Type)}
-		}
-	}
-	return nil
 }

@@ -22,7 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Marshal encodes values, based on the schema of their elements into a
+// Marshal encodes records, based on the schema of their elements into a
 // JavaScript array or a Python list, and appends it to b. The resulting value
 // can be included in a JSON string without escaping.
 //
@@ -31,7 +31,7 @@ import (
 //
 // Unlike Unmarshal, Marshal does not validate the values against the schema.
 // The values must already be validated.
-func Marshal(b []byte, schema types.Type, values []map[string]any, language state.Language) ([]byte, error) {
+func Marshal(b []byte, schema types.Type, records []Record, language state.Language) ([]byte, error) {
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, errors.New("apis/transformers: schema is not an object")
 	}
@@ -46,12 +46,12 @@ func Marshal(b []byte, schema types.Type, values []map[string]any, language stat
 	}
 	var err error
 	b = append(b, '[')
-	for i, v := range values {
+	for i, v := range records {
 		if i > 0 {
 			b = append(b, ',')
 		}
-		if schema.Valid() && len(v) > 0 {
-			b, err = marshal(b, schema, v)
+		if schema.Valid() && len(v.Properties) > 0 {
+			b, err = marshal(b, schema, v.Properties)
 			if err != nil {
 				return nil, err
 			}
@@ -146,7 +146,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 			for _, p := range t.Properties() {
 				e, ok := v[p.Name]
 				if !ok {
-					if p.Required {
+					if !p.ReadOptional {
 						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
 					}
 					continue
@@ -277,7 +277,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 			for _, p := range t.Properties() {
 				e, ok := v[p.Name]
 				if !ok {
-					if p.Required {
+					if !p.ReadOptional {
 						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
 					}
 					continue

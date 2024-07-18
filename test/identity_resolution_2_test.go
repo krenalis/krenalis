@@ -32,10 +32,10 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Add properties to the user schema.
 	schema := types.Object([]types.Property{
-		{Name: "email", Type: types.Text().WithCharLen(300)},
-		{Name: "name", Type: types.Text()},
-		{Name: "phone_numbers", Type: types.Array(types.Text())},
-		{Name: "total_orders", Type: types.Int(32)},
+		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+		{Name: "name", Type: types.Text(), ReadOptional: true},
+		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
+		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
 	})
 	c.ChangeUserSchema(schema, nil, nil)
 
@@ -106,11 +106,11 @@ func TestIdentityResolution2(t *testing.T) {
 			Name: "Action",
 			Path: filename,
 			InSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.JSON(), Nullable: true, Required: true},
-				{Name: "name", Type: types.JSON(), Nullable: true},
-				{Name: "phone_numbers", Type: types.JSON(), Nullable: true},
-				{Name: "total_orders", Type: types.JSON(), Nullable: true},
-				{Name: "last_change_time", Type: types.JSON(), Nullable: true},
+				{Name: "email", Type: types.JSON()},
+				{Name: "name", Type: types.JSON()},
+				{Name: "phone_numbers", Type: types.JSON()},
+				{Name: "total_orders", Type: types.JSON()},
+				{Name: "last_change_time", Type: types.JSON()},
 			}),
 			OutSchema: schema,
 			Transformation: meergotester.Transformation{

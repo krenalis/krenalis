@@ -24,6 +24,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 
@@ -73,8 +74,8 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // record will contain, in the Properties field, the properties of the input
 // schema of the action passed to the constructor of File, with the same types.
 //
-// If the schema of the action of the File does not conform with the schema read
-// from the file, the iterator will return a *SchemaError error.
+// If the action's input schema does not align with the file's schema, the
+// iterator, not Records, will return a *schemas.Error error.
 //
 // If the identity property specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
@@ -124,7 +125,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // If pathReplacer is not nil, then the placeholders in path are replaced using
 // it; in this case, a PlaceholderError error may be returned in case of an
 // error with placeholders.
-func (file *File) Writer(ctx context.Context, schema types.Type, ack AckFunc, pathReplacer PlaceholderReplacer) (Writer, error) {
+func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, ack AckFunc) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
 	}
@@ -149,7 +150,7 @@ func (file *File) Writer(ctx context.Context, schema types.Type, ack AckFunc, pa
 	if err != nil {
 		return nil, err
 	}
-	columns := types.Properties(schema)
+	columns := types.Properties(file.action.OutSchema)
 	records := make(chan fileRecord, 100)
 	result := make(chan error, 1)
 	writeCtx, cancelWrite := context.WithCancel(context.Background())
@@ -637,8 +638,8 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 	if rw.action == nil {
 		rw.properties = columns
 	} else {
-		// Check that the action's schema is aligned with the file's schema.
-		err := checkSchemaAlignment(rw.action.InSchema, fileSchema)
+		// Check that the action's input schema is aligned with the file's schema.
+		err := schemas.CheckAlignment(rw.action.InSchema, fileSchema, nil)
 		if err != nil {
 			return err
 		}
@@ -649,18 +650,10 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 				continue
 			}
 			rw.properties[i] = p
-			// Validate the identity property.
 			if p.Name == rw.action.IdentityProperty {
-				if c.Type.Kind() != p.Type.Kind() {
-					return fmt.Errorf("identity property %q has type %s instead of %s", p.Name, c.Type.Kind(), p.Type.Kind())
-				}
 				rw.identityPropertyIndex = i
 			}
-			// Validate the last change time property.
 			if p.Name == rw.action.LastChangeTimeProperty {
-				if c.Type.Kind() != p.Type.Kind() {
-					return fmt.Errorf("last change time property %q has type %s instead of %s", p.Name, c.Type.Kind(), p.Type.Kind())
-				}
 				rw.lastChangeTimeIndex = i
 			}
 			rw.numPropertiesPerRecord++
@@ -727,8 +720,8 @@ func (rw *recordWriter) Record(record map[string]any) error {
 			}
 			v, ok := record[p.Name]
 			if !ok {
-				if p.Required {
-					rw.record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is required")
+				if !p.ReadOptional {
+					rw.record.Err = newNormalizationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
 					break
 				}
 				continue

@@ -314,6 +314,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if props.External.Role != types.BothRole {
 			return errors.BadRequest("external matching property cannot specify a role")
 		}
+		if props.External.CreateRequired {
+			return errors.BadRequest("external matching property cannot be required for creation")
+		}
+		if props.External.UpdateRequired {
+			return errors.BadRequest("external matching property cannot be required for the update")
+		}
 		if !canBeUsedAsMatchingProp(props.External.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
@@ -362,13 +368,21 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() {
-		if err := validateActionSchema("input", inSchema, v.connection.role, target); err != nil {
+		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
 	if outSchema.Valid() {
-		if err := validateActionSchema("output", outSchema, v.connection.role, target); err != nil {
-			return errors.BadRequest("%s", err)
+		// As a special case, if it is a destination file action, validate it as if it were an input schema.
+		// TODO (marco): remove this special case when the schema is moved from output to input in the destination file actions.
+		if v.connection.role == state.Destination && v.connector.typ == state.File {
+			if err := validateActionSchema("input", outSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
+				return errors.BadRequest("%s", err)
+			}
+		} else {
+			if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
+				return errors.BadRequest("%s", err)
+			}
 		}
 	}
 
@@ -466,8 +480,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		default:
 			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
 		}
-		if !identityProperty.Required {
-			return errors.BadRequest("identity property must be required")
+		if identityProperty.ReadOptional {
+			return errors.BadRequest("identity property cannot be optional")
 		}
 		usedInPaths = append(usedInPaths, action.IdentityProperty)
 		// Validate the last change time property and format.
@@ -566,9 +580,6 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		}
 		if !canBeUsedAsTableKeyProperty(p.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as table key property", p.Type)
-		}
-		if !p.Required {
-			return errors.BadRequest("the table key property must be 'required' in the output schema")
 		}
 		if m := action.Transformation.Mapping; m != nil {
 			if _, ok := m[action.TableKeyProperty]; !ok {
@@ -716,8 +727,8 @@ func unusedProperties(schema types.Type, used []string) []string {
 //
 // io specifies whether the validation relates to "input" or "output", schema is
 // the schema of the input or output action, role and target are the role and
-// target of the action.
-func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target) error {
+// target of the action, and typ is the action's connection type.
+func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType) error {
 	isUserSchema := target == state.Users &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 	for path, p := range types.Walk(schema) {
@@ -727,14 +738,23 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		if p.Role != types.BothRole {
 			return errors.New("properties of an action schema can only have the Both role")
 		}
+		if p.CreateRequired {
+			if role != state.Destination || typ != state.App || io != "output" {
+				return errors.New("only the output properties of destination app actions can be required for creation")
+			}
+		}
+		if p.UpdateRequired {
+			if role != state.Destination || typ != state.App || target == state.Users || io != "output" {
+				return errors.New("only the output properties of destination app actions with Users target can be required for the update")
+			}
+		}
 		if isUserSchema {
 			if isMetaProperty(path) {
 				return fmt.Errorf("%s actions with Users target cannot have meta properties in the %s schema",
 					strings.ToLower(role.String()), io)
 			}
-			if p.Required {
-				return fmt.Errorf("%s actions with Users target cannot have required properties in the %s schema",
-					strings.ToLower(role.String()), io)
+			if !p.ReadOptional {
+				return errors.New("properties of schemas that refer to the user schema must be optional for reading")
 			}
 			if p.Nullable {
 				return fmt.Errorf("%s actions with Users target cannot have nullable properties in the %s schema",
@@ -746,6 +766,10 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 					return fmt.Errorf("%s actions with Users target cannot have properties of type '%s(%s)' in the %s schema",
 						strings.ToLower(role.String()), k, elemK, io)
 				}
+			}
+		} else {
+			if p.ReadOptional && io == "output" {
+				return errors.New("properties in the output schema cannot be optional for reading")
 			}
 		}
 	}

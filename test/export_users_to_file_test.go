@@ -47,10 +47,10 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "lastName", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "first_name", Type: types.Text()},
-				{Name: "last_name", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
 			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
@@ -87,10 +87,10 @@ func TestExportUsersToFile(t *testing.T) {
 		Name: "Export users to the CSV on Filesystem",
 		Path: exportedFilename,
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "first_name", Type: types.Text()},
-			{Name: "last_name", Type: types.Text()},
-			{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "gender", Type: types.Text(), ReadOptional: true},
 		}),
 		Connector: "CSV",
 		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
@@ -130,10 +130,10 @@ func TestExportUsersToFile(t *testing.T) {
 			Name: "Export users to the CSV on Filesystem",
 			Path: exportedFilename,
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "first_name", Type: types.Text()},
-				{Name: "last_name", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
 			Connector: "CSV",
 			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
@@ -144,7 +144,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		c.ExecuteAction(fsID, exportUsersActionID, true)
+		c.ExecuteAction(fsID, exportUsersActionID, true) // TODO(marco): fails with error "in the output schema, "email" property was previously non-optional but it is now optional."
 
 		// Wait for the import to finish.
 		c.WaitActionsToFinish(fsID)

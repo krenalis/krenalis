@@ -48,29 +48,32 @@ func (err *invalidConversionError) Error() string {
 	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.value, err.sourceType, err.destinationType)
 }
 
-// Eval evaluates the expression using the provided values for the properties,
-// which must conform to the expression's source schema, and returns the result
-// that conforms to the expression's destination type or Void if the result is
-// void.
-func (expr *Expression) Eval(values map[string]any) (any, error) {
-	v, st, err := eval(expr.parts, values, expr.timeLayouts)
+// Eval evaluates the expression using the provided properties which must
+// conform to the expression's source schema, and returns the result that
+// conforms to the expression's destination type or Void if the result is void.
+//
+// purpose specifies the reason for the evaluation. If Create or Update, then
+// all the properties required for creation or the update must be present in the
+// returned value.
+func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, error) {
+	v, st, err := eval(expr.parts, properties, expr.timeLayouts, purpose)
 	if err != nil {
 		if err == errVoid {
-			if !expr.required {
-				return Void, nil
+			if expr.createRequired && purpose == Create || expr.updateRequired && purpose == Update {
+				return nil, &invalidConversionError{Void, st, expr.dt}
 			}
-			err = &invalidConversionError{Void, st, expr.dt}
+			return Void, nil
 		}
 		return nil, err
 	}
 	if v != nil || !expr.nullable {
-		c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts)
+		c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts, purpose)
 		if err != nil {
 			if err == errVoid {
-				if !expr.required {
-					return Void, nil
+				if expr.createRequired && purpose == Create || expr.updateRequired && purpose == Update {
+					return nil, &invalidConversionError{Void, st, expr.dt}
 				}
-				err = errInvalidConversion
+				return Void, nil
 			}
 			if err == errInvalidConversion {
 				err = &invalidConversionError{v, st, expr.dt}
@@ -127,12 +130,13 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	return b, errInvalidConversion
 }
 
-// eval evaluates expression and returns its value and type. values contains the
+// eval evaluates expression and returns its value and type. properties are the
 // property values. layouts represents, if not nil, the layouts used to format
-// DateTime, Date, and Time values as strings.
+// DateTime, Date, and Time values as strings, and purpose specifies the reason
+// for the evaluation.
 //
 // If the result of the evaluation is void, it returns the errVoid error.
-func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) (any, types.Type, error) {
+func eval(expression []part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
@@ -143,15 +147,15 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 		if p.value == nil {
 			if len(p.path) == 1 {
 				if p.args == nil {
-					v, ok := values[p.path[0]]
+					v, ok := properties[p.path[0]]
 					if !ok {
 						return nil, types.Type{}, errVoid
 					}
 					return v, p.typ, nil
 				}
-				return evalCall(p, values, layouts)
+				return evalCall(p, properties, layouts, purpose)
 			}
-			v, err := valueOf(p.path, values)
+			v, err := valueOf(p.path, properties)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -172,13 +176,13 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 			continue
 		}
 		if p.args == nil {
-			v, err = valueOf(p.path, values)
+			v, err = valueOf(p.path, properties)
 			if err != nil && err != errVoid {
 				return nil, types.Type{}, err
 			}
 			vt = p.typ
 		} else {
-			v, vt, err = evalCall(p, values, layouts)
+			v, vt, err = evalCall(p, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -193,14 +197,14 @@ func eval(expression []part, values map[string]any, layouts *state.TimeLayouts) 
 }
 
 // evalCall evaluates p representing a function call, and returns its value and
-// type. values contains the property values. timeLayouts represents, if not
+// type. properties contains the property values. timeLayouts represents, if not
 // nil, the timeLayouts used to format DateTime, Date, and Time values as
-// strings.
-func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, types.Type, error) {
+// strings. purpose specifies the reason for the evaluation.
+func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
 	switch name := p.path[0]; name {
 	case "and":
 		for _, arg := range p.args {
-			v, _, err := eval(arg, values, layouts)
+			v, _, err := eval(arg, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -212,7 +216,7 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 	case "array":
 		a := make([]any, len(p.args))
 		for i, arg := range p.args {
-			v, _, err := eval(arg, values, layouts)
+			v, _, err := eval(arg, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -221,7 +225,7 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 		return a, types.Array(types.JSON()), nil
 	case "coalesce":
 		for _, arg := range p.args {
-			v, vt, err := eval(arg, values, layouts)
+			v, vt, err := eval(arg, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -231,16 +235,16 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 		}
 		return nil, p.typ, nil
 	case "eq":
-		v0, t0, err := eval(p.args[0], values, layouts)
+		v0, t0, err := eval(p.args[0], properties, layouts, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		v1, t1, err := eval(p.args[1], values, layouts)
+		v1, t1, err := eval(p.args[1], properties, layouts, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, layouts)
+			v0, err = convert(v0, t0, t1, true, layouts, purpose)
 			if err != nil {
 				if err == errInvalidConversion {
 					return false, types.Boolean(), nil
@@ -250,28 +254,28 @@ func evalCall(p part, values map[string]any, layouts *state.TimeLayouts) (any, t
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "if":
-		v0, _, err := eval(p.args[0], values, layouts)
+		v0, _, err := eval(p.args[0], properties, layouts, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0.(bool) {
-			return eval(p.args[1], values, layouts)
+			return eval(p.args[1], properties, layouts, purpose)
 		}
 		if len(p.args) == 3 {
-			return eval(p.args[2], values, layouts)
+			return eval(p.args[2], properties, layouts, purpose)
 		}
 		return nil, types.Type{}, errVoid
 	}
 	panic(fmt.Errorf("unknown function %q", p.path[0]))
 }
 
-// valueOf returns the value at the specified path in values. It returns errVoid
-// if the path does not exist, including keys in a map and properties of a JSON
-// object.
+// valueOf returns the value at the specified path in properties. It returns
+// errVoid if the path does not exist, including keys in a map and properties of
+// a JSON object.
 //
 // For non-object JSON values, accessing a key returns errVoid if the key is
 // followed by "?"; otherwise, it returns an error.
-func valueOf(path path, values map[string]any) (any, error) {
+func valueOf(path path, properties map[string]any) (any, error) {
 	var v any
 	var ok bool
 	last := len(path) - 1
@@ -285,12 +289,12 @@ func valueOf(path path, values map[string]any) (any, error) {
 		if name[0] == '[' {
 			name = name[1 : len(name)-1]
 		}
-		v, ok = values[name]
+		v, ok = properties[name]
 		if !ok {
 			return nil, errVoid
 		}
 		if i != last {
-			values, ok = v.(map[string]any)
+			properties, ok = v.(map[string]any)
 			if !ok {
 				if name := path[i+1]; name[len(name)-1] == '?' {
 					return nil, errVoid

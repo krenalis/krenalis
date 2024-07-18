@@ -256,7 +256,7 @@ func TestConvert(t *testing.T) {
 		},
 		{
 			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}, {Name: "boo", Type: types.Text()}}),
-			types.Object([]types.Property{{Name: "foo", Type: types.Int(32), Required: true}, {Name: "boo", Type: types.Text()}}),
+			types.Object([]types.Property{{Name: "foo", Type: types.Int(32), CreateRequired: true}, {Name: "boo", Type: types.Text()}}),
 			map[string]any{"foo": 5},
 			map[string]any{"foo": 5},
 			true,
@@ -304,7 +304,7 @@ func TestConvert(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := convert(test.v, test.t1, test.t2, test.nullable, test.layouts)
+		got, err := convert(test.v, test.t1, test.t2, test.nullable, test.layouts, Create)
 		if err != nil {
 			if err == errVoid && test.e == Void {
 				continue

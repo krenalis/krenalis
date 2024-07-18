@@ -86,16 +86,17 @@ func (processor *processor) worker() {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue
 				}
-				results, err := transformer.Transform(ctx, []map[string]any{event.ToMap()})
+				records := []transformers.Record{{Properties: event.ToMap()}}
+				err = transformer.Transform(ctx, records)
 				if err != nil {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue
 				}
-				if err = results[0].Err; err != nil {
+				if err = records[0].Err; err != nil {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue
 				}
-				properties = results[0].Value
+				properties = records[0].Properties
 			}
 
 			// Make the event request.

@@ -3,7 +3,14 @@ import * as http from './http';
 import Type, { Property, ObjectType, Role } from './types/types';
 import { Connection, ConnectionRole, ConnectionToAdd, ConnectionStats, ConnectionToSet } from './types/connection';
 import { Identifiers } from './types/identifiers';
-import { ActionTarget, SchedulePeriod, ActionToSet, ExpressionToBeExtracted, Transformation } from './types/action';
+import {
+	ActionTarget,
+	SchedulePeriod,
+	ActionToSet,
+	ExpressionToBeExtracted,
+	Transformation,
+	TransformationPurpose,
+} from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseType } from './types/warehouse';
@@ -66,7 +73,6 @@ class API {
 		expression: string,
 		properties: Property[],
 		type: Type,
-		required: boolean,
 		nullable: boolean,
 		signal?: AbortSignal,
 	): Promise<string> => {
@@ -77,7 +83,6 @@ class API {
 				expression,
 				properties,
 				type: type,
-				required: required,
 				nullable: nullable,
 			},
 			{ signal },
@@ -100,12 +105,14 @@ class API {
 		inSchema: ObjectType,
 		outSchema: ObjectType,
 		transformation: Transformation,
+		purpose: TransformationPurpose,
 	): Promise<TransformDataResponse> => {
 		return await call(`${this.apiURL}/transformations`, http.POST, {
 			data,
 			inSchema,
 			outSchema,
 			transformation,
+			purpose,
 		});
 	};
 

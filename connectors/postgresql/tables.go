@@ -178,7 +178,6 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		column := types.Property{
 			Name:     row.column,
 			Role:     role,
-			Required: true,
 			Nullable: *isNullable == "YES",
 		}
 		column.Type, err = columnType(row, enums, attTypMods)

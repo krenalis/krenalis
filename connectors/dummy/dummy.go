@@ -224,20 +224,20 @@ type Settings struct {
 func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	if target == meergo.Users {
 		return types.Object([]types.Property{
-			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole, Required: true},
-			{Name: "email", Type: types.Text(), Required: true},
-			{Name: "firstName", Type: types.Text(), Required: true},
-			{Name: "fullName", Type: types.Text(), Required: true},
-			{Name: "lastName", Type: types.Text(), Required: true},
-			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Required: true},
-			{Name: "favourite_movie", Type: types.Text(), Required: false},
+			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
+			{Name: "email", Type: types.Text(), CreateRequired: true},
+			{Name: "firstName", Type: types.Text()},
+			{Name: "fullName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text()},
+			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
+			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
 			{Name: "additionalProperties", Type: types.Map(types.Text()), Role: types.DestinationRole},
 		}), nil
 	}
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "email", Type: types.Text(), CreateRequired: true},
 			{Name: "itemName", Type: types.Text()},
 			{Name: "itemId", Type: types.Int(32)},
 		}), nil
@@ -247,7 +247,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 		}), nil
 	case "send_identity":
 		return types.Object([]types.Property{
-			{Name: "email", Required: true, Type: types.Text()},
+			{Name: "email", CreateRequired: true, Type: types.Text()},
 			{Name: "traits", Type: types.Object([]types.Property{
 				{Name: "address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.Text()},

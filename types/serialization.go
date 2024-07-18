@@ -269,8 +269,14 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	}
 	b.WriteString(`,"type":`)
 	marshalType(b, p.Type)
-	if p.Required {
-		b.WriteString(`,"required":true`)
+	if p.CreateRequired {
+		b.WriteString(`,"createRequired":true`)
+	}
+	if p.UpdateRequired {
+		b.WriteString(`,"updateRequired":true`)
+	}
+	if p.ReadOptional {
+		b.WriteString(`,"readOptional":true`)
 	}
 	if p.Nullable {
 		b.WriteString(`,"nullable":true`)
@@ -904,7 +910,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasLabel, hasPlaceholder, hasRequired, hasNullable, hasNote bool
+	var hasLabel, hasPlaceholder, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasNote bool
 
 	// Read property keys and values.
 	for {
@@ -971,15 +977,33 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 				return Property{}, errors.New("unexpected value for property placeholder")
 			}
 			hasPlaceholder = true
-		case "required":
-			if hasRequired {
-				return Property{}, errors.New("repeated 'required' key")
+		case "createRequired":
+			if hasCreateRequired {
+				return Property{}, errors.New("repeated 'createRequired' key")
 			}
-			p.Required, ok = tok.(bool)
+			p.CreateRequired, ok = tok.(bool)
 			if !ok {
-				return Property{}, errors.New("unexpected value for 'required' key of property")
+				return Property{}, errors.New("unexpected value for 'createRequired' key of property")
 			}
-			hasRequired = true
+			hasCreateRequired = true
+		case "updateRequired":
+			if hasUpdateRequired {
+				return Property{}, errors.New("repeated 'updateRequired' key")
+			}
+			p.UpdateRequired, ok = tok.(bool)
+			if !ok {
+				return Property{}, errors.New("unexpected value for 'updateRequired' key of property")
+			}
+			hasUpdateRequired = true
+		case "readOptional":
+			if hasReadOptional {
+				return Property{}, errors.New("repeated 'readOptional' key")
+			}
+			p.ReadOptional, ok = tok.(bool)
+			if !ok {
+				return Property{}, errors.New("unexpected value for 'readOptional' key of property")
+			}
+			hasReadOptional = true
 		case "nullable":
 			if hasNullable {
 				return Property{}, errors.New("repeated 'nullable' key")

@@ -40,18 +40,18 @@ func New(settings Settings) transformers.Provider {
 	return &function{settings: settings}
 }
 
-// Call calls the function with the given name and version for each value and
-// returns the result of each invocation. Each element of values is supposed to
-// conform to inSchema. Each result conforms to outSchema unless a
-// transformation error occurred, and in that case, the error is stored in the
-// Err field of the result.
+// Call calls the function with the given name and version for each record
+// updating its Properties field with the result of each invocation. Record
+// properties are supposed to conform to inSchema. After the transformation,
+// Record properties conform to outSchema unless a transformation error
+// occurred, and in that case, the error is stored in the Record's Err field.
 //
 // It returns the ErrFunctionNotExist error if the function does not exist, and
 // a FunctionExecutionError if the execution fails.
-func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []transformers.Record) error {
 	name, ext, err := splitName(name)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var language state.Language
 	var executable string
@@ -63,27 +63,27 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		language = state.Python
 		executable = fn.settings.PythonExecutable
 	default:
-		return nil, errors.New("language is not supported")
+		return errors.New("language is not supported")
 	}
 	if !fn.supportLanguage(ext) {
-		return nil, errors.New("language is not supported")
+		return errors.New("language is not supported")
 	}
 
 	versionInt, err := strconv.Atoi(version)
 	if err != nil {
-		return nil, fmt.Errorf("invalid version %q", version)
+		return fmt.Errorf("invalid version %q", version)
 	}
 	filename := fn.absFilename(name, versionInt, ext)
 	if _, err := os.Stat(filename); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, transformers.ErrFunctionNotExist
+			return transformers.ErrFunctionNotExist
 		}
-		return nil, err
+		return err
 	}
 	payload := make([]byte, 0, 1024)
-	payload, err = transformers.Marshal(payload, inSchema, values, language)
+	payload, err = transformers.Marshal(payload, inSchema, records, language)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, executable, filename, string(payload))
@@ -91,16 +91,9 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return nil, transformers.FunctionExecutionError(stderr.String())
+		return transformers.FunctionExecutionError(stderr.String())
 	}
-	results, err := transformers.Unmarshal(&stdout, outSchema, language)
-	if err != nil {
-		return nil, err
-	}
-	if len(results) != len(values) {
-		return nil, fmt.Errorf("transformers/local: expected %d results from function %q, got %d", len(values), name, len(results))
-	}
-	return results, nil
+	return transformers.Unmarshal(&stdout, records, outSchema, language)
 }
 
 // Close closes the function.

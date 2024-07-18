@@ -20,7 +20,7 @@ import (
 
 func Test_eval(t *testing.T) {
 
-	values := map[string]any{
+	properties := map[string]any{
 		"a": 165,
 		"b": map[string]any{
 			"c": "foo",
@@ -58,7 +58,7 @@ func Test_eval(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		got, typ, err := eval(test.expr, values, nil)
+		got, typ, err := eval(test.expr, properties, nil, None)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%d. unexpected error: %s", i+1, err)
@@ -86,7 +86,7 @@ func Test_eval(t *testing.T) {
 
 func Test_valueOf(t *testing.T) {
 
-	values := map[string]any{
+	properties := map[string]any{
 		"a": 5, // Int
 		"b": map[string]any{ // Object
 			"c": "foo", // Text
@@ -142,7 +142,7 @@ func Test_valueOf(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := valueOf(test.path, values)
+		got, err := valueOf(test.path, properties)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%s. unexpected error: %s", stringifyPath(test.path), err)

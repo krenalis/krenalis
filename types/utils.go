@@ -37,11 +37,25 @@ func AsRole(t Type, role Role) Type {
 	var roleProperties []Property
 	properties := t.vl.([]Property)
 	for i, p := range properties {
-		if p.Role == BothRole || p.Role == role {
+		if p.Role == role {
+			continue
+		}
+		if p.Role == BothRole && (role == SourceRole && !p.CreateRequired && !p.UpdateRequired ||
+			role == DestinationRole && !p.ReadOptional) {
 			continue
 		}
 		if last < i {
 			roleProperties = append(roleProperties, properties[last:i]...)
+		}
+		if p.Role == BothRole {
+			switch role {
+			case SourceRole:
+				p.CreateRequired = false
+				p.UpdateRequired = false
+			case DestinationRole:
+				p.ReadOptional = false
+			}
+			roleProperties = append(roleProperties, p)
 		}
 		last = i + 1
 	}
@@ -85,7 +99,9 @@ func Equal(t1, t2 Type) bool {
 				p1.Label != p2.Label ||
 				p1.Placeholder != p2.Placeholder ||
 				p1.Role != p2.Role ||
-				p1.Required != p2.Required ||
+				p1.CreateRequired != p2.CreateRequired ||
+				p1.UpdateRequired != p2.UpdateRequired ||
+				p1.ReadOptional != p2.ReadOptional ||
 				p1.Nullable != p2.Nullable ||
 				p1.Note != p2.Note ||
 				!Equal(p1.Type, p2.Type) {

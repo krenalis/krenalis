@@ -17,7 +17,7 @@ import (
 func TestConvertibleTo(t *testing.T) {
 	// This test is not indented for testing the logic behind the conversion
 	// matrix; instead, it tests the decoding of such matrix and the correct
-	// alignment of values inserted in it.
+	// alignment of properties inserted in it.
 	type testCase struct {
 		from, to types.Type
 		expected bool

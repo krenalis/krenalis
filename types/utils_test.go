@@ -151,6 +151,137 @@ func Test_AsRole(t *testing.T) {
 				},
 			}),
 		},
+		{
+			object: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					Role:         SourceRole,
+					ReadOptional: true,
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					Role:           DestinationRole,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					Role:           BothRole,
+					ReadOptional:   true,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+			role: BothRole,
+			expected: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					Role:         SourceRole,
+					ReadOptional: true,
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					Role:           DestinationRole,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					Role:           BothRole,
+					ReadOptional:   true,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					Role:         SourceRole,
+					ReadOptional: true,
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					Role:           DestinationRole,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					Role:           BothRole,
+					ReadOptional:   true,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+			role: SourceRole,
+			expected: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					Role:         SourceRole,
+					ReadOptional: true,
+				},
+				{
+					Name:         "LastName",
+					Type:         Text(),
+					Role:         BothRole,
+					ReadOptional: true,
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					Role:         SourceRole,
+					ReadOptional: true,
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					Role:           DestinationRole,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					Role:           BothRole,
+					ReadOptional:   true,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+			role: DestinationRole,
+			expected: Object([]Property{
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					Role:           DestinationRole,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					Role:           BothRole,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+		},
 	}
 	for _, cas := range cases {
 		t.Run("", func(t *testing.T) {

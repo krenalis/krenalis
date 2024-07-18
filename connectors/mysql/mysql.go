@@ -254,7 +254,6 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []types.
 		columns[i] = types.Property{
 			Name:     column.Name(),
 			Type:     typ,
-			Required: true,
 			Nullable: nullable || !ok,
 		}
 	}

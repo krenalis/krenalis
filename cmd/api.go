@@ -111,12 +111,13 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		InSchema       types.Type
 		OutSchema      types.Type
 		Transformation apis.DataTransformation
+		Purpose        apis.Purpose
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	data, err := api.apis.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation)
+	data, err := api.apis.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
 	if err != nil {
 		return nil, err
 	}
@@ -141,14 +142,13 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 		Expression string
 		Properties []types.Property
 		Type       types.Type
-		Required   bool
 		Nullable   bool
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	message := api.apis.ValidateExpression(body.Expression, body.Properties, body.Type, body.Required, body.Nullable)
+	message := api.apis.ValidateExpression(body.Expression, body.Properties, body.Type, body.Nullable)
 	return message, nil
 }
 

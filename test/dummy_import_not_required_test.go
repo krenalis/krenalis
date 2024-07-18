@@ -29,14 +29,14 @@ func TestDummyImportNotRequired(t *testing.T) {
 	importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Required: true},
-			{Name: "favourite_movie", Type: types.Text()},
+			{Name: "email", Type: types.Text()},
+			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "favorite_movie", Type: types.Object([]types.Property{
-				{Name: "title", Type: types.Text()},
-			})},
+				{Name: "title", Type: types.Text(), ReadOptional: true},
+			}), ReadOptional: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{

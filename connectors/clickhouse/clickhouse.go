@@ -229,7 +229,6 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []t
 		columns[i] = types.Property{
 			Name:     c.Name(),
 			Type:     typ,
-			Required: true,
 			Nullable: nullable,
 		}
 	}

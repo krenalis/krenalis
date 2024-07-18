@@ -31,7 +31,9 @@ interface PropertyToEdit {
 	placeholder?: string;
 	role?: Role;
 	type?: Type | null;
-	required?: boolean;
+	readOptional?: boolean;
+	createRequired?: boolean;
+	updateRequired?: boolean;
 	nullable?: boolean;
 	note?: string;
 	isEditable?: boolean;
@@ -139,7 +141,9 @@ const useSchemaEdit = (
 			label: property.label,
 			placeholder: '',
 			role: 'Both',
-			required: false,
+			readOptional: true,
+			createRequired: false,
+			updateRequired: false,
 			note: property.note,
 			isEditable: true,
 		};
@@ -237,7 +241,9 @@ const useSchemaEdit = (
 			label: property.label,
 			placeholder: current.placeholder,
 			role: current.role,
-			required: current.required,
+			readOptional: current.readOptional,
+			createRequired: current.createRequired,
+			updateRequired: current.updateRequired,
 			note: property.note,
 			isEditable: current.isEditable ? current.isEditable : false,
 		};

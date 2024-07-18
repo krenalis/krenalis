@@ -183,14 +183,16 @@ func (role Role) String() string {
 
 // Property represents an object property.
 type Property struct {
-	Name        string
-	Label       string
-	Placeholder string
-	Role        Role
-	Type        Type
-	Required    bool
-	Nullable    bool
-	Note        string
+	Name           string
+	Label          string
+	Placeholder    string
+	Role           Role
+	Type           Type
+	CreateRequired bool
+	UpdateRequired bool
+	ReadOptional   bool
+	Nullable       bool
+	Note           string
 }
 
 var _ interface {
@@ -430,19 +432,30 @@ func ObjectOf(properties []Property) (Type, error) {
 		if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		if property.CreateRequired && property.Role == SourceRole {
+			return Type{}, errors.New("property cannot have CreateRequired if its role is Source")
+		}
+		if property.UpdateRequired && property.Role == SourceRole {
+			return Type{}, errors.New("property cannot have UpdateRequired if its role is Source")
+		}
+		if property.ReadOptional && property.Role == DestinationRole {
+			return Type{}, errors.New("property cannot have ReadOptional if its role is Destination")
+		}
 		note, err := normalizedUTF8(property.Note)
 		if err != nil {
 			return Type{}, err
 		}
 		ps[i] = Property{
-			Name:        property.Name,
-			Label:       label,
-			Placeholder: placeholder,
-			Role:        property.Role,
-			Type:        property.Type,
-			Required:    property.Required,
-			Nullable:    property.Nullable,
-			Note:        note,
+			Name:           property.Name,
+			Label:          label,
+			Placeholder:    placeholder,
+			Role:           property.Role,
+			Type:           property.Type,
+			CreateRequired: property.CreateRequired,
+			UpdateRequired: property.UpdateRequired,
+			ReadOptional:   property.ReadOptional,
+			Nullable:       property.Nullable,
+			Note:           note,
 		}
 	}
 	return Type{kind: ObjectKind, vl: ps}, nil

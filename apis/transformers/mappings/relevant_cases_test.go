@@ -44,11 +44,11 @@ func TestRelevantCases(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			expression, err := mappings.Compile(test.expr, schema, test.dt, test.required, test.nullable, test.layouts)
+			expression, err := mappings.Compile(test.expr, schema, test.dt, false, false, test.nullable, test.layouts)
 			if err != nil {
 				t.Fatalf("unexpected compilation error %s", err)
 			}
-			v, err := expression.Eval(test.properties)
+			v, err := expression.Eval(test.properties, mappings.None)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("unexpected error: %s", err)

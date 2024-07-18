@@ -292,17 +292,16 @@ func Test_MarshalSlice(t *testing.T) {
 			result: []byte(`[{"a":""},{"a":"'"},{"a":"\""}]`),
 		},
 		{
-			name: "Non-required property",
+			name: "ReadOptional property",
 			schema: types.Object([]types.Property{
 				{
-					Name:     "a",
-					Type:     types.Text(),
-					Required: true,
+					Name: "a",
+					Type: types.Text(),
 				},
 				{
-					Name:     "b",
-					Type:     types.Boolean(),
-					Required: false,
+					Name:         "b",
+					Type:         types.Boolean(),
+					ReadOptional: true,
 				},
 			}),
 			values: []map[string]any{
@@ -321,10 +320,11 @@ func Test_MarshalSlice(t *testing.T) {
 				{
 					Name: "b",
 					Type: types.Object([]types.Property{
-						{Name: "x", Type: types.Int(32)},
-						{Name: "y", Type: types.Int(32), Required: true},
+						{Name: "x", Type: types.Int(32), ReadOptional: true},
+						{Name: "y", Type: types.Int(32)},
 					}),
-					Nullable: true,
+					ReadOptional: true,
+					Nullable:     true,
 				},
 			}),
 			values: []map[string]any{

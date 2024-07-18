@@ -24,12 +24,13 @@ var jsonArrayType = types.Array(types.JSON())
 // source to a destination. An Expression can contain strings, numbers, true,
 // false, null, property paths and function calls.
 type Expression struct {
-	parts       []part     // expression parts.
-	dt          types.Type // destination type.
-	required    bool       // reports whether the resulting value is required and consequently it cannot be void.
-	nullable    bool       // reports whether the resulting value can be nil.
-	properties  []string   // properties used in the expression; see the documentation of the Properties method.
-	timeLayouts *state.TimeLayouts
+	parts          []part     // expression parts.
+	dt             types.Type // destination type.
+	createRequired bool       // reports whether the resulting value is required for creation.
+	updateRequired bool       // reports whether the resulting value is required for the update.
+	nullable       bool       // reports whether the resulting value can be nil.
+	properties     []string   // properties used in the expression; see the documentation of the Properties method.
+	timeLayouts    *state.TimeLayouts
 }
 
 // Properties returns the properties found in the expression, sorted by their
@@ -47,13 +48,13 @@ func (expr *Expression) Properties() []string {
 // to execute the expression.
 //
 // schema is the schema of the paths in the expression, dt is the destination
-// type, required indicates whether the result value of the evaluation is
-// required (cannot be void), nullable indicates whether that value can be nil,
-// and layouts represents, if not nil, the layouts used to format DateTime,
-// Date, and Time values as strings.
+// type, createRequired and updateRequire indicate whether the returned value is
+// required for creation and the update, nullable indicates whether that value
+// can be nil, and layouts represents, if not nil, the layouts used to format
+// DateTime, Date, and Time values as strings.
 //
 // An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema types.Type, dt types.Type, required, nullable bool, layouts *state.TimeLayouts) (*Expression, error) {
+func Compile(expr string, schema, dt types.Type, createRequired, updateRequired, nullable bool, layouts *state.TimeLayouts) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
@@ -71,16 +72,17 @@ func Compile(expr string, schema types.Type, dt types.Type, required, nullable b
 		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
 	properties := map[string]struct{}{}
-	err = typeCheck(parts, schema, dt, required, nullable, properties)
+	err = typeCheck(parts, schema, dt, nullable, properties)
 	if err != nil {
 		return nil, err
 	}
 	expression := &Expression{
-		parts:       parts,
-		dt:          dt,
-		required:    required,
-		nullable:    nullable,
-		timeLayouts: layouts,
+		parts:          parts,
+		dt:             dt,
+		createRequired: createRequired,
+		updateRequired: updateRequired,
+		nullable:       nullable,
+		timeLayouts:    layouts,
 	}
 	if len(properties) > 0 {
 		expression.properties = make([]string, len(properties))
@@ -95,13 +97,13 @@ func Compile(expr string, schema types.Type, dt types.Type, required, nullable b
 }
 
 // checkAnd type checks a call to 'and' with the given arguments.
-func checkAnd(args [][]part, schema, dt types.Type, required, nullable bool, properties map[string]struct{}) (types.Type, error) {
+func checkAnd(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	if len(args) < 2 {
 		return types.Type{}, errors.New("'and' function requires at least two argument")
 	}
 	booleanType := types.Boolean()
 	for _, arg := range args {
-		err := typeCheck(arg, schema, booleanType, required, nullable, properties)
+		err := typeCheck(arg, schema, booleanType, nullable, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -110,9 +112,9 @@ func checkAnd(args [][]part, schema, dt types.Type, required, nullable bool, pro
 }
 
 // checkArray type checks a call to 'array' with the given arguments.
-func checkArray(args [][]part, schema, dt types.Type, required, nullable bool, properties map[string]struct{}) (types.Type, error) {
+func checkArray(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	for _, arg := range args {
-		err := typeCheck(arg, schema, types.JSON(), required, false, properties)
+		err := typeCheck(arg, schema, types.JSON(), false, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -121,12 +123,12 @@ func checkArray(args [][]part, schema, dt types.Type, required, nullable bool, p
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.
-func checkCoalesce(args [][]part, schema, dt types.Type, required, nullable bool, properties map[string]struct{}) (types.Type, error) {
+func checkCoalesce(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	if len(args) < 1 {
 		return types.Type{}, errors.New("'coalesce' function requires at least one argument")
 	}
 	for _, arg := range args {
-		err := typeCheck(arg, schema, dt, required, nullable, properties)
+		err := typeCheck(arg, schema, dt, nullable, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -135,12 +137,12 @@ func checkCoalesce(args [][]part, schema, dt types.Type, required, nullable bool
 }
 
 // checkEq type checks a call to 'eq' with the given arguments.
-func checkEq(args [][]part, schema, dt types.Type, required, nullable bool, properties map[string]struct{}) (types.Type, error) {
+func checkEq(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	if len(args) != 2 {
 		return types.Type{}, errors.New("'eq' function requires two arguments")
 	}
 	for _, arg := range args {
-		err := typeCheck(arg, schema, types.Type{}, required, true, properties)
+		err := typeCheck(arg, schema, types.Type{}, true, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -160,24 +162,21 @@ func checkEq(args [][]part, schema, dt types.Type, required, nullable bool, prop
 }
 
 // checkIf type checks a call to 'if' with the given arguments.
-func checkIf(args [][]part, schema, dt types.Type, required, nullable bool, properties map[string]struct{}) (types.Type, error) {
+func checkIf(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	n := len(args)
 	if n < 2 {
 		return types.Type{}, errors.New("'if' function requires either two or three arguments")
 	}
-	if required && n == 2 {
-		return types.Type{}, errors.New("'if' function requires three arguments when used in a required expression")
-	}
-	err := typeCheck(args[0], schema, types.Boolean(), false, true, properties)
+	err := typeCheck(args[0], schema, types.Boolean(), true, properties)
 	if err != nil {
 		return types.Type{}, err
 	}
-	err = typeCheck(args[1], schema, dt, false, nullable, properties)
+	err = typeCheck(args[1], schema, dt, nullable, properties)
 	if err != nil {
 		return types.Type{}, err
 	}
 	if n == 3 {
-		err = typeCheck(args[2], schema, dt, false, nullable, properties)
+		err = typeCheck(args[2], schema, dt, nullable, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -186,11 +185,10 @@ func checkIf(args [][]part, schema, dt types.Type, required, nullable bool, prop
 }
 
 // typeCheck type checks the expression expr. schema is the schema of the
-// properties in the expression, dt is the destination type, required indicates
-// whether the result value of the evaluation is required (cannot be void), and
-// nullable indicates whether that value can be nil.
-// An invalid schema can be passed to type check an expression without paths.
-func typeCheck(expr []part, schema, dt types.Type, required, nullable bool, properties map[string]struct{}) error {
+// properties in the expression, dt is the destination type, and nullable
+// indicates whether that value can be nil. An invalid schema can be passed to
+// type check an expression without paths.
+func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map[string]struct{}) error {
 
 	typ := dt
 	n := nullable
@@ -261,15 +259,15 @@ func typeCheck(expr []part, schema, dt types.Type, required, nullable bool, prop
 		var err error
 		switch p.path[0] {
 		case "and":
-			expr[i].typ, err = checkAnd(p.args, schema, typ, required, n, properties)
+			expr[i].typ, err = checkAnd(p.args, schema, typ, n, properties)
 		case "array":
-			expr[i].typ, err = checkArray(p.args, schema, typ, required, n, properties)
+			expr[i].typ, err = checkArray(p.args, schema, typ, n, properties)
 		case "coalesce":
-			expr[i].typ, err = checkCoalesce(p.args, schema, typ, required, n, properties)
+			expr[i].typ, err = checkCoalesce(p.args, schema, typ, n, properties)
 		case "eq":
-			expr[i].typ, err = checkEq(p.args, schema, typ, required, n, properties)
+			expr[i].typ, err = checkEq(p.args, schema, typ, n, properties)
 		case "if":
-			expr[i].typ, err = checkIf(p.args, schema, typ, required, n, properties)
+			expr[i].typ, err = checkIf(p.args, schema, typ, n, properties)
 		default:
 			panic(fmt.Errorf("unknown function %q", p.path[0]))
 		}
@@ -294,7 +292,7 @@ func typeCheck(expr []part, schema, dt types.Type, required, nullable bool, prop
 func asType(expr []part, dt types.Type, nullable bool) error {
 	p := expr[0]
 	if len(expr) == 1 && p.path == nil {
-		v, err := convert(p.value, p.typ, dt, nullable, nil)
+		v, err := convert(p.value, p.typ, dt, nullable, nil, None)
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("cannot convert null to %s", dt)

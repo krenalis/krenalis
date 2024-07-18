@@ -18,6 +18,15 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// Purpose represents the purpose of a record transformation.
+type Purpose int
+
+const (
+	None Purpose = iota
+	Create
+	Update
+)
+
 // validationError implements the apis.ValidationError interface.
 type validationError struct {
 	path string
@@ -72,7 +81,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 			return nil, err
 		}
 		mappingExpressions[i].path = path
-		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, p.Required, p.Nullable, layouts)
+		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, p.CreateRequired, p.UpdateRequired, p.Nullable, layouts)
 		if err != nil {
 			return nil, err
 		}
@@ -127,9 +136,13 @@ func (mapping *Mapping) OutProperties() []string {
 	return properties
 }
 
-// Transform transforms value, that must conform to the expression's source
+// Transform transforms properties, that must conform to the expression's source
 // schema, and returns the result that conforms to the expression's output
 // schema.
+//
+// purpose specifies the reason for the transformation. If Create or Update,
+// then all the properties required for creation or the update must be present
+// in the returned value.
 //
 // If the evaluation of an expression results in a void value, the corresponding
 // property will not be present in the returned value. If all evaluations of the
@@ -137,10 +150,10 @@ func (mapping *Mapping) OutProperties() []string {
 //
 // If the resulting value cannot be converted to the destination type, it
 // returns an error value implementing the ValidationError interface of apis.
-func (mapping *Mapping) Transform(value map[string]any) (map[string]any, error) {
+func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, e := range mapping.expressions {
-		v, err := e.expr.Eval(value)
+		v, err := e.expr.Eval(properties, purpose)
 		if err != nil {
 			if err, ok := err.(*invalidConversionError); ok {
 				return nil, &validationError{

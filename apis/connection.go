@@ -1507,11 +1507,14 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		if err != nil {
 			return nil, err
 		}
-		results, err := transformer.Transform(ctx, []map[string]any{ev.ToMap()})
+		records := []transformers.Record{
+			{Purpose: transformers.Create, Properties: ev.ToMap()},
+		}
+		err = transformer.Transform(ctx, records)
 		if err != nil {
 			return nil, err
 		}
-		if err = results[0].Err; err != nil {
+		if err = records[0].Err; err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
 			}
@@ -1520,7 +1523,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			}
 			return nil, err
 		}
-		properties = results[0].Value
+		properties = records[0].Properties
 
 	} else {
 
@@ -2166,10 +2169,10 @@ func newTempTransformerProvider(name, source string, provider transformers.Provi
 	return &tempTransformerProvider{name, source, provider}
 }
 
-func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, values []map[string]any) ([]transformers.Result, error) {
+func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, records []transformers.Record) error {
 	version, err := tp.provider.Create(ctx, tp.name, tp.source)
 	if err != nil {
-		return nil, nil
+		return nil
 	}
 	defer func() {
 		go func() {
@@ -2179,7 +2182,7 @@ func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSche
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, values)
+	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, records)
 }
 
 func (tp *tempTransformerProvider) Close(_ context.Context) error { panic("not supported") }

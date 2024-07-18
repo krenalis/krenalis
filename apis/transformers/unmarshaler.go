@@ -40,8 +40,8 @@ var (
 var errSyntaxInvalid = errors.New("syntax is not valid")
 
 // functionValidationError represents a validation error related to the output
-// schema. It can be returned by Unmarshal for each single result in the
-// Result.Err field. It implements the ValidationError interface of apis.
+// schema. It can be returned by Unmarshal for each single record in the
+// Record.Err field. It implements the apis.ValidationError interface.
 type functionValidationError struct {
 	path string
 	msg  string
@@ -147,9 +147,10 @@ var pythonDecoderOptions = decoderOptions{
 	timeFormat:     "15:04:05.999999",
 }
 
-// Unmarshal decodes a JSON array of objects read from r, validating it
-// according to the schema of its elements, which must be an Object or invalid.
-// An invalid schema is treated as an object with no properties.
+// Unmarshal decodes a JSON array of objects read from r into records,
+// validating it according to the schema of its elements, which must be an
+// Object or invalid. An invalid schema is treated as an object with no
+// properties.
 //
 // For JavaScript, the following are the expected JSON for each schema type:
 //   - Boolean: true or false
@@ -188,12 +189,12 @@ var pythonDecoderOptions = decoderOptions{
 //   - Array: an array
 //   - Object: an object
 //   - Map: an object
-func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Result, error) {
+func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language) error {
 	if r == nil {
-		return nil, errors.New("apis/transformers: r is nil")
+		return errors.New("apis/transformers: r is nil")
 	}
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
-		return nil, errors.New("apis/transformers: schema is not an object")
+		return errors.New("apis/transformers: schema is not an object")
 	}
 	d := decoder{dec: jsontext.NewDecoder(r)}
 	switch language {
@@ -202,72 +203,79 @@ func Unmarshal(r io.Reader, schema types.Type, language state.Language) ([]Resul
 	case state.Python:
 		d.opts = &pythonDecoderOptions
 	default:
-		return nil, errors.New("apis/transformers: language is not valid")
+		return errors.New("apis/transformers: language is not valid")
 	}
 	tok, err := d.readToken()
 	if err != nil {
 		if err == io.EOF {
-			return nil, errSyntaxInvalid
+			return errSyntaxInvalid
 		}
-		return nil, err
+		return err
 	}
 	if tok.Kind() != '[' {
-		return nil, errSyntaxInvalid
+		return errSyntaxInvalid
 	}
-	var results []Result
+	i := 0
 	for {
 		tok, err := d.readToken()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if tok.Kind() == ']' {
 			break
 		}
 		if tok.Kind() != '{' {
-			return nil, errSyntaxInvalid
+			return errSyntaxInvalid
 		}
 		// Read the key:
 		tok, err = d.readToken()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		var result Result
+		if i == len(records) {
+			return fmt.Errorf("transformers/lambda: expected %d results got more", len(records))
+		}
 		switch tok.String() {
 		case "value":
-			value, err := d.unmarshal(schema)
+			properties, err := d.unmarshal(schema, records[i].Purpose)
 			if err != nil {
 				if err == errSyntaxInvalid {
-					return nil, err
+					return err
 				}
-				result.Err = err
+				records[i].Properties = nil
+				records[i].Err = err
 			} else {
-				result.Value = value.(map[string]any)
+				records[i].Properties = properties.(map[string]any)
 			}
 		case "error":
 			tok, err := d.readToken()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if tok.Kind() != '"' {
-				return nil, errSyntaxInvalid
+				return errSyntaxInvalid
 			}
-			result.Err = FunctionExecutionError(tok.String())
+			records[i].Properties = nil
+			records[i].Err = FunctionExecutionError(tok.String())
 		default:
-			return nil, errSyntaxInvalid
+			return errSyntaxInvalid
 		}
-		results = append(results, result)
 		tok, err = d.readToken()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if tok.Kind() != '}' {
-			return nil, errSyntaxInvalid
+			return errSyntaxInvalid
 		}
+		i++
 	}
 	if _, err := d.readToken(); err != io.EOF {
-		return nil, errSyntaxInvalid
+		return errSyntaxInvalid
 	}
-	return results, nil
+	if i < len(records) {
+		return fmt.Errorf("transformers/lambda: expected %d results got %d", len(records), i)
+	}
+	return nil
 }
 
 // peekKind peeks the next token kind.
@@ -300,7 +308,7 @@ func (d decoder) readValue() (jsontext.Value, error) {
 }
 
 // unmarshal unmarshals a JSON value.
-func (d decoder) unmarshal(t types.Type) (_ any, err error) {
+func (d decoder) unmarshal(t types.Type, purpose Purpose) (_ any, err error) {
 	switch d.peekKind() {
 	case '[':
 		// Unmarshal an array.
@@ -335,7 +343,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 			if i == maxElements {
 				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", maxElements, d.opts.terms["elements"]), "", d.opts.terms)
 			}
-			elem, err := d.unmarshal(t.Elem())
+			elem, err := d.unmarshal(t.Elem(), purpose)
 			if err != nil {
 				if err, ok := err.(*functionValidationError); ok {
 					err.appendIndexToPath(i)
@@ -414,7 +422,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 						return nil, newErrInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
 					}
 				} else {
-					value, err = d.unmarshal(p.Type)
+					value, err = d.unmarshal(p.Type, purpose)
 					if err != nil {
 						if err, ok := err.(*functionValidationError); ok {
 							err.appendNameToPath(name)
@@ -425,8 +433,21 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				o[name] = value
 			}
 			if t.Valid() {
-				for _, p := range t.Properties() {
-					if p.Required {
+				switch purpose {
+				case Create:
+					for _, p := range t.Properties() {
+						if !p.CreateRequired {
+							continue
+						}
+						if _, ok := o[p.Name]; !ok {
+							return nil, newErrMissingProperty(p.Name, d.opts.terms)
+						}
+					}
+				case Update:
+					for _, p := range t.Properties() {
+						if !p.UpdateRequired {
+							continue
+						}
 						if _, ok := o[p.Name]; !ok {
 							return nil, newErrMissingProperty(p.Name, d.opts.terms)
 						}
@@ -451,7 +472,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				}
 				name := tok.String()
 				// Read the property's value.
-				value, err := d.unmarshal(t.Elem())
+				value, err := d.unmarshal(t.Elem(), purpose)
 				if err != nil {
 					return nil, err
 				}

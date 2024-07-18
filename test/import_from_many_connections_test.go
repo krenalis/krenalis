@@ -47,9 +47,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "lastName", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "first_name", Type: types.Text()},
-				{Name: "last_name", Type: types.Text()},
+				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			}),
 			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
@@ -90,14 +90,14 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
 			InSchema: types.Object([]types.Property{
-				{Name: "csv_id", Type: types.Text(), Required: true},
+				{Name: "csv_id", Type: types.Text()},
 				{Name: "email", Type: types.Text()},
 				{Name: "gender", Type: types.Text()},
 				{Name: "timestamp", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
 			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
@@ -147,7 +147,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{

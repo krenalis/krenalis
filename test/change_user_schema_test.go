@@ -71,7 +71,7 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Add a single property.
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
-		Name: "new_prop", Type: types.Text(),
+		Name: "new_prop", Type: types.Text(), ReadOptional: true,
 	}))
 	queries = c.ChangeUserSchemaQueries(schema, nil)
 	expectedQueries := []string{"BEGIN;",
@@ -96,10 +96,10 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Create a schema with two properties that would conflict each other.
 	schema = types.Object(append(types.Properties(file.Schema),
-		types.Property{Name: "a_b", Type: types.Text()},
+		types.Property{Name: "a_b", Type: types.Text(), ReadOptional: true},
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text()},
-		})},
+			{Name: "b", Type: types.Text(), ReadOptional: true},
+		}), ReadOptional: true},
 	))
 	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
 	if err == nil {
@@ -120,8 +120,8 @@ func TestChangeUserSchema(t *testing.T) {
 	// Create a schema with a null property.
 	schema = types.Object(append(types.Properties(file.Schema),
 		types.Property{Name: "a", Type: types.Object([]types.Property{
-			{Name: "b", Type: types.Text(), Nullable: true},
-		})},
+			{Name: "b", Type: types.Text(), ReadOptional: true, Nullable: true},
+		}), ReadOptional: true},
 	))
 	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
 	if err == nil {
@@ -181,8 +181,8 @@ func checkSchemaProperties(schema types.Type) error {
 		if p.Nullable {
 			return fmt.Errorf("unexpected nullable property %q", path)
 		}
-		if p.Required {
-			return fmt.Errorf("unexpected required property %q", path)
+		if !p.ReadOptional {
+			return fmt.Errorf("unexpected non-optional property %q", path)
 		}
 	}
 	return nil

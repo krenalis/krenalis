@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 )
@@ -139,8 +140,8 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 // using it; in this case, a PlaceholderError error may be returned in case of
 // an error with placeholders.
 //
-// If the action's input schema, which must be valid, does not conform to the
-// query's results schema, it returns a *SchemaError error.
+// If the action's input schema does not align with the query's results schema,
+// it returns a *schemas.Error error.
 func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -168,23 +169,13 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	// Validate the identity and the last change time properties.
 	var identityProperty, lastChangeTimeProperty types.Property
 	for _, c := range columns {
 		if c.Name == action.IdentityProperty {
-			p, _ := action.InSchema.Property(c.Name)
-			if c.Type.Kind() != p.Type.Kind() {
-				return nil, &SchemaError{""}
-			}
-			identityProperty = p
+			identityProperty, _ = action.InSchema.Property(c.Name)
 		}
 		if c.Name == action.LastChangeTimeProperty {
-			p, _ := action.InSchema.Property(c.Name)
-			if c.Type.Kind() != p.Type.Kind() {
-				return nil, &SchemaError{fmt.Sprintf(`last change time property %q has type %s instead of %s`,
-					c.Name, c.Type.Kind(), p.Type.Kind())}
-			}
-			lastChangeTimeProperty = p
+			lastChangeTimeProperty, _ = action.InSchema.Property(c.Name)
 		}
 	}
 	if identityProperty.Name == "" {
@@ -198,7 +189,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if err != nil {
 		return nil, rewriteColumnErrors(err)
 	}
-	err = checkSchemaAlignment(action.InSchema, querySchema)
+	err = schemas.CheckAlignment(action.InSchema, querySchema, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -208,19 +199,34 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 }
 
 // Writer returns a Writer to create and update users.
-func (database *Database) Writer(table, key string, schema types.Type, ack AckFunc) (Writer, error) {
+//
+// If the action's output schema does not align with the table's schema, it
+// returns a *schemas.Error error.
+func (database *Database) Writer(ctx context.Context, action *state.Action, ack AckFunc) (Writer, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
+	columns, err := database.inner.Columns(ctx, action.TableName)
+	if err != nil {
+		return nil, err
+	}
+	tableSchema, err := types.ObjectOf(columns)
+	if err != nil {
+		return nil, err
+	}
+	err = schemas.CheckAlignment(action.OutSchema, tableSchema, nil)
+	if err != nil {
+		return nil, err
+	}
 	w := databaseWriter{
 		ack:     ack,
-		table:   table,
-		key:     key,
-		schema:  schema,
-		columns: types.Properties(schema),
+		table:   action.TableName,
+		key:     action.TableKeyProperty,
+		schema:  action.OutSchema,
+		columns: types.Properties(action.OutSchema),
 		inner:   database.inner,
 	}
 	return &w, nil

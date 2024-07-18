@@ -421,7 +421,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 		if !expression.Type.Valid() {
 			return nil, errors.BadRequest("expression type is not valid")
 		}
-		exp, err := mappings.Compile(expression.Value, schema, expression.Type, false, true, nil)
+		exp, err := mappings.Compile(expression.Value, schema, expression.Type, false, false, true, nil)
 		if err != nil {
 			return nil, errors.BadRequest("expression is not valid: %w", err)
 		}
@@ -556,16 +556,26 @@ type DataTransformationFunction struct {
 	Language Language
 }
 
+// Purpose represents the purpose of a data transformation.
+// It can be "Create" or "Update".
+type Purpose string
+
+const (
+	Create Purpose = "Create"
+	Update Purpose = "Update"
+)
+
 // TransformData transforms data using a mapping or a function transformation
 // and returns the transformed data. inSchema is the schema of data, and
 // outSchema is the schema of the transformed data. Only one of mapping and
-// transformation must be non-nil.
+// transformation must be non-nil. purpose indicates the purpose of the
+// transformation and can be either "Create" or "Update".
 //
 // It returns an errors.UnprocessableError error with code:
 //   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
-func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation) ([]byte, error) {
+func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) ([]byte, error) {
 
 	apis.mustBeOpen()
 
@@ -575,6 +585,9 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 	if !outSchema.Valid() {
 		return nil, errors.BadRequest("output schema is not valid")
+	}
+	if purpose != "Create" && purpose != "Update" {
+		return nil, errors.BadRequest(`purpose must be "Create" or "Update"`)
 	}
 	if transformation.Mapping != nil && transformation.Function != nil {
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
@@ -621,7 +634,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
-	value, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
+	properties, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
@@ -646,16 +659,22 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)
 	}
 
-	// Transform the data.
+	// Transform the properties.
 	transformer, err := transformers.New(action, provider, nil)
 	if err != nil {
 		return nil, err
 	}
-	results, err := transformer.Transform(ctx, []map[string]any{value})
+	records := []transformers.Record{
+		{Purpose: transformers.Create, Properties: properties},
+	}
+	if purpose == "Update" {
+		records[0].Purpose = transformers.Update
+	}
+	err = transformer.Transform(ctx, records)
 	if err != nil {
 		return nil, err
 	}
-	if err = results[0].Err; err != nil {
+	if err = records[0].Err; err != nil {
 		if err, ok := err.(transformers.FunctionExecutionError); ok {
 			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 		}
@@ -665,7 +684,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, err
 	}
 
-	return encoding.Marshal(outSchema, results[0].Value)
+	return encoding.Marshal(outSchema, records[0].Properties)
 }
 
 // TransformationLanguages returns the supported transformation languages.
@@ -685,15 +704,14 @@ func (apis *APIs) TransformationLanguages() []string {
 }
 
 // ValidateExpression validates an expression. properties represents the allowed
-// properties in the expression. typ is the type of the expression, required
-// indicates whether a value for that property is required, and nullable
+// properties in the expression. typ is the type of the expression, and nullable
 // indicates whether it can be nullable.
 //
 // The returned string explains why the expression is not valid. It is empty if
 // the expression is valid.
-func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, required, nullable bool) string {
+func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, nullable bool) string {
 	apis.mustBeOpen()
-	_, err := mappings.Compile(expression, types.Object(properties), typ, required, nullable, nil)
+	_, err := mappings.Compile(expression, types.Object(properties), typ, false, false, nullable, nil)
 	if err != nil {
 		return err.Error()
 	}

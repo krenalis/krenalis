@@ -23,124 +23,154 @@ import (
 
 var schema = types.Object([]types.Property{
 	{
-		Name: "Boolean",
-		Type: types.Boolean(),
+		Name:         "Boolean",
+		Type:         types.Boolean(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Int8",
-		Type: types.Int(8),
+		Name:         "Int8",
+		Type:         types.Int(8),
+		ReadOptional: true,
 	},
 	{
-		Name: "Int16",
-		Type: types.Int(16),
+		Name:         "Int16",
+		Type:         types.Int(16),
+		ReadOptional: true,
 	},
 	{
-		Name: "Int24",
-		Type: types.Int(24),
+		Name:         "Int24",
+		Type:         types.Int(24),
+		ReadOptional: true,
 	},
 	{
-		Name: "Int32",
-		Type: types.Int(32),
+		Name:         "Int32",
+		Type:         types.Int(32),
+		ReadOptional: true,
 	},
 	{
-		Name: "Int64",
-		Type: types.Int(64),
+		Name:         "Int64",
+		Type:         types.Int(64),
+		ReadOptional: true,
 	},
 	{
-		Name: "Uint8",
-		Type: types.Uint(8),
+		Name:         "Uint8",
+		Type:         types.Uint(8),
+		ReadOptional: true,
 	},
 	{
-		Name: "Uint16",
-		Type: types.Uint(16),
+		Name:         "Uint16",
+		Type:         types.Uint(16),
+		ReadOptional: true,
 	},
 	{
-		Name: "Uint24",
-		Type: types.Uint(24),
+		Name:         "Uint24",
+		Type:         types.Uint(24),
+		ReadOptional: true,
 	},
 	{
-		Name: "Uint32",
-		Type: types.Uint(32),
+		Name:         "Uint32",
+		Type:         types.Uint(32),
+		ReadOptional: true,
 	},
 	{
-		Name: "Uint64",
-		Type: types.Uint(64),
+		Name:         "Uint64",
+		Type:         types.Uint(64),
+		ReadOptional: true,
 	},
 	{
-		Name: "Float32",
-		Type: types.Float(32),
+		Name:         "Float32",
+		Type:         types.Float(32),
+		ReadOptional: true,
 	},
 	{
-		Name: "Float64",
-		Type: types.Float(64),
+		Name:         "Float64",
+		Type:         types.Float(64),
+		ReadOptional: true,
 	},
 	{
-		Name: "Decimal",
-		Type: types.Decimal(10, 3),
+		Name:         "Decimal",
+		Type:         types.Decimal(10, 3),
+		ReadOptional: true,
 	},
 	{
-		Name: "DateTime",
-		Type: types.DateTime(),
+		Name:         "DateTime",
+		Type:         types.DateTime(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Date",
-		Type: types.Date(),
+		Name:         "Date",
+		Type:         types.Date(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Time",
-		Type: types.Time(),
+		Name:         "Time",
+		Type:         types.Time(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Year",
-		Type: types.Year(),
+		Name:         "Year",
+		Type:         types.Year(),
+		ReadOptional: true,
 	},
 	{
-		Name: "UUID",
-		Type: types.UUID(),
+		Name:         "UUID",
+		Type:         types.UUID(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_RawMessage",
-		Type: types.JSON(),
+		Name:         "JSON_RawMessage",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_bool",
-		Type: types.JSON(),
+		Name:         "JSON_bool",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_string",
-		Type: types.JSON(),
+		Name:         "JSON_string",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_float64",
-		Type: types.JSON(),
+		Name:         "JSON_float64",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_Number",
-		Type: types.JSON(),
+		Name:         "JSON_Number",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_slice",
-		Type: types.JSON(),
+		Name:         "JSON_slice",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_map",
-		Type: types.JSON(),
+		Name:         "JSON_map",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "JSON_null",
-		Type: types.JSON(),
+		Name:         "JSON_null",
+		Type:         types.JSON(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Inet",
-		Type: types.Inet(),
+		Name:         "Inet",
+		Type:         types.Inet(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Text",
-		Type: types.Text(),
+		Name:         "Text",
+		Type:         types.Text(),
+		ReadOptional: true,
 	},
 	{
-		Name: "Array",
-		Type: types.Array(types.Text()),
+		Name:         "Array",
+		Type:         types.Array(types.Text()),
+		ReadOptional: true,
 	},
 	{
 		Name: "Object",
@@ -154,53 +184,55 @@ var schema = types.Object([]types.Property{
 				Type: types.Boolean(),
 			},
 		}),
+		ReadOptional: true,
 	},
 	{
-		Name: "Map",
-		Type: types.Map(types.Int(32)),
+		Name:         "Map",
+		Type:         types.Map(types.Int(32)),
+		ReadOptional: true,
 	},
 	{
-		Name: "MapArray",
-		Type: types.Map(types.Array(types.Text())),
+		Name:         "MapArray",
+		Type:         types.Map(types.Array(types.Text())),
+		ReadOptional: true,
 	},
 })
 
-var values = []map[string]any{
-	{
-		"Boolean":         true,
-		"Int8":            -12,
-		"Int16":           8023,
-		"Int24":           -2880217,
-		"Int32":           1307298102,
-		"Int64":           927041163082605,
-		"Uint8":           uint(12),
-		"Uint16":          uint(8023),
-		"Uint24":          uint(2880217),
-		"Uint32":          uint(1307298102),
-		"Uint64":          uint(927041163082605),
-		"Float32":         float64(float32(57.16038)),
-		"Float64":         18372.36240184391,
-		"Decimal":         decimal.RequireFromString("1752.064"),
-		"DateTime":        time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
-		"Date":            time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
-		"Time":            time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
-		"Year":            2023,
-		"UUID":            "550e8400-e29b-41d4-a716-446655440000",
-		"JSON_RawMessage": json.RawMessage(`{"foo":5,"boo":true}`),
-		"JSON_bool":       true,
-		"JSON_string":     `foo & boo \u`,
-		"JSON_float64":    23.871,
-		"JSON_Number":     json.Number("85802.7305"),
-		"JSON_slice":      []any{"foo", 3, true},
-		"JSON_map":        map[string]any{"a": 1, "b": 2},
-		"JSON_null":       json.RawMessage(`null`),
-		"Inet":            "192.158.1.38",
-		"Text":            "some text",
-		"Array":           []any{"foo", "boo"},
-		"Object":          map[string]any{"a": 9, "b": false},
-		"Map":             map[string]any{},
-	},
-}
+var records = []Record{{Properties: map[string]any{
+	"Boolean":         true,
+	"Int8":            -12,
+	"Int16":           8023,
+	"Int24":           -2880217,
+	"Int32":           1307298102,
+	"Int64":           927041163082605,
+	"Uint8":           uint(12),
+	"Uint16":          uint(8023),
+	"Uint24":          uint(2880217),
+	"Uint32":          uint(1307298102),
+	"Uint64":          uint(927041163082605),
+	"Float32":         float64(float32(57.16038)),
+	"Float64":         18372.36240184391,
+	"Decimal":         decimal.RequireFromString("1752.064"),
+	"DateTime":        time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
+	"Date":            time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
+	"Time":            time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
+	"Year":            2023,
+	"UUID":            "550e8400-e29b-41d4-a716-446655440000",
+	"JSON_RawMessage": json.RawMessage(`{"foo":5,"boo":true}`),
+	"JSON_bool":       true,
+	"JSON_string":     `foo & boo \u`,
+	"JSON_float64":    23.871,
+	"JSON_Number":     json.Number("85802.7305"),
+	"JSON_slice":      []any{"foo", 3, true},
+	"JSON_map":        map[string]any{"a": 1, "b": 2},
+	"JSON_null":       json.RawMessage(`null`),
+	"Inet":            "192.158.1.38",
+	"Text":            "some text",
+	"Array":           []any{"foo", "boo"},
+	"Object":          map[string]any{"a": 9, "b": false},
+	"Map":             map[string]any{},
+},
+}}
 
 var mapValue = map[string]any{"Map": map[string]any{"a": 1, "b": 2, "c": 3}}
 var mapArrayValue = map[string]any{"MapArray": map[string]any{"x": []any{"boo", "foo"}, "y": []any{}}}
@@ -209,21 +241,21 @@ func Test_MarshalJavaScript(t *testing.T) {
 	tests := []struct {
 		name    string
 		schema  types.Type
-		values  []map[string]any
+		records []Record
 		result  []byte
 		results [][]byte
 		err     error
 	}{
 		{
-			name:   "Types",
-			schema: schema,
-			values: values,
-			result: []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+			name:    "Types",
+			schema:  schema,
+			records: records,
+			result:  []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
 		},
 		{
-			name:   "Map",
-			schema: schema,
-			values: []map[string]any{mapValue},
+			name:    "Map",
+			schema:  schema,
+			records: []Record{{Properties: mapValue}},
 			results: [][]byte{
 				[]byte(`[{Map:{'a':1,'b':2,'c':3}}]`),
 				[]byte(`[{Map:{'a':1,'c':3,'b':1}}]`),
@@ -234,23 +266,31 @@ func Test_MarshalJavaScript(t *testing.T) {
 			},
 		},
 		{
-			name:   "MapArray",
-			schema: schema,
-			values: []map[string]any{mapArrayValue},
+			name:    "MapArray",
+			schema:  schema,
+			records: []Record{{Properties: mapArrayValue}},
 			results: [][]byte{
 				[]byte(`[{MapArray:{'x':['boo','foo'],'y':[]}}]`),
 				[]byte(`[{MapArray:{'y':[],'x':['boo','foo']}}]`),
 			},
 		},
 		{
-			name:   "Empty values",
-			values: []map[string]any{{}, {}, {}},
+			name: "Empty values",
+			records: []Record{
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{}},
+			},
 			result: []byte(`[{},{},{}]`),
 		},
 		{
 			name:   "Invalid schema",
 			schema: types.Type{},
-			values: []map[string]any{{"foo": 4}, {}, {"boo": true}},
+			records: []Record{
+				{Properties: map[string]any{"foo": 4}},
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{"boo": true}},
+			},
 			result: []byte(`[{},{},{}]`),
 		},
 		{
@@ -261,14 +301,14 @@ func Test_MarshalJavaScript(t *testing.T) {
 					Type: types.Text(),
 				},
 			}),
-			values: []map[string]any{
-				{"a": ``},
-				{"a": `'`},
-				{"a": `"`},
-				{"a": `&`},
-				{"a": `<`},
-				{"a": "\u2028"},
-				{"a": "\u2029"},
+			records: []Record{
+				{Properties: map[string]any{"a": ``}},
+				{Properties: map[string]any{"a": `'`}},
+				{Properties: map[string]any{"a": `"`}},
+				{Properties: map[string]any{"a": `&`}},
+				{Properties: map[string]any{"a": `<`}},
+				{Properties: map[string]any{"a": "\u2028"}},
+				{Properties: map[string]any{"a": "\u2029"}},
 			},
 			result: []byte(`[{a:''},{a:'\u0027'},{a:'\"'},{a:'\u0026'},{a:'\u003c'},{a:'\u2028'},{a:'\u2029'}]`),
 		},
@@ -281,8 +321,8 @@ func Test_MarshalJavaScript(t *testing.T) {
 					Nullable: true,
 				},
 			}),
-			values: []map[string]any{
-				{"a": nil},
+			records: []Record{
+				{Properties: map[string]any{"a": nil}},
 			},
 			result: []byte(`[{a:null}]`),
 		},
@@ -295,8 +335,8 @@ func Test_MarshalJavaScript(t *testing.T) {
 					Nullable: false,
 				},
 			}),
-			values: []map[string]any{
-				{"a": nil},
+			records: []Record{
+				{Properties: map[string]any{"a": nil}},
 			},
 			err: errors.New("apis/transformers: null property: a"),
 		},
@@ -309,8 +349,8 @@ func Test_MarshalJavaScript(t *testing.T) {
 					Nullable: false,
 				},
 			}),
-			values: []map[string]any{
-				{"a": nil},
+			records: []Record{
+				{Properties: map[string]any{"a": nil}},
 			},
 			err: errors.New("apis/transformers: null property: a"),
 		},
@@ -322,14 +362,13 @@ func Test_MarshalJavaScript(t *testing.T) {
 					Type: types.Text(),
 				},
 				{
-					Name:     "b",
-					Type:     types.Boolean(),
-					Required: true,
+					Name: "b",
+					Type: types.Boolean(),
 				},
 			}),
-			values: []map[string]any{
-				{"a": "foo", "b": true},
-				{"a": "foo"},
+			records: []Record{
+				{Properties: map[string]any{"a": "foo", "b": true}},
+				{Properties: map[string]any{"a": "foo"}},
 			},
 			err: errors.New("apis/transformers: missing property: b"),
 		},
@@ -343,25 +382,26 @@ func Test_MarshalJavaScript(t *testing.T) {
 				{
 					Name: "b",
 					Type: types.Object([]types.Property{
-						{Name: "x", Type: types.Int(32)},
-						{Name: "y", Type: types.Int(32), Required: true},
+						{Name: "x", Type: types.Int(32), ReadOptional: true},
+						{Name: "y", Type: types.Int(32)},
 					}),
-					Nullable: true,
+					ReadOptional: true,
+					Nullable:     true,
 				},
 			}),
-			values: []map[string]any{
-				{},
-				{"a": "foo"},
-				{"a": "foo", "b": nil},
-				{"a": "foo", "b": map[string]any{"y": 45}},
-				{"a": "foo", "b": map[string]any{"x": 12, "y": 45}},
+			records: []Record{
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{"a": "foo"}},
+				{Properties: map[string]any{"a": "foo", "b": nil}},
+				{Properties: map[string]any{"a": "foo", "b": map[string]any{"y": 45}}},
+				{Properties: map[string]any{"a": "foo", "b": map[string]any{"x": 12, "y": 45}}},
 			},
 			result: []byte(`[{},{a:'foo'},{a:'foo',b:null},{a:'foo',b:{y:45}},{a:'foo',b:{x:12,y:45}}]`),
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(nil, test.schema, test.values, state.JavaScript)
+			got, err := Marshal(nil, test.schema, test.records, state.JavaScript)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Marshal JavaScript: expected no error, got error %s", err)
@@ -397,21 +437,21 @@ func Test_MarshalPython(t *testing.T) {
 	tests := []struct {
 		name    string
 		schema  types.Type
-		values  []map[string]any
+		records []Record
 		result  []byte
 		results [][]byte
 		err     error
 	}{
 		{
-			name:   "Types",
-			schema: schema,
-			values: values,
-			result: []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+			name:    "Types",
+			schema:  schema,
+			records: records,
+			result:  []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
 		},
 		{
-			name:   "Map",
-			schema: schema,
-			values: []map[string]any{mapValue},
+			name:    "Map",
+			schema:  schema,
+			records: []Record{{Properties: mapValue}},
 			results: [][]byte{
 				[]byte(`[{'Map':{'a':1,'b':2,'c':3}}]`),
 				[]byte(`[{'Map':{'a':1,'c':3,'b':1}}]`),
@@ -422,23 +462,31 @@ func Test_MarshalPython(t *testing.T) {
 			},
 		},
 		{
-			name:   "MapArray",
-			schema: schema,
-			values: []map[string]any{mapArrayValue},
+			name:    "MapArray",
+			schema:  schema,
+			records: []Record{{Properties: mapArrayValue}},
 			results: [][]byte{
 				[]byte(`[{'MapArray':{'x':['boo','foo'],'y':[]}}]`),
 				[]byte(`[{'MapArray':{'y':[],'x':['boo','foo']}}]`),
 			},
 		},
 		{
-			name:   "Empty values",
-			values: []map[string]any{{}, {}, {}},
+			name: "Empty values",
+			records: []Record{
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{}},
+			},
 			result: []byte(`[{},{},{}]`),
 		},
 		{
 			name:   "Invalid schema",
 			schema: types.Type{},
-			values: []map[string]any{{"foo": 4}, {}, {"boo": true}},
+			records: []Record{
+				{Properties: map[string]any{"foo": 4}},
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{"boo": true}},
+			},
 			result: []byte(`[{},{},{}]`),
 		},
 		{
@@ -449,14 +497,14 @@ func Test_MarshalPython(t *testing.T) {
 					Type: types.Text(),
 				},
 			}),
-			values: []map[string]any{
-				{"a": ``},
-				{"a": `'`},
-				{"a": `"`},
-				{"a": `&`},
-				{"a": `<`},
-				{"a": "\u2028"},
-				{"a": "\u2029"},
+			records: []Record{
+				{Properties: map[string]any{"a": ``}},
+				{Properties: map[string]any{"a": `'`}},
+				{Properties: map[string]any{"a": `"`}},
+				{Properties: map[string]any{"a": `&`}},
+				{Properties: map[string]any{"a": `<`}},
+				{Properties: map[string]any{"a": "\u2028"}},
+				{Properties: map[string]any{"a": "\u2029"}},
 			},
 			result: []byte(`[{'a':''},{'a':'\x27'},{'a':'\"'},{'a':'\x26'},{'a':'\x3c'},{'a':'\u2028'},{'a':'\u2029'}]`),
 		},
@@ -469,8 +517,8 @@ func Test_MarshalPython(t *testing.T) {
 					Nullable: true,
 				},
 			}),
-			values: []map[string]any{
-				{"a": nil},
+			records: []Record{
+				{Properties: map[string]any{"a": nil}},
 			},
 			result: []byte(`[{'a':None}]`),
 		},
@@ -483,8 +531,8 @@ func Test_MarshalPython(t *testing.T) {
 					Nullable: false,
 				},
 			}),
-			values: []map[string]any{
-				{"a": nil},
+			records: []Record{
+				{Properties: map[string]any{"a": nil}},
 			},
 			err: errors.New("apis/transformers: null property: a"),
 		},
@@ -497,8 +545,8 @@ func Test_MarshalPython(t *testing.T) {
 					Nullable: false,
 				},
 			}),
-			values: []map[string]any{
-				{"a": nil},
+			records: []Record{
+				{Properties: map[string]any{"a": nil}},
 			},
 			err: errors.New("apis/transformers: null property: a"),
 		},
@@ -510,14 +558,13 @@ func Test_MarshalPython(t *testing.T) {
 					Type: types.Text(),
 				},
 				{
-					Name:     "b",
-					Type:     types.Boolean(),
-					Required: true,
+					Name: "b",
+					Type: types.Boolean(),
 				},
 			}),
-			values: []map[string]any{
-				{"a": "foo", "b": true},
-				{"a": "foo"},
+			records: []Record{
+				{Properties: map[string]any{"a": "foo", "b": true}},
+				{Properties: map[string]any{"a": "foo"}},
 			},
 			err: errors.New("apis/transformers: missing property: b"),
 		},
@@ -531,25 +578,26 @@ func Test_MarshalPython(t *testing.T) {
 				{
 					Name: "b",
 					Type: types.Object([]types.Property{
-						{Name: "x", Type: types.Int(32)},
-						{Name: "y", Type: types.Int(32), Required: true},
+						{Name: "x", Type: types.Int(32), ReadOptional: true},
+						{Name: "y", Type: types.Int(32)},
 					}),
-					Nullable: true,
+					ReadOptional: true,
+					Nullable:     true,
 				},
 			}),
-			values: []map[string]any{
-				{},
-				{"a": "foo"},
-				{"a": "foo", "b": nil},
-				{"a": "foo", "b": map[string]any{"y": 45}},
-				{"a": "foo", "b": map[string]any{"x": 12, "y": 45}},
+			records: []Record{
+				{Properties: map[string]any{}},
+				{Properties: map[string]any{"a": "foo"}},
+				{Properties: map[string]any{"a": "foo", "b": nil}},
+				{Properties: map[string]any{"a": "foo", "b": map[string]any{"y": 45}}},
+				{Properties: map[string]any{"a": "foo", "b": map[string]any{"x": 12, "y": 45}}},
 			},
 			result: []byte(`[{},{'a':'foo'},{'a':'foo','b':None},{'a':'foo','b':{'y':45}},{'a':'foo','b':{'x':12,'y':45}}]`),
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(nil, test.schema, test.values, state.Python)
+			got, err := Marshal(nil, test.schema, test.records, state.Python)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Marshal Python: expected no error, got error %s", err)

@@ -35,10 +35,10 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "lastName", Type: types.Text()},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "first_name", Type: types.Text()},
-				{Name: "last_name", Type: types.Text()},
-				{Name: "gender", Type: types.Text().WithValues("male", "female", "other")},
+				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
 			Transformation: meergotester.Transformation{
 				Mapping: map[string]string{
@@ -70,8 +70,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 	{
 		schema := c.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Required: true, Nullable: false},
-			{Name: "full_name", Type: types.Text(), Required: true, Nullable: false},
+			{Name: "email", Type: types.Text()},
+			{Name: "full_name", Type: types.Text()},
 		})
 		if !types.Equal(expectedSchema, schema) {
 			t.Fatalf("\nexpecting:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))
@@ -84,13 +84,13 @@ func TestExportToPostgreSQL(t *testing.T) {
 		TableName:        "test_export_to_db",
 		TableKeyProperty: "email",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "first_name", Type: types.Text()},
-			{Name: "last_name", Type: types.Text()},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
+			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Required: true},
-			{Name: "full_name", Type: types.Text(), Required: true},
+			{Name: "email", Type: types.Text()},
+			{Name: "full_name", Type: types.Text()},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
@@ -118,11 +118,11 @@ func TestExportToPostgreSQL(t *testing.T) {
 		TableName:        "test_export_to_db",
 		TableKeyProperty: "email",
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Required: true},
-			{Name: "full_name", Type: types.Text(), Required: true},
+			{Name: "email", Type: types.Text()},
+			{Name: "full_name", Type: types.Text()},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{

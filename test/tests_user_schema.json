@@ -7,13 +7,15 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "dummy_id",
                 "type": {
                     "name": "Text"
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "android",
@@ -24,22 +26,26 @@
                             "name": "id",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "idfa",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "push_token",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "ios",
@@ -50,42 +56,49 @@
                             "name": "id",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "idfa",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "push_token",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "first_name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "last_name",
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "gender",
                 "type": {
                     "name": "Text"
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "food_preferences",
@@ -96,16 +109,19 @@
                             "name": "drink",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "fruit",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "phone_numbers",
@@ -115,7 +131,8 @@
                         "name": "Text",
                         "charLen": 300
                     }
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "favorite_movie",
@@ -126,14 +143,16 @@
                             "name": "title",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "length",
                             "type": {
                                 "name": "Float",
                                 "bitSize": 64
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "soundtrack",
@@ -144,32 +163,38 @@
                                         "name": "title",
                                         "type": {
                                             "name": "Text"
-                                        }
+                                        },
+                                        "readOptional": true
                                     },
                                     {
                                         "name": "author",
                                         "type": {
                                             "name": "Text"
-                                        }
+                                        },
+                                        "readOptional": true
                                     },
                                     {
                                         "name": "length",
                                         "type": {
                                             "name": "Float",
                                             "bitSize": 64
-                                        }
+                                        },
+                                        "readOptional": true
                                     },
                                     {
                                         "name": "genre",
                                         "type": {
                                             "name": "Text"
-                                        }
+                                        },
+                                        "readOptional": true
                                     }
                                 ]
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             }
         ]
     },

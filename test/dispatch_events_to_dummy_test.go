@@ -58,7 +58,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 			},
 		},
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), Required: true},
+			{Name: "email", Type: types.Text(), CreateRequired: true},
 		}),
 	})
 

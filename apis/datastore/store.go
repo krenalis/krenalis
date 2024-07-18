@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 
@@ -157,6 +158,9 @@ func (store *Store) AddEvents(events [][]any) error {
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
+// If the action's output schema does not align with the user schema, it returns
+// a schemas.Error error.
+//
 // It panics if the ack function is nil.
 func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
@@ -173,6 +177,12 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 	execution, ok := action.Execution()
 	if !ok {
 		return nil, fmt.Errorf("action is not in execution")
+	}
+	// Check that action's output schema is aligned with the user schema.
+	workspace := connection.Workspace()
+	err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+	if err != nil {
+		return nil, err
 	}
 	iw := BatchIdentityWriter{
 		store:      store,
@@ -273,10 +283,16 @@ func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc)
 	connection := action.Connection()
 	iw.connection = connection.ID
 	if action.OutSchema.Valid() {
+		workspace := connection.Workspace()
+		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		if err == nil {
+			iw.aligned = true
+			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
+		}
+	} else {
 		// The action's out schema is invalid when importing identities from
 		// events without any transformation in the action.
-		identityColumns := store.identityColumnByProperty()
-		iw.flatter = newFlatter(action.OutSchema, identityColumns)
+		iw.aligned = true
 	}
 	for _, a := range connection.Actions() {
 		iw.actions[a.ID] = struct{}{}
@@ -455,19 +471,38 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 }
 
 // UserRecords returns an iterator over the users, according to the provided
-// query. schema is the expected schema of the provided properties to retrive.
+// query and schema. The properties to return are the properties of schema, and
+// the returned properties will conform to schema.
+//
+// query.Properties must be nil.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema, which must be valid, does not
-// conform to the user schema, it returns a *SchemaError error. If an error
+// align with the user schema, it returns a *schemas.Error error. If an error
 // occurs with the data warehouse, it returns a *DataWarehouseError error.
 func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (*Records, error) {
 	store.mustBeOpen()
 	if store.Mode() == state.Maintenance {
 		return nil, ErrMaintenanceMode
 	}
+	if query.Properties != nil {
+		return nil, errors.New("query.properties is not nil")
+	}
+	if !schema.Valid() {
+		return nil, errors.New("schema is not valid")
+	}
+	workspace, ok := store.ds.state.Workspace(store.workspace)
+	if !ok {
+		return nil, fmt.Errorf("workspace does not exist anymore")
+	}
+	// Check that schema is aligned with the user schema.
+	err := schemas.CheckAlignment(schema, workspace.UserSchema, nil)
+	if err != nil {
+		return nil, err
+	}
 	query.table = "users"
-	return store.records(ctx, query, schema, "__id__", store.userColumnByProperty(), true)
+	query.Properties = types.PropertyNames(schema)
+	return store.records(ctx, query, "__id__", store.userColumnByProperty(), true)
 }
 
 // close closes the store.

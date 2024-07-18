@@ -54,9 +54,13 @@ var (
 // layouts represents, if not nil, the layouts used to format DateTime, Date,
 // and Time values as strings.
 //
+// purpose specifies the reason for the transformation. If Create or Update,
+// then all the properties required for creation or the update must be present
+// in the returned value.
+//
 // For Array, Object, and Map values, it can modify the argument v. It returns
 // an error if v cannot be converted.
-func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts) (any, error) {
+func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
 	spt := st.Kind()
 	dpt := dt.Kind()
 	if nullable {
@@ -494,7 +498,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			it := dt.Elem()
 			if !types.Equal(st, it) {
 				var err error
-				v, err = convert(v, st, it, false, layouts)
+				v, err = convert(v, st, it, false, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -510,7 +514,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			it2 := dt.Elem()
 			for i, item := range s {
-				s[i], err = convert(item, types.JSON(), it2, false, layouts)
+				s[i], err = convert(item, types.JSON(), it2, false, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -535,7 +539,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			if !types.Equal(it1, it2) {
 				var err error
 				for i, item := range s {
-					s[i], err = convert(item, it1, it2, false, layouts)
+					s[i], err = convert(item, it1, it2, false, layouts, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -579,7 +583,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable, layouts)
+				obj[name], err = convert(value, p1.Type, p2.Type, p2.Nullable, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -607,14 +611,27 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					continue
 				}
 				var err error
-				obj[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, layouts)
+				obj[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
 			}
 		}
-		for _, p := range dt.Properties() {
-			if p.Required {
+		switch purpose {
+		case Create:
+			for _, p := range dt.Properties() {
+				if !p.CreateRequired {
+					continue
+				}
+				if _, ok := obj[p.Name]; !ok {
+					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}}
+				}
+			}
+		case Update:
+			for _, p := range dt.Properties() {
+				if !p.UpdateRequired {
+					continue
+				}
 				if _, ok := obj[p.Name]; !ok {
 					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}}
 				}
@@ -632,7 +649,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			var err error
 			for key, value := range m {
-				m[key], err = convert(value, vt1, vt2, false, layouts)
+				m[key], err = convert(value, vt1, vt2, false, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -645,7 +662,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			vt2 := dt.Elem()
 			for key, value := range s {
-				s[key], err = convert(value, types.JSON(), vt2, false, layouts)
+				s[key], err = convert(value, types.JSON(), vt2, false, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}

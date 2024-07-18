@@ -61,13 +61,13 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from a CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text(), Required: true},
+					{Name: "identity", Type: types.Text()},
 					{Name: "Email", Type: types.Text()},
 					{Name: "timestamp", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -122,8 +122,8 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Export users to a CSV on Filesystem",
 				Path: "users.csv",
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Connector: "CSV",
 				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
@@ -139,13 +139,13 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "identity", Type: types.Text(), Required: true},
+					{Name: "identity", Type: types.Text()},
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -173,8 +173,8 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "timestamp", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -226,11 +226,11 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), Required: true},
+					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -268,11 +268,11 @@ func TestActionsCreation(t *testing.T) {
 				Name: "Import users from CSV on Filesystem",
 				Path: "users.csv",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), Required: true},
+					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -300,7 +300,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -318,12 +318,12 @@ func TestActionsCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32), Required: true},
-					{Name: "email", Type: types.Text(), Required: true},
-					{Name: "timestamp", Type: types.DateTime(), Required: true},
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -340,12 +340,12 @@ func TestActionsCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "timestamp" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32), Required: true},
-					{Name: "email", Type: types.Text(), Required: true},
-					{Name: "timestamp", Type: types.Text(), Required: true},
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email", Type: types.Text()},
+					{Name: "timestamp", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -363,12 +363,12 @@ func TestActionsCreation(t *testing.T) {
 				Name:  "Import users from PostgreSQL",
 				Query: `SELECT "id", "email", "my_last_change_time" FROM "my_table"`,
 				InSchema: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(32), Required: true},
-					{Name: "email", Type: types.Text(), Required: true},
-					{Name: "my_last_change_time", Type: types.DateTime(), Required: true},
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email", Type: types.Text()},
+					{Name: "my_last_change_time", Type: types.DateTime()},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -386,7 +386,7 @@ func TestActionsCreation(t *testing.T) {
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -406,7 +406,7 @@ func TestActionsCreation(t *testing.T) {
 					})},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{
@@ -421,7 +421,7 @@ func TestActionsCreation(t *testing.T) {
 			action: meergotester.ActionToSet{
 				Name: "Export users to Dummy",
 				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text()},
@@ -449,7 +449,7 @@ func TestActionsCreation(t *testing.T) {
 				Enabled:  true,
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
+					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
 				Transformation: meergotester.Transformation{
 					Mapping: map[string]string{

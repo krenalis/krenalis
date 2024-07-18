@@ -8,14 +8,16 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "dummy_id",
                 "label": "Dummy ID",
                 "type": {
                     "name": "Text"
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "android",
@@ -28,24 +30,28 @@
                             "label": "ID",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "idfa",
                             "label": "IDFA",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "push_token",
                             "label": "Push token",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "ios",
@@ -58,24 +64,28 @@
                             "label": "ID",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "idfa",
                             "label": "IDFA",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "push_token",
                             "label": "Push token",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "first_name",
@@ -83,7 +93,8 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "last_name",
@@ -91,14 +102,16 @@
                 "type": {
                     "name": "Text",
                     "charLen": 300
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "gender",
                 "label": "Gender",
                 "type": {
                     "name": "Text"
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "food_preferences",
@@ -111,17 +124,20 @@
                             "label": "Drink",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "fruit",
                             "label": "Fruit",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "phone_numbers",
@@ -132,7 +148,8 @@
                         "name": "Text",
                         "charLen": 300
                     }
-                }
+                },
+                "readOptional": true
             },
             {
                 "name": "favorite_movie",
@@ -145,7 +162,8 @@
                             "label": "Title",
                             "type": {
                                 "name": "Text"
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "length",
@@ -153,7 +171,8 @@
                             "type": {
                                 "name": "Float",
                                 "bitSize": 64
-                            }
+                            },
+                            "readOptional": true
                         },
                         {
                             "name": "soundtrack",
@@ -166,14 +185,16 @@
                                         "label": "Title",
                                         "type": {
                                             "name": "Text"
-                                        }
+                                        },
+                                        "readOptional": true
                                     },
                                     {
                                         "name": "author",
                                         "label": "Author",
                                         "type": {
                                             "name": "Text"
-                                        }
+                                        },
+                                        "readOptional": true
                                     },
                                     {
                                         "name": "length",
@@ -181,20 +202,24 @@
                                         "type": {
                                             "name": "Float",
                                             "bitSize": 64
-                                        }
+                                        },
+                                        "readOptional": true
                                     },
                                     {
                                         "name": "genre",
                                         "label": "Genre",
                                         "type": {
                                             "name": "Text"
-                                        }
+                                        },
+                                        "readOptional": true
                                     }
                                 ]
-                            }
+                            },
+                            "readOptional": true
                         }
                     ]
-                }
+                },
+                "readOptional": true
             }
         ]
     },

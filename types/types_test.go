@@ -350,8 +350,14 @@ func sameProperty(p1, p2 Property) error {
 	if err := sameType(p1.Type, p2.Type); err != nil {
 		return err
 	}
-	if p1.Required != p2.Required {
-		return fmt.Errorf("expected property key 'required' with value %t, got %t", p1.Required, p2.Required)
+	if p1.CreateRequired != p2.CreateRequired {
+		return fmt.Errorf("expected property key 'create required' with value %t, got %t", p1.CreateRequired, p2.CreateRequired)
+	}
+	if p1.UpdateRequired != p2.UpdateRequired {
+		return fmt.Errorf("expected property key 'update required' with value %t, got %t", p1.UpdateRequired, p2.UpdateRequired)
+	}
+	if p1.ReadOptional != p2.ReadOptional {
+		return fmt.Errorf("expected property key 'read optional' with value %t, got %t", p1.ReadOptional, p2.ReadOptional)
 	}
 	if p1.Nullable != p2.Nullable {
 		return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)

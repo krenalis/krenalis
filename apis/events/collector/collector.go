@@ -324,12 +324,13 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				if err != nil {
 					return err
 				}
-				results, err := transformer.Transform(ctx, []map[string]any{mapEvent})
+				records := []transformers.Record{{Properties: mapEvent}}
+				err = transformer.Transform(ctx, records)
 				if err != nil {
 					slog.Error("error occurred transforming event", "err", err)
 					continue
 				}
-				if err = results[0].Err; err != nil {
+				if err = records[0].Err; err != nil {
 					if _, ok := err.(ValidationError); ok {
 						stats.Passed(statistics.Transformation)
 						stats.Failed(statistics.OutputValidation, err.Error())
@@ -338,7 +339,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 					stats.Failed(statistics.Transformation, err.Error())
 					continue
 				}
-				properties = results[0].Value
+				properties = records[0].Properties
 				stats.Passed(statistics.Transformation)
 				stats.Passed(statistics.OutputValidation)
 			}

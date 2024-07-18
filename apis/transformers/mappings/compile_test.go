@@ -40,21 +40,23 @@ func Test_Compile(t *testing.T) {
 		{Name: "deep", Type: types.Map(types.Map(types.Object([]types.Property{
 			{Name: "p", Type: types.Map(types.Int(32))},
 		})))},
-		{Name: "other", Type: types.Int(32), Nullable: true},
+		{Name: "other", Type: types.Int(32), CreateRequired: true, Nullable: true},
 		{Name: "properties", Type: types.JSON(), Nullable: true},
 	})
 
 	cx := decimal.NewFromFloat(0.142)
 
 	tests := []struct {
-		expr          string
-		dt            types.Type
-		required      bool
-		nullable      bool
-		layouts       *state.TimeLayouts
-		compileErr    error
-		evalErr       error
-		expectedValue any
+		expr           string
+		dt             types.Type
+		purpose        Purpose
+		createRequired bool
+		updateRequired bool
+		nullable       bool
+		layouts        *state.TimeLayouts
+		compileErr     error
+		evalErr        error
+		expectedValue  any
 	}{
 		{expr: "' '   '  '", dt: types.Text(), expectedValue: "   "},
 		{expr: "''", dt: types.JSON(), expectedValue: json.RawMessage("null")},
@@ -80,7 +82,7 @@ func Test_Compile(t *testing.T) {
 		{expr: `""`, dt: types.JSON(), expectedValue: json.RawMessage("null")},
 		{expr: "other", dt: types.Int(32), nullable: true, expectedValue: nil},
 		{expr: "other", dt: types.Int(32), expectedValue: Void},
-		{expr: "other", dt: types.Int(32), required: true, evalErr: errors.New("cannot convert null to a non-nullable value")},
+		{expr: "other", dt: types.Int(32), purpose: Create, createRequired: true, evalErr: errors.New("expression is required, but the evaluation returned no value")},
 
 		{expr: "map['x']", dt: types.Int(32), expectedValue: 1},
 		{expr: "map.x", dt: types.Int(32), expectedValue: 1},
@@ -134,7 +136,7 @@ func Test_Compile(t *testing.T) {
 
 		// Eval errors.
 		{expr: "manufacturer", dt: types.Int(32), evalErr: errors.New(`cannot convert "MyPlaneCompany" (type Text) to type Int(32)`)},
-		{expr: "properties.a.b?", dt: types.Text(), required: true, evalErr: errors.New(`expression is required, but the evaluation returned no value`)},
+		{expr: "properties.a.b?", dt: types.Text(), purpose: Create, createRequired: true, evalErr: errors.New(`expression is required, but the evaluation returned no value`)},
 
 		// and.
 		{expr: "and(true, true)", dt: types.Boolean(), expectedValue: true},
@@ -187,14 +189,12 @@ func Test_Compile(t *testing.T) {
 		{expr: "if(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
 		{expr: "if(false, null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
 		{expr: "if(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
-		{expr: "if(properties.foo, 'none')", dt: types.Text(), required: true, compileErr: errors.New("'if' function requires three arguments when used in a required expression")},
-		{expr: "and(if(properties.foo, false), true)", dt: types.Text(), required: true, compileErr: errors.New("'if' function requires three arguments when used in a required expression")},
 	}
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
 
-			values := map[string]any{
+			properties := map[string]any{
 				"manufacturer": "MyPlaneCompany",
 				"model":        "SuperFast",
 				"engine": map[string]any{
@@ -237,10 +237,10 @@ func Test_Compile(t *testing.T) {
 			}
 
 			// Test Compile.
-			expr, err := Compile(test.expr, schema, test.dt, test.required, test.nullable, test.layouts)
+			expr, err := Compile(test.expr, schema, test.dt, test.createRequired, test.updateRequired, test.nullable, test.layouts)
 			if test.compileErr != nil {
 				if err == nil {
-					t.Fatalf("expecting compile error %s, got no errors", test.compileErr)
+					t.Fatalf("expecting compile error %q, got no errors", test.compileErr)
 				}
 				if test.compileErr.Error() != err.Error() {
 					t.Fatalf("expecting compile error %q, got %q", test.compileErr.Error(), err.Error())
@@ -252,10 +252,10 @@ func Test_Compile(t *testing.T) {
 			}
 
 			// Test Eval.
-			gotValue, err := expr.Eval(values)
+			gotValue, err := expr.Eval(properties, test.purpose)
 			if test.evalErr != nil {
 				if err == nil {
-					t.Fatalf("expecting eval error %s, got no errors", test.evalErr)
+					t.Fatalf("expecting eval error %q, got no errors", test.evalErr)
 				}
 				if test.evalErr.Error() != err.Error() {
 					t.Fatalf("expecting eval error %q, got %q", test.evalErr.Error(), err.Error())
@@ -290,7 +290,7 @@ func TestInvalidSchema(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
-			_, err := Compile(test.expr, types.Type{}, test.dt, false, false, nil)
+			_, err := Compile(test.expr, types.Type{}, test.dt, false, false, false, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -337,7 +337,7 @@ func TestPropertyPaths(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		expression, err := Compile(test.src, schema, types.JSON(), false, true, nil)
+		expression, err := Compile(test.src, schema, types.JSON(), false, false, true, nil)
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}

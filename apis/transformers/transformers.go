@@ -19,6 +19,22 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// Purpose represents the purpose of a record transformation.
+type Purpose int
+
+const (
+	None Purpose = iota
+	Create
+	Update
+)
+
+// Record represents a record to transform.
+type Record struct {
+	Purpose    Purpose
+	Properties map[string]any
+	Err        error
+}
+
 // Transformer represents a transformer.
 type Transformer struct {
 	action        int
@@ -100,50 +116,51 @@ func (t *Transformer) OutProperties() []string {
 	return slices.Clone(t.outProperties)
 }
 
-// Transform transforms the provided values and returns the results. The value
-// are expected to conform to the input schema. If an error occurs during the
-// transformation of a single value, the error is stored in the Err field of the
-// corresponding result. If the error is a validation error, it implements
-// apis.ValidationError; otherwise it is a FunctionExecutionError error.
+// Transform transforms the provided records and updates their properties.
+// Record properties, before transformation, are expected to conform to the
+// input schema. If an error occurs during the transformation of a single
+// record, the error is stored in the Err field of the corresponding record. If
+// the error is a validation error, it implements apis.ValidationError;
+// otherwise it is a FunctionExecutionError error.
 //
 // For function transformers, it returns the ErrFunctionNotExist error if the
 // function does not exist, and a FunctionExecutionError error if an error
 // occurs during function execution.
-func (t *Transformer) Transform(ctx context.Context, values []map[string]any) ([]Result, error) {
+func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 	// Transform using the mapping.
 	if t.mapping != nil {
-		results := make([]Result, len(values))
-		for i, value := range values {
-			value, err := t.mapping.Transform(value)
+		for i, record := range records {
+			properties, err := t.mapping.Transform(record.Properties, mappings.Purpose(record.Purpose))
 			if err != nil {
-				results[i].Err = err
+				record.Properties = nil
+				records[i].Err = err
 				continue
 			}
-			results[i].Value = value
+			records[i].Properties = properties
 			if i%100 != 0 {
 				continue
 			}
 			select {
 			case <-ctx.Done():
-				return nil, ctx.Err()
+				return ctx.Err()
 			default:
 			}
 		}
-		return results, nil
+		return nil
 	}
 
 	// Transform using the function.
 	funcName := transformationFunctionName(t.action, t.function.Language)
-	results, err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, values)
+	err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, records)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
-			return nil, FunctionExecutionError(fmt.Sprintf("%s: %s ", t.function.Language.String(), err))
+			return FunctionExecutionError(fmt.Sprintf("%s: %s ", t.function.Language.String(), err))
 		}
-		return nil, err
+		return err
 	}
 
-	return results, nil
+	return nil
 }
 
 // schemaSubset returns a subset of schema containing only the properties

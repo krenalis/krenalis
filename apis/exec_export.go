@@ -18,6 +18,7 @@ import (
 
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
 	"github.com/meergo/meergo/apis/transformers"
@@ -36,10 +37,10 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		// Download the users from this connection to match the identities for the export.
 		err := this.downloadUsersForExportMatch(ctx)
 		if err != nil {
-			if err, ok := err.(*connectors.SchemaError); ok {
+			if err, ok := err.(*schemas.Error); ok {
 				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
-			return actionExecutionError{fmt.Errorf("cannot retrieve users information from app: %s", err)}
+			return actionExecutionError{err}
 		}
 		// If the export must be blocked in case of duplicated user on the
 		// destination, check if there are duplicated users on the destination.
@@ -114,10 +115,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 	// Read the users.
 	records, err := store.UserRecords(ctx, datastore.Query{
-		Properties: types.PropertyNames(schema),
-		Where:      where,
-		OrderBy:    orderBy,
-	}, action.Connection().Workspace().UserSchema)
+		Where:   where,
+		OrderBy: orderBy,
+	}, schema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
@@ -128,7 +128,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			ws := action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return err
-		case *connectors.SchemaError:
+		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the %s schema, %s. Please review and update the action before attempting to export the users.", io, err.Msg)
 			return actionExecutionError{err}
 		}
@@ -151,12 +151,12 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	// Get the writer.
 	switch connector.Type {
 	case state.App:
-		writer, err = this.app().Writer(state.Users, ack)
+		writer, err = this.app().Writer(ctx, action, ack)
 	case state.Database:
-		writer, err = this.database().Writer(action.TableName, action.TableKeyProperty, action.OutSchema, ack)
+		writer, err = this.database().Writer(ctx, action, ack)
 	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
-		writer, err = this.file().Writer(ctx, schema, ack, replacer)
+		writer, err = this.file().Writer(ctx, replacer, ack)
 		if err, ok := err.(connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
@@ -164,6 +164,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	if err != nil {
 		if err, ok := err.(connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
+		}
+		if err, ok := err.(*schemas.Error); ok {
+			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to export the users."
 		}
 		return actionExecutionError{err}
 	}
@@ -175,10 +178,8 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		Record datastore.Record // User record.
 	}
 
-	var (
-		users  = make([]User, 0, 100)
-		values = make([]map[string]any, 0, 100)
-	)
+	users := make([]User, 0, 100)
+	transformationRecords := make([]transformers.Record, 0, 100)
 
 	for record := range records.All(ctx) {
 
@@ -238,35 +239,40 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			}
 
 			// Transform the users.
-			clear(values)
-			values = values[0:len(users)]
+			clear(transformationRecords)
+			transformationRecords = transformationRecords[0:len(users)]
 			for i, user := range users {
-				values[i] = user.Record.Properties
+				purpose := transformers.Update
+				if user.ID != "" {
+					purpose = transformers.Create
+				}
+				transformationRecords[i].Purpose = purpose
+				transformationRecords[i].Properties = user.Record.Properties
 			}
-			results, err := transformer.Transform(ctx, values)
+			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
 					return actionExecutionError{err}
 				}
 				return err
 			}
-			for i, result := range results {
+			for i, record := range transformationRecords {
 				user := users[i]
-				if result.Err != nil {
-					if _, ok := result.Err.(ValidationError); ok {
+				if record.Err != nil {
+					if _, ok := record.Err.(ValidationError); ok {
 						stats.Passed(statistics.Transformation)
-						stats.Failed(statistics.OutputValidation, result.Err.Error())
+						stats.Failed(statistics.OutputValidation, record.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.Transformation, result.Err.Error())
+					stats.Failed(statistics.Transformation, record.Err.Error())
 					continue
 				}
 				stats.Passed(statistics.Transformation)
 				stats.Passed(statistics.OutputValidation)
-				if len(result.Value) == 0 {
+				if len(record.Properties) == 0 {
 					continue
 				}
-				if ok := writer.Write(ctx, user.ID, result.Value, user.Record.ID.(string)); !ok {
+				if ok := writer.Write(ctx, user.ID, record.Properties, user.Record.ID.(string)); !ok {
 					return writer.Close(ctx)
 				}
 			}
@@ -304,7 +310,7 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 
 	records, err := this.app().Users(ctx, schema, time.Time{})
 	if err != nil {
-		return actionExecutionError{fmt.Errorf("cannot get users from the connector: %s", err)}
+		return err
 	}
 	defer records.Close()
 
@@ -312,27 +318,27 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	for user := range records.All(ctx) {
 
 		if user.Err != nil {
-			return actionExecutionError{user.Err}
+			return user.Err
 		}
 
 		p, err := json.Marshal(user.Properties[externalProp.Name])
 		if err != nil {
-			return actionExecutionError{err}
+			return err
 		}
 		err = this.connection.store.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
 		if err != nil {
-			return actionExecutionError{err}
+			return err
 		}
 
 		// Set the user cursor.
 		err = this.setUserCursor(ctx, user.LastChangeTime)
 		if err != nil {
-			return actionExecutionError{err}
+			return err
 		}
 
 	}
 	if err = records.Err(); err != nil {
-		return actionExecutionError{fmt.Errorf("an error occurred closing the database: %s", err)}
+		return err
 	}
 
 	return nil

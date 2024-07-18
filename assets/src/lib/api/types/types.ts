@@ -28,7 +28,9 @@ interface Property {
 	placeholder: string;
 	role: Role;
 	type: Type;
-	required: boolean;
+	createRequired: boolean;
+	updateRequired: boolean;
+	readOptional: boolean;
 	nullable: boolean;
 	note: string;
 }

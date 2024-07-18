@@ -9,7 +9,9 @@ interface EditableProperty {
 	placeholder: string;
 	role: Role;
 	type: Type;
-	required: boolean;
+	readOptional: boolean;
+	createRequired: boolean;
+	updateRequired: boolean;
 	nullable: boolean;
 	note: string;
 	isEditable?: boolean;
@@ -78,11 +80,13 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 				type: typ,
 				nullable: property.nullable,
 				note: property.note,
+				readOptional: property.readOptional,
 			};
 			if (!property.isEditable) {
 				p.placeholder = property.placeholder;
 				p.role = property.role;
-				p.required = property.required;
+				p.createRequire = property.createRequired;
+				p.updateRequired = property.updateRequired;
 			}
 			normalized.properties.push(p);
 		} else {
@@ -106,11 +110,13 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 				type: typ,
 				nullable: property.nullable,
 				note: property.note,
+				readOptional: property.readOptional,
 			};
 			if (!property.isEditable) {
 				subP.placeholder = property.placeholder;
 				subP.role = property.role;
-				subP.required = property.required;
+				subP.createRequired = property.createRequired;
+				subP.updateRequired = property.updateRequired;
 			}
 			subProperties.push(subP);
 		}

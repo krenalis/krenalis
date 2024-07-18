@@ -9,6 +9,7 @@ import {
 	MatchingProperties,
 	SchedulePeriod,
 	TransformationFunction,
+	TransformationPurpose,
 } from '../api/types/action';
 import { Filter, ConnectorValues } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
@@ -39,7 +40,9 @@ const EXPORT_MODE_OPTIONS: Record<ExportMode, TransformedExportMode> = {
 
 interface TransformedProperty {
 	value: string;
-	required: boolean;
+	createRequired: boolean;
+	updateRequired: boolean;
+	readOptional: boolean;
 	type: string;
 	label: string;
 	size: number | null;
@@ -237,7 +240,9 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 	const flattenProperty = (property: Property): TransformedProperty => {
 		const flat = {
 			value: property.placeholder || '',
-			required: property.required,
+			readOptional: property.readOptional,
+			createRequired: property.createRequired,
+			updateRequired: property.updateRequired,
 			type: property.type.name,
 			label: property.label,
 			size: null,
@@ -409,11 +414,19 @@ const transformInActionToSet = async (
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 		const mappingToSave = {};
 		const expressions: ExpressionToBeExtracted[] = [];
+		const purpose: TransformationPurpose =
+			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
 		for (const k in action.Transformation.Mapping) {
 			const v = action.Transformation.Mapping[k];
 			if (v.value === '') {
-				if (v.required) {
-					throw new Error(`Required property "${k}" cannot be empty`);
+				if (purpose === 'Update' && v.updateRequired) {
+					throw new Error(
+						`Property "${k}" is required for the update. Indicate an expression for this property.`,
+					);
+				} else if (purpose === 'Create' && v.createRequired) {
+					throw new Error(
+						`Property "${k}" is required for creation. Indicate an expression for this property.`,
+					);
 				}
 				continue;
 			}
@@ -596,14 +609,15 @@ const transformInActionToSet = async (
 			}
 		}
 
-		// ensure the table key property is 'required' in the out schema.
+		// ensure the table key property is required for creation in the out
+		// schema.
 		const i = outSchema.properties.findIndex((p) => p.name === action.TableKeyProperty);
 		if (i === -1) {
 			throw new Error('Table key property must be in the out schema of the action');
 		}
-		if (outSchema.properties[i].required === false) {
-			outSchema.properties[i].required = true;
-		}
+
+		// TODO: see issue https://github.com/meergo/meergo/issues/909
+		// outSchema.properties[i].createRequired = true;
 	} else {
 		// the table key property must be defined for database type actions that
 		// export users.

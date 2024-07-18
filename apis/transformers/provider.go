@@ -26,11 +26,6 @@ type FunctionExecutionError string
 
 func (err FunctionExecutionError) Error() string { return string(err) }
 
-type Result struct {
-	Value map[string]any
-	Err   error
-}
-
 // A Provider represents a function transformer provider.
 //
 // A function name must:
@@ -40,15 +35,15 @@ type Result struct {
 //     functions
 type Provider interface {
 
-	// Call calls the function with the given name and version for each value and
-	// returns the result of each invocation. Each element of values is supposed to
-	// conform to inSchema. Each result conforms to outSchema unless a
-	// transformation error occurred, and in that case, the error is stored in the
-	// Err field of the result.
+	// Call calls the function with the given name and version for each record
+	// updating its Properties field with the result of each invocation. Record
+	// properties are supposed to conform to inSchema. After the transformation,
+	// Record properties conform to outSchema unless a transformation error
+	// occurred, and in that case, the error is stored in the Record's Err field.
 	//
 	// It returns the ErrFunctionNotExist error if the function does not exist, and
 	// a FunctionExecutionError if the execution fails.
-	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, values []map[string]any) ([]Result, error)
+	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []Record) error
 
 	// Close closes the function.
 	Close(ctx context.Context) error
