@@ -61,7 +61,7 @@ func (err *SchemaValidationError) Error() string {
 	case propertyNotExist:
 		return fmt.Sprintf("property %q does not exist", err.path)
 	case missingProperty:
-		return fmt.Sprintf("non-nullable property %q is missing", err.path)
+		return fmt.Sprintf("non-optional property %q is missing", err.path)
 	case invalidValue:
 		if err.path != "" && err.path[len(err.path)-1] == ']' {
 			return fmt.Sprintf("%q %s", err.path, err.msg)
@@ -112,10 +112,9 @@ type decoder struct {
 	dec *jsontext.Decoder
 }
 
-// Unmarshal decodes a JSON object read from r, validating it according to its
-// schema, which must be an Object. If a property is missing, it returns the
-// property with a nil value if nullable, or returns a *SchemaValidationError
-// error if not nullable.
+// Unmarshal decodes a JSON object read from r, validating it according to the
+// provided input schema, which must be an Object. If a property is missing and
+// it is not optional for reading, it returns a *SchemaValidationError error.
 //
 // name is used in error messages as the name of the unmarshaled object.
 //
@@ -343,13 +342,13 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				o[name] = value
 			}
 			for _, p := range t.Properties() {
+				if p.ReadOptional {
+					continue
+				}
 				if _, ok := o[p.Name]; ok {
 					continue
 				}
-				if !p.Nullable {
-					return nil, newErrMissingProperty(p.Name)
-				}
-				o[p.Name] = nil
+				return nil, newErrMissingProperty(p.Name)
 			}
 			_, err = d.readToken()
 			if err != nil {

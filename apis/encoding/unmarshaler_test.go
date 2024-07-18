@@ -151,13 +151,14 @@ func Test_Unmarshal(t *testing.T) {
 					Type: types.Int(32),
 				},
 				{
-					Name: "b",
-					Type: types.Boolean(),
+					Name:     "b",
+					Type:     types.Boolean(),
+					Nullable: true,
 				},
 				{
-					Name:     "c",
-					Type:     types.Uint(8),
-					Nullable: true,
+					Name:         "c",
+					Type:         types.Uint(8),
+					ReadOptional: true,
 				},
 			}),
 		},
@@ -167,7 +168,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 	})
 
-	data := `{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`
+	data := `{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
 	expected := map[string]any{
 		"Boolean":     true,
 		"Int8":        -12,
@@ -197,7 +198,7 @@ func Test_Unmarshal(t *testing.T) {
 		"Text_regexp": "foo",
 		"Text_nil":    nil,
 		"Array":       []any{"foo", "boo"},
-		"Object":      map[string]any{"a": 9, "b": false, "c": nil},
+		"Object":      map[string]any{"a": 9, "b": nil},
 		"Map":         map[string]any{"a": 1, "b": 2, "c": 3},
 	}
 
@@ -332,9 +333,9 @@ func Test_UnmarshalSlice(t *testing.T) {
 			Type: types.Boolean(),
 		},
 		{
-			Name:     "boo",
-			Type:     types.Int(32),
-			Nullable: true,
+			Name:         "boo",
+			Type:         types.Int(32),
+			ReadOptional: true,
 		},
 	})
 
@@ -369,7 +370,7 @@ func Test_UnmarshalSlice(t *testing.T) {
 		},
 		{
 			data:     `[{"foo":true}]`,
-			expected: []map[string]any{{"foo": true, "boo": nil}},
+			expected: []map[string]any{{"foo": true}},
 		},
 		{
 			data: `[{"foo":true}] ,`,
@@ -381,7 +382,7 @@ func Test_UnmarshalSlice(t *testing.T) {
 		},
 		{
 			data:     `[{"foo":true},{"foo": false,"boo":547}]`,
-			expected: []map[string]any{{"foo": true, "boo": nil}, {"foo": false, "boo": 547}},
+			expected: []map[string]any{{"foo": true}, {"foo": false, "boo": 547}},
 		},
 		{
 			data: `[{"ops":5},{"boo":547}]`,
