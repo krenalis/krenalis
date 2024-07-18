@@ -586,7 +586,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	if !outSchema.Valid() {
 		return nil, errors.BadRequest("output schema is not valid")
 	}
-	if purpose != "Create" && purpose != "Update" {
+	if purpose != Create && purpose != Update {
 		return nil, errors.BadRequest(`purpose must be "Create" or "Update"`)
 	}
 	if transformation.Mapping != nil && transformation.Function != nil {
