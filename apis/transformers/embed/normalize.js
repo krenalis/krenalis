@@ -26,10 +26,6 @@ function normalize(obj) {
 					}
 				} else if (v === undefined) {
 					obj[i] = null;
-				} else if (typeof v === "number") {
-					if (!Number.isFinite(v)) {
-						obj[i] = String(v);
-					}
 				} else if (typeof v === "object" && v !== null) {
 					norm(v, set);
 				} else if (typeof v === "bigint") {
