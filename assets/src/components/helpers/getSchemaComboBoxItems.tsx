@@ -41,9 +41,9 @@ const getLastChangeTimeComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getOrderingPropertyPathComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const filterOrderingPropertySchema = (schema: ObjectType): TransformedMapping | null => {
 	if (schema == null) {
-		return [];
+		return null;
 	}
 	const flatSchema = flattenSchema(schema);
 	const filteredSchema: TransformedMapping = {};
@@ -59,6 +59,14 @@ const getOrderingPropertyPathComboboxItems = (schema: ObjectType): ComboboxItem[
 		if (typ === 'Int' || typ === 'Uint' || typ === 'UUID' || typ === 'Inet' || typ === 'Text') {
 			filteredSchema[k] = v;
 		}
+	}
+	return filteredSchema;
+};
+
+const getOrderingPropertyPathComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+	const filteredSchema = filterOrderingPropertySchema(schema);
+	if (filteredSchema == null) {
+		return [];
 	}
 	return computeItems(filteredSchema);
 };
@@ -111,6 +119,7 @@ export {
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
 	getLastChangeTimeComboboxItems,
+	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,
 	getTableKeyComboboxItems,
 };

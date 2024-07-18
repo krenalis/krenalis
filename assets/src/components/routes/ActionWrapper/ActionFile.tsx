@@ -31,7 +31,10 @@ import actionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
 import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getOrderingPropertyPathComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import {
+	filterOrderingPropertySchema,
+	getOrderingPropertyPathComboboxItems,
+} from '../../helpers/getSchemaComboBoxItems';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -300,6 +303,18 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		}
 		return fields;
 	}, [fileFields]);
+
+	const orderingPropertyError = useMemo<string>(() => {
+		const filteredSchema = filterOrderingPropertySchema(actionType.InputSchema);
+		const property = action.FileOrderingPropertyPath;
+		if (filteredSchema == null || property === '') {
+			return '';
+		}
+		if (filteredSchema[property] == null) {
+			return `property "${property}" does not exist in the user schema`;
+		}
+		return '';
+	}, [action, actionType]);
 
 	useEffect(() => {
 		pathRef.current = {
@@ -734,22 +749,23 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<SlOption value='Gzip'>Gzip</SlOption>
 				<SlOption value='Snappy'>Snappy</SlOption>
 			</SlSelect>
-			{!isImport && actionType.Target === 'Users' && (
-				<>
+			{actionType.Fields.includes('FileOrderingProperty') && (
+				<div className='action__file-ordering'>
 					<ComboBoxInput
-						className='action__file-ordering'
 						value={action.FileOrderingPropertyPath}
 						comboBoxListRef={fileOrderingPropertyListRef}
 						onInput={onOrderingPropertyChange}
 						label='Order users by'
+						error={orderingPropertyError && orderingPropertyError}
 						name='ordering'
+						caret={true}
 					/>
 					<ComboBoxList
 						ref={fileOrderingPropertyListRef}
 						items={getOrderingPropertyPathComboboxItems(actionType.InputSchema)}
 						onSelect={onOrderingPropertySelect}
 					/>
-				</>
+				</div>
 			)}
 			{fieldsToRender.length > 0 && (
 				<ConnectorUI fields={fieldsToRender} values={values} onChange={onFieldChange} />

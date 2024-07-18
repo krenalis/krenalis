@@ -16,6 +16,7 @@ import { Compression } from '../api/types/connection';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
+import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboBoxItems';
 
 const SCHEDULE_PERIODS = {
 	5: '5m',
@@ -73,6 +74,7 @@ type ActionTypeField =
 	| 'ExportMode'
 	| 'Query'
 	| 'File'
+	| 'FileOrderingProperty'
 	| 'Table';
 
 interface TransformedActionType {
@@ -583,6 +585,19 @@ const transformInActionToSet = async (
 		}
 	}
 
+	if (action.FileOrderingPropertyPath != null) {
+		const p = action.FileOrderingPropertyPath;
+		if (p === '') {
+			throw new Error('File ordering property cannot be empty');
+		}
+		const filteredSchema = filterOrderingPropertySchema(actionType.InputSchema);
+		if (filteredSchema != null) {
+			if (filteredSchema[p] == null) {
+				throw new Error(`File ordering property "${p}" does not exist in the user schema`);
+			}
+		}
+	}
+
 	const isDatabaseExportOnUsers =
 		connection.type === 'Database' && connection.role === 'Destination' && actionType.Target === 'Users';
 	if (action.TableKeyProperty != null && action.TableKeyProperty !== '') {
@@ -701,8 +716,10 @@ const computeDefaultAction = (
 		action.LastChangeTimeFormat = '';
 		action.Sheet = null;
 		action.Compression = '';
-		action.FileOrderingPropertyPath = '';
 		action.Connector = '';
+	}
+	if (fields.includes('FileOrderingProperty')) {
+		action.FileOrderingPropertyPath = '';
 	}
 	if (fields.includes('Table')) {
 		action.Table = '';
@@ -757,6 +774,9 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (connection.type === 'FileStorage') {
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
+			if (actionType.Target === 'Users') {
+				fields.push('FileOrderingProperty');
+			}
 		}
 		fields.push('File');
 	}
