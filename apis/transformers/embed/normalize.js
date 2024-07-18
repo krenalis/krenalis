@@ -31,7 +31,7 @@ function normalize(obj) {
 						obj[i] = String(v);
 					}
 				} else if (typeof v === "object" && v !== null) {
-					normalize(v, set);
+					norm(v, set);
 				} else if (typeof v === "bigint") {
 					obj[i] = v.toString();
 				}
@@ -47,7 +47,7 @@ function normalize(obj) {
 					} else if (v === undefined) {
 						obj[k] = null;
 					} else if (typeof v === "object" && v !== null) {
-						normalize(v, set);
+						norm(v, set);
 					} else if (typeof v === "bigint") {
 						obj[k] = v.toString();
 					}
