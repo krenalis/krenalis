@@ -446,7 +446,6 @@ Deno.test('Analytics', async (t) => {
 					a.endSession()
 					a.reset(true)
 					assertEquals(a.getSessionId(), null)
-
 				} finally {
 					fetch.restore()
 					time.restore()
