@@ -85,6 +85,15 @@ class Session {
 		return id
 	}
 
+	// reset ends the current session and starts a new one if a session exists.
+	// If there is no active session, it does nothing.
+	reset() {
+		const [id, _] = this.#storage.session()
+		if (id != null) {
+			this.start()
+		}
+	}
+
 	// start starts a new session with identifier id that must be an integer. If
 	// id valuates to false, start uses the time in milliseconds from the epoch
 	// in UTC as identifier.

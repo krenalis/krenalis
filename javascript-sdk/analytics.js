@@ -198,7 +198,7 @@ class Analytics {
 		this.#storage.removeSuspended()
 		if (all || this.#options.strategy.indexOf('-C') > 0) {
 			this.#storage.setAnonymousId()
-			this.#session.end()
+			this.#session.reset()
 		}
 	}
 
@@ -444,11 +444,10 @@ class Analytics {
 					this.#storage.setTraits('user', event.traits)
 					this.#storage.setGroupId()
 					this.#storage.setTraits('group')
-					this.#session.end()
+					this.#session.reset()
 				} else {
 					event.traits = this.#mergeTraits(this.#user, event.traits)
 				}
-				break
 		}
 
 		event.messageId = uuid()

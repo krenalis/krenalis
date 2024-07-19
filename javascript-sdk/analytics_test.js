@@ -232,8 +232,9 @@ Deno.test('Analytics', async (t) => {
 			void a.track('click')
 			sessionId = getTime()
 			assertEquals(a.getSessionId(), sessionId)
+			time.tick(100)
 			a.reset()
-			assertEquals(a.getSessionId(), null)
+			assertNotEquals(a.getSessionId(), sessionId)
 		} finally {
 			if (a != null) {
 				a.close()
@@ -328,8 +329,9 @@ Deno.test('Analytics', async (t) => {
 			time.tick(300)
 			a.startSession(728819037)
 			assertEquals(a.getSessionId(), 728819037)
+			time.tick(100)
 			a.reset()
-			assertEquals(a.getSessionId(), null)
+			assertNotEquals(a.getSessionId(), 728819037)
 			await time.nextAsync()
 			events = await fetch.events(1)
 			assertEquals(events.length, 1)
@@ -436,9 +438,15 @@ Deno.test('Analytics', async (t) => {
 					// test reset with "all".
 					a.startSession(215271912)
 					anonymousId = a.getAnonymousId()
+					time.tick(100)
 					a.reset(true)
 					assertNotEquals(anonymousId, a.getAnonymousId())
+					assertNotEquals(a.getSessionId(), 215271912)
+
+					a.endSession()
+					a.reset(true)
 					assertEquals(a.getSessionId(), null)
+
 				} finally {
 					fetch.restore()
 					time.restore()

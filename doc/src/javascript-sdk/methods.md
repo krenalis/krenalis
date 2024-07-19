@@ -579,7 +579,7 @@ To align with Segment's `reset()` behavior, choose the "A-B-C" or "AB-C" strateg
 
 #### RudderStack Compatibility
 
-To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Meergo. The only difference is that RudderStack clears the current session and starts a new one, while Meergo does not. In Meergo, `reset(true)` works the same way as it does in RudderStack for all strategies.
+To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Meergo. In Meergo, `reset(true)` works the same way as it does in RudderStack for all strategies.
 
 ## debug
 
