@@ -1165,6 +1165,7 @@ type SetWorkspaceUserSchema struct {
 	Workspace      int
 	UserSchema     types.Type
 	PrimarySources map[string]int
+	Identifiers    []string
 }
 
 // setWorkspaceUserSchema sets the "users" schema of a workspace.
@@ -1176,6 +1177,7 @@ func (state *State) setWorkspaceUserSchema(n notification) {
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.UserSchema = e.UserSchema
 		w.UserPrimarySources = e.PrimarySources
+		w.Identifiers = e.Identifiers
 	})
 	dispatchNotification(state, e)
 }

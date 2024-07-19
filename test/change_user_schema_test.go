@@ -36,6 +36,9 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatalf("invalid user schema: %s", err)
 	}
 
+	identifiers := []string{"email", "android.id"}
+	c.SetWorkspaceIdentifiers(identifiers)
+
 	// Read the schema in "tests_user_schema.json".
 	f, err := os.Open("tests_user_schema.json")
 	if err != nil {
@@ -68,6 +71,9 @@ func TestChangeUserSchema(t *testing.T) {
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
 		t.Fatalf("invalid user schema: %s", err)
 	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
 
 	// Add a single property.
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
@@ -92,6 +98,120 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
 		t.Fatalf("invalid user schema: %s", err)
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Rename the property "android.id" to "android.identifier" and drop "email".
+	var properties []types.Property
+	for _, p := range schema.Properties() {
+		switch p.Name {
+		case "email":
+			continue
+		case "android":
+			props := types.Properties(p.Type)
+			for i := 0; i < len(props); i++ {
+				if props[i].Name == "id" {
+					props[i].Name = "identifier"
+					break
+				}
+			}
+			p.Type = types.Object(props)
+		}
+		properties = append(properties, p)
+	}
+	schema = types.Object(properties)
+	rePaths := map[string]any{"android.identifier": "android.id"}
+	queries = c.ChangeUserSchemaQueries(schema, rePaths)
+	expectedQueries = []string{
+		"BEGIN;",
+		"DROP VIEW \"users\";", "ALTER TABLE \"_users\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"email\";",
+		"ALTER TABLE \"_users\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"ALTER TABLE \"_user_identities\"\n\tRENAME COLUMN \"android_id\" TO \"android_identifier\";",
+		"CREATE VIEW \"users\" AS SELECT\n\t\"__id__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_identifier\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users\";",
+		"COMMIT;",
+	}
+	if !slices.Equal(expectedQueries, queries) {
+		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
+	}
+	c.ChangeUserSchema(schema, nil, rePaths)
+	identifiers = []string{"android.identifier"}
+
+	ws = c.Workspace()
+	if n := types.NumProperties(ws.UserSchema); n != 10 {
+		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
+	}
+	if err := checkSchemaProperties(ws.UserSchema); err != nil {
+		t.Fatalf("invalid user schema: %s", err)
+	}
+	if p, ok := ws.UserSchema.Property("email"); ok {
+		t.Fatalf("expecting no \"email\" property, got property %#v", p)
+	}
+	if p, err := types.PropertyByPath(ws.UserSchema, "android.id"); err == nil {
+		t.Fatalf("expecting no \"android.id\" property, got property %#v", p)
+	}
+	if _, err := types.PropertyByPath(ws.UserSchema, "android.identifier"); err != nil {
+		t.Fatalf("expecting property \"android.identifier\", got no property: %s", err)
+	}
+	if !types.Equal(schema, ws.UserSchema) {
+		t.Fatalf("expecting equal schemas, got different schemas")
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Drop "android.identifier".
+	properties = []types.Property{}
+	for _, p := range schema.Properties() {
+		switch p.Name {
+		case "android":
+			var props []types.Property
+			for _, p := range p.Type.Properties() {
+				if p.Name == "identifier" {
+					continue
+				}
+				props = append(props, p)
+			}
+			p.Type = types.Object(props)
+		}
+		properties = append(properties, p)
+	}
+	schema = types.Object(properties)
+	queries = c.ChangeUserSchemaQueries(schema, nil)
+	expectedQueries = []string{
+		"BEGIN;",
+		"DROP VIEW \"users\";",
+		"ALTER TABLE \"_users\"\n\tDROP COLUMN \"android_identifier\";",
+		"ALTER TABLE \"_user_identities\"\n\tDROP COLUMN \"android_identifier\";",
+		"CREATE VIEW \"users\" AS SELECT\n\t\"__id__\",\n\t\"__last_change_time__\",\n\t\"dummy_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users\";",
+		"COMMIT;",
+	}
+	if !slices.Equal(expectedQueries, queries) {
+		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
+	}
+	c.ChangeUserSchema(schema, nil, rePaths)
+
+	ws = c.Workspace()
+	if n := types.NumProperties(ws.UserSchema); n != 10 {
+		t.Fatalf("expected 10 properties in the \"users\" schema, got %d", n)
+	}
+	p, _ := ws.UserSchema.Property("android")
+	if n := types.NumProperties(p.Type); n != 2 {
+		t.Fatalf("expected 2 properties in the \"android\" Object of the \"users\" schema, got %d", n)
+	}
+	if err := checkSchemaProperties(ws.UserSchema); err != nil {
+		t.Fatalf("invalid user schema: %s", err)
+	}
+	if p, err := types.PropertyByPath(ws.UserSchema, "android.identifier"); err == nil {
+		t.Fatalf("expecting no \"android.identifier\" property, got property %#v", p)
+	}
+	if !types.Equal(schema, ws.UserSchema) {
+		t.Fatalf("expecting equal schemas, got different schemas")
+	}
+	if ws.Identifiers == nil || len(ws.Identifiers) != 0 {
+		t.Fatalf("expected no identifiers, got %v", ws.Identifiers)
 	}
 
 	// Create a schema with two properties that would conflict each other.

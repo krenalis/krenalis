@@ -17,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/datastore/diffschemas"
+	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
@@ -101,11 +102,31 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 
+	// Update the identifiers.
+	identifiers := make([]string, 0, len(this.workspace.Identifiers))
+Identifiers:
+	for _, identifier := range this.workspace.Identifiers {
+		for _, operation := range operations {
+			if operation.Operation == warehouses.OperationAddColumn {
+				continue
+			}
+			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
+				continue
+			}
+			if operation.Operation == warehouses.OperationRenameColumn {
+				identifiers = append(identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
+			}
+			continue Identifiers
+		}
+		identifiers = append(identifiers, identifier)
+	}
+
 	// Update the database and send the notification.
 	n := state.SetWorkspaceUserSchema{
 		Workspace:      this.ID,
 		UserSchema:     schema,
 		PrimarySources: primarySources,
+		Identifiers:    identifiers,
 	}
 	schemaJSON, err := json.Marshal(n.UserSchema)
 	if err != nil {
@@ -135,7 +156,7 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		// Update the schema.
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1 WHERE id = $2", schemaJSON, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1, identifiers = $2 WHERE id = $3", schemaJSON, n.Identifiers, n.Workspace)
 		if err != nil {
 			return err
 		}
