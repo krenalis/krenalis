@@ -124,9 +124,14 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer bw.Close()
 		w = brotliResponseWriter{bw, w}
 	}
-	if strings.HasPrefix(r.URL.Path, "/javascript-sdk/dist/meergo.min.js") {
+	if r.URL.Path == "/javascript-sdk/dist/meergo.min.js" {
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js"))
+		return
+	}
+	if r.URL.Path == "/javascript-sdk/dist/meergo.min.js.map" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		http.ServeFile(w, r, filepath.Join(moduleRoot, "javascript-sdk", "dist", "meergo.min.js.map"))
 		return
 	}
 	if r.URL.Path == "/javascript-sdk/mywebsite/" || r.URL.Path == "/javascript-sdk/mywebsite/index.html" {
