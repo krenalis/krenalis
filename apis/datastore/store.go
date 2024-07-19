@@ -159,7 +159,7 @@ func (store *Store) AddEvents(events [][]any) error {
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
 // If the action's output schema does not align with the user schema, it returns
-// a schemas.Error error.
+// a *schemas.Error error.
 //
 // It panics if the ack function is nil.
 func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
