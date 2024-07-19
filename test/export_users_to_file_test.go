@@ -144,7 +144,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		c.ExecuteAction(fsID, exportUsersActionID, true) // TODO(marco): fails with error "in the output schema, "email" property was previously non-optional but it is now optional."
+		c.ExecuteAction(fsID, exportUsersActionID, true)
 
 		// Wait for the import to finish.
 		c.WaitActionsToFinish(fsID)
