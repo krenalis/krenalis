@@ -780,34 +780,6 @@ func (this *Workspace) InitWarehouse(ctx context.Context) error {
 	return nil
 }
 
-// RunIdentityResolution runs the Identity Resolution on the workspace.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - InspectionMode, if the data warehouse is in inspection mode.
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
-	this.apis.mustBeOpen()
-	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
-	}
-	slog.Info("running Identity Resolution", "workspace", this.workspace.ID)
-	err := this.store.RunIdentityResolution(ctx)
-	if err != nil {
-		if err == datastore.ErrInspectionMode {
-			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-		}
-		if err == datastore.ErrMaintenanceMode {
-			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return err
-	}
-	slog.Info("execution of Identity Resolution is completed", "workspace", this.workspace.ID)
-	return nil
-}
-
 // ObservedEvent represents an observed event.
 type ObservedEvent struct {
 
@@ -972,6 +944,34 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 	return err
 }
 
+// RunIdentityResolution runs the Identity Resolution on the workspace.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InspectionMode, if the data warehouse is in inspection mode.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - NotConnected, if the workspace is not connected to a data warehouse.
+func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
+	this.apis.mustBeOpen()
+	if this.store == nil {
+		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
+	}
+	slog.Info("running Identity Resolution", "workspace", this.workspace.ID)
+	err := this.store.RunIdentityResolution(ctx)
+	if err != nil {
+		if err == datastore.ErrInspectionMode {
+			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		}
+		if err == datastore.ErrMaintenanceMode {
+			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		return err
+	}
+	slog.Info("execution of Identity Resolution is completed", "workspace", this.workspace.ID)
+	return nil
+}
+
 // ServeUI serves the user interface for the given connector, with the given
 // role. event is the event and values are the user-entered values in JSON
 // format. oAuth is the OAuth token returned by the (*Workspace).OAuth method,
@@ -1048,48 +1048,6 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	return ui, nil
 }
 
-// SetIdentifiers sets the identifiers of the workspace.
-func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string) error {
-
-	this.apis.mustBeOpen()
-
-	// Validate the identifiers.
-	// Note that identifiers are only formally validated; the types are instead
-	// checked at runtime, before starting the Identity Resolution.
-	for i, id := range identifiers {
-		if !types.IsValidPropertyPath(id) {
-			return errors.BadRequest("identifier %q is not a valid property path", id)
-		}
-		name := strings.Split(id, ".")[0]
-		if isMetaProperty(name) {
-			return errors.BadRequest("meta properties cannot be used as identifiers")
-		}
-		if slices.Contains(identifiers[i+1:], id) {
-			return errors.BadRequest("identifier %s is repeated", id)
-		}
-	}
-
-	// Update the database and send the notification.
-	if identifiers == nil {
-		identifiers = []string{}
-	}
-	ws := this.workspace
-	n := state.SetWorkspaceIdentifiers{
-		Workspace:   ws.ID,
-		Identifiers: identifiers,
-	}
-	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET identifiers = $1 WHERE id = $2",
-			n.Identifiers, n.Workspace)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
 // Set sets the name, the privacy region and the displayed properties of the
 // workspace. name must be between 1 and 100 runes long. displayedProperties
 // must contain valid displayed property names. A valid displayed property name
@@ -1136,6 +1094,48 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 		}
 		return tx.Notify(ctx, n)
 	})
+	return err
+}
+
+// SetIdentifiers sets the identifiers of the workspace.
+func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string) error {
+
+	this.apis.mustBeOpen()
+
+	// Validate the identifiers.
+	// Note that identifiers are only formally validated; the types are instead
+	// checked at runtime, before starting the Identity Resolution.
+	for i, id := range identifiers {
+		if !types.IsValidPropertyPath(id) {
+			return errors.BadRequest("identifier %q is not a valid property path", id)
+		}
+		name := strings.Split(id, ".")[0]
+		if isMetaProperty(name) {
+			return errors.BadRequest("meta properties cannot be used as identifiers")
+		}
+		if slices.Contains(identifiers[i+1:], id) {
+			return errors.BadRequest("identifier %s is repeated", id)
+		}
+	}
+
+	// Update the database and send the notification.
+	if identifiers == nil {
+		identifiers = []string{}
+	}
+	ws := this.workspace
+	n := state.SetWorkspaceIdentifiers{
+		Workspace:   ws.ID,
+		Identifiers: identifiers,
+	}
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET identifiers = $1 WHERE id = $2",
+			n.Identifiers, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+
 	return err
 }
 
@@ -1363,6 +1363,106 @@ func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
 	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
 }
 
+// userIdentities returns the user identities matching the provided where
+// condition and an estimate of their count without applying first and limit.
+//
+// It returns the user identities in range [first,first+limit] with first >= 0
+// and 0 < limit <= 1000.
+//
+// If there are no identities, a nil slice is returned.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+func (this *Workspace) userIdentities(ctx context.Context, where *datastore.Where, first, limit int) ([]UserIdentity, int, error) {
+
+	// Retrieve the identities from the data warehouse.
+	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
+		Properties: []string{
+			"__action__",
+			"__is_anonymous__",
+			"__identity_id__",
+			"__connection__",
+			"__anonymous_ids__",
+			"__last_change_time__",
+		},
+		Where:   where,
+		OrderBy: "__pk__",
+		First:   first,
+		Limit:   limit,
+	})
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		return nil, 0, err
+	}
+
+	// Create the identities from the records returned by the datastore.
+	var identities []UserIdentity
+
+	for _, record := range records {
+
+		// Retrieve the connection.
+		connID := record["__connection__"].(int)
+		conn, ok := this.apis.state.Connection(connID)
+		if !ok {
+			// The connection for this user identity no longer exists, so skip
+			// this identity.
+			continue
+		}
+
+		// Retrieve the action.
+		actionID := record["__action__"].(int)
+		_, ok = conn.Action(actionID)
+		if !ok {
+			// The action for this user identity no longer exists, so skip this
+			// identity.
+			continue
+		}
+
+		// Determine the value for the identity ID.
+		identityID := record["__identity_id__"].(string)
+
+		// Determine the anonymous IDs.
+		var anonIDs []string
+		if ids, ok := record["__anonymous_ids__"].([]any); ok {
+			anonIDs = make([]string, len(ids))
+			for i := range ids {
+				anonIDs[i] = ids[i].(string)
+			}
+		}
+
+		// In the case of anonymous identities, the anonymous ID is inside the
+		// identity ID, so there is the need to populate the anonymous IDs by
+		// taking that value, then reset the identity ID.
+		if record["__is_anonymous__"].(bool) {
+			anonIDs = append(anonIDs, identityID)
+			identityID = ""
+		}
+
+		// Determine the last change time.
+		lastChangeTime := record["__last_change_time__"].(time.Time)
+
+		identities = append(identities, UserIdentity{
+			Connection:     connID,
+			Action:         actionID,
+			ID:             identityID,
+			AnonymousIds:   anonIDs,
+			LastChangeTime: lastChangeTime,
+		})
+
+	}
+
+	// Since the count is an estimate, being counted separately from the actual
+	// number of identities returned, ensure to not return a value lower than
+	// the actually returned number of identities.
+	count = max(len(identities), count)
+
+	return identities, count, nil
+}
+
 // ConnectionToAdd represents a connection to add to a workspace.
 type ConnectionToAdd struct {
 
@@ -1552,104 +1652,4 @@ type UserIdentity struct {
 	ID             string    `json:"id"`           // empty string for identities imported from anonymous events.
 	AnonymousIds   []string  `json:"anonymousIds"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
-}
-
-// userIdentities returns the user identities matching the provided where
-// condition and an estimate of their count without applying first and limit.
-//
-// It returns the user identities in range [first,first+limit] with first >= 0
-// and 0 < limit <= 1000.
-//
-// If there are no identities, a nil slice is returned.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) userIdentities(ctx context.Context, where *datastore.Where, first, limit int) ([]UserIdentity, int, error) {
-
-	// Retrieve the identities from the data warehouse.
-	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
-		Properties: []string{
-			"__action__",
-			"__is_anonymous__",
-			"__identity_id__",
-			"__connection__",
-			"__anonymous_ids__",
-			"__last_change_time__",
-		},
-		Where:   where,
-		OrderBy: "__pk__",
-		First:   first,
-		Limit:   limit,
-	})
-	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return nil, 0, err
-	}
-
-	// Create the identities from the records returned by the datastore.
-	var identities []UserIdentity
-
-	for _, record := range records {
-
-		// Retrieve the connection.
-		connID := record["__connection__"].(int)
-		conn, ok := this.apis.state.Connection(connID)
-		if !ok {
-			// The connection for this user identity no longer exists, so skip
-			// this identity.
-			continue
-		}
-
-		// Retrieve the action.
-		actionID := record["__action__"].(int)
-		_, ok = conn.Action(actionID)
-		if !ok {
-			// The action for this user identity no longer exists, so skip this
-			// identity.
-			continue
-		}
-
-		// Determine the value for the identity ID.
-		identityID := record["__identity_id__"].(string)
-
-		// Determine the anonymous IDs.
-		var anonIDs []string
-		if ids, ok := record["__anonymous_ids__"].([]any); ok {
-			anonIDs = make([]string, len(ids))
-			for i := range ids {
-				anonIDs[i] = ids[i].(string)
-			}
-		}
-
-		// In the case of anonymous identities, the anonymous ID is inside the
-		// identity ID, so there is the need to populate the anonymous IDs by
-		// taking that value, then reset the identity ID.
-		if record["__is_anonymous__"].(bool) {
-			anonIDs = append(anonIDs, identityID)
-			identityID = ""
-		}
-
-		// Determine the last change time.
-		lastChangeTime := record["__last_change_time__"].(time.Time)
-
-		identities = append(identities, UserIdentity{
-			Connection:     connID,
-			Action:         actionID,
-			ID:             identityID,
-			AnonymousIds:   anonIDs,
-			LastChangeTime: lastChangeTime,
-		})
-
-	}
-
-	// Since the count is an estimate, being counted separately from the actual
-	// number of identities returned, ensure to not return a value lower than
-	// the actually returned number of identities.
-	count = max(len(identities), count)
-
-	return identities, count, nil
 }
