@@ -150,7 +150,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 	if err != nil {
 		return nil, err
 	}
-	columns := types.Properties(file.action.OutSchema)
+	columns := types.Properties(file.action.InSchema)
 	records := make(chan fileRecord, 100)
 	result := make(chan error, 1)
 	writeCtx, cancelWrite := context.WithCancel(context.Background())

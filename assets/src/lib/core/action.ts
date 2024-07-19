@@ -466,10 +466,10 @@ const transformInActionToSet = async (
 			mapping = mappingToSave;
 		}
 		inSchema = inputSchema;
-		outSchema = isDestinationFileOnUsers ? actionType.InputSchema : outputSchema;
+		outSchema = outputSchema;
 	} else if (action.Transformation.Function != null) {
 		inSchema = actionType.InputSchema;
-		outSchema = isDestinationFileOnUsers ? actionType.InputSchema : actionType.OutputSchema;
+		outSchema = actionType.OutputSchema;
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
@@ -477,7 +477,8 @@ const transformInActionToSet = async (
 			OutProperties: outSchema.properties!.map((p) => p.name),
 		};
 	} else if (isDestinationFileOnUsers) {
-		outSchema = actionType.InputSchema;
+		inSchema = actionType.InputSchema;
+		outSchema = null; // TODO(Gianluca): it this necessary?
 	}
 
 	let matchingProperties: MatchingProperties;

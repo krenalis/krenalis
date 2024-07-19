@@ -373,16 +373,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		}
 	}
 	if outSchema.Valid() {
-		// As a special case, if it is a destination file action, validate it as if it were an input schema.
-		// TODO (marco): remove this special case when the schema is moved from output to input in the destination file actions.
-		if v.connection.role == state.Destination && v.connector.typ == state.File {
-			if err := validateActionSchema("input", outSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
-				return errors.BadRequest("%s", err)
-			}
-		} else {
-			if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
-				return errors.BadRequest("%s", err)
-			}
+		if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 	}
 
@@ -525,19 +517,22 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// Do some checks related to exporting users to files.
 	exportUsersToFile := v.connection.connector.typ == state.FileStorage && v.connection.role == state.Destination && target == state.Users
 	if exportUsersToFile {
-		// When exporting users to file, ensure that the output schema is valid,
+		// When exporting users to file, ensure that the input schema is valid,
 		// as it contains the properties that will be exported to the file.
-		if !outSchema.Valid() {
-			return errors.BadRequest("output schema cannot be empty when exporting users to file")
+		if !inSchema.Valid() {
+			return errors.BadRequest("input schema must be valid when exporting users to file")
+		}
+		if outSchema.Valid() {
+			return errors.BadRequest("output schema must be invalid when exporting users to file")
 		}
 		// Check that FileOrderingPropertyPath is defined and exists in the out
 		// schema.
 		if action.FileOrderingPropertyPath == "" {
 			return errors.BadRequest("file ordering property path cannot be empty when exporting users to file")
 		}
-		p, err := types.PropertyByPath(outSchema, action.FileOrderingPropertyPath)
+		p, err := types.PropertyByPath(inSchema, action.FileOrderingPropertyPath)
 		if err != nil {
-			return errors.BadRequest("file ordering property path cannot be found in action's output schema: %s", err)
+			return errors.BadRequest("file ordering property path cannot be found in action's input schema: %s", err)
 		}
 		// Check the allowed types.
 		// Regarding the allowed types, we can use the same criterion used for

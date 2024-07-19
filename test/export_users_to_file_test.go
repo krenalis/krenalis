@@ -86,7 +86,7 @@ func TestExportUsersToFile(t *testing.T) {
 	exportUsersActionID := c.AddAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Export users to the CSV on Filesystem",
 		Path: exportedFilename,
-		OutSchema: types.Object([]types.Property{
+		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -129,7 +129,7 @@ func TestExportUsersToFile(t *testing.T) {
 		c.MustCall("PUT", "/api/workspaces/1/connections/"+strconv.Itoa(fsID)+"/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
 			Name: "Export users to the CSV on Filesystem",
 			Path: exportedFilename,
-			OutSchema: types.Object([]types.Property{
+			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},

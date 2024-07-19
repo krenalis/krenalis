@@ -121,7 +121,7 @@ func TestActionsCreation(t *testing.T) {
 			action: meergotester.ActionToSet{
 				Name: "Export users to a CSV on Filesystem",
 				Path: "users.csv",
-				OutSchema: types.Object([]types.Property{
+				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),

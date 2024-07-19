@@ -380,13 +380,13 @@ func Test_validateAction(t *testing.T) {
 		{
 			name: "GOOD: Destination/FileStorage/Users - no placeholders",
 			action: ActionToSet{
-				Name:     "Export users",
-				InSchema: types.Type{},
-				OutSchema: types.Object([]types.Property{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "first_name", Type: types.Text(), ReadOptional: true},
 					{Name: "last_name", Type: types.Text(), ReadOptional: true},
 				}),
+				OutSchema:                types.Type{},
 				Connector:                "CSV",
 				Path:                     "my_output_users.csv",
 				FileOrderingPropertyPath: "email",
@@ -401,13 +401,13 @@ func Test_validateAction(t *testing.T) {
 		{
 			name: "GOOD: Destination/FileStorage/Users - with placeholder",
 			action: ActionToSet{
-				Name:     "Export users",
-				InSchema: types.Type{},
-				OutSchema: types.Object([]types.Property{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "first_name", Type: types.Text(), ReadOptional: true},
 					{Name: "last_name", Type: types.Text(), ReadOptional: true},
 				}),
+				OutSchema:                types.Type{},
 				Connector:                "CSV",
 				Path:                     "my_output_users - ${now}.csv",
 				FileOrderingPropertyPath: "email",
@@ -1948,6 +1948,23 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
 			err:                     "destination actions with Users target cannot have meta properties in the input schema",
+		},
+		{
+			name: "BAD: Destination/FileStorage/Users - no input schema",
+			action: ActionToSet{
+				Name:                     "Export users",
+				OutSchema:                types.Type{},
+				Connector:                "CSV",
+				Path:                     "my_output_users.csv",
+				FileOrderingPropertyPath: "email",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			connectorType:           state.File,
+			connectorHasUI:          false,
+			connectorHasSheets:      false,
+			err:                     "input schema must be valid when exporting users to file",
 		},
 	}
 

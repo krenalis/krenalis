@@ -106,18 +106,11 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		}
 	}
 
-	io := "input"
-	schema := action.InSchema
-	if connector.Type == state.FileStorage {
-		io = "output"
-		schema = action.OutSchema
-	}
-
 	// Read the users.
 	records, err := store.UserRecords(ctx, datastore.Query{
 		Where:   where,
 		OrderBy: orderBy,
-	}, schema)
+	}, action.InSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return actionExecutionError{err}
@@ -129,7 +122,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
 			return err
 		case *schemas.Error:
-			err.Msg = fmt.Sprintf("in the %s schema, %s. Please review and update the action before attempting to export the users.", io, err.Msg)
+			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the users.", err.Msg)
 			return actionExecutionError{err}
 		}
 		return err
