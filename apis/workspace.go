@@ -750,7 +750,7 @@ func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
 func (this *Workspace) IdentifiersSchema() types.Type {
 	this.apis.mustBeOpen()
 	return types.SubsetFunc(this.workspace.UserSchema, func(p types.Property) bool {
-		return datastore.CanBeIdentifier(p.Type)
+		return canBeIdentifier(p.Type)
 	})
 }
 
@@ -1097,28 +1097,29 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	return err
 }
 
-// SetIdentifiers sets the identifiers of the workspace.
+// SetIdentifiers sets the identifiers of the workspace in the specified order.
+// An identifier must be a property in the user schema with a type of Int, Uint,
+// UUID, Inet, Text, or Decimal with zero scale. The property cannot be a
+// sub-property of an Array or Map. Identifiers cannot be repeated.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - NotAllowedType, if a path's type, as defined in the used schema, is not
+//     allowed for identifiers.
+//   - PropertyNotExist, if a path does not exist in the user schema.
 func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string) error {
 
 	this.apis.mustBeOpen()
 
-	// Validate the identifiers.
-	// Note that identifiers are only formally validated; the types are instead
-	// checked at runtime, before starting the Identity Resolution.
 	for i, id := range identifiers {
 		if !types.IsValidPropertyPath(id) {
 			return errors.BadRequest("identifier %q is not a valid property path", id)
 		}
-		name := strings.Split(id, ".")[0]
-		if isMetaProperty(name) {
-			return errors.BadRequest("meta properties cannot be used as identifiers")
-		}
 		if slices.Contains(identifiers[i+1:], id) {
-			return errors.BadRequest("identifier %s is repeated", id)
+			return errors.BadRequest("identifier %q is repeated", id)
 		}
 	}
 
-	// Update the database and send the notification.
 	if identifiers == nil {
 		identifiers = []string{}
 	}
@@ -1127,9 +1128,33 @@ func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string)
 		Workspace:   ws.ID,
 		Identifiers: identifiers,
 	}
+
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET identifiers = $1 WHERE id = $2",
-			n.Identifiers, n.Workspace)
+		if len(identifiers) > 0 {
+			var s []byte
+			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			var schema types.Type
+			err = json.Unmarshal(s, &schema)
+			if err != nil {
+				return err
+			}
+			for _, path := range identifiers {
+				p, err := types.PropertyByPath(schema, path)
+				if err != nil {
+					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
+				}
+				if !canBeIdentifier(p.Type) {
+					return errors.Unprocessable(NotAllowedType, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
+				}
+			}
+		}
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET identifiers = $1 WHERE id = $2", n.Identifiers, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -1628,6 +1653,23 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 	}
 	*mode = mo
 	return nil
+}
+
+// canBeIdentifier reports whether a property with type t can be used as
+// identifier.
+func canBeIdentifier(t types.Type) bool {
+	switch t.Kind() {
+	case types.IntKind,
+		types.UintKind,
+		types.UUIDKind,
+		types.InetKind,
+		types.TextKind:
+		return true
+	case types.DecimalKind:
+		return t.Scale() == 0
+	default:
+		return false
+	}
 }
 
 // isValidDisplayedPropertyName reports whether property is a valid displayed

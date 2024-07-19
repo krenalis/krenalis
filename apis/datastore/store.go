@@ -398,10 +398,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	for i, ident := range ws.Identifiers {
 		identifier, err := types.PropertyByPath(ws.UserSchema, ident)
 		if err != nil {
-			return err
-		}
-		if !CanBeIdentifier(identifier.Type) {
-			return fmt.Errorf("identifier %q has a not allowed type %v", identifier.Name, identifier.Type)
+			return errors.New("unexpected error: identifier does not exist in user schema")
 		}
 		identifiers[i] = warehouses.Column{
 			Name:     strings.ReplaceAll(ident, ".", "_"),

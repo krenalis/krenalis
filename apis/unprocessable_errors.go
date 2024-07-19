@@ -41,6 +41,7 @@ const (
 	MemberEmailAlreadyExists errors.Code = "MemberEmailAlreadyExists"
 	NoColumns                errors.Code = "NoColumns"
 	NoWarehouse              errors.Code = "NoWarehouse"
+	NotAllowedType           errors.Code = "NotAllowedType"
 	NotCompatibleSchema      errors.Code = "NotCompatibleSchema"
 	NotConnected             errors.Code = "NotConnected"
 	OrderNotExist            errors.Code = "OrderNotExist"

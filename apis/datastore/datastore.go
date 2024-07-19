@@ -282,23 +282,6 @@ func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) fu
 	}
 }
 
-// CanBeIdentifier reports whether a property with type t can be used as
-// identifier in the Identity Resolution.
-func CanBeIdentifier(t types.Type) bool {
-	switch t.Kind() {
-	case types.IntKind,
-		types.UintKind,
-		types.UUIDKind,
-		types.InetKind,
-		types.TextKind:
-		return true
-	case types.DecimalKind:
-		return t.Scale() == 0
-	default:
-		return false
-	}
-}
-
 // CheckConflictingProperties checks if schema contains conflicting properties
 // and returns an error if that case. io specifies whether the check relates
 // to "input", "output", or "users" schema.

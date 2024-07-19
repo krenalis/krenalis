@@ -386,6 +386,14 @@ func (c *Meergo) SetWorkspaceIdentifiers(identifiers []string) {
 	c.MustCall("PUT", method, body, nil)
 }
 
+func (c *Meergo) SetWorkspaceIdentifiersErr(identifiers []string) error {
+	body := map[string]any{
+		"Identifiers": identifiers,
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/identifiers", c.ws)
+	return c.Call("PUT", method, body, nil)
+}
+
 func (c *Meergo) Sheets(storage int, fileConnector string, path string, compression Compression, uiValues json.RawMessage) []string {
 	req := map[string]any{
 		"FileConnector": fileConnector,

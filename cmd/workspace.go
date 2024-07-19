@@ -365,7 +365,7 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	return nil, err
 }
 
-// SetIdentifiers sets the identifiers of the workspace.
+// SetIdentifiers sets the identifiers of the workspace in a specified order.
 func (workspace workspace) SetIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
