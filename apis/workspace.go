@@ -1099,8 +1099,7 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 
 // SetIdentifiers sets the identifiers of the workspace in the specified order.
 // An identifier must be a property in the user schema with a type of Int, Uint,
-// UUID, Inet, Text, or Decimal with zero scale. The property cannot be a
-// sub-property of an Array or Map. Identifiers cannot be repeated.
+// UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot be repeated.
 //
 // It returns an errors.UnprocessableError error with code:
 //
