@@ -160,3 +160,64 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 	}
 
 }
+
+func Test_validatePrimarySources(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "first_name", Type: types.Text(), ReadOptional: true},
+		{Name: "address", Type: types.Object([]types.Property{
+			{Name: "street", Type: types.Text(), ReadOptional: true},
+		}), ReadOptional: true},
+		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
+	})
+
+	tests := []struct {
+		primarySources map[string]int
+		expectedErr    string
+	}{
+		{
+			primarySources: nil,
+		},
+		{
+			primarySources: map[string]int{},
+		},
+		{
+			primarySources: map[string]int{"first_name": 12345},
+		},
+		{
+			primarySources: map[string]int{"first_name": 0},
+			expectedErr:    "primary source identifier 0 is not valid",
+		},
+		{
+			primarySources: map[string]int{"first_name": 2147483648},
+			expectedErr:    "primary source identifier 2147483648 is not valid",
+		},
+		{
+			primarySources: map[string]int{"address.street": 12345},
+		},
+		{
+			primarySources: map[string]int{"first_name": 12345, "not_a_prop": 6789},
+			expectedErr:    "property path \"not_a_prop\" does not exist",
+		},
+		{
+			primarySources: map[string]int{"address": 12345},
+			expectedErr:    "primary sources cannot be specified for Object properties",
+		}, {
+			primarySources: map[string]int{"phone_numbers": 12345},
+			expectedErr:    "primary sources cannot be specified for Array properties",
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			gotErr := validatePrimarySources(schema, test.primarySources)
+			var gotErrStr string
+			if gotErr != nil {
+				gotErrStr = gotErr.Error()
+			}
+			if gotErrStr != test.expectedErr {
+				t.Fatalf("expected error %q, got %q instead", test.expectedErr, gotErrStr)
+			}
+		})
+	}
+
+}

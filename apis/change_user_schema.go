@@ -300,12 +300,15 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 // not valid.
 func validatePrimarySources(schema types.Type, primarySources map[string]int) error {
 	for path, source := range primarySources {
-		_, err := types.PropertyByPath(schema, path)
+		p, err := types.PropertyByPath(schema, path)
 		if err != nil {
 			return err
 		}
 		if source < 1 || source > maxInt32 {
 			return fmt.Errorf("primary source identifier %d is not valid", source)
+		}
+		if k := p.Type.Kind(); k == types.ObjectKind || k == types.ArrayKind {
+			return fmt.Errorf("primary sources cannot be specified for %s properties", p.Type)
 		}
 	}
 	return nil
