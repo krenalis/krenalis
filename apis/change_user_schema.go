@@ -260,16 +260,36 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 			return fmt.Errorf("user schema properties cannot be nullable")
 		}
 		switch p.Type.Kind() {
-		// An Array or Map element type cannot be an Array, Object, or Map.
-		case types.ArrayKind, types.MapKind:
+		case types.TextKind:
+			if p.Type.Values() != nil {
+				return fmt.Errorf("user schema properties with type Text cannot specify values")
+			}
+			if p.Type.Regexp() != nil {
+				return fmt.Errorf("user schema properties with type Text cannot specify regexp")
+			}
+		case types.ArrayKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
 				return fmt.Errorf("user schema properties cannot have type '%s(%s)'", p.Type.Kind(), k)
+			}
+			if p.Type.Unique() {
+				return fmt.Errorf("user schema properties with type Array cannot specify unique elements")
+			}
+			if p.Type.MinElements() != 0 {
+				return fmt.Errorf("user schema properties with type Array cannot specify minimum elements count")
+			}
+			if p.Type.MaxElements() != types.MaxElements {
+				return fmt.Errorf("user schema properties with type Array cannot specify maximum elements count")
 			}
 		case types.ObjectKind:
 			err := checkAllowedPropertyUserSchema(p.Type)
 			if err != nil {
 				return err
+			}
+		case types.MapKind:
+			k := p.Type.Elem().Kind()
+			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
+				return fmt.Errorf("user schema properties cannot have type '%s(%s)'", p.Type.Kind(), k)
 			}
 		}
 	}
