@@ -26,17 +26,13 @@ import (
 // ChangeUserSchema changes the user schema and the primary sources of the
 // workspace. schema must be a valid schema.
 //
-// The properties within schema must meet the following requirements:
+// The properties within user schema cannot specify a placeholder, must have
+// role Both, cannot be required for creation or update, must be read optional
+// and cannot be nullable; there are also limits on types, which are documented
+// in "datastore/README.md".
 //
-//   - properties with Array type cannot have elements of type Array, Object, or
-//     Map;
-//   - properties with Map type cannot have elements of type Array, Object, or
-//     Map;
-//   - properties cannot be nullable (as the NULL value of a data warehouse
-//     column represents the fact that there is no value for that column);
-//   - properties cannot specify a placeholder;
-//   - properties cannot be required;
-//   - properties cannot specify a role.
+// primarySources cannot specify a primary source for a property which has kind
+// Object or Array.
 //
 // Moreover, schema cannot contain conflicting properties, meaning properties
 // whose representations as columns in the data warehouse would have the same
