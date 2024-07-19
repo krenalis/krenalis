@@ -88,7 +88,7 @@ class Session {
 	// reset ends the current session and starts a new one if a session exists.
 	// If there is no active session, it does nothing.
 	reset() {
-		const [id, _] = this.#storage.session()
+		const [id] = this.#storage.session()
 		if (id != null) {
 			this.start()
 		}
