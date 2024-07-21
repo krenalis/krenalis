@@ -152,7 +152,8 @@ var pythonDecoderOptions = decoderOptions{
 // Object or invalid. An invalid schema is treated as an object with no
 // properties.
 //
-// For JavaScript, the following are the expected JSON for each schema type:
+// For JavaScript, apart from null, the following are the expected JSON for each
+// schema type:
 //   - Boolean: true or false
 //   - Int (8, 16, 24, and 32 bits): a Number representing an integer
 //   - Int (64 bits): a String representing an integer
@@ -171,7 +172,8 @@ var pythonDecoderOptions = decoderOptions{
 //   - Object: an object
 //   - Map: an object
 //
-// For Python, the following are the expected JSON for each schema type:
+// For Python, apart from null, the following are the expected JSON for each
+// schema type:
 //   - Boolean: true or false
 //   - Int: a Number representing an integer
 //   - Uint: a Number representing an integer
