@@ -10,7 +10,6 @@ package transformers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -327,52 +326,6 @@ func Test_MarshalJavaScript(t *testing.T) {
 			result: []byte(`[{a:null}]`),
 		},
 		{
-			name: "Non-nullable property",
-			schema: types.Object([]types.Property{
-				{
-					Name:     "a",
-					Type:     types.Text(),
-					Nullable: false,
-				},
-			}),
-			records: []Record{
-				{Properties: map[string]any{"a": nil}},
-			},
-			err: errors.New("apis/transformers: null property: a"),
-		},
-		{
-			name: "JSON nil",
-			schema: types.Object([]types.Property{
-				{
-					Name:     "a",
-					Type:     types.JSON(),
-					Nullable: false,
-				},
-			}),
-			records: []Record{
-				{Properties: map[string]any{"a": nil}},
-			},
-			err: errors.New("apis/transformers: null property: a"),
-		},
-		{
-			name: "Missing property",
-			schema: types.Object([]types.Property{
-				{
-					Name: "a",
-					Type: types.Text(),
-				},
-				{
-					Name: "b",
-					Type: types.Boolean(),
-				},
-			}),
-			records: []Record{
-				{Properties: map[string]any{"a": "foo", "b": true}},
-				{Properties: map[string]any{"a": "foo"}},
-			},
-			err: errors.New("apis/transformers: missing property: b"),
-		},
-		{
 			name: "Mix",
 			schema: types.Object([]types.Property{
 				{
@@ -521,52 +474,6 @@ func Test_MarshalPython(t *testing.T) {
 				{Properties: map[string]any{"a": nil}},
 			},
 			result: []byte(`[{'a':None}]`),
-		},
-		{
-			name: "Non-nullable property",
-			schema: types.Object([]types.Property{
-				{
-					Name:     "a",
-					Type:     types.Text(),
-					Nullable: false,
-				},
-			}),
-			records: []Record{
-				{Properties: map[string]any{"a": nil}},
-			},
-			err: errors.New("apis/transformers: null property: a"),
-		},
-		{
-			name: "JSON nil",
-			schema: types.Object([]types.Property{
-				{
-					Name:     "a",
-					Type:     types.JSON(),
-					Nullable: false,
-				},
-			}),
-			records: []Record{
-				{Properties: map[string]any{"a": nil}},
-			},
-			err: errors.New("apis/transformers: null property: a"),
-		},
-		{
-			name: "Missing property",
-			schema: types.Object([]types.Property{
-				{
-					Name: "a",
-					Type: types.Text(),
-				},
-				{
-					Name: "b",
-					Type: types.Boolean(),
-				},
-			}),
-			records: []Record{
-				{Properties: map[string]any{"a": "foo", "b": true}},
-				{Properties: map[string]any{"a": "foo"}},
-			},
-			err: errors.New("apis/transformers: missing property: b"),
 		},
 		{
 			name: "Mix",

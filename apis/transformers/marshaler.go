@@ -146,13 +146,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 			for _, p := range t.Properties() {
 				e, ok := v[p.Name]
 				if !ok {
-					if !p.ReadOptional {
-						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
-					}
 					continue
-				}
-				if !p.Nullable && e == nil {
-					return nil, fmt.Errorf("apis/transformers: null property: %s", p.Name)
 				}
 				if i > 0 {
 					b = append(b, ',')
@@ -277,13 +271,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 			for _, p := range t.Properties() {
 				e, ok := v[p.Name]
 				if !ok {
-					if !p.ReadOptional {
-						return nil, fmt.Errorf("apis/transformers: missing property: %s", p.Name)
-					}
 					continue
-				}
-				if !p.Nullable && e == nil {
-					return nil, fmt.Errorf("apis/transformers: null property: %s", p.Name)
 				}
 				if i > 0 {
 					b = append(b, ',')
