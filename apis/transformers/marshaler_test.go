@@ -314,16 +314,13 @@ func Test_MarshalJavaScript(t *testing.T) {
 		{
 			name: "Nullable property",
 			schema: types.Object([]types.Property{
-				{
-					Name:     "a",
-					Type:     types.Text(),
-					Nullable: true,
-				},
+				{Name: "a", Type: types.JSON(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			records: []Record{
-				{Properties: map[string]any{"a": nil}},
+				{Properties: map[string]any{"a": nil, "b": nil}},
 			},
-			result: []byte(`[{a:null}]`),
+			result: []byte(`[{a:null,b:null}]`),
 		},
 		{
 			name: "Mix",
@@ -464,16 +461,13 @@ func Test_MarshalPython(t *testing.T) {
 		{
 			name: "Nullable property",
 			schema: types.Object([]types.Property{
-				{
-					Name:     "a",
-					Type:     types.Text(),
-					Nullable: true,
-				},
+				{Name: "a", Type: types.JSON(), Nullable: true},
+				{Name: "b", Type: types.Text(), Nullable: true},
 			}),
 			records: []Record{
-				{Properties: map[string]any{"a": nil}},
+				{Properties: map[string]any{"a": nil, "b": nil}},
 			},
-			result: []byte(`[{'a':None}]`),
+			result: []byte(`[{'a':None,'b':None}]`),
 		},
 		{
 			name: "Mix",

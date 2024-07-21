@@ -65,6 +65,9 @@ func Marshal(b []byte, schema types.Type, records []Record, language state.Langu
 
 // marshalJavaScript marshals v as a JavaScript value.
 func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
+	if v == nil {
+		return append(b, "null"...), nil
+	}
 	if t.Kind() == types.JSONKind {
 		var buf strings.Builder
 		enc := json.NewEncoder(&buf)
@@ -81,8 +84,6 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		return b, nil
 	}
 	switch v := v.(type) {
-	case nil:
-		b = append(b, "null"...)
 	case bool:
 		if v {
 			b = append(b, "true"...)
@@ -184,6 +185,9 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 
 // marshalPython marshals v as a Python value.
 func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
+	if v == nil {
+		return append(b, "None"...), nil
+	}
 	k := t.Kind()
 	if k == types.JSONKind {
 		var buf strings.Builder
@@ -201,8 +205,6 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 		return b, nil
 	}
 	switch v := v.(type) {
-	case nil:
-		b = append(b, "None"...)
 	case bool:
 		if v {
 			b = append(b, "True"...)
