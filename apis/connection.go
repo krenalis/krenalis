@@ -1447,6 +1447,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			},
 		}
 
+		// provider is a temporary function transformer provider.
+		var provider transformers.Provider
+
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
@@ -1460,14 +1463,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			if transformation.Function.Source == "" {
 				return nil, errors.BadRequest("transformation source is empty")
 			}
-			provider := this.apis.transformerProvider
 			switch transformation.Function.Language {
 			case "JavaScript":
-				if provider == nil || !provider.SupportLanguage(state.JavaScript) {
+				if this.apis.transformerProvider == nil || !this.apis.transformerProvider.SupportLanguage(state.JavaScript) {
 					return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
 				}
 			case "Python":
-				if provider == nil || !provider.SupportLanguage(state.Python) {
+				if this.apis.transformerProvider == nil || !this.apis.transformerProvider.SupportLanguage(state.Python) {
 					return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
 				}
 			case "":
@@ -1475,17 +1477,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			default:
 				return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
 			}
-			action.Transformation.InProperties = types.PropertyNames(action.InSchema)
-			action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
-		default:
-			return nil, errors.BadRequest("transformation mapping or function is required")
-		}
-
-		// Create a temporary function transformer provider.
-		var provider transformers.Provider
-		var function *state.TransformationFunction
-		if transformation.Function != nil {
-			function = &state.TransformationFunction{
+			action.Transformation.Function = &state.TransformationFunction{
 				Source:  transformation.Function.Source,
 				Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
 			}
@@ -1493,16 +1485,19 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			switch transformation.Function.Language {
 			case "JavaScript":
 				name += ".js"
-				function.Language = state.JavaScript
+				action.Transformation.Function.Language = state.JavaScript
 			case "Python":
 				name += ".py"
-				function.Language = state.Python
+				action.Transformation.Function.Language = state.Python
 			}
-			action.Transformation.Function = function
+			action.Transformation.InProperties = types.PropertyNames(action.InSchema)
+			action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 			provider = newTempTransformerProvider(name, transformation.Function.Source, this.apis.transformerProvider)
+		default:
+			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
-		// Transform the values.
+		// Transform the properties.
 		transformer, err := transformers.New(action, provider, nil)
 		if err != nil {
 			return nil, err

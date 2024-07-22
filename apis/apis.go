@@ -601,6 +601,10 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		},
 	}
 
+	// provider is a temporary function transformer provider.
+	var provider transformers.Provider
+
+	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
 		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, nil)
@@ -610,39 +614,24 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		action.Transformation.InProperties = mapping.InProperties()
 		action.Transformation.OutProperties = mapping.OutProperties()
 	case transformation.Function != nil:
-		function := transformation.Function
-		if function.Source == "" {
+		if transformation.Function.Source == "" {
 			return nil, errors.BadRequest("transformation source is empty")
 		}
-		provider := apis.transformerProvider
-		switch function.Language {
+		switch transformation.Function.Language {
 		case "JavaScript":
-			if provider == nil || !provider.SupportLanguage(state.JavaScript) {
+			if apis.transformerProvider == nil || !apis.transformerProvider.SupportLanguage(state.JavaScript) {
 				return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
 			}
 		case "Python":
-			if provider == nil || !provider.SupportLanguage(state.Python) {
+			if apis.transformerProvider == nil || !apis.transformerProvider.SupportLanguage(state.Python) {
 				return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
 			}
 		case "":
 			return nil, errors.BadRequest("transformation language is empty")
 		default:
-			return nil, errors.BadRequest("transformation language %q is not valid", function.Language)
+			return nil, errors.BadRequest("transformation language %q is not valid", transformation.Function.Language)
 		}
-		action.Transformation.InProperties = types.PropertyNames(action.InSchema)
-		action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
-	default:
-		return nil, errors.BadRequest("mapping (or transformation) is required")
-	}
-	properties, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
-	if err != nil {
-		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
-	}
-
-	// Create a temporary function transformer provider.
-	var provider transformers.Provider
-	if transformation.Function != nil {
-		function := &state.TransformationFunction{
+		action.Transformation.Function = &state.TransformationFunction{
 			Source:  transformation.Function.Source,
 			Version: "1", // no matter the version, it will be overwritten by the temporary transformation.
 		}
@@ -650,13 +639,21 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		switch transformation.Function.Language {
 		case "JavaScript":
 			name += ".js"
-			function.Language = state.JavaScript
+			action.Transformation.Function.Language = state.JavaScript
 		case "Python":
 			name += ".py"
-			function.Language = state.Python
+			action.Transformation.Function.Language = state.Python
 		}
-		action.Transformation.Function = function
+		action.Transformation.InProperties = types.PropertyNames(action.InSchema)
+		action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)
+	default:
+		return nil, errors.BadRequest("mapping (or transformation) is required")
+	}
+
+	properties, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
+	if err != nil {
+		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
 
 	// Transform the properties.
