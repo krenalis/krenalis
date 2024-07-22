@@ -366,7 +366,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 // It returns an errors.UnprocessableError error with code:
 //   - ConnectionNotExist, if the source connection does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) AddEventListener(ctx context.Context, size, source int, onlyValid bool) (string, error) {
+func (this *Workspace) AddEventListener(size, source int, onlyValid bool) (string, error) {
 
 	this.apis.mustBeOpen()
 
@@ -378,22 +378,16 @@ func (this *Workspace) AddEventListener(ctx context.Context, size, source int, o
 	}
 
 	if source > 0 {
-		var typ state.ConnectorType
-		var role state.Role
-		err := this.apis.db.QueryRow(ctx, "SELECT type, role FROM connections\n"+
-			"WHERE id = $1 AND workspace = $2", source, this.workspace.ID).Scan(&typ, &role)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return "", errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", source)
-			}
-			return "", err
+		c, ok := this.workspace.Connection(source)
+		if !ok {
+			return "", errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", source)
 		}
-		switch typ {
+		switch c.Connector().Type {
 		case state.Mobile, state.Server, state.Website:
 		default:
 			return "", errors.BadRequest("connection %d is not a mobile, server or website", source)
 		}
-		if role != state.Source {
+		if c.Role != state.Source {
 			return "", errors.BadRequest("connection %d is not a source", source)
 		}
 	}

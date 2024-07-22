@@ -59,7 +59,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	if body.Size != nil {
 		size = *body.Size
 	}
-	id, err := ws.AddEventListener(r.Context(), size, body.Source, body.OnlyValid)
+	id, err := ws.AddEventListener(size, body.Source, body.OnlyValid)
 	if err != nil {
 		return nil, err
 	}
