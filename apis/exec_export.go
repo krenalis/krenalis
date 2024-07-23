@@ -9,7 +9,6 @@ package apis
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -18,10 +17,12 @@ import (
 
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
 	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/apis/transformers/mappings"
 	"github.com/meergo/meergo/types"
 )
 
@@ -191,6 +192,10 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			// Resolve the external identities.
 			ids, err := this.resolveExternalIdentities(ctx, record)
 			if err != nil {
+				if err == errNoMatchingProperty {
+					// Skip this user.
+					goto Next
+				}
 				if err == datastore.ErrMaintenanceMode {
 					return actionExecutionError{err}
 				}
@@ -209,6 +214,13 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 				}
 			} else {
 				// Create the user.
+				inProp, _ := action.InSchema.Property(action.MatchingProperties.Internal)
+				in := record.Properties[action.MatchingProperties.Internal]
+				matchingPropValue, err := internalToExternalMatchingProperty(in, inProp, action.MatchingProperties.External)
+				if err != nil {
+					return err
+				}
+				record.Properties[action.MatchingProperties.External.Name] = matchingPropValue
 				users = append(users, User{Record: record})
 			}
 		} else {
@@ -314,11 +326,19 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 			return user.Err
 		}
 
-		p, err := json.Marshal(user.Properties[externalProp.Name])
-		if err != nil {
-			return err
+		// If the value for the external matching property is null, or if the
+		// property has no value, then the user should be discarded.
+		v, ok := user.Properties[externalProp.Name]
+		if !ok || v == nil {
+			// Set the user cursor.
+			err = this.setUserCursor(ctx, user.LastChangeTime)
+			if err != nil {
+				return err
+			}
+			continue
 		}
-		err = this.connection.store.SetDestinationUser(ctx, this.action.ID, user.ID, string(p))
+		externalProp := matchingPropertyToString(v)
+		err = this.connection.store.SetDestinationUser(ctx, this.action.ID, user.ID, externalProp)
 		if err != nil {
 			return err
 		}
@@ -337,22 +357,28 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	return nil
 }
 
-// resolveExternalIdentities resolves the external identities of the record and
-// returns its external app identifiers, if resolved, or the empty slice if such
-// user does not exist on the remote app.
+var errNoMatchingProperty = errors.New("internal matching property for record is null or missing")
+
+// resolves the external identities of the record and returns its external app
+// identifiers.
+//
+// If the external identity cannot be resolved because the record does not have
+// a value for the internal matching property, or has a value but it is null,
+// this method returns the error errNoMatchingProperty.
+//
+// If record has value for the internal matching property but the user does not
+// exist externally, the empty slice is returned, since there is no external
+// identity for the user.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // datastore.ErrMaintenanceMode error.
 func (this *Action) resolveExternalIdentities(ctx context.Context, record datastore.Record) ([]string, error) {
 	internalPropName := this.action.MatchingProperties.Internal
 	property, ok := record.Properties[internalPropName]
-	if !ok {
-		property = nil
+	if !ok || property == nil {
+		return nil, errNoMatchingProperty
 	}
-	p, err := json.Marshal(property)
-	if err != nil {
-		return nil, err
-	}
+	p := matchingPropertyToString(property)
 	c := this.connection
 	ids, err := c.store.DestinationUsers(ctx, this.action.ID, string(p))
 	if err != nil {
@@ -382,4 +408,49 @@ func newPathPlaceholderReplacer(t time.Time) func(string) (string, bool) {
 		}
 		return "", false
 	}
+}
+
+// matchingPropertyToString returns the string representation of a value for a
+// matching property.
+// v cannot be nil.
+func matchingPropertyToString(v any) string {
+	switch v := v.(type) {
+	case int: // Int(n)
+		return strconv.Itoa(v)
+	case uint: // Uint(n)
+		return strconv.FormatUint(uint64(v), 10)
+	case string: // Text and UUID
+		return v
+	default:
+		panic(fmt.Sprintf("unexpected matching property value with type %T", v))
+	}
+}
+
+// internalToExternalMatchingProperty returns the value to be written to the
+// external matching property of an app during users export, in case of
+// creation.
+//
+// internal is the value of the internal matching property, while internalProp
+// and externalProp are, respectively, the properties of the internal and the
+// external matching property.
+//
+// Any returned error is an internal error.
+func internalToExternalMatchingProperty(internal any, internalProp, externalProp types.Property) (any, error) {
+	// TODO(Gianluca): this implementation requires to instantiate every time a
+	// new 'mappings.Mapping', this is because we preferred to implement a
+	// solution that requires less changes, at the moment, since the issue
+	// https://github.com/meergo/meergo/issues/935 will require a deeper review
+	// of the code structure of the export to app.
+	expressions := map[string]string{externalProp.Name: internalProp.Name}
+	inSchema := types.Object([]types.Property{internalProp})
+	outSchema := types.Object([]types.Property{externalProp})
+	m, err := mappings.New(expressions, inSchema, outSchema, nil)
+	if err != nil {
+		return nil, err
+	}
+	out, err := m.Transform(map[string]any{internalProp.Name: internal}, mappings.Create)
+	if err != nil {
+		return nil, err
+	}
+	return out[externalProp.Name], nil
 }

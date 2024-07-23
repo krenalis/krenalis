@@ -305,14 +305,17 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !types.IsValidPropertyName(props.External.Name) {
 			return errors.BadRequest("external matching property %q is not a valid property name", props.External.Name)
 		}
-		if !props.External.Type.Valid() {
-			return errors.BadRequest("external matching property type is not valid")
-		}
 		if props.External.Placeholder != "" {
 			return errors.BadRequest("external matching property cannot specify a placeholder")
 		}
 		if props.External.Role != types.BothRole {
 			return errors.BadRequest("external matching property cannot specify a role")
+		}
+		if !props.External.Type.Valid() {
+			return errors.BadRequest("external matching property type is not valid")
+		}
+		if !canBeUsedAsMatchingProp(props.External.Type.Kind()) {
+			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
 		}
 		if props.External.CreateRequired {
 			return errors.BadRequest("external matching property cannot be required for creation")
@@ -320,9 +323,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if props.External.UpdateRequired {
 			return errors.BadRequest("external matching property cannot be required for the update")
 		}
-		if !canBeUsedAsMatchingProp(props.External.Type.Kind()) {
-			return errors.BadRequest("type %s cannot be used as matching property", props.External.Type)
-		}
+		// The external matching property can be either Nullable or
+		// ReadOptional; it will then be at runtime that, in the case in which
+		// the value is null or the value is missing, the user will be
+		// skipped.
 	}
 	// Validate the compression.
 	switch action.Compression {
@@ -616,6 +620,33 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		}
 		if action.ExportOnDuplicatedUsers != nil {
 			return errors.BadRequest("export on duplicated users setting must be nil")
+		}
+	}
+	// Check that the external matching property has not been transformed, and
+	// that in the case of CreateOnly or CreateOrUpdate this is present among
+	// the properties of the output schema (as it will be implicitly written by
+	// the export action).
+	if action.MatchingProperties != nil {
+		if m := action.Transformation.Mapping; m != nil {
+			if _, ok := m[action.MatchingProperties.External.Name]; ok {
+				return errors.BadRequest("the external matching property cannot be mapped by the mapping")
+			}
+		} else if t := action.Transformation.Function; t != nil {
+			if slices.Contains(t.OutProperties, action.MatchingProperties.External.Name) {
+				return errors.BadRequest("the external matching property cannot be transformed by the transformation function")
+			}
+		}
+		if mode := action.ExportMode; mode != nil && *mode == CreateOnly || *mode == CreateOrUpdate {
+			ext := action.MatchingProperties.External
+			p, ok := outSchema.Property(ext.Name)
+			if !ok {
+				return errors.BadRequest("external matching property must appear in the out schema when mode is CreateOnly or CreateOrUpdate")
+			}
+			if p.Type.Kind() != ext.Type.Kind() {
+				return errors.BadRequest("the external matching property must have the same" +
+					" kind of the property with the same name within out schema")
+			}
+			usedOutPaths = append(usedOutPaths, p.Name)
 		}
 	}
 

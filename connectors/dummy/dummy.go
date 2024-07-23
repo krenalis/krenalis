@@ -225,7 +225,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 	if target == meergo.Users {
 		return types.Object([]types.Property{
 			{Name: "dummyId", Type: types.Text(), Role: types.SourceRole},
-			{Name: "email", Type: types.Text(), CreateRequired: true},
+			{Name: "email", Type: types.Text()}, // TODO(Gianluca): removed 'CreateRequired' until UI is updated in https://github.com/meergo/meergo/issues/934.
 			{Name: "firstName", Type: types.Text()},
 			{Name: "fullName", Type: types.Text()},
 			{Name: "lastName", Type: types.Text()},
