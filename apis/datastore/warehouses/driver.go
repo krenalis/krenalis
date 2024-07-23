@@ -198,7 +198,7 @@ type Warehouse interface {
 	// properties.
 	//
 	// userPrimarySources is a mapping between user column names (for which a
-	// primary source connection have have been set) and the ID of primary source
+	// primary source connection have been set) and IDs of primary source
 	// connections.
 	RunIdentityResolution(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
