@@ -486,7 +486,7 @@ func (d decoder) unmarshal(t types.Type, purpose Purpose) (_ any, err error) {
 		if term := d.opts.terms["object"]; term == "object" {
 			msg += "n object"
 		} else {
-			msg += term
+			msg += " " + term
 		}
 		return nil, newErrInvalidValue(msg, "", d.opts.terms)
 	default:
