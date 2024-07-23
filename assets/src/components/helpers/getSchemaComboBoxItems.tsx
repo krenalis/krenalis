@@ -11,6 +11,25 @@ const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(flatSchema);
 };
 
+const getExternalMatchingPropertiesItems = (
+	externalMatchingSchema: ObjectType,
+	outputSchema: ObjectType,
+): ComboboxItem[] => {
+	if (externalMatchingSchema == null || outputSchema == null) {
+		return [];
+	}
+	const flatExternalMatchingSchema = flattenSchema(externalMatchingSchema);
+	const flatOutputSchema = flattenSchema(outputSchema);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(flatExternalMatchingSchema)) {
+		const isInOutputSchema = flatOutputSchema[k] && flatOutputSchema[k].type === v.type;
+		if (isInOutputSchema) {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
 const getIdentityPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
@@ -122,4 +141,5 @@ export {
 	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,
 	getTableKeyComboboxItems,
+	getExternalMatchingPropertiesItems,
 };

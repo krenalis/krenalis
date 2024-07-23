@@ -501,7 +501,7 @@ const transformInActionToSet = async (
 			throw new Error(`Matching property "${external}" does not exist`);
 		}
 
-		const fullExternalProperty = actionType.OutputMatchingSchema.properties.find((p) => p.name === external);
+		const fullExternalProperty = flattenedOutputMatchingSchema[external].full;
 		matchingProperties = {
 			Internal: internal,
 			External: fullExternalProperty,
@@ -510,8 +510,31 @@ const transformInActionToSet = async (
 		// Add the internal matching property to the in schema of the action.
 		const isInternalAlreadyInActionSchema = inSchema.properties!.findIndex((p) => p.name === internal) !== -1;
 		if (!isInternalAlreadyInActionSchema) {
-			const flattenedInputMatchingSchema = flattenSchema(actionType.InputMatchingSchema);
 			inSchema.properties.push(flattenedInputMatchingSchema[internal].full);
+		}
+
+		if (action.ExportMode === 'CreateOnly' || action.ExportMode === 'CreateOrUpdate') {
+			// add the external matching property (not directly the one from the
+			// output matching schema, but instead the corresponding "writable"
+			// one in the output schema of the transformation) to the out schema
+			// of the action.
+			let externalPropertyToAdd: Property;
+			const p = flattenSchema(actionType.OutputSchema)[external]?.full;
+			if (p?.type.name === fullExternalProperty.type.name) {
+				externalPropertyToAdd = p;
+			}
+			if (externalPropertyToAdd === null) {
+				throw new Error(`External matching property "${external}" does not exist in the output schema`);
+			}
+			// TODO(@Andrea): after closing issue
+			// https://github.com/meergo/meergo/issues/507, add additional check
+			// and throw an error if the property is already inserted in the out
+			// schema, as it must not be used within the mapping or the
+			// transformation function.
+			const isAlreadyInSchema = outSchema.properties!.findIndex((p) => p.name === external) !== -1;
+			if (!isAlreadyInSchema) {
+				outSchema.properties.push(externalPropertyToAdd);
+			}
 		}
 	}
 

@@ -1,7 +1,7 @@
 import React, { useRef, useContext, useMemo } from 'react';
 import Section from '../../base/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getExternalMatchingPropertiesItems, getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import ActionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
@@ -80,7 +80,7 @@ const ActionMatchingProperties = () => {
 				></ComboBoxInput>
 				<ComboBoxList
 					ref={externalMatchingPropertyListRef}
-					items={getSchemaComboboxItems(actionType.OutputMatchingSchema)}
+					items={getExternalMatchingPropertiesItems(actionType.OutputMatchingSchema, actionType.OutputSchema)}
 					onSelect={onSelectMatchingProperties}
 				/>
 			</div>
