@@ -3,31 +3,15 @@ import { TransformedMapping, flattenSchema } from '../../lib/core/action';
 import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/ComboBox/ComboBox.types';
 
-const getSchemaComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
-	const flatSchema = flattenSchema(schema);
-	return computeItems(flatSchema);
-};
-
-const getExternalMatchingPropertiesItems = (
-	externalMatchingSchema: ObjectType,
-	outputSchema: ObjectType,
-): ComboboxItem[] => {
-	if (externalMatchingSchema == null || outputSchema == null) {
-		return [];
+	const isFlat = schema.name === null;
+	if (!isFlat) {
+		schema = flattenSchema(schema as ObjectType);
 	}
-	const flatExternalMatchingSchema = flattenSchema(externalMatchingSchema);
-	const flatOutputSchema = flattenSchema(outputSchema);
-	const filteredSchema: TransformedMapping = {};
-	for (const [k, v] of Object.entries(flatExternalMatchingSchema)) {
-		const isInOutputSchema = flatOutputSchema[k] && flatOutputSchema[k].type === v.type;
-		if (isInOutputSchema) {
-			filteredSchema[k] = v;
-		}
-	}
-	return computeItems(filteredSchema);
+	return computeItems(schema as TransformedMapping);
 };
 
 const getIdentityPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
@@ -141,5 +125,4 @@ export {
 	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,
 	getTableKeyComboboxItems,
-	getExternalMatchingPropertiesItems,
 };

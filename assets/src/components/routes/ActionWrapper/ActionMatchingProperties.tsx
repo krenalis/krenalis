@@ -1,11 +1,10 @@
 import React, { useRef, useContext, useMemo } from 'react';
 import Section from '../../base/Section/Section';
 import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getExternalMatchingPropertiesItems, getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import ActionContext from '../../../context/ActionContext';
-import { flattenSchema } from '../../../lib/core/action';
+import { flattenSchema, TransformedMapping } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
-import { ComboboxItem } from '../../base/ComboBox/ComboBox.types';
 
 const ActionMatchingProperties = () => {
 	const { connection, action, setAction, actionType } = useContext(ActionContext);
@@ -14,21 +13,35 @@ const ActionMatchingProperties = () => {
 	const externalMatchingPropertyListRef = useRef(null);
 
 	const flatInputMatchingSchema = useMemo(() => flattenSchema(actionType.InputMatchingSchema), [actionType]);
-	const flatOutputMatchingSchema = useMemo(() => flattenSchema(actionType.OutputMatchingSchema), [actionType]);
+
+	const { externalMatchingPropertiesItems, flatExternalMatchingPropertiesSchema } = useMemo(() => {
+		if (action.ExportMode === 'CreateOnly' || action.ExportMode === 'CreateOrUpdate') {
+			const flatExternalMatchingSchema = flattenSchema(actionType.OutputMatchingSchema);
+			const flatOutputSchema = flattenSchema(actionType.OutputSchema);
+			const filteredSchema: TransformedMapping = {};
+			for (const [k, v] of Object.entries(flatExternalMatchingSchema)) {
+				const isInOutputSchema = flatOutputSchema[k] && flatOutputSchema[k].type === v.type;
+				if (isInOutputSchema) {
+					filteredSchema[k] = v;
+				}
+			}
+			return {
+				externalMatchingPropertiesItems: getSchemaComboboxItems(filteredSchema),
+				flatExternalMatchingPropertiesSchema: filteredSchema,
+			};
+		}
+		return {
+			externalMatchingPropertiesItems: getSchemaComboboxItems(actionType.OutputMatchingSchema),
+			flatExternalMatchingPropertiesSchema: flattenSchema(actionType.OutputMatchingSchema),
+		};
+	}, [action]);
 
 	const internalPropertyError = useMemo<string>(() => {
 		return checkIfPropertyExists(action.MatchingProperties.Internal, flatInputMatchingSchema);
 	}, [action]);
 
 	const externalPropertyError = useMemo<string>(() => {
-		return checkIfPropertyExists(action.MatchingProperties.External, flatOutputMatchingSchema);
-	}, [action]);
-
-	const externalMatchingPropertiesItems = useMemo<ComboboxItem[]>(() => {
-		if (action.ExportMode === 'CreateOnly' || action.ExportMode === 'CreateOrUpdate') {
-			return getExternalMatchingPropertiesItems(actionType.OutputMatchingSchema, actionType.OutputSchema);
-		}
-		return getSchemaComboboxItems(actionType.OutputMatchingSchema);
+		return checkIfPropertyExists(action.MatchingProperties.External, flatExternalMatchingPropertiesSchema);
 	}, [action]);
 
 	const onUpdateMatchingProperties = (e) => {

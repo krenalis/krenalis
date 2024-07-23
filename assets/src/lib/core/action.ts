@@ -523,7 +523,7 @@ const transformInActionToSet = async (
 			if (p?.type.name === fullExternalProperty.type.name) {
 				externalPropertyToAdd = p;
 			}
-			if (externalPropertyToAdd === null) {
+			if (externalPropertyToAdd == null) {
 				throw new Error(`External matching property "${external}" does not exist in the output schema`);
 			}
 			// TODO(@Andrea): after closing issue
