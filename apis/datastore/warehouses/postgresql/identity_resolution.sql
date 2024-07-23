@@ -39,7 +39,7 @@ AS $$
                 AND i1.__identity_id__ = i2.__identity_id__
                 AND i1.__is_anonymous__ = i2.__is_anonymous__
             )
-            OR {{ same_user }} -- This placeholder will be replaced by Meergo:
+            OR {{ same_user }} -- This placeholder will be replaced by Meergo.
         ) as same_user
     FROM
         _user_identities i1
@@ -107,9 +107,10 @@ AS $$
     END $clustering$;
 
     -- This placeholder will be replaced by Meergo:
-    {{ merge_users }};
+    {{ merge_identities_in_users }};
 
-    -- Update the GID of the user identities.
+    -- Update associations between identities and users by updating the GID of
+    -- the identities.
     UPDATE "_user_identities" SET "__gid__" = (
         SELECT "__id__"
         FROM "_users"
@@ -121,7 +122,8 @@ AS $$
     WHERE
         "_user_identities"."__pk__" = ANY ("_users"."__identities__");
 
-    -- Update the user GID of the events.
+    -- Update associations between events and users by updating the user ID of
+    -- the events.
     UPDATE "events" SET "user" = null;
     UPDATE "events" SET "user" = "_user_identities"."__gid__"
     FROM "_user_identities" WHERE

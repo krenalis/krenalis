@@ -50,7 +50,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 	}
 
 	// Drop (if exists) and create the aggregation function "array_cat_agg"
-	// which is used by the merge query.
+	// which is used by the identities merge query.
 	const aggregateFunction = `
 		DROP AGGREGATE IF EXISTS array_cat_agg(anycompatiblearray);
 		CREATE AGGREGATE array_cat_agg(anycompatiblearray) (
@@ -165,7 +165,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 
 	// Replace the placeholders in the Identity Resolution queries and run them.
 	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
-	query = strings.Replace(query, "{{ merge_users }}", mergeUsers.String(), 1)
+	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
