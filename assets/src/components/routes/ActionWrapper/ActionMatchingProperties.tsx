@@ -57,7 +57,7 @@ const ActionMatchingProperties = () => {
 					comboBoxListRef={internalMatchingPropertyListRef}
 					onInput={onUpdateMatchingProperties}
 					value={action.MatchingProperties!.Internal}
-					label='Golden record property'
+					label={`User's schema property`}
 					data-type='Internal'
 					className='action__transformation-input-property'
 					caret={true}
