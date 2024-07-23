@@ -23,6 +23,7 @@ var eventsMergeTable = warehouses.MergeTable{
 	Name:    "events",
 	Columns: eventsColumnsForMerge,
 	Keys: []warehouses.Column{
+		{Name: "source", Type: types.Int(32)},
 		{Name: "message_id", Type: types.Text()},
 	},
 }

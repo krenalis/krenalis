@@ -306,7 +306,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	b.WriteString("\" s\nON ")
 	for i, key := range table.Keys {
 		if i > 0 {
-			b.WriteByte(',')
+			b.WriteString(" AND ")
 		}
 		b.WriteString(`d."`)
 		b.WriteString(key.Name)
