@@ -587,6 +587,32 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			c.setEventAsReceived(event)
 		}
 		writeOK(w, origin)
+		if c.observer.hasEnrichedListener(connection.ID) {
+			for _, event := range evs.Batch {
+				c.enrichEvent(event)
+				ev := &events.Event{
+					Header:       event.header,
+					Id:           event.id,
+					AnonymousId:  event.AnonymousId,
+					Category:     event.Category,
+					Context:      event.Context,
+					Event:        event.Event,
+					GroupId:      event.GroupId,
+					Integrations: event.Integrations,
+					MessageId:    event.MessageId,
+					Name:         event.Name,
+					ReceivedAt:   event.receivedAt,
+					SentAt:       event.sentAt,
+					Timestamp:    event.timestamp,
+					Traits:       event.Traits,
+					Type:         event.Type,
+					UserId:       event.UserId,
+					PreviousId:   event.PreviousId,
+					Properties:   event.Properties,
+				}
+				c.observer.addEnrichedEvent(header.Connection, ev)
+			}
+		}
 		return nil
 	}
 

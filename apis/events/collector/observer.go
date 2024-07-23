@@ -471,6 +471,19 @@ func (observer *Observer) flushStats(t time.Time) error {
 	return err
 }
 
+// hasEnrichedListener checks if there is a listener for enriched events
+// received from the specified source connection.
+func (observer *Observer) hasEnrichedListener(source int) bool {
+	observer.RLock()
+	defer observer.RUnlock()
+	for _, listener := range observer.listeners.enriched {
+		if slices.Contains(listener.sources, source) {
+			return true
+		}
+	}
+	return false
+}
+
 // hoursFromEpoch returns the hours since January 1, 1970 UTC until time t.
 // t must be a UTC time.
 func hoursFromEpoch(t time.Time) int {
