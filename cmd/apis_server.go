@@ -156,6 +156,11 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		s.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			response, err := serve(w, r)
 			if err != nil {
+				select {
+				case <-r.Context().Done():
+					return
+				default:
+				}
 				if err, ok := err.(errors.ResponseWriterTo); ok {
 					_ = err.WriteTo(w)
 					return
