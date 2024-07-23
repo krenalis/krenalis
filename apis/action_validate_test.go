@@ -426,6 +426,27 @@ func Test_validateAction(t *testing.T) {
 			connectorHasUI:          false,
 			connectorHasSheets:      false,
 		},
+		{
+			name: "GOOD: Source/App/Users - input schema can contain meta properties",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "__id__", Type: types.Int(32)},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in __id__",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+		},
 
 		// Actions that are invalid.
 
@@ -1350,27 +1371,6 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.FileStorage,
 			err:                     "action with target 'Events' not allowed for destination FileStorage connections",
-		},
-		{
-			name: "GOOD: Source/App/Users - input schema can contain meta properties",
-			action: ActionToSet{
-				Name: "Import users",
-				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
-					{Name: "__id__", Type: types.Int(32)},
-				}),
-				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
-				}),
-				Transformation: Transformation{
-					Mapping: map[string]string{
-						"email_out": "email_in __id__",
-					},
-				},
-			},
-			target:                  state.Users,
-			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
 		},
 		{
 			name: "BAD: Source/App/Users - output schema cannot contain meta properties",
