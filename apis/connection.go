@@ -631,19 +631,20 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
-			"transformation_source, transformation_language, transformation_version, transformation_in_properties,\n" +
-			"transformation_out_properties, query, connector, path, sheet, compression, settings, table_name, table_key_property,\n" +
-			"identity_property, last_change_time_property, last_change_time_format, file_ordering_property_path," +
-			"export_mode, matching_properties_internal, matching_properties_external, export_on_duplicated_users)\n" +
+			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
+			"transformation_in_properties, transformation_out_properties, query, connector, path, sheet, compression,\n" +
+			"settings, table_name, table_key_property, identity_property, last_change_time_property,\n" +
+			"last_change_time_format, file_ordering_property_path, export_mode, matching_properties_internal,\n" +
+			"matching_properties_external, export_on_duplicated_users)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
-			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)"
+			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-			string(filter), mapping, function.Source, function.Language, function.Version, n.Transformation.InProperties,
-			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
-			n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
-			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
-			n.ExportOnDuplicatedUsers)
+			string(filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
+			n.Transformation.InProperties, n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet,
+			n.Compression, string(n.Settings), n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty,
+			n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
+			string(matchPropExternal), n.ExportOnDuplicatedUsers)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)
@@ -1490,6 +1491,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 				name += ".py"
 				action.Transformation.Function.Language = state.Python
 			}
+			action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 			action.Transformation.InProperties = types.PropertyNames(action.InSchema)
 			action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 			provider = newTempTransformerProvider(name, transformation.Function.Source, this.apis.transformerProvider)
@@ -2164,7 +2166,7 @@ func newTempTransformerProvider(name, source string, provider transformers.Provi
 	return &tempTransformerProvider{name, source, provider}
 }
 
-func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, records []transformers.Record) error {
+func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	version, err := tp.provider.Create(ctx, tp.name, tp.source)
 	if err != nil {
 		return nil
@@ -2177,7 +2179,7 @@ func (tp *tempTransformerProvider) Call(ctx context.Context, _, _ string, inSche
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, records)
+	return tp.provider.Call(ctx, tp.name, version, inSchema, outSchema, preserveJSON, records)
 }
 
 func (tp *tempTransformerProvider) Close(_ context.Context) error { panic("not supported") }

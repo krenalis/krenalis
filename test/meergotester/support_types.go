@@ -330,6 +330,7 @@ type Transformation struct {
 type TransformationFunction struct {
 	Source        string
 	Language      Language
+	PreserveJSON  bool
 	InProperties  []string
 	OutProperties []string
 }

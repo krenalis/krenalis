@@ -376,7 +376,6 @@ inherit the disabled style */
 	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 0;
 	color: var(--sl-color-neutral-500);
-	text-transform: capitalize;
 	font-size: 13px;
 	border-bottom: 1px solid var(--sl-color-neutral-200);
 	display: flex;
@@ -419,6 +418,85 @@ inherit the disabled style */
 .transformation-box__header-buttons sl-button::part(base) {
 	padding-left: 10px;
 	padding-right: 10px;
+}
+
+.transformation-box__header-right-buttons {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+}
+
+.transformation-box__function-settings {
+	position: relative;
+}
+
+.transformation-box__function-settings::part(panel) {
+	box-shadow: none;
+}
+
+.transformation-box__function-settings sl-button::part(base) {
+	border: 0;
+	background-color: transparent;
+}
+
+.transformation-box__function-settings-icon {
+	font-size: 18px;
+	position: relative;
+	top: 3px;
+}
+
+.transformation-box__function-settings-icon-dot {
+	font-size: 5px;
+	position: absolute;
+	right: 6px;
+	top: 6px;
+	opacity: 0;
+	color: var(--sl-color-success-600);
+	transition: opacity 0.3s;
+}
+
+.transformation-box__function-settings-icon-dot--active {
+	opacity: 1;
+}
+
+.transformation-box__preserve-json-description {
+	display: block;
+	font-size: 12px;
+	margin-top: 5px;
+	color: var(--sl-color-neutral-500);
+}
+
+.transformation-box__function-settings-menu {
+	position: absolute;
+	padding: 22px;
+	top: 17px;
+	right: -50px;
+	overflow: visible;
+	background-color: var(--bg-gray);
+	width: 300px;
+	border: 2px solid var(--sl-panel-border-color);
+}
+
+.transformation-box__function-settings-menu sl-switch::part(base) {
+	color: var(--sl-color-neutral-900);
+	align-items: start;
+	column-gap: 5px;
+}
+
+.transformation-box__function-settings-menu::before {
+	content: '';
+	width: 18px;
+	height: 18px;
+	display: block;
+	position: absolute;
+	right: 20px;
+	top: -11px;
+	background-color: var(--bg-primary);
+	transform: rotate(45deg);
+	border: 2px solid var(--sl-panel-border-color);
+	border-bottom: 0;
+	border-right: 0;
+	background-color: var(--bg-gray);
 }
 
 .transformation-box__fullscreen-button::part(base) {

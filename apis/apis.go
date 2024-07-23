@@ -552,8 +552,9 @@ type DataTransformation struct {
 // DataTransformationFunction represents transformation function passed to
 // (*APIs).TransformData and (*Connection).PreviewSendEvent methods.
 type DataTransformationFunction struct {
-	Source   string
-	Language Language
+	Source       string
+	Language     Language
+	PreserveJSON bool
 }
 
 // Purpose represents the purpose of a data transformation.
@@ -644,6 +645,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 			name += ".py"
 			action.Transformation.Function.Language = state.Python
 		}
+		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
 		action.Transformation.InProperties = types.PropertyNames(action.InSchema)
 		action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
 		provider = newTempTransformerProvider(name, transformation.Function.Source, apis.transformerProvider)

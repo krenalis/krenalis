@@ -165,7 +165,8 @@ var pythonDecoderOptions = decoderOptions{
 //     "2006-01-02T15:04:05.000Z07:00"
 //   - Year: a Number representing an integer
 //   - UUID: a String representing a UUID
-//   - JSON: a String representing a JSON value
+//   - JSON: if preserveJSON is false: true, false, a Number, a String, an
+//     array, or an object; Otherwise a String representing a JSON value
 //   - Inet: a String representing an IP number
 //   - Text: a String
 //   - Array: an array
@@ -185,13 +186,14 @@ var pythonDecoderOptions = decoderOptions{
 //   - Time: a String representing a time formatted as "15:04:05.999999"
 //   - Year: a Number representing an integer
 //   - UUID: a String representing a UUID
-//   - JSON: a String representing a JSON value
 //   - Inet: a String representing an IP number
+//   - JSON: if preserveJSON is false: true, false, a Number, a String, an
+//     array, or an object; Otherwise a String representing a JSON value
 //   - Text: a String
 //   - Array: an array
 //   - Object: an object
 //   - Map: an object
-func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language) error {
+func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language, preserveJSON bool) error {
 	if r == nil {
 		return errors.New("apis/transformers: r is nil")
 	}
@@ -239,7 +241,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		}
 		switch tok.String() {
 		case "value":
-			properties, err := d.unmarshal(schema, records[i].Purpose)
+			properties, err := d.unmarshal(schema, preserveJSON, records[i].Purpose)
 			if err != nil {
 				if err == errSyntaxInvalid {
 					return err
@@ -310,7 +312,14 @@ func (d decoder) readValue() (jsontext.Value, error) {
 }
 
 // unmarshal unmarshals a JSON value.
-func (d decoder) unmarshal(t types.Type, purpose Purpose) (_ any, err error) {
+func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ any, err error) {
+	if t.Kind() == types.JSONKind && !preserveJSON {
+		v, err := d.readValue()
+		if err != nil {
+			return nil, err
+		}
+		return json.RawMessage(slices.Clone(v)), nil
+	}
 	switch d.peekKind() {
 	case '[':
 		// Unmarshal an array.
@@ -345,7 +354,7 @@ func (d decoder) unmarshal(t types.Type, purpose Purpose) (_ any, err error) {
 			if i == maxElements {
 				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", maxElements, d.opts.terms["elements"]), "", d.opts.terms)
 			}
-			elem, err := d.unmarshal(t.Elem(), purpose)
+			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 			if err != nil {
 				if err, ok := err.(*functionValidationError); ok {
 					err.appendIndexToPath(i)
@@ -421,10 +430,13 @@ func (d decoder) unmarshal(t types.Type, purpose Purpose) (_ any, err error) {
 						return nil, err
 					}
 					if !p.Nullable {
-						return nil, newErrInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
+						if p.Type.Kind() != types.JSONKind || preserveJSON {
+							return nil, newErrInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
+						}
+						value = json.RawMessage("null")
 					}
 				} else {
-					value, err = d.unmarshal(p.Type, purpose)
+					value, err = d.unmarshal(p.Type, preserveJSON, purpose)
 					if err != nil {
 						if err, ok := err.(*functionValidationError); ok {
 							err.appendNameToPath(name)
@@ -474,7 +486,7 @@ func (d decoder) unmarshal(t types.Type, purpose Purpose) (_ any, err error) {
 				}
 				name := tok.String()
 				// Read the property's value.
-				value, err := d.unmarshal(t.Elem(), purpose)
+				value, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 				if err != nil {
 					return nil, err
 				}

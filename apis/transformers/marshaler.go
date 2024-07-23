@@ -8,6 +8,7 @@
 package transformers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,11 +32,11 @@ import (
 //
 // Unlike Unmarshal, Marshal does not validate the values against the schema.
 // The values must already be validated.
-func Marshal(b []byte, schema types.Type, records []Record, language state.Language) ([]byte, error) {
+func Marshal(b []byte, schema types.Type, records []Record, language state.Language, preserveJSON bool) ([]byte, error) {
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, errors.New("apis/transformers: schema is not an object")
 	}
-	var marshal func([]byte, types.Type, any) ([]byte, error)
+	var marshal func([]byte, types.Type, any, bool) ([]byte, error)
 	switch language {
 	case state.JavaScript:
 		marshal = marshalJavaScript
@@ -51,7 +52,7 @@ func Marshal(b []byte, schema types.Type, records []Record, language state.Langu
 			b = append(b, ',')
 		}
 		if schema.Valid() && len(v.Properties) > 0 {
-			b, err = marshal(b, schema, v.Properties)
+			b, err = marshal(b, schema, v.Properties, preserveJSON)
 			if err != nil {
 				return nil, err
 			}
@@ -64,24 +65,37 @@ func Marshal(b []byte, schema types.Type, records []Record, language state.Langu
 }
 
 // marshalJavaScript marshals v as a JavaScript value.
-func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
+func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, error) {
 	if v == nil {
 		return append(b, "null"...), nil
 	}
-	if t.Kind() == types.JSONKind {
-		var buf strings.Builder
-		enc := json.NewEncoder(&buf)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(v)
-		if err != nil {
-			return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
+	k := t.Kind()
+	if k == types.JSONKind {
+		if preserveJSON {
+			var buf strings.Builder
+			enc := json.NewEncoder(&buf)
+			enc.SetEscapeHTML(false)
+			err := enc.Encode(v)
+			if err != nil {
+				return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
+			}
+			s := buf.String()
+			s = s[:len(s)-1]
+			b = append(b, '\'')
+			b = jsStringEscape(b, s)
+			b = append(b, '\'')
+			return b, nil
 		}
-		s := buf.String()
-		s = s[:len(s)-1]
-		b = append(b, '\'')
-		b = jsStringEscape(b, s)
-		b = append(b, '\'')
-		return b, nil
+		if raw, ok := v.(json.RawMessage); ok {
+			dec := json.NewDecoder(bytes.NewReader(raw))
+			dec.UseNumber()
+			v = nil
+			err := dec.Decode(&v)
+			if err != nil {
+				return nil, fmt.Errorf("apis/transformers: cannot unmarshal JSON: %s", err)
+			}
+		}
+		return marshalJavaScriptFromJSON(b, v), nil
 	}
 	switch v := v.(type) {
 	case bool:
@@ -92,7 +106,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 		}
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
-		if t.Kind() == types.IntKind && t.BitSize() == 64 {
+		if k == types.IntKind && t.BitSize() == 64 {
 			b = append(b, 'n')
 		}
 	case uint:
@@ -133,17 +147,17 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 			if i > 0 {
 				b = append(b, ',')
 			}
-			b, err = marshalJavaScript(b, elem, v[i])
+			b, err = marshalJavaScript(b, elem, v[i], preserveJSON)
 			if err != nil {
 				return nil, err
 			}
 		}
 		b = append(b, ']')
 	case map[string]any:
-		b = append(b, '{')
 		var err error
+		b = append(b, '{')
 		i := 0
-		if t.Kind() == types.ObjectKind {
+		if k == types.ObjectKind {
 			for _, p := range t.Properties() {
 				e, ok := v[p.Name]
 				if !ok {
@@ -154,7 +168,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 				b = append(b, p.Name...)
 				b = append(b, ':')
-				b, err = marshalJavaScript(b, p.Type, e)
+				b, err = marshalJavaScript(b, p.Type, e, preserveJSON)
 				if err != nil {
 					return nil, err
 				}
@@ -169,7 +183,7 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, '\'')
 				b = jsStringEscape(b, k)
 				b = append(b, '\'', ':')
-				b, err = marshalJavaScript(b, elem, e)
+				b, err = marshalJavaScript(b, elem, e, preserveJSON)
 				if err != nil {
 					return nil, err
 				}
@@ -183,26 +197,88 @@ func marshalJavaScript(b []byte, t types.Type, v any) ([]byte, error) {
 	return b, nil
 }
 
+// marshalJavaScriptFromJSON marshals the JSON value v into b as JavaScript. v
+// can be nil or have type bool, int, float64 (not Nan, +Inf, and -Inf), string,
+// json.Number, []any, and map[string]any.
+func marshalJavaScriptFromJSON(b []byte, v any) []byte {
+	switch v := v.(type) {
+	case nil:
+		b = append(b, "null"...)
+	case bool:
+		if v {
+			b = append(b, "true"...)
+		} else {
+			b = append(b, "false"...)
+		}
+	case int:
+		b = strconv.AppendInt(b, int64(v), 10)
+	case float64:
+		b = strconv.AppendFloat(b, v, 'f', -1, 64)
+	case string:
+		b = append(b, '\'')
+		b = jsStringEscape(b, v)
+		b = append(b, '\'')
+	case json.Number:
+		b = append(b, v...)
+	case []any:
+		b = append(b, '[')
+		for i, e := range v {
+			if i > 0 {
+				b = append(b, ',')
+			}
+			b = marshalJavaScriptFromJSON(b, e)
+		}
+		b = append(b, ']')
+	case map[string]any:
+		b = append(b, '{')
+		i := 0
+		for k, e := range v {
+			if i > 0 {
+				b = append(b, ',')
+			}
+			b = append(b, '\'')
+			b = jsStringEscape(b, k)
+			b = append(b, '\'', ':')
+			b = marshalJavaScriptFromJSON(b, e)
+			i++
+		}
+		b = append(b, '}')
+	}
+	return b
+}
+
 // marshalPython marshals v as a Python value.
-func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
+func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, error) {
 	if v == nil {
 		return append(b, "None"...), nil
 	}
 	k := t.Kind()
 	if k == types.JSONKind {
-		var buf strings.Builder
-		enc := json.NewEncoder(&buf)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(v)
-		if err != nil {
-			return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
+		if preserveJSON {
+			var buf strings.Builder
+			enc := json.NewEncoder(&buf)
+			enc.SetEscapeHTML(false)
+			err := enc.Encode(v)
+			if err != nil {
+				return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
+			}
+			s := buf.String()
+			s = s[:len(s)-1]
+			b = append(b, '\'')
+			b = pyStringEscape(b, s)
+			b = append(b, '\'')
+			return b, nil
 		}
-		s := buf.String()
-		s = s[:len(s)-1]
-		b = append(b, '\'')
-		b = pyStringEscape(b, s)
-		b = append(b, '\'')
-		return b, nil
+		if raw, ok := v.(json.RawMessage); ok {
+			dec := json.NewDecoder(bytes.NewReader(raw))
+			dec.UseNumber()
+			v = nil
+			err := dec.Decode(&v)
+			if err != nil {
+				return nil, fmt.Errorf("apis/transformers: cannot unmarshal JSON: %s", err)
+			}
+		}
+		return marshalPythonFromJSON(b, v), nil
 	}
 	switch v := v.(type) {
 	case bool:
@@ -260,16 +336,17 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, ',')
 			}
 
-			b, err = marshalPython(b, elem, v[i])
+			b, err = marshalPython(b, elem, v[i], preserveJSON)
 			if err != nil {
 				return nil, err
 			}
 		}
 		b = append(b, ']')
 	case map[string]any:
+		var err error
 		b = append(b, '{')
 		i := 0
-		if t.Kind() == types.ObjectKind {
+		if k == types.ObjectKind {
 			for _, p := range t.Properties() {
 				e, ok := v[p.Name]
 				if !ok {
@@ -281,8 +358,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, '\'')
 				b = append(b, p.Name...)
 				b = append(b, '\'', ':')
-				var err error
-				b, err = marshalPython(b, p.Type, e)
+				b, err = marshalPython(b, p.Type, e, preserveJSON)
 				if err != nil {
 					return nil, err
 				}
@@ -297,8 +373,7 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, '\'')
 				b = pyStringEscape(b, k)
 				b = append(b, '\'', ':')
-				var err error
-				b, err = marshalPython(b, elem, e)
+				b, err = marshalPython(b, elem, e, preserveJSON)
 				if err != nil {
 					return nil, err
 				}
@@ -310,6 +385,56 @@ func marshalPython(b []byte, t types.Type, v any) ([]byte, error) {
 		return nil, fmt.Errorf("apis/transformers: unexpected type %s", k)
 	}
 	return b, nil
+}
+
+// marshalPythonFromJSON marshals the JSON value v into b as Python. v can be
+// nil or have type bool, int, float64 (not Nan, +Inf, and -Inf), string,
+// json.Number, []any, and map[string]any.
+func marshalPythonFromJSON(b []byte, v any) []byte {
+	switch v := v.(type) {
+	case nil:
+		b = append(b, "None"...)
+	case bool:
+		if v {
+			b = append(b, "True"...)
+		} else {
+			b = append(b, "False"...)
+		}
+	case int:
+		b = strconv.AppendInt(b, int64(v), 10)
+	case float64:
+		b = strconv.AppendFloat(b, v, 'f', -1, 64)
+	case string:
+		b = append(b, '\'')
+		b = pyStringEscape(b, v)
+		b = append(b, '\'')
+	case json.Number:
+		b = append(b, v...)
+	case []any:
+		b = append(b, '[')
+		for i, e := range v {
+			if i > 0 {
+				b = append(b, ',')
+			}
+			b = marshalPythonFromJSON(b, e)
+		}
+		b = append(b, ']')
+	case map[string]any:
+		b = append(b, '{')
+		i := 0
+		for k, e := range v {
+			if i > 0 {
+				b = append(b, ',')
+			}
+			b = append(b, '\'')
+			b = pyStringEscape(b, k)
+			b = append(b, '\'', ':')
+			b = marshalPythonFromJSON(b, e)
+			i++
+		}
+		b = append(b, '}')
+	}
+	return b
 }
 
 // jsStringEscapes contains the runes that must be escaped when placed within

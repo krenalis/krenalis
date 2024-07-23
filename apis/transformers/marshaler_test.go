@@ -238,18 +238,32 @@ var mapArrayValue = map[string]any{"MapArray": map[string]any{"x": []any{"boo", 
 
 func Test_MarshalJavaScript(t *testing.T) {
 	tests := []struct {
-		name    string
-		schema  types.Type
-		records []Record
-		result  []byte
-		results [][]byte
-		err     error
+		name         string
+		schema       types.Type
+		preserveJSON bool
+		records      []Record
+		result       []byte
+		results      [][]byte
+		err          error
 	}{
 		{
-			name:    "Types",
-			schema:  schema,
-			records: records,
-			result:  []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+			name:         "Types",
+			schema:       schema,
+			preserveJSON: false,
+			records:      records,
+			results: [][]byte{
+				[]byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:{'foo':5,'boo':true},JSON_bool:true,JSON_string:'foo \u0026 boo \\u',JSON_float64:23.871,JSON_Number:85802.7305,JSON_slice:['foo',3,true],JSON_map:{'a':1,'b':2},JSON_null:null,Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:{'boo':true,'foo':5},JSON_bool:true,JSON_string:'foo \u0026 boo \\u',JSON_float64:23.871,JSON_Number:85802.7305,JSON_slice:['foo',3,true],JSON_map:{'a':1,'b':2},JSON_null:null,Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:{'foo':5,'boo':true},JSON_bool:true,JSON_string:'foo \u0026 boo \\u',JSON_float64:23.871,JSON_Number:85802.7305,JSON_slice:['foo',3,true],JSON_map:{'b':2,'a':1},JSON_null:null,Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+				[]byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:{'boo':true,'foo':5},JSON_bool:true,JSON_string:'foo \u0026 boo \\u',JSON_float64:23.871,JSON_Number:85802.7305,JSON_slice:['foo',3,true],JSON_map:{'b':2,'a':1},JSON_null:null,Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
+			},
+		},
+		{
+			name:         "Types",
+			schema:       schema,
+			preserveJSON: true,
+			records:      records,
+			result:       []byte(`[{Boolean:true,Int8:-12,Int16:8023,Int24:-2880217,Int32:1307298102,Int64:927041163082605n,Uint8:12,Uint16:8023,Uint24:2880217,Uint32:1307298102,Uint64:927041163082605n,Float32:57.16038,Float64:18372.36240184391,Decimal:'1752.064',DateTime:new Date(1697535265836),Date:new Date(1697500800000),Time:new Date(34465836),Year:2023,UUID:'550e8400-e29b-41d4-a716-446655440000',JSON_RawMessage:'{\"foo\":5,\"boo\":true}',JSON_bool:'true',JSON_string:'\"foo \u0026 boo \\\\u\"',JSON_float64:'23.871',JSON_Number:'85802.7305',JSON_slice:'[\"foo\",3,true]',JSON_map:'{\"a\":1,\"b\":2}',JSON_null:'null',Inet:'192.158.1.38',Text:'some text',Array:['foo','boo'],Object:{a:9,b:false},Map:{}}]`),
 		},
 		{
 			name:    "Map",
@@ -348,10 +362,40 @@ func Test_MarshalJavaScript(t *testing.T) {
 			},
 			result: []byte(`[{},{a:'foo'},{a:'foo',b:null},{a:'foo',b:{y:45}},{a:'foo',b:{x:12,y:45}}]`),
 		},
+		{
+			name: "JSON null - not preserve",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.JSON(), Nullable: false},
+				{Name: "b", Type: types.JSON(), Nullable: true},
+				{Name: "c", Type: types.JSON(), Nullable: true},
+			}),
+			preserveJSON: false,
+			records: []Record{{Properties: map[string]any{
+				"a": json.RawMessage("null"),
+				"b": nil,
+				"c": json.RawMessage("null"),
+			}}},
+			result: []byte(`[{a:null,b:null,c:null}]`),
+		},
+		{
+			name: "JSON null - preserve",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.JSON(), Nullable: false},
+				{Name: "b", Type: types.JSON(), Nullable: true},
+				{Name: "c", Type: types.JSON(), Nullable: true},
+			}),
+			preserveJSON: true,
+			records: []Record{{Properties: map[string]any{
+				"a": json.RawMessage("null"),
+				"b": nil,
+				"c": json.RawMessage("null"),
+			}}},
+			result: []byte(`[{a:'null',b:null,c:'null'}]`),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(nil, test.schema, test.records, state.JavaScript)
+			got, err := Marshal(nil, test.schema, test.records, state.JavaScript, test.preserveJSON)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Marshal JavaScript: expected no error, got error %s", err)
@@ -385,18 +429,32 @@ func Test_MarshalJavaScript(t *testing.T) {
 
 func Test_MarshalPython(t *testing.T) {
 	tests := []struct {
-		name    string
-		schema  types.Type
-		records []Record
-		result  []byte
-		results [][]byte
-		err     error
+		name         string
+		schema       types.Type
+		preserveJSON bool
+		records      []Record
+		result       []byte
+		results      [][]byte
+		err          error
 	}{
 		{
-			name:    "Types",
-			schema:  schema,
-			records: records,
-			result:  []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+			name:         "Types - not preserve JSON",
+			schema:       schema,
+			preserveJSON: false,
+			records:      records,
+			results: [][]byte{
+				[]byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':{'foo':5,'boo':True},'JSON_bool':True,'JSON_string':'foo \x26 boo \\u','JSON_float64':23.871,'JSON_Number':85802.7305,'JSON_slice':['foo',3,True],'JSON_map':{'a':1,'b':2},'JSON_null':None,'Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':{'boo':True,'foo':5},'JSON_bool':True,'JSON_string':'foo \x26 boo \\u','JSON_float64':23.871,'JSON_Number':85802.7305,'JSON_slice':['foo',3,True],'JSON_map':{'a':1,'b':2},'JSON_null':None,'Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':{'foo':5,'boo':True},'JSON_bool':True,'JSON_string':'foo \x26 boo \\u','JSON_float64':23.871,'JSON_Number':85802.7305,'JSON_slice':['foo',3,True],'JSON_map':{'b':2,'a':1},'JSON_null':None,'Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+				[]byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':{'boo':True,'foo':5},'JSON_bool':True,'JSON_string':'foo \x26 boo \\u','JSON_float64':23.871,'JSON_Number':85802.7305,'JSON_slice':['foo',3,True],'JSON_map':{'b':2,'a':1},'JSON_null':None,'Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
+			},
+		},
+		{
+			name:         "Types - preserve JSON",
+			schema:       schema,
+			preserveJSON: true,
+			records:      records,
+			result:       []byte(`[{'Boolean':True,'Int8':-12,'Int16':8023,'Int24':-2880217,'Int32':1307298102,'Int64':927041163082605,'Uint8':12,'Uint16':8023,'Uint24':2880217,'Uint32':1307298102,'Uint64':927041163082605,'Float32':57.16038,'Float64':18372.36240184391,'Decimal':Decimal('1752.064'),'DateTime':datetime(2023,10,17,9,34,25,836042),'Date':date(2023,10,17),'Time':time(9,34,25,836042),'Year':2023,'UUID':UUID('550e8400-e29b-41d4-a716-446655440000'),'JSON_RawMessage':'{\"foo\":5,\"boo\":true}','JSON_bool':'true','JSON_string':'\"foo \x26 boo \\\\u\"','JSON_float64':'23.871','JSON_Number':'85802.7305','JSON_slice':'[\"foo\",3,true]','JSON_map':'{\"a\":1,\"b\":2}','JSON_null':'null','Inet':'192.158.1.38','Text':'some text','Array':['foo','boo'],'Object':{'a':9,'b':False},'Map':{}}]`),
 		},
 		{
 			name:    "Map",
@@ -495,10 +553,40 @@ func Test_MarshalPython(t *testing.T) {
 			},
 			result: []byte(`[{},{'a':'foo'},{'a':'foo','b':None},{'a':'foo','b':{'y':45}},{'a':'foo','b':{'x':12,'y':45}}]`),
 		},
+		{
+			name: "JSON null - not preserve",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.JSON(), Nullable: false},
+				{Name: "b", Type: types.JSON(), Nullable: true},
+				{Name: "c", Type: types.JSON(), Nullable: true},
+			}),
+			preserveJSON: false,
+			records: []Record{{Properties: map[string]any{
+				"a": json.RawMessage("null"),
+				"b": nil,
+				"c": json.RawMessage("null"),
+			}}},
+			result: []byte(`[{'a':None,'b':None,'c':None}]`),
+		},
+		{
+			name: "JSON null - preserve",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.JSON(), Nullable: false},
+				{Name: "b", Type: types.JSON(), Nullable: true},
+				{Name: "c", Type: types.JSON(), Nullable: true},
+			}),
+			preserveJSON: true,
+			records: []Record{{Properties: map[string]any{
+				"a": json.RawMessage("null"),
+				"b": nil,
+				"c": json.RawMessage("null"),
+			}}},
+			result: []byte(`[{'a':'null','b':None,'c':'null'}]`),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(nil, test.schema, test.records, state.Python)
+			got, err := Marshal(nil, test.schema, test.records, state.Python, test.preserveJSON)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Marshal Python: expected no error, got error %s", err)

@@ -1157,9 +1157,10 @@ type Transformation struct {
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source   string
-	Language Language
-	Version  string
+	Source       string
+	Language     Language
+	Version      string
+	PreserveJSON bool
 }
 
 // ExportMode represents one of the three export modes.

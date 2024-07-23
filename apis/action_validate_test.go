@@ -2186,7 +2186,7 @@ type testProvider struct{}
 
 var _ transformers.Provider = testProvider{}
 
-func (testProvider) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []transformers.Record) error {
+func (testProvider) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	panic("not implemented")
 }
 func (testProvider) Close(ctx context.Context) error { panic("not implemented") }

@@ -72,6 +72,7 @@ type Language string
 type TransformationFunction struct {
 	Source        string
 	Language      Language
+	PreserveJSON  bool
 	InProperties  []string
 	OutProperties []string
 }
@@ -134,6 +135,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 		this.Transformation.Function = &TransformationFunction{
 			Source:        function.Source,
 			Language:      Language(function.Language.String()),
+			PreserveJSON:  function.PreserveJSON,
 			InProperties:  slices.Clone(action.Transformation.InProperties),
 			OutProperties: slices.Clone(action.Transformation.OutProperties),
 		}
@@ -553,18 +555,18 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
-			"transformation_version = $9, transformation_in_properties = $10, transformation_out_properties = $11,"+
-			"query = $12, connector = $13, path = $14, sheet = $15, compression = $16, settings = $17,"+
-			"table_name = $18, table_key_property = $19, identity_property = $20, user_cursor = CASE WHEN $21 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
-			"last_change_time_property = $22, last_change_time_format = $23, file_ordering_property_path = $24,"+
-			"export_mode = $25, matching_properties_internal = $26, matching_properties_external = $27,"+
-			"export_on_duplicated_users = $28\nWHERE id = $29",
+			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_properties = $11, "+
+			"transformation_out_properties = $12, query = $13, connector = $14, path = $15, sheet = $16, "+
+			"compression = $17, settings = $18, table_name = $19, table_key_property = $20, identity_property = $21, "+
+			"user_cursor = CASE WHEN $22 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
+			"last_change_time_property = $23, last_change_time_format = $24, file_ordering_property_path = $25,"+
+			"export_mode = $26, matching_properties_internal = $27, matching_properties_external = $28,"+
+			"export_on_duplicated_users = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
-			function.Source, function.Language, function.Version, n.Transformation.InProperties,
-			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression,
-			string(n.Settings), n.TableName, n.TableKeyProperty, n.IdentityProperty, n.ResetUserCursor,
-			n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath,
-			n.ExportMode, string(matchPropInternal), string(matchPropExternal),
+			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InProperties,
+			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
+			n.TableKeyProperty, n.IdentityProperty, n.ResetUserCursor, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
 			n.ExportOnDuplicatedUsers, n.ID,
 		)
 		if err != nil {
@@ -1028,6 +1030,7 @@ func toStateTransformation(transformation Transformation) state.Transformation {
 		case "Python":
 			tr.Function.Language = state.Python
 		}
+		tr.Function.PreserveJSON = function.PreserveJSON
 		tr.InProperties = function.InProperties
 		tr.OutProperties = function.OutProperties
 	} else {

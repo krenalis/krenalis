@@ -213,7 +213,6 @@ func Test_Unmarshal(t *testing.T) {
 				"UUID":                "550e8400-e29b-41d4-a716-446655440000",
 				"JSON":                json.RawMessage(`{"foo":5,"boo":true}`),
 				"JSON_null":           json.RawMessage(`null`),
-				"JSON_nil":            nil,
 				"Inet":                "192.158.1.38",
 				"Text":                "some text",
 				"Text_nil":            nil,
@@ -230,6 +229,7 @@ func Test_Unmarshal(t *testing.T) {
 	tests := []struct {
 		language     state.Language
 		schema       types.Type
+		preserveJSON bool
 		timeTruncate time.Duration
 		data         string
 		records      []Record
@@ -239,16 +239,48 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language:     state.JavaScript,
 			schema:       schema,
+			preserveJSON: false,
 			timeTruncate: time.Millisecond,
-			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]`,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]`,
+			records:      records,
+		},
+		{
+			language:     state.JavaScript,
+			schema:       schema,
+			preserveJSON: true,
+			timeTruncate: time.Millisecond,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]`,
 			records:      records,
 		},
 		{
 			language:     state.Python,
 			schema:       schema,
+			preserveJSON: false,
 			timeTruncate: time.Microsecond,
-			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","JSON_nil":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]`,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]`,
 			records:      records,
+		},
+		{
+			language:     state.Python,
+			schema:       schema,
+			preserveJSON: true,
+			timeTruncate: time.Microsecond,
+			data:         `[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]`,
+			records:      records,
+		},
+		{
+			language:     state.JavaScript,
+			schema:       schema,
+			preserveJSON: true,
+			data:         `[{"value":{"JSON_nil":null}}]`,
+			records:      []Record{{Properties: map[string]any{"JSON_nil": nil}}},
+		},
+		{
+			language:     state.Python,
+			schema:       schema,
+			preserveJSON: true,
+			data:         `[{"value":{"JSON_nil":null}}]`,
+			records:      []Record{{Properties: map[string]any{"JSON_nil": nil}}},
 		},
 		{
 			language: state.JavaScript,
@@ -434,7 +466,7 @@ func Test_Unmarshal(t *testing.T) {
 			for i, record := range test.records {
 				records[i].Purpose = record.Purpose
 			}
-			err := Unmarshal(b, records, test.schema, test.language)
+			err := Unmarshal(b, records, test.schema, test.language, test.preserveJSON)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Unmarshal: expected no error, got error %s", err)

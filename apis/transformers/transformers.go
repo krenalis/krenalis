@@ -152,7 +152,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 	// Transform using the function.
 	funcName := transformationFunctionName(t.action, t.function.Language)
-	err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, records)
+	err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, t.function.PreserveJSON, records)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
 			return FunctionExecutionError(fmt.Sprintf("%s: %s ", t.function.Language.String(), err))

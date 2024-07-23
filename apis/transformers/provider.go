@@ -43,7 +43,7 @@ type Provider interface {
 	//
 	// It returns the ErrFunctionNotExist error if the function does not exist, and
 	// a FunctionExecutionError if the execution fails.
-	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []Record) error
+	Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
 
 	// Close closes the function.
 	Close(ctx context.Context) error

@@ -118,14 +118,13 @@ func TestIdentityResolution2(t *testing.T) {
 				// properties that are "null".
 				Function: &meergotester.TransformationFunction{
 					Source: strings.Join([]string{
-						// TODO(Gianluca): if the proposal
-						// https://github.com/meergo/meergo/issues/877 is
-						// implemented, remove the call to 'json.loads'.
+						// TODO(Gianluca): remove the call to 'json.loads'.
 						`import json`,
 						`def transform(user: dict) -> dict:`,
 						`    return {k: json.loads(v) for k, v in user.items() if v != "null"}`,
 					}, "\n"),
 					Language:      "Python",
+					PreserveJSON:  true,
 					InProperties:  []string{"email", "name", "phone_numbers", "total_orders"},
 					OutProperties: []string{"email", "name", "phone_numbers", "total_orders"},
 				},

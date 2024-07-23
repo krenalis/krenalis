@@ -473,6 +473,7 @@ const transformInActionToSet = async (
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
+			PreserveJSON: action.Transformation.Function.PreserveJSON,
 			InProperties: inSchema.properties === null ? [] : inSchema.properties.map((p) => p.name),
 			OutProperties: outSchema.properties!.map((p) => p.name),
 		};

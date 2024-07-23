@@ -48,7 +48,7 @@ func New(settings Settings) transformers.Provider {
 //
 // It returns the ErrFunctionNotExist error if the function does not exist, and
 // a FunctionExecutionError if the execution fails.
-func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []transformers.Record) error {
+func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	name, ext, err := splitName(name)
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		return err
 	}
 	payload := make([]byte, 0, 1024)
-	payload, err = transformers.Marshal(payload, inSchema, records, language)
+	payload, err = transformers.Marshal(payload, inSchema, records, language, preserveJSON)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	if err != nil {
 		return transformers.FunctionExecutionError(stderr.String())
 	}
-	return transformers.Unmarshal(&stdout, records, outSchema, language)
+	return transformers.Unmarshal(&stdout, records, outSchema, language, preserveJSON)
 }
 
 // Close closes the function.

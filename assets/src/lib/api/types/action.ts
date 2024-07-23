@@ -20,6 +20,7 @@ interface Transformation {
 interface TransformationFunction {
 	Source: string;
 	Language: string;
+	PreserveJSON: boolean;
 	InProperties: string[];
 	OutProperties: string[];
 }

@@ -31,6 +31,9 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
@@ -185,6 +188,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					getTransformationFunctionParameterName(connection, actionType),
 				),
 				Language: selectedLanguage,
+				PreserveJSON: false,
 				InProperties: [],
 				OutProperties: [],
 			};
@@ -242,6 +246,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		a.Transformation.Function = {
 			Source: source,
 			Language: selectedLanguage,
+			PreserveJSON: a.Transformation.Function.PreserveJSON,
 			InProperties: [],
 			OutProperties: [],
 		};
@@ -578,7 +583,7 @@ const TransformationBox = ({
 	isTransformationFunctionSupported,
 }: TransformationBoxProps) => {
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
-	const [hasFullscreenText, setHasFullscreenText] = useState<boolean>();
+	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
 	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
 
 	const pendingMode = useRef<string>();
@@ -601,10 +606,10 @@ const TransformationBox = ({
 			}, 100);
 			setTimeout(() => {
 				setIsFullscreenAnimating(false);
-				setHasFullscreenText(true);
-			}, 250);
+				setIsCompletelyOpen(true);
+			}, 300);
 		} else {
-			setHasFullscreenText(false);
+			setIsCompletelyOpen(false);
 		}
 	}, [isFullscreenTransformationOpen]);
 
@@ -628,6 +633,7 @@ const TransformationBox = ({
 						getTransformationFunctionParameterName(connection, actionType),
 					),
 					Language: pendingMode.current,
+					PreserveJSON: false,
 					InProperties: [],
 					OutProperties: [],
 				};
@@ -654,6 +660,13 @@ const TransformationBox = ({
 		} else {
 			onChangeMode(0);
 		}
+	};
+
+	const onFunctionPreserveJSONSwitch = (e) => {
+		e.preventDefault();
+		const a = { ...action };
+		a.Transformation.Function.PreserveJSON = !a.Transformation.Function.PreserveJSON;
+		setAction(a);
 	};
 
 	let body: ReactNode;
@@ -753,7 +766,7 @@ const TransformationBox = ({
 		>
 			<div className='transformation-box__header'>
 				<div className='transformation-box__header-title'>
-					{hasFullscreenText || !isTransformationFunctionSupported || transformationLanguages.length == 0 ? (
+					{isCompletelyOpen || !isTransformationFunctionSupported || transformationLanguages.length == 0 ? (
 						<>
 							<span className='transformation-box__header-icon'>
 								{mode === 'mappings' ? <SlIcon name='shuffle' /> : getLanguageLogo(selectedLanguage)}
@@ -791,23 +804,49 @@ const TransformationBox = ({
 						</SlButtonGroup>
 					)}
 				</div>
-				<SlButton
-					className='transformation-box__fullscreen-button'
-					variant='primary'
-					onClick={
-						isFullscreenTransformationOpen
-							? onCloseFullscreenTransformation
-							: onOpenFullscreenTransformation
-					}
-					disabled={isTransformationDisabled}
-				>
-					{hasFullscreenText ? (
-						<SlIcon name='arrows-angle-contract' />
-					) : (
-						<SlIcon name='arrows-angle-expand' />
+				<div className='transformation-box__header-right-buttons'>
+					{mode === 'transformation' && (
+						<SlDropdown className='transformation-box__function-settings'>
+							<SlButton slot='trigger' circle>
+								<SlIcon className='transformation-box__function-settings-icon' name='gear' />
+								<SlIcon
+									className={`transformation-box__function-settings-icon-dot${action.Transformation.Function.PreserveJSON ? ' transformation-box__function-settings-icon-dot--active' : ''}`}
+									name='circle-fill'
+								></SlIcon>
+							</SlButton>
+							<SlMenu className='transformation-box__function-settings-menu'>
+								<SlSwitch
+									size='small'
+									checked={action.Transformation.Function.PreserveJSON}
+									onClick={onFunctionPreserveJSONSwitch}
+								>
+									Preserve JSON
+									<span className='transformation-box__preserve-json-description'>
+										Pass and receive JSON values as strings in their original format, without
+										decoding or encoding them.
+									</span>
+								</SlSwitch>
+							</SlMenu>
+						</SlDropdown>
 					)}
-					{hasFullscreenText ? 'Exit testing mode' : 'Testing mode'}
-				</SlButton>
+					<SlButton
+						className='transformation-box__fullscreen-button'
+						variant='primary'
+						onClick={
+							isFullscreenTransformationOpen
+								? onCloseFullscreenTransformation
+								: onOpenFullscreenTransformation
+						}
+						disabled={isTransformationDisabled}
+					>
+						{isCompletelyOpen ? (
+							<SlIcon name='arrows-angle-contract' />
+						) : (
+							<SlIcon name='arrows-angle-expand' />
+						)}
+						{isCompletelyOpen ? 'Exit testing mode' : 'Testing mode'}
+					</SlButton>
+				</div>
 			</div>
 			<div className='transformation-box__body'>{body}</div>
 			<AlertDialog

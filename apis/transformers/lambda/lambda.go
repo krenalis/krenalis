@@ -68,7 +68,7 @@ func New(settings Settings) transformers.Provider {
 //
 // It returns the ErrFunctionNotExist error if the function does not exist, and
 // a FunctionExecutionError if the execution fails.
-func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, records []transformers.Record) error {
+func (fn *function) Call(ctx context.Context, name, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	if !transformers.ValidFunctionName(name) {
 		return errors.New("function name is not valid")
@@ -92,7 +92,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
 	payload = append(payload, '"')
-	payload, err = transformers.Marshal(payload, inSchema, records, language)
+	payload, err = transformers.Marshal(payload, inSchema, records, language, preserveJSON)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		}
 		r = strings.NewReader(s)
 	}
-	return transformers.Unmarshal(r, records, outSchema, language)
+	return transformers.Unmarshal(r, records, outSchema, language, preserveJSON)
 }
 
 // Close closes the function.
