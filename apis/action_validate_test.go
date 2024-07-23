@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/types"
@@ -253,9 +254,9 @@ func Test_validateAction(t *testing.T) {
 			name: "GOOD: Destination/App/Users - with mapping and filters",
 			action: ActionToSet{
 				Name: "Export users",
-				Filter: &Filter{
+				Filter: &filters.Filter{
 					Logical: "all",
-					Conditions: []FilterCondition{
+					Conditions: []filters.Condition{
 						{
 							Property: "email_in",
 							Operator: "is not",
@@ -980,9 +981,9 @@ func Test_validateAction(t *testing.T) {
 			name: "BAD: Source/App/Users - filters are not allowed",
 			action: ActionToSet{
 				Name: "Import users",
-				Filter: &Filter{
+				Filter: &filters.Filter{
 					Logical: "all",
-					Conditions: []FilterCondition{
+					Conditions: []filters.Condition{
 						{
 							Property: "email_in",
 							Operator: "is",
@@ -1884,9 +1885,9 @@ func Test_validateAction(t *testing.T) {
 			name: "BAD: Destination/App/Users - filter refers to a property not in input schema",
 			action: ActionToSet{
 				Name: "Export users",
-				Filter: &Filter{
+				Filter: &filters.Filter{
 					Logical: "all",
-					Conditions: []FilterCondition{
+					Conditions: []filters.Condition{
 						{
 							Property: "__id__",
 							Operator: "is not",
@@ -1921,9 +1922,9 @@ func Test_validateAction(t *testing.T) {
 			name: "BAD: Destination/App/Users - filter refers to a meta property in input schema",
 			action: ActionToSet{
 				Name: "Export users",
-				Filter: &Filter{
+				Filter: &filters.Filter{
 					Logical: "all",
-					Conditions: []FilterCondition{
+					Conditions: []filters.Condition{
 						{
 							Property: "__id__",
 							Operator: "is not",

@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"net/http"
 	"slices"
 	"sort"
@@ -27,7 +28,9 @@ import (
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/events/collector"
+	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
@@ -351,55 +354,81 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	return n.ID, nil
 }
 
-// AddEventListener adds an event listener to the workspace that listens to
-// collected events and returns its identifier.
+// AddCollectedEventListener adds an event listener to the workspace that
+// listens to collected events and returns its identifier.
 //
 // size specifies the maximum number of observed events to be returned by a
-// subsequent call to the ListenedEvents method, and must be in range [1, 1000].
+// subsequent call to the ListenedEvents method and must be in the range
+// [1, 1000].
 //
-// source represents the identifier of a source, whether it's a mobile, server,
-// or website connection. If source is non-zero, only events originating from
-// this source will be observed.
+// sources contains the identifiers of the sources, whether they are mobile,
+// server, or website connections. If sources is non-nil, only events
+// originating from these sources will be observed.
 //
 // onlyValid determines whether only valid events should be observed.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - ConnectionNotExist, if the source connection does not exist.
+//
+//   - ConnectionNotExist, if a source connection does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) AddEventListener(size, source int, onlyValid bool) (string, error) {
-
+func (this *Workspace) AddCollectedEventListener(size int, sources []int, onlyValid bool) (string, error) {
 	this.apis.mustBeOpen()
-
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
 	}
-	if source < 0 || source > maxInt32 {
-		return "", errors.BadRequest("source identifier %d is not valid", source)
+	err := this.validateEventListenerSources(sources)
+	if err != nil {
+		return "", errors.BadRequest("%s", err)
 	}
-
-	if source > 0 {
-		c, ok := this.workspace.Connection(source)
-		if !ok {
-			return "", errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", source)
-		}
-		switch c.Connector().Type {
-		case state.Mobile, state.Server, state.Website:
-		default:
-			return "", errors.BadRequest("connection %d is not a mobile, server or website", source)
-		}
-		if c.Role != state.Source {
-			return "", errors.BadRequest("connection %d is not a source", source)
-		}
-	}
-
-	id, err := this.apis.events.observer.AddListener(size, source, onlyValid)
+	id, err := this.apis.events.observer.AddCollectedListener(size, sources, onlyValid)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
 		}
 		return "", err
 	}
+	return id, nil
+}
 
+// AddEnrichedEventListener adds an event listener to the workspace that listens
+// to enriched events and returns its identifier.
+//
+// size specifies the maximum number of observed events to be returned by a
+// subsequent call to the ListenedEvents method and must be in the range
+// [1, 1000].
+//
+// sources contains the identifiers of the sources, whether they are mobile,
+// server, or website connections. If sources is non-nil, only events
+// originating from these sources will be observed.
+//
+// If filter is non-nil, only events that satisfy the filter will be observed.
+//
+// It returns an errors.UnprocessableError with code:
+//
+//   - ConnectionNotExist, if a source connection does not exist.
+//   - TooManyListeners, if there are already too many listeners.
+func (this *Workspace) AddEnrichedEventListener(size int, sources []int, filter *filters.Filter) (string, error) {
+	this.apis.mustBeOpen()
+	if size < 1 || size > maxEventsListenedTo {
+		return "", errors.BadRequest("size %d is not valid", size)
+	}
+	err := this.validateEventListenerSources(sources)
+	if err != nil {
+		return "", errors.BadRequest("%s", err)
+	}
+	if filter != nil {
+		_, err := filters.Validate(filter, events.Schema)
+		if err != nil {
+			return "", errors.BadRequest("filter is not valid: %w", err)
+		}
+	}
+	id, err := this.apis.events.observer.AddEnrichedListener(size, sources, filter)
+	if err != nil {
+		if err == collector.ErrTooManyListeners {
+			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
+		}
+		return "", err
+	}
 	return id, nil
 }
 
@@ -804,10 +833,12 @@ type ObservedEventHeader struct {
 	Headers    http.Header `json:"headers"`
 }
 
-// ListenedEvents returns the events listen to by the specified listener and
-// the number of discarded events.
+// ListenedEvents returns the events listened to the specified listener and the
+// number of discarded events. It returns collected events if the listener
+// listens to collected events, and returns enriched events if the listener
+// listens to enriched events.
 //
-// It returns an errors.NotFoundError error, if the listener does not exist.
+// If the listener does not exist, the function returns an errors.NotFoundError.
 func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, error) {
 	this.apis.mustBeOpen()
 	observedEvents, discarded, err := this.apis.events.observer.Events(listener)
@@ -1210,7 +1241,7 @@ func (this *Workspace) User(id uuid.UUID) (*User, error) {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]byte, types.Type, int, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, filter *filters.Filter, order string, orderDesc bool, first, limit int) ([]byte, types.Type, int, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1243,7 +1274,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	var where *datastore.Where
 	if filter != nil {
-		_, err := validateFilter(filter, ws.UserSchema)
+		_, err := filters.Validate(filter, ws.UserSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
@@ -1687,4 +1718,38 @@ type UserIdentity struct {
 	ID             string    `json:"id"`           // empty string for identities imported from anonymous events.
 	AnonymousIds   []string  `json:"anonymousIds"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
+}
+
+// validateEventListenerSources validates the sources from which events are
+// listened to.
+func (this *Workspace) validateEventListenerSources(sources []int) error {
+	if sources == nil {
+		return nil
+	}
+	if len(sources) == 0 {
+		return fmt.Errorf("sources, if not nil, cannot be empty")
+	}
+	for i, s := range sources {
+		if s < 1 || s > math.MaxInt32 {
+			return fmt.Errorf("source %d is not valid", s)
+		}
+		c, ok := this.workspace.Connection(s)
+		if !ok {
+			return errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", sources)
+		}
+		switch c.Connector().Type {
+		case state.Mobile, state.Server, state.Website:
+		default:
+			return errors.BadRequest("connection %d is not a mobile, server or website", sources)
+		}
+		if c.Role != state.Source {
+			return errors.BadRequest("connection %d is not a source", sources)
+		}
+		for _, s2 := range sources[i+1:] {
+			if s == s2 {
+				return fmt.Errorf("sources contains duplicated values")
+			}
+		}
+	}
+	return nil
 }

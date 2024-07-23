@@ -570,7 +570,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		event.header = header
 		mergeContexts(&event.Context, evs.Context)
 		err = validateEvent(method, event)
-		c.observer.addEvent(header.Connection, event, err)
+		c.observer.addCollectedEvent(header.Connection, event, err)
 		if err != nil {
 			// Remove the invalid event.
 			evs.Batch = slices.Delete(evs.Batch, i, i+1)
@@ -642,6 +642,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			PreviousId:   event.PreviousId,
 			Properties:   event.Properties,
 		}
+		c.observer.addEnrichedEvent(header.Connection, batch[i])
 	}
 
 	if c.hasImportEventsAction(connection) {

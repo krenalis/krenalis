@@ -15,6 +15,7 @@ import (
 
 	"github.com/meergo/meergo/apis"
 	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/types"
 )
 
@@ -40,16 +41,18 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 }
 
 // AddEventListener adds an event listener to a workspace that listens to
-// collected events.
+// collected or enriched events.
 func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
 	var body struct {
+		Enriched  bool
 		Size      *int
-		Source    int
+		Sources   []int
 		OnlyValid bool
+		Filter    *filters.Filter
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -59,11 +62,16 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	if body.Size != nil {
 		size = *body.Size
 	}
-	id, err := ws.AddEventListener(size, body.Source, body.OnlyValid)
+	var id string
+	if body.Enriched {
+		id, err = ws.AddEnrichedEventListener(size, body.Sources, body.Filter)
+	} else {
+		id, err = ws.AddCollectedEventListener(size, body.Sources, body.OnlyValid)
+	}
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": id}, nil
+	return map[string]string{"id": id}, nil
 }
 
 // ChangeUserSchema changes the user schema of a workspace.
@@ -391,7 +399,7 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}
 	var body struct {
 		Properties []string
-		Filter     *apis.Filter
+		Filter     *filters.Filter
 		Order      string
 		OrderDesc  bool
 		First      int

@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package apis
+package filters
 
 import (
 	"encoding/json"
@@ -26,26 +26,59 @@ import (
 
 // Filter represents a filter.
 type Filter struct {
-	Logical    FilterLogical     // can be "all" or "any".
-	Conditions []FilterCondition // cannot be empty.
+	Logical    Logical     // can be "all" or "any".
+	Conditions []Condition // cannot be empty.
 }
 
-// FilterLogical represents the logical operator of a filter.
+// Logical represents the logical operator of a filter.
 // It can be "all" or "any".
-type FilterLogical string
+type Logical string
 
-// FilterCondition represents the condition of a filter.
-type FilterCondition struct {
+// Condition represents the condition of a filter.
+type Condition struct {
 	Property string // property's path.
 	Operator string // operator, can be "is" or "is not".
 	Value    string // value, cannot be longer than 60 runes and cannot contain the NUL rune.
 }
 
-// validateFilter validates a filter and returns its properties, possibly
-// repeated. It returns an error if filter is not valid. In particular, it
+// Applies determines whether the filter applies to the provided properties.
+// Returns an error if any property in the filter is not found in the properties
+// map.
+func Applies(filter *Filter, properties map[string]any) (bool, error) {
+	if filter == nil {
+		return true, nil
+	}
+	for _, cond := range filter.Conditions {
+		value, ok := readPropertyFrom(properties, cond.Property)
+		if !ok {
+			return false, fmt.Errorf("property %q not found", cond.Property)
+		}
+		var conditionApplies bool
+		switch cond.Operator {
+		case "is":
+			conditionApplies = value == cond.Value
+		case "is not":
+			conditionApplies = value != cond.Value
+		}
+		if conditionApplies && filter.Logical == "any" {
+			return true, nil
+		}
+		if !conditionApplies && filter.Logical == "all" {
+			return false, nil
+		}
+	}
+	if filter.Logical == "any" {
+		return false, nil // none of the conditions applied.
+	}
+	// All the conditions applied.
+	return true, nil
+}
+
+// Validate checks the validity of a filter and returns its properties, possibly
+// repeated. Returns an error if the filter is not valid. Specifically, it
 // returns a types.PathNotExistError if a path does not exist.
-// It panics if filter is nil or schema is not valid.
-func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
+// Panics if the filter is nil or the schema is not valid.
+func Validate(filter *Filter, schema types.Type) ([]string, error) {
 	if op := filter.Logical; op != "all" && op != "any" {
 		return nil, fmt.Errorf("invalid logical operator %q", op)
 	}
@@ -177,6 +210,10 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 	return properties, nil
 }
 
+func containsNUL(s string) bool {
+	return strings.ContainsRune(s, '\x00')
+}
+
 // parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as
 // the time on January 1, 1970 UTC. The sub-second part can contain from 1 to 9
 // digits or can be missing. The hour must be in range [0, 23], minute and second
@@ -214,4 +251,25 @@ func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 		}
 	}
 	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
+}
+
+// readPropertyFrom reads the property with the given path from m, returning its
+// value (if found, otherwise nil) and a boolean indicating if the property path
+// corresponds to a value in m or not.
+func readPropertyFrom(m map[string]any, path string) (any, bool) {
+	var name string
+	for {
+		name, path, _ = strings.Cut(path, ".")
+		v, ok := m[name]
+		if !ok {
+			return nil, false
+		}
+		if path == "" {
+			return v, true
+		}
+		m, ok = v.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+	}
 }

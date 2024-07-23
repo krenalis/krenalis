@@ -22,6 +22,7 @@ import (
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
+	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/apis/transformers/mappings"
@@ -45,7 +46,7 @@ type Action struct {
 	SchedulePeriod           *SchedulePeriod
 	InSchema                 types.Type
 	OutSchema                types.Type
-	Filter                   *Filter
+	Filter                   *filters.Filter
 	Transformation           Transformation
 	Query                    *string
 	Connector                string
@@ -115,12 +116,12 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	this.InSchema = action.InSchema
 	this.OutSchema = action.OutSchema
 	if action.Filter != nil {
-		this.Filter = &Filter{
-			Logical:    FilterLogical(action.Filter.Logical),
-			Conditions: make([]FilterCondition, len(action.Filter.Conditions)),
+		this.Filter = &filters.Filter{
+			Logical:    filters.Logical(action.Filter.Logical),
+			Conditions: make([]filters.Condition, len(action.Filter.Conditions)),
 		}
 		for i, condition := range action.Filter.Conditions {
-			this.Filter.Conditions[i] = FilterCondition(condition)
+			this.Filter.Conditions[i] = filters.Condition(condition)
 		}
 	}
 	if mapping := action.Transformation.Mapping; mapping != nil {
@@ -703,7 +704,7 @@ type ActionToSet struct {
 	Enabled bool
 
 	// Filter is the filter of the action, if it has one, otherwise is nil.
-	Filter *Filter
+	Filter *filters.Filter
 
 	// InSchema is the input schema of the action.
 	//

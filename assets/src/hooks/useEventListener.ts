@@ -38,7 +38,11 @@ const useEventListener = (
 		const startListener = async () => {
 			let listener: AddEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventlisteners.add(3, connectionID, onlyValid ? onlyValid : false);
+				listener = await api.workspaces.eventlisteners.addCollected(
+					3,
+					connectionID === 0 ? null : [connectionID],
+					onlyValid,
+				);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExists') {

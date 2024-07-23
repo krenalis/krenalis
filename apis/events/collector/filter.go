@@ -14,15 +14,15 @@ import (
 	"github.com/meergo/meergo/apis/state"
 )
 
-// filterApplies reports whether the filter applies to props, which can be an
-// event or a user. Returns error if one of the properties of the filter are not
-// found within props.
-func filterApplies(filter *state.Filter, props map[string]any) (bool, error) {
+// filterApplies reports whether the filter applies to the provided properties.
+// Returns an error if one of the properties of the filter is not found in the
+// properties map.
+func filterApplies(filter *state.Filter, properties map[string]any) (bool, error) {
 	if filter == nil {
 		return true, nil
 	}
 	for _, cond := range filter.Conditions {
-		value, ok := readPropertyFrom(props, cond.Property)
+		value, ok := readPropertyFrom(properties, cond.Property)
 		if !ok {
 			return false, fmt.Errorf("property %q not found", cond.Property)
 		}
@@ -47,9 +47,9 @@ func filterApplies(filter *state.Filter, props map[string]any) (bool, error) {
 	return true, nil
 }
 
-// readPropertyFrom reads the property with the given path from m, returning its
-// value (if found, otherwise nil) and a boolean indicating if the property path
-// corresponds to a value in m or not.
+// readPropertyFrom retrieves the value at the specified path from the map m.
+// It returns the value if found, otherwise nil, and a boolean indicating
+// whether the path exists in m.
 func readPropertyFrom(m map[string]any, path string) (any, bool) {
 	var name string
 	for {
