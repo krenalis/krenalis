@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/filters"
@@ -235,11 +236,7 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 			if properties == nil {
 				properties = event.AsProperties()
 			}
-			var b bytes.Buffer
-			enc := json.NewEncoder(&b)
-			enc.SetEscapeHTML(false)
-			_ = enc.Encode(properties)
-			data := b.Bytes()
+			data, _ := encoding.Marshal(events.Schema, properties)
 			oe = ObservedEvent{
 				Source: source,
 				Header: event.Header,
