@@ -197,10 +197,10 @@ func (event *Event) ToConnectorEvent() *meergo.Event {
 	return &e
 }
 
-// ToMap returns event as a map, enabling its use in transformations.
-func (event *Event) ToMap() map[string]any {
+// AsProperties converts the event into properties that conform to Schema.
+func (event *Event) AsProperties() map[string]any {
 
-	// Keep in sync with the schema in "apis/events/schema.go".
+	// Keep in sync with the schema in "schema.go".
 
 	groupId := event.GroupId
 	if event.GroupId == "" {

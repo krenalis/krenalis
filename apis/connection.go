@@ -1503,7 +1503,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			return nil, err
 		}
 		records := []transformers.Record{
-			{Purpose: transformers.Create, Properties: ev.ToMap()},
+			{Purpose: transformers.Create, Properties: ev.AsProperties()},
 		}
 		err = transformer.Transform(ctx, records)
 		if err != nil {

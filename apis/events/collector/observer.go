@@ -206,7 +206,7 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 	if len(observer.listeners.enriched) == 0 {
 		return
 	}
-	var asMap map[string]any
+	var properties map[string]any
 	var oe ObservedEvent
 	var receivedAt string
 	for _, listener := range observer.listeners.enriched {
@@ -214,10 +214,10 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 			continue
 		}
 		if listener.filter != nil {
-			if asMap == nil {
-				asMap = event.ToMap()
+			if properties == nil {
+				properties = event.AsProperties()
 			}
-			if ok, err := filters.Applies(listener.filter, asMap); err != nil || !ok {
+			if ok, err := filters.Applies(listener.filter, properties); err != nil || !ok {
 				continue
 			}
 		}
@@ -232,13 +232,13 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 			}
 		}
 		if oe.Data == nil {
-			if asMap == nil {
-				asMap = event.ToMap()
+			if properties == nil {
+				properties = event.AsProperties()
 			}
 			var b bytes.Buffer
 			enc := json.NewEncoder(&b)
 			enc.SetEscapeHTML(false)
-			_ = enc.Encode(asMap)
+			_ = enc.Encode(properties)
 			data := b.Bytes()
 			oe = ObservedEvent{
 				Source: source,

@@ -86,7 +86,7 @@ func (processor *processor) worker() {
 					processor.setEventWithError(event.Id, action.ID, err)
 					continue
 				}
-				records := []transformers.Record{{Properties: event.ToMap()}}
+				records := []transformers.Record{{Properties: event.AsProperties()}}
 				err = transformer.Transform(ctx, records)
 				if err != nil {
 					processor.setEventWithError(event.Id, action.ID, err)

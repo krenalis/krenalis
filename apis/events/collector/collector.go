@@ -311,12 +311,11 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if *event.Type != "identify" {
 				continue
 			}
-			mapEvent := event.ToMap()
-			ok, err := filterApplies(action.Filter, mapEvent)
+			properties := event.AsProperties()
+			ok, err := filterApplies(action.Filter, properties)
 			if err != nil || !ok {
 				continue
 			}
-			var properties map[string]any
 			// If the action has a transformation, apply it to the event and
 			// obtain the properties.
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
@@ -324,7 +323,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				if err != nil {
 					return err
 				}
-				records := []transformers.Record{{Properties: mapEvent}}
+				records := []transformers.Record{{Properties: properties}}
 				err = transformer.Transform(ctx, records)
 				if err != nil {
 					slog.Error("error occurred transforming event", "err", err)
@@ -671,8 +670,8 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		// Send the events to the dispatcher.
 		for _, event := range batch {
 			for _, action := range c.actions() {
-				eventAsMap := event.ToMap()
-				ok, err := filterApplies(action.Filter, eventAsMap)
+				properties := event.AsProperties()
+				ok, err := filterApplies(action.Filter, properties)
 				if err != nil || !ok {
 					continue
 				}
