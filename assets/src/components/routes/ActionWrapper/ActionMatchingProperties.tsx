@@ -5,6 +5,7 @@ import { getExternalMatchingPropertiesItems, getSchemaComboboxItems } from '../.
 import ActionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
+import { ComboboxItem } from '../../base/ComboBox/ComboBox.types';
 
 const ActionMatchingProperties = () => {
 	const { connection, action, setAction, actionType } = useContext(ActionContext);
@@ -21,6 +22,13 @@ const ActionMatchingProperties = () => {
 
 	const externalPropertyError = useMemo<string>(() => {
 		return checkIfPropertyExists(action.MatchingProperties.External, flatOutputMatchingSchema);
+	}, [action]);
+
+	const externalMatchingPropertiesItems = useMemo<ComboboxItem[]>(() => {
+		if (action.ExportMode === 'CreateOnly' || action.ExportMode === 'CreateOrUpdate') {
+			return getExternalMatchingPropertiesItems(actionType.OutputMatchingSchema, actionType.OutputSchema);
+		}
+		return getSchemaComboboxItems(actionType.OutputMatchingSchema);
 	}, [action]);
 
 	const onUpdateMatchingProperties = (e) => {
@@ -80,7 +88,7 @@ const ActionMatchingProperties = () => {
 				></ComboBoxInput>
 				<ComboBoxList
 					ref={externalMatchingPropertyListRef}
-					items={getExternalMatchingPropertiesItems(actionType.OutputMatchingSchema, actionType.OutputSchema)}
+					items={externalMatchingPropertiesItems}
 					onSelect={onSelectMatchingProperties}
 				/>
 			</div>
