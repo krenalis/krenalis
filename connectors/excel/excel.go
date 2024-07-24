@@ -106,8 +106,8 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 			for i := range columns {
 				if exel.settings.HasColumnNames {
 					header := record[i]
-					name := meergo.SuggestPropertyName(header)
-					if name == "" {
+					name, ok := meergo.SuggestPropertyName(header)
+					if !ok {
 						return fmt.Errorf("header %q, of column %s, cannot be converted to a valid property name", header, columnNumberToName(i+1))
 					}
 					if nameOfHeader == nil {
