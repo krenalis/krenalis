@@ -389,10 +389,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	dispatchEventsToApps := isDispatchingEventsToApps(c.Connector().Type, c.Role, this.action.Target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target)
 	if dispatchEventsToApps || importUserIdentitiesFromEvents {
-		// The input schema is the events schema without the GID, because both
-		// the actions that import user identities from events and the actions
-		// that dispatch events to apps have in input an event without a GID, as
-		// the GID is added to the event when it is already in the warehouse.
 		inSchema = events.Schema
 	}
 

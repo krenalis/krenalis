@@ -186,10 +186,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return actionSchemas, nil
 			}
 		case Events:
-			// Use the schema without GID since events sent to the apps do not
-			// have the GID, as they are sent as they are after enrichment; the
-			// GID is added by the identity resolution directly to the data
-			// warehouse, without affecting the events sent to the apps.
 			return &ActionSchemas{In: events.Schema, Out: eventTypeSchema}, nil
 		}
 
@@ -229,9 +225,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
-		// The input schema is the events schema without GID because these
-		// actions import user identities from incoming events, which do not
-		// have any user associated.
 		switch target {
 		case Users:
 			return &ActionSchemas{In: events.Schema, Out: users}, nil
@@ -475,10 +468,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, this.connection.Role, state.Target(target))
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target))
 	if dispatchEventsToApps || importUserIdentitiesFromEvents {
-		// The input schema is the events schema without the GID, because both
-		// the actions that import user identities from events and the actions
-		// that dispatch events to apps have in input an event without a GID, as
-		// the GID is added to the event when it is already in the warehouse.
 		inSchema = events.Schema
 	}
 

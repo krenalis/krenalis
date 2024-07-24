@@ -9,7 +9,7 @@ package events
 
 import "github.com/meergo/meergo/types"
 
-// Schema is the schema of an event. It does not include the user GID property.
+// Schema is the schema of an enriched event.
 var Schema = types.Object([]types.Property{
 	{Name: "anonymousId", Type: types.Text()},
 	{Name: "category", Type: types.Text()},
