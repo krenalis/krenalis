@@ -206,9 +206,17 @@ func (event *Event) AsProperties() map[string]any {
 	if event.GroupId == "" {
 		groupId = event.Context.GroupId
 	}
-	traits := event.Traits
-	if event.Traits == nil {
+
+	var traits any
+	if event.Traits != nil {
+		traits = event.Traits
+	} else if event.Context.Traits != nil {
 		traits = event.Context.Traits
+	}
+
+	var properties any
+	if event.Properties != nil {
+		properties = event.Properties
 	}
 
 	// TODO(Gianluca): define datetime layout and parse/convert the values.
@@ -294,7 +302,7 @@ func (event *Event) AsProperties() map[string]any {
 		"groupId":    groupId,
 		"messageId":  event.MessageId,
 		"name":       event.Name,
-		"properties": event.Properties,
+		"properties": properties,
 		"receivedAt": event.ReceivedAt,
 		"sentAt":     event.SentAt,
 		"source":     event.Header.Connection,
