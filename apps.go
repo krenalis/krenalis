@@ -261,13 +261,12 @@ type Webhooks interface {
 type Event struct {
 
 	// Keep these fields in sync with the event schema, except for Properties,
-	// Source, Traits and Version fields.
+	// Source, and Traits fields.
 
 	AnonymousId string
 	Category    string
 	Context     struct {
-		Active bool
-		App    struct {
+		App struct {
 			Name      string
 			Version   string
 			Build     string
@@ -334,10 +333,12 @@ type Event struct {
 			Height  int
 			Density decimal.Decimal
 		}
-		SessionId    int
-		SessionStart bool
-		Timezone     string
-		UserAgent    string
+		Session struct {
+			Id    int
+			Start bool
+		}
+		Timezone  string
+		UserAgent string
 	}
 	Event      string
 	GroupId    string

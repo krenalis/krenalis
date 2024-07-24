@@ -181,8 +181,8 @@ func (event *Event) ToConnectorEvent() *meergo.Event {
 	e.Context.Screen.Width = event.Context.Screen.Width
 	e.Context.Screen.Height = event.Context.Screen.Height
 	e.Context.Screen.Density = decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2)
-	e.Context.SessionId = event.Context.SessionId
-	e.Context.SessionStart = event.Context.SessionStart
+	e.Context.Session.Id = event.Context.SessionId
+	e.Context.Session.Start = event.Context.SessionStart
 	e.Context.Timezone = event.Context.Timezone
 	e.Context.UserAgent = event.Context.UserAgent
 	e.Event = event.Event
