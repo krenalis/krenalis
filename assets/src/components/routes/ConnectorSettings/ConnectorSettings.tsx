@@ -290,7 +290,7 @@ const ConnectorSettings = () => {
 				variant='primary'
 				onClick={() => onActionClick('save')}
 			>
-				Save
+				Add
 			</SlButton>
 		</div>,
 	);

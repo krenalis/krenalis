@@ -10,7 +10,7 @@ To create a source Android connection in Meergo:
 1. Click on **Connections**.
 2. Click on **Add a New Connection**.
 3. From the list of connectors, select the **Android** connector.
-5. Click on **Save**.
+5. Click on **Add**.
 
 ## Step 2: Import the SDK
 

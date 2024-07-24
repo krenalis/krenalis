@@ -106,7 +106,7 @@ ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*me
 The `ServeUI` method must serve the `"load"` and `"save"` events:
 
 - `"load"`: Initially, when the connector's interface is loaded, `ServeUI` is called with the `"load"` event and `values` set to `nil`. If no errors occur, the method must return a non-`nil` interface.
-- `"save"`: When the user clicks the "create" or "save" button, `ServeUI` is called with the `"save"` event and `values` representing the user-entered values serialized in JSON. The method must validate and save the values as settings and return a `nil` interface.
+- `"save"`: When the user clicks the "Add" or "Save" button, `ServeUI` is called with the `"save"` event and `values` representing the user-entered values serialized in JSON. The method must validate and save the values as settings and return a `nil` interface.
 
 It must also serve any other event associated with the buttons present in the interface. When called for one of these events, `values` are in JSON-serialized format of the user-entered values. If the method returns a non-`nil` interface, the UI is updated with the returned interface.
 
