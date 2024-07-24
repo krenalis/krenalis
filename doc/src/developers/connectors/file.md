@@ -156,6 +156,9 @@ Once it has finished writing all the read records, it simply returns without err
 
 The `sheet` parameter is only used if the connector supports multiple sheets, meaning if the files it reads can contain multiple sheets. In this case, Meergo passes the name of the sheet to read as an argument. See the [Sheets method](#sheets-method) for more details.
 
+> The columns passed to the `Columns` method must have valid property names. To assist with this, you can use the `meergo.SuggestPropertyName` function, which suggests column names that are valid.
+> For example, if a column in the file is named `"Prénom"`, calling `SuggestPropertyName("Prénom")` will suggest `"Prenom"`, which is a valid property name that can be used with the `Columns` method.
+
 ### Write method
 
 ```go
