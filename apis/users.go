@@ -14,7 +14,6 @@ import (
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
-	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 
@@ -27,6 +26,22 @@ type User struct {
 	workspace *state.Workspace
 	store     *datastore.Store
 	id        uuid.UUID
+}
+
+// eventProperties contains the properties of the events as returned by the
+// (*User).Events method.
+var eventProperties []string
+
+func init() {
+	eventProperties = make([]string, types.NumProperties(datastore.EventSchema)-1)
+	i := 0
+	for _, p := range datastore.EventSchema.Properties() {
+		if p.Name == "user" {
+			continue
+		}
+		eventProperties[i] = p.Name
+		i++
+	}
 }
 
 // Events returns the events of the user, ordered from the most recent to the
@@ -55,7 +70,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 
 	// Retrieve the events records.
 	evs, err := this.store.Events(ctx, datastore.Query{
-		Properties: types.PropertyNames(events.Schema),
+		Properties: eventProperties,
 		Where: &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 			Property: "user",
 			Operator: "is",
@@ -90,7 +105,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		}
 	}
 
-	return encoding.MarshalSlice(events.Schema, evs)
+	return encoding.MarshalSlice(datastore.EventSchema, evs)
 }
 
 // Identities returns the user identities of the user, and an estimate of their
