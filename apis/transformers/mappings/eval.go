@@ -33,19 +33,23 @@ var errVoid = errors.New("void")
 // methods of when a value resulted from an evaluation cannot be converted to
 // the destination type.
 type invalidConversionError struct {
-	value           any
-	sourceType      types.Type
-	destinationType types.Type
+	v   any
+	st  types.Type
+	dt  types.Type
+	msg string
 }
 
 func (err *invalidConversionError) Error() string {
-	switch err.value {
+	if err.msg != "" {
+		return err.msg
+	}
+	switch err.v {
 	case nil:
 		return "cannot convert null to a non-nullable value"
 	case Void:
 		return "expression is required, but the evaluation returned no value"
 	}
-	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.value, err.sourceType, err.destinationType)
+	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.v, err.st, err.dt)
 }
 
 // Eval evaluates the expression using the provided properties which must
@@ -60,7 +64,7 @@ func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, e
 	if err != nil {
 		if err == errVoid {
 			if expr.createRequired && purpose == Create || expr.updateRequired && purpose == Update {
-				return nil, &invalidConversionError{Void, st, expr.dt}
+				return nil, &invalidConversionError{Void, st, expr.dt, ""}
 			}
 			return Void, nil
 		}
@@ -71,12 +75,12 @@ func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, e
 		if err != nil {
 			if err == errVoid {
 				if expr.createRequired && purpose == Create || expr.updateRequired && purpose == Update {
-					return nil, &invalidConversionError{Void, st, expr.dt}
+					return nil, &invalidConversionError{Void, st, expr.dt, ""}
 				}
 				return Void, nil
 			}
 			if err == errInvalidConversion {
-				err = &invalidConversionError{v, st, expr.dt}
+				err = &invalidConversionError{v, st, expr.dt, ""}
 			}
 			return nil, err
 		}
@@ -312,7 +316,7 @@ func valueOf(path path, properties map[string]any) (any, error) {
 				default:
 					t = "a JSON array"
 				}
-				return nil, fmt.Errorf("invalid %s: %s is not a JSON object, it is %s", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), t)
+				return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), t)}
 			}
 		}
 	}

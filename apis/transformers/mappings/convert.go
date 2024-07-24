@@ -624,7 +624,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					continue
 				}
 				if _, ok := obj[p.Name]; !ok {
-					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}}
+					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}, ""}
 				}
 			}
 		case Update:
@@ -633,7 +633,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					continue
 				}
 				if _, ok := obj[p.Name]; !ok {
-					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}}
+					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}, ""}
 				}
 			}
 		}
