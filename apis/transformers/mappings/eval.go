@@ -8,6 +8,7 @@
 package mappings
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,6 +60,9 @@ func (err *invalidConversionError) Error() string {
 // purpose specifies the reason for the evaluation. If Create or Update, then
 // all the properties required for creation or the update must be present in the
 // returned value.
+//
+// Eval might replace JSON properties in the properties map with their
+// unmarshalled values.
 func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, error) {
 	v, st, err := eval(expr.parts, properties, expr.timeLayouts, purpose)
 	if err != nil {
@@ -279,6 +283,9 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 //
 // For non-object JSON values, accessing a key returns errVoid if the key is
 // followed by "?"; otherwise, it returns an error.
+//
+// For a JSON property of type json.RawMessage, the function unmarshals the
+// value and replaces it with the unmarshalled value in the properties map.
 func valueOf(path path, properties map[string]any) (any, error) {
 	var v any
 	var ok bool
@@ -298,7 +305,20 @@ func valueOf(path path, properties map[string]any) (any, error) {
 			return nil, errVoid
 		}
 		if i != last {
-			properties, ok = v.(map[string]any)
+			var ok bool
+			switch v2 := v.(type) {
+			case map[string]any:
+				properties, ok = v2, true
+			case json.RawMessage:
+				if v2[0] == '{' {
+					dec := json.NewDecoder(bytes.NewReader(v2))
+					dec.UseNumber()
+					v = nil
+					_ = dec.Decode(&v)
+					properties[name] = v
+					properties, ok = v.(map[string]any), true
+				}
+			}
 			if !ok {
 				if name := path[i+1]; name[len(name)-1] == '?' {
 					return nil, errVoid

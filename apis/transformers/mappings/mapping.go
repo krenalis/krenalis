@@ -150,6 +150,9 @@ func (mapping *Mapping) OutProperties() []string {
 //
 // If the resulting value cannot be converted to the destination type, it
 // returns an error value implementing the ValidationError interface of apis.
+//
+// Transform might replace JSON properties in the properties map with their
+// unmarshalled values.
 func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, e := range mapping.expressions {

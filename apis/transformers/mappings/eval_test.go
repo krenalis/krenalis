@@ -105,6 +105,7 @@ func Test_valueOf(t *testing.T) {
 			"[i":  "foo",
 			"i]":  "zoo",
 		},
+		"l": json.RawMessage(`{"name":"Bob","email":"bob@axample.com"}`),
 	}
 
 	tests := []struct {
@@ -139,6 +140,8 @@ func Test_valueOf(t *testing.T) {
 		{path{"h", ":x"}, nil, errVoid},
 		{path{"h", ":i", ":[x]?"}, nil, errVoid},
 		{path{"x"}, nil, errVoid},
+		{path{"l", "email"}, "bob@axample.com", nil},
+		{path{"l", "name"}, "Bob", nil},
 	}
 
 	for _, test := range tests {
