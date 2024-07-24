@@ -264,55 +264,36 @@ const ConnectorSettings = () => {
 		fieldsToRender.push(<ConnectorField key={f.Label} field={f} />);
 	}
 
-	let hasSaveButton = false;
 	const buttonsToRender: ReactNode[] = [];
 	if (buttons) {
 		for (const [i, b] of buttons.entries()) {
-			if (b.Event !== 'save') {
-				buttonsToRender.push(
-					<FeedbackButton
-						key={b.Event}
-						variant={b.Variant}
-						onClick={async () => {
-							await onActionClick(b.Event, i);
-						}}
-						ref={(ref) => {
-							confirmationButtonsRef.current[i] = ref!;
-						}}
-					>
-						{b.Text}
-					</FeedbackButton>,
-				);
-			} else {
-				hasSaveButton = true;
-				buttonsToRender.push(
-					<SlButton
-						key={b.Event}
-						variant={b.Variant}
-						onClick={async () => {
-							await onActionClick(b.Event);
-						}}
-					>
-						{b.Text}
-					</SlButton>,
-				);
-			}
+			buttonsToRender.push(
+				<FeedbackButton
+					key={b.Event}
+					variant={b.Variant}
+					onClick={async () => {
+						await onActionClick(b.Event, i);
+					}}
+					ref={(ref) => {
+						confirmationButtonsRef.current[i] = ref!;
+					}}
+				>
+					{b.Text}
+				</FeedbackButton>,
+			);
 		}
 	}
-
-	if (!hasSaveButton) {
-		buttonsToRender.push(
-			<div className='connector-settings__save-wrapper'>
-				<SlButton
-					className='connector-settings__save-button'
-					variant='primary'
-					onClick={() => onActionClick('save')}
-				>
-					Save
-				</SlButton>
-			</div>,
-		);
-	}
+	buttonsToRender.push(
+		<div className='connector-settings__save-wrapper'>
+			<SlButton
+				className='connector-settings__save-button'
+				variant='primary'
+				onClick={() => onActionClick('save')}
+			>
+				Save
+			</SlButton>
+		</div>,
+	);
 
 	if (notFound) {
 		return <NotFound />;
