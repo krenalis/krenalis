@@ -11,6 +11,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -23,6 +25,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse
 
 // ErrInspectionMode is returned by Store methods when they cannot execute due
 // to the data warehouse being in inspection mode.
@@ -520,6 +524,20 @@ func (store *Store) close() error {
 		return fmt.Errorf("error occurred closing data warehouse: %s", err)
 	}
 	return err
+}
+
+// flushEvents flushes a batch of events to the data warehouse.
+func (store *Store) flushEvents(events [][]any) {
+	slog.Info("flush events", "count", len(events))
+	for {
+		err := store.warehouse.Merge(context.Background(), eventsMergeTable, events, nil)
+		if err != nil {
+			slog.Error("cannot flush the event queue", "workspace", store.workspace, "err", err)
+			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
+			continue
+		}
+		break
+	}
 }
 
 // identityColumnByProperty returns the map from properties to columns for the
