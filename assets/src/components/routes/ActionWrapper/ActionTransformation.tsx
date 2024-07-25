@@ -1186,6 +1186,26 @@ const FullscreenTransformation = ({
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
 
+		if (mode === 'mappings') {
+			let hasMappedProperty = false;
+			for (const k in action.Transformation.Mapping) {
+				if (action.Transformation.Mapping[k].value !== '') {
+					hasMappedProperty = true;
+					break;
+				}
+			}
+			if (!hasMappedProperty) {
+				setTimeout(() => {
+					// Since having no transformation is allowed in the actions
+					// that import users from events, simply display an empty
+					// JSON object.
+					setOutput(JSON.stringify({}, null, 4));
+					setIsExecuting(false);
+				}, 300);
+				return;
+			}
+		}
+
 		let actionToSet: ActionToSet;
 		try {
 			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
@@ -1211,23 +1231,6 @@ const FullscreenTransformation = ({
 				return;
 			}
 			eventSchema.current = { ...inSchema };
-		}
-
-		if (mode === 'mappings') {
-			let hasMappedProperty = false;
-			for (const k in action.Transformation.Mapping) {
-				if (action.Transformation.Mapping[k].value !== '') {
-					hasMappedProperty = true;
-					break;
-				}
-			}
-			if (!hasMappedProperty) {
-				setTimeout(() => {
-					setOutputError('You must map at least a property if you want to test the transformation');
-					setIsExecuting(false);
-				}, 300);
-				return;
-			}
 		}
 
 		let purpose: TransformationPurpose =
