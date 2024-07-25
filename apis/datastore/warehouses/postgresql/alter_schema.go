@@ -225,12 +225,6 @@ func typeToPostgresType(t types.Type) (string, bool) {
 	case types.InetKind:
 		return "", false
 	case types.TextKind:
-		if len(t.Values()) > 0 {
-			return "", false
-		}
-		if t.Regexp() != nil {
-			return "", false
-		}
 		if _, ok := t.ByteLen(); ok {
 			return "", false
 		}
@@ -240,19 +234,11 @@ func typeToPostgresType(t types.Type) (string, bool) {
 		}
 		return typ, true
 	case types.ArrayKind:
-		if t.MinElements() > 0 || t.MaxElements() < types.MaxElements {
-			return "", false
-		}
-		if t.Elem().Kind() == types.ArrayKind {
-			return "", false
-		}
 		typ, ok := typeToPostgresType(t.Elem())
 		if !ok {
 			return "", false
 		}
 		return typ + "[]", true
-	case types.ObjectKind:
-		return "", false
 	case types.MapKind:
 		return "", false
 	}

@@ -6,6 +6,7 @@
 package postgresql
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -93,16 +94,6 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: warehouses.OperationAddColumn, Column: "x_f", Type: types.Float(64).AsReal()},
 			},
 			expectedErr: "unsupported alter schema operation: the type of the column \"x_f\" is not supported by the PostgreSQL driver",
-		},
-		{
-			name: "Enum are not supported",
-			userColumns: []warehouses.Column{
-				{Name: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad"), Nullable: true},
-			},
-			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text().WithValues("Happy", "Angry", "Sad")},
-			},
-			expectedErr: "unsupported alter schema operation: the type of the column \"a\" is not supported by the PostgreSQL driver",
 		},
 		{
 			name: "Add a second level property",
@@ -322,6 +313,96 @@ func Test_alterSchemaQueries(t *testing.T) {
 			if !reflect.DeepEqual(gotQueries, test.expectedQueries) {
 				t.Fatalf("expected queries %#v, got %#v", test.expectedQueries, gotQueries)
 			}
+		})
+	}
+
+}
+
+func Test_typeToPostgresType(t *testing.T) {
+
+	tests := []struct {
+		typ      types.Type
+		expected string
+	}{
+		// Boolean.
+		{types.Boolean(), "boolean"},
+
+		// Int.
+		{types.Int(8), ""},
+		{types.Int(16), "smallint"},
+		{types.Int(24), ""},
+		{types.Int(32), "integer"},
+		{types.Int(64), "bigint"},
+		{types.Int(16).WithIntRange(0, 10), ""},
+
+		// Uint.
+		{types.Uint(8), ""},
+		{types.Uint(16), ""},
+		{types.Uint(24), ""},
+		{types.Uint(32), ""},
+		{types.Uint(64), ""},
+		{types.Uint(16).WithUintRange(0, 10), ""},
+
+		// Float.
+		{types.Float(32), "real"},
+		{types.Float(64), "double precision"},
+		{types.Float(64).WithFloatRange(0, 100), ""},
+		{types.Float(64).AsReal(), ""},
+
+		// Decimal.
+		{types.Decimal(10, 3), "decimal(10, 3)"},
+		// TODO(Gianluca): see https://github.com/meergo/meergo/issues/578.
+		// {types.Decimal(10, 3).WithDecimalRange(decimal.NewFromInt(0), decimal.NewFromInt(1000)), "decimal(10, 3)"},
+
+		// DateTime.
+		{types.DateTime(), "timestamp without time zone"},
+
+		// Date.
+		{types.Date(), "date"},
+
+		// Time.
+		{types.Time(), "time without time zone"},
+
+		// Year.
+		{types.Year(), ""},
+
+		// UUID.
+		{types.UUID(), "uuid"},
+
+		// JSON.
+		{types.JSON(), "jsonb"},
+
+		// Inet.
+		{types.Inet(), ""},
+
+		// Text.
+		{types.Text(), "varchar"},
+		{types.Text().WithByteLen(256), ""},
+		{types.Text().WithCharLen(300), "varchar(300)"},
+
+		// Array.
+		{types.Array(types.Text()), "varchar[]"},
+		{types.Array(types.Time()), "time without time zone[]"},
+
+		// Map.
+		{types.Map(types.Text()), ""},
+	}
+
+	for _, test := range tests {
+		t.Run(fmt.Sprint(test.typ), func(t *testing.T) {
+
+			gotType, gotOk := typeToPostgresType(test.typ)
+
+			if gotType == "" && gotOk {
+				t.Fatal("unexpected 'ok' when returned type is empty")
+			} else if gotType != "" && !gotOk {
+				t.Fatal("expected 'ok' when returned type is not empty")
+			}
+
+			if test.expected != gotType {
+				t.Fatalf("expected %q to be returned, got %q instead", test.expected, gotType)
+			}
+
 		})
 	}
 
