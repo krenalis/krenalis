@@ -446,7 +446,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.JSONKind:
 		if !validJSON(src) {
-			return nil, fmt.Errorf("app has returned an invalid JSON for property %q", name)
+			return nil, fmt.Errorf("value of property %q is not valid JSON", name)
 		}
 		if raw, ok := src.(json.RawMessage); ok {
 			src = json.RawMessage(bytes.TrimSpace(raw))
