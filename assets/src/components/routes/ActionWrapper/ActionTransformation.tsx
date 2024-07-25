@@ -937,6 +937,13 @@ const FullscreenTransformation = ({
 	}, []);
 
 	useEffect(() => {
+		// Reset the output of the transformation tests when the user switches
+		// the language or the mode of the transformation.
+		setOutput('');
+		setOutputError('');
+	}, [mode, selectedLanguage]);
+
+	useEffect(() => {
 		if (isFullscreenTransformationOpen) {
 			// Delay the rendering of the transformation box to avoid
 			// content flashes and to ensure that the code editor is
