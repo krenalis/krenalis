@@ -1343,7 +1343,11 @@ const FullscreenTransformation = ({
 	if (connection.isSource) {
 		if (actionType.Target === 'Users') {
 			const term = connection.connector.termForUsers;
-			InputPanelTitle = term[0].toUpperCase() + term.slice(1, term.length);
+			if (isEventBasedUserImport) {
+				InputPanelTitle = 'Events';
+			} else {
+				InputPanelTitle = term[0].toUpperCase() + term.slice(1, term.length);
+			}
 			OutputPanelTitle = 'Resulting user';
 		} else if (actionType.Target === 'Groups') {
 			const term = connection.connector.termForGroups;
