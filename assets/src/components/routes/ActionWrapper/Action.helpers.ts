@@ -1,5 +1,5 @@
 import { TransformedAction, TransformedMapping } from '../../../lib/core/action';
-import { SpecialProperties } from './Action.types';
+import { SampleIdentifiers } from './Action.types';
 
 const updateMappingProperty = (action: TransformedAction, name: string, value: string, error: string) => {
 	const getAlternativeProperties = (name: string, mapping: TransformedMapping): string[] => {
@@ -96,33 +96,37 @@ const emailIdentifiers = ['email', 'Email', 'EMail', 'e_mail', 'E_mail', 'EMAIL'
 
 const idIdentifiers = ['id', 'ID', 'Id', '__id__'];
 
-const extractSpecialProperties = (resources: Record<string, any>[]): SpecialProperties => {
-	let firstNameID: string, lastNameID: string, emailID: string, idID: string;
-	const keys = Object.keys(resources[0]);
-	for (const key of keys) {
-		if (firstNameIdentifiers.includes(key) || firstNameIdentifiers.includes(resources[0][key].property.label)) {
-			firstNameID = key;
+// getSampleIdentifiers returns the names of the properties that are used in the
+// UI to identify a sample.
+const getSampleIdentifiers = (sample: Record<string, any>): SampleIdentifiers | null => {
+	let firstNameIdentifier: string, lastNameIdentifier: string, emailIdentifier: string, idIdentifier: string;
+	for (const key in sample) {
+		if (!sample.hasOwnProperty(key)) {
 			continue;
 		}
-		if (lastNameIdentifiers.includes(key) || lastNameIdentifiers.includes(resources[0][key].property.label)) {
-			lastNameID = key;
+		if (firstNameIdentifiers.includes(key)) {
+			firstNameIdentifier = key;
 			continue;
 		}
-		if (emailIdentifiers.includes(key) || emailIdentifiers.includes(resources[0][key].property.label)) {
-			emailID = key;
+		if (lastNameIdentifiers.includes(key)) {
+			lastNameIdentifier = key;
 			continue;
 		}
-		if (idIdentifiers.includes(key) || idIdentifiers.includes(resources[0][key].property.label)) {
-			idID = key;
+		if (emailIdentifiers.includes(key)) {
+			emailIdentifier = key;
+			continue;
+		}
+		if (idIdentifiers.includes(key)) {
+			idIdentifier = key;
 			continue;
 		}
 	}
 	return {
-		firstNameID,
-		lastNameID,
-		emailID,
-		idID,
+		firstNameIdentifier,
+		lastNameIdentifier,
+		emailIdentifier,
+		idIdentifier,
 	};
 };
 
-export { updateMappingProperty, checkIfPropertyExists, extractSpecialProperties };
+export { updateMappingProperty, checkIfPropertyExists, getSampleIdentifiers };

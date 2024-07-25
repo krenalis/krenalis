@@ -1,5 +1,5 @@
 import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode } from 'react';
-import { checkIfPropertyExists, updateMappingProperty, extractSpecialProperties } from './Action.helpers';
+import { checkIfPropertyExists, updateMappingProperty, getSampleIdentifiers } from './Action.helpers';
 import {
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
@@ -940,97 +940,70 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		const fetchSamples = async () => {
-			let samples: Sample[];
-			if (actionType.Target === 'Users') {
-				if (connection.isFileStorage && connection.isSource) {
-					let res: RecordsResponse;
-					try {
-						res = await api.workspaces.connections.records(
-							connection.id,
-							action.Connector,
-							action.Path,
-							action.Sheet,
-							action.Compression,
-							values,
-							20,
-						);
-					} catch (err) {
-						handleError(err);
-						return;
-					}
-					const smpls: Sample[] = [];
-					for (const r of res.records) {
-						const sample = {};
-						for (let i = 0; i < res.schema.properties.length; i++) {
-							const propertyName = res.schema.properties[i].name;
-							sample[propertyName] = {
-								value: r[propertyName],
-								property: res.schema.properties[i],
-							};
-						}
-						smpls.push(sample);
-					}
-					samples = smpls;
-				} else if (connection.isDatabase && connection.isSource) {
-					// Will show a button to execute the query and retrieve the
-					// samples (as the query can be destructive).
-					return;
-				} else if (connection.isApp && connection.isSource) {
-					let res: AppUsersResponse;
-					try {
-						res = await api.workspaces.connections.appUsers(connection.id, inputSchema);
-					} catch (err) {
-						handleError(err);
-						return;
-					}
-					const smpls: Sample[] = [];
-					for (const u of res.users) {
-						const sample = {};
-						for (let i = 0; i < inputSchema.properties.length; i++) {
-							const propertyName = inputSchema.properties[i].name;
-							sample[propertyName] = {
-								value: u[propertyName],
-								property: inputSchema.properties[i],
-							};
-						}
-						smpls.push(sample);
-					}
-					samples = smpls;
-				} else if ((connection.isApp || connection.isDatabase) && connection.isDestination) {
-					const properties: string[] = [];
-					for (const prop of inputSchema.properties) {
-						properties.push(prop.name);
-					}
-					let res: FindUsersResponse;
-					try {
-						res = await api.workspaces.users.find(properties, null, '', true, 0, 20);
-					} catch (err) {
-						handleError(err);
-						return;
-					}
-					if (res.users.length === 0) {
-						return;
-					}
-					const smpls: Sample[] = [];
-					for (const u of res.users) {
-						const sample = {};
-						for (let i = 0; i < res.schema.properties.length; i++) {
-							const propertyName = res.schema.properties[i].name;
-							sample[propertyName] = {
-								value: u.properties[propertyName],
-								property: res.schema.properties[i],
-							};
-						}
-						smpls.push(sample);
-					}
-					samples = smpls;
-				}
+			if (actionType.Target !== 'Users') {
+				return;
 			}
-			const { firstNameID, lastNameID, emailID, idID } = extractSpecialProperties(samples);
-			firstNameIdentifier.current = firstNameID;
-			lastNameIdentifier.current = lastNameID;
-			emailIdentifier.current = emailID;
-			idIdentifier.current = idID;
+			let samples: Sample[];
+			if (connection.isFileStorage && connection.isSource) {
+				let res: RecordsResponse;
+				try {
+					res = await api.workspaces.connections.records(
+						connection.id,
+						action.Connector,
+						action.Path,
+						action.Sheet,
+						action.Compression,
+						values,
+						20,
+					);
+				} catch (err) {
+					handleError(err);
+					return;
+				}
+				samples = res.records;
+			} else if (connection.isDatabase && connection.isSource) {
+				// Will show a button to execute the query and retrieve the
+				// samples (as the query can be potentially destructive).
+				return;
+			} else if (connection.isApp && connection.isSource) {
+				let res: AppUsersResponse;
+				try {
+					res = await api.workspaces.connections.appUsers(connection.id, inputSchema);
+				} catch (err) {
+					handleError(err);
+					return;
+				}
+				samples = res.users;
+			} else if ((connection.isApp || connection.isDatabase) && connection.isDestination) {
+				const properties: string[] = [];
+				for (const prop of inputSchema.properties) {
+					properties.push(prop.name);
+				}
+				let res: FindUsersResponse;
+				try {
+					res = await api.workspaces.users.find(properties, null, '', true, 0, 20);
+				} catch (err) {
+					handleError(err);
+					return;
+				}
+				if (res.users.length === 0) {
+					return;
+				}
+				const s: Sample[] = [];
+				for (const user of res.users) {
+					s.push(user.properties);
+				}
+				samples = s;
+			} else {
+				return;
+			}
+			const idents = getSampleIdentifiers(samples[0]);
+			if (idents != null) {
+				firstNameIdentifier.current = idents.firstNameIdentifier;
+				lastNameIdentifier.current = idents.lastNameIdentifier;
+				emailIdentifier.current = idents.emailIdentifier;
+				idIdentifier.current = idents.idIdentifier;
+			}
 			setSamples(samples);
 		};
 		fetchSamples();
@@ -1152,12 +1125,13 @@ const FullscreenTransformation = ({
 			return;
 		}
 
-		const normalized = normalizeSample(sample);
+		// Only send the sample's properties that are actually present in the
+		// input schema of the "ActionToSet".
 		let s = {};
-		for (const k in normalized) {
+		for (const k in sample) {
 			const isInSchema = actionToSet.inSchema.properties.findIndex((prop) => prop.name === k) !== -1;
 			if (isInSchema) {
-				s[k] = normalized[k];
+				s[k] = sample[k];
 			}
 		}
 
@@ -1247,24 +1221,14 @@ const FullscreenTransformation = ({
 			handleError(err);
 			return;
 		}
-		const smpls: Sample[] = [];
-		for (const r of res.Rows) {
-			const sample = {};
-			for (let i = 0; i < res.Schema.properties.length; i++) {
-				const propertyName = res.Schema.properties[i].name;
-				sample[propertyName] = {
-					value: r[propertyName],
-					property: res.Schema.properties[i],
-				};
-			}
-			smpls.push(sample);
+		const idents = getSampleIdentifiers(res.Rows[0]);
+		if (idents != null) {
+			firstNameIdentifier.current = idents.firstNameIdentifier;
+			lastNameIdentifier.current = idents.lastNameIdentifier;
+			emailIdentifier.current = idents.emailIdentifier;
+			idIdentifier.current = idents.idIdentifier;
 		}
-		const { firstNameID, lastNameID, emailID, idID } = extractSpecialProperties(smpls);
-		firstNameIdentifier.current = firstNameID;
-		lastNameIdentifier.current = lastNameID;
-		emailIdentifier.current = emailID;
-		idIdentifier.current = idID;
-		setSamples(smpls);
+		setSamples(res.Rows);
 	};
 
 	const onClear = () => {
@@ -1350,20 +1314,20 @@ const FullscreenTransformation = ({
 											<>
 												{idIdentifier.current && (
 													<div className='fullscreen-transformation__sample-id'>
-														{removeQuotes(s[idIdentifier.current].value)}
+														{removeQuotes(s[idIdentifier.current])}
 													</div>
 												)}
 												<div>
 													<div className='fullscreen-transformation__sample-full-name'>
 														{firstNameIdentifier.current && lastNameIdentifier.current
-															? removeQuotes(s[firstNameIdentifier.current].value) +
+															? removeQuotes(s[firstNameIdentifier.current]) +
 																' ' +
-																removeQuotes(s[lastNameIdentifier.current].value)
+																removeQuotes(s[lastNameIdentifier.current])
 															: `Sample ${i}`}
 													</div>
 													{emailIdentifier.current && (
 														<div className='fullscreen-transformation__sample-email'>
-															{removeQuotes(s[emailIdentifier.current].value)}
+															{removeQuotes(s[emailIdentifier.current])}
 														</div>
 													)}
 												</div>
@@ -1386,7 +1350,7 @@ const FullscreenTransformation = ({
 							}
 							details={
 								<div className='fullscreen-transformation__sample-source'>
-									<SyntaxHighlight>{JSON.stringify(normalizeSample(s), null, 4)}</SyntaxHighlight>
+									<SyntaxHighlight>{JSON.stringify(s, null, 4)}</SyntaxHighlight>
 								</div>
 							}
 						/>
@@ -1845,14 +1809,6 @@ function fromKindToPythonType(type: Type) {
 	}
 }
 
-const normalizeSample = (sample: Sample): Record<string, any> => {
-	const normalized = {};
-	for (const k in sample) {
-		normalized[k] = sample[k].value;
-	}
-	return normalized;
-};
-
 function removeTrailingS(str: string) {
 	if (str.endsWith('s')) {
 		return str.slice(0, -1);
@@ -1860,11 +1816,14 @@ function removeTrailingS(str: string) {
 	return str;
 }
 
-function removeQuotes(str: string | null) {
-	if (str == null) {
+function removeQuotes(v: any | null) {
+	if (v == null) {
 		return null;
 	}
-	return str.replace(/^"|"$/g, '');
+	if (typeof v !== 'string') {
+		return v;
+	}
+	return v.replace(/^"|"$/g, '');
 }
 
 export default ActionTransformation;

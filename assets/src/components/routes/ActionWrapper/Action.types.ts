@@ -1,17 +1,10 @@
-import { Property } from '../../../lib/api/types/types';
-
-interface SpecialProperties {
-	firstNameID: string;
-	lastNameID: string;
-	emailID: string;
-	idID: string;
+interface SampleIdentifiers {
+	firstNameIdentifier: string;
+	lastNameIdentifier: string;
+	emailIdentifier: string;
+	idIdentifier: string;
 }
 
-interface SampleProperty {
-	value: any;
-	property: Property;
-}
+type Sample = Record<string, any>;
 
-type Sample = Record<string, SampleProperty>;
-
-export { Sample, SpecialProperties };
+export { Sample, SampleIdentifiers };
