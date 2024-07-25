@@ -8,6 +8,7 @@
 package connectors
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -446,6 +447,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.JSONKind:
 		if !validJSON(src) {
 			return nil, fmt.Errorf("app has returned an invalid JSON for property %q", name)
+		}
+		if raw, ok := src.(json.RawMessage); ok {
+			src = json.RawMessage(bytes.TrimSpace(raw))
 		}
 		value = src
 		valid = true

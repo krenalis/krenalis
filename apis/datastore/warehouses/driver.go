@@ -8,6 +8,7 @@
 package warehouses
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -396,6 +397,7 @@ func ValidateJSONRaw(name string, b json.RawMessage) (any, error) {
 	if !json.Valid(b) {
 		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
 	}
+	b = bytes.TrimSpace(b)
 	return b, nil
 }
 
