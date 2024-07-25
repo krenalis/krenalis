@@ -36,7 +36,7 @@ class TransformedConnection {
 	linkedFiles?: TransformedConnection[];
 	actionTypes?: ActionType[];
 	actions?: Action[];
-	eventConnections?: Number[];
+	eventConnections?: number[];
 
 	constructor(
 		id: number,
@@ -58,7 +58,7 @@ class TransformedConnection {
 		linkedFiles?: TransformedConnection[],
 		actionTypes?: ActionType[],
 		actions?: Action[],
-		eventConnections?: Number[],
+		eventConnections?: number[],
 	) {
 		this.id = id;
 		this.name = name;

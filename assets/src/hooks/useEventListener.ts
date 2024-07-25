@@ -1,7 +1,12 @@
 import { useEffect, useContext, useState } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
-import { ObservedEvent, AddEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
+import {
+	ObservedEvent,
+	AddEventListenerResponse,
+	EventListenerEventsResponse,
+	Filter,
+} from '../lib/api/types/responses';
 
 interface EventListenerEvent {
 	id: number;
@@ -13,10 +18,13 @@ interface EventListenerEvent {
 }
 
 const useEventListener = (
-	connectionID: number,
+	sources: number[],
 	onlyValid: boolean,
+	enriched: boolean,
 	setEvents: (events: EventListenerEvent[]) => void,
 	setDiscarded?: React.Dispatch<React.SetStateAction<number>>,
+	filter?: Filter,
+	listenedEventTypes?: string[],
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
@@ -38,11 +46,11 @@ const useEventListener = (
 		const startListener = async () => {
 			let listener: AddEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventlisteners.addCollected(
-					3,
-					connectionID === 0 ? null : [connectionID],
-					onlyValid,
-				);
+				if (enriched) {
+					listener = await api.workspaces.eventlisteners.addEnriched(3, sources, filter);
+				} else {
+					listener = await api.workspaces.eventlisteners.addCollected(3, sources, onlyValid);
+				}
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExists') {
@@ -74,6 +82,11 @@ const useEventListener = (
 				const newly: EventListenerEvent[] = [];
 				for (const e of res.events) {
 					const dec = JSON.parse(atob(e.Data));
+					if (listenedEventTypes != null) {
+						if (!listenedEventTypes.includes(dec.type)) {
+							continue;
+						}
+					}
 					newly.push({
 						id: id,
 						err: e.Err,

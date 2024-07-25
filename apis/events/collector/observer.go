@@ -13,9 +13,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"math/rand"
-	"net"
-	"net/netip"
-	"net/url"
 	"slices"
 	"sort"
 	"sync"
@@ -28,7 +25,6 @@ import (
 	"github.com/meergo/meergo/apis/postgres"
 
 	"github.com/google/uuid"
-	"golang.org/x/text/unicode/norm"
 )
 
 const MaxEventListeners = 100 // maximum number of event listeners.
@@ -352,75 +348,6 @@ func (observer *Observer) Events(listenerID string) ([]ObservedEvent, int, error
 	}
 	l.Unlock()
 	return observedEvents, discarded, nil
-}
-
-// ParseObservedEvent parses an observed event, enriches and returns it.
-// It returns an error if the event is not valid.
-func (c *Collector) ParseObservedEvent(event *ObservedEvent) (*events.Event, error) {
-
-	// Validate the arguments.
-	if event.Header == nil {
-		return nil, errors.New("header is nil")
-	}
-	ip, _, err := net.SplitHostPort(event.Header.RemoteAddr)
-	if err != nil {
-		return nil, errors.New("header.RemoteAddr is not valid")
-	}
-	if _, err := netip.ParseAddr(ip); err != nil {
-		return nil, errors.New("header.RemoteAddr is not valid")
-	}
-	if _, err := url.Parse(event.Header.URL); err != nil {
-		return nil, errors.New("header.URL is not valid")
-	}
-	if len(event.Data) > maxRequestSize {
-		return nil, errors.New("event is too long")
-	}
-
-	// Decode the event.
-	nr := norm.NFC.Reader(bytes.NewReader(event.Data))
-	dec := json.NewDecoder(nr)
-	dec.UseNumber()
-	ev := &collectedEvent{}
-	err = dec.Decode(ev)
-	if err != nil {
-		return nil, errors.New("cannot decode JSON")
-	}
-
-	// Validate the event.
-	if ev.Type == nil {
-		return nil, errors.New("missing event type")
-	}
-	err = validateEvent(*ev.Type, ev)
-	if err != nil {
-		return nil, err
-	}
-	ev.header = event.Header
-
-	// Enrich the event.
-	c.enrichEvent(ev)
-
-	e := &events.Event{
-		Header:       ev.header,
-		Id:           ev.id,
-		AnonymousId:  ev.AnonymousId,
-		Category:     ev.Category,
-		Context:      ev.Context,
-		Event:        ev.Event,
-		GroupId:      ev.GroupId,
-		Integrations: ev.Integrations,
-		MessageId:    ev.MessageId,
-		Name:         ev.Name,
-		ReceivedAt:   ev.receivedAt,
-		SentAt:       ev.sentAt,
-		Timestamp:    ev.timestamp,
-		Traits:       ev.Traits,
-		Type:         ev.Type,
-		UserId:       ev.UserId,
-		PreviousId:   ev.PreviousId,
-		Properties:   ev.Properties,
-	}
-
-	return e, nil
 }
 
 // RemoveListener removes the listener with identifier id.

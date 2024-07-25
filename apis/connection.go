@@ -24,12 +24,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
-	"github.com/meergo/meergo/apis/events/collector"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
@@ -39,6 +39,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -1402,18 +1403,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	// Parse the event.
-	ev, err := this.apis.events.collector.ParseObservedEvent(&collector.ObservedEvent{
-		Source: event.Source,
-		Header: &events.Header{
-			ReceivedAt: event.Header.ReceivedAt,
-			RemoteAddr: event.Header.RemoteAddr,
-			Method:     event.Header.Method,
-			Proto:      event.Header.Proto,
-			URL:        event.Header.URL,
-		},
-		Data: event.Data,
-	})
+	data, err := encoding.Unmarshal(bytes.NewReader(event.Data), events.Schema)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
@@ -1494,7 +1484,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			return nil, err
 		}
 		records := []transformers.Record{
-			{Purpose: transformers.Create, Properties: ev.AsProperties()},
+			{Purpose: transformers.Create, Properties: data},
 		}
 		err = transformer.Transform(ctx, records)
 		if err != nil {
@@ -1519,7 +1509,94 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	}
 
-	req, err := this.app().EventRequest(ctx, ev.ToConnectorEvent(), eventType, outSchema, properties, true)
+	// Convert data into a meergo.Event value.
+	ev := meergo.Event{}
+	ev.AnonymousId = data["anonymousId"].(string)
+	ev.Category = data["category"].(string)
+
+	eventContext := data["context"].(map[string]any)
+	contextApp := eventContext["app"].(map[string]any)
+	ev.Context.App.Name = contextApp["name"].(string)
+	ev.Context.App.Version = contextApp["version"].(string)
+	ev.Context.App.Build = contextApp["build"].(string)
+	ev.Context.App.Namespace = contextApp["namespace"].(string)
+
+	contextCampaign := eventContext["campaign"].(map[string]any)
+	ev.Context.Campaign.Name = contextCampaign["name"].(string)
+	ev.Context.Campaign.Source = contextCampaign["source"].(string)
+	ev.Context.Campaign.Medium = contextCampaign["medium"].(string)
+	ev.Context.Campaign.Term = contextCampaign["term"].(string)
+	ev.Context.Campaign.Content = contextCampaign["content"].(string)
+
+	contextDevice := eventContext["device"].(map[string]any)
+	ev.Context.Device.Id = contextDevice["id"].(string)
+	ev.Context.Device.AdvertisingId = contextDevice["advertisingId"].(string)
+	ev.Context.Device.AdTrackingEnabled = contextDevice["adTrackingEnabled"].(bool)
+	ev.Context.Device.Manufacturer = contextDevice["manufacturer"].(string)
+	ev.Context.Device.Model = contextDevice["model"].(string)
+	ev.Context.Device.Name = contextDevice["name"].(string)
+	ev.Context.Device.Type = contextDevice["type"].(string)
+	ev.Context.Device.Token = contextDevice["token"].(string)
+
+	ev.Context.IP = eventContext["ip"].(string)
+
+	contextLibrary := eventContext["library"].(map[string]any)
+	ev.Context.Library.Name = contextLibrary["name"].(string)
+	ev.Context.Library.Version = contextLibrary["version"].(string)
+
+	ev.Context.Locale = eventContext["locale"].(string)
+
+	contextLocation := eventContext["location"].(map[string]any)
+	ev.Context.Location.City = contextLocation["city"].(string)
+	ev.Context.Location.Country = contextLocation["country"].(string)
+	ev.Context.Location.Latitude = contextLocation["latitude"].(float64)
+	ev.Context.Location.Longitude = contextLocation["longitude"].(float64)
+	ev.Context.Location.Speed = contextLocation["speed"].(float64)
+
+	contextNetwork := eventContext["network"].(map[string]any)
+	ev.Context.Network.Bluetooth = contextNetwork["bluetooth"].(bool)
+	ev.Context.Network.Carrier = contextNetwork["carrier"].(string)
+	ev.Context.Network.Cellular = contextNetwork["cellular"].(bool)
+	ev.Context.Network.WiFi = contextNetwork["wifi"].(bool)
+
+	contextOS := eventContext["os"].(map[string]any)
+	ev.Context.OS.Name = contextOS["name"].(string)
+	ev.Context.OS.Version = contextOS["version"].(string)
+
+	contextPage := eventContext["page"].(map[string]any)
+	ev.Context.Page.Path = contextPage["path"].(string)
+	ev.Context.Page.Referrer = contextPage["referrer"].(string)
+	ev.Context.Page.Search = contextPage["search"].(string)
+	ev.Context.Page.Title = contextPage["title"].(string)
+	ev.Context.Page.URL = contextPage["url"].(string)
+
+	contextReferrer := eventContext["referrer"].(map[string]any)
+	ev.Context.Referrer.Id = contextReferrer["id"].(string)
+	ev.Context.Referrer.Type = contextReferrer["type"].(string)
+
+	contextScreen := eventContext["screen"].(map[string]any)
+	ev.Context.Screen.Width = contextScreen["width"].(int)
+	ev.Context.Screen.Height = contextScreen["height"].(int)
+	ev.Context.Screen.Density = contextScreen["density"].(decimal.Decimal)
+
+	contextSession := eventContext["session"].(map[string]any)
+	ev.Context.Session.Id = contextSession["id"].(int)
+	ev.Context.Session.Start = contextSession["start"].(bool)
+
+	ev.Context.Timezone = eventContext["timezone"].(string)
+	ev.Context.UserAgent = eventContext["userAgent"].(string)
+
+	ev.Event = data["event"].(string)
+	ev.GroupId = data["groupId"].(string)
+	ev.MessageId = data["messageId"].(string)
+	ev.Name = data["name"].(string)
+	ev.ReceivedAt = data["receivedAt"].(time.Time)
+	ev.SentAt = data["sentAt"].(time.Time)
+	ev.Timestamp = data["timestamp"].(time.Time)
+	ev.Type = data["type"].(string)
+	ev.UserId = data["userId"].(string)
+
+	req, err := this.app().EventRequest(ctx, &ev, eventType, outSchema, properties, true)
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)

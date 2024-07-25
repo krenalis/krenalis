@@ -19,7 +19,7 @@ const ConnectionEvents = () => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener(c.id, true, collectEvents, setDiscarded);
+	const { startListening } = useEventListener([c.id], true, false, collectEvents, setDiscarded);
 
 	useEffect(() => {
 		startListening();

@@ -899,7 +899,7 @@ const FullscreenTransformation = ({
 	const [isBodyShown, setIsBodyShown] = useState<boolean>(false);
 
 	const { handleError, api } = useContext(AppContext);
-	const { action, values, actionType, connection } = useContext(ActionContext);
+	const { action, values, actionType, connection, mode } = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
 	const lastNameIdentifier = useRef<string>('');
@@ -907,15 +907,31 @@ const FullscreenTransformation = ({
 	const idIdentifier = useRef<string>('');
 	const lastExecutedSample = useRef<Sample>(null);
 	const lastExecutedEvent = useRef<EventListenerEvent>(null);
+	const eventSchema = useRef<ObjectType>(null);
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener(0, true, collectEvents);
+	const { isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
+		return {
+			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.Target === 'Users',
+			isAppEventsExport: connection.isApp && connection.isDestination && actionType.Target === 'Events',
+		};
+	}, [connection, actionType]);
+
+	const { startListening } = useEventListener(
+		isEventBasedUserImport ? [connection.id] : connection.eventConnections,
+		true,
+		true,
+		collectEvents,
+		null,
+		action.Filter,
+		isEventBasedUserImport ? ['identify'] : null,
+	);
 
 	useEffect(() => {
-		if (connection.isApp && connection.isDestination && actionType.Target === 'Events') {
+		if (isEventBasedUserImport || isAppEventsExport) {
 			startListening();
 		}
 	}, []);
@@ -1105,7 +1121,7 @@ const FullscreenTransformation = ({
 		}
 	};
 
-	const onExecuteSample = async (sample: Record<string, any>) => {
+	const onTransformSample = async (sample: Record<string, any>) => {
 		lastExecutedSample.current = sample;
 		if (JSON.stringify(sample) !== JSON.stringify(selectedSample)) {
 			setSelectedSample(null);
@@ -1125,6 +1141,8 @@ const FullscreenTransformation = ({
 			return;
 		}
 
+		let inSchema = actionToSet.inSchema;
+
 		// Only send the sample's properties that are actually present in the
 		// input schema of the "ActionToSet".
 		let s = {};
@@ -1139,13 +1157,7 @@ const FullscreenTransformation = ({
 			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
 		let res: TransformDataResponse;
 		try {
-			res = await api.transformData(
-				s,
-				actionToSet.inSchema,
-				actionToSet.outSchema,
-				actionToSet.transformation,
-				purpose,
-			);
+			res = await api.transformData(s, inSchema, actionToSet.outSchema, actionToSet.transformation, purpose);
 		} catch (err) {
 			setOutput('');
 			if (err instanceof UnprocessableError && err.code === 'TransformationFailed') {
@@ -1165,7 +1177,85 @@ const FullscreenTransformation = ({
 		setTimeout(() => setIsExecuting(false), 300);
 	};
 
-	const onExecuteEvent = async (event: EventListenerEvent) => {
+	const onTransformUserEvent = async (event: EventListenerEvent) => {
+		lastExecutedEvent.current = event;
+		if (selectedEvent && event.id !== selectedEvent.id) {
+			setSelectedEvent(null);
+		}
+		setOutputError('');
+		setIsOutputSchemaSelected(false);
+		setIsExecuting(true);
+
+		let actionToSet: ActionToSet;
+		try {
+			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
+		} catch (err) {
+			setTimeout(() => {
+				setOutputError(err.message);
+				setIsExecuting(false);
+			}, 300);
+			return;
+		}
+
+		let inSchema: ObjectType;
+		if (eventSchema.current != null) {
+			inSchema = eventSchema.current;
+		} else {
+			try {
+				inSchema = await api.eventsSchema();
+			} catch (err) {
+				setTimeout(() => {
+					handleError(err);
+					setIsExecuting(false);
+				}, 300);
+				return;
+			}
+			eventSchema.current = { ...inSchema };
+		}
+
+		if (mode === 'mappings') {
+			let hasMappedProperty = false;
+			for (const k in action.Transformation.Mapping) {
+				if (action.Transformation.Mapping[k].value !== '') {
+					hasMappedProperty = true;
+					break;
+				}
+			}
+			if (!hasMappedProperty) {
+				setTimeout(() => {
+					setOutputError('You must map at least a property if you want to test the transformation');
+					setIsExecuting(false);
+				}, 300);
+				return;
+			}
+		}
+
+		let purpose: TransformationPurpose =
+			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
+		let res: TransformDataResponse;
+		try {
+			const data = JSON.parse(atob(event.full.Data));
+			res = await api.transformData(data, inSchema, actionToSet.outSchema, actionToSet.transformation, purpose);
+		} catch (err) {
+			setOutput('');
+			if (err instanceof UnprocessableError && err.code === 'TransformationFailed') {
+				setTimeout(() => {
+					setOutputError(err.message);
+					setIsExecuting(false);
+				}, 300);
+			} else {
+				setTimeout(() => {
+					handleError(err);
+					setIsExecuting(false);
+				}, 300);
+			}
+			return;
+		}
+		setOutput(JSON.stringify(res.data, null, 4));
+		setTimeout(() => setIsExecuting(false), 300);
+	};
+
+	const onTransformEvent = async (event: EventListenerEvent) => {
 		lastExecutedEvent.current = event;
 		if (selectedEvent && event.id !== selectedEvent.id) {
 			setSelectedEvent(null);
@@ -1342,7 +1432,7 @@ const FullscreenTransformation = ({
 											name='play-circle'
 											onClick={(e) => {
 												e.stopPropagation();
-												onExecuteSample(s);
+												onTransformSample(s);
 											}}
 										/>
 									</div>
@@ -1374,7 +1464,7 @@ const FullscreenTransformation = ({
 				</SlButton>
 			</div>
 		);
-	} else if (connection.isApp && connection.isDestination && actionType.Target === 'Events') {
+	} else if (isEventBasedUserImport || isAppEventsExport) {
 		const reversedEvents: EventListenerEvent[] = [...events].reverse();
 		inputPanelContent = (
 			<div className='fullscreen-transformation__event-listener'>
@@ -1414,7 +1504,11 @@ const FullscreenTransformation = ({
 												className='fullscreen-transformation__event-run'
 												name='play-circle'
 												onClick={(evt) => {
-													onExecuteEvent(e);
+													if (isAppEventsExport) {
+														onTransformEvent(e);
+													} else {
+														onTransformUserEvent(e);
+													}
 													evt.stopPropagation();
 												}}
 											/>

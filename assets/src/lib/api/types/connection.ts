@@ -24,7 +24,7 @@ interface Connection {
 	Health: Health;
 	ActionTypes?: ActionType[];
 	Actions?: Action[];
-	EventConnections?: Number[];
+	EventConnections?: number[];
 }
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
