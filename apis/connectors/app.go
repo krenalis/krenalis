@@ -107,8 +107,13 @@ func (app *App) EventRequest(ctx context.Context, event *Event, eventType string
 	if err != nil {
 		return nil, err
 	}
+	// If schema is invalid, properties is nil. The EventRequest method,
+	// when the event schema is valid, requires properties to be non-nil.
+	if properties == nil && eventTypeSchema.Valid() {
+		properties = map[string]any{}
+	}
 	// Return the event request.
-	return appEvents.EventRequest(ctx, event, eventType, schema, properties, redacted)
+	return appEvents.EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
 }
 
 // EventTypes returns the app's event types.
