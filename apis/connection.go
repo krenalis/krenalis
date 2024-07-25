@@ -1539,18 +1539,20 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if err != nil {
 		return nil, err
 	}
-	b.WriteByte('\n')
-	ct := req.Header.Get("Content-Type")
-	switch ct {
-	case "application/json":
-		err = json.Indent(&b, req.Body, "", "\t")
-		if err != nil {
-			return nil, err
+	if req.Body != nil {
+		b.WriteByte('\n')
+		ct := req.Header.Get("Content-Type")
+		switch ct {
+		case "application/json":
+			err = json.Indent(&b, req.Body, "", "\t")
+			if err != nil {
+				return nil, err
+			}
+		case "application/x-ndjson":
+			b.Write(req.Body)
+		default:
+			_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(req.Body))
 		}
-	case "application/x-ndjson":
-		b.Write(req.Body)
-	default:
-		_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(req.Body))
 	}
 
 	return b.Bytes(), nil
