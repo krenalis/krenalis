@@ -1465,67 +1465,82 @@ const FullscreenTransformation = ({
 			</div>
 		);
 	} else if (isEventBasedUserImport || isAppEventsExport) {
-		const reversedEvents: EventListenerEvent[] = [...events].reverse();
-		inputPanelContent = (
-			<div className='fullscreen-transformation__event-listener'>
-				<div className='fullscreen-transformation__event-listener-list'>
-					<div className='fullscreen-transformation__event-listener-body'>
-						{events.length === 0 && (
-							<div className='fullscreen-transformation__event-listener-no-event'>
-								Listening for new events{' '}
-								<span className='fullscreen-transformation__event-listener-loading-ellipsis'>
-									<span className='fullscreen-transformation__event-listener-ellipsis1'>.</span>
-									<span className='fullscreen-transformation__event-listener-ellipsis2'>.</span>
-									<span className='fullscreen-transformation__event-listener-ellipsis3'>.</span>
-								</span>
-							</div>
-						)}
-						{reversedEvents.map((e) => {
-							const isOpen = selectedEvent && selectedEvent.id === e.id;
-							const isLastExecuted =
-								lastExecutedEvent.current &&
-								JSON.stringify(lastExecutedEvent.current) === JSON.stringify(e);
-							return (
-								<Accordion
-									key={e.id}
-									isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
-									summary={
-										<div
-											className={`fullscreen-transformation__event${isOpen ? ' fullscreen-transformation__event--open' : ''}${
-												isLastExecuted ? ' fullscreen-transformation__event--last-executed' : ''
-											}`}
-											onClick={(evt) => onEventClick(evt, e)}
-										>
-											<div className='fullscreen-transformation__event-name'>{e.type}</div>
-											<div className='fullscreen-transformation__event-time'>
-												{new Date(e.time).toLocaleString()}
+		if (isAppEventsExport && (connection.eventConnections == null || connection.eventConnections.length === 0)) {
+			inputPanelContent = (
+				<div className='fullscreen-transformation__no-sample'>
+					<SlIcon name='x-lg' />
+					<p className='fullscreen-transformation__no-sample-text'>
+						This connection cannot retrieve events for testing the transformation because no event source
+						has been added. Please add an event source in the connection settings to start collecting events
+						and enable transformation testing.
+					</p>
+				</div>
+			);
+		} else {
+			const reversedEvents: EventListenerEvent[] = [...events].reverse();
+			inputPanelContent = (
+				<div className='fullscreen-transformation__event-listener'>
+					<div className='fullscreen-transformation__event-listener-list'>
+						<div className='fullscreen-transformation__event-listener-body'>
+							{events.length === 0 && (
+								<div className='fullscreen-transformation__event-listener-no-event'>
+									Listening for new events{' '}
+									<span className='fullscreen-transformation__event-listener-loading-ellipsis'>
+										<span className='fullscreen-transformation__event-listener-ellipsis1'>.</span>
+										<span className='fullscreen-transformation__event-listener-ellipsis2'>.</span>
+										<span className='fullscreen-transformation__event-listener-ellipsis3'>.</span>
+									</span>
+								</div>
+							)}
+							{reversedEvents.map((e) => {
+								const isOpen = selectedEvent && selectedEvent.id === e.id;
+								const isLastExecuted =
+									lastExecutedEvent.current &&
+									JSON.stringify(lastExecutedEvent.current) === JSON.stringify(e);
+								return (
+									<Accordion
+										key={e.id}
+										isOpen={JSON.stringify(e) === JSON.stringify(selectedEvent)}
+										summary={
+											<div
+												className={`fullscreen-transformation__event${isOpen ? ' fullscreen-transformation__event--open' : ''}${
+													isLastExecuted
+														? ' fullscreen-transformation__event--last-executed'
+														: ''
+												}`}
+												onClick={(evt) => onEventClick(evt, e)}
+											>
+												<div className='fullscreen-transformation__event-name'>{e.type}</div>
+												<div className='fullscreen-transformation__event-time'>
+													{new Date(e.time).toLocaleString()}
+												</div>
+												<SlIconButton
+													className='fullscreen-transformation__event-run'
+													name='play-circle'
+													onClick={(evt) => {
+														if (isAppEventsExport) {
+															onTransformEvent(e);
+														} else {
+															onTransformUserEvent(e);
+														}
+														evt.stopPropagation();
+													}}
+												/>
 											</div>
-											<SlIconButton
-												className='fullscreen-transformation__event-run'
-												name='play-circle'
-												onClick={(evt) => {
-													if (isAppEventsExport) {
-														onTransformEvent(e);
-													} else {
-														onTransformUserEvent(e);
-													}
-													evt.stopPropagation();
-												}}
-											/>
-										</div>
-									}
-									details={
-										<div className='fullscreen-transformation__event-source'>
-											<SyntaxHighlight>{e.source}</SyntaxHighlight>
-										</div>
-									}
-								/>
-							);
-						})}
+										}
+										details={
+											<div className='fullscreen-transformation__event-source'>
+												<SyntaxHighlight>{e.source}</SyntaxHighlight>
+											</div>
+										}
+									/>
+								);
+							})}
+						</div>
 					</div>
 				</div>
-			</div>
-		);
+			);
+		}
 	} else {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
