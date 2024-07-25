@@ -127,9 +127,10 @@ func (fn *function) create(name string, version int, source string) error {
 	if !fn.supportLanguage(ext) {
 		return errors.New("language is not supported")
 	}
+	var fullSource string
 	switch ext {
 	case ".js":
-		source += `
+		fullSource = source + `
 const results = [];
 const event = Function("return " + process.argv[2])();
 ` + embed.JavaScriptNormalizeFunc + `
@@ -149,8 +150,9 @@ for ( let i = 0; i < event.length; i++ ) {
 }
 process.stdout.write(JSON.stringify(results))`
 	case ".py":
-		source += "\n\n" + embed.PythonNormalizeFunc + "\n\n"
-		source += `
+		fullSource = embed.PythonNormalizeFunc + "\n\n"
+		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
+		fullSource += `
 def main():
 	import json
 	import sys
@@ -158,8 +160,20 @@ def main():
 	from decimal import Decimal
 	from datetime import datetime, date, time
 
+	exec_error = None
+	try:
+		exec(_SOURCE, globals())
+	except SyntaxError as ex:
+		exec_error = {"error": f"SyntaxError: {ex.msg} (line {ex.lineno})"}
+	except Exception as ex:
+		name = type(ex).__name__
+		exec_error = {"error": f"{name}: {ex}"}
+
 	results = [] 
 	for event in eval(sys.argv[1]):
+		if exec_error:
+			results.append(exec_error)
+			continue
 		try:
 			value = transform(event)
 			_Norm.normalize(value)
@@ -188,7 +202,7 @@ if __name__ == "__main__":
 		}
 		return err
 	}
-	_, err = f.WriteString(source)
+	_, err = f.WriteString(fullSource)
 	if err != nil {
 		return err
 	}
@@ -335,4 +349,18 @@ func (fn *function) supportLanguage(ext string) bool {
 		return fn.settings.PythonExecutable != ""
 	}
 	panic("invalid extension")
+}
+
+// pythonEscaper is used by escapePythonSourceCode.
+//
+// Keep this in sync with the code within the Lambda transformer.
+var pythonEscaper = strings.NewReplacer(`\`, `\\`, `'''`, `''\'`)
+
+// escapePythonSourceCode escapes the given Python source code so it can be
+// safely be put into a triple-quoted Python string literal (where the quote
+// character is the single quote, not double) for later evaluation.
+//
+// Keep this in sync with the code within the Lambda transformer.
+func escapePythonSourceCode(src string) string {
+	return pythonEscaper.Replace(src)
 }

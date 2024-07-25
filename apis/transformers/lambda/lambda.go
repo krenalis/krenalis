@@ -299,10 +299,11 @@ func (fn *function) Update(ctx context.Context, name, source string) (string, er
 // code returns the code of the function with the given source.
 func (fn *function) code(source string, ext string) ([]byte, error) {
 	var filename string
+	var fullSource string
 	switch ext {
 	case ".js":
 		filename = "index.mjs"
-		source += `
+		fullSource = source + `
 export const _handler = async (event) => {
 ` + embed.JavaScriptNormalizeFunc + `
 	event = Function("return " + event)();
@@ -326,16 +327,29 @@ export const _handler = async (event) => {
 `
 	case ".py":
 		filename = "index.py"
-		source += "\n\n" + embed.PythonNormalizeFunc + "\n\n"
-		source += `
+		fullSource = embed.PythonNormalizeFunc + "\n\n"
+		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
+		fullSource += `
 def _handler(event, context):
 	import json
 	from uuid import UUID
 	from decimal import Decimal
 	from datetime import datetime, date, time
+
+	exec_error = None
+	try:
+		exec(_SOURCE, globals())
+	except SyntaxError as ex:
+		exec_error = {"error": f"SyntaxError: {ex.msg} (line {ex.lineno})"}
+	except Exception as ex:
+		name = type(ex).__name__
+		exec_error = {"error": f"{name}: {ex}"}
     
 	results = []
 	for e in eval(event):
+		if exec_error:
+			results.append(exec_error)
+			continue
 		try:
 			value = transform(e)
 			_Norm.normalize(value)
@@ -354,7 +368,7 @@ def _handler(event, context):
 	if err != nil {
 		return nil, err
 	}
-	_, err = io.WriteString(fi, source)
+	_, err = io.WriteString(fi, fullSource)
 	if err != nil {
 		return nil, err
 	}
@@ -406,4 +420,18 @@ func httpStatusCode(err error) (int, bool) {
 // lambdaFunctionName returns a function name in the format accepted by Lambda.
 func lambdaFunctionName(name string) string {
 	return name[:len(name)-3] + "_" + name[len(name)-2:]
+}
+
+// pythonEscaper is used by escapePythonSourceCode.
+//
+// Keep this in sync with the code within the local transformer.
+var pythonEscaper = strings.NewReplacer(`\`, `\\`, `'''`, `''\'`)
+
+// escapePythonSourceCode escapes the given Python source code so it can be
+// safely be put into a triple-quoted Python string literal (where the quote
+// character is the single quote, not double) for later evaluation.
+//
+// Keep this in sync with the code within the local transformer.
+func escapePythonSourceCode(src string) string {
+	return pythonEscaper.Replace(src)
 }
