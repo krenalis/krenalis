@@ -653,7 +653,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
 
-	properties, err := encoding.Unmarshal(bytes.NewReader(data), "data", inSchema)
+	properties, err := encoding.Unmarshal(bytes.NewReader(data), inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}

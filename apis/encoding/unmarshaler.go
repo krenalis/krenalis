@@ -116,11 +116,9 @@ type decoder struct {
 // provided input schema, which must be an Object. If a property is missing and
 // it is not optional for reading, it returns a *SchemaValidationError error.
 //
-// name is used in error messages as the name of the unmarshaled object.
-//
 // It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
-// valid JSON and returns a *SchemaValidationError value if an error occurs
-// during schema validation.
+// valid JSON Object and returns a *SchemaValidationError value if an error
+// occurs during schema validation.
 //
 // The following are the expected JSON values for each schema type:
 //
@@ -144,7 +142,7 @@ type decoder struct {
 //   - Array: a JSON Array
 //   - Object: a JSON Object
 //   - Map: a JSON Object
-func Unmarshal(r io.Reader, name string, schema types.Type) (map[string]any, error) {
+func Unmarshal(r io.Reader, schema types.Type) (map[string]any, error) {
 	if r == nil {
 		return nil, errors.New("r is nil")
 	}
@@ -155,15 +153,17 @@ func Unmarshal(r io.Reader, name string, schema types.Type) (map[string]any, err
 		return nil, errors.New("apis/encoding:schema is not an object")
 	}
 	d := decoder{dec: jsontext.NewDecoder(r)}
+	if d.peekKind() != '{' {
+		return nil, ErrSyntaxInvalid
+	}
 	value, err := d.unmarshal(schema)
 	if err != nil {
-		if err, ok := err.(*SchemaValidationError); ok {
+		if _, ok := err.(*SchemaValidationError); ok {
 			// Consume the remaining tokens to return a ErrSyntaxInvalid error
 			// in case of a syntax error, instead of the validation error.
 			if err := d.consumeTokens(); err != nil {
 				return nil, err
 			}
-			err.appendNameToPath(name)
 		}
 		return nil, err
 	}

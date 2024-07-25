@@ -230,7 +230,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			data: `5`,
-			err:  newErrInvalidValue(`does not have a valid value: 5`, "data"),
+			err:  ErrSyntaxInvalid,
 		},
 		{
 			data: `{"Boolean":}`,
@@ -246,51 +246,51 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			data: `[{"Boolean":true}]`,
-			err:  newErrInvalidValue(`cannot be an array`, "data"),
+			err:  ErrSyntaxInvalid,
 		},
 		{
 			data: `{"Object":{"d":5}}`,
-			err:  newErrPropertyNotExist("data.Object.d"),
+			err:  newErrPropertyNotExist("Object.d"),
 		},
 		{
 			data: `{"Object":{"b":true}}`,
-			err:  newErrMissingProperty("data.Object.a"),
+			err:  newErrMissingProperty("Object.a"),
 		},
 		{
 			data: `{"Object":{"b":3}}`,
-			err:  newErrInvalidValue(`does not have a valid value: 3`, "data.Object.b"),
+			err:  newErrInvalidValue(`does not have a valid value: 3`, "Object.b"),
 		},
 		{
 			data: `{"Int8":21}`,
-			err:  newErrInvalidValue(`is out of range [-20, 20]: 21`, "data.Int8"),
+			err:  newErrInvalidValue(`is out of range [-20, 20]: 21`, "Int8"),
 		},
 		{
 			data: `{"Int8":-25}`,
-			err:  newErrInvalidValue(`is out of range [-20, 20]: -25`, "data.Int8"),
+			err:  newErrInvalidValue(`is out of range [-20, 20]: -25`, "Int8"),
 		},
 		{
 			data: `{"Boolean":"a \" \\ b"}`,
-			err:  newErrInvalidValue(`does not have a valid value: "a \" \\ b"`, "data.Boolean"),
+			err:  newErrInvalidValue(`does not have a valid value: "a \" \\ b"`, "Boolean"),
 		},
 		{
 			data: `{"Boolean":null}`,
-			err:  newErrInvalidValue(`cannot be null`, "data.Boolean"),
+			err:  newErrInvalidValue(`cannot be null`, "Boolean"),
 		},
 		{
 			data: `{"Date":"2023-02-30"}`,
-			err:  newErrInvalidValue(`does not have a valid value: "2023-02-30"`, "data.Date"),
+			err:  newErrInvalidValue(`does not have a valid value: "2023-02-30"`, "Date"),
 		},
 		{
 			data: `{"Text":"some long text"}`,
-			err:  newErrInvalidValue(`is longer than 10 characters: "some long text"`, "data.Text"),
+			err:  newErrInvalidValue(`is longer than 10 characters: "some long text"`, "Text"),
 		},
 		{
 			data: `{"Text_values":"foo"}`,
-			err:  newErrInvalidValue(`has an invalid value: "foo"; valid values are "a", "b", and "c"`, "data.Text_values"),
+			err:  newErrInvalidValue(`has an invalid value: "foo"; valid values are "a", "b", and "c"`, "Text_values"),
 		},
 		{
 			data: `{"Text_regexp":"faa"}`,
-			err:  newErrInvalidValue(`has an invalid value: "faa"; it does not match the property's regular expression`, "data.Text_regexp"),
+			err:  newErrInvalidValue(`has an invalid value: "faa"; it does not match the property's regular expression`, "Text_regexp"),
 		},
 	}
 
@@ -301,7 +301,7 @@ func Test_Unmarshal(t *testing.T) {
 			if !test.schema.Valid() {
 				testSchema = schema
 			}
-			got, err := Unmarshal(b, "data", testSchema)
+			got, err := Unmarshal(b, testSchema)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("Unmarshal: expected no error, got error %s", err)
