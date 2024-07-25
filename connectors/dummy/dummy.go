@@ -129,10 +129,12 @@ func (dummy *Dummy) EventRequest(ctx context.Context, event *meergo.Event, event
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	var err error
-	req.Body, err = json.Marshal(properties)
-	if err != nil {
-		return nil, err
+	if properties != nil {
+		var err error
+		req.Body, err = json.Marshal(properties)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return req, nil
 }
