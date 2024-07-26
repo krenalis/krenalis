@@ -674,6 +674,11 @@ const TransformationBox = ({
 		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.Transformation.Mapping) {
+			const isExternalMatchingProperty =
+				action.MatchingProperties?.External && action.MatchingProperties.External === k;
+			if (isExternalMatchingProperty) {
+				continue;
+			}
 			const isRequired =
 				action.Transformation.Mapping[k].createRequired || action.Transformation.Mapping[k].updateRequired;
 			mappings.push(

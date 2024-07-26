@@ -7,7 +7,7 @@ import { flattenSchema, TransformedMapping } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
 
 const ActionMatchingProperties = () => {
-	const { connection, action, setAction, actionType } = useContext(ActionContext);
+	const { connection, action, setAction, actionType, mode } = useContext(ActionContext);
 
 	const internalMatchingPropertyListRef = useRef(null);
 	const externalMatchingPropertyListRef = useRef(null);
@@ -52,6 +52,13 @@ const ActionMatchingProperties = () => {
 			a.MatchingProperties!.Internal = value;
 		} else {
 			a.MatchingProperties!.External = value;
+			// The external matching properties cannot be transformed.
+			if (mode === 'mappings') {
+				a.Transformation.Mapping[value].value = '';
+			}
+			// TODO(@Andrea): remove the property from the transformation even
+			// in case of transformation function (this must be addressed after
+			// fixing issue https://github.com/meergo/meergo/issues/507)
 		}
 		setAction(a);
 	};
@@ -63,6 +70,13 @@ const ActionMatchingProperties = () => {
 			a.MatchingProperties!.Internal = value;
 		} else {
 			a.MatchingProperties!.External = value;
+			// The external matching properties cannot be transformed.
+			if (mode === 'mappings') {
+				a.Transformation.Mapping[value].value = '';
+			}
+			// TODO(@Andrea): remove the property from the transformation even
+			// in case of transformation function (this must be addressed after
+			// fixing issue https://github.com/meergo/meergo/issues/507)
 		}
 		setAction(a);
 	};
