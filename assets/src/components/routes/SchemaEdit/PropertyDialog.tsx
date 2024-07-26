@@ -131,6 +131,7 @@ const PropertyDialog = ({
 		}
 		if (typeName === 'Float') {
 			typ.bitSize = 64;
+			typ.real = false;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
 		if (typeName === 'Decimal') {
@@ -226,6 +227,28 @@ const PropertyDialog = ({
 		if (typeError !== '') {
 			setTypeError('');
 		}
+	};
+
+	const onRealChange = () => {
+		const p = { ...property };
+		if (p.type.name === 'Array') {
+			const typ = p.type as ArrayType;
+			const elementTyp = typ.elementType as FloatType;
+			elementTyp.real = !elementTyp.real;
+			typ.elementType = elementTyp;
+			p.type = typ;
+		} else if (p.type.name === 'Map') {
+			const typ = p.type as MapType;
+			const valueTyp = typ.valueType as FloatType;
+			valueTyp.real = !valueTyp.real;
+			typ.valueType = valueTyp;
+			p.type = typ;
+		} else {
+			const typ = p.type as FloatType;
+			typ.real = !typ.real;
+			p.type = typ;
+		}
+		setProperty(p);
 	};
 
 	const onChangeAssociatedType = (e) => {
@@ -512,6 +535,33 @@ const PropertyDialog = ({
 		}
 	}
 
+	let realSection = null;
+	if (property != null && property.type != null) {
+		const isArray = property.type.name === 'Array';
+		const isMap = property.type.name === 'Map';
+		const hasFloat =
+			property.type.name === 'Float' ||
+			(isArray && (property.type as ArrayType).elementType.name === 'Float') ||
+			(isMap && (property.type as MapType).valueType.name === 'Float');
+		if (hasFloat) {
+			const typ: any = isArray
+				? (property.type as ArrayType).elementType
+				: isMap
+					? (property.type as MapType).valueType
+					: property.type;
+			realSection = (
+				<SlCheckbox
+					className='property-dialog__real'
+					size='small'
+					checked={!typ.real}
+					onSlChange={onRealChange}
+				>
+					Allow infinite and NaN values
+				</SlCheckbox>
+			);
+		}
+	}
+
 	let lengthSection = null;
 	if (property != null && property.type != null) {
 		const isArray = property.type.name === 'Array';
@@ -671,6 +721,7 @@ const PropertyDialog = ({
 								{bitSizeSection}
 								{precisionSection}
 								{scaleSection}
+								{realSection}
 								{property.type?.name !== 'Array' && property.type?.name !== 'Map' && lengthSection}
 							</div>
 							{typeError !== '' && (
