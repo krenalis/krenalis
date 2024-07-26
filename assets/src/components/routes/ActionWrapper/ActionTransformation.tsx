@@ -1626,7 +1626,16 @@ const FullscreenTransformation = ({
 								{isOutputSchemaSelected ? (
 									<div className='fullscreen-transformation__panel-schema'>
 										{outputSchema.properties.map((p) => {
-											if (p.type.name === 'Object') {
+											if (
+												action.MatchingProperties?.External &&
+												action.MatchingProperties.External === p.name
+											) {
+												// Do not show the property used
+												//  as external matching
+												//  property as it must not be
+												//  transformed.
+												return null;
+											} else if (p.type.name === 'Object') {
 												return (
 													<TransformationNestedProperties
 														key={p.name}
