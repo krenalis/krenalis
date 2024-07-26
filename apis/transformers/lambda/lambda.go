@@ -135,7 +135,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		return err
 	}
 
-	// Unmarshal the results.
+	// Unmarshal the records.
 	if out.FunctionError != nil {
 		dec := json.NewDecoder(bytes.NewReader(out.Payload))
 		payload := struct {
@@ -145,7 +145,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 		if err != nil {
 			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
 		}
-		return transformers.FunctionExecutionError(payload.ErrorMessage)
+		return errors.New(payload.ErrorMessage)
 	}
 	var r io.Reader
 	switch ext {
@@ -303,26 +303,36 @@ func (fn *function) code(source string, ext string) ([]byte, error) {
 	switch ext {
 	case ".js":
 		filename = "index.mjs"
-		fullSource = source + `
+		escapedSource := escapeJavaScriptSourceCode(source)
+		fullSource = `
+var transform;
 export const _handler = async (event) => {
 ` + embed.JavaScriptNormalizeFunc + `
+	if ( transform == null ) {
+		try {
+			Function(` + "`" + escapedSource + "`" + `);
+		} catch (error) {
+			return { error: error.toString() };
+		}
+		transform = Function('event', ` + "`" + escapedSource + "; return transform(event)`" + `);
+	}
 	event = Function("return " + event)();
-	const results = [];
+	const records = [];
 	for ( let i = 0; i < event.length; i++ ) {
 		try {
 			let value = transform(event[i]);
 			normalize(value);
-			results[i] = { value: value };
+			records[i] = { value: value };
 		} catch (error) {
 			if (error instanceof Error) {
 				error = error.toString();
 			} else {
 				error = "throw error of type " + (typeof error) + ": " + JSON.stringify(error);
 			}
-			results[i] = { error: error };
+			records[i] = { error: error };
 		}
 	}
-	return results;
+	return { records };
 };
 `
 	case ".py":
@@ -336,29 +346,26 @@ def _handler(event, context):
 	from decimal import Decimal
 	from datetime import datetime, date, time
 
-	exec_error = None
 	try:
 		exec(_SOURCE, globals())
 	except SyntaxError as ex:
-		exec_error = {"error": f"SyntaxError: {ex.msg} (line {ex.lineno})"}
+		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
+		return json.dumps({"error": error}, separators=(",", ":"), default=str)
 	except Exception as ex:
 		name = type(ex).__name__
-		exec_error = {"error": f"{name}: {ex}"}
-    
-	results = []
+		error = f"{name}: {ex}"
+		return json.dumps({"error": error}, separators=(",", ":"), default=str)
+	records = []
 	for e in eval(event):
-		if exec_error:
-			results.append(exec_error)
-			continue
 		try:
 			value = transform(e)
 			_Norm.normalize(value)
 		except Exception as ex:
 			name = type(ex).__name__
-			results.append({"error": f"{name}: {ex}"})
+			records.append({"error": f"{name}: {ex}"})
 		else:
-			results.append({"value": value})
-	return json.dumps(results, separators=(",", ":"), default=str)
+			records.append({"value": value})
+	return json.dumps({"records": records}, separators=(",", ":"), default=str)
 `
 	}
 	// Make a Zip file with the function code.
@@ -434,4 +441,18 @@ var pythonEscaper = strings.NewReplacer(`\`, `\\`, `'''`, `''\'`)
 // Keep this in sync with the code within the local transformer.
 func escapePythonSourceCode(src string) string {
 	return pythonEscaper.Replace(src)
+}
+
+// javaScriptEscaper is used by escapeJavaScriptSourceCode.
+//
+// Keep this in sync with the code within the local transformer.
+var javaScriptEscaper = strings.NewReplacer(`\`, `\\`, "`", "\\`", `$`, `\$`)
+
+// escapeJavaScriptSourceCode escapes the given JavaScript source code so it can
+// be safely be put into a single quoted JavaScript string literal for later
+// evaluation.
+//
+// Keep this in sync with the code within the local transformer.
+func escapeJavaScriptSourceCode(src string) string {
+	return javaScriptEscaper.Replace(src)
 }

@@ -93,7 +93,7 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		return transformers.FunctionExecutionError(stderr.String())
+		return err
 	}
 	return transformers.Unmarshal(&stdout, records, outSchema, language, preserveJSON)
 }
@@ -132,25 +132,33 @@ func (fn *function) create(name string, version int, source string) error {
 	var fullSource string
 	switch ext {
 	case ".js":
-		fullSource = source + `
-const results = [];
+		escapedSource := escapeJavaScriptSourceCode(source)
+		fullSource = `
+try {
+	Function(` + "`" + escapedSource + "`" + `);
+} catch (error) {
+	process.stdout.write(JSON.stringify({ error: error.toString() }));
+	return;
+}
+const transform = Function('event', ` + "`" + escapedSource + "; return transform(event)`" + `);
+const records = [];
 const event = Function("return " + process.argv[2])();
 ` + embed.JavaScriptNormalizeFunc + `
 for ( let i = 0; i < event.length; i++ ) {
 	try {
 		let value = transform(event[i]);
 		normalize(value);
-		results[i] = { value: value };
+		records[i] = { value: value };
 	} catch (error) {
 		if (error instanceof Error) {
 			error = error.toString();
 		} else {
 			error = "throw error of type " + (typeof error) + ": " + JSON.stringify(error);
 		}
-		results[i] = { error: error };
+		records[i] = { error: error };
 	}
 }
-process.stdout.write(JSON.stringify(results))`
+process.stdout.write(JSON.stringify({ records: records }));`
 	case ".py":
 		fullSource = embed.PythonNormalizeFunc + "\n\n"
 		fullSource += "_SOURCE = '''" + escapePythonSourceCode(source) + "'''\n\n"
@@ -162,29 +170,29 @@ def main():
 	from decimal import Decimal
 	from datetime import datetime, date, time
 
-	exec_error = None
 	try:
 		exec(_SOURCE, globals())
 	except SyntaxError as ex:
-		exec_error = {"error": f"SyntaxError: {ex.msg} (line {ex.lineno})"}
+		error = f"SyntaxError: {ex.msg} (line {ex.lineno})"
+		print(json.dumps({"error": error}, separators=(",", ":"), default=str))
+		return
 	except Exception as ex:
 		name = type(ex).__name__
-		exec_error = {"error": f"{name}: {ex}"}
+		error = f"{name}: {ex}"
+		print(json.dumps({"error": error}, separators=(",", ":"), default=str))
+		return
 
-	results = [] 
+	records = []
 	for event in eval(sys.argv[1]):
-		if exec_error:
-			results.append(exec_error)
-			continue
 		try:
 			value = transform(event)
 			_Norm.normalize(value)
 		except Exception as ex:
 			name = type(ex).__name__
-			results.append({"error": f"{name}: {ex}"})
+			records.append({"error": f"{name}: {ex}"})
 		else:
-			results.append({"value": value})
-	print(json.dumps(results, separators=(",", ":"), default=str))
+			records.append({"value": value})
+	print(json.dumps({"records": records}, separators=(",", ":"), default=str))
 
 if __name__ == "__main__":
 	main()
@@ -365,4 +373,18 @@ var pythonEscaper = strings.NewReplacer(`\`, `\\`, `'''`, `''\'`)
 // Keep this in sync with the code within the Lambda transformer.
 func escapePythonSourceCode(src string) string {
 	return pythonEscaper.Replace(src)
+}
+
+// javaScriptEscaper is used by escapeJavaScriptSourceCode.
+//
+// Keep this in sync with the code within the Lambda transformer.
+var javaScriptEscaper = strings.NewReplacer(`\`, `\\`, "`", "\\`", `$`, `\$`)
+
+// escapeJavaScriptSourceCode escapes the given JavaScript source code so it can
+// be safely be put into a single quoted JavaScript string literal for later
+// evaluation.
+//
+// Keep this in sync with the code within the Lambda transformer.
+func escapeJavaScriptSourceCode(src string) string {
+	return javaScriptEscaper.Replace(src)
 }

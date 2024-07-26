@@ -671,16 +671,13 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 	err = transformer.Transform(ctx, records)
 	if err != nil {
-		return nil, err
-	}
-	if err = records[0].Err; err != nil {
 		if err, ok := err.(transformers.FunctionExecutionError); ok {
 			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 		}
-		if err, ok := err.(ValidationError); ok {
-			return nil, errors.Unprocessable(TransformationFailed, "%w", err)
-		}
 		return nil, err
+	}
+	if err = records[0].Err; err != nil {
+		return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 	}
 
 	return encoding.Marshal(outSchema, records[0].Properties)

@@ -216,6 +216,41 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 		}
 		return err
 	}
+	if tok.Kind() != '{' {
+		return errSyntaxInvalid
+	}
+	tok, err = d.readToken()
+	if err != nil {
+		return err
+	}
+	key := tok.String()
+	if key == "error" {
+		// Parse and return a FunctionExecutionError error.
+		if tok, err = d.readToken(); err != nil {
+			return err
+		}
+		if tok.Kind() != '"' {
+			return errSyntaxInvalid
+		}
+		msg := tok.String()
+		if tok, err = d.readToken(); err != nil {
+			return err
+		}
+		if tok.Kind() != '}' {
+			return errSyntaxInvalid
+		}
+		if _, err := d.readToken(); err != io.EOF {
+			return errSyntaxInvalid
+		}
+		return FunctionExecutionError(msg)
+	}
+	if key != "records" {
+		return errSyntaxInvalid
+	}
+	// Parse the records.
+	if tok, err = d.readToken(); err != nil {
+		return err
+	}
 	if tok.Kind() != '[' {
 		return errSyntaxInvalid
 	}
@@ -260,7 +295,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 				return errSyntaxInvalid
 			}
 			records[i].Properties = nil
-			records[i].Err = FunctionExecutionError(tok.String())
+			records[i].Err = errors.New(tok.String())
 		default:
 			return errSyntaxInvalid
 		}
@@ -272,6 +307,12 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 			return errSyntaxInvalid
 		}
 		i++
+	}
+	if tok, err = d.readToken(); err != nil {
+		return err
+	}
+	if tok.Kind() != '}' {
+		return errSyntaxInvalid
 	}
 	if _, err := d.readToken(); err != io.EOF {
 		return errSyntaxInvalid
