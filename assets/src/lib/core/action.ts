@@ -470,6 +470,9 @@ const transformInActionToSet = async (
 	} else if (action.Transformation.Function != null) {
 		inSchema = actionType.InputSchema;
 		outSchema = actionType.OutputSchema;
+		if (action.MatchingProperties?.External) {
+			outSchema.properties = outSchema.properties.filter((p) => p.name !== action.MatchingProperties.External);
+		}
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
 			Language: action.Transformation.Function.Language,
@@ -527,12 +530,10 @@ const transformInActionToSet = async (
 			if (externalPropertyToAdd == null) {
 				throw new Error(`External matching property "${external}" does not exist in the output schema`);
 			}
-			// TODO(@Andrea): after closing issue
-			// https://github.com/meergo/meergo/issues/507, add additional check
-			// and throw an error if the property is already inserted in the out
-			// schema, as it must not be used within the mapping or the
-			// transformation function.
 			const isAlreadyInSchema = outSchema.properties!.findIndex((p) => p.name === external) !== -1;
+			if (isAlreadyInSchema) {
+				throw new Error(`External matching property cannot be used in the transformation`);
+			}
 			if (!isAlreadyInSchema) {
 				outSchema.properties.push(externalPropertyToAdd);
 			}
