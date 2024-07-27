@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	mathrand "math/rand"
+	mathrand "math/rand/v2"
 	"slices"
 	"strconv"
 	"strings"
@@ -478,7 +478,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Name:                     action.Name,
 		Enabled:                  action.Enabled,
 		EventType:                eventType,
-		ScheduleStart:            int16(mathrand.Intn(24 * 60)),
+		ScheduleStart:            int16(mathrand.IntN(24 * 60)),
 		SchedulePeriod:           60,
 		InSchema:                 inSchema,
 		OutSchema:                action.OutSchema,

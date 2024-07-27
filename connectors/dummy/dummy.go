@@ -15,7 +15,7 @@ import (
 	"errors"
 	"io"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"sort"
 	"sync"
@@ -75,12 +75,10 @@ var (
 //go:embed users.json
 var jsonUsers []byte
 
-var randGenerator = rand.New(rand.NewSource(time.Now().Unix()))
-
 func newUserID() string {
 	b := make([]rune, 12)
 	for i := range b {
-		b[i] = rune(randGenerator.Intn(20) + 'a')
+		b[i] = rune(rand.IntN(20) + 'a')
 	}
 	return "dummy_" + string(b)
 }

@@ -12,7 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -533,7 +533,7 @@ func (store *Store) flushEvents(events [][]any) {
 		err := store.warehouse.Merge(context.Background(), eventsMergeTable, events, nil)
 		if err != nil {
 			slog.Error("cannot flush the event queue", "workspace", store.workspace, "err", err)
-			time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
+			time.Sleep(time.Duration(rand.IntN(2000)) * time.Millisecond)
 			continue
 		}
 		break

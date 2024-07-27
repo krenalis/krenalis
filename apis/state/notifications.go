@@ -18,7 +18,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"reflect"
 	"strconv"
 	"strings"
@@ -293,7 +293,7 @@ func (acks *acks) create() (int, <-chan struct{}) {
 	var id int
 	var ack chan struct{}
 	for ack == nil {
-		id = rand.Intn(math.MaxInt-1) + 1
+		id = rand.IntN(math.MaxInt-1) + 1
 		acks.Lock()
 		_, ok := acks.ids[id]
 		if !ok {

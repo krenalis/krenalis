@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"net/url"
 	"os"

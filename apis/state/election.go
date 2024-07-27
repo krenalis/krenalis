@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"time"
 )
@@ -47,8 +47,6 @@ func (state *State) keepElections() {
 	// |--------------|          leaderInterval
 	// |--------------|·······|  grantedLeaderInterval
 	// |~~~~~~~|                 electionRandomInterval
-
-	randSource := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	debugf := func(format string, a ...any) {
 		if !debugElection {
@@ -87,7 +85,7 @@ func (state *State) keepElections() {
 		if deadline.After(now) {
 			return state.sleep(deadline.Sub(now))
 		}
-		d := time.Duration(randSource.Intn(int(electionRandomInterval)))
+		d := time.Duration(rand.IntN(int(electionRandomInterval)))
 		debugf("\t%s until election\n", d)
 		if err := state.sleep(d); err != nil {
 			return err

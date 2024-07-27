@@ -12,7 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"sort"
 	"sync"
@@ -156,7 +156,7 @@ func (observer *Observer) addCollectedEvent(source int, event *collectedEvent, e
 		var p int
 		if len(listener.events) == cap(listener.events) {
 			listener.discarded++
-			p = rand.Intn(len(listener.events) + listener.discarded)
+			p = rand.IntN(len(listener.events) + listener.discarded)
 			if p >= cap(listener.events) {
 				listener.Unlock()
 				continue
@@ -222,7 +222,7 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 		var p int
 		if len(listener.events) == cap(listener.events) {
 			listener.discarded++
-			p = rand.Intn(len(listener.events) + listener.discarded)
+			p = rand.IntN(len(listener.events) + listener.discarded)
 			if p >= cap(listener.events) {
 				listener.Unlock()
 				continue

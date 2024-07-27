@@ -37,7 +37,7 @@ package backoff
 import (
 	"context"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 )
 
