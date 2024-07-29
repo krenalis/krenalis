@@ -668,19 +668,20 @@ inherit the disabled style */
 	font-size: 14px;
 }
 
-.fullscreen-transformation__property-copy::part(copy-icon),
-.fullscreen-transformation__property--expand:hover
-	> .fullscreen-transformation__parent-property
-	> .fullscreen-transformation__property
-	> .fullscreen-transformation__property-copy::part(copy-icon) {
-	visibility: hidden;
+.fullscreen-transformation__property-copy::part(copy-icon) {
+	opacity: 0;
+	transform: scale(0);
+	transition:
+		opacity 0.1s,
+		transform 0.3s;
+	will-change: opacity, transform;
 }
 
 .fullscreen-transformation__property:hover
-	> .fullscreen-transformation__parent-property
-	> .fullscreen-transformation__property
+	> .fullscreen-transformation__property-name
 	> .fullscreen-transformation__property-copy::part(copy-icon) {
-	visibility: visible !important;
+	opacity: 1;
+	transform: scale(1);
 }
 
 .fullscreen-transformation__left-panel {

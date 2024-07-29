@@ -1816,13 +1816,15 @@ const TransformationProperty = ({ property, language, isParent, parentName, side
 					</SlTooltip>
 				)}
 				{property.name}
-				<SlCopyButton
-					className='fullscreen-transformation__property-copy'
-					value={property.name}
-					copyLabel='Click to copy'
-					successLabel='✓ Copied'
-					errorLabel='Copying to clipboard is not supported by your browser'
-				/>
+				{!isParent && (
+					<SlCopyButton
+						className='fullscreen-transformation__property-copy'
+						value={parentName ? `${parentName}.${property.name}` : property.name}
+						copyLabel='Click to copy'
+						successLabel='✓ Copied'
+						errorLabel='Copying to clipboard is not supported by your browser'
+					/>
+				)}
 			</div>
 			{property.label != null && property.label !== '' && (
 				<span className='fullscreen-transformation__property-label'>{property.label}</span>
