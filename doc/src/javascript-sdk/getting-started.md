@@ -8,10 +8,10 @@ This guide provides clear instructions for installing the JavaScript SDK in web 
 To create a source JavaScript connection in Meergo:
 
 1. Click on **Connections**.
-2. Click on **Add a New Connection**.
+2. Click on **Add a new source**.
 3. From the list of connectors, select the **JavaScript** connector.
 4. Enter the display name and the hostname where the SDK will be installed.
-5. Click on **Save**.
+5. Click on **Add**.
 
 ## Step 2: Install or Import the SDK
 
@@ -69,6 +69,6 @@ The JavaScript SDK can be imported with `require` into JavaScript projects, usin
 When the JavaScript SDK is installed on your website, using the snippet or imported in your project, you can choose to collect only the events, or import the users, or both:
 
 1. Go to the JavaScript connection you just created and click on **Actions**.
-2. Under the **Import Events** action, click on **Add**.
+2. Under the **Import events** action, click on **Add**.
 3. Confirm by clicking **Add**.
-4. Enable the action by toggling the switch in the **Enable** column.
+4. Enable the action by toggling the switch in the **Enabled** column.

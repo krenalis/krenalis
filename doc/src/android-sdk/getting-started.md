@@ -8,9 +8,9 @@ This guide provides clear instructions for integrating the Android SDK into Andr
 To create a source Android connection in Meergo:
 
 1. Click on **Connections**.
-2. Click on **Add a New Connection**.
+2. Click on **Add a new source**.
 3. From the list of connectors, select the **Android** connector.
-5. Click on **Add**.
+4. Click on **Add**.
 
 ## Step 2: Import the SDK
 
@@ -79,6 +79,6 @@ To integrate the Android SDK inside your application:
 When the Android SDK is imported in your application, you can choose to collect only the events, or import the users, or both:
 
 1. Go to the Android connection you just created and click on **Actions**.
-2. Under the **Import Events** action, click on **Add**.
+2. Under the **Import events** action, click on **Add**.
 3. Confirm by clicking **Add**.
-4. Enable the action by toggling the switch in the **Enable** column.
+4. Enable the action by toggling the switch in the **Enabled** column.
