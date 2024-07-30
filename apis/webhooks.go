@@ -67,7 +67,7 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an api.WebhooksPer value", v)
+		return fmt.Errorf("json: cannot scan a %T value into an apis.WebhooksPer value", v)
 	}
 	var p WebhooksPer
 	switch s {
@@ -80,7 +80,7 @@ func (per *WebhooksPer) UnmarshalJSON(data []byte) error {
 	case "Connector":
 		p = WebhooksPerConnector
 	default:
-		return fmt.Errorf("json: invalid state.WebhooksPer: %s", s)
+		return fmt.Errorf("json: invalid apis.WebhooksPer: %s", s)
 	}
 	*per = p
 	return nil
