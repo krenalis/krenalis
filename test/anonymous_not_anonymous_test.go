@@ -93,6 +93,8 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
 	})
 
+	c.RunIdentityResolution()
+
 	// Wait for the 2 identities to be imported successfully.
 	attempts := 0
 	var identities []meergotester.UserIdentity
@@ -137,6 +139,8 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		MessageId:   "message3",
 		Traits:      analytics.NewTraits().SetAge(20),
 	})
+
+	c.RunIdentityResolution()
 
 	attempts = 0
 waitLoop:

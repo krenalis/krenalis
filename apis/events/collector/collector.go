@@ -361,14 +361,6 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 		if err != nil {
 			return err
 		}
-		// Run the Identity Resolution.
-		err = store.RunIdentityResolution(ctx)
-		if err != nil {
-			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
-				return err
-			}
-			return fmt.Errorf("cannot run the Identity Resolution: %s", err)
-		}
 	}
 	return nil
 }

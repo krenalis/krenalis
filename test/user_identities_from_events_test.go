@@ -46,6 +46,8 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		},
 	})
 
+	ctx := context.Background()
+
 	const eventUserEmail = "event-user@example.com"
 	c.SendEvent(javaScriptKey, analytics.Identify{
 		UserId: "f4ca124298",
@@ -58,9 +60,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 			},
 		},
 	})
-
-	ctx := context.Background()
-
+	c.RunIdentityResolution()
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 
 	// Retrieve the user imported from the event.
@@ -103,6 +103,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 			"email": eventUserEmail,
 		},
 	})
+	c.RunIdentityResolution()
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
 
 	// Check that the user has been created.
@@ -142,6 +143,7 @@ def transform(event: dict) -> dict:
 			"email": eventUserEmail,
 		},
 	})
+	c.RunIdentityResolution()
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
 
 	// Check that the user has been created.

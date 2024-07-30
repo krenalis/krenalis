@@ -166,6 +166,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"email": "kbuessen0@example.com",
 			},
 		})
+		c.RunIdentityResolution()
 		c.WaitEventsStoredIntoWarehouse(ctx, 1)
 	}
 

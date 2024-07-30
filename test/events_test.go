@@ -117,6 +117,8 @@ func TestEvents(t *testing.T) {
 		})
 	}
 
+	c.RunIdentityResolution()
+
 	ctx := context.Background()
 
 	const expectedEventsCount = 5
