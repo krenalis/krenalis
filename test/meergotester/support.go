@@ -22,7 +22,7 @@ import (
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
-	"github.com/segmentio/analytics-go/v3"
+	"github.com/open2b/analytics-go"
 )
 
 var defaultStrategy Strategy = "AB-C"

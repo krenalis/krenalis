@@ -26,11 +26,11 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/useragent v1.0.0
+	github.com/open2b/analytics-go v0.0.1
 	github.com/oschwald/maxminddb-golang v1.13.0
 	github.com/pkg/sftp v1.13.6
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.4.0
-	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/snowflakedb/gosnowflake v1.10.1
 	github.com/twmb/franz-go v1.17.0
@@ -71,7 +71,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.21.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.25.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.29.1 // indirect
-	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -105,9 +104,12 @@ require (
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/segmentio/backo-go v1.0.1 // indirect
+	github.com/segmentio/backo-go v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tidwall/gjson v1.17.2 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.8.0 // indirect
 	github.com/xuri/efp v0.0.0-20231025114914-d1ff6096ae53 // indirect
 	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect

@@ -30,3 +30,7 @@ _testmain.go
 
 # Artifacts
 tmp/*
+
+.vscode
+.DS_Store
+*.env

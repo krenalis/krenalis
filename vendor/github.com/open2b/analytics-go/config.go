@@ -15,9 +15,12 @@ import (
 // default value defined by the library.
 type Config struct {
 
+	// Deprecated: Endpoint is deprecated, will be removed in next releases. Use DataPlaneUrl.
+	Endpoint string
+
 	// The endpoint to which the client connect and send their messages, set to
 	// `DefaultEndpoint` by default.
-	Endpoint string
+	DataPlaneUrl string
 
 	// The flushing interval of the client. Messages will be sent when they've
 	// been queued up to the maximum batch size or when the flushing interval
@@ -78,11 +81,28 @@ type Config struct {
 	// This field is not exported and only exposed internally to let unit tests
 	// mock the current time.
 	maxConcurrentRequests int
+
+	//This variable will disable checking for the cluster-info end point and
+	//split the payload at node level for multi node setup
+	NoProxySupport bool
+
+	// Maximum bytes in a message
+	MaxMessageBytes int
+
+	// Maximum bytes in a batch
+	MaxBatchBytes int
+
+	// Deprecated: Gzip is deprecated, will be removed in next releases. Use DisableGzip.
+	Gzip int
+
+	// Disable/enable gzip support.
+	DisableGzip bool
 }
 
 // This constant sets the default endpoint to which client instances send
 // messages if none was explictly set.
-const DefaultEndpoint = "https://api.segment.io"
+
+const DefaultEndpoint = "https://example.com"
 
 // This constant sets the default flush interval used by client instances if
 // none was explicitly set.
@@ -111,13 +131,33 @@ func (c *Config) validate() error {
 		}
 	}
 
+	if c.MaxMessageBytes < 0 {
+		return ConfigError{
+			Reason: "negetive value is not supported for MaxMessageBytes",
+			Field:  "MaxMessageBytes",
+			Value:  c.MaxMessageBytes,
+		}
+	}
+
+	if c.MaxBatchBytes < 0 {
+		return ConfigError{
+			Reason: "negetive value is not supported for MaxBatchBytes",
+			Field:  "MaxBatchBytes",
+			Value:  c.MaxBatchBytes,
+		}
+	}
+
 	return nil
 }
 
 // Given a config object as argument the function will set all zero-values to
 // their defaults and return the modified object.
 func makeConfig(c Config) Config {
-	if len(c.Endpoint) == 0 {
+	if len(c.DataPlaneUrl) > 0 {
+		c.Endpoint = c.DataPlaneUrl
+	}
+
+	if len(c.Endpoint) == 0 && len(c.DataPlaneUrl) == 0 {
 		c.Endpoint = DefaultEndpoint
 	}
 
@@ -142,7 +182,7 @@ func makeConfig(c Config) Config {
 	}
 
 	if c.RetryAfter == nil {
-		c.RetryAfter = backo.DefaultBacko().Duration
+		c.RetryAfter = backo.NewBacko(time.Millisecond*100, 2, 1, time.Second*30).Duration
 	}
 
 	if c.uid == nil {
@@ -155,6 +195,18 @@ func makeConfig(c Config) Config {
 
 	if c.maxConcurrentRequests == 0 {
 		c.maxConcurrentRequests = 1000
+	}
+
+	if c.MaxMessageBytes == 0 {
+		c.MaxMessageBytes = defMaxMessageBytes
+	}
+
+	if c.MaxBatchBytes == 0 {
+		c.MaxBatchBytes = defMaxBatchBytes
+	}
+
+	if c.Gzip != 0 {
+		c.DisableGzip = true
 	}
 
 	// We always overwrite the 'library' field of the default context set on the

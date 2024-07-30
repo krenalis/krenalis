@@ -14,7 +14,7 @@ import (
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
 
-	"github.com/segmentio/analytics-go/v3"
+	"github.com/open2b/analytics-go"
 )
 
 func TestUserIdentitiesFromEvents(t *testing.T) {
