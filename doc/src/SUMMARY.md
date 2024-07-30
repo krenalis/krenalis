@@ -26,6 +26,7 @@
     - [Getting Started](android-sdk/getting-started.md)
     - [Options](android-sdk/options.md)
     - [Methods](android-sdk/methods.md)
+- [Go SDK](./go-sdk.md)
 - [Data Validation](./data-validation.md)
 - [Changing User Schema](./changing-user-schema.md)
 - [Transformations](./transformations.md)
