@@ -143,7 +143,7 @@ func TestEvents(t *testing.T) {
 	if userGID == (uuid.UUID{}) {
 		t.Fatalf("user with email %q not found", eventUserEmail)
 	}
-	t.Logf("user imported from event has GID %d", userGID)
+	t.Logf("user imported from event has GID %s", userGID)
 
 	// Retrieve the first event for the user.
 	var event map[string]any
