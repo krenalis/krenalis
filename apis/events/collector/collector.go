@@ -565,7 +565,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			// Remove the invalid event.
 			evs.Batch = slices.Delete(evs.Batch, i, i+1)
-			c.setEventAsReceived(event)
+			_ = c.setEventAsReceived(event)
 			i--
 			continue
 		}
@@ -576,7 +576,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	if !c.canCollectEvents(connection) {
 		for _, event := range evs.Batch {
-			c.setEventAsReceived(event)
+			_ = c.setEventAsReceived(event)
 		}
 		writeOK(w, origin)
 		if c.observer.hasEnrichedListener(connection.ID) {
