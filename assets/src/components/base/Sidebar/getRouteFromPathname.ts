@@ -40,8 +40,8 @@ const getRouteFromPathname = (route: string, connections: TransformedConnection[
 		const lastFragment = fragments[fragments.length - 1];
 		if (lastFragment === 'general') {
 			currentRoute = 'settings/general';
-		} else if (lastFragment === 'identifiers') {
-			currentRoute = 'settings/identifiers';
+		} else if (lastFragment === 'identity-resolution') {
+			currentRoute = 'settings/identityResolution';
 		} else if (lastFragment === 'data-warehouse') {
 			currentRoute = 'settings/dataWarehouse';
 		}

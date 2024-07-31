@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import './Identifiers.css';
+import './IdentityResolutionSettings.css';
 import Section from '../../base/Section/Section';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
@@ -17,7 +17,7 @@ import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import { Link } from '../../base/Link/Link';
 
-const Identifiers = () => {
+const IdentityResolutionSettings = () => {
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
 	const [identifiersSchema, setIdentifiersSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -230,4 +230,4 @@ const Identifiers = () => {
 	);
 };
 
-export default Identifiers;
+export default IdentityResolutionSettings;

@@ -19,7 +19,7 @@ import ConnectionActions from './components/routes/ConnectionActions/ConnectionA
 import ActionWrapper from './components/routes/ActionWrapper/ActionWrapper';
 import ConnectionSettings from './components/routes/ConnectionSettings/ConnectionSettings';
 import { ConnectionIdentities } from './components/routes/ConnectionIdentities/ConnectionIdentities';
-import Identifiers from './components/routes/Identifiers/Identifiers';
+import IdentityResolutionSettings from './components/routes/IdentityResolutionSettings/IdentityResolutionSettings';
 import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
 import GeneralSettings from './components/routes/GeneralSettings/GeneralSettings';
@@ -98,8 +98,8 @@ const router = createBrowserRouter([
 								element: <GeneralSettings />,
 							},
 							{
-								path: 'identifiers',
-								element: <Identifiers />,
+								path: 'identity-resolution',
+								element: <IdentityResolutionSettings />,
 							},
 							{
 								path: 'data-warehouse',

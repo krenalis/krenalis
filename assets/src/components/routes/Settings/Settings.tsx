@@ -37,12 +37,12 @@ const Settings = () => {
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
-				<Link path='settings/identifiers'>
+				<Link path='settings/identity-resolution'>
 					<ListTile
 						className='settings__setting'
 						icon={<SlIcon name='person-check' />}
-						name={'Identifiers'}
-						description='Modify the identifiers used to resolve the identity of the users'
+						name={'Identity Resolution'}
+						description='Modify the settings of the Identity Resolution, used to resolve the identity of the users'
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
