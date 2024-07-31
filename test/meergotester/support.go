@@ -211,6 +211,22 @@ func (c *Meergo) AddSourcePostgreSQL() int {
 	})
 }
 
+func (c *Meergo) ChangeIdentityResolutionSettings(identifiers []string) {
+	body := map[string]any{
+		"Identifiers": identifiers,
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
+	c.MustCall("PUT", method, body, nil)
+}
+
+func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error {
+	body := map[string]any{
+		"Identifiers": identifiers,
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
+	return c.Call("PUT", method, body, nil)
+}
+
 func (c *Meergo) ChangeUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
@@ -376,24 +392,6 @@ func (c *Meergo) GetConnectionUI(connection int) map[string]any {
 func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d", c.ws, conn, actionID)
 	c.MustCall("PUT", method, action, nil)
-}
-
-// TODO(Gianluca): move these methods after merge into 'main':
-
-func (c *Meergo) ChangeIdentityResolutionSettings(identifiers []string) {
-	body := map[string]any{
-		"Identifiers": identifiers,
-	}
-	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
-	c.MustCall("PUT", method, body, nil)
-}
-
-func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error {
-	body := map[string]any{
-		"Identifiers": identifiers,
-	}
-	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
-	return c.Call("PUT", method, body, nil)
 }
 
 func (c *Meergo) Sheets(storage int, fileConnector string, path string, compression Compression, uiValues json.RawMessage) []string {
