@@ -2,103 +2,116 @@
 
 The Meergo Go SDK lets you send customer event data from your Go applications to your specified destinations.
 
-## SDK setup requirements
+## Step 1: Create a Source Go Connection
 
-- Set up a Meergo account.
-- Set up a Go source in the dashboard.
-- Copy the write key and the data plane URL.
+To create a source Go connection in Meergo:
 
-## Installation
+1. Click on **Connections**.
+2. Click on **Add a new source**.
+3. From the list of connectors, select the **Go** connector.
+4. Click on **Add**.
 
-You can install the Go SDK via the `go get` command.
+## Step 2: Import the SDK
 
-To install the SDK in the `GOPATH`, run the following:
+1. In the new created Go connection, navigate to **Settings**.
+2. Select **Write Keys**.
+3. Copy the Write Key and the Endpoint.
+4. In your Go module, go get the `"github.com/open2b/analytics-go"` package:
+    ```sh
+    $ go get github.com/open2b/analytics-go
+    ```
+5. Import and use the package, replacing `<write key>` and `<endpoint>` respectively with the previously copied Write Key and Endpoint:
+    ```go
+    import "github.com/open2b/analytics-go"
 
-```go
-go get github.com/open2b/analytics-go
-```
-
-## Using the SDK
-
-```go
-package main
-
-import (
-    "github.com/open2b/analytics-go"
-)
-
-func main() {
-    // Instantiates a client to send messages to the Meergo API.
-    
-    // Use your write key in the below placeholder:
-    
-    client := analytics.New(<WRITE_KEY>, <DATA_PLANE_URL>)
-
-    // Enqueues a track event that will be sent asynchronously.
+    client := analytics.New("<write key>", "<endpoint>")
     client.Enqueue(analytics.Track{
-        UserId: "test-user",
-        Event:  "test-snippet",
-    })
+		UserId: "test-user",
+		Event:  "test-snippet",
+	})
+   ```
 
-    // Flushes any queued messages and closes the client.
-    client.Close()
-}
-```
+## Step 3: Add an Action
 
-Alternatively, you can run the following snippet:
+Now you can choose to collect only the events, or import the users, or both:
 
-```go
-package main
+1. Go to the Go connection you just created and click on **Actions**.
+2. Under the **Import Events** action, click on **Add**.
+3. Confirm by clicking **Add**.
+4. Enable the action by toggling the switch in the **Enabled** column.
 
-import (
-    "github.com/open2b/analytics-go"
-)
+## Step 4: Test the integration
 
-func main() {
-    // Instantiates a client to use send messages to the Meergo API.
-    
-    // User your write key in the below placeholder:
-    
-    client, _ := analytics.NewWithConfig(WRITE_KEY,
-		analytics.Config{
-			DataPlaneUrl: DATA_PLANE_URL,
-			Interval:     30 * time.Second,
-			BatchSize:    100,
-			Verbose:      true,
-		})
-
-    // Enqueues a track event that will be sent asynchronously.
-    
-    client.Enqueue(analytics.Track{
-        UserId: "test-user",
-        Event:  "test-snippet",
-    })
-
-    // Flushes any queued messages and closes the client.
-    
-    client.Close()
-}
-```
-
-## Gzip support
-
-The Go SDK supports Gzip compression and it is enabled by default. However, you can disable this feature by setting the `DisableGzip` parameter to `true` while initializing the SDK, as shown:
-
-```go
-client, _ := analytics.NewWithConfig(WRITE_KEY,
-		analytics.Config{
-			DataPlaneUrl: DATA_PLANE_URL,
-			Interval:     30 * time.Second,
-			BatchSize:    100,
-			Verbose:      true,
-			DisableGzip:  false  // Enables Gzip compression - set true to disable Gzip.
-		})
-```
-
-## Sending events
+1. Go to the Go connection you just created and click on **Live events**.
+2. Execute your application to send some events.
+3. Click on a received event in **Live events** to view its details.
 
 Refer to the [Meergo events documentation](./events.md) for more information on the supported event types.
 
-## License
+## Code Examples
+
+```go
+package main
+
+import (
+	"github.com/open2b/analytics-go"
+)
+
+func main() {
+	// Instantiates a client to send messages to the Meergo API.
+
+	// Use your write key in the below placeholder:
+
+	client := analytics.New("<write key>", "<endpoint>")
+
+	// Enqueues a track event that will be sent asynchronously.
+	client.Enqueue(analytics.Track{
+		UserId: "test-user",
+		Event:  "test-snippet",
+	})
+
+	// Flushes any queued messages and closes the client.
+	client.Close()
+}
+```
+
+Alternatively, you can run the following program:
+
+```go
+package main
+
+import (
+	"time"
+
+	"github.com/open2b/analytics-go"
+)
+
+func main() {
+	// Instantiates a client to use send messages to the Meergo API.
+
+	// User your write key in the below placeholder:
+
+	client, _ := analytics.NewWithConfig("<write key>",
+		analytics.Config{
+			DataPlaneUrl: "<endpoint>",
+			Interval:     30 * time.Second,
+			BatchSize:    100,
+			Verbose:      true,
+		})
+
+	// Enqueues a track event that will be sent asynchronously.
+
+	client.Enqueue(analytics.Track{
+		UserId: "test-user",
+		Event:  "test-snippet",
+	})
+
+	// Flushes any queued messages and closes the client.
+
+	client.Close()
+}
+```
+
+### License
 
 The Meergo Go SDK is released under the MIT license.
