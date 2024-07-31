@@ -160,7 +160,7 @@ func TestEvents(t *testing.T) {
 		const (
 			expectedAnonymousId = "baeeb556-96f3-4631-a22d-928431af8bf6"
 			expectedIP          = "127.0.0.1"
-			expectedUserAgent   = "analytics-go (version: 4.2.0)" // TODO(Gianluca): this version should be fixed in the SDK.
+			expectedUserAgent   = "analytics-go (version: 0.0.2)"
 			expectedEvent       = "Signed Up"
 			expectedProperties  = `{"plan":"Enterprise","some-index":44}`
 			expectedTraits      = "{}"

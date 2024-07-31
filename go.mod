@@ -26,7 +26,7 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/useragent v1.0.0
-	github.com/open2b/analytics-go v0.0.1
+	github.com/open2b/analytics-go v0.0.2
 	github.com/oschwald/maxminddb-golang v1.13.0
 	github.com/pkg/sftp v1.13.6
 	github.com/rabbitmq/amqp091-go v1.10.0
