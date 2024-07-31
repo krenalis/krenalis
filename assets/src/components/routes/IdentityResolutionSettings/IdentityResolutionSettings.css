@@ -1,5 +1,5 @@
 .identifiers {
-	max-width: 1200px;
+	max-width: 900px;
 	margin: auto;
 	padding: 30px;
 }
@@ -22,7 +22,7 @@
 .identifiers__save-button {
 	max-width: 200px;
 	display: block;
-	margin: 50px auto 0 auto;
+	margin-left: auto;
 }
 
 .identifiers .combobox-input sl-input .combobox-input__error-icon {
