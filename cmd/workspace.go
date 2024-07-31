@@ -373,8 +373,9 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	return nil, err
 }
 
-// SetIdentifiers sets the identifiers of the workspace in a specified order.
-func (workspace workspace) SetIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
+// ChangeIdentityResolutionSettings changes the settings of the Identity
+// Resolution of the workspace.
+func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -386,7 +387,7 @@ func (workspace workspace) SetIdentifiers(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.SetIdentifiers(r.Context(), body.Identifiers)
+	err = ws.ChangeIdentityResolutionSettings(r.Context(), body.Identifiers)
 	return nil, err
 }
 

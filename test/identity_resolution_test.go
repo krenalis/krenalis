@@ -76,7 +76,7 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.Text().WithCharLen(300)), ReadOptional: true},
 	}
 
-	c.SetWorkspaceIdentifiers([]string{"dummy_id", "email"})
+	c.ChangeIdentityResolutionSettings([]string{"dummy_id", "email"})
 
 	// Generate and add an action to the JSON for importing the users.
 	mapping := map[string]string{

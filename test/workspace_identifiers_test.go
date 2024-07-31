@@ -22,25 +22,25 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers(nil)
+	c.ChangeIdentityResolutionSettings(nil)
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.SetWorkspaceIdentifiers([]string{})
+	c.ChangeIdentityResolutionSettings([]string{})
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.SetWorkspaceIdentifiers([]string{"dummy_id"})
+	c.ChangeIdentityResolutionSettings([]string{"dummy_id"})
 	if ws := c.Workspace(); len(ws.Identifiers) != 1 || ws.Identifiers[0] != "dummy_id" {
 		t.Fatalf("expected \"dummy_id\", got %v", ws.Identifiers)
 	}
-	c.SetWorkspaceIdentifiers([]string{"email", "android.id"})
+	c.ChangeIdentityResolutionSettings([]string{"email", "android.id"})
 	if ws := c.Workspace(); len(ws.Identifiers) != 2 || ws.Identifiers[0] != "email" || ws.Identifiers[1] != "android.id" {
 		t.Fatalf("expected \"email\" and \"android.id\", got %v", ws.Identifiers)
 	}
 
 	// Test an invalid path.
-	err := c.SetWorkspaceIdentifiersErr([]string{"invalid path"})
+	err := c.ChangeIdentityResolutionSettingsErr([]string{"invalid path"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -50,7 +50,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not existent path in the user schema.
-	err = c.SetWorkspaceIdentifiersErr([]string{"non_existent"})
+	err = c.ChangeIdentityResolutionSettingsErr([]string{"non_existent"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -60,7 +60,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not allowed type for identifiers.
-	err = c.SetWorkspaceIdentifiersErr([]string{"phone_numbers"})
+	err = c.ChangeIdentityResolutionSettingsErr([]string{"phone_numbers"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}

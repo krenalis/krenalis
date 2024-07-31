@@ -103,7 +103,7 @@ const IdentityResolutionSettings = () => {
 	const onSave = async () => {
 		setIsSaving(true);
 		try {
-			await api.workspaces.setIdentifiers(identifiers);
+			await api.workspaces.changeIdentityResolutionSettings(identifiers);
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);

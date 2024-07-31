@@ -42,7 +42,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Set the email as the only identifier, as the 3 identities, imported from
 	// the 3 connections, will all be put together in a single user as they
 	// share the same email.
-	c.SetWorkspaceIdentifiers([]string{"email"})
+	c.ChangeIdentityResolutionSettings([]string{"email"})
 
 	storage := meergotester.NewTempStorage(t)
 

@@ -1122,16 +1122,21 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	return err
 }
 
-// SetIdentifiers sets the identifiers of the workspace in the specified order.
-// An identifier must be a property in the user schema with a type of Int, Uint,
-// UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot be repeated.
+// ChangeIdentityResolutionSettings changes the settings of the Identity
+// Resolution of the workspace.
+//
+// identifiers specify the Identity Resolution identifiers in the specified
+// order. An identifier must be a property in the user schema with a type of
+// Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
+// be repeated.
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - NotAllowedType, if a path's type, as defined in the used schema, is not
-//     allowed for identifiers.
-//   - PropertyNotExist, if a path does not exist in the user schema.
-func (this *Workspace) SetIdentifiers(ctx context.Context, identifiers []string) error {
+//   - NotAllowedType, if an identifier path's type, as defined in the user
+//     schema, is not allowed for identifiers.
+//   - PropertyNotExist, if an identifier path does not exist in the user
+//     schema.
+func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, identifiers []string) error {
 
 	this.apis.mustBeOpen()
 

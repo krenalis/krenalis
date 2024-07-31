@@ -575,8 +575,8 @@ class Workspaces {
 		});
 	};
 
-	setIdentifiers = async (identifiers: Identifiers): Promise<void> => {
-		return await call(`${this.apiURL}/identifiers`, http.PUT, {
+	changeIdentityResolutionSettings = async (identifiers: Identifiers): Promise<void> => {
+		return await call(`${this.apiURL}/identity-resolution/settings`, http.PUT, {
 			identifiers: identifiers,
 		});
 	};

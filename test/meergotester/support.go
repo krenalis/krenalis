@@ -378,19 +378,21 @@ func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
 	c.MustCall("PUT", method, action, nil)
 }
 
-func (c *Meergo) SetWorkspaceIdentifiers(identifiers []string) {
+// TODO(Gianluca): move these methods after merge into 'main':
+
+func (c *Meergo) ChangeIdentityResolutionSettings(identifiers []string) {
 	body := map[string]any{
 		"Identifiers": identifiers,
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/identifiers", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
 	c.MustCall("PUT", method, body, nil)
 }
 
-func (c *Meergo) SetWorkspaceIdentifiersErr(identifiers []string) error {
+func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error {
 	body := map[string]any{
 		"Identifiers": identifiers,
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/identifiers", c.ws)
+	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
 	return c.Call("PUT", method, body, nil)
 }
 

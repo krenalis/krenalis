@@ -23,7 +23,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"email"})
+	c.ChangeIdentityResolutionSettings([]string{"email"})
 
 	// Load some users in the data warehouse.
 	{

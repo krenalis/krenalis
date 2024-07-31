@@ -145,7 +145,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   action.Set,
 		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
 		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}/status":            action.SetStatus,
-		"PUT    /api/workspaces/{workspace}/identifiers":                                                 workspace.SetIdentifiers,
+		"PUT    /api/workspaces/{workspace}/identity-resolution/settings":                                workspace.ChangeIdentityResolutionSettings,
 		"PUT    /api/workspaces/{workspace}/user-schema":                                                 workspace.ChangeUserSchema,
 		"PUT    /api/workspaces/{workspace}/warehouse/mode":                                              workspace.ChangeWarehouseMode,
 		"PUT    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.ChangeWarehouseSettings,

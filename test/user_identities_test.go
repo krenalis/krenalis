@@ -25,7 +25,7 @@ func Test_UserIdentities(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.SetWorkspaceIdentifiers([]string{"email"})
+	c.ChangeIdentityResolutionSettings([]string{"email"})
 
 	storageDir, err := filepath.Abs("testdata/user_identities_test")
 	if err != nil {
