@@ -31,7 +31,7 @@ This is the simplest method to start collecting events.
 The JavaScript SDK can be imported with `import` into TypeScript and JavaScript projects, using ES6 modules, that will be bundled to run in the browser.
 
 1. In the new created JavaScript connection, navigate to **Settings**.
-2. Select **Write Key**.
+2. Click on **Write Keys**.
 3. Copy the Write Key and the Endpoint.
 4. In your project, install the `meergo-javascript-sdk` npm package:
     ```sh
@@ -50,7 +50,7 @@ The JavaScript SDK can be imported with `import` into TypeScript and JavaScript 
 The JavaScript SDK can be imported with `require` into JavaScript projects, using CommonJS modules, that will be bundled to run in the browser.
 
 1. In the new created JavaScript connection, navigate to **Settings**.
-2. Select **Write Key**.
+2. Click on **Write Keys**.
 3. Copy the Write Key and the Endpoint.
 4. In your project, install the `meergo-javascript-sdk` npm package:
     ```sh

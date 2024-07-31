@@ -131,10 +131,10 @@ const ConnectionSettings = () => {
 				{(c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website') && c.role === 'Source' && (
 					<>
 						<SlTab slot='nav' panel='keys'>
-							API Keys
+							Write Keys
 						</SlTab>
 						<SlTabPanel name='keys'>
-							<div className='connection-settings__panel-title'>API keys</div>
+							<div className='connection-settings__panel-title'>Write Keys</div>
 							<ConnectionKeys connection={c} />
 						</SlTabPanel>
 					</>
