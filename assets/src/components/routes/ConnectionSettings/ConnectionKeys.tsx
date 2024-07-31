@@ -98,7 +98,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 					return (
 						<Flex key={key} alignItems='center' gap={30}>
 							<div className='connection-settings__key-copy'>
-								<SlInput readonly value={key} />
+								<SlInput readonly value={key} filled />
 								<SlCopyButton value={key} />
 							</div>
 							<SlButton variant='danger' onClick={() => onRevokeKey(key)}>
@@ -111,6 +111,12 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			<SlButton variant='neutral' onClick={onAddKey}>
 				Generate new key
 			</SlButton>
+			<div className='connection-settings__keys-endpoint'>
+				<div className='connection-settings__keys-endpoint-copy'>
+					<SlInput readonly label='Endpoint' value={`${window.location.origin}/api/v1/`} filled />
+					<SlCopyButton value={`${window.location.origin}/api/v1/`} />
+				</div>
+			</div>
 		</>
 	);
 };

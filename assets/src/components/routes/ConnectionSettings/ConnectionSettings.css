@@ -83,14 +83,36 @@
 }
 
 .connection-settings__key-copy > sl-input {
-	width: 400px;
+	width: 500px;
 }
 
 .connection-settings__key-copy > sl-input::part(base) {
 	font-size: 14px;
 }
 
-.connection-settings__snippet-copy .editor-wrapper {
+.connection-settings__keys-endpoint {
+	margin-top: 50px;
+}
+
+.connection-settings__keys-endpoint-copy {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.connection-settings__keys-endpoint-copy > sl-input {
+	width: 500px;
+}
+
+.connection-settings__keys-endpoint-copy > sl-input::part(base) {
+	font-size: 14px;
+}
+
+.connection-settings__keys-endpoint-copy > sl-copy-button {
+	transform: translateY(16px);
+}
+
+.connection-settings__keys-endpoint-copy .editor-wrapper {
 	margin-top: 10px;
 	width: 100%;
 }
