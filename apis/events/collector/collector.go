@@ -1128,11 +1128,6 @@ func (c *Collector) enrichEvent(event *collectedEvent) {
 		event.Traits = map[string]any{}
 	}
 
-	// Context.Traits.
-	if t := *event.Type; t != "identify" && t != "group" && event.Context.Traits == nil {
-		event.Context.Traits = map[string]any{}
-	}
-
 	// Properties.
 	if t := *event.Type; (t == "page" || t == "screen" || t == "track") && event.Properties == nil {
 		event.Properties = map[string]any{}
@@ -1191,8 +1186,10 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 		traits.Reset()
 		if *e.Type == "identify" || *e.Type == "group" {
 			err = traitsEnc.Encode(e.Traits)
-		} else {
+		} else if e.Context.Traits != nil {
 			err = traitsEnc.Encode(e.Context.Traits)
+		} else {
+			traits.WriteString("{}\n")
 		}
 		if err != nil {
 			slog.Error("cannot marshal event", "err", err)
