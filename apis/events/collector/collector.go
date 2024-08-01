@@ -79,24 +79,25 @@ type collectedEvent struct {
 
 	id [20]byte
 
-	AnonymousId  string          `json:"anonymousId,omitempty"`
-	Category     string          `json:"category,omitempty"`
-	Context      events.Context  `json:"context,omitempty"`
-	Event        string          `json:"event,omitempty"`
-	GroupId      string          `json:"groupId,omitempty"`
-	Integrations json.RawMessage `json:"integrations,omitempty"`
-	MessageId    string          `json:"messageId,omitempty"`
-	Name         string          `json:"name,omitempty"`
-	receivedAt   time.Time
-	SentAt       string `json:"sentAt,omitempty"`
-	sentAt       time.Time
-	Timestamp    string `json:"timestamp,omitempty"`
-	timestamp    time.Time
-	Traits       map[string]any `json:"traits,omitempty"`
-	Type         *string        `json:"type"`
-	UserId       string         `json:"userId,omitempty"`
-	PreviousId   string         `json:"previousId,omitempty"`
-	Properties   map[string]any `json:"properties,omitempty"`
+	AnonymousId       string          `json:"anonymousId,omitempty"`
+	Category          string          `json:"category,omitempty"`
+	Context           events.Context  `json:"context,omitempty"`
+	Event             string          `json:"event,omitempty"`
+	GroupId           string          `json:"groupId,omitempty"`
+	Integrations      json.RawMessage `json:"integrations,omitempty"`
+	MessageId         string          `json:"messageId,omitempty"`
+	Name              string          `json:"name,omitempty"`
+	originalTimestamp time.Time
+	receivedAt        time.Time
+	SentAt            string `json:"sentAt,omitempty"`
+	sentAt            time.Time
+	Timestamp         string `json:"timestamp,omitempty"`
+	timestamp         time.Time
+	Traits            map[string]any `json:"traits,omitempty"`
+	Type              *string        `json:"type"`
+	UserId            string         `json:"userId,omitempty"`
+	PreviousId        string         `json:"previousId,omitempty"`
+	Properties        map[string]any `json:"properties,omitempty"`
 
 	WriteKey string `json:"writeKey,omitempty"`
 }
@@ -1110,13 +1111,14 @@ func (c *Collector) enrichEvent(event *collectedEvent) {
 		}
 	}
 
-	// Timestamp.
-	event.timestamp, err = iso8601.ParseString(event.Timestamp)
+	// Timestamp and OriginalTimeStamp.
+	event.originalTimestamp, err = iso8601.ParseString(event.Timestamp)
 	if err != nil {
+		event.originalTimestamp = event.header.ReceivedAt
 		event.timestamp = event.header.ReceivedAt
 	} else {
 		skew := event.header.ReceivedAt.Sub(event.sentAt)
-		event.timestamp = event.timestamp.UTC().Add(skew)
+		event.timestamp = event.originalTimestamp.UTC().Add(skew)
 		// The iso8601.ParseString function returns years >= 0.
 		if y := event.timestamp.Year(); y < 1 || y > 9999 {
 			event.timestamp = event.header.ReceivedAt
