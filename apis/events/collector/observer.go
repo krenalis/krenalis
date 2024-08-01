@@ -105,6 +105,115 @@ func newObserver(db *postgres.DB) *Observer {
 	return observer
 }
 
+// AddCollectedListener adds a listener for collected events and returns its
+// identifier. size specifies the maximum number of observed events to be
+// returned by a subsequent call to the Events method and must be in range
+// [1, 1000]. If sources is non-nil, only events originating from these sources
+// will be observed. onlyValid determines whether only valid events should be
+// observed.
+//
+// AddCollectedListener does not validate its arguments, so it is the caller's
+// responsibility to pass valid arguments.
+//
+// It returns the ErrTooManyListeners error if there are already too many
+// listeners.
+func (observer *Observer) AddCollectedListener(size int, sources []int, onlyValid bool) (string, error) {
+	id := uuid.New().String()
+	listener := listener{
+		id:        id,
+		sources:   sources,
+		onlyValid: onlyValid,
+		events:    make([]ObservedEvent, 0, size),
+		times:     make([]string, 0, size),
+	}
+	observer.Lock()
+	defer observer.Unlock()
+	if len(observer.listeners.collected) == MaxEventListeners {
+		return "", ErrTooManyListeners
+	}
+	observer.listeners.collected = append(observer.listeners.collected, &listener)
+	return id, nil
+}
+
+// AddEnrichedListener adds a listener for enriched events and returns its
+// identifier. size specifies the maximum number of observed events to be
+// returned by a subsequent call to the Events method. size must be in range
+// [1, 1000]. If filter is non-nil, only events that satisfy the filter will be
+// observed.
+//
+// AddEnrichedListener does not validate its arguments, so it is the caller's
+// responsibility to pass valid arguments.
+//
+// It returns the ErrTooManyListeners error if there are already too many
+// listeners.
+func (observer *Observer) AddEnrichedListener(size int, sources []int, filter *filters.Filter) (string, error) {
+	id := uuid.New().String()
+	listener := listener{
+		id:      id,
+		sources: sources,
+		filter:  filter,
+		events:  make([]ObservedEvent, 0, size),
+		times:   make([]string, 0, size),
+	}
+	observer.Lock()
+	defer observer.Unlock()
+	if len(observer.listeners.enriched) == MaxEventListeners {
+		return "", ErrTooManyListeners
+	}
+	observer.listeners.enriched = append(observer.listeners.enriched, &listener)
+	return id, nil
+}
+
+// Events returns the observed events listen to by the specified listener and
+// the number of discarded events. If the listener does not exist, it returns
+// the ErrEventListenerNotFound error.
+func (observer *Observer) Events(listenerID string) ([]ObservedEvent, int, error) {
+	observer.RLock()
+	defer observer.RUnlock()
+	var l *listener
+	for _, collected := range observer.listeners.collected {
+		if collected.id == listenerID {
+			l = collected
+			break
+		}
+	}
+	if l == nil {
+		for _, enriched := range observer.listeners.enriched {
+			if enriched.id == listenerID {
+				l = enriched
+				break
+			}
+		}
+	}
+	if l == nil {
+		return nil, 0, ErrEventListenerNotFound
+	}
+	l.Lock()
+	observedEvents := make([]ObservedEvent, len(l.events))
+	var discarded int
+	if len(l.events) > 0 {
+		sort.Slice(l.events, func(i, j int) bool { return l.times[i] < l.times[j] })
+		copy(observedEvents, l.events)
+		discarded = l.discarded
+		l.events = l.events[0:0]
+		l.times = l.times[0:0]
+		l.discarded = 0
+	}
+	l.Unlock()
+	return observedEvents, discarded, nil
+}
+
+// RemoveListener removes the listener with identifier id.
+func (observer *Observer) RemoveListener(id string) {
+	var ok bool
+	observer.Lock()
+	observer.listeners.collected, ok = removeListener(observer.listeners.collected, id)
+	if !ok {
+		observer.listeners.enriched, _ = removeListener(observer.listeners.enriched, id)
+	}
+	observer.Unlock()
+}
+
 // addCollectedEvent adds a collected event to the observed events. source, if
 // non-zero, indicates the origin (mobile, server, or website connection) for
 // which the event was sent. If the event or message is invalid, err contains
@@ -250,115 +359,6 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 		listener.Unlock()
 	}
 
-}
-
-// AddCollectedListener adds a listener for collected events and returns its
-// identifier. size specifies the maximum number of observed events to be
-// returned by a subsequent call to the Events method and must be in range
-// [1, 1000]. If sources is non-nil, only events originating from these sources
-// will be observed. onlyValid determines whether only valid events should be
-// observed.
-//
-// AddCollectedListener does not validate its arguments, so it is the caller's
-// responsibility to pass valid arguments.
-//
-// It returns the ErrTooManyListeners error if there are already too many
-// listeners.
-func (observer *Observer) AddCollectedListener(size int, sources []int, onlyValid bool) (string, error) {
-	id := uuid.New().String()
-	listener := listener{
-		id:        id,
-		sources:   sources,
-		onlyValid: onlyValid,
-		events:    make([]ObservedEvent, 0, size),
-		times:     make([]string, 0, size),
-	}
-	observer.Lock()
-	defer observer.Unlock()
-	if len(observer.listeners.collected) == MaxEventListeners {
-		return "", ErrTooManyListeners
-	}
-	observer.listeners.collected = append(observer.listeners.collected, &listener)
-	return id, nil
-}
-
-// AddEnrichedListener adds a listener for enriched events and returns its
-// identifier. size specifies the maximum number of observed events to be
-// returned by a subsequent call to the Events method. size must be in range
-// [1, 1000]. If filter is non-nil, only events that satisfy the filter will be
-// observed.
-//
-// AddEnrichedListener does not validate its arguments, so it is the caller's
-// responsibility to pass valid arguments.
-//
-// It returns the ErrTooManyListeners error if there are already too many
-// listeners.
-func (observer *Observer) AddEnrichedListener(size int, sources []int, filter *filters.Filter) (string, error) {
-	id := uuid.New().String()
-	listener := listener{
-		id:      id,
-		sources: sources,
-		filter:  filter,
-		events:  make([]ObservedEvent, 0, size),
-		times:   make([]string, 0, size),
-	}
-	observer.Lock()
-	defer observer.Unlock()
-	if len(observer.listeners.enriched) == MaxEventListeners {
-		return "", ErrTooManyListeners
-	}
-	observer.listeners.enriched = append(observer.listeners.enriched, &listener)
-	return id, nil
-}
-
-// Events returns the observed events listen to by the specified listener and
-// the number of discarded events. If the listener does not exist, it returns
-// the ErrEventListenerNotFound error.
-func (observer *Observer) Events(listenerID string) ([]ObservedEvent, int, error) {
-	observer.RLock()
-	defer observer.RUnlock()
-	var l *listener
-	for _, collected := range observer.listeners.collected {
-		if collected.id == listenerID {
-			l = collected
-			break
-		}
-	}
-	if l == nil {
-		for _, enriched := range observer.listeners.enriched {
-			if enriched.id == listenerID {
-				l = enriched
-				break
-			}
-		}
-	}
-	if l == nil {
-		return nil, 0, ErrEventListenerNotFound
-	}
-	l.Lock()
-	observedEvents := make([]ObservedEvent, len(l.events))
-	var discarded int
-	if len(l.events) > 0 {
-		sort.Slice(l.events, func(i, j int) bool { return l.times[i] < l.times[j] })
-		copy(observedEvents, l.events)
-		discarded = l.discarded
-		l.events = l.events[0:0]
-		l.times = l.times[0:0]
-		l.discarded = 0
-	}
-	l.Unlock()
-	return observedEvents, discarded, nil
-}
-
-// RemoveListener removes the listener with identifier id.
-func (observer *Observer) RemoveListener(id string) {
-	var ok bool
-	observer.Lock()
-	observer.listeners.collected, ok = removeListener(observer.listeners.collected, id)
-	if !ok {
-		observer.listeners.enriched, _ = removeListener(observer.listeners.enriched, id)
-	}
-	observer.Unlock()
 }
 
 func (observer *Observer) flushStats(t time.Time) error {
