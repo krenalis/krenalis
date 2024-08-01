@@ -37,7 +37,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	identifiers := []string{"email", "android.id"}
-	c.ChangeIdentityResolutionSettings(identifiers)
+	c.ChangeIdentityResolutionSettings(true, identifiers)
 
 	// Read the schema in "tests_user_schema.json".
 	f, err := os.Open("tests_user_schema.json")

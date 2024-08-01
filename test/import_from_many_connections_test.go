@@ -177,7 +177,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Set the "email" as identifier and run the Identity Resolution.
-	c.ChangeIdentityResolutionSettings([]string{"email"})
+	c.ChangeIdentityResolutionSettings(true, []string{"email"})
 	c.RunIdentityResolution()
 
 	// Ensure that there are 10 users.

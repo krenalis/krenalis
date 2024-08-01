@@ -45,18 +45,19 @@ const (
 
 // Workspace represents a workspace.
 type Workspace struct {
-	apis                *APIs
-	organization        *Organization
-	store               *datastore.Store
-	workspace           *state.Workspace
-	ID                  int
-	Name                string
-	UserSchema          types.Type
-	UserPrimarySources  map[string]int
-	Identifiers         []string
-	WarehouseMode       *WarehouseMode
-	PrivacyRegion       PrivacyRegion
-	DisplayedProperties DisplayedProperties
+	apis                               *APIs
+	organization                       *Organization
+	store                              *datastore.Store
+	workspace                          *state.Workspace
+	ID                                 int
+	Name                               string
+	UserSchema                         types.Type
+	UserPrimarySources                 map[string]int
+	RunIdentityResolutionOnBatchImport bool
+	Identifiers                        []string
+	WarehouseMode                      *WarehouseMode
+	PrivacyRegion                      PrivacyRegion
+	DisplayedProperties                DisplayedProperties
 }
 
 // PrivacyRegion represents a privacy region.
@@ -1125,6 +1126,9 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 // ChangeIdentityResolutionSettings changes the settings of the Identity
 // Resolution of the workspace.
 //
+// runOnBatchImport determines whether the Identity Resolution should be
+// executed automatically every time a batch import is completed.
+//
 // identifiers specify the Identity Resolution identifiers in the specified
 // order. An identifier must be a property in the user schema with a type of
 // Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
@@ -1136,7 +1140,7 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 //     schema, is not allowed for identifiers.
 //   - PropertyNotExist, if an identifier path does not exist in the user
 //     schema.
-func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, identifiers []string) error {
+func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
 
 	this.apis.mustBeOpen()
 
@@ -1153,9 +1157,10 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, ide
 		identifiers = []string{}
 	}
 	ws := this.workspace
-	n := state.SetWorkspaceIdentifiers{
-		Workspace:   ws.ID,
-		Identifiers: identifiers,
+	n := state.SetIdentityResolutionSettings{
+		Workspace:                          ws.ID,
+		RunIdentityResolutionOnBatchImport: runOnBatchImport,
+		Identifiers:                        identifiers,
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -1183,7 +1188,8 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, ide
 				}
 			}
 		}
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET identifiers = $1 WHERE id = $2", n.Identifiers, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET run_identity_resolution_on_batch_import = $1,\n"+
+			"identifiers = $2 WHERE id = $3", n.RunIdentityResolutionOnBatchImport, n.Identifiers, n.Workspace)
 		if err != nil {
 			return err
 		}

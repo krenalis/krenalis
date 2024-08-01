@@ -98,14 +98,14 @@ func (state *State) keep() {
 			state.setConnection(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
+		case "SetIdentityResolutionSettings":
+			state.setIdentityResolutionSettings(n)
 		case "SetWarehouse":
 			state.setWarehouse(n)
 		case "SetWarehouseMode":
 			state.setWarehouseMode(n)
 		case "SetWorkspace":
 			state.setWorkspace(n)
-		case "SetWorkspaceIdentifiers":
-			state.setWorkspaceIdentifiers(n)
 		case "SetWorkspaceUserSchema":
 			state.setWorkspaceUserSchema(n)
 		default:
@@ -468,12 +468,13 @@ func (state *State) addEventConnection(n notification) {
 
 // AddWorkspace is the event sent when a workspace is added.
 type AddWorkspace struct {
-	ID                  int
-	Organization        int
-	Name                string
-	UserSchema          types.Type
-	PrivacyRegion       PrivacyRegion
-	DisplayedProperties DisplayedProperties
+	ID                                 int
+	Organization                       int
+	Name                               string
+	UserSchema                         types.Type
+	RunIdentityResolutionOnBatchImport bool
+	PrivacyRegion                      PrivacyRegion
+	DisplayedProperties                DisplayedProperties
 }
 
 // addWorkspace adds a workspace.
@@ -484,14 +485,15 @@ func (state *State) addWorkspace(n notification) {
 	}
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
-		mu:                  &sync.Mutex{},
-		connections:         map[int]*Connection{},
-		ID:                  e.ID,
-		organization:        organization,
-		Name:                e.Name,
-		UserSchema:          e.UserSchema,
-		PrivacyRegion:       e.PrivacyRegion,
-		DisplayedProperties: e.DisplayedProperties,
+		mu:                                 &sync.Mutex{},
+		connections:                        map[int]*Connection{},
+		ID:                                 e.ID,
+		organization:                       organization,
+		Name:                               e.Name,
+		UserSchema:                         e.UserSchema,
+		RunIdentityResolutionOnBatchImport: e.RunIdentityResolutionOnBatchImport,
+		PrivacyRegion:                      e.PrivacyRegion,
+		DisplayedProperties:                e.DisplayedProperties,
 	}
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
@@ -1141,20 +1143,23 @@ func (state *State) setWorkspace(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetWorkspaceIdentifiers is the event sent when the identifiers of a workspace
-// are changed.
-type SetWorkspaceIdentifiers struct {
-	Workspace   int
-	Identifiers []string
+// SetIdentityResolutionSettings is the event sent when the settings of the
+// Identity Resolution of a workspace are changed.
+type SetIdentityResolutionSettings struct {
+	Workspace                          int
+	RunIdentityResolutionOnBatchImport bool
+	Identifiers                        []string
 }
 
-// setWorkspaceIdentifiers sets the identifiers of a workspace.
-func (state *State) setWorkspaceIdentifiers(n notification) {
-	e := SetWorkspaceIdentifiers{}
+// setIdentityResolutionSettings sets the Identity Resolution settings of a
+// workspace.
+func (state *State) setIdentityResolutionSettings(n notification) {
+	e := SetIdentityResolutionSettings{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.RunIdentityResolutionOnBatchImport = e.RunIdentityResolutionOnBatchImport
 		w.Identifiers = e.Identifiers
 	})
 }

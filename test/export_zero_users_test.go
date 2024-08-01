@@ -30,7 +30,7 @@ func TestExportZeroUsers(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.ChangeIdentityResolutionSettings([]string{"email"})
+	c.ChangeIdentityResolutionSettings(true, []string{"email"})
 
 	// Test the export of zero users to an app (Dummy).
 	func() {

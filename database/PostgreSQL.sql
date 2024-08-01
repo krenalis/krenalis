@@ -24,6 +24,7 @@ CREATE TABLE workspaces (
     warehouse_mode warehouse_mode DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
     user_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
+    run_identity_resolution_on_batch_import boolean NOT NULL DEFAULT false,
     identifiers text[] NOT NULL DEFAULT '{}',
     privacy_region privacy_region NOT NULL DEFAULT '',
     displayed_image varchar(100) NOT NULL DEFAULT '',
@@ -34,8 +35,8 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, organization, name, user_schema, warehouse_type, warehouse_settings)
-VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name":"email","type":{"name":"Text","charLen":300},"readOptional":true}]}', NULL, '');
+INSERT INTO workspaces (id, organization, name, user_schema, warehouse_type, warehouse_settings, run_identity_resolution_on_batch_import)
+VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name":"email","type":{"name":"Text","charLen":300},"readOptional":true}]}', NULL, '', true);
 
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
 

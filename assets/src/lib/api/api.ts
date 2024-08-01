@@ -575,8 +575,9 @@ class Workspaces {
 		});
 	};
 
-	changeIdentityResolutionSettings = async (identifiers: Identifiers): Promise<void> => {
+	changeIdentityResolutionSettings = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {
 		return await call(`${this.apiURL}/identity-resolution/settings`, http.PUT, {
+			runOnBatchImport: runOnBatchImport,
 			identifiers: identifiers,
 		});
 	};

@@ -27,7 +27,7 @@ func TestImportWithTransformation(t *testing.T) {
 	// Create a Dummy (source) connection.
 	dummyID := c.AddDummy("Dummy (source)", meergotester.Source)
 
-	c.ChangeIdentityResolutionSettings([]string{"email"})
+	c.ChangeIdentityResolutionSettings(true, []string{"email"})
 
 	// Add an action with a transformation function which imports users, then
 	// execute it.

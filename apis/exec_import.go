@@ -208,11 +208,5 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 
 	users = nil
 
-	// Run the Identity Resolution.
-	err = this.connection.store.RunIdentityResolution(ctx)
-	if err != nil {
-		return actionExecutionError{fmt.Errorf("error while running the Identity Resolution at the end of the import: %s", err)}
-	}
-
 	return nil
 }

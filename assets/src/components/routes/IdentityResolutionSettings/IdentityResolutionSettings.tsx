@@ -16,12 +16,16 @@ import { Identifiers } from '../../../lib/api/types/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import { Link } from '../../base/Link/Link';
+import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 
 const IdentityResolutionSettings = () => {
+	const [runOnBatchImport, setRunOnBatchImport] = useState<boolean>(false);
 	const [identifiers, setIdentifiers] = useState<Identifiers>();
 	const [identifiersSchema, setIdentifiersSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
+
+	const onRunOnBatchImportChange = () => setRunOnBatchImport(!runOnBatchImport);
 
 	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace } =
 		useContext(AppContext);
@@ -31,6 +35,7 @@ const IdentityResolutionSettings = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+			setRunOnBatchImport(workspace.RunIdentityResolutionOnBatchImport);
 			setIdentifiers(workspace.Identifiers);
 			let identifiersSchema: ObjectType;
 			try {
@@ -103,7 +108,7 @@ const IdentityResolutionSettings = () => {
 	const onSave = async () => {
 		setIsSaving(true);
 		try {
-			await api.workspaces.changeIdentityResolutionSettings(identifiers);
+			await api.workspaces.changeIdentityResolutionSettings(runOnBatchImport, identifiers);
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);
@@ -114,7 +119,7 @@ const IdentityResolutionSettings = () => {
 		setIsLoadingWorkspaces(true);
 		setTimeout(() => {
 			setIsSaving(false);
-			showStatus({ variant: 'success', icon: icons.OK, text: 'Identifiers saved successfully' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity Resolution settings saved successfully' });
 		}, 500);
 	};
 
@@ -153,6 +158,15 @@ const IdentityResolutionSettings = () => {
 				</div>
 			) : (
 				<div>
+					<Section
+						title='Automatic execution'
+						description='Define when the Identity Resolution should be automatically started'
+					>
+						<SlCheckbox checked={runOnBatchImport} onSlChange={onRunOnBatchImportChange}>
+							Automatically run the Identity Resolution when importing users from apps, files and
+							databases
+						</SlCheckbox>
+					</Section>
 					<Section
 						title='Identifiers'
 						description='Define the identifiers used to resolve the identity of the users'

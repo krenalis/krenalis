@@ -211,9 +211,10 @@ func (c *Meergo) AddSourcePostgreSQL() int {
 	})
 }
 
-func (c *Meergo) ChangeIdentityResolutionSettings(identifiers []string) {
+func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
-		"Identifiers": identifiers,
+		"RunOnBatchImport": runOnBatchImport,
+		"Identifiers":      identifiers,
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
 	c.MustCall("PUT", method, body, nil)

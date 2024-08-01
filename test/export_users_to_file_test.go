@@ -34,7 +34,7 @@ func TestExportUsersToFile(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.ChangeIdentityResolutionSettings([]string{"email"})
+	c.ChangeIdentityResolutionSettings(true, []string{"email"})
 
 	// Load some users in the data warehouse.
 	{

@@ -381,13 +381,14 @@ func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWrite
 		return nil, err
 	}
 	body := struct {
-		Identifiers []string
+		RunOnBatchImport bool
+		Identifiers      []string
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeIdentityResolutionSettings(r.Context(), body.Identifiers)
+	err = ws.ChangeIdentityResolutionSettings(r.Context(), body.RunOnBatchImport, body.Identifiers)
 	return nil, err
 }
 

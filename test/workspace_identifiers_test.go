@@ -22,19 +22,27 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.ChangeIdentityResolutionSettings(nil)
+	// Test the default value for RunIdentityResolutionOnBatchImport, when a
+	// workspace is created.
+	if ws := c.Workspace(); !ws.RunIdentityResolutionOnBatchImport {
+		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be true (which is the default), got %t", ws.RunIdentityResolutionOnBatchImport)
+	}
+
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.ChangeIdentityResolutionSettings([]string{})
+	c.ChangeIdentityResolutionSettings(true, []string{})
+	if ws := c.Workspace(); !ws.RunIdentityResolutionOnBatchImport {
+		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be true, got %t", ws.RunIdentityResolutionOnBatchImport)
+	}
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.ChangeIdentityResolutionSettings([]string{"dummy_id"})
+	c.ChangeIdentityResolutionSettings(true, []string{"dummy_id"})
 	if ws := c.Workspace(); len(ws.Identifiers) != 1 || ws.Identifiers[0] != "dummy_id" {
 		t.Fatalf("expected \"dummy_id\", got %v", ws.Identifiers)
 	}
-	c.ChangeIdentityResolutionSettings([]string{"email", "android.id"})
+	c.ChangeIdentityResolutionSettings(true, []string{"email", "android.id"})
 	if ws := c.Workspace(); len(ws.Identifiers) != 2 || ws.Identifiers[0] != "email" || ws.Identifiers[1] != "android.id" {
 		t.Fatalf("expected \"email\" and \"android.id\", got %v", ws.Identifiers)
 	}
@@ -67,6 +75,18 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	expected = `unexpected HTTP status code 422: {"error":{"code":"NotAllowedType","message":"property \"phone_numbers\" has a type Array, which is not allowed for identifiers"}}`
 	if err.Error() != expected {
 		t.Fatalf("expected error %q, got %q", expected, err)
+	}
+
+	// Test the disabling of RunIdentityResolutionOnBatchImport.
+	c.ChangeIdentityResolutionSettings(false, []string{})
+	if ws := c.Workspace(); ws.RunIdentityResolutionOnBatchImport {
+		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be false, got %t", ws.RunIdentityResolutionOnBatchImport)
+	}
+
+	// Test the enabling of RunIdentityResolutionOnBatchImport.
+	c.ChangeIdentityResolutionSettings(true, []string{})
+	if ws := c.Workspace(); !ws.RunIdentityResolutionOnBatchImport {
+		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be true, got %t", ws.RunIdentityResolutionOnBatchImport)
 	}
 
 }

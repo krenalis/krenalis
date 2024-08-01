@@ -70,6 +70,7 @@ func (this *Action) exec(ctx context.Context) {
 
 	var err error
 	var passed, failed [6]int
+	var actionImportedUsers bool
 
 	if this.Target == Groups {
 		err = actionExecutionError{fmt.Errorf("groups import and export are not implemented")}
@@ -81,6 +82,7 @@ func (this *Action) exec(ctx context.Context) {
 		stats := this.apis.statistics.Action(this.action.ID)
 		if connection.Role == state.Source {
 			err = this.importUsers(ctx, stats)
+			actionImportedUsers = true
 		} else {
 			err = this.exportUsers(ctx, stats)
 		}
@@ -141,6 +143,16 @@ func (this *Action) exec(ctx context.Context) {
 			"execution", execution.ID,
 			"err", err,
 		)
+	}
+
+	// Run the Identity Resolution, if necessary.
+	ws := this.action.Connection().Workspace()
+	if actionImportedUsers && ws.RunIdentityResolutionOnBatchImport {
+		err = this.connection.store.RunIdentityResolution(ctx)
+		if err != nil {
+			slog.Error("error while running the Identity Resolution at the end of user import", "err", err)
+			return
+		}
 	}
 
 }

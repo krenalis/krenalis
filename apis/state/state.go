@@ -440,19 +440,20 @@ type Warehouse struct {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu                  *sync.Mutex
-	Warehouse           *Warehouse
-	connections         map[int]*Connection
-	ID                  int
-	organization        *Organization
-	Name                string
-	UserSchema          types.Type // without meta properties.
-	UserPrimarySources  map[string]int
-	accounts            map[int]*Account
-	Identifiers         []string
-	PrivacyRegion       PrivacyRegion
-	DisplayedProperties DisplayedProperties
-	actionsToPurge      []int
+	mu                                 *sync.Mutex
+	Warehouse                          *Warehouse
+	connections                        map[int]*Connection
+	ID                                 int
+	organization                       *Organization
+	Name                               string
+	UserSchema                         types.Type // without meta properties.
+	UserPrimarySources                 map[string]int
+	accounts                           map[int]*Account
+	RunIdentityResolutionOnBatchImport bool
+	Identifiers                        []string
+	PrivacyRegion                      PrivacyRegion
+	DisplayedProperties                DisplayedProperties
+	actionsToPurge                     []int
 }
 
 // Account returns the account with identifier id. The boolean return value
