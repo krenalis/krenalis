@@ -25,7 +25,7 @@ type Header struct {
 	Proto      string      `json:"proto"`
 	URL        string      `json:"url"`
 	Headers    http.Header `json:"headers"`
-	Connection int
+	Source     int
 }
 
 // Event represents an event.
@@ -309,7 +309,7 @@ func (event *Event) AsProperties() map[string]any {
 		"properties": properties,
 		"receivedAt": event.ReceivedAt,
 		"sentAt":     event.SentAt,
-		"source":     event.Header.Connection,
+		"source":     event.Header.Source,
 		"timestamp":  event.Timestamp,
 		"traits":     traits,
 		"type":       *event.Type,

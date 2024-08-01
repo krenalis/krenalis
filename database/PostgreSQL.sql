@@ -181,7 +181,7 @@ CREATE TABLE event_dispatching (
 
 CREATE TABLE event_payloads (
     id bytea NOT NULL,
-    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     received_at timestamp NOT NULL,
     remote_addr inet NOT NULL,
     user_agent TEXT NOT NULL,

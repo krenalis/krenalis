@@ -213,13 +213,13 @@ func (c *Collector) actions() []*state.Action {
 	return actions
 }
 
-// canCollectEvents reports whether the provided connection can collect events.
-// It can collect events if it is enabled and has an enabled action, or is
-// enabled and has an enabled event destination with an enabled action on
+// canCollectEvents reports whether the provided source connection can collect
+// events. It can collect events if it is enabled and has an enabled action, or
+// is enabled and has an enabled event destination with an enabled action on
 // events.
-func (c *Collector) canCollectEvents(connection *state.Connection) bool {
-	return connection.Enabled && (c.hasImportEventsAction(connection) ||
-		c.hasImportUsersAction(connection) || c.hasEventDestinations(connection))
+func (c *Collector) canCollectEvents(source *state.Connection) bool {
+	return source.Enabled && (c.hasImportEventsAction(source) ||
+		c.hasImportUsersAction(source) || c.hasEventDestinations(source))
 }
 
 // connectionByKey returns an enable source mobile, server or website connection
@@ -378,8 +378,8 @@ func (c *Collector) persistEvents(events []*collectedEvent) <-chan error {
 			remoteAddr, _, _ := net.SplitHostPort(header.RemoteAddr)
 			_ = enc.Encode(event)
 			payload := b.Bytes()
-			_, err := c.db.Exec(context.Background(), "INSERT INTO event_payloads (id, connection, received_at, remote_addr, user_agent, payload) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING",
-				event.id[:], header.Connection, header.ReceivedAt, remoteAddr, header.Headers.Get("User-Agent"), payload)
+			_, err := c.db.Exec(context.Background(), "INSERT INTO event_payloads (id, source, received_at, remote_addr, user_agent, payload) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING",
+				event.id[:], header.Source, header.ReceivedAt, remoteAddr, header.Headers.Get("User-Agent"), payload)
 			if err != nil {
 				ack <- err
 				return
@@ -511,7 +511,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Validate the write key.
-	var connection *state.Connection
+	var source *state.Connection
 	{
 		writeKey := evs.WriteKey
 		if method != "batch" {
@@ -523,19 +523,19 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if writeKey != "" {
-			connection, _ = c.connectionByKey(writeKey)
+			source, _ = c.connectionByKey(writeKey)
 		}
-		if connection == nil {
+		if source == nil {
 			writeOK(w, origin)
 			return nil
 		}
 	}
-	header.Connection = connection.ID
+	header.Source = source.ID
 
 	// Assign an identifier to each event concatenating the connection with the message ID.
 	var id bytes.Buffer
 	for _, event := range evs.Batch {
-		id.WriteString(strconv.Itoa(connection.ID))
+		id.WriteString(strconv.Itoa(source.ID))
 		id.WriteRune(':')
 		id.WriteString(event.MessageId)
 		h := sha1.New()
@@ -562,7 +562,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		event.header = header
 		mergeContexts(&event.Context, evs.Context)
 		err = validateEvent(method, event)
-		c.observer.addCollectedEvent(header.Connection, event, err)
+		c.observer.addCollectedEvent(header.Source, event, err)
 		if err != nil {
 			// Remove the invalid event.
 			evs.Batch = slices.Delete(evs.Batch, i, i+1)
@@ -575,12 +575,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
-	if !c.canCollectEvents(connection) {
+	if !c.canCollectEvents(source) {
 		for _, event := range evs.Batch {
 			_ = c.setEventAsReceived(event)
 		}
 		writeOK(w, origin)
-		if c.observer.hasEnrichedListener(connection.ID) {
+		if c.observer.hasEnrichedListener(source.ID) {
 			for _, event := range evs.Batch {
 				c.enrichEvent(event)
 				ev := &events.Event{
@@ -603,7 +603,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					PreviousId:   event.PreviousId,
 					Properties:   event.Properties,
 				}
-				c.observer.addEnrichedEvent(header.Connection, ev)
+				c.observer.addEnrichedEvent(header.Source, ev)
 			}
 		}
 		return nil
@@ -660,12 +660,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			PreviousId:   event.PreviousId,
 			Properties:   event.Properties,
 		}
-		c.observer.addEnrichedEvent(header.Connection, batch[i])
+		c.observer.addEnrichedEvent(header.Source, batch[i])
 	}
 
-	if c.hasImportEventsAction(connection) {
+	if c.hasImportEventsAction(source) {
 		// Store the events into the data warehouse.
-		err = c.storeEvents(connection.Workspace().ID, batch)
+		err = c.storeEvents(source.Workspace().ID, batch)
 		if err != nil {
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
@@ -674,9 +674,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	if c.hasImportUsersAction(connection) {
+	if c.hasImportUsersAction(source) {
 		// Import the user identities.
-		err = c.importUserIdentities(connection, batch)
+		err = c.importUserIdentities(source, batch)
 		if err != nil {
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
@@ -685,7 +685,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	if c.hasEventDestinations(connection) {
+	if c.hasEventDestinations(source) {
 		// Send the events to the dispatcher.
 		for _, event := range batch {
 			for _, action := range c.actions() {
@@ -1277,7 +1277,7 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 			json.RawMessage(slices.Clone(properties.Bytes())), // properties
 			e.ReceivedAt,                                      // received_at
 			e.SentAt,                                          // sent_at
-			e.Header.Connection,                               // source
+			e.Header.Source,                                   // source
 			e.Timestamp,                                       // timestamp
 			json.RawMessage(slices.Clone(traits.Bytes())),     // traits
 			*e.Type,  // type
