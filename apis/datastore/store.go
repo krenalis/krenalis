@@ -385,7 +385,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	//
 	//     duplicate key value violates unique constraint "pg_proc_proname_args_nsp_index" (SQLSTATE 23505)
 	//
-	// TODO(Gianluca): also take a look at https://github.com/meergo/meergo/issues/354.
+	// TODO(Gianluca): also take a look at https://github.com/meergo/meergo/issues/967.
 	store.runningIR <- struct{}{}
 	defer func() {
 		<-store.runningIR

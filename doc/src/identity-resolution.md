@@ -10,12 +10,9 @@ In particular, it performs these operations (not necessarily in this order):
 
 ## When It Is Executed
 
-The Identity Resolution is executed:
+The Identity Resolution can be executed manually by the user through a button in the UI.
 
-* arbitrarily by Meergo, for example when importing from a connection
-* explicitly by the user
-
->  We have a discussion on that, [#354](https://github.com/meergo/meergo/issues/354).
+It is also possible to configure Meergo to automatically perform Identity Resolution at the end of every user import from apps, files, or databases. This can be configured through the Identity Resolution settings in the UI.
 
 ## Same User Criterion
 
