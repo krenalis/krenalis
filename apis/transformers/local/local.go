@@ -208,9 +208,20 @@ if __name__ == "__main__":
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
-			err = transformers.ErrFunctionExist
+			return transformers.ErrFunctionExist
 		}
-		return err
+		dir := filepath.Dir(filename)
+		st, err2 := os.Stat(dir)
+		if err2 != nil {
+			if errors.Is(err2, os.ErrNotExist) {
+				return fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+			}
+		} else {
+			if !st.IsDir() {
+				return fmt.Errorf("path %q for storing local transformation functions is not a directory", dir)
+			}
+		}
+		return fmt.Errorf("cannot create local transformation function: %v", err)
 	}
 	_, err = f.WriteString(fullSource)
 	if err != nil {
@@ -230,9 +241,13 @@ func (fn *function) Delete(ctx context.Context, name string) error {
 	if !fn.supportLanguage(ext) {
 		return errors.New("language is not supported")
 	}
-	entries, err := os.ReadDir(fn.settings.FunctionsDir)
+	dir := fn.settings.FunctionsDir
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return err
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+		}
+		return fmt.Errorf("cannot read files in directory %q storing local transformation functions", dir)
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -240,9 +255,10 @@ func (fn *function) Delete(ctx context.Context, name string) error {
 		}
 		v, ok := filenameToVersion(name, entry.Name(), ext)
 		if ok {
-			err := os.Remove(fn.absFilename(name, v, ext))
+			filename := fn.absFilename(name, v, ext)
+			err := os.Remove(filename)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return err
+				return fmt.Errorf("cannot remove file %q of local transformation function: %v", filename, err)
 			}
 		}
 	}
@@ -275,9 +291,13 @@ func (fn *function) Update(ctx context.Context, name, source string) (string, er
 	attempts := 0
 fileCreation:
 	for {
-		entries, err := os.ReadDir(fn.settings.FunctionsDir)
+		dir := fn.settings.FunctionsDir
+		entries, err := os.ReadDir(dir)
 		if err != nil {
-			return "", err
+			if errors.Is(err, os.ErrNotExist) {
+				return "", fmt.Errorf("directory %q for storing local transformation functions does not exist", dir)
+			}
+			return "", fmt.Errorf("cannot read files in directory %q storing local transformation functions", dir)
 		}
 		// Filenames for functions should be like: "<name>_v<version>.<ext>"
 		var maxVersion int
