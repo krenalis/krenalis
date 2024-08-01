@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import * as icons from '../../../constants/icons';
 import UsersContext from '../../../context/UsersContext';
 import Toolbar from '../../base/Toolbar/Toolbar';
+import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -24,6 +25,8 @@ const UsersList = () => {
 		setSelectedUser(id),
 	);
 
+	const [askRunIRConfirmation, setAskRunIRConfirmation] = useState<boolean>(false);
+
 	const onToggleColumn = (name: string) => {
 		const updatedProps: UserProperty[] = [];
 		for (const p of usersProperties) {
@@ -39,6 +42,7 @@ const UsersList = () => {
 
 	const onRunIdentityResolution = async () => {
 		setIsLoadingIdentityResolution(true);
+		setAskRunIRConfirmation(false);
 		try {
 			await api.workspaces.runIdentityResolution();
 		} catch (err) {
@@ -75,9 +79,31 @@ const UsersList = () => {
 						})}
 					</SlMenu>
 				</SlDropdown>
-				<SlButton onClick={onRunIdentityResolution} loading={isLoadingIdentityResolution} variant='primary'>
-					Run identity resolution
+				<SlButton
+					onClick={() => setAskRunIRConfirmation(true)}
+					loading={isLoadingIdentityResolution}
+					variant='primary'
+				>
+					Run Identity Resolution
 				</SlButton>
+				<AlertDialog
+					isOpen={askRunIRConfirmation}
+					onClose={() => setAskRunIRConfirmation(false)}
+					title='Are you sure?'
+					actions={
+						<>
+							<SlButton onClick={() => setAskRunIRConfirmation(false)}>Cancel</SlButton>
+							<SlButton variant='primary' onClick={onRunIdentityResolution}>
+								Run
+							</SlButton>
+						</>
+					}
+				>
+					<p>
+						The time it takes to perform the Identity Resolution can vary significantly, from seconds to
+						hours, depending on the size of user data.
+					</p>
+				</AlertDialog>
 			</Toolbar>
 			<div className='users-list__content'>
 				<div className='users-list__grid-container'>

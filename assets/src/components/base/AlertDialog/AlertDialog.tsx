@@ -5,15 +5,15 @@ import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface AlertDialogProps {
-	variant: string;
 	isOpen: boolean;
 	onClose: () => void;
 	title: string;
 	actions?: ReactNode;
 	children?: ReactNode;
+	variant?: string;
 }
 
-const AlertDialog = ({ variant, isOpen, onClose, title, actions, children }: AlertDialogProps) => {
+const AlertDialog = ({ isOpen, onClose, title, actions, children, variant }: AlertDialogProps) => {
 	const { isFullscreen } = useContext(AppContext);
 
 	let icon: ReactNode, color: string;
