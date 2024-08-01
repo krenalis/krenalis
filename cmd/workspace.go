@@ -48,11 +48,12 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 		return nil, err
 	}
 	var body struct {
-		Enriched  bool
-		Size      *int
-		Sources   []int
-		OnlyValid bool
-		Filter    *filters.Filter
+		Enriched      bool
+		Size          *int
+		Sources       []int
+		OnlyValid     bool
+		HasUserTraits bool
+		Filter        *filters.Filter
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -64,7 +65,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	}
 	var id string
 	if body.Enriched {
-		id, err = ws.AddEnrichedEventListener(size, body.Sources, body.Filter)
+		id, err = ws.AddEnrichedEventListener(size, body.Sources, body.HasUserTraits, body.Filter)
 	} else {
 		id, err = ws.AddCollectedEventListener(size, body.Sources, body.OnlyValid)
 	}

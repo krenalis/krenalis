@@ -210,8 +210,11 @@ func (event *Event) AsProperties() map[string]any {
 	var traits any
 	if event.Traits != nil {
 		traits = event.Traits
-	} else if event.Context.Traits != nil {
-		traits = event.Context.Traits
+	}
+
+	var contextTraits any
+	if event.Context.Traits != nil {
+		contextTraits = event.Context.Traits
 	}
 
 	var properties any
@@ -296,6 +299,7 @@ func (event *Event) AsProperties() map[string]any {
 				"start": event.Context.SessionStart,
 			},
 			"timezone":  event.Context.Timezone,
+			"traits":    contextTraits,
 			"userAgent": event.Context.UserAgent,
 		},
 		"event":      event.Event,

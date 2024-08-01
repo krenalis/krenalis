@@ -402,13 +402,16 @@ func (this *Workspace) AddCollectedEventListener(size int, sources []int, onlyVa
 // server, or website connections. If sources is non-nil, only events
 // originating from these sources will be observed.
 //
+// If hasUserTraits is true, only events with user traits will be observed,
+// such as "identify" events and events with a non-nil traits in context.
+//
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
 // It returns an errors.UnprocessableError with code:
 //
 //   - ConnectionNotExist, if a source connection does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) AddEnrichedEventListener(size int, sources []int, filter *filters.Filter) (string, error) {
+func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUserTraits bool, filter *filters.Filter) (string, error) {
 	this.apis.mustBeOpen()
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -423,7 +426,7 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, filter 
 			return "", errors.BadRequest("filter is not valid: %w", err)
 		}
 	}
-	id, err := this.apis.events.observer.AddEnrichedListener(size, sources, filter)
+	id, err := this.apis.events.observer.AddEnrichedListener(size, sources, hasUserTraits, filter)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)

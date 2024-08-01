@@ -124,6 +124,7 @@ var Schema = types.Object([]types.Property{
 				}),
 			},
 			{Name: "timezone", Type: types.Text()},
+			{Name: "traits", Type: types.JSON(), Nullable: true},
 			{Name: "userAgent", Type: types.Text()},
 		}),
 	},

@@ -24,7 +24,6 @@ const useEventListener = (
 	setEvents: (events: EventListenerEvent[]) => void,
 	setDiscarded?: React.Dispatch<React.SetStateAction<number>>,
 	filter?: Filter,
-	listenedEventTypes?: string[],
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
@@ -47,7 +46,7 @@ const useEventListener = (
 			let listener: AddEventListenerResponse;
 			try {
 				if (enriched) {
-					listener = await api.workspaces.eventlisteners.addEnriched(3, sources, filter);
+					listener = await api.workspaces.eventlisteners.addEnriched(3, sources, true, filter);
 				} else {
 					listener = await api.workspaces.eventlisteners.addCollected(3, sources, onlyValid);
 				}
@@ -82,11 +81,6 @@ const useEventListener = (
 				const newly: EventListenerEvent[] = [];
 				for (const e of res.events) {
 					const dec = JSON.parse(atob(e.Data));
-					if (listenedEventTypes != null) {
-						if (!listenedEventTypes.includes(dec.type)) {
-							continue;
-						}
-					}
 					newly.push({
 						id: id,
 						err: e.Err,

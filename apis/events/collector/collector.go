@@ -308,7 +308,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 
 		// Import the user identities from the events batch.
 		for _, event := range events {
-			if *event.Type != "identify" {
+			if t := *event.Type; t != "identify" && event.Context.Traits == nil {
 				continue
 			}
 			properties := event.AsProperties()

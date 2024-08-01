@@ -443,11 +443,17 @@ class Eventlisteners {
 		});
 	};
 
-	addEnriched = async (size: number, sources: number[], filter: Filter): Promise<AddEventListenerResponse> => {
+	addEnriched = async (
+		size: number,
+		sources: number[],
+		hasUserTraits: boolean,
+		filter: Filter,
+	): Promise<AddEventListenerResponse> => {
 		return await call(`${this.apiURL}/events-listeners`, http.POST, {
 			enriched: true,
 			size: size,
 			sources: sources,
+			hasUserTraits: hasUserTraits,
 			filter: filter,
 		});
 	};

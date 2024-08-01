@@ -58,14 +58,15 @@ type statsEntry struct {
 
 // listener represents an event listener.
 type listener struct {
-	id         string
-	sources    []int
-	onlyValid  bool
-	filter     *filters.Filter
-	sync.Mutex // for the events and discarded fields
-	events     []ObservedEvent
-	times      []string
-	discarded  int
+	id            string
+	sources       []int
+	hasUserTraits bool
+	onlyValid     bool
+	filter        *filters.Filter
+	sync.Mutex    // for the events and discarded fields
+	events        []ObservedEvent
+	times         []string
+	discarded     int
 }
 
 // ObservedEvent represents an observed event.
@@ -146,14 +147,15 @@ func (observer *Observer) AddCollectedListener(size int, sources []int, onlyVali
 //
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
-func (observer *Observer) AddEnrichedListener(size int, sources []int, filter *filters.Filter) (string, error) {
+func (observer *Observer) AddEnrichedListener(size int, sources []int, hasUserTraits bool, filter *filters.Filter) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
-		id:      id,
-		sources: sources,
-		filter:  filter,
-		events:  make([]ObservedEvent, 0, size),
-		times:   make([]string, 0, size),
+		id:            id,
+		sources:       sources,
+		hasUserTraits: hasUserTraits,
+		filter:        filter,
+		events:        make([]ObservedEvent, 0, size),
+		times:         make([]string, 0, size),
 	}
 	observer.Lock()
 	defer observer.Unlock()
@@ -318,6 +320,11 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 	for _, listener := range observer.listeners.enriched {
 		if !slices.Contains(listener.sources, source) {
 			continue
+		}
+		if listener.hasUserTraits {
+			if t := *event.Type; t != "identify" && event.Context.Traits == nil {
+				continue
+			}
 		}
 		if listener.filter != nil {
 			if properties == nil {

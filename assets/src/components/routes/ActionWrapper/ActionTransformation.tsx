@@ -932,7 +932,6 @@ const FullscreenTransformation = ({
 		collectEvents,
 		null,
 		action.Filter,
-		isEventBasedUserImport ? ['identify'] : null,
 	);
 
 	useEffect(() => {
