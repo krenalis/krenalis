@@ -12,7 +12,7 @@ import "github.com/meergo/meergo/types"
 // Schema is the schema of an enriched event.
 var Schema = types.Object([]types.Property{
 	{Name: "anonymousId", Type: types.Text()},
-	{Name: "category", Type: types.Text()},
+	{Name: "category", Type: types.Text(), ReadOptional: true},
 	{
 		Name: "context",
 		Type: types.Object([]types.Property{
@@ -24,6 +24,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "build", Type: types.Text()},
 					{Name: "namespace", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "browser",
@@ -32,6 +33,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "other", Type: types.Text()},
 					{Name: "version", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "campaign",
@@ -42,6 +44,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "term", Type: types.Text()},
 					{Name: "content", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "device",
@@ -55,16 +58,18 @@ var Schema = types.Object([]types.Property{
 					{Name: "type", Type: types.Text()},
 					{Name: "token", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
-			{Name: "ip", Type: types.Inet()},
+			{Name: "ip", Type: types.Inet(), ReadOptional: true},
 			{
 				Name: "library",
 				Type: types.Object([]types.Property{
 					{Name: "name", Type: types.Text()},
 					{Name: "version", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
-			{Name: "locale", Type: types.Text()},
+			{Name: "locale", Type: types.Text(), ReadOptional: true},
 			{
 				Name: "location",
 				Type: types.Object([]types.Property{
@@ -74,6 +79,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "longitude", Type: types.Float(64)},
 					{Name: "speed", Type: types.Float(64)},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "network",
@@ -83,6 +89,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "cellular", Type: types.Boolean()},
 					{Name: "wifi", Type: types.Boolean()},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "os",
@@ -90,6 +97,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
 					{Name: "version", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "page",
@@ -107,6 +115,7 @@ var Schema = types.Object([]types.Property{
 					{Name: "id", Type: types.Text()},
 					{Name: "type", Type: types.Text()},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "screen",
@@ -115,29 +124,31 @@ var Schema = types.Object([]types.Property{
 					{Name: "height", Type: types.Int(32)},
 					{Name: "density", Type: types.Decimal(3, 2)},
 				}),
+				ReadOptional: true,
 			},
 			{
 				Name: "session",
 				Type: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(64)},
-					{Name: "start", Type: types.Boolean()},
+					{Name: "start", Type: types.Boolean(), ReadOptional: true},
 				}),
+				ReadOptional: true,
 			},
-			{Name: "timezone", Type: types.Text()},
-			{Name: "traits", Type: types.JSON(), Nullable: true},
-			{Name: "userAgent", Type: types.Text()},
+			{Name: "timezone", Type: types.Text(), ReadOptional: true},
+			{Name: "traits", Type: types.JSON(), ReadOptional: true},
+			{Name: "userAgent", Type: types.Text(), ReadOptional: true},
 		}),
 	},
-	{Name: "event", Type: types.Text()},
-	{Name: "groupId", Type: types.Text()},
+	{Name: "event", Type: types.Text(), ReadOptional: true},
+	{Name: "groupId", Type: types.Text(), ReadOptional: true},
 	{Name: "messageId", Type: types.Text()},
-	{Name: "name", Type: types.Text()},
-	{Name: "properties", Type: types.JSON(), Nullable: true},
+	{Name: "name", Type: types.Text(), ReadOptional: true},
+	{Name: "properties", Type: types.JSON(), ReadOptional: true},
 	{Name: "receivedAt", Type: types.DateTime()},
 	{Name: "sentAt", Type: types.DateTime()},
 	{Name: "source", Type: types.Int(32)},
 	{Name: "timestamp", Type: types.DateTime()},
-	{Name: "traits", Type: types.JSON(), Nullable: true},
+	{Name: "traits", Type: types.JSON(), ReadOptional: true},
 	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
-	{Name: "userId", Type: types.Text()},
+	{Name: "userId", Type: types.Text(), Nullable: true},
 })

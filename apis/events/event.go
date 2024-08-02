@@ -202,118 +202,156 @@ func (event *Event) AsProperties() map[string]any {
 
 	// Keep in sync with the schema in "schema.go".
 
-	groupId := event.GroupId
-	if event.GroupId == "" {
-		groupId = event.Context.GroupId
-	}
-
-	var traits any
-	if event.Traits != nil {
-		traits = event.Traits
-	}
-
-	var contextTraits any
-	if event.Context.Traits != nil {
-		contextTraits = event.Context.Traits
-	}
-
-	var properties any
-	if event.Properties != nil {
-		properties = event.Properties
-	}
+	context := map[string]any{}
 
 	// TODO(Gianluca): define datetime layout and parse/convert the values.
 	mapEvent := map[string]any{
 		"anonymousId": event.AnonymousId,
-		"category":    event.Category,
-		"context": map[string]any{
-			"app": map[string]any{
-				"name":      event.Context.App.Name,
-				"version":   event.Context.App.Version,
-				"build":     event.Context.App.Build,
-				"namespace": event.Context.App.Namespace,
-			},
-			"browser": map[string]any{
-				"name":    event.Context.Browser.Name,
-				"other":   event.Context.Browser.Other,
-				"version": event.Context.Browser.Version,
-			},
-			"campaign": map[string]any{
-				"name":    event.Context.Campaign.Name,
-				"source":  event.Context.Campaign.Source,
-				"medium":  event.Context.Campaign.Medium,
-				"term":    event.Context.Campaign.Term,
-				"content": event.Context.Campaign.Content,
-			},
-			"device": map[string]any{
-				"id":                event.Context.Device.Id,
-				"advertisingId":     event.Context.Device.AdvertisingId,
-				"adTrackingEnabled": event.Context.Device.AdTrackingEnabled,
-				"manufacturer":      event.Context.Device.Manufacturer,
-				"model":             event.Context.Device.Model,
-				"name":              event.Context.Device.Name,
-				"type":              event.Context.Device.Type,
-				"token":             event.Context.Device.Token,
-			},
-			"ip": event.Context.IP,
-			"library": map[string]any{
-				"name":    event.Context.Library.Name,
-				"version": event.Context.Library.Version,
-			},
-			"locale": event.Context.Locale,
-			"location": map[string]any{
-				"city":      event.Context.Location.City,
-				"country":   event.Context.Location.Country,
-				"latitude":  event.Context.Location.Latitude,
-				"longitude": event.Context.Location.Longitude,
-				"speed":     event.Context.Location.Speed,
-			},
-			"network": map[string]any{
-				"bluetooth": event.Context.Network.Bluetooth,
-				"carrier":   event.Context.Network.Carrier,
-				"cellular":  event.Context.Network.Cellular,
-				"wifi":      event.Context.Network.WiFi,
-			},
-			"os": map[string]any{
-				"name":    event.Context.OS.Name,
-				"version": event.Context.OS.Version,
-			},
-			"page": map[string]any{
-				"path":     event.Context.Page.Path,
-				"referrer": event.Context.Page.Referrer,
-				"search":   event.Context.Page.Search,
-				"title":    event.Context.Page.Title,
-				"url":      event.Context.Page.URL,
-			},
-			"referrer": map[string]any{
-				"id":   event.Context.Referrer.Id,
-				"type": event.Context.Referrer.Type,
-			},
-			"screen": map[string]any{
-				"width":   event.Context.Screen.Width,
-				"height":  event.Context.Screen.Height,
-				"density": decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2),
-			},
-			"session": map[string]any{
-				"id":    event.Context.SessionId,
-				"start": event.Context.SessionStart,
-			},
-			"timezone":  event.Context.Timezone,
-			"traits":    contextTraits,
-			"userAgent": event.Context.UserAgent,
-		},
-		"event":      event.Event,
-		"groupId":    groupId,
-		"messageId":  event.MessageId,
-		"name":       event.Name,
-		"properties": properties,
-		"receivedAt": event.ReceivedAt,
-		"sentAt":     event.SentAt,
-		"source":     event.Header.Source,
-		"timestamp":  event.Timestamp,
-		"traits":     traits,
-		"type":       *event.Type,
-		"userId":     event.UserId,
+		"context":     context,
+		"messageId":   event.MessageId,
+		"receivedAt":  event.ReceivedAt,
+		"sentAt":      event.SentAt,
+		"source":      event.Header.Source,
+		"timestamp":   event.Timestamp,
+		"type":        *event.Type,
+	}
+
+	if event.UserId == "" {
+		mapEvent["userId"] = nil
+	} else {
+		mapEvent["userId"] = event.UserId
+	}
+
+	if event.Category != "" {
+		mapEvent["category"] = event.Category
+	}
+	if event.Context.App.Name != "" {
+		context["app"] = map[string]any{
+			"name":      event.Context.App.Name,
+			"version":   event.Context.App.Version,
+			"build":     event.Context.App.Build,
+			"namespace": event.Context.App.Namespace,
+		}
+	}
+	if event.Context.Browser.Name != "None" {
+		context["browser"] = map[string]any{
+			"name":    event.Context.Browser.Name,
+			"other":   event.Context.Browser.Other,
+			"version": event.Context.Browser.Version,
+		}
+	}
+	if event.Context.Campaign.Name != "" {
+		context["campaign"] = map[string]any{
+			"name":    event.Context.Campaign.Name,
+			"source":  event.Context.Campaign.Source,
+			"medium":  event.Context.Campaign.Medium,
+			"term":    event.Context.Campaign.Term,
+			"content": event.Context.Campaign.Content,
+		}
+	}
+	if event.Context.Device.Id != "" {
+		context["device"] = map[string]any{
+			"id":                event.Context.Device.Id,
+			"advertisingId":     event.Context.Device.AdvertisingId,
+			"adTrackingEnabled": event.Context.Device.AdTrackingEnabled,
+			"manufacturer":      event.Context.Device.Manufacturer,
+			"model":             event.Context.Device.Model,
+			"name":              event.Context.Device.Name,
+			"type":              event.Context.Device.Type,
+			"token":             event.Context.Device.Token,
+		}
+	}
+	if event.Context.IP != "" {
+		context["ip"] = event.Context.IP
+	}
+	if event.Context.Library.Name != "" {
+		context["library"] = map[string]any{
+			"name":    event.Context.Library.Name,
+			"version": event.Context.Library.Version,
+		}
+	}
+	if event.Context.Locale != "" {
+		context["locale"] = event.Context.Locale
+	}
+	if event.Context.Locale != "" {
+		context["location"] = map[string]any{
+			"city":      event.Context.Location.City,
+			"country":   event.Context.Location.Country,
+			"latitude":  event.Context.Location.Latitude,
+			"longitude": event.Context.Location.Longitude,
+			"speed":     event.Context.Location.Speed,
+		}
+	}
+	if event.Context.Network.Carrier != "" {
+		context["network"] = map[string]any{
+			"bluetooth": event.Context.Network.Bluetooth,
+			"carrier":   event.Context.Network.Carrier,
+			"cellular":  event.Context.Network.Cellular,
+			"wifi":      event.Context.Network.WiFi,
+		}
+	}
+	if event.Context.OS.Name != "None" {
+		context["os"] = map[string]any{
+			"name":    event.Context.OS.Name,
+			"version": event.Context.OS.Version,
+		}
+	}
+	if event.Context.Page.Path != "" {
+		context["page"] = map[string]any{
+			"path":     event.Context.Page.Path,
+			"referrer": event.Context.Page.Referrer,
+			"search":   event.Context.Page.Search,
+			"title":    event.Context.Page.Title,
+			"url":      event.Context.Page.URL,
+		}
+	}
+	if event.Context.Referrer.Id != "" {
+		context["referrer"] = map[string]any{
+			"id":   event.Context.Referrer.Id,
+			"type": event.Context.Referrer.Type,
+		}
+	}
+	if event.Context.Screen.Width != 0 {
+		context["screen"] = map[string]any{
+			"width":   event.Context.Screen.Width,
+			"height":  event.Context.Screen.Height,
+			"density": decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2),
+		}
+	}
+	if event.Context.SessionId != 0 {
+		session := map[string]any{
+			"id": event.Context.SessionId,
+		}
+		if event.Context.SessionStart {
+			session["start"] = event.Context.SessionStart
+		}
+		context["session"] = session
+	}
+	if event.Context.Timezone != "" {
+		context["timezone"] = event.Context.Timezone
+	}
+	if event.Context.UserAgent != "" {
+		context["userAgent"] = event.Context.UserAgent
+	}
+	if event.Context.Traits != nil {
+		context["traits"] = event.Context.Traits
+	}
+	if event.Event != "" {
+		mapEvent["event"] = event.Event
+	}
+	if event.GroupId != "" {
+		mapEvent["groupId"] = event.GroupId
+	} else if event.Context.GroupId != "" {
+		mapEvent["groupId"] = event.Context.GroupId
+	}
+	if event.Name != "" {
+		mapEvent["name"] = event.Name
+	}
+	if event.Properties != nil {
+		mapEvent["properties"] = event.Properties
+	}
+	if event.Traits != nil {
+		mapEvent["traits"] = event.Traits
 	}
 
 	return mapEvent
