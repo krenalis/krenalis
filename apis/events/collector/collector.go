@@ -1093,7 +1093,9 @@ func (c *Collector) enrichEvent(event *collectedEvent, sourceType state.Connecto
 	}
 
 	// UserAgent.
-	event.Context.UserAgent = event.header.Headers.Get("User-Agent")
+	if event.Context.UserAgent == "" && sourceType != state.Server {
+		event.Context.UserAgent = event.header.Headers.Get("User-Agent")
+	}
 
 	// MessageId.
 	if event.MessageId == "" {
