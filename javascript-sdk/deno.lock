@@ -2,16 +2,16 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "jsr:@std/assert@^1.0.0": "jsr:@std/assert@1.0.0",
-      "jsr:@std/async@^1.0.0-rc.2": "jsr:@std/async@1.0.0-rc.3",
-      "jsr:@std/data-structures@^1.0.0-rc.1": "jsr:@std/data-structures@1.0.0-rc.2",
+      "jsr:@std/assert@^1.0.1": "jsr:@std/assert@1.0.1",
+      "jsr:@std/async@^1.0.0-rc.2": "jsr:@std/async@1.0.1",
+      "jsr:@std/data-structures@^1.0.0-rc.1": "jsr:@std/data-structures@1.0.1",
       "jsr:@std/internal@^1.0.1": "jsr:@std/internal@1.0.1",
       "jsr:@std/testing@^0.225.3": "jsr:@std/testing@0.225.3",
       "jsr:@std/uuid@^1.0.0": "jsr:@std/uuid@1.0.0"
     },
     "jsr": {
-      "@std/assert@1.0.0": {
-        "integrity": "0e4f6d873f7f35e2a1e6194ceee39686c996b9e5d134948e644d35d4c4df2008",
+      "@std/assert@1.0.1": {
+        "integrity": "13590ef8e5854f59e4ad252fd987e83239a1bf1f16cb9c69c1d123ebb807a75b",
         "dependencies": [
           "jsr:@std/internal@^1.0.1"
         ]
@@ -19,8 +19,14 @@
       "@std/async@1.0.0-rc.3": {
         "integrity": "f0f1cb8cca0981c1ed0a5cf1b264bc3f0a44129e53a94be1e80cebeb2817633b"
       },
+      "@std/async@1.0.1": {
+        "integrity": "3c7f6324a8a1b47ca657e5a349b511c9a6c2c0729e9d66b223c9ecaac0753ecb"
+      },
       "@std/data-structures@1.0.0-rc.2": {
         "integrity": "f302a70a30a62bdf569830285ae7d37b15d7bd88c1744acceb91a56016f898f8"
+      },
+      "@std/data-structures@1.0.1": {
+        "integrity": "e4fa6bcc33839979ac118e2746f349cd7b57c58bd3036b5b82ac608771ee856e"
       },
       "@std/internal@1.0.1": {
         "integrity": "6f8c7544d06a11dd256c8d6ba54b11ed870aac6c5aeafff499892662c57673e6"
@@ -66,7 +72,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/assert@^1.0.0",
+      "jsr:@std/assert@^1.0.1",
       "jsr:@std/testing@^0.225.3",
       "jsr:@std/uuid@^1.0.0"
     ],
