@@ -531,6 +531,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	header.Source = source.ID
+	sourceType := source.Connector().Type
 
 	// Assign an identifier to each event concatenating the connection with the message ID.
 	var id bytes.Buffer
@@ -582,7 +583,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		writeOK(w, origin)
 		if c.observer.hasEnrichedListener(source.ID) {
 			for _, event := range evs.Batch {
-				c.enrichEvent(event)
+				c.enrichEvent(event, sourceType)
 				ev := &events.Event{
 					Header:       event.header,
 					Id:           event.id,
@@ -614,7 +615,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Enrich the events.
 	for _, event := range evs.Batch {
-		c.enrichEvent(event)
+		c.enrichEvent(event, sourceType)
 	}
 
 	// Wait for the events to be logged.
@@ -957,7 +958,7 @@ func mergeContexts(ctx, defaultCtx *events.Context) {
 }
 
 // enrichEvent enriches the given event.
-func (c *Collector) enrichEvent(event *collectedEvent) {
+func (c *Collector) enrichEvent(event *collectedEvent, sourceType state.ConnectorType) {
 
 	// AnonymousId.
 	if event.AnonymousId == "" {
@@ -1021,12 +1022,16 @@ func (c *Collector) enrichEvent(event *collectedEvent) {
 	// IP.
 	var requestIP net.IP
 	if event.Context.IP == "" {
-		ip, _, _ := net.SplitHostPort(event.header.RemoteAddr)
-		requestIP = net.ParseIP(ip).To16()
+		if sourceType != state.Server {
+			ip, _, _ := net.SplitHostPort(event.header.RemoteAddr)
+			requestIP = net.ParseIP(ip).To16()
+		}
 	} else {
 		requestIP = net.ParseIP(event.Context.IP).To16()
 	}
-	event.Context.IP = requestIP.String()
+	if requestIP != nil {
+		event.Context.IP = requestIP.String()
+	}
 
 	// Locale.
 	if event.Context.Locale != "" {
@@ -1035,7 +1040,7 @@ func (c *Collector) enrichEvent(event *collectedEvent) {
 
 	// Location.
 	if loc := event.Context.Location; loc.Country == "" && loc.City == "" {
-		if c.maxmindDB != nil {
+		if c.maxmindDB != nil && requestIP != nil {
 			var record struct {
 				City struct {
 					Names struct {
@@ -1218,68 +1223,74 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 			groupId = e.Context.GroupId
 		}
 
+		// Set ip.
+		ip := e.Context.IP
+		if ip == "" {
+			ip = "0.0.0.0"
+		}
+
 		rows[i] = []any{
-			e.AnonymousId,                                     // anonymous_id
-			e.Category,                                        // category
-			e.Context.App.Name,                                // context_app_name
-			e.Context.App.Version,                             // context_app_version
-			e.Context.App.Build,                               // context_app_build
-			e.Context.App.Namespace,                           // context_app_namespace
-			e.Context.Browser.Name,                            // context_browser_name
-			e.Context.Browser.Other,                           // context_browser_other
-			e.Context.Browser.Version,                         // context_browser_version
-			e.Context.Campaign.Name,                           // context_campaign_name
-			e.Context.Campaign.Source,                         // context_campaign_source
-			e.Context.Campaign.Medium,                         // context_campaign_medium
-			e.Context.Campaign.Term,                           // context_campaign_term
-			e.Context.Campaign.Content,                        // context_campaign_content
-			e.Context.Device.Id,                               // context_device_id
-			e.Context.Device.AdvertisingId,                    // context_device_advertising_id
-			e.Context.Device.AdTrackingEnabled,                // context_device_ad_tracking_enabled
-			e.Context.Device.Manufacturer,                     // context_device_manufacturer
-			e.Context.Device.Model,                            // context_device_model
-			e.Context.Device.Name,                             // context_device_name
-			e.Context.Device.Type,                             // context_device_type
-			e.Context.Device.Token,                            // context_device_token
-			e.Context.IP,                                      // context_ip
-			e.Context.Library.Name,                            // context_library_name
-			e.Context.Library.Version,                         // context_library_version
-			e.Context.Locale,                                  // context_locale
-			e.Context.Location.City,                           // context_location_city
-			e.Context.Location.Country,                        // context_location_country
-			e.Context.Location.Latitude,                       // context_location_latitude
-			e.Context.Location.Longitude,                      // context_location_longitude
-			e.Context.Location.Speed,                          // context_location_speed
-			e.Context.Network.Bluetooth,                       // context_network_bluetooth
-			e.Context.Network.Carrier,                         // context_network_carrier
-			e.Context.Network.Cellular,                        // context_network_cellular
-			e.Context.Network.WiFi,                            // context_network_wifi
-			e.Context.OS.Name,                                 // context_os_name
-			e.Context.OS.Version,                              // context_os_version
-			e.Context.Page.Path,                               // context_page_path
-			e.Context.Page.Referrer,                           // context_page_referrer
-			e.Context.Page.Search,                             // context_page_search
-			e.Context.Page.Title,                              // context_page_title
-			e.Context.Page.URL,                                // context_page_url
-			e.Context.Referrer.Id,                             // context_referrer_id
-			e.Context.Referrer.Type,                           // context_referrer_type
-			int16(e.Context.Screen.Width),                     // context_screen_width
-			int16(e.Context.Screen.Height),                    // context_screen_height
-			e.Context.Screen.Density,                          // context_screen_density
-			e.Context.SessionId,                               // context_session_id
-			e.Context.SessionStart,                            // context_session_start
-			e.Context.Timezone,                                // context_timezone
-			e.Context.UserAgent,                               // context_user_agent
-			e.Event,                                           // event
-			groupId,                                           // group_id
-			e.MessageId,                                       // message_id
-			e.Name,                                            // name
+			e.AnonymousId,                      // anonymous_id
+			e.Category,                         // category
+			e.Context.App.Name,                 // context_app_name
+			e.Context.App.Version,              // context_app_version
+			e.Context.App.Build,                // context_app_build
+			e.Context.App.Namespace,            // context_app_namespace
+			e.Context.Browser.Name,             // context_browser_name
+			e.Context.Browser.Other,            // context_browser_other
+			e.Context.Browser.Version,          // context_browser_version
+			e.Context.Campaign.Name,            // context_campaign_name
+			e.Context.Campaign.Source,          // context_campaign_source
+			e.Context.Campaign.Medium,          // context_campaign_medium
+			e.Context.Campaign.Term,            // context_campaign_term
+			e.Context.Campaign.Content,         // context_campaign_content
+			e.Context.Device.Id,                // context_device_id
+			e.Context.Device.AdvertisingId,     // context_device_advertising_id
+			e.Context.Device.AdTrackingEnabled, // context_device_ad_tracking_enabled
+			e.Context.Device.Manufacturer,      // context_device_manufacturer
+			e.Context.Device.Model,             // context_device_model
+			e.Context.Device.Name,              // context_device_name
+			e.Context.Device.Type,              // context_device_type
+			e.Context.Device.Token,             // context_device_token
+			ip,                                 // context_ip
+			e.Context.Library.Name,             // context_library_name
+			e.Context.Library.Version,          // context_library_version
+			e.Context.Locale,                   // context_locale
+			e.Context.Location.City,            // context_location_city
+			e.Context.Location.Country,         // context_location_country
+			e.Context.Location.Latitude,        // context_location_latitude
+			e.Context.Location.Longitude,       // context_location_longitude
+			e.Context.Location.Speed,           // context_location_speed
+			e.Context.Network.Bluetooth,        // context_network_bluetooth
+			e.Context.Network.Carrier,          // context_network_carrier
+			e.Context.Network.Cellular,         // context_network_cellular
+			e.Context.Network.WiFi,             // context_network_wifi
+			e.Context.OS.Name,                  // context_os_name
+			e.Context.OS.Version,               // context_os_version
+			e.Context.Page.Path,                // context_page_path
+			e.Context.Page.Referrer,            // context_page_referrer
+			e.Context.Page.Search,              // context_page_search
+			e.Context.Page.Title,               // context_page_title
+			e.Context.Page.URL,                 // context_page_url
+			e.Context.Referrer.Id,              // context_referrer_id
+			e.Context.Referrer.Type,            // context_referrer_type
+			int16(e.Context.Screen.Width),      // context_screen_width
+			int16(e.Context.Screen.Height),     // context_screen_height
+			e.Context.Screen.Density,           // context_screen_density
+			e.Context.SessionId,                // context_session_id
+			e.Context.SessionStart,             // context_session_start
+			e.Context.Timezone,                 // context_timezone
+			e.Context.UserAgent,                // context_user_agent
+			e.Event,                            // event
+			groupId,                            // group_id
+			e.MessageId,                        // message_id
+			e.Name,                             // name
 			json.RawMessage(slices.Clone(properties.Bytes())), // properties
-			e.ReceivedAt,                                      // received_at
-			e.SentAt,                                          // sent_at
-			e.Header.Source,                                   // source
-			e.Timestamp,                                       // timestamp
-			json.RawMessage(slices.Clone(traits.Bytes())),     // traits
+			e.ReceivedAt,    // received_at
+			e.SentAt,        // sent_at
+			e.Header.Source, // source
+			e.Timestamp,     // timestamp
+			json.RawMessage(slices.Clone(traits.Bytes())), // traits
 			*e.Type,  // type
 			e.UserId, // user_id
 		}
