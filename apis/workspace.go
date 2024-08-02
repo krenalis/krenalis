@@ -436,6 +436,82 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 	return id, nil
 }
 
+// ChangeIdentityResolutionSettings changes the settings of the Identity
+// Resolution of the workspace.
+//
+// runOnBatchImport determines whether the Identity Resolution should be
+// executed automatically every time a batch import is completed.
+//
+// identifiers specify the Identity Resolution identifiers in the specified
+// order. An identifier must be a property in the user schema with a type of
+// Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
+// be repeated.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - NotAllowedType, if an identifier path's type, as defined in the user
+//     schema, is not allowed for identifiers.
+//   - PropertyNotExist, if an identifier path does not exist in the user
+//     schema.
+func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
+
+	this.apis.mustBeOpen()
+
+	for i, id := range identifiers {
+		if !types.IsValidPropertyPath(id) {
+			return errors.BadRequest("identifier %q is not a valid property path", id)
+		}
+		if slices.Contains(identifiers[i+1:], id) {
+			return errors.BadRequest("identifier %q is repeated", id)
+		}
+	}
+
+	if identifiers == nil {
+		identifiers = []string{}
+	}
+	ws := this.workspace
+	n := state.SetIdentityResolutionSettings{
+		Workspace:                          ws.ID,
+		RunIdentityResolutionOnBatchImport: runOnBatchImport,
+		Identifiers:                        identifiers,
+	}
+
+	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+		if len(identifiers) > 0 {
+			var s []byte
+			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			var schema types.Type
+			err = json.Unmarshal(s, &schema)
+			if err != nil {
+				return err
+			}
+			for _, path := range identifiers {
+				p, err := types.PropertyByPath(schema, path)
+				if err != nil {
+					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
+				}
+				if !canBeIdentifier(p.Type) {
+					return errors.Unprocessable(NotAllowedType, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
+				}
+			}
+		}
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET run_identity_resolution_on_batch_import = $1,\n"+
+			"identifiers = $2 WHERE id = $3", n.RunIdentityResolutionOnBatchImport, n.Identifiers, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
+}
+
 // ChangeWarehouseMode changes the mode of the data warehouse for the workspace.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
@@ -1126,82 +1202,6 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	return err
 }
 
-// ChangeIdentityResolutionSettings changes the settings of the Identity
-// Resolution of the workspace.
-//
-// runOnBatchImport determines whether the Identity Resolution should be
-// executed automatically every time a batch import is completed.
-//
-// identifiers specify the Identity Resolution identifiers in the specified
-// order. An identifier must be a property in the user schema with a type of
-// Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
-// be repeated.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - NotAllowedType, if an identifier path's type, as defined in the user
-//     schema, is not allowed for identifiers.
-//   - PropertyNotExist, if an identifier path does not exist in the user
-//     schema.
-func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
-
-	this.apis.mustBeOpen()
-
-	for i, id := range identifiers {
-		if !types.IsValidPropertyPath(id) {
-			return errors.BadRequest("identifier %q is not a valid property path", id)
-		}
-		if slices.Contains(identifiers[i+1:], id) {
-			return errors.BadRequest("identifier %q is repeated", id)
-		}
-	}
-
-	if identifiers == nil {
-		identifiers = []string{}
-	}
-	ws := this.workspace
-	n := state.SetIdentityResolutionSettings{
-		Workspace:                          ws.ID,
-		RunIdentityResolutionOnBatchImport: runOnBatchImport,
-		Identifiers:                        identifiers,
-	}
-
-	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		if len(identifiers) > 0 {
-			var s []byte
-			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			var schema types.Type
-			err = json.Unmarshal(s, &schema)
-			if err != nil {
-				return err
-			}
-			for _, path := range identifiers {
-				p, err := types.PropertyByPath(schema, path)
-				if err != nil {
-					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
-				}
-				if !canBeIdentifier(p.Type) {
-					return errors.Unprocessable(NotAllowedType, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
-				}
-			}
-		}
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET run_identity_resolution_on_batch_import = $1,\n"+
-			"identifiers = $2 WHERE id = $3", n.RunIdentityResolutionOnBatchImport, n.Identifiers, n.Workspace)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
 // PingWarehouse pings the data warehouse with the given settings, verifying
 // that the settings are valid and a connection can be established.
 //
@@ -1526,6 +1526,40 @@ func (this *Workspace) userIdentities(ctx context.Context, where *datastore.Wher
 	return identities, count, nil
 }
 
+// validateEventListenerSources validates the sources from which events are
+// listened to.
+func (this *Workspace) validateEventListenerSources(sources []int) error {
+	if sources == nil {
+		return nil
+	}
+	if len(sources) == 0 {
+		return fmt.Errorf("sources, if not nil, cannot be empty")
+	}
+	for i, s := range sources {
+		if s < 1 || s > math.MaxInt32 {
+			return fmt.Errorf("source %d is not valid", s)
+		}
+		c, ok := this.workspace.Connection(s)
+		if !ok {
+			return errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", sources)
+		}
+		switch c.Connector().Type {
+		case state.Mobile, state.Server, state.Website:
+		default:
+			return errors.BadRequest("connection %d is not a mobile, server or website", sources)
+		}
+		if c.Role != state.Source {
+			return errors.BadRequest("connection %d is not a source", sources)
+		}
+		for _, s2 := range sources[i+1:] {
+			if s == s2 {
+				return fmt.Errorf("sources contains duplicated values")
+			}
+		}
+	}
+	return nil
+}
+
 // ConnectionToAdd represents a connection to add to a workspace.
 type ConnectionToAdd struct {
 
@@ -1732,38 +1766,4 @@ type UserIdentity struct {
 	ID             string    `json:"id"`           // empty string for identities imported from anonymous events.
 	AnonymousIds   []string  `json:"anonymousIds"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
-}
-
-// validateEventListenerSources validates the sources from which events are
-// listened to.
-func (this *Workspace) validateEventListenerSources(sources []int) error {
-	if sources == nil {
-		return nil
-	}
-	if len(sources) == 0 {
-		return fmt.Errorf("sources, if not nil, cannot be empty")
-	}
-	for i, s := range sources {
-		if s < 1 || s > math.MaxInt32 {
-			return fmt.Errorf("source %d is not valid", s)
-		}
-		c, ok := this.workspace.Connection(s)
-		if !ok {
-			return errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", sources)
-		}
-		switch c.Connector().Type {
-		case state.Mobile, state.Server, state.Website:
-		default:
-			return errors.BadRequest("connection %d is not a mobile, server or website", sources)
-		}
-		if c.Role != state.Source {
-			return errors.BadRequest("connection %d is not a source", sources)
-		}
-		for _, s2 := range sources[i+1:] {
-			if s == s2 {
-				return fmt.Errorf("sources contains duplicated values")
-			}
-		}
-	}
-	return nil
 }
