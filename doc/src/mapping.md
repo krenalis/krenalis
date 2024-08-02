@@ -106,6 +106,37 @@ In expressions, you can reference sub-properties, map keys, and JSON object keys
 └─────────────────────────────────┘
 ```
 
+### JSON Handling
+
+When working with JSON objects, if a key does not exist, it evaluates to `null`. For example, consider the `traits` property with the following JSON value:
+
+```json
+{
+    "address": {
+        "city": "Milan"
+    },
+    "phone": "+39 02 12345678"
+}
+```
+
+Here, `traits.address` evaluates to the JSON value `{"city": "Milan"}`, but `traits.name` evaluates to `null` because the key `"name"` does not exist in `traits`.
+
+Accessing a non-object JSON value as if it were an object results in an error, causing the entire mapping to fail. For instance, the following mapping returns an error because `traits.phone` is not a JSON object:
+
+```
+┌─────────────────────────────────┐
+│ traits.phone.mobile             │ ->  phoneNumber
+└─────────────────────────────────┘
+```
+
+To avoid this error, you can add a `?` after the key, which prevents the error if the accessed JSON value is not an object. However, note that the output property `phoneNumber` will not have a value:
+
+```
+┌─────────────────────────────────┐
+│ traits.phone.mobile?            │ ->  phoneNumber
+└─────────────────────────────────┘
+```
+
 ### Functions
 
 In expressions, you can use some functions to do slightly more complex tasks.
