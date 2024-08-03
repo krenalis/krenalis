@@ -119,7 +119,9 @@ When working with JSON objects, if a key does not exist, it evaluates to `null`.
 }
 ```
 
-Here, `traits.address` evaluates to the JSON value `{"city": "Milan"}`, but `traits.name` evaluates to `null` because the key `"name"` does not exist in `traits`.
+Here, `traits.address` evaluates to the JSON value `{"city":"Milan"}`.
+
+When evaluating `traits.name`, if `name` is not a property of `traits`, the result will be undefined, so the output property will be missing from the mapping result.
 
 Accessing a non-object JSON value as if it were an object results in an error, causing the entire mapping to fail. For instance, the following mapping returns an error because `traits.phone` is not a JSON object:
 
