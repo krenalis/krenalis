@@ -17,9 +17,7 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-func TestRelevantCases(t *testing.T) {
-
-	t.Skip()
+func Test_RelevantCases(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.JSON()},
