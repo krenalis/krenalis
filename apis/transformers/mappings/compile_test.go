@@ -42,6 +42,8 @@ func Test_Compile(t *testing.T) {
 		})))},
 		{Name: "other", Type: types.Int(32), CreateRequired: true, Nullable: true},
 		{Name: "properties", Type: types.JSON(), Nullable: true},
+		{Name: "jsonNull", Type: types.JSON()},
+		{Name: "jsonNil", Type: types.JSON(), Nullable: true},
 	})
 
 	cx := decimal.NewFromFloat(0.142)
@@ -58,6 +60,27 @@ func Test_Compile(t *testing.T) {
 		evalErr        error
 		expectedValue  any
 	}{
+		{expr: "null", dt: types.Int(32), nullable: true, expectedValue: nil},
+		{expr: "null", dt: types.Int(32), nullable: false, compileErr: errors.New("cannot convert null to Int(32)")},
+		{expr: "engine.afterburner", dt: types.Text(), nullable: true, expectedValue: nil},
+		{expr: "engine.afterburner", dt: types.Text(), nullable: false, expectedValue: Void},
+		{expr: "properties.no_key", dt: types.Int(32), nullable: true, expectedValue: Void},
+		{expr: "properties.no_key", dt: types.Int(32), nullable: false, expectedValue: Void},
+		{expr: "jsonNull", dt: types.Int(32), nullable: false, expectedValue: Void},
+		{expr: "jsonNull", dt: types.Int(32), nullable: true, expectedValue: nil},
+		{expr: "jsonNil", dt: types.Int(32), nullable: false, expectedValue: Void},
+		{expr: "jsonNil", dt: types.Int(32), nullable: true, expectedValue: nil},
+		{expr: "null", dt: types.JSON(), nullable: true, expectedValue: nil},
+		{expr: "null", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
+		{expr: "engine.afterburner", dt: types.JSON(), nullable: true, expectedValue: nil},
+		{expr: "engine.afterburner", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
+		{expr: "properties.no_key", dt: types.JSON(), nullable: true, expectedValue: Void},
+		{expr: "properties.no_key", dt: types.JSON(), nullable: false, expectedValue: Void},
+		{expr: "jsonNull", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
+		{expr: "jsonNull", dt: types.JSON(), nullable: true, expectedValue: json.RawMessage("null")},
+		{expr: "jsonNil", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
+		{expr: "jsonNil", dt: types.JSON(), nullable: true, expectedValue: nil},
+
 		{expr: "' '   '  '", dt: types.Text(), expectedValue: "   "},
 		{expr: "''", dt: types.JSON(), expectedValue: json.RawMessage("null")},
 		{expr: "'100'", dt: types.JSON(), expectedValue: json.RawMessage(`"100"`)},
@@ -234,6 +257,8 @@ func Test_Compile(t *testing.T) {
 					":":    7.0,
 					":x":   8.0,
 				},
+				"jsonNull": json.RawMessage("null"),
+				"jsonNil":  nil,
 			}
 
 			// Test Compile.
@@ -268,6 +293,12 @@ func Test_Compile(t *testing.T) {
 			if !reflect.DeepEqual(test.expectedValue, gotValue) {
 				if j, ok := gotValue.(json.RawMessage); ok {
 					t.Fatalf("expecting value %#v, got %#v (which represents the string %q)", test.expectedValue, gotValue, string(j))
+				}
+				if gotValue == Void {
+					t.Fatalf("expecting value %#v, got void", test.expectedValue)
+				}
+				if test.expectedValue == Void {
+					t.Fatalf("expecting void, got %#v", gotValue)
 				}
 				t.Fatalf("expecting value %#v, got %#v", test.expectedValue, gotValue)
 			}
