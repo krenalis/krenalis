@@ -84,6 +84,50 @@ func Test_eval(t *testing.T) {
 
 }
 
+func Test_substring(t *testing.T) {
+
+	tests := []struct {
+		s        string
+		start    int
+		length   int
+		expected string
+	}{
+		{"", 1, 0, ""},
+		{"", 5, 3, ""},
+		{"a", 1, 1, "a"},
+		{"a", 1, -1, "a"},
+		{"a", 2, -1, ""},
+		{"hello world", 1, 0, ""},
+		{"hello world", 1, -1, "hello world"},
+		{"hello world", 1, 5, "hello"},
+		{"hello world", 7, 5, "world"},
+		{"hello world", 2, 3, "ell"},
+		{"hello world", 1, 20, "hello world"},
+		{"hello world", 1, 1, "h"},
+		{"hello world", 11, 1, "d"},
+		{"hello world", 11, 20, "d"},
+		{"hello world", 12, 5, ""},
+		{"hello world", 3, -1, "llo world"},
+		{"hello world", 3, 9, "llo world"},
+		{"hello world", 12, -1, ""},
+		{"hello world", 50, -1, ""},
+		{"The café is ready for lunch at the résidence", 8, 1, "é"},
+		{"The café is ready for lunch at the résidence", 8, 30, "é is ready for lunch at the ré"},
+		{"The café is ready for lunch at the résidence", 8, 31, "é is ready for lunch at the rés"},
+		{"日本の文化はとても興味深いです。", 1, 5, "日本の文化"},
+		{"日本の文化はとても興味深いです。", 6, 7, "はとても興味深"},
+		{"日本の文化はとても興味深いです。", 10, -1, "興味深いです。"},
+	}
+
+	for _, test := range tests {
+		got := substring(test.s, test.start, test.length)
+		if test.expected != got {
+			t.Fatalf("expected %q, got %q", test.expected, got)
+		}
+	}
+
+}
+
 func Test_valueOf(t *testing.T) {
 
 	properties := map[string]any{

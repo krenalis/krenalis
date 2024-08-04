@@ -32,11 +32,18 @@ var (
 // numArguments reports the number of arguments for each expression function.
 // It is used to initialize the slice of arguments before parsing them.
 var numArguments = map[string]int{
-	"and":      2,
-	"array":    2,
-	"coalesce": 2,
-	"eq":       2,
-	"if":       3,
+	"and":       2,
+	"array":     2,
+	"coalesce":  2,
+	"eq":        2,
+	"if":        3,
+	"initcap":   1,
+	"lower":     1,
+	"ne":        2,
+	"not":       1,
+	"or":        2,
+	"substring": 3,
+	"upper":     1,
 }
 
 // path represents a property path or a function name.

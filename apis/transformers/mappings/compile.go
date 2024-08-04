@@ -156,7 +156,7 @@ func checkEq(args [][]part, schema, dt types.Type, nullable bool, properties map
 // checkIf type checks a call to 'if' with the given arguments.
 func checkIf(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	n := len(args)
-	if n < 2 {
+	if n < 2 || n > 3 {
 		return types.Type{}, errors.New("'if' function requires either two or three arguments")
 	}
 	err := typeCheck(args[0], schema, types.Boolean(), true, properties)
@@ -172,6 +172,121 @@ func checkIf(args [][]part, schema, dt types.Type, nullable bool, properties map
 		if err != nil {
 			return types.Type{}, err
 		}
+	}
+	return dt, nil
+}
+
+// checkInitCap type checks a call to 'initcap' with the given arguments.
+func checkInitCap(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	n := len(args)
+	if n != 1 {
+		return types.Type{}, errors.New("'initcap' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return dt, nil
+}
+
+// checkLower type checks a call to 'lower' with the given arguments.
+func checkLower(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	n := len(args)
+	if n != 1 {
+		return types.Type{}, errors.New("'lower' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return dt, nil
+}
+
+// checkNe type checks a call to 'ne' with the given arguments.
+func checkNe(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) != 2 {
+		return types.Type{}, errors.New("'ne' function requires two arguments")
+	}
+	for _, arg := range args {
+		err := typeCheck(arg, schema, types.Type{}, true, properties)
+		if err != nil {
+			return types.Type{}, err
+		}
+	}
+	t0 := typesOf(args[0])
+	t1 := typesOf(args[1])
+	if !t0.Valid() || !t1.Valid() {
+		return types.Boolean(), nil
+	}
+	if !convertibleTo(t0, t1) {
+		return types.Type{}, errors.New("first argument of 'ne(...)' is not convertible to the type of the second")
+	}
+	if !convertibleTo(t1, t0) {
+		return types.Type{}, errors.New("second argument of 'ne(...)' is not convertible to the type of the first")
+	}
+	return types.Boolean(), nil
+}
+
+// checkNot type checks a call to 'not' with the given arguments.
+func checkNot(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	n := len(args)
+	if n != 1 {
+		return types.Type{}, errors.New("'not' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Boolean(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return dt, nil
+}
+
+// checkOr type checks a call to 'or' with the given arguments.
+func checkOr(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) < 2 {
+		return types.Type{}, errors.New("'or' function requires at least two argument")
+	}
+	booleanType := types.Boolean()
+	for _, arg := range args {
+		err := typeCheck(arg, schema, booleanType, true, properties)
+		if err != nil {
+			return types.Type{}, err
+		}
+	}
+	return booleanType, nil
+}
+
+// checkSubstring type checks a call to 'substring' with the given arguments.
+func checkSubstring(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	n := len(args)
+	if n < 2 || 3 < n {
+		return types.Type{}, errors.New("'substring' function requires two or three arguments")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	err = typeCheck(args[1], schema, types.Int(32), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	if n == 3 {
+		err = typeCheck(args[2], schema, types.Int(32), true, properties)
+		if err != nil {
+			return types.Type{}, err
+		}
+	}
+	return dt, nil
+}
+
+// checkUpper type checks a call to 'upper' with the given arguments.
+func checkUpper(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	n := len(args)
+	if n != 1 {
+		return types.Type{}, errors.New("'upper' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
 	}
 	return dt, nil
 }
@@ -260,6 +375,20 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 			expr[i].typ, err = checkEq(p.args, schema, typ, n, properties)
 		case "if":
 			expr[i].typ, err = checkIf(p.args, schema, typ, n, properties)
+		case "initcap":
+			expr[i].typ, err = checkInitCap(p.args, schema, typ, n, properties)
+		case "lower":
+			expr[i].typ, err = checkLower(p.args, schema, typ, n, properties)
+		case "ne":
+			expr[i].typ, err = checkNe(p.args, schema, typ, n, properties)
+		case "not":
+			expr[i].typ, err = checkNot(p.args, schema, typ, n, properties)
+		case "or":
+			expr[i].typ, err = checkOr(p.args, schema, typ, n, properties)
+		case "substring":
+			expr[i].typ, err = checkSubstring(p.args, schema, typ, n, properties)
+		case "upper":
+			expr[i].typ, err = checkUpper(p.args, schema, typ, n, properties)
 		default:
 			panic(fmt.Errorf("unknown function %q", p.path[0]))
 		}

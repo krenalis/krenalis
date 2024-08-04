@@ -176,10 +176,11 @@ The `and` function returns `true` only when all of its arguments are `true`; oth
 
 It returns `null`, if an argument is `null` and there are no `false` arguments. For example:
 ```
-and(true, true)  -> true
-and(true, false) -> false
-and(true, null)  -> null
-and(false, null) -> false
+and(true, true)   -> true
+and(true, false)  -> false
+and(false, false) -> false
+and(null, true)   -> null
+and(null, false)  -> false
 ```
 
 The arguments of the `and` function should have type `Boolean`, and the result has type `Boolean`.
@@ -264,3 +265,149 @@ if(null, 5)  -> null
 ```
 
 The result of the `if` function has type `JSON`.
+
+#### **initcap** function
+
+The `initcap` function returns its argument with the first letter of each word in uppercase, all other letters in lowercase. For example:
+```
+┌─────────────────────────────────┐
+│ initcap(firstName ' ' lastName) │ ->  full_name
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+initcap('emily johnson')  -> 'Emily Johnson'
+initcap('john o\'connor') -> 'John O\'Connor'
+initcap('NEW YORK')       -> 'New York'
+initcap(null)             -> null
+```
+
+The argument of the `initcap` function should have type `text`, and the result has type `Text`.
+
+#### **lower** function
+
+The `lower` function returns its argument with all letters in lower case. For example:
+```
+┌─────────────────────────────────┐
+│ lower(address.city)             │ ->  city
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+lower("aBc") -> "abc"
+lower(null)  -> null
+```
+
+The argument of the `lower` function should have type `text`, and the result has type `Text`.
+
+#### **ne** function
+
+The `ne` function takes two values and returns `true` if they are not equal; otherwise, it returns `false`. For example:
+```
+┌─────────────────────────────────┐
+│ ne(status, "inactive")          │ ->  is_active
+└─────────────────────────────────┘
+```
+
+If an argument is `null`, the function returns `null`. For example:
+```
+ne(5, 5)      -> false
+ne('a', 'b')  -> true
+ne('a', 5)    -> true
+ne('a', null) -> null
+```
+
+The result of the `eq` function has type `Boolean`.
+
+#### **not** function
+
+The `not` function returns `false` if its argument is `true`, and `true` if its argument is `false`. For example:
+```
+┌─────────────────────────────────┐
+│ not(traits.active)              │ ->  disactive
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+not(true)  -> false
+not(false) -> true
+not(null)  -> null
+```
+
+The argument of the `not` function should have type `Boolean`, and the result has type `Boolean`.
+
+#### **or** function
+
+The `or` function returns `true` if at least one of its arguments is `true`; otherwise, it returns `false`. For example:
+```
+┌─────────────────────────────────┐
+| or(hasDriverLicense, age18)     │ ->  eligibility
+└─────────────────────────────────┘
+```
+
+It returns `null`, if an argument is `null` and there are no `true` arguments. For example:
+```
+or(true, true)   -> true
+or(true, false)  -> true
+or(false, false) -> false
+or(null, true)   -> true
+or(null, false)  -> null
+```
+
+The arguments of the `or` function should have type `Boolean`, and the result has type `Boolean`.
+
+#### **substring** function
+
+The `substring` function extracts a portion of a string based on a specified starting position and length. The indices are 1-based, meaning the first character of the string has an index of 1.
+
+```
+┌─────────────────────────────────┐
+│ substring(traits.phone, 6, 12)  │ ->  phone
+└─────────────────────────────────┘
+```
+
+The syntax is `substring(s, start, length)`, where:
+
+- `s` is the input string from which you want to extract a substring.
+- `start` is the position in the string where extraction begins, with the first character at position 1.
+- `length` is the number of characters to extract from the starting position. If omitted, the function will extract the substring from `start` to the end of the string.
+
+For example:
+```
+substring('Alice Johnson', 0, 5)  -> 'Alice'
+substring('Alice Johnson', 1, 5)  -> 'Alice'
+substring('Alice Johnson', 7)     -> 'Johnson'
+substring('Alice Johnson', 7, 6)  -> 'Johnson'
+substring('Alice Johnson', 7, 20) -> 'Johnson'
+substring('Alice Johnson', 20, 5) -> '' 
+substring(null, 1, 5)             -> null
+```
+
+Note:
+
+- If any argument is `null`, the function returns `null`.
+- If the starting position `start` exceeds the length of the string `s`, the result is an empty string.
+- The length `length` can be zero but cannot be negative.
+- When `length` is greater than the number of characters remaining from `start` to the end of the string, the function returns the substring from `start` to the end of the string.
+
+The `start` and `length` arguments should be of type `integer`, and the `s` argument and the result are of type `Text`.
+
+#### **upper** function
+
+The `upper` function returns its argument with all letters in upper case. For example:
+```
+┌─────────────────────────────────┐
+│ upper(address.countryCode)      │ ->  country
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+upper("usa") -> "USA"
+upper(null)  -> null
+```
+
+The argument of the `upper` function should have type `text`, and the result has type `Text`.

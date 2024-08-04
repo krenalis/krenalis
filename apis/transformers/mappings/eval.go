@@ -10,10 +10,13 @@ package mappings
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
@@ -265,8 +268,158 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return eval(p.args[2], properties, layouts, purpose)
 		}
 		return nil, types.JSON(), nil
+	case "initcap":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		return strings.Title(v.(string)), types.Text(), nil
+	case "lower":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		return strings.ToLower(v.(string)), types.Text(), nil
+	case "ne":
+		v0, t0, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v0 == nil {
+			return nil, types.Boolean(), nil
+		}
+		v1, t1, err := eval(p.args[1], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v1 == nil {
+			return nil, types.Boolean(), nil
+		}
+		if !types.Equal(t0, t1) {
+			v0, err = convert(v0, t0, t1, true, layouts, purpose)
+			if err != nil {
+				if err == errInvalidConversion {
+					return true, types.Boolean(), nil
+				}
+				return nil, types.Type{}, err
+			}
+		}
+		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
+	case "not":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Boolean(), nil
+		}
+		return !v.(bool), types.Boolean(), nil
+	case "or":
+		var null bool
+		for _, arg := range p.args {
+			v, _, err := eval(arg, properties, layouts, purpose)
+			if err != nil {
+				return nil, types.Type{}, err
+			}
+			if v == nil {
+				null = true
+				continue
+			}
+			if v.(bool) {
+				return true, types.Boolean(), nil
+			}
+		}
+		if null {
+			return nil, types.Boolean(), nil
+		}
+		return false, types.Boolean(), nil
+	case "substring":
+		v0, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v0 == nil {
+			return nil, types.Text(), nil
+		}
+		v1, _, err := eval(p.args[1], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v1 == nil {
+			return nil, types.Text(), nil
+		}
+		start := v1.(int)
+		if start < 1 {
+			start = 1
+		}
+		length := -1
+		if len(p.args) == 3 {
+			v2, _, err := eval(p.args[2], properties, layouts, purpose)
+			if err != nil {
+				return nil, types.Type{}, err
+			}
+			if v2 == nil {
+				return nil, types.Text(), nil
+			}
+			length = v2.(int)
+			if length < 0 {
+				return nil, types.Type{}, errors.New("negative substring length is not allowed")
+			}
+		}
+		return substring(v0.(string), start, length), types.Text(), nil
+	case "upper":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		return strings.ToUpper(v.(string)), types.Text(), nil
 	}
 	panic(fmt.Errorf("unknown function %q", p.path[0]))
+}
+
+// substring returns a substring of s starting from the rune at position
+// start-1, with start > 0, for a length in rune of length. If length is
+// negative, it returns all the runes from s to the end of the string.
+func substring(s string, start, length int) string {
+	if length == 0 {
+		return ""
+	}
+	n := 0
+	var i int
+	if start > 1 {
+		for i = range s {
+			n += 1
+			if n == start {
+				break
+			}
+		}
+		if n < start {
+			return ""
+		}
+	}
+	s = s[i:]
+	if length < 0 {
+		return s
+	}
+	n = 0
+	var r rune
+	for i, r = range s {
+		n += 1
+		if n == length {
+			break
+		}
+	}
+	i += utf8.RuneLen(r)
+	return s[:i]
 }
 
 // valueOf returns the value at the specified path in properties. It returns nil

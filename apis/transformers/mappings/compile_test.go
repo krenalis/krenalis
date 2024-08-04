@@ -170,6 +170,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "and(true)", dt: types.Boolean(), compileErr: errors.New("'and' function requires at least two argument")},
 		{expr: "and(1, true)", dt: types.Boolean(), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
 		{expr: "and(true, true)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
+		{expr: "and()", dt: types.Int(32), compileErr: errors.New("'and' function requires at least two argument")},
 
 		// array.
 		{expr: "array()", dt: types.Array(types.JSON()), nullable: true, expectedValue: []any{}},
@@ -192,6 +193,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "coalesce(1, coalesce(2, null))", dt: types.Int(32), nullable: false, expectedValue: 1},
 		{expr: "coalesce(1, 2)", dt: types.Boolean(), nullable: true, compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
 		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(32), expectedValue: 2},
+		{expr: "coalesce()", dt: types.Int(32), compileErr: errors.New("'coalesce' function requires at least one argument")},
 
 		// eq.
 		{expr: "eq(1, 1)", dt: types.Boolean(), expectedValue: true},
@@ -203,6 +205,8 @@ func Test_Compile(t *testing.T) {
 		{expr: "eq(null, null)", dt: types.Boolean(), nullable: true, expectedValue: nil},
 		{expr: "eq(1)", dt: types.Boolean(), compileErr: errors.New("'eq' function requires two arguments")},
 		{expr: "eq(1, 1)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
+		{expr: "eq()", dt: types.Int(32), compileErr: errors.New("'eq' function requires two arguments")},
+		{expr: "eq(1, 2, 3)", dt: types.Int(32), compileErr: errors.New("'eq' function requires two arguments")},
 
 		// if.
 		{expr: "if(true, 1)", dt: types.Int(32), expectedValue: 1},
@@ -219,6 +223,82 @@ func Test_Compile(t *testing.T) {
 		{expr: "if(false, null)", dt: types.Int(32), expectedValue: nil},
 		{expr: "if(true, 1, null)", dt: types.Int(32), expectedValue: 1},
 		{expr: "if(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
+		{expr: "if()", dt: types.Boolean(), compileErr: errors.New("'if' function requires either two or three arguments")},
+		{expr: "if(1, 2, 3, 4)", dt: types.Boolean(), compileErr: errors.New("'if' function requires either two or three arguments")},
+
+		// initcap.
+		{expr: "initcap('new york')", dt: types.Text(), expectedValue: "New York"},
+		{expr: "initcap(' new york ')", dt: types.Text(), expectedValue: " New York "},
+		{expr: "initcap('neW YORK')", dt: types.Text(), expectedValue: "NeW YORK"},
+		{expr: "initcap(null)", dt: types.Text(), expectedValue: nil},
+		{expr: "initcap()", dt: types.Text(), compileErr: errors.New("'initcap' function requires a single argument")},
+		{expr: "initcap('a', 5)", dt: types.Text(), compileErr: errors.New("'initcap' function requires a single argument")},
+
+		// lower.
+		{expr: "lower('')", dt: types.Text(), expectedValue: ""},
+		{expr: "lower('New York')", dt: types.Text(), expectedValue: "new york"},
+		{expr: "lower('new york')", dt: types.Text(), expectedValue: "new york"},
+		{expr: "lower()", dt: types.Text(), compileErr: errors.New("'lower' function requires a single argument")},
+		{expr: "lower('New', 'York')", dt: types.Text(), compileErr: errors.New("'lower' function requires a single argument")},
+
+		// ne.
+		{expr: "ne(1, 2)", dt: types.Boolean(), expectedValue: true},
+		{expr: "ne(1, 1)", dt: types.Boolean(), expectedValue: false},
+		{expr: "ne(1, '1')", dt: types.Boolean(), expectedValue: false},
+		{expr: "ne('1', 1)", dt: types.Boolean(), expectedValue: false},
+		{expr: "ne('2', 1)", dt: types.Boolean(), expectedValue: true},
+		{expr: "ne(1, null)", dt: types.Boolean(), nullable: true, expectedValue: nil},
+		{expr: "ne(null, 2)", dt: types.Boolean(), nullable: true, expectedValue: nil},
+		{expr: "ne(null, null)", dt: types.Boolean(), nullable: true, expectedValue: nil},
+		{expr: "ne(1)", dt: types.Boolean(), compileErr: errors.New("'ne' function requires two arguments")},
+		{expr: "ne(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
+		{expr: "ne()", dt: types.Int(32), compileErr: errors.New("'ne' function requires two arguments")},
+		{expr: "ne(1, 2, 3)", dt: types.Int(32), compileErr: errors.New("'ne' function requires two arguments")},
+
+		// not.
+		{expr: "not(true)", dt: types.Boolean(), expectedValue: false},
+		{expr: "not(false)", dt: types.Boolean(), expectedValue: true},
+		{expr: "not(null)", dt: types.Boolean(), expectedValue: nil},
+		{expr: "not(true, false)", dt: types.Boolean(), compileErr: errors.New("'not' function requires a single argument")},
+		{expr: "not()", dt: types.Boolean(), compileErr: errors.New("'not' function requires a single argument")},
+
+		// substring.
+		{expr: "substring('Hello World', 7, 5)", dt: types.Text(), expectedValue: "World"},
+		{expr: "substring('Hello World', -5, 5)", dt: types.Text(), expectedValue: "Hello"},
+		{expr: "substring('Hello World', 0)", dt: types.Text(), expectedValue: "Hello World"},
+		{expr: "substring(null, 3, 12)", dt: types.Text(), expectedValue: nil},
+		{expr: "substring('Hello World', null, 12)", dt: types.Text(), expectedValue: nil},
+		{expr: "substring('Hello World', 3, null)", dt: types.Text(), expectedValue: nil},
+		{expr: "substring('Hello World', null)", dt: types.Text(), expectedValue: nil},
+		{expr: "substring('Hello World', 3, -2)", dt: types.Text(), evalErr: errors.New("negative substring length is not allowed")},
+		{expr: "substring(250, 2, 2)", dt: types.Int(32), expectedValue: 50},
+		{expr: "substring('Hello World', 'a', 2)", dt: types.Int(32), compileErr: errors.New("cannot convert a (type Text) to Int(32)")},
+		{expr: "substring('Hello World', 0, 'b')", dt: types.Int(32), compileErr: errors.New("cannot convert b (type Text) to Int(32)")},
+		{expr: "substring()", dt: types.Int(32), compileErr: errors.New("'substring' function requires two or three arguments")},
+		{expr: "substring('a', 3, 6, 8)", dt: types.Int(32), compileErr: errors.New("'substring' function requires two or three arguments")},
+
+		// or.
+		{expr: "or(true, true)", dt: types.Boolean(), expectedValue: true},
+		{expr: "or(true, false)", dt: types.Boolean(), expectedValue: true},
+		{expr: "or(false, true)", dt: types.Boolean(), expectedValue: true},
+		{expr: "or(false, false)", dt: types.Boolean(), expectedValue: false},
+		{expr: "or(null, false)", dt: types.Boolean(), expectedValue: nil},
+		{expr: "or(true, null)", dt: types.Boolean(), expectedValue: true},
+		{expr: "or(or(false, true), true)", dt: types.Boolean(), expectedValue: true},
+		{expr: "or(true, or(true, false))", dt: types.Boolean(), expectedValue: true},
+		{expr: "or(false, or(false, false))", dt: types.Boolean(), expectedValue: false},
+		{expr: "or(false)", dt: types.Boolean(), compileErr: errors.New("'or' function requires at least two argument")},
+		{expr: "or(1, true)", dt: types.Boolean(), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
+		{expr: "or(true, false)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
+		{expr: "or()", dt: types.Int(32), compileErr: errors.New("'or' function requires at least two argument")},
+		{expr: "or(1)", dt: types.Int(32), compileErr: errors.New("'or' function requires at least two argument")},
+
+		// upper.
+		{expr: "upper('')", dt: types.Text(), expectedValue: ""},
+		{expr: "upper('New York')", dt: types.Text(), expectedValue: "NEW YORK"},
+		{expr: "upper('NEW YORK')", dt: types.Text(), expectedValue: "NEW YORK"},
+		{expr: "upper()", dt: types.Text(), compileErr: errors.New("'upper' function requires a single argument")},
+		{expr: "upper('New', 'York')", dt: types.Text(), compileErr: errors.New("'upper' function requires a single argument")},
 	}
 
 	for _, test := range tests {
