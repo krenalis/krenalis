@@ -100,7 +100,7 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case types.BooleanKind:
 			v, ok := baseExpr.Value.(bool)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type bool, got %T", baseExpr.Value)
 			}
 			if v {
 				s.WriteString("TRUE")
@@ -110,25 +110,25 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case types.IntKind:
 			v, ok := baseExpr.Value.(int)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type int, got %T", baseExpr.Value)
 			}
 			s.WriteString(strconv.Itoa(v))
 		case types.FloatKind:
 			v, ok := baseExpr.Value.(float64)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type float64, got %T", baseExpr.Value)
 			}
 			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 		case types.DecimalKind:
 			d, ok := baseExpr.Value.(decimal.Decimal)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type decimal.Dec, got %T", baseExpr.Value)
 			}
 			s.WriteString(d.String())
 		case types.DateTimeKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
 			}
 			s.WriteByte('\'')
 			s.WriteString(v.Format("2006-01-02 15:04:05.999999"))
@@ -136,7 +136,7 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case types.DateKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
 			}
 			s.WriteByte('\'')
 			s.WriteString(v.Format(time.DateTime))
@@ -144,7 +144,7 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case types.TimeKind:
 			v, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type time.Time, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
 			}
 			s.WriteByte('\'')
 			s.WriteString(v.Format("15:04:05.999999"))
@@ -152,7 +152,7 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case types.UUIDKind, types.InetKind, types.TextKind:
 			v, ok := baseExpr.Value.(string)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type string, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type string, got %T", baseExpr.Value)
 			}
 			quoteString(&s, v)
 		case types.JSONKind:

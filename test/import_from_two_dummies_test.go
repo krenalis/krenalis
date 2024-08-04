@@ -66,7 +66,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 		for _, identity := range identities {
 			if identity.Action != action1 {
-				t.Fatalf("unexpected action %d, expecting %d", identity.Action, action1)
+				t.Fatalf("expected action %d, got %d, ", action1, identity.Action)
 			}
 		}
 		identities, count = c.ConnectionIdentities(dummy2, 0, 100)
@@ -75,7 +75,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 		}
 		for _, identity := range identities {
 			if identity.Action != action2 {
-				t.Fatalf("unexpected action %d, expecting %d", identity.Action, action2)
+				t.Fatalf("expected action %d, got %d", action2, identity.Action)
 			}
 		}
 	}
@@ -95,12 +95,12 @@ func TestImportFromTwoDummies(t *testing.T) {
 		_, count := c.UserIdentities(user.ID, 0, 100)
 		const expectedCount = 1
 		if expectedCount != count {
-			t.Fatalf("expecting %d identities for user %s, got %d", count, user.ID, count)
+			t.Fatalf("expected %d identities for user %s, got %d", count, user.ID, count)
 		}
 		totalUsers++
 	}
 	if expectedCount != totalUsers { // ensure that the number of users matches with the returned 'count' value.
-		t.Fatalf("expecting %d users returned, got %d", expectedCount, totalUsers)
+		t.Fatalf("expected %d users returned, got %d", expectedCount, totalUsers)
 	}
 
 	// Change the workspace identifiers and run the Identity Resolution.
@@ -120,12 +120,12 @@ func TestImportFromTwoDummies(t *testing.T) {
 		_, count := c.UserIdentities(user.ID, 0, 100)
 		const expectedCount = 2
 		if expectedCount != count {
-			t.Fatalf("expecting %d identities for user %s, got %d", count, user.ID, count)
+			t.Fatalf("expected %d identities for user %s, got %d", count, user.ID, count)
 		}
 		totalUsers++
 	}
 	if expectedCount != totalUsers { // ensure that the number of users matches with the returned 'count' value.
-		t.Fatalf("expecting %d users returned, got %d", expectedCount, totalUsers)
+		t.Fatalf("expected %d users returned, got %d", expectedCount, totalUsers)
 	}
 
 }

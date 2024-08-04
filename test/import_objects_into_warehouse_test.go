@@ -80,12 +80,12 @@ def transform(user: dict) -> dict:
 		},
 	}
 	if len(expectedProperties) != len(users) {
-		t.Fatalf("expecting %d users, got %d", len(expectedProperties), len(users))
+		t.Fatalf("expected %d users, got %d", len(expectedProperties), len(users))
 	}
 	for i, user := range users {
 		expected := expectedProperties[i]
 		if !reflect.DeepEqual(expected, user.Properties) {
-			t.Fatalf("expecting %#v, got %#v", expected, user)
+			t.Fatalf("expected %#v, got %#v", expected, user)
 		}
 	}
 

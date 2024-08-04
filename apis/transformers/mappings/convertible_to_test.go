@@ -132,7 +132,7 @@ func TestConvertibleTo(t *testing.T) {
 		t.Run(fmt.Sprintf("%s to %s", cas.from, cas.to), func(t *testing.T) {
 			got := convertibleTo(cas.from, cas.to)
 			if cas.expected != got {
-				t.Fatalf("expecting ConvertibleTo(%s, %s) = %t, got %t", cas.from, cas.to, cas.expected, got)
+				t.Fatalf("expected ConvertibleTo(%s, %s) = %t, got %t", cas.from, cas.to, cas.expected, got)
 			}
 		})
 	}

@@ -31,7 +31,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 	keys := c.ConnectionKeys(javaScriptID)
 	if len(keys) != 1 {
-		t.Fatalf("expecting one key, got %d keys", len(keys))
+		t.Fatalf("expected one key, got %d keys", len(keys))
 	}
 	javaScriptKey = keys[0]
 
@@ -185,7 +185,7 @@ waitLoop:
 	// Check that there is actually only one user in the workspace.
 	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 1 {
-		t.Fatalf("expecting only one user in the workspace, got %d instead", count)
+		t.Fatalf("expected only one user in the workspace, got %d instead", count)
 	}
 
 }

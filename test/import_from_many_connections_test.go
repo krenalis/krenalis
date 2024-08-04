@@ -135,7 +135,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 			keys := c.ConnectionKeys(javaScript)
 			if len(keys) != 1 {
-				t.Fatalf("expecting one key, got %d keys", len(keys))
+				t.Fatalf("expected one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
 			c.AddAction(javaScript, "Events", meergotester.ActionToSet{
@@ -201,17 +201,17 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	// Ensure that "kbuessen0@example.com" has one event associated.
 	events := c.UserEvents(kBuessenGid)
 	if len(events) != 1 {
-		t.Fatalf("expecting %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
+		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}
 
 	// Validate the identities.
 	identities, count := c.UserIdentities(kBuessenGid, 0, 1000)
 	if count != 3 {
-		t.Fatalf("expecting user %s to have 3 identities associated, got %d", kBuessenGid, count)
+		t.Fatalf("expected user %s to have 3 identities associated, got %d", kBuessenGid, count)
 	}
 	assertEqualIdentity := func(got, expected meergotester.UserIdentity) {
 		if !reflect.DeepEqual(got, expected) {
-			t.Fatalf("expecting identity %#v, got %#v", expected, got)
+			t.Fatalf("expected identity %#v, got %#v", expected, got)
 		}
 	}
 	{

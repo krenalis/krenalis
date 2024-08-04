@@ -74,7 +74,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "full_name", Type: types.Text()},
 		})
 		if !types.Equal(expectedSchema, schema) {
-			t.Fatalf("\nexpecting:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))
+			t.Fatalf("\nexpected:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))
 		}
 	}
 
@@ -109,7 +109,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 		`SELECT COUNT(*) FROM test_export_to_db WHERE email <> '' AND full_name <> ''`,
 	)
 	if expectedCount != count {
-		t.Fatalf("expecting count %d, got %d", expectedCount, count)
+		t.Fatalf("expected count %d, got %d", expectedCount, count)
 	}
 
 	// Change the action to export the empty string for full_name.
@@ -139,7 +139,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 		`SELECT COUNT(*) FROM test_export_to_db WHERE email <> '' AND full_name = ''`,
 	)
 	if expectedCount != count {
-		t.Fatalf("expecting count %d, got %d", expectedCount, count)
+		t.Fatalf("expected count %d, got %d", expectedCount, count)
 	}
 
 }

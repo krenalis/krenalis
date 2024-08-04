@@ -226,13 +226,13 @@ Expression:
 						return nil, "", err
 					}
 					if arg == nil {
-						return nil, "", fmt.Errorf("unexpected %q, expecting argument", src[0])
+						return nil, "", fmt.Errorf("expected argument, got %q", src[0])
 					}
 					src = skipSpaces(src)
 					if src != "" && src[0] == ',' {
 						src = skipSpaces(src[1:])
 						if src != "" && src[0] == ')' {
-							return nil, "", fmt.Errorf("unexpected ), expecting argument")
+							return nil, "", fmt.Errorf("expected argument, got ')'")
 						}
 					}
 					p.args = append(p.args, arg)

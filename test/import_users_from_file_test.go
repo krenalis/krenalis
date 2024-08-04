@@ -84,10 +84,10 @@ func TestImportUsersFromFile(t *testing.T) {
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 	usersLen := len(users)
 	if usersLen != expectedUsersLen {
-		t.Fatalf("expecting %d users, got %d", expectedUsersLen, usersLen)
+		t.Fatalf("expected %d users, got %d", expectedUsersLen, usersLen)
 	}
 	if count != expectedCount {
-		t.Fatalf("expecting \"count\" to be %d, got %d", expectedCount, count)
+		t.Fatalf("expected \"count\" to be %d, got %d", expectedCount, count)
 	}
 
 	// Retrieve the user identities and test them.

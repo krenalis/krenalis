@@ -98,15 +98,15 @@ func Test_renderExpr(t *testing.T) {
 			gotQuery, gotErr := renderExpr(cas.expr)
 			if cas.invalid {
 				if gotErr == nil {
-					t.Fatalf("expecting invalid, got query %q", gotQuery)
+					t.Fatalf("expected invalid, got query %q", gotQuery)
 				}
 				return
 			}
 			if gotErr != nil {
-				t.Fatalf("expecting query %q, got error: %s", cas.query, gotErr)
+				t.Fatalf("expected query %q, got error: %s", cas.query, gotErr)
 			}
 			if cas.query != gotQuery {
-				t.Fatalf("\nexpecting query:  %s\ngot:              %s", cas.query, gotQuery)
+				t.Fatalf("\nexpected query:  %s\ngot:              %s", cas.query, gotQuery)
 			}
 		})
 	}

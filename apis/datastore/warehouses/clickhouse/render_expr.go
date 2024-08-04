@@ -99,67 +99,67 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case types.BooleanKind:
 			b, ok := baseExpr.Value.(bool)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type bool, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type bool, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, b)
 		case types.IntKind:
 			i, ok := baseExpr.Value.(int)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type int, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, i)
 		case types.UintKind:
 			u, ok := baseExpr.Value.(uint)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type uint, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type uint, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, u)
 		case types.FloatKind:
 			f, ok := baseExpr.Value.(float64)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type float64, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type float64, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, f)
 		case types.DecimalKind:
 			d, ok := baseExpr.Value.(decimal.Decimal)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type decimal.Dec, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type decimal.Dec, got %T", baseExpr.Value)
 			}
 			s.WriteString(d.String())
 		case types.DateTimeKind:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type connector.DateTime, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type connector.DateTime, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format(time.DateTime))
 		case types.DateKind:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type connector.Date, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type connector.Date, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format(time.DateTime))
 		case types.TimeKind:
 			t, ok := baseExpr.Value.(time.Time)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type connector.Time, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type connector.Time, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, t.Format(time.TimeOnly))
 		case types.YearKind:
 			year, ok := baseExpr.Value.(int)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type int, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type int, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, year)
 		case types.UUIDKind, types.InetKind, types.TextKind:
 			u, ok := baseExpr.Value.(string)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type uuid.UUID, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type uuid.UUID, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, u)
 		case types.JSONKind:
 			j, ok := baseExpr.Value.(json.RawMessage)
 			if !ok {
-				return "", fmt.Errorf("expecting value of type json.RawMessage, got %T", baseExpr.Value)
+				return "", fmt.Errorf("expected value of type json.RawMessage, got %T", baseExpr.Value)
 			}
 			quoteValue(&s, string(j))
 		default:

@@ -2239,7 +2239,7 @@ func Test_unusedProperties(t *testing.T) {
 	for _, cas := range cases {
 		got := unusedProperties(cas.schema, cas.paths)
 		if !reflect.DeepEqual(cas.expected, got) {
-			t.Fatalf("expecting %#v, got %#v", cas.expected, got)
+			t.Fatalf("expected %#v, got %#v", cas.expected, got)
 		}
 	}
 }
@@ -2273,7 +2273,7 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 				gotStr = got.Error()
 			}
 			if test.err != gotStr {
-				t.Fatalf("expecting %q, got %q", test.err, gotStr)
+				t.Fatalf("expected %q, got %q", test.err, gotStr)
 			}
 		})
 	}

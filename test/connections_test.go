@@ -28,7 +28,7 @@ func TestConnections(t *testing.T) {
 	var connections []any
 	c.MustCall("GET", "/api/workspaces/1/connections", nil, &connections)
 	if len(connections) != 0 {
-		t.Fatalf("expecting 0 connections, got %d", len(connections))
+		t.Fatalf("expected 0 connections, got %d", len(connections))
 	}
 
 	// Create a Dummy (source) connection.
@@ -38,13 +38,13 @@ func TestConnections(t *testing.T) {
 	connections = nil
 	c.MustCall("GET", "/api/workspaces/1/connections", nil, &connections)
 	if len(connections) != 1 {
-		t.Fatalf("expecting 1 connections, got %d", len(connections))
+		t.Fatalf("expected 1 connections, got %d", len(connections))
 	}
 	dummy := connections[0].(map[string]any)
 	expectedName := "Dummy (source)"
 	gotName := dummy["Name"].(string)
 	if expectedName != gotName {
-		t.Fatalf("expecting name %q, got %q", expectedName, gotName)
+		t.Fatalf("expected name %q, got %q", expectedName, gotName)
 	}
 
 	// Retrieve the input and the output schema, which must me both valid.
@@ -65,11 +65,11 @@ func isValidSchema(schema any) error {
 	}
 	name := s["name"]
 	if name != "Object" {
-		return fmt.Errorf("expecting name %q, got %q", "Object", name)
+		return fmt.Errorf("expected name %q, got %q", "Object", name)
 	}
 	props := s["properties"].([]any)
 	if len(props) == 0 {
-		return fmt.Errorf("expecting at least one property")
+		return fmt.Errorf("expected at least one property")
 	}
 	return nil
 }

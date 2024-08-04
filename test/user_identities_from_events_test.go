@@ -66,7 +66,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	// Retrieve the user imported from the event.
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 	if 1 != count {
-		t.Fatalf("expecting one user, got %d", count)
+		t.Fatalf("expected one user, got %d", count)
 	}
 	found := false
 	for _, user := range users {
@@ -109,7 +109,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	// Check that the user has been created.
 	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 2 {
-		t.Fatalf("expecting 2 users, got %d", count)
+		t.Fatalf("expected 2 users, got %d", count)
 	}
 
 	// Change the action to import identities through a transformation function.
@@ -149,7 +149,7 @@ def transform(event: dict) -> dict:
 	// Check that the user has been created.
 	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 3 {
-		t.Fatalf("expecting 3 users, got %d", count)
+		t.Fatalf("expected 3 users, got %d", count)
 	}
 
 }

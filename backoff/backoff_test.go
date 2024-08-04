@@ -27,7 +27,7 @@ func Test_AfterFunc(t *testing.T) {
 	for {
 		ok := bo.AfterFunc(context.Background(), f)
 		if !ok {
-			t.Fatalf("AfterFunc: expecting true, got false")
+			t.Fatalf("AfterFunc: expected true, got false")
 		}
 		select {
 		case <-c:

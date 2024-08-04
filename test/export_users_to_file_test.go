@@ -195,7 +195,7 @@ kdericut4@example.com,Kingsly,Dericut,male
 kfellon6@example.com,Katine,Fellon,male` + "\n"
 
 		if !bytes.EqualFold([]byte(expected), content) {
-			t.Fatalf("expecting content %q, got %q", expected, string(content))
+			t.Fatalf("expected content %q, got %q", expected, string(content))
 		}
 
 	}

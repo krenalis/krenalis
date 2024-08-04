@@ -48,10 +48,10 @@ func Test_newPathPlaceholderReplacer(t *testing.T) {
 				gotErrStr = gotErr.Error()
 			}
 			if test.err != gotErrStr {
-				t.Fatalf("expecting error %q, got %q", test.err, gotErrStr)
+				t.Fatalf("expected error %q, got %q", test.err, gotErrStr)
 			}
 			if test.expected != got {
-				t.Fatalf("expecting %q, got %q", test.expected, got)
+				t.Fatalf("expected %q, got %q", test.expected, got)
 			}
 		})
 	}

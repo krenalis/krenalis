@@ -147,16 +147,16 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatalf("invalid user schema: %s", err)
 	}
 	if p, ok := ws.UserSchema.Property("email"); ok {
-		t.Fatalf("expecting no \"email\" property, got property %#v", p)
+		t.Fatalf("expected no \"email\" property, got property %#v", p)
 	}
 	if p, err := types.PropertyByPath(ws.UserSchema, "android.id"); err == nil {
-		t.Fatalf("expecting no \"android.id\" property, got property %#v", p)
+		t.Fatalf("expected no \"android.id\" property, got property %#v", p)
 	}
 	if _, err := types.PropertyByPath(ws.UserSchema, "android.identifier"); err != nil {
-		t.Fatalf("expecting property \"android.identifier\", got no property: %s", err)
+		t.Fatalf("expected property \"android.identifier\", got no property: %s", err)
 	}
 	if !types.Equal(schema, ws.UserSchema) {
-		t.Fatalf("expecting equal schemas, got different schemas")
+		t.Fatalf("expected equal schemas, got different schemas")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
@@ -205,10 +205,10 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatalf("invalid user schema: %s", err)
 	}
 	if p, err := types.PropertyByPath(ws.UserSchema, "android.identifier"); err == nil {
-		t.Fatalf("expecting no \"android.identifier\" property, got property %#v", p)
+		t.Fatalf("expected no \"android.identifier\" property, got property %#v", p)
 	}
 	if !types.Equal(schema, ws.UserSchema) {
-		t.Fatalf("expecting equal schemas, got different schemas")
+		t.Fatalf("expected equal schemas, got different schemas")
 	}
 	if ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected no identifiers, got %v", ws.Identifiers)

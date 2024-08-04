@@ -265,10 +265,10 @@ func Test_Compile(t *testing.T) {
 			expr, err := Compile(test.expr, schema, test.dt, test.createRequired, test.updateRequired, test.nullable, test.layouts)
 			if test.compileErr != nil {
 				if err == nil {
-					t.Fatalf("expecting compile error %q, got no errors", test.compileErr)
+					t.Fatalf("expected compile error %q, got no errors", test.compileErr)
 				}
 				if test.compileErr.Error() != err.Error() {
-					t.Fatalf("expecting compile error %q, got %q", test.compileErr.Error(), err.Error())
+					t.Fatalf("expected compile error %q, got %q", test.compileErr.Error(), err.Error())
 				}
 				return
 			}
@@ -280,10 +280,10 @@ func Test_Compile(t *testing.T) {
 			gotValue, err := expr.Eval(properties, test.purpose)
 			if test.evalErr != nil {
 				if err == nil {
-					t.Fatalf("expecting eval error %q, got no errors", test.evalErr)
+					t.Fatalf("expected eval error %q, got no errors", test.evalErr)
 				}
 				if test.evalErr.Error() != err.Error() {
-					t.Fatalf("expecting eval error %q, got %q", test.evalErr.Error(), err.Error())
+					t.Fatalf("expected eval error %q, got %q", test.evalErr.Error(), err.Error())
 				}
 				return
 			}
@@ -292,15 +292,9 @@ func Test_Compile(t *testing.T) {
 			}
 			if !reflect.DeepEqual(test.expectedValue, gotValue) {
 				if j, ok := gotValue.(json.RawMessage); ok {
-					t.Fatalf("expecting value %#v, got %#v (which represents the string %q)", test.expectedValue, gotValue, string(j))
+					t.Fatalf("expected value %#v, got %#v (which represents the string %q)", test.expectedValue, gotValue, string(j))
 				}
-				if gotValue == Void {
-					t.Fatalf("expecting value %#v, got void", test.expectedValue)
-				}
-				if test.expectedValue == Void {
-					t.Fatalf("expecting void, got %#v", gotValue)
-				}
-				t.Fatalf("expecting value %#v, got %#v", test.expectedValue, gotValue)
+				t.Fatalf("expected value %#v, got %#v", test.expectedValue, gotValue)
 			}
 
 		})

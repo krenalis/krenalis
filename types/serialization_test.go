@@ -87,7 +87,7 @@ func TestPropertySerialization(t *testing.T) {
 				gotErr = err.Error()
 			}
 			if test.Err != gotErr {
-				t.Fatalf("expecting error %q, got %q", test.Err, gotErr)
+				t.Fatalf("expected error %q, got %q", test.Err, gotErr)
 			}
 			if test.Expected != string(got) {
 				t.Fatalf("expected %q, got %q", test.Expected, string(got))
@@ -152,7 +152,7 @@ func TestPropertyDeserialization(t *testing.T) {
 				gotErr = err.Error()
 			}
 			if test.Err != gotErr {
-				t.Fatalf("expecting error %q, got %q", test.Err, gotErr)
+				t.Fatalf("expected error %q, got %q", test.Err, gotErr)
 			}
 			if err := sameProperty(test.Property, p); err != nil {
 				t.Fatal(err)
@@ -298,7 +298,7 @@ func TestTypeSerialization(t *testing.T) {
 			continue
 		}
 		if data := string(b); test.Data != data {
-			t.Errorf("\nexpecting\t%s\ngot\t\t\t%s", test.Data, data)
+			t.Errorf("\nexpected\t%s\ngot\t\t\t%s", test.Data, data)
 		}
 	}
 

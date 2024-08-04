@@ -83,11 +83,11 @@ func TestInOutProperties(t *testing.T) {
 			}
 			got := mapping.InProperties()
 			if got == nil || !slices.Equal(test.inProperties, got) {
-				t.Fatalf("expecting input properties %#v, got %#v", test.inProperties, got)
+				t.Fatalf("expected input properties %#v, got %#v", test.inProperties, got)
 			}
 			got = mapping.OutProperties()
 			if got == nil || !slices.Equal(test.outProperties, got) {
-				t.Fatalf("expecting output properties %#v, got %#v", test.outProperties, got)
+				t.Fatalf("expected output properties %#v, got %#v", test.outProperties, got)
 			}
 		})
 	}
@@ -130,7 +130,7 @@ func Test_storeValue(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			storeValue(test.value, test.path, test.v)
 			if !reflect.DeepEqual(test.value, test.expected) {
-				t.Fatalf("expecting %#v, got %#v", test.expected, test.value)
+				t.Fatalf("expected %#v, got %#v", test.expected, test.value)
 			}
 		})
 	}

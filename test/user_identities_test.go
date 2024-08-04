@@ -90,7 +90,7 @@ func Test_UserIdentities(t *testing.T) {
 
 	const expectedCount = 4
 	if expectedCount != count {
-		t.Fatalf("expecting %d users, got %d", expectedCount, count)
+		t.Fatalf("expected %d users, got %d", expectedCount, count)
 	}
 	t.Logf("the APIs successfully returned %d users", count)
 
@@ -101,7 +101,7 @@ func Test_UserIdentities(t *testing.T) {
 		identities, count := c.UserIdentities(user.ID, 0, 1000)
 
 		if count != 1 && count != 2 {
-			t.Fatalf("expecting 'count' to be 1 or 2, got %d", count)
+			t.Fatalf("expected 'count' to be 1 or 2, got %d", count)
 		}
 
 		for _, identity := range identities {
@@ -136,7 +136,7 @@ func Test_UserIdentities(t *testing.T) {
 
 	const expectedTotalIdentities = 6
 	if expectedTotalIdentities != totalIdentities {
-		t.Fatalf("expecting a total of %d identities, got %d", expectedTotalIdentities, totalIdentities)
+		t.Fatalf("expected a total of %d identities, got %d", expectedTotalIdentities, totalIdentities)
 	}
 	t.Logf("there is a total of %d identities", totalIdentities)
 
@@ -146,7 +146,7 @@ func Test_UserIdentities(t *testing.T) {
 		url := "/api/workspaces/1/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities"
 		err := c.Call("GET", url, nil, nil)
 		if err == nil {
-			t.Fatalf("expecting error, got nothing")
+			t.Fatalf("expected error, got nothing")
 		}
 		errorMsg := err.Error()
 		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user 7682c2a8-d85d-458b-9bd8-dc57cc12575a does not exist"}}`

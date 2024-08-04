@@ -76,7 +76,7 @@ def transform(user: dict) -> dict:
 	// Validate the count of the returned users.
 	usersLen := len(users)
 	if expectedTotalCount != usersLen {
-		t.Fatalf("expecting %d users, got %d", expectedTotalCount, usersLen)
+		t.Fatalf("expected %d users, got %d", expectedTotalCount, usersLen)
 	}
 
 	// Validate the users.
@@ -93,12 +93,12 @@ def transform(user: dict) -> dict:
 		{"email": "kfellon6@example.com", "first_name": "Katine", "gender": "female"},
 	}
 	if len(expectedProperties) != len(users) {
-		t.Fatalf("expecting %d users, got %d", len(expectedProperties), len(users))
+		t.Fatalf("expected %d users, got %d", len(expectedProperties), len(users))
 	}
 	for i, user := range users {
 		expected := expectedProperties[i]
 		if !reflect.DeepEqual(expected, user.Properties) {
-			t.Fatalf("expecting %#v, got %#v", expected, user)
+			t.Fatalf("expected %#v, got %#v", expected, user)
 		}
 	}
 

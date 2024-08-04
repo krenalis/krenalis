@@ -112,7 +112,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		}
 		for _, user := range users {
 			if user.Properties["email"] != user.Properties["last_name"] {
-				t.Fatalf("expecting 'email' to be equal to 'last_name', got '%v' != '%v'", user.Properties["email"], user.Properties["last_name"])
+				t.Fatalf("expected 'email' to be equal to 'last_name', got '%v' != '%v'", user.Properties["email"], user.Properties["last_name"])
 			}
 		}
 	}

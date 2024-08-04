@@ -63,9 +63,9 @@ func TestTypes(t *testing.T) {
 		}
 		if got.Valid() != test.t.Valid() {
 			if test.t.Valid() {
-				t.Errorf("%s: expecting a valid type, got an invalid type", test.s)
+				t.Errorf("%s: expected a valid type, got an invalid type", test.s)
 			}
-			t.Errorf("%s: expecting an invalid type, got a valid type: %#v", test.s, got)
+			t.Errorf("%s: expected an invalid type, got a valid type: %#v", test.s, got)
 		}
 		if !types.Equal(got, test.t) {
 			t.Errorf("%s: unexpected type: %#v", test.s, got)
@@ -92,7 +92,7 @@ func TestUnsupportedTypes(t *testing.T) {
 			t.Error(err)
 		}
 		if got.Valid() {
-			t.Errorf("%s: expecting an invalid type, got a valid type: %#v", test, got)
+			t.Errorf("%s: expected an invalid type, got a valid type: %#v", test, got)
 		}
 	}
 }

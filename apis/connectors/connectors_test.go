@@ -164,10 +164,10 @@ func Test_parseLastChangeTimePropertyWithFormat(t *testing.T) {
 				gotErr = err.Error()
 			}
 			if test.expectedErr != gotErr {
-				t.Fatalf("expecting error %q, got %q", test.expectedErr, gotErr)
+				t.Fatalf("expected error %q, got %q", test.expectedErr, gotErr)
 			}
 			if test.expected != got {
-				t.Fatalf("expecting %v, got %v", test.expected, got)
+				t.Fatalf("expected %v, got %v", test.expected, got)
 			}
 		})
 	}

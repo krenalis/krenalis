@@ -60,7 +60,7 @@ func TestEvents(t *testing.T) {
 		javaScriptID = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 		keys := c.ConnectionKeys(javaScriptID)
 		if len(keys) != 1 {
-			t.Fatalf("expecting one key, got %d keys", len(keys))
+			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
 		c.AddAction(javaScriptID, "Events", meergotester.ActionToSet{
@@ -132,7 +132,7 @@ func TestEvents(t *testing.T) {
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedUsersCount != count {
-		t.Fatalf("expecting %d users, got %d", expectedUsersCount, count)
+		t.Fatalf("expected %d users, got %d", expectedUsersCount, count)
 	}
 	var userGID uuid.UUID
 	for _, user := range users {
@@ -151,7 +151,7 @@ func TestEvents(t *testing.T) {
 	var event map[string]any
 	events := c.UserEvents(userGID)
 	if len(events) != expectedEventsCount {
-		t.Fatalf("expecting %d events for user %s, got %d", expectedEventsCount, userGID, len(events))
+		t.Fatalf("expected %d events for user %s, got %d", expectedEventsCount, userGID, len(events))
 	}
 	event = events[0] // most recent event.
 

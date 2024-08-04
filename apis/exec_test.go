@@ -60,10 +60,10 @@ func Test_readPropertyFrom(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			gotV, gotOk := readPropertyFrom(cas.m, cas.prop)
 			if !reflect.DeepEqual(gotV, cas.expectedV) {
-				t.Fatalf("expecting %#v, got %#v", cas.expectedV, gotV)
+				t.Fatalf("expected %#v, got %#v", cas.expectedV, gotV)
 			}
 			if gotOk != cas.expectedOk {
-				t.Fatalf("expecting ok = %t, got %t", cas.expectedOk, gotOk)
+				t.Fatalf("expected ok = %t, got %t", cas.expectedOk, gotOk)
 			}
 		})
 	}
