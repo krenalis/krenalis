@@ -93,10 +93,10 @@ will become:
 full_name: "Emma Johnson"
 ```
 
-### Sub-properties, map keys and JSON Object keys
+### Sub-properties, Map Keys, and JSON Object Keys
 
+You can reference sub-properties, map keys, and JSON object keys in expressions using either dot notation or square brackets:
 
-In expressions, you can reference sub-properties, map keys, and JSON object keys using either a dot or square brackets:
 ```
 ┌─────────────────────────────────┐
 │ address.city                    │ ->  city
@@ -106,9 +106,7 @@ In expressions, you can reference sub-properties, map keys, and JSON object keys
 └─────────────────────────────────┘
 ```
 
-### JSON Handling
-
-When working with JSON objects, if a key does not exist, it evaluates to `null`. For example, consider the `traits` property with the following JSON value:
+Accessing a non-existent property causes a compile error. However, trying to access a map key or a JSON object key that doesn't exist will result in `null`. If the result of the map expression is `null`, but the output property cannot be `null`, the output property will be missing from the mapping result. For example, consider the `traits` property with the following JSON value:
 
 ```json
 {
@@ -119,11 +117,17 @@ When working with JSON objects, if a key does not exist, it evaluates to `null`.
 }
 ```
 
-Here, `traits.address` evaluates to the JSON value `{"city":"Milan"}`.
+Here, `traits.address` evaluates to the JSON value `{"city":"Milan"}`. However, `traits.name` evaluates to `null` since `name` is not a property of `traits`. Therefore, in the following mapping expression:
 
-When evaluating `traits.name`, if `name` is not a property of `traits`, the result will be undefined, so the output property will be missing from the mapping result.
+```
+┌─────────────────────────────────┐
+│ traits.name                     │ ->  first_name
+└─────────────────────────────────┘
+```
 
-Accessing a non-object JSON value as if it were an object results in an error, causing the entire mapping to fail. For instance, the following mapping returns an error because `traits.phone` is not a JSON object:
+the `first_name` output property will be missing from the mapping result if it cannot be `null`. As a special case, if the output property is of type `JSON` and cannot be `null`, it will be present with the JSON null value.
+
+Attempting to access a non-object JSON value as if it were an object results in an error, causing the entire mapping to fail. For example, the following mapping will return an error because `traits.phone` is not a JSON object:
 
 ```
 ┌─────────────────────────────────┐
@@ -131,7 +135,7 @@ Accessing a non-object JSON value as if it were an object results in an error, c
 └─────────────────────────────────┘
 ```
 
-To avoid this error, you can add a `?` after the key, which prevents the error if the accessed JSON value is not an object. However, note that the output property `phoneNumber` will not have a value:
+To avoid this error, append a `?` after the key. This prevents the error if the accessed JSON value is not an object and evaluates to `null`. The following mapping expression will be evaluated as `null`:
 
 ```
 ┌─────────────────────────────────┐

@@ -35,13 +35,13 @@ func Test_RelevantCases(t *testing.T) {
 	}{
 		{
 			name: `Mapping a JSON null value, from the JSON connector, to a property of the user schema, that property will have no value`,
-			expr: `a`, dt: types.Text(), value: mappings.Void, properties: map[string]any{"a": json.RawMessage("null")},
+			expr: `a`, dt: types.Text(), value: nil, properties: map[string]any{"a": json.RawMessage("null")},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			expression, err := mappings.Compile(test.expr, schema, test.dt, test.nullable, test.layouts)
+			expression, err := mappings.Compile(test.expr, schema, test.dt, test.layouts)
 			if err != nil {
 				t.Fatalf("unexpected compilation error %s", err)
 			}
@@ -59,11 +59,11 @@ func Test_RelevantCases(t *testing.T) {
 				t.Fatalf("expected error %q, got no error", test.err)
 			}
 			if !reflect.DeepEqual(test.value, v) {
-				if test.value == mappings.Void {
-					t.Fatalf("expected void, got value %#v (type %T)", v, v)
+				if test.value == nil {
+					t.Fatalf("expected nil, got value %#v (type %T)", v, v)
 				}
-				if v == mappings.Void {
-					t.Fatalf("expected value %#v (type %T), got void", test.value, test.value)
+				if v == nil {
+					t.Fatalf("expected value %#v (type %T), got nil", test.value, test.value)
 				}
 				t.Fatalf("expected value %#v (type %T), got value %#v (type %T)", test.value, test.value, v, v)
 			}

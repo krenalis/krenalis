@@ -59,28 +59,28 @@ func Test_Compile(t *testing.T) {
 		expectedValue any
 	}{
 		{expr: "null", dt: types.Int(32), nullable: true, expectedValue: nil},
-		{expr: "null", dt: types.Int(32), nullable: false, compileErr: errors.New("cannot convert null to Int(32)")},
+		{expr: "null", dt: types.Int(32), nullable: false, expectedValue: nil},
 		{expr: "engine.afterburner", dt: types.Text(), nullable: true, expectedValue: nil},
-		{expr: "engine.afterburner", dt: types.Text(), nullable: false, expectedValue: Void},
-		{expr: "properties.no_key", dt: types.Int(32), nullable: true, expectedValue: Void},
-		{expr: "properties.no_key", dt: types.Int(32), nullable: false, expectedValue: Void},
-		{expr: "jsonNull", dt: types.Int(32), nullable: false, expectedValue: Void},
+		{expr: "engine.afterburner", dt: types.Text(), nullable: false, expectedValue: nil},
+		{expr: "properties.no_key", dt: types.Int(32), nullable: true, expectedValue: nil},
+		{expr: "properties.no_key", dt: types.Int(32), nullable: false, expectedValue: nil},
+		{expr: "jsonNull", dt: types.Int(32), nullable: false, expectedValue: nil},
 		{expr: "jsonNull", dt: types.Int(32), nullable: true, expectedValue: nil},
-		{expr: "jsonNil", dt: types.Int(32), nullable: false, expectedValue: Void},
+		{expr: "jsonNil", dt: types.Int(32), nullable: false, expectedValue: nil},
 		{expr: "jsonNil", dt: types.Int(32), nullable: true, expectedValue: nil},
 		{expr: "null", dt: types.JSON(), nullable: true, expectedValue: nil},
-		{expr: "null", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
+		{expr: "null", dt: types.JSON(), nullable: false, expectedValue: nil},
 		{expr: "engine.afterburner", dt: types.JSON(), nullable: true, expectedValue: nil},
-		{expr: "engine.afterburner", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
-		{expr: "properties.no_key", dt: types.JSON(), nullable: true, expectedValue: Void},
-		{expr: "properties.no_key", dt: types.JSON(), nullable: false, expectedValue: Void},
+		{expr: "engine.afterburner", dt: types.JSON(), nullable: false, expectedValue: nil},
+		{expr: "properties.no_key", dt: types.JSON(), nullable: true, expectedValue: nil},
+		{expr: "properties.no_key", dt: types.JSON(), nullable: false, expectedValue: nil},
 		{expr: "jsonNull", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
 		{expr: "jsonNull", dt: types.JSON(), nullable: true, expectedValue: json.RawMessage("null")},
-		{expr: "jsonNil", dt: types.JSON(), nullable: false, expectedValue: json.RawMessage("null")},
+		{expr: "jsonNil", dt: types.JSON(), nullable: false, expectedValue: nil},
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expectedValue: nil},
 
 		{expr: "' '   '  '", dt: types.Text(), expectedValue: "   "},
-		{expr: "''", dt: types.JSON(), expectedValue: json.RawMessage("null")},
+		{expr: "''", dt: types.JSON(), expectedValue: nil},
 		{expr: "'100'", dt: types.JSON(), expectedValue: json.RawMessage(`"100"`)},
 		{expr: "'42'", dt: types.Int(32), expectedValue: 42},
 		{expr: "'42'", dt: types.Text(), expectedValue: "42"},
@@ -100,27 +100,27 @@ func Test_Compile(t *testing.T) {
 		{expr: "manufacturer", dt: types.Text(), expectedValue: "MyPlaneCompany"},
 		{expr: "revision_dates", dt: types.Array(types.Date()), expectedValue: []any{d}},
 		{expr: "map", dt: types.Map(types.Int(32)), expectedValue: map[string]any{"x": 1, "y": 2}},
-		{expr: `""`, dt: types.JSON(), expectedValue: json.RawMessage("null")},
+		{expr: `""`, dt: types.JSON(), expectedValue: nil},
 		{expr: "other", dt: types.Int(32), nullable: true, expectedValue: nil},
-		{expr: "other", dt: types.Int(32), expectedValue: Void},
+		{expr: "other", dt: types.Int(32), expectedValue: nil},
 
 		{expr: "map['x']", dt: types.Int(32), expectedValue: 1},
 		{expr: "map.x", dt: types.Int(32), expectedValue: 1},
-		{expr: "map['not-exist']", dt: types.Int(32), expectedValue: Void},
+		{expr: "map['not-exist']", dt: types.Int(32), expectedValue: nil},
 		{expr: "deep['a']", dt: types.JSON(), expectedValue: json.RawMessage(`{"b":{"p":{"x":1,"y":2}}}`)},
 		{expr: "deep['a']['b']", dt: types.JSON(), expectedValue: json.RawMessage(`{"p":{"x":1,"y":2}}`)},
 		{expr: "deep['a']['b'].p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
 		{expr: "deep.a.b.p", dt: types.JSON(), expectedValue: json.RawMessage(`{"x":1,"y":2}`)},
-		{expr: "deep['a']['not-exist'].p", dt: types.JSON(), expectedValue: Void},
+		{expr: "deep['a']['not-exist'].p", dt: types.JSON(), expectedValue: nil},
 		{expr: "deep['a']['b'].p['x']", dt: types.Int(32), expectedValue: 1},
 
 		{expr: "properties", dt: types.JSON(), expectedValue: json.RawMessage(`{":":7,":x":8,"?":4,"[x":1,"[x]":3,"[x]?":6,"a":1,"b":{"c":[1,2]},"x?":5,"x]":2}`)},
 		{expr: "properties.a", dt: types.Int(32), expectedValue: 1},
 		{expr: "properties.a.x", dt: types.Int(32), evalErr: errors.New(`invalid properties.a.x: properties.a is not a JSON object, it is a JSON number`)},
-		{expr: "properties.a.x?", dt: types.Int(32), expectedValue: Void},
+		{expr: "properties.a.x?", dt: types.Int(32), expectedValue: nil},
 		{expr: "properties.b.c", dt: types.Array(types.Int(32)), expectedValue: []any{1, 2}},
 		{expr: "properties.b['c']", dt: types.Array(types.Int(32)), expectedValue: []any{1, 2}},
-		{expr: "properties.b.x", dt: types.Array(types.Int(32)), expectedValue: Void},
+		{expr: "properties.b.x", dt: types.Array(types.Int(32)), expectedValue: nil},
 		{expr: `properties["[x"]`, dt: types.Float(64), expectedValue: 1.0},
 		{expr: `properties["x]"]`, dt: types.Float(64), expectedValue: 2.0},
 		{expr: `properties["[x]"]`, dt: types.Float(64), expectedValue: 3.0},
@@ -185,10 +185,10 @@ func Test_Compile(t *testing.T) {
 		{expr: "coalesce(other, 2)", dt: types.Int(32), nullable: true, expectedValue: 2},
 		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(32), nullable: true, expectedValue: 2},
 		{expr: "coalesce()", dt: types.Int(32), compileErr: errors.New("'coalesce' function requires at least one argument")},
-		{expr: "coalesce(null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
-		{expr: "coalesce(1, coalesce(2, null))", dt: types.Int(32), nullable: false, compileErr: errors.New("cannot convert null to Int(32)")},
+		{expr: "coalesce(null)", dt: types.Int(32), expectedValue: nil},
+		{expr: "coalesce(1, coalesce(2, null))", dt: types.Int(32), nullable: false, expectedValue: 1},
 		{expr: "coalesce(1, 2)", dt: types.Boolean(), nullable: true, compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
-		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(32), compileErr: errors.New(`cannot convert null to Int(32)`)},
+		{expr: "coalesce(coalesce(other, null), coalesce(other, 2))", dt: types.Int(32), expectedValue: 2},
 
 		// eq.
 		{expr: "eq(1, 1)", dt: types.Boolean(), expectedValue: true},
@@ -200,13 +200,13 @@ func Test_Compile(t *testing.T) {
 
 		// if.
 		{expr: "if(true, 1)", dt: types.Int(32), expectedValue: 1},
-		{expr: "if(false, 1)", dt: types.Int(32), expectedValue: Void},
+		{expr: "if(false, 1)", dt: types.Int(32), expectedValue: nil},
 		{expr: "if(true, 1, 2)", dt: types.Int(32), expectedValue: 1},
 		{expr: "if(false, 1, 2)", dt: types.Int(32), expectedValue: 2},
 		{expr: "if(eq(3, 5), 1, 2)", dt: types.Int(32), expectedValue: 2},
 		{expr: "if(false)", dt: types.Int(32), compileErr: errors.New("'if' function requires either two or three arguments")},
 		{expr: "if(1, 2)", dt: types.Int(32), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
-		{expr: "if(false, null)", dt: types.Int(32), compileErr: errors.New("cannot convert null to Int(32)")},
+		{expr: "if(false, null)", dt: types.Int(32), expectedValue: nil},
 		{expr: "if(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
 	}
 
@@ -258,7 +258,7 @@ func Test_Compile(t *testing.T) {
 			}
 
 			// Test Compile.
-			expr, err := Compile(test.expr, schema, test.dt, test.nullable, test.layouts)
+			expr, err := Compile(test.expr, schema, test.dt, test.layouts)
 			if err != nil {
 				if test.compileErr == nil {
 					t.Fatalf("unexpected compile error %q (type %T)", err, err)
@@ -311,7 +311,7 @@ func TestInvalidSchema(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
-			_, err := Compile(test.expr, types.Type{}, test.dt, false, nil)
+			_, err := Compile(test.expr, types.Type{}, test.dt, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -358,7 +358,7 @@ func TestPropertyPaths(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		expression, err := Compile(test.src, schema, types.JSON(), true, nil)
+		expression, err := Compile(test.src, schema, types.JSON(), nil)
 		if err != nil {
 			t.Fatalf("%q. unexpected compilation error: %s", test.src, err)
 		}

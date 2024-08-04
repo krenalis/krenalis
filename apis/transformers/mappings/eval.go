@@ -10,7 +10,6 @@ package mappings
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -21,14 +20,6 @@ import (
 
 	"github.com/shopspring/decimal"
 )
-
-// Void represents the void value.
-var Void = struct{}{}
-
-// errVoid is returned by the 'if' function when it has only two arguments and
-// the first argument is false. In this case, the destination property is not
-// changed.
-var errVoid = errors.New("void")
 
 // invalidConversionError is the error returned by the Eval and Transform
 // methods of when a value resulted from an evaluation cannot be converted to
@@ -47,15 +38,13 @@ func (err *invalidConversionError) Error() string {
 	switch err.v {
 	case nil:
 		return "cannot convert null to a non-nullable value"
-	case Void:
-		return "expression is required, but the evaluation returned no value"
 	}
 	return fmt.Sprintf("cannot convert %#v (type %s) to type %s", err.v, err.st, err.dt)
 }
 
 // Eval evaluates the expression using the provided properties which must
 // conform to the expression's source schema, and returns the result that
-// conforms to the expression's destination type or Void if the result is void.
+// conforms to the expression's destination type.
 //
 // purpose specifies the reason for the evaluation. If Create or Update, then
 // all the properties required for creation or the update must be present in the
@@ -66,19 +55,13 @@ func (err *invalidConversionError) Error() string {
 func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, error) {
 	v, st, err := eval(expr.parts, properties, expr.timeLayouts, purpose)
 	if err != nil {
-		if err == errVoid {
-			return Void, nil
-		}
 		return nil, err
 	}
-	if v == nil && expr.nullable {
+	if v == nil {
 		return v, err
 	}
-	c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts, purpose)
+	c, err := convert(v, st, expr.dt, true, expr.timeLayouts, purpose)
 	if err != nil {
-		if err == errVoid {
-			return Void, nil
-		}
 		if err == errInvalidConversion {
 			err = &invalidConversionError{v, st, expr.dt, ""}
 		}
@@ -136,8 +119,6 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 // property values. layouts represents, if not nil, the layouts used to format
 // DateTime, Date, and Time values as strings, and purpose specifies the reason
 // for the evaluation.
-//
-// If the result of the evaluation is void, it returns the errVoid error.
 func eval(expression []part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
@@ -151,7 +132,7 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 				if p.args == nil {
 					v, ok := properties[p.path[0]]
 					if !ok {
-						return nil, types.Type{}, errVoid
+						return nil, types.Type{}, nil
 					}
 					return v, p.typ, nil
 				}
@@ -179,7 +160,7 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 		}
 		if p.args == nil {
 			v, err = valueOf(p.path, properties)
-			if err != nil && err != errVoid {
+			if err != nil {
 				return nil, types.Type{}, err
 			}
 			vt = p.typ
@@ -266,16 +247,16 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		if len(p.args) == 3 {
 			return eval(p.args[2], properties, layouts, purpose)
 		}
-		return nil, types.Type{}, errVoid
+		return nil, types.Type{}, nil
 	}
 	panic(fmt.Errorf("unknown function %q", p.path[0]))
 }
 
-// valueOf returns the value at the specified path in properties. It returns
-// errVoid if the path does not exist, including keys in a map and properties of
-// a JSON object.
+// valueOf returns the value at the specified path in properties. It returns nil
+// if the path does not exist, including keys in a map and properties of a JSON
+// object.
 //
-// For non-object JSON values, accessing a key returns errVoid if the key is
+// For non-object JSON values, accessing a key returns nil if the key is
 // followed by "?"; otherwise, it returns an error.
 //
 // For a JSON property of type json.RawMessage, the function unmarshals the
@@ -296,7 +277,7 @@ func valueOf(path path, properties map[string]any) (any, error) {
 		}
 		v, ok = properties[name]
 		if !ok {
-			return nil, errVoid
+			return nil, nil
 		}
 		if i != last {
 			var ok bool
@@ -315,7 +296,7 @@ func valueOf(path path, properties map[string]any) (any, error) {
 			}
 			if !ok {
 				if name := path[i+1]; name[len(name)-1] == '?' {
-					return nil, errVoid
+					return nil, nil
 				}
 				var t string
 				switch v.(type) {

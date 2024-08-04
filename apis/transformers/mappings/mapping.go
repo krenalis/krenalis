@@ -49,6 +49,7 @@ type Mapping struct {
 type mappingExpr struct {
 	path           string
 	expr           *Expression
+	nullable       bool
 	createRequired bool
 	updateRequired bool
 }
@@ -83,7 +84,8 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 			return nil, err
 		}
 		mappingExpressions[i].path = path
-		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, p.Nullable, layouts)
+		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, layouts)
+		mappingExpressions[i].nullable = p.Nullable
 		mappingExpressions[i].createRequired = p.CreateRequired
 		mappingExpressions[i].updateRequired = p.UpdateRequired
 		if err != nil {
@@ -148,9 +150,9 @@ func (mapping *Mapping) OutProperties() []string {
 // then all the properties required for creation or the update must be present
 // in the returned value.
 //
-// If the evaluation of an expression results in a void value, the corresponding
-// property will not be present in the returned value. If all evaluations of the
-// expression result in a void value, an empty map is returned.
+// If an expression evaluates to nil and the corresponding property cannot be
+// null, that property will be omitted from the returned result, provided this
+// is allowed by the purpose.
 //
 // If the resulting value cannot be converted to the destination type, it
 // returns an error value implementing the ValidationError interface of apis.
@@ -170,11 +172,11 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 			}
 			return nil, err
 		}
-		if v == Void {
+		if v == nil && !e.nullable {
 			if e.createRequired && purpose == Create || e.updateRequired && purpose == Update {
 				return nil, &validationError{
 					path: e.path,
-					msg:  "expression is required, but the evaluation returned undefined",
+					msg:  "evaluation returned null, but a non-null value was required",
 				}
 			}
 			continue

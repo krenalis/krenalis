@@ -78,10 +78,10 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		if dpt == types.JSONKind {
 			return json.RawMessage("null"), nil
 		}
-		return nil, errVoid
+		return nil, errInvalidConversion
 	} else if spt == types.JSONKind && dpt != types.JSONKind {
 		if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
-			return nil, errVoid
+			return nil, errInvalidConversion
 		}
 	}
 	// Convert the unparsed cases, v is not nil.
@@ -624,7 +624,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					continue
 				}
 				if _, ok := obj[p.Name]; !ok {
-					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}, ""}
+					return nil, errInvalidConversion
 				}
 			}
 		case Update:
@@ -633,7 +633,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					continue
 				}
 				if _, ok := obj[p.Name]; !ok {
-					return nil, &invalidConversionError{Void, types.Type{}, types.Type{}, ""}
+					return nil, errInvalidConversion
 				}
 			}
 		}

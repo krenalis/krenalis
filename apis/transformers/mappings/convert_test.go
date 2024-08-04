@@ -204,7 +204,6 @@ func TestConvert(t *testing.T) {
 
 		// Text.
 		{types.Int(32), types.Text(), nil, nil, true, nil},
-		{types.Int(32), types.Text(), nil, Void, false, nil},
 		{types.Text(), types.Text(), "foo", "foo", true, nil},
 		{types.Text(), types.Text().WithValues("foo", "boo"), "", nil, true, nil},
 		{types.Text(), types.Text().WithValues("foo", "boo"), "boo", "boo", true, nil},
@@ -229,7 +228,6 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Text(), json.Number("812"), "812", true, nil},
 		{types.JSON(), types.Text(), true, "true", true, nil},
 		{types.JSON(), types.Text(), json.RawMessage("null"), nil, true, nil},
-		{types.JSON(), types.Text(), json.RawMessage("null"), Void, false, nil},
 
 		// Array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
@@ -306,9 +304,6 @@ func TestConvert(t *testing.T) {
 	for _, test := range tests {
 		got, err := convert(test.v, test.t1, test.t2, test.nullable, test.layouts, Create)
 		if err != nil {
-			if err == errVoid && test.e == Void {
-				continue
-			}
 			t.Fatalf("cannot convert %s<%v> to type %s", test.t1, test.v, test.t2)
 		}
 		expected := test.e

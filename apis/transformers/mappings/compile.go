@@ -26,7 +26,6 @@ var jsonArrayType = types.Array(types.JSON())
 type Expression struct {
 	parts       []part     // expression parts.
 	dt          types.Type // destination type.
-	nullable    bool       // reports whether the resulting value can be nil.
 	properties  []string   // properties used in the expression; see the documentation of the Properties method.
 	timeLayouts *state.TimeLayouts
 }
@@ -46,12 +45,11 @@ func (expr *Expression) Properties() []string {
 // to execute the expression.
 //
 // schema is the schema of the paths in the expression, dt is the destination
-// type, nullable indicates whether that value can be nil, and layouts
-// represents, if not nil, the layouts used to format DateTime, Date, and Time
-// values as strings.
+// type, and layouts represents, if not nil, the layouts used to format
+// DateTime, Date, and Time values as strings.
 //
 // An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema, dt types.Type, nullable bool, layouts *state.TimeLayouts) (*Expression, error) {
+func Compile(expr string, schema, dt types.Type, layouts *state.TimeLayouts) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
@@ -69,14 +67,13 @@ func Compile(expr string, schema, dt types.Type, nullable bool, layouts *state.T
 		return nil, fmt.Errorf("unexpected character %v", strconv.QuoteRuneToGraphic(rune(src[0])))
 	}
 	properties := map[string]struct{}{}
-	err = typeCheck(parts, schema, dt, nullable, properties)
+	err = typeCheck(parts, schema, dt, true, properties)
 	if err != nil {
 		return nil, err
 	}
 	expression := &Expression{
 		parts:       parts,
 		dt:          dt,
-		nullable:    nullable,
 		timeLayouts: layouts,
 	}
 	if len(properties) > 0 {
