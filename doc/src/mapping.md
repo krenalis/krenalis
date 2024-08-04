@@ -285,6 +285,47 @@ initcap(null)             -> null
 
 The argument of the `initcap` function should have type `text`, and the result has type `Text`.
 
+#### **len** function
+
+The `len` function returns the length of the given argument based on its type.
+```
+┌─────────────────────────────────┐
+│ len(values)                     │ ->  num_values
+└─────────────────────────────────┘
+```
+
+The length is determined as follows:
+
+* `Text`: Returns the length in characters.
+* `Array`: Returns the number of elements.
+* `Map`: Returns the number of key-value pairs.
+* `Object`: Returns the number of present properties.
+* `Boolean`, `Int`, `Uint`, `Float`, `Decimal`, `DateTime`, `Date`, `Time`, `Year`, `UUID`, `Inet`: Returns the length of its string representation.
+
+For `JSON` values:
+ 
+* `JSON` string: Returns the length in characters.
+* `JSON` object: Returns the number of key-value pairs.
+* `JSON` array: Returns the number of elements.
+* `JSON` boolean: Returns the length of its string representation.
+* `JSON` number: Returns the length of its string representation.
+* `JSON` null: Returns `0`.
+
+If the argument is `null`, the function also returns `0`. For example:
+```
+len(null) -> 0
+len(true) -> 4
+len(false) -> 5
+len('Seattle') -> 7
+len('東京') -> 2
+len(array(1.5, 3.9, 0.15)) -> 3
+len(520945) -> 6
+len(-722) -> 4
+len(88.0300) -> 5
+```
+
+The result of the `len` function has type `Int(32)`.
+
 #### **lower** function
 
 The `lower` function returns its argument with all letters in lower case. For example:

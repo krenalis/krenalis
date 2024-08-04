@@ -18,6 +18,52 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+func Test_digitCountInt(t *testing.T) {
+
+	tests := []struct {
+		n        int64
+		expected int
+	}{
+		{0, 1},
+		{10, 2},
+		{7940200381, 10},
+		{-1, 2},
+		{-2817482, 8},
+		{9223372036854775807, 19},
+		{-9223372036854775807, 20},
+		{-9223372036854775808, 20},
+	}
+
+	for _, test := range tests {
+		got := digitCountInt(test.n)
+		if test.expected != got {
+			t.Fatalf("%d: expected %d, got %d", test.n, test.expected, got)
+		}
+	}
+
+}
+
+func Test_digitCountUint(t *testing.T) {
+
+	tests := []struct {
+		n        uint64
+		expected int
+	}{
+		{0, 1},
+		{10, 2},
+		{63471038, 8},
+		{18446744073709551615, 20},
+	}
+
+	for _, test := range tests {
+		got := digitCountUint(test.n)
+		if test.expected != got {
+			t.Fatalf("%d: expected %d, got %d", test.n, test.expected, got)
+		}
+	}
+
+}
+
 func Test_eval(t *testing.T) {
 
 	properties := map[string]any{

@@ -38,6 +38,7 @@ var numArguments = map[string]int{
 	"eq":        2,
 	"if":        3,
 	"initcap":   1,
+	"len":       1,
 	"lower":     1,
 	"ne":        2,
 	"not":       1,

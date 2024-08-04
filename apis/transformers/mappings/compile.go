@@ -189,6 +189,27 @@ func checkInitCap(args [][]part, schema, dt types.Type, nullable bool, propertie
 	return dt, nil
 }
 
+// checkLen type checks a call to 'len' with the given arguments.
+func checkLen(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) != 1 {
+		return types.Type{}, errors.New("'len' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Type{}, true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	//t := typesOf(args[0])
+	//switch t.Kind() {
+	//case types.InvalidKind:
+	//case types.JSONKind, types.TextKind, types.ArrayKind, types.ObjectKind, types.MapKind:
+	//default:
+	//	if !convertibleTo(t, types.JSON()) {
+	//		return types.Type{}, fmt.Errorf("type %s is not allowed as 'len' argument", t)
+	//	}
+	//}
+	return types.Int(32), nil
+}
+
 // checkLower type checks a call to 'lower' with the given arguments.
 func checkLower(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	n := len(args)
@@ -377,6 +398,8 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 			expr[i].typ, err = checkIf(p.args, schema, typ, n, properties)
 		case "initcap":
 			expr[i].typ, err = checkInitCap(p.args, schema, typ, n, properties)
+		case "len":
+			expr[i].typ, err = checkLen(p.args, schema, typ, n, properties)
 		case "lower":
 			expr[i].typ, err = checkLower(p.args, schema, typ, n, properties)
 		case "ne":

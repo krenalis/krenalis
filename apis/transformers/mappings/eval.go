@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -116,6 +117,31 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 		}
 	}
 	return b, errInvalidConversion
+}
+
+// digitCountInt returns the number of decimal digits in n, including the sign
+// for negative numbers.
+func digitCountInt(n int64) int {
+	if n == 0 {
+		return 1
+	}
+	sign := 0
+	if n < 0 {
+		if n == math.MinInt64 {
+			return 20
+		}
+		sign = 1
+		n = -n
+	}
+	return sign + int(math.Log10(float64(n))) + 1
+}
+
+// digitCountUint returns the number of decimal digits in n.
+func digitCountUint(n uint64) int {
+	if n == 0 {
+		return 1
+	}
+	return int(math.Log10(float64(n))) + 1
 }
 
 // eval evaluates expression and returns its value and type. properties are the
@@ -277,6 +303,57 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return nil, types.Text(), nil
 		}
 		return strings.Title(v.(string)), types.Text(), nil
+	case "len":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v, ok := v.(json.RawMessage); ok {
+			dec := json.NewDecoder(bytes.NewReader(v))
+			dec.UseNumber()
+			v = nil
+			_ = dec.Decode(&v)
+		}
+		var length int
+		switch v := v.(type) {
+		case nil:
+		case bool:
+			length = 5
+			if v {
+				length = 4
+			}
+		case int:
+			length = digitCountInt(int64(v))
+		case uint:
+			length = digitCountUint(uint64(v))
+		case float64:
+			bitSize := 64
+			if t := typesOf(p.args[0]); t.Kind() == types.FloatKind && t.BitSize() == 32 {
+				bitSize = 32
+			}
+			length = len(strconv.FormatFloat(v, 'g', -1, bitSize))
+		case decimal.Decimal:
+			length = len(v.String())
+		case string:
+			length = utf8.RuneCountInString(v)
+		case time.Time:
+			t := typesOf(p.args[0])
+			switch t.Kind() {
+			case types.DateTimeKind:
+				length = 20
+			case types.DateKind:
+				length = 10
+			case types.TimeKind:
+				length = len(v.Format("15:04:05.999999999"))
+			}
+		case []any:
+			length = len(v)
+		case map[string]any:
+			length = len(v)
+		case json.Number:
+			length = len(v)
+		}
+		return length, types.Int(32), nil
 	case "lower":
 		v, _, err := eval(p.args[0], properties, layouts, purpose)
 		if err != nil {
