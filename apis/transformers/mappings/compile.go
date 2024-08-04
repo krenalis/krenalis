@@ -95,7 +95,7 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool, properties ma
 	}
 	booleanType := types.Boolean()
 	for _, arg := range args {
-		err := typeCheck(arg, schema, booleanType, nullable, properties)
+		err := typeCheck(arg, schema, booleanType, true, properties)
 		if err != nil {
 			return types.Type{}, err
 		}
@@ -120,7 +120,7 @@ func checkCoalesce(args [][]part, schema, dt types.Type, nullable bool, properti
 		return types.Type{}, errors.New("'coalesce' function requires at least one argument")
 	}
 	for _, arg := range args {
-		err := typeCheck(arg, schema, dt, nullable, properties)
+		err := typeCheck(arg, schema, dt, true, properties)
 		if err != nil {
 			return types.Type{}, err
 		}

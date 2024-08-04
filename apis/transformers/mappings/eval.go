@@ -186,14 +186,22 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
 	switch name := p.path[0]; name {
 	case "and":
+		var null bool
 		for _, arg := range p.args {
 			v, _, err := eval(arg, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
+			if v == nil {
+				null = true
+				continue
+			}
 			if !v.(bool) {
 				return false, types.Boolean(), nil
 			}
+		}
+		if null {
+			return nil, types.Boolean(), nil
 		}
 		return true, types.Boolean(), nil
 	case "array":
@@ -202,6 +210,9 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			v, _, err := eval(arg, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
+			}
+			if v == nil {
+				v = json.RawMessage("null")
 			}
 			a[i] = v
 		}
@@ -222,9 +233,15 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		if err != nil {
 			return nil, types.Type{}, err
 		}
+		if v0 == nil {
+			return nil, types.Boolean(), nil
+		}
 		v1, t1, err := eval(p.args[1], properties, layouts, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
+		}
+		if v1 == nil {
+			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
 			v0, err = convert(v0, t0, t1, true, layouts, purpose)
@@ -241,13 +258,13 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		if v0.(bool) {
+		if v0 != nil && v0.(bool) {
 			return eval(p.args[1], properties, layouts, purpose)
 		}
 		if len(p.args) == 3 {
 			return eval(p.args[2], properties, layouts, purpose)
 		}
-		return nil, types.Type{}, nil
+		return nil, types.JSON(), nil
 	}
 	panic(fmt.Errorf("unknown function %q", p.path[0]))
 }

@@ -174,18 +174,26 @@ The `and` function returns `true` only when all of its arguments are `true`; oth
 └─────────────────────────────────┘
 ```
 
-The arguments for `and` should be of boolean (`Boolean` type), and the returned value is also a boolean (`Boolean` type).
+It returns `null`, if an argument is `null` and there are no `false` arguments. For example:
+```
+and(true, true)  -> true
+and(true, false) -> false
+and(true, null)  -> null
+and(false, null) -> false
+```
+
+The arguments of the `and` function should have type `Boolean`, and the result has type `Boolean`.
 
 #### **array** function
 
-The `array` function returns an array with the passed arguments as elements.  For example:
+The `array` function returns an array with the passed arguments as elements. For example:
 ```
 ┌─────────────────────────────────┐
 │ array(email, company.email)     │ ->  emails
 └─────────────────────────────────┘
 ```
 
-The `array` function returns a value in the form of a JSON array (`Array(JSON)` type).
+The result of the `array` function has type `Array(JSON)`.
 
 #### **coalesce** function
 
@@ -197,7 +205,13 @@ The `coalesce` function returns the first non-null argument, or `null` if all ar
 └───────────────────────────────────────────┘
 ```
 
-The `coalesce` function returns a value in the form of a JSON value (`JSON` type).
+For example:
+```
+coalesce(null, 0)    -> 0
+coalesce(null, null) -> null
+```
+
+The result of the `coalesce` function has type `JSON`.
 
 #### **eq** function
 
@@ -208,28 +222,45 @@ The `eq` function takes two values and returns `true` if they are equal; otherwi
 └─────────────────────────────────┘
 ```
 
-The `eq` function returns a boolean value (`Boolean` type).
+If an argument is `null`, the function returns `null`. For example:
+```
+eq(5, 5)      -> true
+eq('a', 'b')  -> false
+eq('a', 5)    -> false
+eq('a', null) -> null
+```
 
+The result of the `eq` function has type `Boolean`.
 
 #### **if** function
 
-The `if` function evaluates the first boolean argument. If it is `true`, it returns the second argument; otherwise, it returns the third argument. For example, if `hasCode` is `true`, the following evaluates to the value of `code`; otherwise, it evaluates to `null`
+The `if` function evaluates the first boolean argument. If it is `true`, the function returns the second argument. If the first argument is `false` or `null`, the function returns the third argument. For example, if `hasCode` is `true`, the following code evaluates to the value of `code`; otherwise, it evaluates to an empty `Text` value.
 ```
 ┌─────────────────────────────────┐
-│ if(hasCode, code, null)         │ ->  code
+│ if(hasCode, code, '')           │ ->  code
 └─────────────────────────────────┘
 ```
 
-The second or third argument is returned in the form of a JSON value (`JSON` type).
+For example:
+```
+if(true, 1, 2)      -> 1
+if(false, 'a', 'b') -> 'b'
+if(null, 7.5, 9.8)  -> 9.8
+```
 
-The `if` function can also be called with only two arguments. In this case, if the first argument is `false`, the output property will not have a value, as if it had not been mapped.
-
-In the following example, the property will not have a value if `hasCode` is `false`
+The `if` function can also be called with only two arguments. In this case, if the first argument is not `true`, the result is `null`.
 ```
 ┌─────────────────────────────────┐
 │ if(hasCode, code)               │ ->  code
 └─────────────────────────────────┘
 ```
 
+For example:
 
-The second argument, if the first argument is `true`, is returned in the form of a JSON value (`JSON` type).
+```
+if(true, 5)  -> 5
+if(false, 5) -> null
+if(null, 5)  -> null
+```
+
+The result of the `if` function has type `JSON`.
