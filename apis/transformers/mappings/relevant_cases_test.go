@@ -28,7 +28,6 @@ func Test_RelevantCases(t *testing.T) {
 		properties map[string]any
 		expr       string
 		dt         types.Type
-		required   bool
 		nullable   bool
 		layouts    *state.TimeLayouts
 		value      any
@@ -42,7 +41,7 @@ func Test_RelevantCases(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			expression, err := mappings.Compile(test.expr, schema, test.dt, false, false, test.nullable, test.layouts)
+			expression, err := mappings.Compile(test.expr, schema, test.dt, test.nullable, test.layouts)
 			if err != nil {
 				t.Fatalf("unexpected compilation error %s", err)
 			}

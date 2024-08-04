@@ -47,8 +47,10 @@ type Mapping struct {
 }
 
 type mappingExpr struct {
-	path string
-	expr *Expression
+	path           string
+	expr           *Expression
+	createRequired bool
+	updateRequired bool
 }
 
 // New returns a new mapping that transforms values according to the provided
@@ -81,7 +83,9 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 			return nil, err
 		}
 		mappingExpressions[i].path = path
-		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, p.CreateRequired, p.UpdateRequired, p.Nullable, layouts)
+		mappingExpressions[i].expr, err = Compile(expr, inSchema, p.Type, p.Nullable, layouts)
+		mappingExpressions[i].createRequired = p.CreateRequired
+		mappingExpressions[i].updateRequired = p.UpdateRequired
 		if err != nil {
 			return nil, err
 		}
@@ -166,9 +170,16 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 			}
 			return nil, err
 		}
-		if v != Void {
-			storeValue(out, e.path, v)
+		if v == Void {
+			if e.createRequired && purpose == Create || e.updateRequired && purpose == Update {
+				return nil, &validationError{
+					path: e.path,
+					msg:  "expression is required, but the evaluation returned undefined",
+				}
+			}
+			continue
 		}
+		storeValue(out, e.path, v)
 	}
 	return out, nil
 }

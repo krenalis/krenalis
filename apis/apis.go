@@ -421,7 +421,7 @@ func (apis *APIs) ExpressionsProperties(expressions []ExpressionToBeExtracted, s
 		if !expression.Type.Valid() {
 			return nil, errors.BadRequest("expression type is not valid")
 		}
-		exp, err := mappings.Compile(expression.Value, schema, expression.Type, false, false, true, nil)
+		exp, err := mappings.Compile(expression.Value, schema, expression.Type, true, nil)
 		if err != nil {
 			return nil, errors.BadRequest("expression is not valid: %w", err)
 		}
@@ -707,7 +707,7 @@ func (apis *APIs) TransformationLanguages() []string {
 // the expression is valid.
 func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, nullable bool) string {
 	apis.mustBeOpen()
-	_, err := mappings.Compile(expression, types.Object(properties), typ, false, false, nullable, nil)
+	_, err := mappings.Compile(expression, types.Object(properties), typ, nullable, nil)
 	if err != nil {
 		return err.Error()
 	}

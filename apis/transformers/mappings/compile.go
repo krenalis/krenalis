@@ -24,13 +24,11 @@ var jsonArrayType = types.Array(types.JSON())
 // source to a destination. An Expression can contain strings, numbers, true,
 // false, null, property paths and function calls.
 type Expression struct {
-	parts          []part     // expression parts.
-	dt             types.Type // destination type.
-	createRequired bool       // reports whether the resulting value is required for creation.
-	updateRequired bool       // reports whether the resulting value is required for the update.
-	nullable       bool       // reports whether the resulting value can be nil.
-	properties     []string   // properties used in the expression; see the documentation of the Properties method.
-	timeLayouts    *state.TimeLayouts
+	parts       []part     // expression parts.
+	dt          types.Type // destination type.
+	nullable    bool       // reports whether the resulting value can be nil.
+	properties  []string   // properties used in the expression; see the documentation of the Properties method.
+	timeLayouts *state.TimeLayouts
 }
 
 // Properties returns the properties found in the expression, sorted by their
@@ -48,13 +46,12 @@ func (expr *Expression) Properties() []string {
 // to execute the expression.
 //
 // schema is the schema of the paths in the expression, dt is the destination
-// type, createRequired and updateRequire indicate whether the returned value is
-// required for creation and the update, nullable indicates whether that value
-// can be nil, and layouts represents, if not nil, the layouts used to format
-// DateTime, Date, and Time values as strings.
+// type, nullable indicates whether that value can be nil, and layouts
+// represents, if not nil, the layouts used to format DateTime, Date, and Time
+// values as strings.
 //
 // An invalid schema can be passed to compile an expression without paths.
-func Compile(expr string, schema, dt types.Type, createRequired, updateRequired, nullable bool, layouts *state.TimeLayouts) (*Expression, error) {
+func Compile(expr string, schema, dt types.Type, nullable bool, layouts *state.TimeLayouts) (*Expression, error) {
 	if expr == "" {
 		return nil, errors.New("expression is empty")
 	}
@@ -77,12 +74,10 @@ func Compile(expr string, schema, dt types.Type, createRequired, updateRequired,
 		return nil, err
 	}
 	expression := &Expression{
-		parts:          parts,
-		dt:             dt,
-		createRequired: createRequired,
-		updateRequired: updateRequired,
-		nullable:       nullable,
-		timeLayouts:    layouts,
+		parts:       parts,
+		dt:          dt,
+		nullable:    nullable,
+		timeLayouts: layouts,
 	}
 	if len(properties) > 0 {
 		expression.properties = make([]string, len(properties))

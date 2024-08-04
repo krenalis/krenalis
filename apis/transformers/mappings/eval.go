@@ -67,30 +67,24 @@ func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, e
 	v, st, err := eval(expr.parts, properties, expr.timeLayouts, purpose)
 	if err != nil {
 		if err == errVoid {
-			if expr.createRequired && purpose == Create || expr.updateRequired && purpose == Update {
-				return nil, &invalidConversionError{Void, st, expr.dt, ""}
-			}
 			return Void, nil
 		}
 		return nil, err
 	}
-	if v != nil || !expr.nullable {
-		c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts, purpose)
-		if err != nil {
-			if err == errVoid {
-				if expr.createRequired && purpose == Create || expr.updateRequired && purpose == Update {
-					return nil, &invalidConversionError{Void, st, expr.dt, ""}
-				}
-				return Void, nil
-			}
-			if err == errInvalidConversion {
-				err = &invalidConversionError{v, st, expr.dt, ""}
-			}
-			return nil, err
-		}
-		v = c
+	if v == nil && expr.nullable {
+		return v, err
 	}
-	return v, err
+	c, err := convert(v, st, expr.dt, expr.nullable, expr.timeLayouts, purpose)
+	if err != nil {
+		if err == errVoid {
+			return Void, nil
+		}
+		if err == errInvalidConversion {
+			err = &invalidConversionError{v, st, expr.dt, ""}
+		}
+		return nil, err
+	}
+	return c, nil
 }
 
 // appendAsString appends v to b after converting it to a string.
