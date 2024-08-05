@@ -332,12 +332,12 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					p.path[j] = ":" + name
 				case types.ObjectKind, types.InvalidKind:
 					if name[len(name)-1] == '?' {
-						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
+						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path[:j+1])
 					}
 					if name[0] == '[' {
 						name = name[1 : len(name)-1]
 						if !types.IsValidPropertyName(name) {
-							return fmt.Errorf("invalid %s: %q is not a valid property name", stringifyPath(p.path[:j+1]), name)
+							return fmt.Errorf("invalid %s: %q is not a valid property name", p.path[:j+1], name)
 						}
 					}
 					var property types.Property
@@ -348,7 +348,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					if !ok {
 						msg := fmt.Sprintf("property %q does not exist", name)
 						if j > 0 {
-							msg = fmt.Sprintf("invalid %s: %s", stringifyPath(p.path[:j+1]), msg)
+							msg = fmt.Sprintf("invalid %s: %s", p.path[:j+1], msg)
 						}
 						return errors.New(msg)
 					}
@@ -359,16 +359,16 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					t = property.Type
 				case types.MapKind:
 					if name[len(name)-1] == '?' {
-						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", stringifyPath(p.path[:j+1]))
+						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path[:j+1])
 					}
 					p.path[j] = ":" + name
 					t = t.Elem()
 				default:
-					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", stringifyPath(p.path[:j+1]), stringifyPath(p.path[:j]), t)
+					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", p.path[:j+1], p.path[:j], t)
 				}
 			}
 			if concatenate && !convertibleTo(t, types.Text()) {
-				return fmt.Errorf("cannot convert %s (type %s) to Text", stringifyPath(p.path), t)
+				return fmt.Errorf("cannot convert %s (type %s) to Text", p.path, t)
 			}
 			properties[b.String()] = struct{}{}
 			expr[i].typ = t
@@ -411,7 +411,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 		}
 		if concatenate {
 			if st := expr[i].typ; st.Valid() && !convertibleTo(st, types.Text()) {
-				return fmt.Errorf("cannot convert %s(...) (type %s) to Text", stringifyPath(p.path), st)
+				return fmt.Errorf("cannot convert %s(...) (type %s) to Text", p.path, st)
 			}
 		}
 	}

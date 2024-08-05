@@ -238,18 +238,18 @@ func Test_valueOf(t *testing.T) {
 		got, err := valueOf(test.path, properties)
 		if err != nil {
 			if test.err == nil {
-				t.Fatalf("%s. unexpected error: %s", stringifyPath(test.path), err)
+				t.Fatalf("%s. unexpected error: %s", test.path, err)
 			}
 			if err.Error() != test.err.Error() {
-				t.Fatalf("%s. expected error %q, got error %q", stringifyPath(test.path), test.err.Error(), err.Error())
+				t.Fatalf("%s. expected error %q, got error %q", test.path, test.err.Error(), err.Error())
 			}
 			continue
 		}
 		if test.err != nil {
-			t.Fatalf("%s. expected error %q, got no error", stringifyPath(test.path), test.err)
+			t.Fatalf("%s. expected error %q, got no error", test.path, test.err)
 		}
 		if !reflect.DeepEqual(got, test.expected) {
-			t.Fatalf("%s. unexpected value\nexpected %v (type %T)\ngot      %v (type %T)", stringifyPath(test.path), test.expected, test.expected, got, got)
+			t.Fatalf("%s. unexpected value\nexpected %v (type %T)\ngot      %v (type %T)", test.path, test.expected, test.expected, got, got)
 		}
 
 	}

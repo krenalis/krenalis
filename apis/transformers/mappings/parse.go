@@ -51,6 +51,29 @@ var numArguments = map[string]int{
 // See 'part.path' for documentation.
 type path []string
 
+// String returns p as a string.
+func (p path) String() string {
+	s := p[0]
+	for _, name := range p[1:] {
+		if name[0] == ':' {
+			name = name[1:]
+		}
+		question := name[len(name)-1] == '?'
+		if question {
+			name = name[:len(name)-1]
+		}
+		if name[0] == '[' {
+			s += "[" + strconv.Quote(name[1:len(name)-1]) + "]"
+		} else {
+			s += "." + name
+		}
+		if question {
+			s += "?"
+		}
+	}
+	return s
+}
+
 // part represents an expression part within an Expression. An expression part
 // can take different forms:
 //
@@ -217,7 +240,7 @@ Expression:
 				name := p.path[0]
 				n, ok := numArguments[name]
 				if !ok || len(p.path) > 1 {
-					return nil, "", fmt.Errorf("function %q does not exist", stringifyPath(p.path))
+					return nil, "", fmt.Errorf("function %q does not exist", p.path)
 				}
 				p.args = make([][]part, 0, n)
 				for {
@@ -473,27 +496,4 @@ func skipSpaces(src string) string {
 		}
 	}
 	return ""
-}
-
-// stringifyPath returns path as a string.
-func stringifyPath(path []string) string {
-	s := path[0]
-	for _, name := range path[1:] {
-		if name[0] == ':' {
-			name = name[1:]
-		}
-		question := name[len(name)-1] == '?'
-		if question {
-			name = name[:len(name)-1]
-		}
-		if name[0] == '[' {
-			s += "[" + strconv.Quote(name[1:len(name)-1]) + "]"
-		} else {
-			s += "." + name
-		}
-		if question {
-			s += "?"
-		}
-	}
-	return s
 }

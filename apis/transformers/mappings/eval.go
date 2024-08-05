@@ -558,7 +558,7 @@ func valueOf(path path, properties map[string]any) (any, error) {
 				default:
 					t = "a JSON array"
 				}
-				return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", stringifyPath(path[:i+2]), stringifyPath(path[:i+1]), t)}
+				return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", path[:i+2], path[:i+1], t)}
 			}
 		}
 	}
