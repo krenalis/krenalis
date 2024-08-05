@@ -198,15 +198,6 @@ func checkLen(args [][]part, schema, dt types.Type, nullable bool, properties ma
 	if err != nil {
 		return types.Type{}, err
 	}
-	//t := typesOf(args[0])
-	//switch t.Kind() {
-	//case types.InvalidKind:
-	//case types.JSONKind, types.TextKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-	//default:
-	//	if !convertibleTo(t, types.JSON()) {
-	//		return types.Type{}, fmt.Errorf("type %s is not allowed as 'len' argument", t)
-	//	}
-	//}
 	return types.Int(32), nil
 }
 
