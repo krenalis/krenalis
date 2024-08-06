@@ -15,7 +15,7 @@ require (
 	github.com/aws/smithy-go v1.20.2
 	github.com/evanw/esbuild v0.23.0
 	github.com/fraugster/parquet-go v0.12.0
-	github.com/go-json-experiment/json v0.0.0-20240418180308-af2d5061e6c2
+	github.com/go-json-experiment/json v0.0.0-20240524174822-2d9f40f7385b
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.6.0
@@ -27,13 +27,13 @@ require (
 	github.com/jxskiss/base62 v1.1.0
 	github.com/mssola/useragent v1.0.0
 	github.com/open2b/analytics-go v0.0.2
-	github.com/oschwald/maxminddb-golang v1.13.0
+	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.6
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.4.0
 	github.com/shopspring/decimal v1.4.0
-	github.com/snowflakedb/gosnowflake v1.10.1
-	github.com/twmb/franz-go v1.17.0
+	github.com/snowflakedb/gosnowflake v1.11.0
+	github.com/twmb/franz-go v1.17.1
 	github.com/xuri/excelize/v2 v2.8.1
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.24.0
@@ -41,8 +41,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/sdk/metric v1.24.0
 	go.opentelemetry.io/otel/trace v1.24.0
-	golang.org/x/crypto v0.25.0
-	golang.org/x/text v0.16.0
+	golang.org/x/crypto v0.26.0
+	golang.org/x/text v0.17.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -120,13 +120,13 @@ require (
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
-	golang.org/x/term v0.22.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
-	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
-	google.golang.org/grpc v1.61.1 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240311132316-a219d84964c2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240314234333-6e1732d8331c // indirect
+	google.golang.org/grpc v1.62.1 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var incorrectSecondsFractionRegex = regexp.MustCompile(`[^.,]FF`)
@@ -32,6 +33,18 @@ var formatReplacements = []formatReplacement{
 	{input: "SS", output: "05"},
 	{input: "TZH", output: "Z07"},
 	{input: "TZM", output: "00"},
+}
+
+func timeToString(t time.Time, dateTimeType string, params map[string]*string) (string, error) {
+	sfFormat, err := dateTimeInputFormatByType(dateTimeType, params)
+	if err != nil {
+		return "", err
+	}
+	goFormat, err := snowflakeFormatToGoFormat(sfFormat)
+	if err != nil {
+		return "", err
+	}
+	return t.Format(goFormat), nil
 }
 
 func snowflakeFormatToGoFormat(sfFormat string) (string, error) {
@@ -61,11 +74,11 @@ func snowflakeFormatToGoFormat(sfFormat string) (string, error) {
 	return res, nil
 }
 
-func dateTimeFormatByType(dateTimeType string, params map[string]*string) (string, error) {
+func dateTimeOutputFormatByType(dateTimeType string, params map[string]*string) (string, error) {
 	paramsMutex.Lock()
 	defer paramsMutex.Unlock()
 	var format *string
-	switch dateTimeType {
+	switch strings.ToLower(dateTimeType) {
 	case "date":
 		format = params["date_output_format"]
 	case "time":
@@ -89,5 +102,49 @@ func dateTimeFormatByType(dateTimeType string, params map[string]*string) (strin
 	if format != nil {
 		return *format, nil
 	}
-	return "", errors.New("not known format parameter for " + dateTimeType)
+	return "", errors.New("not known output format parameter for " + dateTimeType)
+}
+
+func dateTimeInputFormatByType(dateTimeType string, params map[string]*string) (string, error) {
+	paramsMutex.Lock()
+	defer paramsMutex.Unlock()
+	var format *string
+	switch strings.ToLower(dateTimeType) {
+	case "date":
+		if format = params["date_input_format"]; format == nil || *format == "" {
+			format = params["date_output_format"]
+		}
+	case "time":
+		if format = params["time_input_format"]; format == nil || *format == "" {
+			format = params["time_output_format"]
+		}
+	case "timestamp_ltz":
+		if format = params["timestamp_ltz_input_format"]; format == nil || *format == "" {
+			if format = params["timestamp_input_format"]; format == nil || *format == "" {
+				if format = params["timestamp_ltz_output_format"]; format == nil || *format == "" {
+					format = params["timestamp_output_format"]
+				}
+			}
+		}
+	case "timestamp_tz":
+		if format = params["timestamp_tz_input_format"]; format == nil || *format == "" {
+			if format = params["timestamp_input_format"]; format == nil || *format == "" {
+				if format = params["timestamp_tz_output_format"]; format == nil || *format == "" {
+					format = params["timestamp_output_format"]
+				}
+			}
+		}
+	case "timestamp_ntz":
+		if format = params["timestamp_ntz_input_format"]; format == nil || *format == "" {
+			if format = params["timestamp_input_format"]; format == nil || *format == "" {
+				if format = params["timestamp_ntz_output_format"]; format == nil || *format == "" {
+					format = params["timestamp_output_format"]
+				}
+			}
+		}
+	}
+	if format != nil {
+		return *format, nil
+	}
+	return "", errors.New("not known input format parameter for " + dateTimeType)
 }
