@@ -558,6 +558,32 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
+// IdentityResolutionExecution returns information about the execution of the
+// Identity Resolution.
+//
+//   - if the procedure has been started and completed, returns its start time
+//     and end time;
+//   - if it is in progress, returns its start time and nil for the end time;
+//   - if no Identity Resolution has ever been executed, returns nil and nil.
+//
+// It returns an errors.UnprocessableError error with code DataWarehouseFailed,
+// if an error occurred with the data warehouse.
+func (this *Workspace) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+	this.apis.mustBeOpen()
+	ws := this.workspace
+	if this.store == nil {
+		return nil, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
+	}
+	startTime, endTime, err = this.store.IdentityResolutionExecution(ctx)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return nil, nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
+		}
+		return nil, nil, err
+	}
+	return startTime, endTime, nil
+}
+
 // ChangeWarehouseSettings changes the mode and the settings of the data
 // warehouse for the workspace.
 //
@@ -1055,6 +1081,8 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
+//   - IdentityResolutionAlreadyRunning, if the Identity Resolution is already
+//     running on the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
@@ -1065,6 +1093,9 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	slog.Info("running Identity Resolution", "workspace", this.workspace.ID)
 	err := this.store.RunIdentityResolution(ctx)
 	if err != nil {
+		if err == datastore.ErrIdentityResolutionAlreadyRunning {
+			return errors.Unprocessable(IdentityResolutionAlreadyRunning, "the Identity Resolution is already running on the data warehouse")
+		}
 		if err == datastore.ErrInspectionMode {
 			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 		}

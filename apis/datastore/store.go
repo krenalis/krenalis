@@ -36,6 +36,11 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
+// ErrIdentityResolutionAlreadyRunning is an error that indicates that the
+// Identity Resolution cannot be started because there is already one running on
+// the data warehouse.
+var ErrIdentityResolutionAlreadyRunning = warehouses.IdentityResolutionAlreadyRunning
+
 // IdentityWriterAckFunc is the function called when a batch of user identities
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
@@ -50,8 +55,7 @@ type Store struct {
 		identity map[string]warehouses.Column // including meta properties.
 	}
 	closed               atomic.Bool
-	runningIR            chan struct{} // prevents concurrent executions of the Identity Resolution.
-	mu                   sync.Mutex    // for 'mode', 'events' and 'eventIdentityWriters' fields
+	mu                   sync.Mutex // for 'mode', 'events' and 'eventIdentityWriters' fields
 	mode                 state.WarehouseMode
 	events               [][]any
 	eventIdentityWriters map[int]*EventIdentityWriter // action -> *EventIdentityWriter
@@ -64,7 +68,6 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		ds:                   ds,
 		workspace:            ws.ID,
 		mode:                 ws.Warehouse.Mode,
-		runningIR:            make(chan struct{}, 1),
 		eventIdentityWriters: map[int]*EventIdentityWriter{},
 	}
 	var err error
@@ -324,6 +327,24 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	return records, err
 }
 
+// IdentityResolutionExecution returns information about the execution of the
+// Identity Resolution.
+//
+//   - if the procedure has been started and completed, returns its start time
+//     and end time;
+//   - if it is in progress, returns its start time and nil for the end time;
+//   - if no Identity Resolution has ever been executed, returns nil and nil.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+	store.mustBeOpen()
+	if store.Mode() == state.Maintenance {
+		return nil, nil, ErrMaintenanceMode
+	}
+	return store.warehouse.IdentityResolutionExecution(ctx)
+}
+
 // InitWarehouse initializes the data warehouse creating the events and the
 // destinations_users tables.
 //
@@ -368,6 +389,10 @@ func (store *Store) PurgeIdentities(ctx context.Context, actions []int) error {
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+//
+// If the Identity Resolution is already in execution, it returns the
+// ErrIdentityResolutionAlreadyRunning error.
+//
 // If an error occurs with the data warehouse, it returns a
 // *DataWarehouseError error.
 func (store *Store) RunIdentityResolution(ctx context.Context) error {
@@ -379,17 +404,6 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
-
-	// Prevent concurrent executions of the Identity Resolution. This is a
-	// workaround for the PostgreSQL error:
-	//
-	//     duplicate key value violates unique constraint "pg_proc_proname_args_nsp_index" (SQLSTATE 23505)
-	//
-	// TODO(Gianluca): also take a look at https://github.com/meergo/meergo/issues/967.
-	store.runningIR <- struct{}{}
-	defer func() {
-		<-store.runningIR
-	}()
 
 	// Retrieve the workspace.
 	ws, ok := store.ds.state.Workspace(store.workspace)
@@ -421,7 +435,11 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	return store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
+	err := store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
+	if err != nil && err == warehouses.IdentityResolutionAlreadyRunning {
+		err = ErrIdentityResolutionAlreadyRunning
+	}
+	return err
 }
 
 // SetDestinationUser sets the destination user for an action.

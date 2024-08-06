@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
@@ -148,6 +149,23 @@ func TestIdentityResolution2(t *testing.T) {
 	// Explicitly run the Identity Resolution, even if it has been executed at
 	// the end of the import action executions.
 	c.RunIdentityResolution()
+
+	// Test that the execution of the Identity Resolution has ended and that its
+	// duration has a reasonable value.
+	startTime, endTime := c.IdentityResolutionExecution()
+	if startTime == nil {
+		t.Fatalf("startTime should be a valid timestamp, got nil")
+	}
+	if endTime == nil {
+		t.Fatalf("endTime should be a valid timestamp, got nil")
+	}
+	duration := endTime.Sub(*startTime)
+	if duration == 0 {
+		t.Fatalf("expected a positive Identity Resolution duration, got zero")
+	}
+	if duration > 1*time.Hour {
+		t.Fatalf("expected an Identity Resolution duration less than 1 hour, got a duration of %v", duration)
+	}
 
 	// Check that there is only one user, and that its properties have been
 	// merged correctly.

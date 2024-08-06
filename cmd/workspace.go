@@ -423,6 +423,23 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}, nil
 }
 
+// IdentityResolutionExecution returns information about the execution of the
+// Identity Resolution of the workspace.
+func (workspace workspace) IdentityResolutionExecution(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	startTime, endTime, err := ws.IdentityResolutionExecution(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"startTime": startTime,
+		"endTime":   endTime,
+	}, nil
+}
+
 // UserSchema returns the user schema of a workspace.
 func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)

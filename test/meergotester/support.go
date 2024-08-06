@@ -211,6 +211,16 @@ func (c *Meergo) AddSourcePostgreSQL() int {
 	})
 }
 
+func (c *Meergo) IdentityResolutionExecution() (startTime, endTime *time.Time) {
+	var response struct {
+		StartTime *time.Time `json:"startTime"`
+		EndTime   *time.Time `json:"endTime"`
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/execution", c.ws)
+	c.MustCall("GET", method, nil, &response)
+	return response.StartTime, response.EndTime
+}
+
 func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
 		"RunOnBatchImport": runOnBatchImport,

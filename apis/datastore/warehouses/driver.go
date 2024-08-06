@@ -142,6 +142,18 @@ type Warehouse interface {
 	// error.
 	DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error)
 
+	// IdentityResolutionExecution returns information about the execution of the
+	// Identity Resolution.
+	//
+	// - if the procedure has been started and completed, returns its start time and
+	//   end time;
+	// - if it is in progress, returns its start time and nil for the end time;
+	// - if no Identity Resolution has ever been executed, returns nil and nil.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error)
+
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
 
@@ -201,6 +213,10 @@ type Warehouse interface {
 	// userPrimarySources is a mapping between user column names (for which a
 	// primary source connection have been set) and IDs of primary source
 	// connections.
+	//
+	// If an Identity Resolution is already in execution, returns an
+	// IdentityResolutionAlreadyRunning error. If an error occurs with the data
+	// warehouse, it returns a *DataWarehouseError error.
 	RunIdentityResolution(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// SetDestinationUser sets the destination user for an action.
@@ -470,3 +486,5 @@ func isValidJSON(src any) bool {
 	}
 	return false
 }
+
+var IdentityResolutionAlreadyRunning = errors.New("the Identity Resolution is already running on the data warehouse")

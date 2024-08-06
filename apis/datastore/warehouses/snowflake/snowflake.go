@@ -125,6 +125,12 @@ func (warehouse *Snowflake) DuplicatedUsers(ctx context.Context, column string) 
 	panic("TODO: not implemented")
 }
 
+// IdentityResolutionExecution returns information about the execution of the
+// Identity Resolution.
+func (warehouse *Snowflake) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+	panic("not implemented")
+}
+
 // Init initializes the data warehouse by creating the supporting tables.
 func (warehouse *Snowflake) Init(ctx context.Context) error {
 	return nil

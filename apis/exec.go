@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
@@ -149,7 +150,7 @@ func (this *Action) exec(ctx context.Context) {
 	ws := this.action.Connection().Workspace()
 	if actionImportedUsers && ws.RunIdentityResolutionOnBatchImport {
 		err = this.connection.store.RunIdentityResolution(ctx)
-		if err != nil {
+		if err != nil && err != datastore.ErrIdentityResolutionAlreadyRunning {
 			slog.Error("error while running the Identity Resolution at the end of user import", "err", err)
 			return
 		}
