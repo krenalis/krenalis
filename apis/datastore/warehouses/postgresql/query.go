@@ -33,20 +33,11 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		}
 	}
 
-	// Determine the table name.
-	tableName := query.Table
-	if tableName == "users" {
-		// Change the table name from "users" to "_users" because the PostgreSQL
-		// driver has a view called "users", with columns sorted according to
-		// the schema, while the actual table is called "_users".
-		tableName = "_users"
-	}
-
 	// Build and execute the COUNT query to determine the count of records.
 	var count int
 	var b strings.Builder
 	b.WriteString(`SELECT COUNT(*) FROM "`)
-	b.WriteString(tableName)
+	b.WriteString(query.Table)
 	b.WriteByte('"')
 	if query.Where != nil {
 		b.WriteString(` WHERE `)
@@ -69,7 +60,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		b.WriteByte('"')
 	}
 	b.WriteString(` FROM "`)
-	b.WriteString(tableName)
+	b.WriteString(query.Table)
 	b.WriteByte('"')
 	if query.Where != nil {
 		b.WriteString(` WHERE `)
