@@ -155,6 +155,29 @@ Identifiers:
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
+
+		// TODO(Gianluca): the alter schema of the warehouse is done within the
+		// transaction to avoid updating the state when in reality the alter
+		// schema ends with an error, thus preventing the creation of an
+		// inconsistent state that would require resetting the databases.
+		//
+		// This is just a temporary workaround.
+		//
+		// The topic is discussed in the issue https://github.com/meergo/meergo/issues/692.
+		err = this.store.AlterSchema(ctx, schema, operations)
+		if err != nil {
+			if err == datastore.ErrInspectionMode {
+				return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+			}
+			if err, ok := err.(*datastore.DataWarehouseError); ok {
+				return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+			}
+			if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
+				return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
+			}
+			return err
+		}
+
 		// Update the schema.
 		_, err := tx.Exec(ctx, "UPDATE workspaces SET user_schema = $1, identifiers = $2 WHERE id = $3", schemaJSON, n.Identifiers, n.Workspace)
 		if err != nil {
@@ -175,29 +198,10 @@ Identifiers:
 				return err
 			}
 		}
+
 		return tx.Notify(ctx, n)
 	})
 	if err != nil {
-		return err
-	}
-
-	// Alter the schema on the data warehouse.
-	//
-	// This must also be called even if operations is empty, as it is still
-	// necessary to recreate the views (for example in the case where only the
-	// ordering of properties has been changed).
-	//
-	err = this.store.AlterSchema(ctx, schema, operations)
-	if err != nil {
-		if err == datastore.ErrInspectionMode {
-			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-		}
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		if err, ok := err.(datastore.UnsupportedAlterSchemaErr); ok {
-			return errors.Unprocessable(InvalidSchemaChange, "cannot apply the schema change: %s", err)
-		}
 		return err
 	}
 
