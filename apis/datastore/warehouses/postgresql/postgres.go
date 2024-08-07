@@ -241,15 +241,6 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 
 	var b strings.Builder
 
-	// Determine the table name.
-	tableName := table.Name
-	if tableName == "users" {
-		// Change the table name from "users" to "_users" because the PostgreSQL
-		// driver has a view called "users", with columns sorted according to
-		// the schema, while the actual table is called "_users".
-		tableName = "_users"
-	}
-
 	// Create the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	b.WriteString(`CREATE UNLOGGED TABLE "`)
@@ -261,7 +252,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 		b.WriteString(`",`)
 	}
 	b.WriteString(`false AS "$purge" FROM "`)
-	b.WriteString(tableName)
+	b.WriteString(table.Name)
 	b.WriteString("\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
 	if err != nil {
@@ -303,7 +294,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.MergeTa
 	// Merge the temporary table's rows with the destination table's rows.
 	b.Reset()
 	b.WriteString(`MERGE INTO "`)
-	b.WriteString(tableName)
+	b.WriteString(table.Name)
 	b.WriteString("\" d\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString("\" s\nON ")
