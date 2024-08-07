@@ -64,6 +64,9 @@ func makeVendor() error {
 					if args.Kind == api.ResolveEntryPoint {
 						return api.OnResolveResult{}, nil
 					}
+					if strings.HasPrefix(args.Path, "data:") {
+						return api.OnResolveResult{}, nil
+					}
 					var key string
 					if dir, ok := strings.CutPrefix(args.ResolveDir, nodeModulesDir); ok {
 						key = pathKey(dir, args.Path)

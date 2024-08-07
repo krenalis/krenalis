@@ -221,6 +221,9 @@ func build(outDir, assetsDir string, resolve map[string]string) error {
 						if args.Kind == api.ResolveEntryPoint {
 							return api.OnResolveResult{}, nil
 						}
+						if strings.HasPrefix(args.Path, "data:") {
+							return api.OnResolveResult{}, nil
+						}
 						var key string
 						if dir, ok := strings.CutPrefix(args.ResolveDir, vendorDir); ok {
 							key = pathKey(dir, args.Path)
