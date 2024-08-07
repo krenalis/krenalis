@@ -118,17 +118,24 @@ CREATE TABLE actions_executions (
     reimport boolean NOT NULL DEFAULT FALSE,
     start_time timestamp NOT NULL,
     end_time timestamp DEFAULT NULL,
-    passed integer[6] DEFAULT NULL,
-    failed integer[6] DEFAULT NULL,
-    error varchar(1000) NOT NULL DEFAULT '',
+    passed integer DEFAULT 0 NOT NULL,
+    failed integer DEFAULT 0 NOT NULL,
+    error_step smallint,
+    error_message varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
-CREATE TABLE actions_log (
+CREATE TABLE actions_errors (
     action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     timeslot integer NOT NULL,
+    step smallint NOT NULL,
+    count integer NOT NULL,
     message varchar NOT NULL
 );
+
+CREATE INDEX ON actions_errors (action);
+CREATE INDEX ON actions_errors (timeslot);
+CREATE INDEX ON actions_errors (step);
 
 CREATE TABLE actions_stats (
     action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
@@ -147,6 +154,9 @@ CREATE TABLE actions_stats (
     failed_5 integer NOT NULL,
     PRIMARY KEY (action, timeslot)
 );
+
+CREATE INDEX ON actions_stats (action);
+CREATE INDEX ON actions_stats (timeslot);
 
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,

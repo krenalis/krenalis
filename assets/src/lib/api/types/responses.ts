@@ -1,3 +1,4 @@
+import { ActionError } from './action';
 import { ObjectType } from './types';
 import ConnectorField, { ConnectorButton, ConnectorAlert } from './ui';
 import { UserEvent, UserIdentity, UserTraits } from './user';
@@ -169,6 +170,10 @@ interface ChangeUserSchemaQueriesResponse {
 	Queries: string[];
 }
 
+interface ActionErrorsResponse {
+	errors: ActionError[];
+}
+
 export type {
 	authCodeURLResponse,
 	ConnectorUIResponse,
@@ -201,4 +206,6 @@ export type {
 	RePaths,
 	ChangeUserSchemaQueriesResponse,
 	ResponseUser,
+	ActionError,
+	ActionErrorsResponse,
 };

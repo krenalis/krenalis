@@ -33,6 +33,7 @@ import (
 	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/apis/statistics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -74,6 +75,273 @@ type DisplayedProperties struct {
 	FirstName   string
 	LastName    string
 	Information string
+}
+
+// ActionStep represents a step of an action.
+type ActionStep int
+
+const (
+	ReceivingStep        = ActionStep(statistics.ReceivingStep)
+	InputValidationStep  = ActionStep(statistics.InputValidationStep)
+	FilteringStep        = ActionStep(statistics.FilteringStep)
+	TransformationStep   = ActionStep(statistics.TransformationStep)
+	OutputValidationStep = ActionStep(statistics.OutputValidationStep)
+	FinalizingStep       = ActionStep(statistics.FinalizingStep)
+)
+
+func (step ActionStep) String() string {
+	switch step {
+	case ReceivingStep:
+		return "Receiving"
+	case InputValidationStep:
+		return "InputValidation"
+	case FilteringStep:
+		return "Filtering"
+	case TransformationStep:
+		return "Transformation"
+	case OutputValidationStep:
+		return "OutputValidation"
+	case FinalizingStep:
+		return "Finalizing"
+	}
+	panic("apis: invalid ActionStep")
+}
+
+// ParseActionStep parses an action step and returns it. If step is not a valid
+// returns 0 and an error.
+func ParseActionStep(step string) (ActionStep, error) {
+	switch step {
+	case "Receiving":
+		return ReceivingStep, nil
+	case "InputValidation":
+		return InputValidationStep, nil
+	case "Filtering":
+		return FilteringStep, nil
+	case "Transformation":
+		return TransformationStep, nil
+	case "OutputValidation":
+		return OutputValidationStep, nil
+	case "Finalizing":
+		return FinalizingStep, nil
+	}
+	return 0, fmt.Errorf("step is not valid")
+}
+
+// ActionError represents an action error.
+type ActionError struct {
+	Action       int
+	Step         ActionStep
+	Count        int
+	Message      string
+	LastOccurred time.Time
+}
+
+// ActionErrors returns the errors for the provided actions within the time
+// range [start,end). The end time must not precede the start time, and both
+// must be within [statistics.MinTime,statistics.MaxTime]. actions must not be
+// empty. Returned errors are limited to [first, first+limit), where first >= 0
+// and 0 < limit <= 100.
+func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, actions []int, step *ActionStep, first, limit int) ([]ActionError, error) {
+
+	this.apis.mustBeOpen()
+
+	start = start.UTC()
+	end = end.UTC()
+
+	// Validate start and end.
+	if start.Before(statistics.MinTime) {
+		return nil, errors.New("start date is too far in the past")
+	}
+	if end.After(statistics.MaxTime) {
+		return nil, errors.New("end date date is too far in the future")
+	}
+	if end.Before(start) {
+		return nil, fmt.Errorf("end date cannot be earlier than start date")
+	}
+
+	// Validate actions.
+	if len(actions) == 0 {
+		return nil, errors.BadRequest("actions cannot be empty")
+	}
+	for _, action := range actions {
+		if action < 1 || action > maxInt32 {
+			return nil, errors.BadRequest("action %d is not valid", action)
+		}
+	}
+
+	// Validate step.
+	var s *statistics.Step
+	if step != nil {
+		if *step < ReceivingStep || *step > FinalizingStep {
+			return nil, errors.BadRequest("step %d is not valid", *step)
+		}
+		s = (*statistics.Step)(step)
+	}
+
+	// validate first and limit.
+	if first < 0 || first > 9999 {
+		return nil, errors.BadRequest("first must be in range [0,9999]")
+	}
+	if limit < 1 || limit > 100 {
+		return nil, errors.BadRequest("limit must be in range [1,100]")
+	}
+
+	actions = filterWorkspaceActions(this.workspace, actions)
+	if len(actions) == 0 {
+		return []ActionError{}, nil
+	}
+
+	statisticsErrors, err := this.apis.statistics.Errors(ctx, start, end, actions, s, first, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	errs := make([]ActionError, len(statisticsErrors))
+	for i, e := range statisticsErrors {
+		errs[i] = ActionError{
+			Action:       e.Action,
+			Step:         ActionStep(e.Step),
+			Count:        e.Count,
+			Message:      e.Message,
+			LastOccurred: e.LastOccurred,
+		}
+	}
+
+	return errs, nil
+}
+
+// ActionStats represents action statistics for a time period.
+type ActionStats struct {
+	Start, End time.Time
+	Passed     [][6]int
+	Failed     [][6]int
+}
+
+// StatsUnit represents the unit of time used for aggregating statistics.
+// It can be:
+// - Minute: aggregates statistics by minute
+// - Hour: aggregates statistics by hour
+// - Day: aggregates statistics by day
+type StatsUnit int
+
+const (
+	Minute = StatsUnit(statistics.Minute)
+	Hour   = StatsUnit(statistics.Hour)
+	Day    = StatsUnit(statistics.Day)
+)
+
+// ActionStatsPerDate returns statistics aggregated by day for the time interval
+// between the specified start and end dates. The years in the dates must be
+// no earlier than 1970 and no later than the next year. The day of the start
+// date must be at least one day before the day of the end date. actions
+// specifies the actions for which statistics are returned and must not be
+// empty.
+func (this *Workspace) ActionStatsPerDate(ctx context.Context, start, end time.Time, actions []int) (ActionStats, error) {
+
+	this.apis.mustBeOpen()
+
+	start = start.UTC().Truncate(24 * time.Hour)
+	end = end.UTC().Truncate(24 * time.Hour)
+
+	// Validate start and end.
+	if start.Before(statistics.MinTime) {
+		return ActionStats{}, errors.BadRequest("start date is too far in the past")
+	}
+	if end.After(statistics.MaxTime) {
+		return ActionStats{}, errors.BadRequest("end date date is too far in the future")
+	}
+	if !end.After(start) {
+		return ActionStats{}, errors.BadRequest("day of the end date must be after the day of the start date")
+	}
+
+	// Validate actions.
+	if len(actions) == 0 {
+		return ActionStats{}, errors.BadRequest("actions if non-nil, cannot be empty")
+	}
+	for _, action := range actions {
+		if action < 1 || action > maxInt32 {
+			return ActionStats{}, errors.BadRequest("action %d is not valid", action)
+		}
+	}
+
+	actions = filterWorkspaceActions(this.workspace, actions)
+	if len(actions) == 0 {
+		number := int(end.Sub(start).Hours() / 24)
+		return ActionStats{
+			Start:  start,
+			End:    end,
+			Passed: make([][6]int, number),
+			Failed: make([][6]int, number),
+		}, nil
+	}
+
+	stats, err := this.apis.statistics.StatsPerDate(ctx, start, end, actions)
+	if err != nil {
+		return ActionStats{}, err
+	}
+
+	return ActionStats{
+		Start:  stats.Start,
+		End:    stats.End,
+		Passed: stats.Passed,
+		Failed: stats.Failed,
+	}, nil
+}
+
+// ActionStatsPerTimeUnit returns statistics for the specified number of
+// minutes, hours, or days based on the unit, which can be Minute, Hour, or Day,
+// up to the current time. number must be in the following ranges: [1,60] for
+// minutes, [1,48] for hours, and [1,30] for days. actions specifies the actions
+// for which statistics are returned and must not be empty.
+func (this *Workspace) ActionStatsPerTimeUnit(ctx context.Context, number int, unit StatsUnit, actions []int) (ActionStats, error) {
+
+	this.apis.mustBeOpen()
+
+	// Validate number and unit.
+	switch unit {
+	case Minute:
+		if number < 1 || number > 60 {
+			return ActionStats{}, errors.BadRequest("minutes must be in range [1,60]")
+		}
+	case Hour:
+		if number < 1 || number > 48 {
+			return ActionStats{}, errors.BadRequest("hours must be in range [1,48]")
+		}
+	case Day:
+		if number < 1 || number > 30 {
+			return ActionStats{}, errors.BadRequest("days must be in range [1,30]")
+		}
+	}
+
+	// Validate actions.
+	if len(actions) == 0 {
+		return ActionStats{}, errors.BadRequest("actions if non-nil, cannot be empty")
+	}
+	for _, action := range actions {
+		if action < 1 || action > maxInt32 {
+			return ActionStats{}, errors.BadRequest("action %d is not valid", action)
+		}
+	}
+
+	actions = filterWorkspaceActions(this.workspace, actions)
+	if len(actions) == 0 {
+		return ActionStats{
+			Passed: make([][6]int, number),
+			Failed: make([][6]int, number),
+		}, nil
+	}
+
+	stats, err := this.apis.statistics.StatsPerTimeUnit(ctx, number, time.Duration(unit), actions)
+	if err != nil {
+		return ActionStats{}, err
+	}
+
+	return ActionStats{
+		Start:  stats.Start,
+		End:    stats.End,
+		Passed: stats.Passed,
+		Failed: stats.Failed,
+	}, nil
 }
 
 // AddConnection adds a new connection. oAuthToken is an OAuth token returned by
@@ -1802,4 +2070,26 @@ type UserIdentity struct {
 	ID             string    `json:"id"`           // empty string for identities imported from anonymous events.
 	AnonymousIds   []string  `json:"anonymousIds"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
+}
+
+// filterWorkspaceActions returns from actions, only the actions of the provided
+// workspace. It does not change actions.
+func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
+	notExists := map[int]struct{}{}
+	for _, action := range actions {
+		notExists[action] = struct{}{}
+	}
+	for _, c := range ws.Connections() {
+		for _, a := range c.Actions() {
+			delete(notExists, a.ID)
+		}
+	}
+	if len(notExists) == 0 {
+		return actions
+	}
+	actions = slices.DeleteFunc(slices.Clone(actions), func(id int) bool {
+		_, ok := notExists[id]
+		return ok
+	})
+	return actions
 }

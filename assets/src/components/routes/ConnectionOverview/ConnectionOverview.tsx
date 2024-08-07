@@ -1,33 +1,200 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef, ReactNode } from 'react';
 import './ConnectionOverview.css';
-import Flex from '../../base/Flex/Flex';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
-import { NotFoundError } from '../../../lib/api/errors';
-import { BarChart, Bar, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import { ConnectionStats } from '../../../lib/api/types/connection';
-import { GridRow } from '../../base/Grid/Grid.types';
-import { Execution } from '../../../lib/api/types/responses';
+import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
+import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import { DateRange } from 'react-date-range';
+import { ActionError, ActionErrorsResponse } from '../../../lib/api/types/responses';
+import { ActionStatistics } from '../../../lib/api/types/action';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
+import TransformedConnection from '../../../lib/core/connection';
+import { Link } from '../../base/Link/Link';
+import considerAsUTC from '../../../utils/considerUTC';
 
-const EXECUTIONS_COLUMNS = [
-	{ name: 'ID' },
-	{ name: 'Start time', type: 'DateTime' },
-	{ name: 'End time', type: 'DateTime' },
-	{ name: 'Errors' },
+interface ActionStatisticsPoint {
+	time: string;
+	passed: number;
+	failed: number;
+	total: number;
+}
+
+interface FunnelPoint {
+	passed: number;
+	failed: number;
+}
+
+type FunnelData = FunnelPoint[];
+
+type statisticsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
+
+const MINUTES_COUNT = 15;
+const HOURS_COUNT = 24;
+const DAYS_COUNT = 7;
+
+const ERRORS_COLUMNS: GridColumn[] = [
+	{ name: 'Action' },
+	{ name: 'Step' },
+	{ name: 'Count', alignment: 'center' },
+	{ name: 'Last occurred' },
+	{ name: 'Error' },
+];
+
+const STEP_NAMES: string[] = [
+	'Receiving',
+	'Input validation',
+	'Filtering',
+	'Transformation',
+	'Output validation',
+	'Finalizing',
 ];
 
 const ConnectionOverview = () => {
-	const [userStats, setUserStats] = useState<any[]>([]);
-	const [executions, setExecutions] = useState<Execution[]>([]);
-	const [hasExecutions, setHasExecutions] = useState<boolean>(true);
-	const [selectedExecution, setSelectedExecution] = useState<Execution>(null);
+	const [userActionsStatistics, setUserActionsStatistics] = useState<ActionStatistics>();
+	const [eventActionsStatistics, setEventActionsStatistics] = useState<ActionStatistics>();
+	const [userActionsErrors, setUserActionsErrors] = useState<ActionError[]>([]);
+	const [eventActionsErrors, setEventActionsErrors] = useState<ActionError[]>([]);
+	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [selectedTarget, setSelectedTarget] = useState<'Users' | 'Events'>('Users');
+	const [selectedStatisticsRange, setSelectedStatisticsRange] = useState<statisticsRange>('last15Minutes');
+	const [isCustomStatisticsRangePickerOpen, setIsCustomStatisticsRangePickerOpen] = useState<boolean>(false);
+	const [customStatisticsRange, setCustomStatisticsRange] = useState([
+		{
+			startDate: new Date(),
+			endDate: new Date(),
+			key: 'selection',
+		},
+	]);
 
-	const { api, handleError, redirect } = useContext(AppContext);
+	const { api, handleError } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
+
+	const supportedTargets = useRef([]);
+	const currentStatisticsIntervalID = useRef<number>();
+
+	const { userActionErrorRows, eventActionErrorRows } = useMemo(() => {
+		return {
+			userActionErrorRows: computeActionErrorRows(c, userActionsErrors),
+			eventActionErrorRows: computeActionErrorRows(c, eventActionsErrors),
+		};
+	}, [userActionsErrors, eventActionsErrors]);
+
+	const { userActionStatisticsData, eventActionStatisticsData } = useMemo(() => {
+		return {
+			userActionStatisticsData: computeActionStatisticsData(userActionsStatistics, selectedStatisticsRange),
+			eventActionStatisticsData: computeActionStatisticsData(eventActionsStatistics, selectedStatisticsRange),
+		};
+	}, [userActionsStatistics, eventActionsStatistics]);
+
+	const { userFunnelData, eventFunnelData } = useMemo(() => {
+		return {
+			userFunnelData: computeFunnelData(userActionsStatistics),
+			eventFunnelData: computeFunnelData(eventActionsStatistics),
+		};
+	}, [userActionsStatistics, eventActionsStatistics]);
+
+	const hasFilters = useMemo(() => {
+		let hasFilters = false;
+		if (c.isSource && (c.isMobile || c.isServer || c.isWebsite) && selectedTarget === 'Users') {
+			hasFilters = true;
+		} else if (c.isDestination && c.isApp) {
+			hasFilters = true;
+		} else if (c.isDestination && c.isDatabase && selectedTarget === 'Users') {
+			hasFilters = true;
+		} else if (c.isDestination && c.isFileStorage && selectedTarget === 'Users') {
+			hasFilters = true;
+		}
+		return hasFilters;
+	}, [c, selectedTarget]);
+
+	useEffect(() => {
+		let data: FunnelData;
+		if (selectedTarget === 'Events') {
+			if (eventFunnelData == null) {
+				return;
+			}
+			data = eventFunnelData;
+		} else {
+			if (userFunnelData == null) {
+				return;
+			}
+			data = userFunnelData;
+		}
+		const arrows: ReactNode[] = [];
+		for (let i = 0; i < 6; i++) {
+			const isBeforeFilterStep = i === 1;
+			const isFilterStep = i === 2;
+			if (!hasFilters && isFilterStep) {
+				continue;
+			}
+			let nextCircleIndex = i;
+			if (!hasFilters && isBeforeFilterStep) {
+				// connect the arrow to the circle that is next to the filter
+				// one.
+				nextCircleIndex += 1;
+			}
+
+			let forwardArrow = (
+				<Arrow
+					key={`forward-arrow-${i}`}
+					start={`funnel-circle-passed-${i}`}
+					end={`funnel-circle-passed-${nextCircleIndex + 1}`}
+					startAnchor='right'
+					endAnchor='left'
+					showHead={true}
+					label={
+						i === 5 ? null : (
+							<div className='connection-overview__funnel-label connection-overview__funnel-label--passed'>
+								{String(data[i].passed)}
+							</div>
+						)
+					}
+				></Arrow>
+			);
+			let bottomArrow = (
+				<Arrow
+					key={`bottom-arrow-${i}`}
+					start={`funnel-circle-passed-${i}`}
+					end={`funnel-circle-failed-${i}`}
+					startAnchor='bottom'
+					endAnchor='top'
+					showHead={true}
+					path='grid'
+					label={
+						<div
+							className={`connection-overview__funnel-label connection-overview__funnel-label--failed${isFilterStep ? ' connection-overview__funnel-label--discarded' : ''}`}
+						>
+							{String(data[i].failed)}
+						</div>
+					}
+				></Arrow>
+			);
+			arrows.push(
+				<>
+					{forwardArrow}
+					{bottomArrow}
+				</>,
+			);
+		}
+		arrows.push(
+			<Arrow
+				start='funnel-circle-initial'
+				end='funnel-circle-passed-0'
+				startAnchor='right'
+				endAnchor='left'
+				showHead={true}
+			></Arrow>,
+		);
+		setFunnelArrows(arrows);
+	}, [isLoading, eventFunnelData, userFunnelData]);
 
 	useEffect(() => {
 		const stopLoading = () => {
@@ -36,59 +203,155 @@ const ConnectionOverview = () => {
 			}, 300);
 		};
 		const fetchData = async () => {
-			if (c.type !== 'App' && c.type !== 'Database' && c.type !== 'FileStorage') {
-				setHasExecutions(false);
+			let userActionsIds: number[] = [];
+			let eventActionsIds: number[] = [];
+			for (const action of c.actions) {
+				if (action.Target === 'Users') {
+					userActionsIds.push(action.ID);
+				} else if (action.Target === 'Events') {
+					eventActionsIds.push(action.ID);
+				}
+			}
+
+			if (userActionsIds.length === 0 && eventActionsIds.length === 0) {
 				stopLoading();
 				return;
 			}
-			// get the stats.
-			let stats: ConnectionStats;
-			try {
-				stats = await api.workspaces.connections.stats(c.id);
-			} catch (err) {
-				if (err instanceof NotFoundError) {
-					redirect('connections');
-					handleError('The connection does not exist anymore');
-					stopLoading();
+
+			if (userActionsIds.length > 0) {
+				supportedTargets.current.push('Users');
+			}
+
+			if (eventActionsIds.length > 0) {
+				supportedTargets.current.push('Events');
+			}
+
+			let fetchStatistics: (...args) => Promise<ActionStatistics> = null;
+			if (selectedStatisticsRange === 'last15Minutes') {
+				fetchStatistics = async (actionIds) =>
+					await api.workspaces.actionStatsPerMinute(MINUTES_COUNT, actionIds);
+			} else if (selectedStatisticsRange === 'last24Hours') {
+				fetchStatistics = async (actionIds) => await api.workspaces.actionStatsPerHour(HOURS_COUNT, actionIds);
+			} else if (selectedStatisticsRange === 'last7Days') {
+				fetchStatistics = async (actionIds) => await api.workspaces.actionStatsPerDay(DAYS_COUNT, actionIds);
+			} else {
+				// end date must be shifted by one day to retrieve the
+				// statistics including the last selected day.
+				const endDate = new Date(customStatisticsRange[0].endDate);
+				endDate.setDate(endDate.getDate() + 1);
+				try {
+					validateStatisticsRangeDates(customStatisticsRange[0].startDate, endDate);
+				} catch (err) {
+					// fallback to the default statistics range.
+					setSelectedStatisticsRange('last15Minutes');
+					handleError(err);
 					return;
 				}
-				handleError(err);
-				stopLoading();
-				return;
+				fetchStatistics = async (actionIds) =>
+					await api.workspaces.actionStatsPerDate(customStatisticsRange[0].startDate, endDate, actionIds);
 			}
-			const userStats: any[] = [];
-			// compute the last 24 hours.
-			var ts = Math.round(new Date().getTime());
-			for (const [i, userCount] of stats.UserIdentities.entries()) {
-				const relativeTs = ts + (i + 1) * 3600 * 1000;
-				const d = new Date(relativeTs);
-				const hour = d.getHours();
-				userStats.push({ name: hour, users: userCount });
-			}
-			setUserStats(userStats);
 
-			// get the executions.
-			let executions: Execution[];
+			let ids: number[] = [];
+			if (selectedTarget === 'Users' && userActionsIds.length > 0) {
+				ids = userActionsIds;
+			} else if (selectedTarget === 'Events' && eventActionsIds.length > 0) {
+				ids = eventActionsIds;
+			}
+
+			let statistics: ActionStatistics;
 			try {
-				executions = await api.workspaces.connections.executions(c.id);
+				statistics = await fetchStatistics(ids);
 			} catch (err) {
 				handleError(err);
 				stopLoading();
 				return;
 			}
-			setExecutions(executions);
-			stopLoading();
-			const params = new URLSearchParams(window.location.search);
-			const hasFailedExecution = params.has('failed-execution-action');
-			if (hasFailedExecution) {
-				setTimeout(() => {
-					const executionsListElement = document.querySelector('.connection-overview__executions');
-					executionsListElement.scrollIntoView({ behavior: 'smooth' });
-				}, 500);
+			if (selectedTarget === 'Users') {
+				setUserActionsStatistics(statistics);
+			} else {
+				setEventActionsStatistics(statistics);
+			}
+
+			let errorRes: ActionErrorsResponse;
+			try {
+				errorRes = await api.workspaces.actionErrors(statistics.start, statistics.end, ids, 0, 50, null);
+			} catch (err) {
+				handleError(err);
+				stopLoading();
+				return;
+			}
+			if (selectedTarget === 'Users') {
+				setUserActionsErrors(errorRes.errors);
+			} else {
+				setEventActionsErrors(errorRes.errors);
+			}
+
+			if (isLoading) {
+				stopLoading();
 			}
 		};
+
+		if (currentStatisticsIntervalID.current != null) {
+			clearInterval(currentStatisticsIntervalID.current);
+		}
+
+		currentStatisticsIntervalID.current = setInterval(() => {
+			fetchData();
+		}, 5000);
 		fetchData();
+
+		return () => {
+			clearInterval(currentStatisticsIntervalID.current);
+		};
+	}, [c, selectedTarget, selectedStatisticsRange, customStatisticsRange]);
+
+	useEffect(() => {
+		const handleCustomRangePickerClick = (e) => {
+			const isInRangePicker = e.target.closest('.connection-overview__tabs-date-range-picker') != null;
+			if (!isInRangePicker) {
+				const isInRangePickerSelector = e.target.closest('.connection-overview__tabs-date-range') != null;
+				if (!isInRangePickerSelector) {
+					setIsCustomStatisticsRangePickerOpen(false);
+				}
+			}
+		};
+		window.addEventListener('click', handleCustomRangePickerClick);
+		() => {
+			window.removeEventListener('click', handleCustomRangePickerClick);
+		};
 	}, []);
+
+	const onSelectUsers = () => {
+		setSelectedTarget('Users');
+	};
+
+	const onSelectEvents = () => {
+		setSelectedTarget('Events');
+	};
+
+	const onSelectLast15Minutes = () => {
+		setSelectedStatisticsRange('last15Minutes');
+	};
+
+	const onSelectLast24Hours = () => {
+		setSelectedStatisticsRange('last24Hours');
+	};
+
+	const onSelectLast7Days = () => {
+		setSelectedStatisticsRange('last7Days');
+	};
+
+	const onSelectCustom = () => {
+		setIsCustomStatisticsRangePickerOpen(!isCustomStatisticsRangePickerOpen);
+	};
+
+	const onChangeCustomStatisticsRange = (selection) => {
+		// the dates must be considered UTC.
+		selection[0].startDate = considerAsUTC(selection[0].startDate);
+		selection[0].endDate = considerAsUTC(selection[0].endDate);
+		setCustomStatisticsRange(selection);
+		setSelectedStatisticsRange('Custom');
+	};
 
 	if (isLoading) {
 		return (
@@ -105,54 +368,174 @@ const ConnectionOverview = () => {
 		);
 	}
 
-	const rows: GridRow[] = [];
-	for (const exec of executions) {
-		const errorCell = (
-			<div
-				className={`connection-overview__cell-error${exec.Error !== '' ? ' connection-overview__cell-error--has-error' : ''}`}
-				onClick={() => {
-					setSelectedExecution(exec);
-				}}
-			>
-				{exec.Error === '' ? '-' : exec.Error}
-			</div>
-		);
-		const row = { cells: [exec.ID, exec.StartTime, exec.EndTime, errorCell], key: String(exec.ID) };
-		rows.push(row);
+	const hasBothTargets = supportedTargets.current.includes('Users') && supportedTargets.current.includes('Events');
+	const isUsersSelected = selectedTarget === 'Users';
+	let titleRange = '';
+	if (selectedStatisticsRange === 'last15Minutes') {
+		titleRange = 'in the last 15 minutes';
+	} else if (selectedStatisticsRange === 'last24Hours') {
+		titleRange = 'in the last 24 hours';
+	} else if (selectedStatisticsRange === 'last7Days') {
+		titleRange = 'in the last 7 days';
+	} else {
+		titleRange = `between ${customStatisticsRange[0].startDate.toLocaleDateString()} and ${customStatisticsRange[0].endDate.toLocaleDateString()}`;
 	}
 
 	return (
 		<div className='connection-overview'>
-			{hasExecutions ? (
+			{supportedTargets.current.length > 0 ? (
 				<>
-					{c.role === 'Source' && (
-						<div className='connection-overview__chart'>
-							<Flex
-								className='connection-overview__cart-head'
-								justifyContent='space-between'
-								alignItems='baseline'
+					<div className='connection-overview__tabs'>
+						{hasBothTargets && (
+							<SlButtonGroup>
+								<SlButton
+									variant={isUsersSelected ? 'default' : 'primary'}
+									onClick={onSelectEvents}
+									size='small'
+								>
+									Events
+								</SlButton>
+								<SlButton
+									variant={isUsersSelected ? 'primary' : 'default'}
+									onClick={onSelectUsers}
+									size='small'
+								>
+									Users
+								</SlButton>
+							</SlButtonGroup>
+						)}
+						<SlButtonGroup>
+							<SlButton
+								variant={selectedStatisticsRange === 'last15Minutes' ? 'primary' : 'default'}
+								onClick={onSelectLast15Minutes}
+								size='small'
 							>
-								<div className='connection-overview__cart-title'>
-									User identities ingested by {c.name} in the last 24 hours
+								Last 15 minutes
+							</SlButton>
+							<SlButton
+								variant={selectedStatisticsRange === 'last24Hours' ? 'primary' : 'default'}
+								onClick={onSelectLast24Hours}
+								size='small'
+							>
+								Last 24 hours
+							</SlButton>
+							<SlButton
+								variant={selectedStatisticsRange === 'last7Days' ? 'primary' : 'default'}
+								onClick={onSelectLast7Days}
+								size='small'
+							>
+								Last 7 days
+							</SlButton>
+							<div className='connection-overview__tabs-date-range'>
+								<SlButton
+									variant={selectedStatisticsRange === 'Custom' ? 'primary' : 'default'}
+									onClick={onSelectCustom}
+									size='small'
+								>
+									{selectedStatisticsRange === 'Custom'
+										? `${customStatisticsRange[0].startDate.toLocaleDateString()} - ${customStatisticsRange[0].endDate.toLocaleDateString()}`
+										: 'Custom range'}
+								</SlButton>
+								<div
+									className={`connection-overview__tabs-date-range-picker${isCustomStatisticsRangePickerOpen ? ' connection-overview__tabs-date-range-picker--open' : ''}`}
+								>
+									<DateRange
+										editableDateInputs={true}
+										onChange={(item) => onChangeCustomStatisticsRange([item.selection])}
+										showSelectionPreview={true}
+										moveRangeOnFirstSelection={false}
+										months={2}
+										ranges={customStatisticsRange}
+										direction='horizontal'
+									/>
 								</div>
-							</Flex>
-							<BarChart width={1400} height={350} data={userStats}>
+							</div>
+						</SlButtonGroup>
+					</div>
+					<div className='connection-overview__chart'>
+						<div className='connection-overview__chart-heading'>
+							{isUsersSelected ? 'Users' : 'Events'} {c.isSource ? 'ingestion' : 'exports'} {titleRange}
+						</div>
+						<ResponsiveContainer width='100%' height='100%'>
+							<ComposedChart
+								data={isUsersSelected ? userActionStatisticsData : eventActionStatisticsData}
+								margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+							>
 								<CartesianGrid strokeDasharray='3 3' />
-								<XAxis dataKey='name' />
+								<XAxis dataKey='time' />
 								<YAxis />
 								<Tooltip />
-								<Bar dataKey='users' fill='var(--color-primary-600)' />
-							</BarChart>
+								<Legend />
+								<Bar dataKey='passed' fill='#4f46e5' />
+								<Bar dataKey='failed' fill='#cf3a3a' />
+								<Line
+									type='monotone'
+									dataKey='total'
+									stroke='#a1a1aa'
+									strokeDasharray='7 7'
+									dot={{ stroke: '#3f3f46', fill: '#3f3f46', strokeWidth: 0 }}
+								/>
+							</ComposedChart>
+						</ResponsiveContainer>
+						{selectedStatisticsRange !== 'Custom' && (
+							<div className='connection-overview__chart-now'>Now</div>
+						)}
+					</div>
+					<div className='connection-overview__funnel'>
+						<div className='connection-overview__funnel-heading'>Pipeline</div>
+						<div className='connection-overview__funnel-passed'>
+							<div className='connection-overview__funnel-initial' id={`funnel-circle-initial`}>
+								{isUsersSelected
+									? userFunnelData[0].passed + userFunnelData[0].failed
+									: eventFunnelData[0].passed + eventFunnelData[0].failed}
+							</div>
+							{Object.keys(isUsersSelected ? userFunnelData : eventFunnelData).map((_, i) => {
+								const isFilterStep = i === 2;
+								if (!hasFilters && isFilterStep) {
+									return null;
+								}
+								return (
+									<div key={`funnel-passed-${i}`}>
+										<div className='connection-overview__funnel-title'>
+											{c.isDestination && c.isApp && i === 5 ? 'Delivering' : STEP_NAMES[i]}
+										</div>
+										<div
+											className='connection-overview__funnel-circle'
+											id={`funnel-circle-passed-${i}`}
+										></div>
+									</div>
+								);
+							})}
+							<div className='connection-overview__funnel-final' id={`funnel-circle-passed-6`}>
+								{isUsersSelected
+									? userFunnelData[5].passed - userFunnelData[5].failed
+									: eventFunnelData[5].passed - eventFunnelData[5].failed}
+							</div>
 						</div>
-					)}
-					<div className='connection-overview__executions'>
-						<div className='connection-overview__executions-title'>
-							{c.role === 'Source' ? 'Imports' : 'Exports'}
+						<div className='connection-overview__funnel-failed'>
+							<div key='funnel-initial-empty'></div>
+							{Object.keys(isUsersSelected ? userFunnelData : eventFunnelData).map((_, i) => {
+								const isFilterStep = i === 2;
+								if (!hasFilters && isFilterStep) {
+									return null;
+								}
+								return (
+									<div
+										key={`funnel-failed-${i}`}
+										className='connection-overview__funnel-circle'
+										id={`funnel-circle-failed-${i}`}
+									></div>
+								);
+							})}
 						</div>
+						{funnelArrows}
+					</div>
+					<div className='connection-overview__errors'>
+						<div className='connection-overview__errors-heading'>Failures {titleRange}</div>
 						<Grid
-							columns={EXECUTIONS_COLUMNS}
-							rows={rows}
-							noRowsMessage={`No execution has been yet performed from the ${c.name} connection`}
+							columns={ERRORS_COLUMNS}
+							rows={isUsersSelected ? userActionErrorRows : eventActionErrorRows}
+							noRowsMessage={`No error has been returned ${titleRange}`}
 						/>
 					</div>
 				</>
@@ -161,17 +544,116 @@ const ConnectionOverview = () => {
 					Currently there is nothing to show for connection {c.name}
 				</div>
 			)}
-			<SlDialog
-				open={selectedExecution !== null}
-				style={{ '--width': '600px' } as React.CSSProperties}
-				onSlAfterHide={() => setSelectedExecution(null)}
-				className='connection-overview__selected-error-dialog'
-				label={selectedExecution ? `${c.role === 'Source' ? 'Import' : 'Export'} ${selectedExecution.ID}` : ''}
-			>
-				{selectedExecution ? selectedExecution.Error : ''}
-			</SlDialog>
 		</div>
 	);
+};
+
+const computeActionErrorRows = (connection: TransformedConnection, actionErrors: ActionError[]): GridRow[] => {
+	if (actionErrors == null) {
+		return null;
+	}
+	let actionErrorRows: GridRow[] = [];
+	for (const error of actionErrors) {
+		const row = {
+			cells: [
+				<Link path={`connections/${connection.id}/actions/edit/${error.Action}`}>
+					{connection.actions.find((a) => a.ID == error.Action)?.Name}
+				</Link>,
+				STEP_NAMES[error.Step],
+				error.Count,
+				<SlRelativeTime date={error.LastOccurred.toISOString()} lang='en-US' />,
+				error.Message,
+			],
+		};
+		actionErrorRows.push(row);
+	}
+	return actionErrorRows;
+};
+
+const computeActionStatisticsData = (
+	actionStatistics: ActionStatistics,
+	range: statisticsRange,
+): ActionStatisticsPoint[] => {
+	if (actionStatistics == null) {
+		return null;
+	}
+	let points: ActionStatisticsPoint[] = [];
+	const timeLength = actionStatistics.passed.length;
+	let counter = timeLength;
+	for (let timeUnit = 0; timeUnit < timeLength; timeUnit++) {
+		let failedTotal = 0;
+		for (let i = 0; i < 6; i++) {
+			if (i === 2) {
+				// filtered must not be considered as failed.
+				continue;
+			}
+			failedTotal += actionStatistics.failed[timeUnit][i];
+		}
+		let filteredTotal = actionStatistics.failed[timeUnit][2];
+		let passedTotal = actionStatistics.passed[timeUnit][5];
+		let total = failedTotal + filteredTotal + passedTotal;
+		const d = new Date(actionStatistics.end.getTime());
+		let time = '';
+		if (range === 'last15Minutes') {
+			d.setMinutes(d.getMinutes() - counter);
+			if (timeUnit === 0) {
+				time = `${d.getHours()}:${d.getMinutes()}`;
+			} else {
+				time = `${d.getMinutes()}`;
+			}
+		} else if (range === 'last24Hours') {
+			d.setHours(d.getHours() - counter);
+			time = `${d.getHours()}`;
+		} else {
+			d.setDate(d.getDate() - counter);
+			time = `${d.toLocaleDateString()}`;
+		}
+		points.push({
+			time: `${time}`,
+			passed: passedTotal,
+			failed: failedTotal,
+			total: total,
+		});
+		counter--;
+	}
+	return points;
+};
+
+const computeFunnelData = (actionStatistics: ActionStatistics): FunnelData => {
+	if (actionStatistics == null) {
+		return null;
+	}
+	const data = [];
+	for (let i = 0; i < 6; i++) {
+		let totalPassed = 0;
+		let totalFailed = 0;
+		for (const p of actionStatistics.passed) {
+			totalPassed += p[i];
+		}
+		for (const f of actionStatistics.failed) {
+			totalFailed += f[i];
+		}
+		data.push({
+			passed: totalPassed,
+			failed: totalFailed,
+		});
+	}
+	return data as FunnelData;
+};
+
+const LOWER_DATE = new Date('1970-01-01');
+const UPPER_DATE = new Date('2262-04-11');
+const ONE_DAY = 24 * 60 * 60 * 1000;
+const validateStatisticsRangeDates = (start: Date, end: Date): void => {
+	if (start < LOWER_DATE || start > UPPER_DATE || end < LOWER_DATE || end > UPPER_DATE) {
+		throw new Error(
+			`Dates must be in the range between ${LOWER_DATE.toLocaleDateString()} and ${UPPER_DATE.toLocaleDateString()}`,
+		);
+	}
+	const difference = end.getTime() - start.getTime();
+	if (difference < ONE_DAY) {
+		throw new Error('Start date must be at least one day before the end date');
+	}
 };
 
 export default ConnectionOverview;

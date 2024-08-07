@@ -345,15 +345,6 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	return map[string]any{"sheets": sheets}, nil
 }
 
-// Stats returns statistics on a connection for the last 24 hours.
-func (connection connection) Stats(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	return c.Stats(r.Context())
-}
-
 // TableSchema returns the schema of a table of a database connection.
 func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)

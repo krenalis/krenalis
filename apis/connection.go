@@ -955,15 +955,13 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 // An Execution describes an action execution as returned by Executions.
 type Execution struct {
-	ID          int
-	Action      int
-	StartTime   time.Time
-	EndTime     *time.Time
-	Passed      []int
-	Failed      []int
-	TotalPassed int
-	TotalFailed int
-	Error       string
+	ID        int
+	Action    int
+	StartTime time.Time
+	EndTime   *time.Time
+	Passed    int
+	Failed    int
+	Error     string
 }
 
 // Executions returns the executions of the actions of the connections.
@@ -981,7 +979,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 
 	executions := []*Execution{}
 	err := this.apis.db.QueryScan(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error\n"+
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error_message\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
 			"WHERE a.connection = $1\n"+
@@ -1001,9 +999,9 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	}
 
 	for _, exe := range executions {
-		if exe.Passed != nil {
-			exe.TotalPassed = exe.Passed[5]
-			exe.TotalFailed = exe.Failed[0] + exe.Failed[1] + exe.Failed[2] + exe.Failed[3] + exe.Failed[4] + exe.Failed[5]
+		if exe.EndTime == nil {
+			exe.Passed = 0
+			exe.Failed = 0
 		}
 	}
 
@@ -1815,46 +1813,6 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 	}
 
 	return sheets, nil
-}
-
-// ConnectionsStats represents the statistics on a connection for the last 24
-// hours.
-type ConnectionsStats struct {
-	UserIdentities [24]int // ingested or loaded user identities per hour
-}
-
-// Stats returns statistics on the connection for the last 24 hours.
-//
-// It returns an errors.NotFound error if the connection does not exist
-// anymore.
-func (this *Connection) Stats(ctx context.Context) (*ConnectionsStats, error) {
-	this.apis.mustBeOpen()
-	toSlot := int(time.Now().UTC().Unix() / (60 * 10))
-	firstHour := toSlot/6 - 23
-	fromSlot := firstHour * 6
-	stats := &ConnectionsStats{
-		UserIdentities: [24]int{},
-	}
-	query := "SELECT s.timeslot / 6 AS hour, SUM(s.passed_5)\n" +
-		"FROM actions_stats s\n" +
-		"INNER JOIN actions a ON a.id = s.action\n" +
-		"WHERE a.connection = $1 AND timeslot BETWEEN $2 AND $3\n" +
-		"GROUP BY s.action, hour"
-	err := this.apis.db.QueryScan(ctx, query, this.connection.ID, fromSlot, toSlot, func(rows *postgres.Rows) error {
-		var err error
-		var hour, passed int
-		for rows.Next() {
-			if err = rows.Scan(&hour, &passed); err != nil {
-				return err
-			}
-			stats.UserIdentities[hour-firstHour] = passed
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return stats, nil
 }
 
 // TableSchema returns the schema of the given table for the connection.

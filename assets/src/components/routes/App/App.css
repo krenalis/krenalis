@@ -329,3 +329,23 @@ sl-split-panel sl-icon[slot='divider'] {
 		opacity: 1;
 	}
 }
+
+/* || Date range picker */
+
+.rdrDateRangePickerWrapper .rdrStaticRangeSelected,
+.rdrDateRangePickerWrapper .rdrStartEdge,
+.rdrDateRangePickerWrapper .rdrInRange,
+.rdrDateRangePickerWrapper .rdrEndEdge,
+.rdrDateRangePickerWrapper .rdrDateDisplay,
+.rdrDateRangeWrapper .rdrStaticRangeSelected,
+.rdrDateRangeWrapper .rdrStartEdge,
+.rdrDateRangeWrapper .rdrInRange,
+.rdrDateRangeWrapper .rdrEndEdge,
+.rdrDateRangeWrapper .rdrDateDisplay {
+	color: var(--sl-color-primary-600) !important;
+}
+
+.rdrDateRangePickerWrapper .rdrDayToday .rdrDayNumber span:after,
+.rdrDateRangeWrapper .rdrDayToday .rdrDayNumber span:after {
+	background-color: var(--sl-color-primary-600) !important;
+}

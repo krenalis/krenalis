@@ -1,7 +1,7 @@
 import call from './call';
 import * as http from './http';
 import Type, { Property, ObjectType, Role } from './types/types';
-import { Connection, ConnectionRole, ConnectionToAdd, ConnectionStats, ConnectionToSet } from './types/connection';
+import { Connection, ConnectionRole, ConnectionToAdd, ConnectionToSet } from './types/connection';
 import { Identifiers } from './types/identifiers';
 import {
 	ActionTarget,
@@ -10,6 +10,8 @@ import {
 	ExpressionToBeExtracted,
 	Transformation,
 	TransformationPurpose,
+	ActionStep,
+	ActionStatistics,
 } from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
@@ -43,6 +45,7 @@ import {
 	ConnectionIdentitiesResponse,
 	ChangeUserSchemaQueriesResponse,
 	RePaths,
+	ActionErrorsResponse,
 } from './types/responses';
 
 class API {
@@ -177,10 +180,6 @@ class Connections {
 
 	delete = async (connection: number): Promise<void> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.DELETE);
-	};
-
-	stats = async (connection: number): Promise<ConnectionStats> => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/stats`, http.GET);
 	};
 
 	executions = async (connection: number): Promise<Execution[]> => {
@@ -649,6 +648,101 @@ class Workspaces {
 			schema,
 			rePaths,
 		});
+	};
+
+	actionErrors = async (
+		start: Date,
+		end: Date | null,
+		actions: number[],
+		first: number,
+		limit: number,
+		step?: ActionStep,
+	): Promise<ActionErrorsResponse> => {
+		let actionQueryString = '';
+		for (let i = 0; i < actions.length; i++) {
+			if (i > 0) {
+				actionQueryString += '&';
+			}
+			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+		}
+		const r: ActionErrorsResponse = await call(
+			`${this.apiURL}/action-errors?start=${encodeURIComponent(start.toISOString())}${end ? `&end=${encodeURIComponent(end.toISOString())}` : ''}&${actionQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
+			http.GET,
+		);
+		for (let i = 0; i < r.errors.length; i++) {
+			r.errors[i].LastOccurred = new Date(r.errors[i].LastOccurred);
+		}
+		return r;
+	};
+
+	actionStatsPerDate = async (start: Date, end: Date, actions: number[]): Promise<ActionStatistics> => {
+		let actionQueryString = '';
+		for (let i = 0; i < actions.length; i++) {
+			if (i > 0) {
+				actionQueryString += '&';
+			}
+			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+		}
+		const sd = start.toISOString().split('T')[0];
+		const ed = end.toISOString().split('T')[0];
+		const r = await call(
+			`${this.apiURL}/action-stats/dates?start=${encodeURIComponent(sd)}&end=${encodeURIComponent(ed)}&${actionQueryString}`,
+			http.GET,
+		);
+		r.start = new Date(r.start);
+		r.end = new Date(r.end);
+		return r;
+	};
+
+	actionStatsPerDay = async (days: number, actions: number[]): Promise<ActionStatistics> => {
+		let actionQueryString = '';
+		for (let i = 0; i < actions.length; i++) {
+			if (i > 0) {
+				actionQueryString += '&';
+			}
+			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+		}
+		const r = await call(
+			`${this.apiURL}/action-stats/days?days=${encodeURIComponent(days)}&${actionQueryString}`,
+			http.GET,
+		);
+		r.start = new Date(r.start);
+		r.end = new Date(r.end);
+		return r;
+	};
+
+	actionStatsPerHour = async (hours: number, actions: number[]): Promise<ActionStatistics> => {
+		let actionQueryString = '';
+		for (let i = 0; i < actions.length; i++) {
+			if (i > 0) {
+				actionQueryString += '&';
+			}
+			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+		}
+		const r = await call(
+			`${this.apiURL}/action-stats/hours?hours=${encodeURIComponent(hours)}&${actionQueryString}`,
+			http.GET,
+		);
+		r.start = new Date(r.start);
+		r.end = new Date(r.end);
+		return r;
+	};
+
+	actionStatsPerMinute = async (minutes: number, actions: number[]): Promise<ActionStatistics> => {
+		let actionQueryString = '';
+		for (let i = 0; i < actions.length; i++) {
+			if (i > 0) {
+				actionQueryString += '&';
+			}
+			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+		}
+		const r = await call(
+			`${this.apiURL}/action-stats/minutes?minutes=${encodeURIComponent(minutes)}&${actionQueryString}`,
+			http.GET,
+		);
+		r.start = new Date(r.start);
+		r.end = new Date(r.end);
+		return r;
 	};
 }
 

@@ -23,7 +23,7 @@ import (
 )
 
 // importUsers imports the users of the action.
-func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCollector) error {
+func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector) error {
 
 	action := this.action
 	connection := action.Connection()
@@ -83,25 +83,25 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
 		}
-		return actionExecutionError{err}
+		return newActionError(statistics.InputValidationStep, err)
 	}
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
 	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
-			stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
+			stats.FailedFinalizing(len(ids), err.Error())
 			return
 		}
-		stats.PassedCount(statistics.Finalizing, len(ids))
+		stats.PassedFinalizing(len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
-			return actionExecutionError{err}
+			return newActionError(statistics.FinalizingStep, err)
 		}
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
-			return actionExecutionError{err}
+			return newActionError(statistics.OutputValidationStep, err)
 		}
 		return err
 	}
@@ -118,16 +118,16 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 		if user.Err != nil {
 			iw.Keep(user.ID)
 			if _, ok := user.Err.(ValidationError); ok {
-				stats.Passed(statistics.Receiving)
-				stats.Failed(statistics.InputValidation, user.Err.Error())
+				stats.PassedReceiving(1)
+				stats.FailedInputValidation(1, user.Err.Error())
 				goto Next
 			}
-			stats.Failed(statistics.Receiving, user.Err.Error())
+			stats.FailedReceiving(1, user.Err.Error())
 			goto Next
 		}
 
-		stats.Passed(statistics.Receiving)
-		stats.Passed(statistics.InputValidation)
+		stats.PassedReceiving(1)
+		stats.PassedInputValidation(1)
 
 		if user.LastChangeTime.After(cursor) {
 			cursor = user.LastChangeTime
@@ -148,7 +148,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
-					return actionExecutionError{err}
+					return newActionError(statistics.TransformationStep, err)
 				}
 				return err
 			}
@@ -158,16 +158,16 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						stats.Passed(statistics.Transformation)
-						stats.Failed(statistics.OutputValidation, record.Err.Error())
+						stats.PassedTransformation(1)
+						stats.FailedOutputValidation(1, record.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.Transformation, record.Err.Error())
+					stats.FailedTransformation(1, record.Err.Error())
 					continue
 				}
 				user.Properties = record.Properties
-				stats.Passed(statistics.Transformation)
-				stats.Passed(statistics.OutputValidation)
+				stats.PassedTransformation(1)
+				stats.PassedOutputValidation(1)
 				err = iw.Write(datastore.Identity{
 					ID:             user.ID,
 					Properties:     user.Properties,
@@ -175,14 +175,14 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 				}, "")
 				if err != nil {
 					err := iw.Close(ctx)
-					return actionExecutionError{err}
+					return newActionError(statistics.FinalizingStep, err)
 				}
 			}
 
 			// Set the user cursor.
 			err = this.setUserCursor(ctx, cursor)
 			if err != nil {
-				return actionExecutionError{err}
+				return err
 			}
 
 			clear(users)
@@ -194,19 +194,18 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.ActionCol
 	if err = records.Err(); err != nil {
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
+			return newActionError(statistics.InputValidationStep, err)
 		}
 		if err == connectors.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}
-		return actionExecutionError{err}
+		return newActionError(statistics.ReceivingStep, err)
 	}
 
 	err = iw.Close(ctx)
 	if err != nil {
-		return actionExecutionError{err}
+		return newActionError(statistics.FinalizingStep, err)
 	}
-
-	users = nil
 
 	return nil
 }

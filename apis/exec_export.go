@@ -28,7 +28,7 @@ import (
 
 // exportUsers exports the users for the action.
 // The action must have a store.
-func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCollector) error {
+func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector) error {
 
 	action := this.action
 	store := this.connection.store
@@ -41,7 +41,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			if err, ok := err.(*schemas.Error); ok {
 				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
-			return actionExecutionError{err}
+			return newActionError(statistics.OutputValidationStep, err)
 		}
 		// If the export must be blocked in case of duplicated user on the
 		// destination, check if there are duplicated users on the destination.
@@ -49,14 +49,14 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			u1, u2, ok, err := store.DuplicatedDestinationUsers(ctx, action.ID)
 			if err != nil {
 				if err == datastore.ErrMaintenanceMode {
-					return actionExecutionError{err}
+					return newActionError(statistics.ReceivingStep, err)
 				}
-				return actionExecutionError{fmt.Errorf("cannot look for duplicated destination users: %s", err)}
+				return newActionError(statistics.ReceivingStep, fmt.Errorf("cannot look for duplicated destination users: %s", err))
 			}
 			if ok {
-				return actionExecutionError{fmt.Errorf("there are two users on the connection (%q and %q)"+
+				return newActionError(statistics.ReceivingStep, fmt.Errorf("there are two users on the connection (%q and %q)"+
 					" with the same value for the external matching property %q",
-					u1, u2, action.MatchingProperties.External.Name)}
+					u1, u2, action.MatchingProperties.External.Name))
 			}
 		}
 		// Check if there are duplicated users within Meergo.
@@ -64,14 +64,14 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			u1, u2, ok, err := store.DuplicatedUsers(ctx, action.MatchingProperties.Internal)
 			if err != nil {
 				if err == datastore.ErrMaintenanceMode {
-					return actionExecutionError{err}
+					return newActionError(statistics.ReceivingStep, err)
 				}
-				return actionExecutionError{fmt.Errorf("cannot look for duplicated users on data warehouse: %s", err)}
+				return newActionError(statistics.ReceivingStep, fmt.Errorf("cannot look for duplicated users on data warehouse: %s", err))
 			}
 			if ok {
-				return actionExecutionError{fmt.Errorf("there are two users (%s and %s)"+
+				return newActionError(statistics.ReceivingStep, fmt.Errorf("there are two users (%s and %s)"+
 					" with the same value for the internal matching property %q",
-					u1, u2, action.MatchingProperties.Internal)}
+					u1, u2, action.MatchingProperties.Internal))
 			}
 		}
 	}
@@ -114,7 +114,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	}, action.InSchema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return actionExecutionError{err}
+			return newActionError(statistics.ReceivingStep, err)
 		}
 		switch err := err.(type) {
 		case *datastore.DataWarehouseError:
@@ -124,7 +124,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			return err
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the users.", err.Msg)
-			return actionExecutionError{err}
+			return newActionError(statistics.InputValidationStep, err)
 		}
 		return err
 	}
@@ -135,10 +135,10 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	ack := func(ids []string, err error) {
 		for range ids {
 			if err != nil {
-				stats.Failed(statistics.Finalizing, err.Error())
+				stats.FailedFinalizing(1, err.Error())
 				continue
 			}
-			stats.Passed(statistics.Finalizing)
+			stats.PassedFinalizing(1)
 		}
 	}
 
@@ -162,7 +162,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to export the users."
 		}
-		return actionExecutionError{err}
+		return newActionError(statistics.OutputValidationStep, err)
 	}
 	defer writer.Close(ctx)
 
@@ -178,15 +178,15 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 	for record := range records.All(ctx) {
 
 		if record.Err != nil {
-			stats.Failed(statistics.Receiving, record.Err.Error())
+			stats.FailedReceiving(1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return record.Err
 			}
 			goto Next
 		}
 
-		stats.Passed(statistics.Receiving)
-		stats.Passed(statistics.InputValidation)
+		stats.PassedReceiving(1)
+		stats.PassedInputValidation(1)
 
 		if connector.Type == state.App {
 			// Resolve the external identities.
@@ -197,7 +197,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 					goto Next
 				}
 				if err == datastore.ErrMaintenanceMode {
-					return actionExecutionError{err}
+					return newActionError(statistics.ReceivingStep, err)
 				}
 				return err
 			}
@@ -257,7 +257,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
-					return actionExecutionError{err}
+					return newActionError(statistics.TransformationStep, err)
 				}
 				return err
 			}
@@ -265,15 +265,15 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						stats.Passed(statistics.Transformation)
-						stats.Failed(statistics.OutputValidation, record.Err.Error())
+						stats.PassedTransformation(1)
+						stats.FailedOutputValidation(1, record.Err.Error())
 						continue
 					}
-					stats.Failed(statistics.Transformation, record.Err.Error())
+					stats.FailedTransformation(1, record.Err.Error())
 					continue
 				}
-				stats.Passed(statistics.Transformation)
-				stats.Passed(statistics.OutputValidation)
+				stats.PassedTransformation(1)
+				stats.PassedOutputValidation(1)
 				if len(record.Properties) == 0 {
 					continue
 				}
@@ -288,7 +288,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 
 	}
 	if err = records.Err(); err != nil {
-		return actionExecutionError{err}
+		return newActionError(statistics.ReceivingStep, err)
 	}
 
 	users = nil
@@ -299,7 +299,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.ActionCol
 		err = writer.Close(ctx)
 	}
 	if err != nil {
-		return actionExecutionError{err}
+		return newActionError(statistics.FinalizingStep, err)
 	}
 
 	return nil

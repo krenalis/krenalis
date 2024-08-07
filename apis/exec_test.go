@@ -9,6 +9,7 @@ package apis
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -66,5 +67,26 @@ func Test_readPropertyFrom(t *testing.T) {
 				t.Fatalf("expected ok = %t, got %t", cas.expectedOk, gotOk)
 			}
 		})
+	}
+}
+
+// readPropertyFrom reads the property with the given path from m, returning its
+// value (if found, otherwise nil) and a boolean indicating if the property path
+// corresponds to a value in m or not.
+func readPropertyFrom(m map[string]any, path string) (any, bool) {
+	var name string
+	for {
+		name, path, _ = strings.Cut(path, ".")
+		v, ok := m[name]
+		if !ok {
+			return nil, false
+		}
+		if path == "" {
+			return v, true
+		}
+		m, ok = v.(map[string]any)
+		if !ok {
+			return nil, false
+		}
 	}
 }

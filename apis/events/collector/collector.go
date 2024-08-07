@@ -108,7 +108,7 @@ type Collector struct {
 	db                  *postgres.DB
 	state               *state.State
 	datastore           *datastore.Datastore
-	statistics          *statistics.Collector
+	statistics          *statistics.Statistics
 	observer            *Observer
 	messageIds          sync.Map
 	transformerProvider transformers.Provider
@@ -118,7 +118,7 @@ type Collector struct {
 
 // New returns a new event collector. It receives HTTP requests from mobile,
 // server and website sources and sends them to the dispatcher.
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, stats *statistics.Collector) (*Collector, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, stats *statistics.Statistics) (*Collector, error) {
 	var collector = Collector{
 		db:                  db,
 		state:               st,
@@ -291,16 +291,15 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 		connection := action.Connection()
 		ws := connection.Workspace()
 		store := c.datastore.Store(ws.ID)
-		stats := c.statistics.Action(action.ID)
-
+		stats := c.statistics.Collector(action.ID)
 		// Instantiate an event identity writer for writing the user identities.
 		ctx := context.Background()
 		iw, err := store.EventIdentityWriter(action.ID, func(ids []string, err error) {
 			if err != nil {
-				stats.FailedCount(statistics.Finalizing, len(ids), err.Error())
+				stats.FailedFinalizing(len(ids), err.Error())
 				return
 			}
-			stats.PassedCount(statistics.Finalizing, len(ids))
+			stats.PassedFinalizing(len(ids))
 		})
 		if err != nil {
 			return err
@@ -332,16 +331,16 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				}
 				if err = records[0].Err; err != nil {
 					if _, ok := err.(ValidationError); ok {
-						stats.Passed(statistics.Transformation)
-						stats.Failed(statistics.OutputValidation, err.Error())
+						stats.PassedTransformation(1)
+						stats.FailedOutputValidation(1, err.Error())
 						continue
 					}
-					stats.Failed(statistics.Transformation, err.Error())
+					stats.FailedTransformation(1, err.Error())
 					continue
 				}
 				properties = records[0].Properties
-				stats.Passed(statistics.Transformation)
-				stats.Passed(statistics.OutputValidation)
+				stats.PassedTransformation(1)
+				stats.PassedOutputValidation(1)
 			}
 			// Discard anonymous events with no properties.
 			if event.UserId == "" && len(properties) == 0 {

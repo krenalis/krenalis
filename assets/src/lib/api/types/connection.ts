@@ -53,10 +53,6 @@ interface ConnectionToSet {
 	SendingMode?: SendingMode | null;
 }
 
-interface ConnectionStats {
-	UserIdentities: number[];
-}
-
 export type {
 	Connection,
 	ConnectionRole,
@@ -67,5 +63,4 @@ export type {
 	ConnectionToSet,
 	ConnectorType,
 	Health,
-	ConnectionStats,
 };

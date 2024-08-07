@@ -12,15 +12,322 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/meergo/meergo/apis"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/types"
+
+	"github.com/relvacode/iso8601"
 )
 
 type workspace struct {
 	*apisServer
+}
+
+// ActionErrors returns the action errors of the workspace.
+func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+
+	// Parse start.
+	var start time.Time
+	if s, ok := q["start"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'start' parameter is allowed")
+		}
+		start, err = iso8601.ParseString(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'start' parameter is not a valid time")
+		}
+		start = start.UTC()
+	} else {
+		return nil, errors.BadRequest("'start' parameter is missing")
+	}
+
+	// Parse end.
+	var end time.Time
+	if s, ok := q["end"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'end' parameter is allowed")
+		}
+		end, err = iso8601.ParseString(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'end' parameter is not a valid time")
+		}
+		end = end.UTC()
+	} else {
+		end = time.Now().UTC()
+	}
+
+	// Parse actions.
+	var actions []int
+	if ids, ok := q["action"]; ok {
+		actions = make([]int, len(ids))
+		for i, id := range ids {
+			actions[i], err = strconv.Atoi(id)
+			if err != nil {
+				return nil, errors.BadRequest("an 'action' parameter is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+	}
+
+	// Parse step.
+	var step *apis.ActionStep
+	if s, ok := q["step"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'step' parameter is allowed")
+		}
+		st, err := apis.ParseActionStep(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'step' parameter is not valid")
+		}
+		step = &st
+	}
+
+	// Parse first and limit.
+	first, limit := 0, 100
+	if s, ok := q["first"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'first' parameter is allowed")
+		}
+		first, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'first' parameter is not valid")
+		}
+	}
+	if s, ok := q["limit"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'limit' parameters is allowed")
+		}
+		limit, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'limit' parameter is not valid")
+		}
+	}
+
+	errs, err := ws.ActionErrors(r.Context(), start, end, actions, step, first, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]apis.ActionError{"errors": errs}, nil
+}
+
+// ActionStatsPerDate returns statistics aggregated by day for a time interval
+// between specified start and end dates.
+func (workspace workspace) ActionStatsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+
+	// Parse start.
+	var start time.Time
+	if s, ok := q["start"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'start' parameter is allowed")
+		}
+		start, err = iso8601.ParseString(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'start' parameter is not valid")
+		}
+	}
+
+	// Parse end.
+	var end time.Time
+	if s, ok := q["end"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'end' parameter is allowed")
+		}
+		end, err = iso8601.ParseString(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'end' parameter is not valid")
+		}
+	}
+
+	// Parse actions.
+	var actions []int
+	if ids, ok := q["action"]; ok {
+		actions = make([]int, len(ids))
+		for i, id := range ids {
+			actions[i], err = strconv.Atoi(id)
+			if err != nil {
+				return nil, errors.BadRequest("an 'action' parameter is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+	}
+
+	stats, err := ws.ActionStatsPerDate(r.Context(), start, end, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  stats.Start,
+		"end":    stats.End,
+		"passed": stats.Passed,
+		"failed": stats.Failed}, nil
+}
+
+// ActionStatsPerDay returns the action statistics for a specified number of
+// days.
+func (workspace workspace) ActionStatsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+
+	// Parse days.
+	days := 48
+	if s, ok := q["days"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'days' parameter is allowed")
+		}
+		days, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'days' parameter is not valid")
+		}
+	}
+
+	// Parse actions.
+	var actions []int
+	if ids, ok := q["action"]; ok {
+		actions = make([]int, len(ids))
+		for i, id := range ids {
+			actions[i], err = strconv.Atoi(id)
+			if err != nil {
+				return nil, errors.BadRequest("an 'action' parameter is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+	}
+
+	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), days, apis.Day, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  stats.Start,
+		"end":    stats.End,
+		"passed": stats.Passed,
+		"failed": stats.Failed}, nil
+}
+
+// ActionStatsPerHour returns the action statistics for a specified number of
+// hours.
+func (workspace workspace) ActionStatsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+
+	// Parse hours.
+	hours := 48
+	if s, ok := q["hours"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'hours' parameter is allowed")
+		}
+		hours, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'hours' parameter is not valid")
+		}
+	}
+
+	// Parse actions.
+	var actions []int
+	if ids, ok := q["action"]; ok {
+		actions = make([]int, len(ids))
+		for i, id := range ids {
+			actions[i], err = strconv.Atoi(id)
+			if err != nil {
+				return nil, errors.BadRequest("an 'action' parameter is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+	}
+
+	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), hours, apis.Hour, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  stats.Start,
+		"end":    stats.End,
+		"passed": stats.Passed,
+		"failed": stats.Failed}, nil
+}
+
+// ActionStatsPerMinute returns the action statistics for a specified number of
+// minutes.
+func (workspace workspace) ActionStatsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+
+	// Parse minutes.
+	minutes := 60
+	if s, ok := q["minutes"]; ok {
+		if len(s) > 1 {
+			return nil, errors.BadRequest("only one 'minutes' parameter is allowed")
+		}
+		minutes, err = strconv.Atoi(s[0])
+		if err != nil {
+			return nil, errors.BadRequest("'minutes' parameter is not valid")
+		}
+	}
+
+	// Parse actions.
+	var actions []int
+	if ids, ok := q["action"]; ok {
+		actions = make([]int, len(ids))
+		for i, id := range ids {
+			actions[i], err = strconv.Atoi(id)
+			if err != nil {
+				return nil, errors.BadRequest("an 'action' parameter is not valid")
+			}
+		}
+	} else {
+		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+	}
+
+	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), minutes, apis.Minute, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{
+		"start":  stats.Start,
+		"end":    stats.End,
+		"passed": stats.Passed,
+		"failed": stats.Failed}, nil
 }
 
 // AddConnection adds a new connection.

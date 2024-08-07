@@ -54,7 +54,7 @@ type APIs struct {
 	state      *state.State
 	datastore  *datastore.Datastore
 	connectors *connectors.Connectors
-	statistics *statistics.Collector
+	statistics *statistics.Statistics
 	events     struct {
 		collector  *collector.Collector
 		observer   *collector.Observer
@@ -185,7 +185,7 @@ func New(conf *Config) (*APIs, error) {
 	apis.connectors = connectors.New(db, apis.state)
 
 	// Init the statistics.
-	apis.statistics = statistics.New(db)
+	apis.statistics = statistics.New(db, apis.state)
 
 	// Init the events.
 	apis.events.dispatcher, err = dispatcher.New(db, apis.state, apis.transformerProvider, apis.connectors)

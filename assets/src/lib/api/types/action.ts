@@ -4,6 +4,8 @@ import Type, { ObjectType, Property } from './types';
 
 type ActionTarget = 'Events' | 'Users' | 'Groups';
 
+type ActionStep = 'Receiving' | 'InputValidation' | 'Filtering' | 'Transformation' | 'OutputValidation' | 'Finalizing';
+
 type SchedulePeriod = '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' | '8h' | '12h' | '24h';
 
 type ExportMode = 'CreateOnly' | 'UpdateOnly' | 'CreateOrUpdate';
@@ -96,6 +98,21 @@ interface ActionToSet {
 	UIValues?: ConnectorValues;
 }
 
+interface ActionError {
+	Action: number;
+	Step: ActionStep;
+	Count: number;
+	Message: string;
+	LastOccurred: Date;
+}
+
+interface ActionStatistics {
+	start: Date;
+	end: Date;
+	passed: [number, number, number, number, number, number][];
+	failed: [number, number, number, number, number, number][];
+}
+
 export type {
 	ActionTarget,
 	Transformation,
@@ -109,4 +126,7 @@ export type {
 	ExpressionToBeExtracted,
 	Mapping,
 	TransformationPurpose,
+	ActionStep,
+	ActionError,
+	ActionStatistics,
 };
