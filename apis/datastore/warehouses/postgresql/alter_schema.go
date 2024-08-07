@@ -30,12 +30,57 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		return err
 	}
 	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
+
+		// Check if an alter schema operation is already in execution, and
+		// return an error in that case.
+		inExecution, err := alterSchemaInProgress(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if inExecution {
+			return warehouses.ErrAlterSchemaInProgress
+		}
+
+		// Check if the Identity Resolution is in progress, and return and error
+		// in that case.
+		starTime, endTime, err := identityResolutionExecution(ctx, tx, warehouse.settings.Database)
+		if err != nil {
+			return err
+		}
+		if starTime != nil && endTime == nil {
+			return warehouses.ErrIdentityResolutionInProgress
+		}
+
+		// Add an entry to the "_meergo_operations" table.
+
+		// TODO(Gianluca): there is a problem with this code: this is actually
+		// written to the table only when the transaction is finished;
+		// therefore, while the transaction is ongoing, the Identity Resolution
+		// or other alter schema may still be initiated. This is a bug to be
+		// fixed. There is probably a similar problem in the Identity Resolution
+		// as well? Investigate on a solution.
+
+		_, err = tx.Exec(ctx, `INSERT INTO _meergo_operations (operation, start_time, end_time) `+
+			`VALUES ('AlterSchema', (clock_timestamp() at time zone 'utc')::timestamp, NULL)`)
+		if err != nil {
+			return warehouses.Error(err)
+		}
+
 		for _, query := range queries {
 			_, err := tx.Exec(ctx, query)
 			if err != nil {
 				return warehouses.Error(err)
 			}
 		}
+
+		// Mark the operation within "_meergo_operations" as completed.
+		_, err = tx.Exec(ctx, "UPDATE _meergo_operations"+
+			" SET end_time = (clock_timestamp() at time zone 'utc')::timestamp"+
+			" WHERE end_time IS NULL")
+		if err != nil {
+			return warehouses.Error(err)
+		}
+
 		return nil
 	})
 	return err
@@ -53,6 +98,18 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 		queries[i] = q + ";"
 	}
 	return queries, nil
+}
+
+// alterSchemaInProgress reports whether an alter schema operation is progress
+// on the data warehouse.
+func alterSchemaInProgress(ctx context.Context, tx *postgres.Tx) (bool, error) {
+	query := "SELECT COUNT(*) FROM _meergo_operations WHERE operation = 'AlterSchema' AND end_time IS NULL"
+	var count int
+	err := tx.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return false, warehouses.Error(err)
+	}
+	return count == 1, nil
 }
 
 // alterSchemaQueries returns the queries that perform the given operations.

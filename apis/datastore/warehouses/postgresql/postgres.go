@@ -31,8 +31,8 @@ var (
 	createDestinationUsersTable string
 	//go:embed tables/events.sql
 	createEventsTable string
-	//go:embed tables/identity_resolution_executions.sql
-	createIRExecutionsTable string
+	//go:embed tables/_meergo_operations.sql
+	createOperationsTable string
 	//go:embed tables/user_identities.sql
 	createUserIdentitiesTable string
 	//go:embed tables/users.sql
@@ -218,9 +218,9 @@ func (warehouse *PostgreSQL) Init(ctx context.Context) error {
 	tables := []string{
 		createDestinationUsersTable,
 		createEventsTable,
+		createOperationsTable,
 		createUserIdentitiesTable,
 		createUsersTable,
-		createIRExecutionsTable,
 	}
 	for _, table := range tables {
 		_, err := conn.Exec(ctx, table)

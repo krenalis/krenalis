@@ -1079,10 +1079,12 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - AlterSchemaInProgress, if an alter schema operation is currently in
+//     in progresso on the data warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
-//   - IdentityResolutionAlreadyRunning, if the Identity Resolution is already
-//     running on the data warehouse.
+//   - IdentityResolutionInProgress, if an Identity Resolution is already in
+//     progress on the warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
@@ -1093,14 +1095,17 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	slog.Info("running Identity Resolution", "workspace", this.workspace.ID)
 	err := this.store.RunIdentityResolution(ctx)
 	if err != nil {
-		if err == datastore.ErrIdentityResolutionAlreadyRunning {
-			return errors.Unprocessable(IdentityResolutionAlreadyRunning, "the Identity Resolution is already running on the data warehouse")
+		if err == datastore.ErrAlterSchemaInProgress {
+			return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is in progress on the data warehouse")
 		}
 		if err == datastore.ErrInspectionMode {
 			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 		}
 		if err == datastore.ErrMaintenanceMode {
 			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err == datastore.ErrIdentityResolutionInProgress {
+			return errors.Unprocessable(IdentityResolutionInProgress, "the Identity Resolution is already running on the data warehouse")
 		}
 		return err
 	}

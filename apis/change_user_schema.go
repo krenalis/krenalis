@@ -48,9 +48,13 @@ import (
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - AlterSchemaInProgress, if an alter schema operation is already in
+//     progress on the warehouse.
 //   - ConnectionNotExist, if a connections used as primary source does not
 //     exist.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - IdentityResolutionInProgress, if an Identity Resolution is currently in
+//     progress on the warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaChange, if the schema change is invalid.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
@@ -166,6 +170,12 @@ Identifiers:
 		// The topic is discussed in the issue https://github.com/meergo/meergo/issues/692.
 		err = this.store.AlterSchema(ctx, schema, operations)
 		if err != nil {
+			if err == datastore.ErrAlterSchemaInProgress {
+				return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is already in progress on the warehouse")
+			}
+			if err == datastore.ErrIdentityResolutionInProgress {
+				return errors.Unprocessable(IdentityResolutionInProgress, "an Identity Resolution is currently in progress on the warehouse")
+			}
 			if err == datastore.ErrInspectionMode {
 				return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 			}

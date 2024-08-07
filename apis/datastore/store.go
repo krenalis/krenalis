@@ -36,10 +36,13 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
-// ErrIdentityResolutionAlreadyRunning is an error that indicates that the
-// Identity Resolution cannot be started because there is already one running on
-// the data warehouse.
-var ErrIdentityResolutionAlreadyRunning = warehouses.IdentityResolutionAlreadyRunning
+// ErrAlterSchemaInProgress is a error indicating that the an alter schema
+// operation is currently in progress on the data warehouse.
+var ErrAlterSchemaInProgress = warehouses.ErrAlterSchemaInProgress
+
+// ErrIdentityResolutionInProgress is a error indicating that the Identity
+// Resolution is currently in progress on the data warehouse.
+var ErrIdentityResolutionInProgress = warehouses.ErrIdentityResolutionInProgress
 
 // IdentityWriterAckFunc is the function called when a batch of user identities
 // have been written to the data warehouse.
@@ -106,6 +109,12 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
 // UnsupportedSchemaChangeErr error.
+//
+// If another alter schema operation is in progress on the data warehouse,
+// returns a ErrAlterSchemaInProgress error.
+//
+// If an Identity Resolution is in progress, returns an
+// ErrIdentityResolutionInProgress error.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If an error occurs with the data warehouse, it returns a
@@ -390,11 +399,14 @@ func (store *Store) PurgeIdentities(ctx context.Context, actions []int) error {
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 //
-// If the Identity Resolution is already in execution, it returns the
-// ErrIdentityResolutionAlreadyRunning error.
+// If an Identity Resolution is already in execution, returns an
+// IdentityResolutionInProgress error.
 //
-// If an error occurs with the data warehouse, it returns a
-// *DataWarehouseError error.
+// If an alter schema operation is in progress on the data warehouse, returns a
+// AlterSchemaInProgress error.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
 func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	store.mustBeOpen()
 
@@ -436,8 +448,8 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	}
 
 	err := store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
-	if err != nil && err == warehouses.IdentityResolutionAlreadyRunning {
-		err = ErrIdentityResolutionAlreadyRunning
+	if err != nil && err == warehouses.ErrIdentityResolutionInProgress {
+		err = ErrIdentityResolutionInProgress
 	}
 	return err
 }

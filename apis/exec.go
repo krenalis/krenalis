@@ -150,7 +150,7 @@ func (this *Action) exec(ctx context.Context) {
 	ws := this.action.Connection().Workspace()
 	if actionImportedUsers && ws.RunIdentityResolutionOnBatchImport {
 		err = this.connection.store.RunIdentityResolution(ctx)
-		if err != nil && err != datastore.ErrIdentityResolutionAlreadyRunning {
+		if err != nil && err != datastore.ErrIdentityResolutionInProgress {
 			slog.Error("error while running the Identity Resolution at the end of user import", "err", err)
 			return
 		}

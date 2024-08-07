@@ -77,6 +77,11 @@ func (e UnsupportedAlterSchemaErr) Error() string {
 	return fmt.Sprintf("unsupported alter schema operation: %s", string(e))
 }
 
+var (
+	ErrAlterSchemaInProgress        = errors.New("alter schema currently in progress on the data warehouse")
+	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
+)
+
 // Warehouse is the interface implemented by data warehouses.
 //
 // Methods return a *DataWarehouseError error if an error occurs with the data
@@ -93,6 +98,15 @@ type Warehouse interface {
 	// If one of the specified operations is not supported by the data warehouse,
 	// for example if a type is not supported, this method returns a
 	// warehouses.UnsupportedSchemaChangeErr error.
+	//
+	// If another alter schema operation is in progress on the data warehouse,
+	// returns an ErrAlterSchemaInProgress error.
+	//
+	// If an Identity Resolution is in progress, returns an
+	// ErrIdentityResolutionInProgress error.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
@@ -215,8 +229,13 @@ type Warehouse interface {
 	// connections.
 	//
 	// If an Identity Resolution is already in execution, returns an
-	// IdentityResolutionAlreadyRunning error. If an error occurs with the data
-	// warehouse, it returns a *DataWarehouseError error.
+	// ErrIdentityResolutionInProgress error.
+	//
+	// If an alter schema operation is in progress on the data warehouse, returns a
+	// ErrAlterSchemaInProgress error.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
 	RunIdentityResolution(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// SetDestinationUser sets the destination user for an action.
@@ -486,5 +505,3 @@ func isValidJSON(src any) bool {
 	}
 	return false
 }
-
-var IdentityResolutionAlreadyRunning = errors.New("the Identity Resolution is already running on the data warehouse")
