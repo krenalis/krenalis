@@ -253,7 +253,7 @@ github.com/dvsekhvalnov/jose2go/compact
 github.com/dvsekhvalnov/jose2go/kdf
 github.com/dvsekhvalnov/jose2go/keys/ecc
 github.com/dvsekhvalnov/jose2go/padding
-# github.com/evanw/esbuild v0.23.0
+# github.com/evanw/esbuild v0.23.1
 ## explicit; go 1.13
 github.com/evanw/esbuild/internal/api_helpers
 github.com/evanw/esbuild/internal/ast
@@ -300,8 +300,8 @@ github.com/go-faster/city
 # github.com/go-faster/errors v0.6.1
 ## explicit; go 1.18
 github.com/go-faster/errors
-# github.com/go-json-experiment/json v0.0.0-20240524174822-2d9f40f7385b
-## explicit; go 1.22
+# github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1
+## explicit; go 1.23
 github.com/go-json-experiment/json/internal
 github.com/go-json-experiment/json/internal/jsonflags
 github.com/go-json-experiment/json/internal/jsonopts
