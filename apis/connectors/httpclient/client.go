@@ -22,6 +22,8 @@ import (
 	"github.com/meergo/meergo/apis/capture"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/state"
+
+	"github.com/google/uuid"
 )
 
 // backoffBase is the base for the default exponential backoff.
@@ -115,10 +117,29 @@ func (c *Client) ClientSecret() (string, error) {
 	return connector.OAuth.ClientSecret, nil
 }
 
-// Do sends an HTTP request with an Authorization header if required. It
-// returns the response and ensures that the request body is closed, even in
-// the case of errors. Redirects are not followed.
+// Do sends an HTTP request with an Authorization header if required. It returns
+// the response and ensures that the request body is closed, even in the case of
+// errors. Redirects are not followed.
+//
+// If an error occurs during GET, PUT, DELETE, or HEAD requests, it retries
+// using the client's backoff policy or a default policy if the client has no
+// policy.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	idempotent := false
+	switch req.Method {
+	case "GET", "PUT", "DELETE", "HEAD":
+		idempotent = true
+	}
+	return c.DoIdempotent(req, idempotent)
+}
+
+// DoIdempotent behaves like Do, but unlike Do, which assumes GET, PUT, DELETE,
+// and HEAD requests are idempotent by default, it allows to explicitly specify
+// idempotency.
+//
+// If an error occurs during an idempotent request, it retries using the
+// client's backoff policy or a default policy if the client has no policy.
+func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Response, error) {
 
 	var body io.Reader
 	if req.Body != nil {
@@ -164,7 +185,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			capture.Response(res, dump, true, true)
 		}
 
-		if req.Method != "GET" && req.Method != "HEAD" {
+		if !idempotent {
 			return res, nil
 		}
 		if status := res.StatusCode; 200 <= status && status < 300 {
@@ -183,6 +204,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	}
 
+}
+
+// UUID returns a random version 4 UUID, suitable for use as an idempotency key.
+func (c *Client) UUID() string {
+	return uuid.NewString()
 }
 
 // waitTime calculates the duration to wait before retrying a failed request,

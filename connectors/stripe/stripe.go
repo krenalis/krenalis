@@ -301,9 +301,13 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Rea
 	if err != nil {
 		return err
 	}
+	client := stripe.conf.HTTPClient
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Bearer "+stripe.settings.APIKey)
-	res, err := stripe.conf.HTTPClient.Do(req)
+	if req.Method == "POST" {
+		req.Header.Set("Idempotency-Key", client.UUID())
+	}
+	res, err := client.DoIdempotent(req, true)
 	if err != nil {
 		return err
 	}

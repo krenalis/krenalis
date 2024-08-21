@@ -152,7 +152,7 @@ type AppConfig struct {
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 - `SetSettings`: A function that enables the connector to update its settings as necessary.
 - `OAuthAccount`: The app's account associated with the OAuth authorization.
-- `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required.
+- `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required and retries idempotent requests as specified.
 - `Region`: Indicates the privacy region of the workspace. The connector must adhere to the specified privacy region if supported. It defaults to `PrivacyRegionNotSpecified` if no region is specified, or `PrivacyRegionEurope` if the Europe region is specified.
 - `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks.
 

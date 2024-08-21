@@ -1,6 +1,6 @@
 # Backoff
 
-App connectors can use backoff policies to manage how retries of HTTP requests (GET and HEAD) are handled based on the app's response status code.
+App connectors can use backoff policies to manage retries of idempotent HTTP requests based on the app's response status code.
 
 You only need to set up the backoff policy when you register the connector. After that, use the HTTP client provided to make calls, and Meergo will handle retries using the policy you set.
 
@@ -29,9 +29,15 @@ type Backoff func(res *http.Response, retries int) (waitTime time.Duration, err 
 
 You can use the strategies provided by Meergo or create your own. If the app documentation does not specify how to handle errors, do not set a backoff policy. Meergo will use a default policy in that case.
 
+## Idempotency
+
+When making HTTP requests, the `Do` method of `meergo.HTTPClient` automatically treats GET, PUT, DELETE, and HEAD requests as idempotent. Use the `DoIdempotent` method if you need to explicitly specify idempotency for a request.
+
+If your application supports idempotency, you can use the `UUID` method of `meergo.HTTPClient` to generate a unique version 4 UUID to use as an idempotency key.
+
 The following are the strategies already implemented by Meergo, so you do not have to implement it: 
 
-## Provided Strategies
+## Strategies
 
 Meergo provides several built-in backoff strategies that you can use to manage retries. These strategies include a random jitter added to the calculated duration.
 
