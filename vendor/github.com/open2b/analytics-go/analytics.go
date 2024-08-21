@@ -17,7 +17,7 @@ import (
 )
 
 // Version of the client.
-const Version = "0.0.2"
+const Version = "0.0.3"
 
 // This interface is the main API exposed by the analytics package.
 // Values that satsify this interface are returned by the client constructors
@@ -67,10 +67,10 @@ type client struct {
 // Instantiate a new client that uses the write key passed as first argument to
 // send messages to the backend.
 // The client is created with the default configuration.
-func New(writeKey string, dataPlaneUrl string) Client {
+func New(writeKey string, endpoint string) Client {
 	// Here we can ignore the error because the default config is always valid.
 	config := Config{
-		DataPlaneUrl: dataPlaneUrl,
+		Endpoint: endpoint,
 	}
 	c, _ := NewWithConfig(writeKey, config)
 	return c

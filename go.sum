@@ -186,8 +186,8 @@ github.com/mssola/useragent v1.0.0/go.mod h1:hz9Cqz4RXusgg1EdI4Al0INR62kP7aPSRNH
 github.com/mtibben/percent v0.2.1 h1:5gssi8Nqo8QU/r2pynCm+hBQHpkB/uNK7BJCFogWdzs=
 github.com/mtibben/percent v0.2.1/go.mod h1:KG9uO+SZkUp+VkRHsCdYQV3XSZrrSpR3O9ibNBTZrns=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/open2b/analytics-go v0.0.2 h1:B5axeePWsCyZ8EUXfsuk60R51Cu9o83xnaW731XuJkQ=
-github.com/open2b/analytics-go v0.0.2/go.mod h1:8iIbBoQAo6deb8J8dj9etb2Bv8sy0SBimZWuMy0RmWA=
+github.com/open2b/analytics-go v0.0.3 h1:6lRCQBqsfv0eP3qqWOaMsJtjE7lZjmlK435yqKny2vs=
+github.com/open2b/analytics-go v0.0.3/go.mod h1:8iIbBoQAo6deb8J8dj9etb2Bv8sy0SBimZWuMy0RmWA=
 github.com/open2b/clickhouse-go/v2 v2.12.0-fix h1:h2eCfl6bbiFmXe+WqGSYBAxtHDBddZL5Z1OooWhwL6Q=
 github.com/open2b/clickhouse-go/v2 v2.12.0-fix/go.mod h1:W/UQ/GchOF+Q0k5iv6ZanLKQNukA4Oiyt4sMFDsv8QY=
 github.com/oschwald/maxminddb-golang v1.13.1 h1:G3wwjdN9JmIK2o/ermkHM+98oX5fS+k5MbwsmL4MRQE=

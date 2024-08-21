@@ -6,7 +6,7 @@ The Meergo Go SDK lets you send customer event data from your Go applications to
 
 - Set up a Meergo account.
 - Set up a Go source in the dashboard.
-- Copy the write key and the data plane URL.
+- Copy the write key and the endpoint.
 
 ## Installation
 
@@ -32,7 +32,7 @@ func main() {
     
     // Use your write key in the below placeholder:
     
-    client := analytics.New(<WRITE_KEY>, <DATA_PLANE_URL>)
+    client := analytics.New(<WRITE_KEY>, <ENDPOINT>)
 
     // Enqueues a track event that will be sent asynchronously.
     client.Enqueue(analytics.Track{
@@ -61,10 +61,10 @@ func main() {
     
     client, _ := analytics.NewWithConfig(WRITE_KEY,
 		analytics.Config{
-			DataPlaneUrl: DATA_PLANE_URL,
-			Interval:     30 * time.Second,
-			BatchSize:    100,
-			Verbose:      true,
+			Endpoint:  ENDPOINT,
+			Interval:  30 * time.Second,
+			BatchSize: 100,
+			Verbose:   true,
 		})
 
     // Enqueues a track event that will be sent asynchronously.
@@ -87,11 +87,11 @@ The Go SDK supports Gzip compression and it is enabled by default. However, you 
 ```go
 client, _ := analytics.NewWithConfig(WRITE_KEY,
 		analytics.Config{
-			DataPlaneUrl: DATA_PLANE_URL,
-			Interval:     30 * time.Second,
-			BatchSize:    100,
-			Verbose:      true,
-			DisableGzip:  false  // Enables Gzip compression - set true to disable Gzip.
+			Endpoint:    ENDPOINT,
+			Interval:    30 * time.Second,
+			BatchSize:   100,
+			Verbose:     true,
+			DisableGzip: false  // Enables Gzip compression - set true to disable Gzip.
 		})
 ```
 

@@ -14,13 +14,9 @@ import (
 // Each field's zero-value is either meaningful or interpreted as using the
 // default value defined by the library.
 type Config struct {
-
-	// Deprecated: Endpoint is deprecated, will be removed in next releases. Use DataPlaneUrl.
-	Endpoint string
-
 	// The endpoint to which the client connect and send their messages, set to
 	// `DefaultEndpoint` by default.
-	DataPlaneUrl string
+	Endpoint string
 
 	// The flushing interval of the client. Messages will be sent when they've
 	// been queued up to the maximum batch size or when the flushing interval
@@ -153,11 +149,7 @@ func (c *Config) validate() error {
 // Given a config object as argument the function will set all zero-values to
 // their defaults and return the modified object.
 func makeConfig(c Config) Config {
-	if len(c.DataPlaneUrl) > 0 {
-		c.Endpoint = c.DataPlaneUrl
-	}
-
-	if len(c.Endpoint) == 0 && len(c.DataPlaneUrl) == 0 {
+	if len(c.Endpoint) == 0 {
 		c.Endpoint = DefaultEndpoint
 	}
 
