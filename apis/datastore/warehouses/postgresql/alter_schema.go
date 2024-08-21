@@ -51,7 +51,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 			return warehouses.ErrIdentityResolutionInProgress
 		}
 
-		// Add an entry to the "_meergo_operations" table.
+		// Add an entry to the "_operations" table.
 
 		// TODO(Gianluca): there is a problem with this code: this is actually
 		// written to the table only when the transaction is finished;
@@ -60,7 +60,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		// fixed. There is probably a similar problem in the Identity Resolution
 		// as well? Investigate on a solution.
 
-		_, err = tx.Exec(ctx, `INSERT INTO _meergo_operations (operation, start_time, end_time) `+
+		_, err = tx.Exec(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
 			`VALUES ('AlterSchema', (clock_timestamp() at time zone 'utc')::timestamp, NULL)`)
 		if err != nil {
 			return warehouses.Error(err)
@@ -73,8 +73,8 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 			}
 		}
 
-		// Mark the operation within "_meergo_operations" as completed.
-		_, err = tx.Exec(ctx, "UPDATE _meergo_operations"+
+		// Mark the operation within "_operations" as completed.
+		_, err = tx.Exec(ctx, "UPDATE _operations"+
 			" SET end_time = (clock_timestamp() at time zone 'utc')::timestamp"+
 			" WHERE end_time IS NULL")
 		if err != nil {
@@ -103,7 +103,7 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 // alterSchemaInProgress reports whether an alter schema operation is progress
 // on the data warehouse.
 func alterSchemaInProgress(ctx context.Context, tx *postgres.Tx) (bool, error) {
-	query := "SELECT COUNT(*) FROM _meergo_operations WHERE operation = 'AlterSchema' AND end_time IS NULL"
+	query := "SELECT COUNT(*) FROM _operations WHERE operation = 'AlterSchema' AND end_time IS NULL"
 	var count int
 	err := tx.QueryRow(ctx, query).Scan(&count)
 	if err != nil {

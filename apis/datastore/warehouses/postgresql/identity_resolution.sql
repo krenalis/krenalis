@@ -138,7 +138,7 @@ AS $$
     -- Mark the Identity Resolution execution as completed by setting a value
     -- for end_time.
     UPDATE
-        _meergo_operations
+        _operations
     SET
         end_time = (clock_timestamp() at time zone 'utc')::timestamp
     WHERE

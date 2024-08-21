@@ -31,7 +31,7 @@ var (
 	createDestinationUsersTable string
 	//go:embed tables/events.sql
 	createEventsTable string
-	//go:embed tables/_meergo_operations.sql
+	//go:embed tables/operations.sql
 	createOperationsTable string
 	//go:embed tables/user_identities.sql
 	createUserIdentitiesTable string

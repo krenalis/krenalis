@@ -35,7 +35,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 
 	// Check if the Identity Resolution or an alter schema operation is already
 	// in progress; if they are, return an error. If not, «acquire a lock» on
-	// other executions by inserting a row into the '_meergo_operations' table.
+	// other executions by inserting a row into the '_operations' table.
 	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 		inExecution, err := alterSchemaInProgress(ctx, tx)
 		if err != nil {
@@ -51,7 +51,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 		if startTime != nil && endTime == nil {
 			return warehouses.ErrIdentityResolutionInProgress
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO _meergo_operations (operation, start_time, end_time) `+
+		_, err = tx.Exec(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
 			`VALUES ('IdentityResolution', (clock_timestamp() at time zone 'utc')::timestamp, NULL)`)
 		if err != nil {
 			return warehouses.Error(err)
@@ -236,7 +236,7 @@ type queryExec interface {
 // If an error occurs with the data warehouse, it returns a
 // warehouses.DataWarehouseError.
 func identityResolutionExecution(ctx context.Context, db queryExec, databaseName string) (startTime, endTime *time.Time, err error) {
-	query := "SELECT start_time, end_time FROM _meergo_operations WHERE operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
+	query := "SELECT start_time, end_time FROM _operations WHERE operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
 	err = db.QueryRow(ctx, query).Scan(&startTime, &endTime)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -247,11 +247,11 @@ func identityResolutionExecution(ctx context.Context, db queryExec, databaseName
 	// Check the consistency of the start time and the end time.
 	if endTime != nil {
 		if startTime == nil {
-			return nil, nil, warehouses.Error(errors.New("table '_meergo_operations' has" +
+			return nil, nil, warehouses.Error(errors.New("table '_operations' has" +
 				" an Identity Resolution execution with end time but without start time"))
 		}
 		if startTime != nil && startTime.After(*endTime) {
-			return nil, nil, warehouses.Error(errors.New("table '_meergo_operations' has" +
+			return nil, nil, warehouses.Error(errors.New("table '_operations' has" +
 				" an Identity Resolution execution with start time after the end time"))
 		}
 	}
@@ -270,7 +270,7 @@ func identityResolutionExecution(ctx context.Context, db queryExec, databaseName
 		case 0:
 			// Fix the end time.
 			now := time.Now().UTC()
-			_, err := db.Exec(ctx, `UPDATE _meergo_operations SET end_time = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, now)
+			_, err := db.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, now)
 			if err != nil {
 				return nil, nil, warehouses.Error(err)
 			}
