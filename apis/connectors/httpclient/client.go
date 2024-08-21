@@ -8,7 +8,6 @@
 package httpclient
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -19,7 +18,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/apis/capture"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/state"
 
@@ -164,25 +162,10 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 			req.Header.Set("Authorization", "Bearer "+accessToken)
 		}
 
-		// Trace the request.
-		var dump *bufio.Writer
-		if c.http.trace != nil {
-			dump = bufio.NewWriter(c.http.trace)
-			_, _ = dump.WriteString("\nRequest:\n------\n")
-			capture.Request(req, dump, true, true)
-		}
-
 		// Sent the request.
 		res, err := c.http.transport.RoundTrip(req)
 		if err != nil {
 			return nil, err
-		}
-
-		// Trace the response.
-		if c.http.trace != nil {
-			dump.Reset(c.http.trace)
-			_, _ = dump.WriteString("\n\n\nResponse:\n------\n")
-			capture.Response(res, dump, true, true)
 		}
 
 		if !idempotent {

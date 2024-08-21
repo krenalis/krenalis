@@ -18,7 +18,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -185,7 +184,6 @@ type Connectors struct {
 // New returns a new *Connectors value.
 func New(db *postgres.DB, state *state.State) *Connectors {
 	h := httpclient.New(db, state, http.DefaultTransport)
-	h.SetTrace(os.Stdout)
 	return &Connectors{state: state, http: h}
 }
 
