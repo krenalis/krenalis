@@ -16,26 +16,15 @@ meergo.RegisterApp(meergo.AppInfo{
 }, New)
 ```
 
-The `meergo.Backoff` type defines a backoff strategy as follows:
+The `AppInfo.Backoff` field is a `map[string]meergo.Backoff`. If an idempotent HTTP request fails, Meergo will look up the status code in the connector policy and retry the request using the corresponding backoff strategy.
 
-```go
-type Backoff func(res *http.Response, retries int) (waitTime time.Duration, err error)
-```
-
-- `res`: The HTTP response from the app.
-- `retries`: The number of times the request has been retried, starting from 0.
-- `waitTime`: The amount of time to wait before retrying.
-- `err`: If the request should not be retried, it is `meergo.NoRetry`, otherwise `nil`.
-
-You can use the strategies provided by Meergo or create your own. If the app documentation does not specify how to handle errors, do not set a backoff policy. Meergo will use a default policy in that case.
+You can use the strategies provided by Meergo, so you do not have to implement it, or create your own. If the app documentation does not specify how to handle errors, do not set a backoff policy. Meergo will use a default policy in that case.
 
 ## Idempotency
 
-When making HTTP requests, the `Do` method of `meergo.HTTPClient` automatically treats GET, PUT, DELETE, and HEAD requests as idempotent. Use the `DoIdempotent` method if you need to explicitly specify idempotency for a request.
+As mentioned earlier, only idempotent requests can be retried. The `Do` method of `meergo.HTTPClient` automatically treats GET, PUT, DELETE, and HEAD requests as idempotent. Use the `DoIdempotent` method if you need to specify idempotency explicitly.
 
 If your application supports idempotency, you can use the `UUID` method of `meergo.HTTPClient` to generate a unique version 4 UUID to use as an idempotency key.
-
-The following are the strategies already implemented by Meergo, so you do not have to implement it: 
 
 ## Strategies
 
@@ -84,3 +73,25 @@ func (s string) (time.Duration, error)
 If the `parse` function returns an error, the request will not be retried. If no `parse` function is provided, the strategy defaults to the behavior of the RetryAfter strategy.
 
 
+### Custom Strategy
+
+To create a custom backoff strategy, implement a function with the `meergo.Backoff` type:
+
+```go
+type Backoff func(res *http.Response, retries int) (waitTime time.Duration, err error)
+```
+
+This function takes the failed response and the number of retries so far, and returns the time to wait before retrying. Parameters include: 
+
+- `res`: The HTTP response from the app.
+- `retries`: The number of times the request has been retried, starting from 0.
+- `waitTime`: The amount of time to wait before retrying.
+- `err`: If the request should not be retried, it is `meergo.NoRetry`, otherwise `nil`.
+
+For custom strategies, jitter is not automatically added, so you need to include it in your function. If `d` is the calculated wait time, you can add jitter with the following code before returning the value:
+
+```go
+d += time.Duration(float64(d) * rand.Float64() * 0.5)
+```
+
+This code multiplies the calculated duration by a random factor (between 0 and 0.5) to introduce variability.
