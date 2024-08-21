@@ -137,7 +137,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	case state.App:
 		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken, c.Backoff),
+			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken, c.BackoffPolicy),
 			Region:       meergo.PrivacyRegion(conf.Region),
 		})
 	case state.Database:
@@ -191,7 +191,7 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	case state.App:
 		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
-			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken, c.Backoff),
+			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken, c.BackoffPolicy),
 			SetSettings:  setSettings,
 		})
 	case state.Database:

@@ -43,10 +43,10 @@ func init() {
 		DestinationDescription: "export users as clients and send events to Klaviyo",
 		TermForUsers:           "clients",
 		Icon:                   icon,
-		Backoff: map[string]meergo.Backoff{
+		BackoffPolicy: meergo.BackoffPolicy{
 			// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
-			"429":     meergo.RetryAfterBackoff(),
-			"500 503": meergo.ExponentialBackoff(100 * time.Millisecond),
+			"429":     meergo.RetryAfterStrategy(),
+			"500 503": meergo.ExponentialStrategy(100 * time.Millisecond),
 		},
 		SendingMode: meergo.Cloud,
 	}, New)

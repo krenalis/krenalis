@@ -23,7 +23,7 @@ func Test_waitTime(t *testing.T) {
 	var exponentialTimes = []time.Duration{backoffBase, backoffBase * 2, backoffBase * 4, backoffBase * 8, backoffBase * 16, backoffBase * 32, meergo.BackoffCap, meergo.BackoffCap}
 
 	tests := []struct {
-		backoff  map[string]meergo.Backoff
+		policy   meergo.BackoffPolicy
 		response *http.Response
 		times    []time.Duration
 		err      error
@@ -59,7 +59,7 @@ func Test_waitTime(t *testing.T) {
 		},
 		// Custom backoff: 404.
 		{
-			backoff: map[string]meergo.Backoff{"500": func(res *http.Response, retries int) (time.Duration, error) {
+			policy: meergo.BackoffPolicy{"500": func(res *http.Response, retries int) (time.Duration, error) {
 				return time.Duration(retries), nil
 			}},
 			response: &http.Response{Status: "404 Not Found", StatusCode: 404},
@@ -67,7 +67,7 @@ func Test_waitTime(t *testing.T) {
 		},
 		// Custom backoff: 500.
 		{
-			backoff: map[string]meergo.Backoff{"500": func(res *http.Response, retries int) (time.Duration, error) {
+			policy: meergo.BackoffPolicy{"500": func(res *http.Response, retries int) (time.Duration, error) {
 				return time.Duration(retries), nil
 			}},
 			response: &http.Response{Status: "500 Internal Server Error", StatusCode: 500},
@@ -79,7 +79,7 @@ func Test_waitTime(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			c.backoff = test.backoff
+			c.backoffPolicy = test.policy
 			for retries := range max(len(test.times), 1) {
 				got, err := c.waitTime(test.response, retries)
 				if err != nil {

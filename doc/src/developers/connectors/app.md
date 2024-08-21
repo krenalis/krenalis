@@ -105,7 +105,7 @@ The `AppInfo` type describes information about the app connector:
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 - `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth.md).
-- `Backoff`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff.md).
+- `BackoffPolicy`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff.md).
 - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values.md#time-layouts) in [Data Values](data-values.md) for more details.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
@@ -159,5 +159,6 @@ type AppConfig struct {
 ### Continue Reading
 
 - [OAuth](app/oauth.md)
+- [Backoff](app/backoff.md)
 - [Users and Groups](app/users-and-groups.md)
 - [Dispatch Events](app/dispatch-events.md)

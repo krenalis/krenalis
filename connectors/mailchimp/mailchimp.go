@@ -57,9 +57,9 @@ func init() {
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",
 			ExpiresIn: math.MaxInt32,
 		},
-		Backoff: map[string]meergo.Backoff{
+		BackoffPolicy: meergo.BackoffPolicy{
 			// https://mailchimp.com/developer/marketing/docs/fundamentals/#api-limits
-			"403 429 500": meergo.ExponentialBackoff(50 * time.Millisecond),
+			"403 429 500": meergo.ExponentialStrategy(50 * time.Millisecond),
 		},
 	}, New)
 }

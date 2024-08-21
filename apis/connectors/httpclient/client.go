@@ -28,17 +28,17 @@ import (
 const backoffBase = 100 * time.Millisecond
 
 // netBackoff is the backoff strategy applied when a network error occurs.
-var netBackoff = meergo.ExponentialBackoff(50 * time.Millisecond)
+var netBackoff = meergo.ExponentialStrategy(50 * time.Millisecond)
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")
 
 // Client implements the connector.HTTPClient interface.
 type Client struct {
-	http         *HTTP
-	connection   int
-	clientSecret string
-	accessToken  string
-	backoff      map[string]meergo.Backoff
+	http          *HTTP
+	connection    int
+	clientSecret  string
+	accessToken   string
+	backoffPolicy meergo.BackoffPolicy
 }
 
 // AccessToken returns an OAuth access token.
@@ -245,15 +245,15 @@ func (c *Client) UUID() string {
 }
 
 // waitTime calculates the duration to wait before retrying a failed request,
-// based on the backoff policy in c.backoff and the response's status code.
-// If c.backoff is nil, it checks the Retry-After header for status codes
-// 429 (Too Many Requests) and 503 (Service Unavailable); for status code 500
-// (Internal Server Error), it applies exponential backoff with an initial
+// based on the backoff policy in c.backoffPolicy and the response's status
+// code. If c.backoffPolicy is nil, it checks the Retry-After header for status
+// code 429 (Too Many Requests); for status codes 500 (Internal Server Error)
+// and 503 (Service Unavailable), it applies exponential backoff with an initial
 // delay of 100ms. If the response status code does not warrant a retry, it
 // returns the meergo.NoRetry error.
 func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error) {
-	var primaryBackoff, secondaryBackoff meergo.Backoff
-	if c.backoff != nil {
+	var primaryStrategy, secondaryStrategy meergo.BackoffStrategy
+	if c.backoffPolicy != nil {
 		// Use the client's policy.
 		var status string
 		if len(res.Status) >= 3 {
@@ -261,9 +261,9 @@ func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error
 		} else {
 			status = strconv.Itoa(res.StatusCode)
 		}
-		for statuses, backoff := range c.backoff {
+		for statuses, strategy := range c.backoffPolicy {
 			if strings.Contains(statuses, status) {
-				primaryBackoff = backoff
+				primaryStrategy = strategy
 				break
 			}
 		}
@@ -271,18 +271,18 @@ func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error
 		// Use the default policy.
 		switch res.StatusCode {
 		case 429:
-			primaryBackoff = meergo.RetryAfterBackoff()
-			secondaryBackoff = meergo.ExponentialBackoff(backoffBase)
+			primaryStrategy = meergo.RetryAfterStrategy()
+			secondaryStrategy = meergo.ExponentialStrategy(backoffBase)
 		case 500, 503, 502, 504:
-			primaryBackoff = meergo.ExponentialBackoff(backoffBase)
+			primaryStrategy = meergo.ExponentialStrategy(backoffBase)
 		}
 	}
-	if primaryBackoff == nil {
+	if primaryStrategy == nil {
 		return 0, meergo.NoRetry
 	}
-	d, err := primaryBackoff(res, retries)
-	if err == meergo.NoRetry && secondaryBackoff != nil {
-		d, err = secondaryBackoff(res, retries)
+	d, err := primaryStrategy(res, retries)
+	if err == meergo.NoRetry && secondaryStrategy != nil {
+		d, err = secondaryStrategy(res, retries)
 	}
 	if err != nil {
 		return 0, err

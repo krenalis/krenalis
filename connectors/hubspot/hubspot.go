@@ -58,11 +58,11 @@ func init() {
 			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
 			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
-		Backoff: map[string]meergo.Backoff{
+		BackoffPolicy: meergo.BackoffPolicy{
 			// https://developers.hubspot.com/docs/api/error-handling
-			"429":                         meergo.HeaderBackoff("X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
-			"477":                         meergo.RetryAfterBackoff(),
-			"500 502 503 504 521 523 524": meergo.ExponentialBackoff(time.Second),
+			"429":                         meergo.HeaderStrategy("X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
+			"477":                         meergo.RetryAfterStrategy(),
+			"500 502 503 504 521 523 524": meergo.ExponentialStrategy(time.Second),
 		},
 	}, New)
 }

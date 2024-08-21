@@ -22,82 +22,82 @@ func Test_Backoff(t *testing.T) {
 	nowTestTime = time.Date(2024, 8, 20, 15, 49, 13, 387104382, time.UTC)
 
 	tests := []struct {
-		backoff  Backoff
+		strategy BackoffStrategy
 		response *http.Response
 		times    []time.Duration
 		err      error
 	}{
 		{
-			backoff: ConstantBackoff(300 * time.Millisecond),
-			times:   []time.Duration{300 * time.Millisecond, 300 * time.Millisecond},
+			strategy: ConstantStrategy(300 * time.Millisecond),
+			times:    []time.Duration{300 * time.Millisecond, 300 * time.Millisecond},
 		},
 		{
-			backoff: ConstantBackoff(-100 * time.Millisecond),
-			times:   []time.Duration{0, 0},
+			strategy: ConstantStrategy(-100 * time.Millisecond),
+			times:    []time.Duration{0, 0},
 		},
 		{
-			backoff: ExponentialBackoff(750 * time.Millisecond),
-			times:   []time.Duration{750 * time.Millisecond, 1500 * time.Millisecond, 3 * time.Second, BackoffCap, BackoffCap},
+			strategy: ExponentialStrategy(750 * time.Millisecond),
+			times:    []time.Duration{750 * time.Millisecond, 1500 * time.Millisecond, 3 * time.Second, BackoffCap, BackoffCap},
 		},
 		{
-			backoff: ExponentialBackoff(0),
-			times:   []time.Duration{0, 0, 0},
+			strategy: ExponentialStrategy(0),
+			times:    []time.Duration{0, 0, 0},
 		},
 		{
-			backoff: ExponentialBackoff(-100),
-			times:   []time.Duration{0, 0, 0},
+			strategy: ExponentialStrategy(-100),
+			times:    []time.Duration{0, 0, 0},
 		},
 		{
-			backoff: ExponentialBackoff(BackoffCap + 1),
-			times:   []time.Duration{BackoffCap, BackoffCap, BackoffCap},
+			strategy: ExponentialStrategy(BackoffCap + 1),
+			times:    []time.Duration{BackoffCap, BackoffCap, BackoffCap},
 		},
 		{
-			backoff:  HeaderBackoff("After", nil),
+			strategy: HeaderStrategy("After", nil),
 			response: &http.Response{Header: http.Header{"After": []string{"Tue, 20 Aug 2024 15:53:00 UTC"}}},
 			times:    []time.Duration{226612895618},
 		},
 		{
-			backoff:  HeaderBackoff("After", nil),
+			strategy: HeaderStrategy("After", nil),
 			response: &http.Response{Header: http.Header{"After": []string{"Tue, 13 Aug 2024 09:23:51 UTC"}}},
 			times:    []time.Duration{0},
 		},
 		{
-			backoff:  HeaderBackoff("After", nil),
+			strategy: HeaderStrategy("After", nil),
 			response: &http.Response{Header: http.Header{"After": []string{"5"}}},
 			times:    []time.Duration{5 * time.Second},
 		},
 		{
-			backoff:  HeaderBackoff("After", time.ParseDuration),
+			strategy: HeaderStrategy("After", time.ParseDuration),
 			response: &http.Response{Header: http.Header{"After": []string{"2s"}}},
 			times:    []time.Duration{2 * time.Second},
 		},
 		{
-			backoff:  HeaderBackoff("After", time.ParseDuration),
+			strategy: HeaderStrategy("After", time.ParseDuration),
 			response: &http.Response{Header: http.Header{"After": []string{""}}},
 			err:      NoRetry,
 		},
 		{
-			backoff:  RetryAfterBackoff(),
+			strategy: RetryAfterStrategy(),
 			response: &http.Response{Header: http.Header{"Retry-After": []string{"10"}}},
 			times:    []time.Duration{10 * time.Second},
 		},
 		{
-			backoff:  RetryAfterBackoff(),
+			strategy: RetryAfterStrategy(),
 			response: &http.Response{Header: http.Header{"Retry-After": []string{"2.25"}}},
 			times:    []time.Duration{time.Duration(2.25 * float64(time.Second))},
 		},
 		{
-			backoff:  RetryAfterBackoff(),
+			strategy: RetryAfterStrategy(),
 			response: &http.Response{Header: http.Header{"Retry-After": []string{"-3"}}},
 			times:    []time.Duration{0},
 		},
 		{
-			backoff:  RetryAfterBackoff(),
+			strategy: RetryAfterStrategy(),
 			response: &http.Response{Header: http.Header{"Retry-After": []string{"Tue, 20 Aug 2024 16:00:00 UTC"}}},
 			times:    []time.Duration{646612895618},
 		},
 		{
-			backoff:  RetryAfterBackoff(),
+			strategy: RetryAfterStrategy(),
 			response: &http.Response{},
 			err:      NoRetry,
 		},
@@ -106,7 +106,7 @@ func Test_Backoff(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			for retries := range max(len(test.times), 1) {
-				got, err := test.backoff(test.response, retries)
+				got, err := test.strategy(test.response, retries)
 				if err != nil {
 					if test.err == nil {
 						t.Fatalf("expected no error, got error %q (type %T)", err, err)
