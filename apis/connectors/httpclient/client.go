@@ -139,15 +139,17 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 // client's backoff policy or a default policy if the client has no policy.
 func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Response, error) {
 
-	var body io.Reader
-	if req.Body != nil {
-		b, err := io.ReadAll(req.Body)
+	ctx := req.Context()
+
+	var body []byte
+	if idempotent && req.Body != nil {
+		var err error
+		body, err = io.ReadAll(req.Body)
 		_ = req.Body.Close()
 		if err != nil {
 			return nil, err
 		}
-		body = bytes.NewBuffer(b)
-		req.Body = io.NopCloser(body)
+		req.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 
 	for i := 0; ; i++ {
@@ -179,10 +181,32 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		if err != nil {
 			return res, nil
 		}
+
+		// Drain and close the response body.
+		closed := make(chan struct{})
+		go func() {
+			_, _ = io.Copy(io.Discard, res.Body)
+			_ = res.Body.Close()
+			close(closed)
+		}()
+
+		// Wait before retrying.
 		select {
 		case <-time.After(wt):
-		case <-req.Context().Done():
-			return nil, req.Context().Err()
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+
+		// Wait that the response's body is closed.
+		select {
+		case <-closed:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+
+		// Restore the request body.
+		if req.Body != nil {
+			req.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
 
 	}
