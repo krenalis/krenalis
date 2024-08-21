@@ -27,6 +27,9 @@ import (
 // backoffBase is the base for the default exponential backoff.
 const backoffBase = 100 * time.Millisecond
 
+// netBackoff is the backoff strategy applied when a network error occurs.
+var netBackoff = meergo.ExponentialBackoff(50 * time.Millisecond)
+
 var errUnsupportedOAuth = errors.New("OAuth is not supported")
 
 // Client implements the connector.HTTPClient interface.
@@ -152,7 +155,10 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		req.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 
-	for i := 0; ; i++ {
+	retries := 0
+	netRetries := false // indicates if the last retry was triggered by a network error.
+
+	for {
 
 		// Set the Authorization header if OAuth is supported.
 		accessToken, err := c.AccessToken(req.Context())
@@ -167,6 +173,21 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		// Sent the request.
 		res, err := c.http.transport.RoundTrip(req)
 		if err != nil {
+			if idempotent {
+				// Wait before retrying.
+				if !netRetries {
+					retries = 0
+					netRetries = true
+				}
+				wt, _ := netBackoff(nil, retries)
+				select {
+				case <-time.After(wt):
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				}
+				retries++
+				continue
+			}
 			return nil, err
 		}
 
@@ -174,11 +195,6 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 			return res, nil
 		}
 		if status := res.StatusCode; 200 <= status && status < 300 {
-			return res, nil
-		}
-
-		wt, err := c.waitTime(res, i)
-		if err != nil {
 			return res, nil
 		}
 
@@ -191,6 +207,14 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		}()
 
 		// Wait before retrying.
+		if netRetries {
+			retries = 0
+			netRetries = false
+		}
+		wt, err := c.waitTime(res, retries)
+		if err != nil {
+			return res, nil
+		}
 		select {
 		case <-time.After(wt):
 		case <-ctx.Done():
@@ -208,6 +232,8 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		if req.Body != nil {
 			req.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
+
+		retries++
 
 	}
 
