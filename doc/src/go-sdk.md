@@ -93,10 +93,10 @@ func main() {
 
 	client, _ := analytics.NewWithConfig("<write key>",
 		analytics.Config{
-			DataPlaneUrl: "<endpoint>",
-			Interval:     30 * time.Second,
-			BatchSize:    100,
-			Verbose:      true,
+			Endpoint:  "<endpoint>",
+			Interval:  30 * time.Second,
+			BatchSize: 100,
+			Verbose:   true,
 		})
 
 	// Enqueues a track event that will be sent asynchronously.
