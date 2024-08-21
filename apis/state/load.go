@@ -76,6 +76,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 						OAuth: connector.OAuth,
 					}
 				}
+				c.Backoff = connector.Backoff
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.Icon = connector.Icon
 				if connectorSettings != nil {

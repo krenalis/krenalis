@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 )
@@ -46,20 +47,28 @@ func New(db *postgres.DB, state *state.State, transport http.RoundTripper) *HTTP
 // Client returns an HTTP client with the provided OAuth client secret and
 // access token. If the client does not need to support OAuth, clientSecret
 // and accessToken can be left empty.
-func (h *HTTP) Client(clientSecret, accessToken string) *Client {
+//
+// backoff is the backoff policy. The keys of the map are the status codes for
+// which the backoff strategy should be applied, separated by spaces. If backoff
+// is nil, the client will use a default backoff policy.
+func (h *HTTP) Client(clientSecret, accessToken string, backoff map[string]meergo.Backoff) *Client {
 	return &Client{
 		http:         h,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
+		backoff:      backoff,
 	}
 }
 
 // ConnectionClient returns an HTTP client capable of retrieving OAuth
-// credentials from the provided connection if it supports OAuth.
+// credentials from the provided connection if it supports OAuth. The client's
+// backoff policy is the connector's policy.
 func (h *HTTP) ConnectionClient(connection int) *Client {
+	c, _ := h.state.Connection(connection)
 	return &Client{
 		http:       h,
 		connection: connection,
+		backoff:    c.Connector().Backoff,
 	}
 }
 

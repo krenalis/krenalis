@@ -9,15 +9,23 @@ package httpclient
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/capture"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/state"
 )
+
+// backoffBase is the base for the default exponential backoff.
+const backoffBase = 100 * time.Millisecond
 
 var errUnsupportedOAuth = errors.New("OAuth is not supported")
 
@@ -27,6 +35,7 @@ type Client struct {
 	connection   int
 	clientSecret string
 	accessToken  string
+	backoff      map[string]meergo.Backoff
 }
 
 // AccessToken returns an OAuth access token.
@@ -111,47 +120,116 @@ func (c *Client) ClientSecret() (string, error) {
 // the case of errors. Redirects are not followed.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
-	// Close the body before returning.
-	bodyClosed := false
+	var body io.Reader
 	if req.Body != nil {
-		defer func() {
-			if !bodyClosed {
-				_ = req.Body.Close()
-			}
-		}()
-	}
-
-	// Set the Authorization header if OAuth is supported.
-	accessToken, err := c.AccessToken(req.Context())
-	if err != nil {
-		if err != errUnsupportedOAuth {
+		b, err := io.ReadAll(req.Body)
+		_ = req.Body.Close()
+		if err != nil {
 			return nil, err
 		}
+		body = bytes.NewBuffer(b)
+		req.Body = io.NopCloser(body)
+	}
+
+	for i := 0; ; i++ {
+
+		// Set the Authorization header if OAuth is supported.
+		accessToken, err := c.AccessToken(req.Context())
+		if err != nil {
+			if err != errUnsupportedOAuth {
+				return nil, err
+			}
+		} else {
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+		}
+
+		// Trace the request.
+		var dump *bufio.Writer
+		if c.http.trace != nil {
+			dump = bufio.NewWriter(c.http.trace)
+			_, _ = dump.WriteString("\nRequest:\n------\n")
+			capture.Request(req, dump, true, true)
+		}
+
+		// Sent the request.
+		res, err := c.http.transport.RoundTrip(req)
+		if err != nil {
+			return nil, err
+		}
+
+		// Trace the response.
+		if c.http.trace != nil {
+			dump.Reset(c.http.trace)
+			_, _ = dump.WriteString("\n\n\nResponse:\n------\n")
+			capture.Response(res, dump, true, true)
+		}
+
+		if req.Method != "GET" && req.Method != "HEAD" {
+			return res, nil
+		}
+		if status := res.StatusCode; 200 <= status && status < 300 {
+			return res, nil
+		}
+
+		wt, err := c.waitTime(res, i)
+		if err != nil {
+			return res, nil
+		}
+		select {
+		case <-time.After(wt):
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		}
+
+	}
+
+}
+
+// waitTime calculates the duration to wait before retrying a failed request,
+// based on the backoff policy in c.backoff and the response's status code.
+// If c.backoff is nil, it checks the Retry-After header for status codes
+// 429 (Too Many Requests) and 503 (Service Unavailable); for status code 500
+// (Internal Server Error), it applies exponential backoff with an initial
+// delay of 100ms. If the response status code does not warrant a retry, it
+// returns the meergo.NoRetry error.
+func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error) {
+	var primaryBackoff, secondaryBackoff meergo.Backoff
+	if c.backoff != nil {
+		// Use the client's policy.
+		var status string
+		if len(res.Status) >= 3 {
+			status = res.Status[:3]
+		} else {
+			status = strconv.Itoa(res.StatusCode)
+		}
+		for statuses, backoff := range c.backoff {
+			if strings.Contains(statuses, status) {
+				primaryBackoff = backoff
+				break
+			}
+		}
 	} else {
-		req.Header.Set("Authorization", "Bearer "+accessToken)
+		// Use the default policy.
+		switch res.StatusCode {
+		case 429:
+			primaryBackoff = meergo.RetryAfterBackoff()
+			secondaryBackoff = meergo.ExponentialBackoff(backoffBase)
+		case 500, 503, 502, 504:
+			primaryBackoff = meergo.ExponentialBackoff(backoffBase)
+		}
 	}
-
-	// Trace the request.
-	var dump *bufio.Writer
-	if c.http.trace != nil {
-		dump = bufio.NewWriter(c.http.trace)
-		_, _ = dump.WriteString("\nRequest:\n------\n")
-		capture.Request(req, dump, true, true)
+	if primaryBackoff == nil {
+		return 0, meergo.NoRetry
 	}
-
-	// Sent the request.
-	bodyClosed = true
-	res, err := c.http.transport.RoundTrip(req)
+	d, err := primaryBackoff(res, retries)
+	if err == meergo.NoRetry && secondaryBackoff != nil {
+		d, err = secondaryBackoff(res, retries)
+	}
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-
-	// Trace the response.
-	if c.http.trace != nil {
-		dump.Reset(c.http.trace)
-		_, _ = dump.WriteString("\n\n\nResponse:\n------\n")
-		capture.Response(res, dump, true, true)
+	if d <= 0 {
+		return 0, nil
 	}
-
-	return res, nil
+	return d, nil
 }

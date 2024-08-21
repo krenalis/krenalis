@@ -50,16 +50,17 @@ const (
 type AppInfo struct {
 	Name                   string
 	Targets                Targets
-	SourceDescription      string // It should complete the sentence "Add an action to ..."
-	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	SourceDescription      string // It should complete the sentence "Add an action to ...".
+	DestinationDescription string // It should complete the sentence "Add an action to ...".
 	TermForUsers           string
 	TermForGroups          string
 	IdentityIDLabel        string
-	WebhooksPer            WebhooksPer // indicates if webhooks are per account, connection, or connector
-	OAuth                  OAuth       // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0
-	SendingMode            SendingMode // mode of event sending. None for sources and non-supporting event apps.
-	TimeLayouts            TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
-	Icon                   string      // icon in SVG format
+	WebhooksPer            WebhooksPer        // indicates if webhooks are per account, connection, or connector.
+	OAuth                  OAuth              // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
+	Backoff                map[string]Backoff // backoff policy. It controls retry timing using provided strategies or custom ones.
+	SendingMode            SendingMode        // mode of event sending. None for sources and non-supporting event apps.
+	TimeLayouts            TimeLayouts        // layouts for time values. If left empty, it is ISO 8601.
+	Icon                   string             // icon in SVG format.
 
 	newFunc reflect.Value
 	ct      reflect.Type

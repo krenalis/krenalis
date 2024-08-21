@@ -58,6 +58,12 @@ func init() {
 			SourceScopes:      []string{"crm.objects.contacts.read", "crm.schemas.contacts.read"},
 			DestinationScopes: []string{"crm.objects.contacts.read", "crm.objects.contacts.write", "crm.schemas.contacts.read"},
 		},
+		Backoff: map[string]meergo.Backoff{
+			// https://developers.hubspot.com/docs/api/error-handling
+			"429":                         meergo.HeaderBackoff("X-HubSpot-RateLimit-Interval-Milliseconds", parseMilliseconds),
+			"477":                         meergo.RetryAfterBackoff(),
+			"500 502 503 504 521 523 524": meergo.ExponentialBackoff(time.Second),
+		},
 	}, New)
 }
 
@@ -494,6 +500,16 @@ type hubspotError struct {
 
 func (err *hubspotError) Error() string {
 	return fmt.Sprintf("unexpected error from HubSpot: (%d) %s", err.statusCode, err.Message)
+}
+
+// parseMilliseconds parses the value of the
+// "X-HubSpot-RateLimit-Interval-Milliseconds" response header.
+func parseMilliseconds(s string) (time.Duration, error) {
+	d, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(d) * time.Millisecond, nil
 }
 
 // propertyType returns the property type of the HubSpot property type t with name c.

@@ -66,8 +66,12 @@ func init() {
 		SourceDescription:      "import customers as users",
 		DestinationDescription: "export users as customers",
 		TermForUsers:           "customers",
-		Icon:                   icon,
-		WebhooksPer:            meergo.WebhooksPerConnection,
+		Backoff: map[string]meergo.Backoff{
+			// https://docs.stripe.com/api/errors
+			"429 500 502 503 504": meergo.ExponentialBackoff(200 * time.Millisecond),
+		},
+		Icon:        icon,
+		WebhooksPer: meergo.WebhooksPerConnection,
 	}, New)
 }
 

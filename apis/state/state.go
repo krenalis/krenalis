@@ -573,6 +573,7 @@ type Connector struct {
 	SampleQuery            string
 	WebhooksPer            WebhooksPer
 	OAuth                  *OAuth
+	Backoff                map[string]meergo.Backoff
 }
 
 // ConnectorTargets represents the targets of a connector.
