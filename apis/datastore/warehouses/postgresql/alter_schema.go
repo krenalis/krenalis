@@ -29,8 +29,10 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 	if err != nil {
 		return err
 	}
-	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 
+	// If there are no operations in progress, get the "lock" by inserting a row
+	// into the "_operations" table.
+	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 		// Check if an alter schema operation is already in execution, and
 		// return an error in that case.
 		inExecution, err := alterSchemaInProgress(ctx, tx)
@@ -40,7 +42,6 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		if inExecution {
 			return warehouses.ErrAlterSchemaInProgress
 		}
-
 		// Check if the Identity Resolution is in progress, and return and error
 		// in that case.
 		starTime, endTime, err := identityResolutionExecution(ctx, tx, warehouse.settings.Database)
@@ -50,29 +51,26 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		if starTime != nil && endTime == nil {
 			return warehouses.ErrIdentityResolutionInProgress
 		}
-
 		// Add an entry to the "_operations" table.
-
-		// TODO(Gianluca): there is a problem with this code: this is actually
-		// written to the table only when the transaction is finished;
-		// therefore, while the transaction is ongoing, the Identity Resolution
-		// or other alter schema may still be initiated. This is a bug to be
-		// fixed. There is probably a similar problem in the Identity Resolution
-		// as well? Investigate on a solution.
-
 		_, err = tx.Exec(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
 			`VALUES ('AlterSchema', (clock_timestamp() at time zone 'utc')::timestamp, NULL)`)
 		if err != nil {
 			return warehouses.Error(err)
 		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
+	// Execute the alter schema queries within a transaction.
+	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 		for _, query := range queries {
 			_, err := tx.Exec(ctx, query)
 			if err != nil {
 				return warehouses.Error(err)
 			}
 		}
-
 		// Mark the operation within "_operations" as completed.
 		_, err = tx.Exec(ctx, "UPDATE _operations"+
 			" SET end_time = (clock_timestamp() at time zone 'utc')::timestamp"+
@@ -80,7 +78,6 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		if err != nil {
 			return warehouses.Error(err)
 		}
-
 		return nil
 	})
 	return err
