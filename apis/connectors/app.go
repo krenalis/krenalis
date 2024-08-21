@@ -174,7 +174,7 @@ func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Respons
 		return nil, err
 	}
 	r.Header = req.Header.Clone()
-	return app.httpClient.Do(r)
+	return app.httpClient.DoIdempotent(r, req.Idempotent)
 }
 
 // Users returns an iterator to iterate over the app's users. Each returned

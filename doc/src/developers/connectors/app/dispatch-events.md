@@ -103,18 +103,21 @@ Given the event, `EventRequest` returns an HTTP request used to dispatch the eve
 - `properties`: The values for the properties of the event type, required to prepare the request. These values conform to the schema of the event type. It is `nil` if the event type does not have a schema.
 - `redacted`: Reports whether authentication data in the returned request must be redacted. It's `true` when the returned request is previewed.
 
-`EventRequest` returns the HTTP request to be sent to the app:
+The `EventRequest` method returns the HTTP request to be sent to the app. The returned value has the following type:
 
 ```go
 type EventRequest struct {
-    Endpoint string      // Destination identifier, e.g., "us", "europe", or leave empty.
-    Method   string      // HTTP method (e.g., "POST").
-    URL      string      // URL to which the request will be sent.
-    Header   http.Header // Header fields to be included with the request.
-    Body     []byte      // The body of the request.
+    Endpoint   string      // Destination identifier, e.g., "us", "europe", or leave empty.
+    Method     string      // HTTP method (e.g., "POST").
+    URL        string      // URL to which the request will be sent.
+    Idempotent bool        // Indicates whether the request is idempotent.
+    Header     http.Header // Header fields to be included with the request.
+    Body       []byte      // The body of the request.
 }
 ```
 
 The `Endpoint` field identifies the specific destination for dispatching events. For instance, you can label endpoints as "us" or "europe" if events go to different locations based on privacy regions. Events going to the same endpoint get grouped into one queue, which avoids bottlenecks and keeps the system efficient. If a server where the events with the same endpoint are dispatched becomes unavailable, it affects only events routed to that queue. You can assign any value to this field, and if all events go to one destination, you can leave it empty.
+
+If a request is idempotent (`Idempotent` is `true`), in case of an error, the connector's backoff policy will be used to retry the failed request.
 
 To redact the returned request, when the `redacted` argument is `true`, replace authorization data in the URL, header, and body with "REDACTED".
