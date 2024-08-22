@@ -113,14 +113,14 @@ AS $$
     -- the identities.
     UPDATE "_user_identities" SET "__gid__" = (
         SELECT "__id__"
-        FROM "_users"
+        FROM {{ new_users_name }}
         WHERE
-            "_user_identities"."__pk__" = ANY ("_users"."__identities__")
+            "_user_identities"."__pk__" = ANY ({{ new_users_name }}."__identities__")
         LIMIT 1
     )
-    FROM "_users"
+    FROM {{ new_users_name }}
     WHERE
-        "_user_identities"."__pk__" = ANY ("_users"."__identities__");
+        "_user_identities"."__pk__" = ANY ({{ new_users_name }}."__identities__");
 
     -- Update associations between events and users by updating the user ID of
     -- the events.
@@ -136,11 +136,12 @@ AS $$
         );
 
     -- Mark the Identity Resolution execution as completed by setting a value
-    -- for end_time.
+    -- for end_time and setting the version of the "users" table.
     UPDATE
         _operations
     SET
-        end_time = (clock_timestamp() at time zone 'utc')::timestamp
+        end_time = (clock_timestamp() at time zone 'utc')::timestamp,
+        users_version = {{ new_users_version }}
     WHERE
         end_time IS NULL;
 

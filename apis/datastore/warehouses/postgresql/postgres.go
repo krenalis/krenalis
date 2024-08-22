@@ -174,6 +174,10 @@ func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, act
 
 // DuplicatedUsers returns the GIDs of two duplicated users.
 func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error) {
+	usersVersion, err := warehouse.usersVersion(ctx)
+	if err != nil {
+		return uuid.UUID{}, uuid.UUID{}, false, err
+	}
 	db, err := warehouse.connection()
 	if err != nil {
 		return uuid.UUID{}, uuid.UUID{}, false, err
@@ -184,7 +188,7 @@ func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string)
 				min("__id__"::text) AS gid1,
 				max("__id__"::text) as gid2,
 				count(*) AS cnt
-			FROM _users
+			FROM "_users_` + strconv.Itoa(usersVersion) + `"
 			GROUP BY "` + column + `") AS subquery
 		WHERE subquery.cnt > 1
 		LIMIT 1`
@@ -540,6 +544,20 @@ func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
 	}
 	warehouse.db = db
 	return db, nil
+}
+
+// usersVersion returns the version of the "users" table.
+func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
+	db, err := warehouse.connection()
+	if err != nil {
+		return 0, nil
+	}
+	var v int
+	err = db.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
+	if err != nil {
+		return 0, warehouses.Error(err)
+	}
+	return v, nil
 }
 
 // dsn returns the connection string, from s, in the URL format.

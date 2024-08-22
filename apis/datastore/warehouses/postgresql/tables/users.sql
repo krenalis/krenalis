@@ -1,4 +1,4 @@
-CREATE TABLE _users (
+CREATE TABLE _users_0 (
     "__id__" uuid,
     "__identities__" int [],
     "__last_change_time__" timestamp NOT NULL,
@@ -11,4 +11,4 @@ SELECT
     "__last_change_time__",
     "email"
 FROM
-    "_users";
+    "_users_0";

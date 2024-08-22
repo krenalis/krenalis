@@ -21,17 +21,25 @@ import (
 
 // AlterSchema alters the user schema.
 func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
-	queries, err := alterSchemaQueries(userColumns, operations)
+
+	// Retrieve the current version of the "users" table.
+	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {
 		return err
 	}
-	db, err := warehouse.connection()
+
+	// Determine the alter schema queries.
+	queries, err := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
 	if err != nil {
 		return err
 	}
 
 	// If there are no operations in progress, get the "lock" by inserting a row
 	// into the "_operations" table.
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
 	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 		// Check if an alter schema operation is already in execution, and
 		// return an error in that case.
@@ -85,7 +93,11 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
 func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
-	queries, err := alterSchemaQueries(userColumns, operations)
+	usersVersion, err := warehouse.usersVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	queries, err := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +122,9 @@ func alterSchemaInProgress(ctx context.Context, tx *postgres.Tx) (bool, error) {
 }
 
 // alterSchemaQueries returns the queries that perform the given operations.
-// operations must contain at least one operation.
-func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+// usersTableName is the current name of the users table, for example
+// "_users_42". operations must contain at least one operation.
+func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 
 	// The operations are performed in this order:
 	//
@@ -135,9 +148,9 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 			}
 		}
 		if len(toDrop) > 0 {
-			for _, table := range []string{"_users", "_user_identities"} {
+			for _, table := range []string{usersTableName, "_user_identities"} {
 				b := strings.Builder{}
-				b.WriteString("ALTER TABLE \"" + table + "\"\n\t")
+				b.WriteString("ALTER TABLE " + postgres.QuoteIdent(table) + "\n\t")
 				for i, c := range toDrop {
 					if i > 0 {
 						b.WriteString(",\n\t")
@@ -152,7 +165,7 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 	// ALTER TABLE ... RENAME COLUMN.
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
-			queries = append(queries, `ALTER TABLE "_users"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
+			queries = append(queries, `ALTER TABLE `+postgres.QuoteIdent(usersTableName)+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
 			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
 		}
 	}
@@ -166,9 +179,9 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 			}
 		}
 		if len(toAdd) > 0 {
-			for _, table := range []string{"_users", "_user_identities"} {
+			for _, table := range []string{usersTableName, "_user_identities"} {
 				b := strings.Builder{}
-				b.WriteString("ALTER TABLE \"" + table + "\"\n\t")
+				b.WriteString("ALTER TABLE " + postgres.QuoteIdent(table) + "\n\t")
 				for i, op := range toAdd {
 					if i > 0 {
 						b.WriteString(",\n\t")
@@ -187,28 +200,34 @@ func alterSchemaQueries(userColumns []warehouses.Column, operations []warehouses
 	}
 
 	// CREATE VIEW "users".
-	{
-		b := strings.Builder{}
-		b.WriteString(`CREATE VIEW "users" AS SELECT` + "\n")
-		metaProps := []string{"__id__", "__last_change_time__"}
-		for i, p := range metaProps {
-			if i > 0 {
-				b.WriteString(",\n")
-			}
-			b.WriteString("\t\"")
-			b.WriteString(p)
-			b.WriteRune('"')
-		}
-		for _, c := range userColumns {
-			b.WriteString(",\n\t\"")
-			b.WriteString(c.Name)
-			b.WriteRune('"')
-		}
-		b.WriteString("\n" + `FROM "_users"`)
-		queries = append(queries, b.String())
-	}
+	queries = append(queries, createViewQuery(usersTableName, userColumns))
 
 	return queries, nil
+}
+
+// createViewQuery returns the CREATE OR REPLACE VIEW query that creates the
+// "users" view on the "users" table with the given name.
+// userColumns contains the columns of such table.
+func createViewQuery(usersTableName string, userColumns []warehouses.Column) string {
+	b := strings.Builder{}
+	b.WriteString(`CREATE OR REPLACE VIEW "users" AS SELECT` + "\n")
+	metaProps := []string{"__id__", "__last_change_time__"}
+	for i, p := range metaProps {
+		if i > 0 {
+			b.WriteString(",\n")
+		}
+		b.WriteString("\t\"")
+		b.WriteString(p)
+		b.WriteRune('"')
+	}
+	for _, c := range userColumns {
+		b.WriteString(",\n\t\"")
+		b.WriteString(c.Name)
+		b.WriteRune('"')
+	}
+	b.WriteString("\nFROM ")
+	b.WriteString(postgres.QuoteIdent(usersTableName))
+	return b.String()
 }
 
 func typeToPostgresType(t types.Type) (string, bool) {

@@ -62,6 +62,19 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 		return err
 	}
 
+	// Determine the current version of the "users" table and create a copy of
+	// it with the incremented version.
+	usersVersion, err := warehouse.usersVersion(ctx)
+	if err != nil {
+		return err
+	}
+	newUsersVersion := usersVersion + 1
+	newUsersName := fmt.Sprintf("_users_%d", newUsersVersion)
+	_, err = db.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
 	// Generate the SQL function that determines if two identities are the same
 	// user.
 	var sameUser strings.Builder
@@ -97,7 +110,9 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 
 	// Generate the SQL queries that merge the identities to obtain the users.
 	var mergeUsers strings.Builder
-	mergeUsers.WriteString(`TRUNCATE _users; INSERT INTO _users (`)
+	mergeUsers.WriteString(`INSERT INTO `)
+	mergeUsers.WriteString(postgres.QuoteIdent(newUsersName))
+	mergeUsers.WriteString(` (`)
 	for _, c := range userColumns {
 		mergeUsers.WriteByte('"')
 		mergeUsers.WriteString(c.Name)
@@ -181,7 +196,9 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,
 	// replaces the GID of both users with new random GIDs.
-	mergeUsers.WriteString(`UPDATE "_users" u
+	mergeUsers.WriteString(`UPDATE `)
+	mergeUsers.WriteString(postgres.QuoteIdent(newUsersName))
+	mergeUsers.WriteString(` u
 		SET
 			"__id__" = gen_random_uuid()
 		WHERE
@@ -189,7 +206,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 				SELECT
 					"u2"."__id__"
 				FROM
-					"_users" "u2"
+					` + postgres.QuoteIdent(newUsersName) + ` "u2"
 				GROUP BY
 					"u2"."__id__"
 				HAVING
@@ -199,6 +216,8 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 	// Replace the placeholders in the Identity Resolution queries and run them.
 	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
+	query = strings.ReplaceAll(query, "{{ new_users_name }}", postgres.QuoteIdent(newUsersName))
+	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
 	_, err = warehouse.db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
@@ -207,6 +226,20 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 	// Call the 'do_identity_resolution' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
 	_, err = db.Exec(ctx, "CALL do_identity_resolution()")
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Create a view that references the new 'users' table, which has a new
+	// name.
+	_, err = db.Exec(ctx, createViewQuery(newUsersName, userColumns))
+	if err != nil {
+		return warehouses.Error(err)
+	}
+
+	// Drop the 'users' table that existed before executing this Identity
+	// Resolution.
+	_, err = db.Exec(ctx, `DROP TABLE "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
 		return warehouses.Error(err)
 	}
