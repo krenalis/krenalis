@@ -44,6 +44,10 @@ func init() {
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,
 		SendingMode:            meergo.Cloud,
+		BackoffPolicy: meergo.BackoffPolicy{
+			// https://developer.mixpanel.com/reference/import-events#rate-limits
+			"429 502 503": meergo.ExponentialStrategy(2 * time.Second),
+		},
 	}, New)
 }
 
