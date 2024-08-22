@@ -18,7 +18,7 @@ import (
 func Test_waitTime(t *testing.T) {
 
 	// Disable jitter in backoff.
-	meergo.BackoffJitterEnabled = false
+	backoffJitterEnabled = false
 
 	var exponentialTimes = []time.Duration{backoffBase, backoffBase * 2, backoffBase * 4, backoffBase * 8, backoffBase * 16, backoffBase * 32, meergo.BackoffCap, meergo.BackoffCap}
 
@@ -98,4 +98,37 @@ func Test_waitTime(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_jitter(t *testing.T) {
+	c := &Client{
+		backoffPolicy: meergo.BackoffPolicy{
+			"500": func(res *http.Response, replies int) (time.Duration, error) {
+				return 0, nil
+			}},
+	}
+	res := &http.Response{Status: "500 Internal Server Error", StatusCode: 500}
+	tests := []time.Duration{0, 1, 10 * time.Millisecond, 250 * time.Millisecond, 5 * time.Second}
+	for _, d := range tests {
+		t.Run(d.String(), func(t *testing.T) {
+			for range 10 {
+				got, err := c.waitTime(res, 0)
+				if err != nil {
+					t.Fatalf("unexpected error %s", err)
+				}
+				if got < 0 || d != 0 && got >= d {
+					t.Fatalf("expected a value in range [0, %s), got %s", d/2, got)
+				}
+			}
+		})
+	}
+	t.Run("backoffJitterEnabled = false", func(t *testing.T) {
+		backoffJitterEnabled = false
+		if got, err := c.waitTime(res, 0); got != 0 {
+			if err != nil {
+				t.Fatalf("unexpected error %s", err)
+			}
+			t.Fatalf("expected 0, got %s", got)
+		}
+	})
 }

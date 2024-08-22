@@ -26,7 +26,7 @@ As mentioned earlier, only idempotent requests can be retried. The `Do` method o
 
 ## Strategies
 
-Meergo provides several built-in strategies that you can use to manage retries. These strategies include a random jitter added to the calculated duration.
+Meergo offers Constant, Exponential, RetryAfter, and Header strategies for managing retries. Jitter is automatically added to the wait time calculated by strategies to introduce variability.
 
 ### Constant Strategy
 
@@ -86,10 +86,4 @@ This function takes the failed response and the number of retries so far, and re
 - `waitTime`: The amount of time to wait before retrying.
 - `err`: If the request should not be retried, it is `meergo.NoRetry`, otherwise `nil`.
 
-For custom strategies, jitter is not automatically added, so you need to include it in your function. For example, if `d` is the calculated wait time, you can add jitter with the following code before returning the value:
-
-```go
-d += time.Duration(float64(d) * rand.Float64() * 0.5)
-```
-
-This code multiplies the calculated duration by a random factor (between 0 and 0.5) to introduce variability.
+Do not add jitter to the wait time; it is added automatically.

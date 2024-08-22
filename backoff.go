@@ -10,7 +10,6 @@ package meergo
 import (
 	"errors"
 	"math"
-	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,9 +17,6 @@ import (
 
 // BackoffCap is the exponential backoff cap.
 var BackoffCap = 5 * time.Second
-
-// BackoffJitterEnabled controls whether jitter is applied in backoff.
-var BackoffJitterEnabled = true
 
 // NoRetry is the error returned by a Backoff function when the request
 // should not be retried.
@@ -38,7 +34,7 @@ var nowTestTime time.Time
 //
 //	BackoffPolicy{
 //	    "429":     meergo.RetryAfterStrategy(),
-//	    "500 503": meergo.ExponentialStrategy(1 * time.Second),
+//	    "500 503": meergo.ExponentialStrategy(time.Second),
 //	}
 type BackoffPolicy map[string]BackoffStrategy
 
@@ -65,7 +61,7 @@ func ExponentialStrategy(base time.Duration) BackoffStrategy {
 	return func(res *http.Response, retries int) (time.Duration, error) {
 		d := time.Duration(b*math.Pow(2, float64(retries))) * time.Millisecond // base * 2^retries
 		d = min(d, BackoffCap)                                                 // limit to cap
-		return d + jitter(d), nil
+		return d, nil
 	}
 }
 
@@ -95,7 +91,7 @@ func HeaderStrategy(header string, parse func(s string) (time.Duration, error)) 
 				if d < 0 {
 					d = 0
 				}
-				return d + jitter(d), nil
+				return d, nil
 			}
 			return 0, NoRetry
 		}
@@ -106,7 +102,7 @@ func HeaderStrategy(header string, parse func(s string) (time.Duration, error)) 
 		if d < 0 {
 			d = 0
 		}
-		return d + jitter(d), nil
+		return d, nil
 	}
 }
 
@@ -117,14 +113,4 @@ func HeaderStrategy(header string, parse func(s string) (time.Duration, error)) 
 // https://httpwg.org/specs/rfc9110.html#field.retry-after
 func RetryAfterStrategy() BackoffStrategy {
 	return HeaderStrategy("Retry-After", nil)
-}
-
-// jitter returns a random duration in the range [0, d/2). d cannot be negative.
-// It is called by backoff strategy to add variability to the delay.
-// If BackoffJitterEnabled is false, it returns 0.
-func jitter(d time.Duration) time.Duration {
-	if BackoffJitterEnabled {
-		return time.Duration(float64(d) * rand.Float64() * 0.5)
-	}
-	return 0
 }

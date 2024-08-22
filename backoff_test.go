@@ -15,9 +15,6 @@ import (
 
 func Test_Backoff(t *testing.T) {
 
-	// Disable jitter.
-	BackoffJitterEnabled = false
-
 	// Set a fake time.
 	nowTestTime = time.Date(2024, 8, 20, 15, 49, 13, 387104382, time.UTC)
 
@@ -122,23 +119,4 @@ func Test_Backoff(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_jitter(t *testing.T) {
-	tests := []time.Duration{0, 1, 10 * time.Millisecond, 250 * time.Millisecond, 5 * time.Second}
-	for _, d := range tests {
-		t.Run(d.String(), func(t *testing.T) {
-			for range 10 {
-				if got := jitter(d); got < 0 || d != 0 && got >= d {
-					t.Fatalf("expected a value in range [0, %s), got %s", d/2, got)
-				}
-			}
-		})
-	}
-	t.Run("BackoffJitterEnabled = true", func(t *testing.T) {
-		BackoffJitterEnabled = false
-		if got := jitter(5); got != 0 {
-			t.Fatalf("expected 0, got %s", got)
-		}
-	})
 }

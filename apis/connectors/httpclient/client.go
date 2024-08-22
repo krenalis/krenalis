@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,6 +27,9 @@ import (
 
 // backoffBase is the base for the default exponential backoff.
 const backoffBase = 100 * time.Millisecond
+
+// backoffJitterEnabled controls whether jitter is applied in backoff.
+var backoffJitterEnabled = true
 
 // netBackoff is the backoff strategy applied when a network error occurs.
 var netBackoff = meergo.ExponentialStrategy(50 * time.Millisecond)
@@ -289,6 +293,10 @@ func (c *Client) waitTime(res *http.Response, retries int) (time.Duration, error
 	}
 	if d <= 0 {
 		return 0, nil
+	}
+	// Add a jitter to introduce variability to the delay.
+	if backoffJitterEnabled {
+		d += time.Duration(float64(d) * rand.Float64() * 0.5)
 	}
 	return d, nil
 }
