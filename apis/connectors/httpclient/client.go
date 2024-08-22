@@ -222,6 +222,7 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		select {
 		case <-time.After(wt):
 		case <-ctx.Done():
+			_ = res.Body.Close()
 			return nil, ctx.Err()
 		}
 
@@ -229,6 +230,7 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		select {
 		case <-closed:
 		case <-ctx.Done():
+			_ = res.Body.Close()
 			return nil, ctx.Err()
 		}
 
