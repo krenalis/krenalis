@@ -79,15 +79,26 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 				return warehouses.Error(err)
 			}
 		}
-		// Mark the operation within "_operations" as completed.
-		_, err = tx.Exec(ctx, "UPDATE _operations"+
-			" SET end_time = (clock_timestamp() at time zone 'utc')::timestamp"+
-			" WHERE end_time IS NULL")
-		if err != nil {
-			return warehouses.Error(err)
-		}
 		return nil
 	})
+
+	// Before checking the alter schema errors, mark the operation within
+	// "_operations" as completed, independently from any error.
+	_, err2 := db.Exec(ctx, "UPDATE _operations"+
+		" SET end_time = (clock_timestamp() at time zone 'utc')::timestamp"+
+		" WHERE end_time IS NULL")
+	if err2 != nil {
+		if err == nil {
+			return warehouses.Error(err2)
+		}
+		// Both the alter schema and the query that updates '_operations' have
+		// failed, so both errors must be reported.
+		return warehouses.Error(fmt.Errorf(
+			"alter schema failed with error %s, then setting the operation as"+
+				" completed failed too with error %s", err, err2,
+		))
+	}
+
 	return err
 }
 
