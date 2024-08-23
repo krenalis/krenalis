@@ -16,8 +16,8 @@ import (
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 )
 
-// Query executes a query and returns the results as a Rows.
-func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery) (warehouses.Rows, int, error) {
+// Query executes a query and returns the results as Rows.
+func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -33,23 +33,26 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		}
 	}
 
-	// Build and execute the COUNT query to determine the count of records.
-	var count int
 	var b strings.Builder
-	b.WriteString(`SELECT COUNT(*) FROM "`)
-	b.WriteString(query.Table)
-	b.WriteByte('"')
-	if query.Where != nil {
-		b.WriteString(` WHERE `)
-		b.WriteString(whereExpr)
-	}
-	err = db.QueryRow(ctx, b.String()).Scan(&count)
-	if err != nil {
-		return nil, 0, warehouses.Error(err)
+
+	// Count the total number of records.
+	var count int
+	if withCount {
+		b.WriteString(`SELECT COUNT(*) FROM "`)
+		b.WriteString(query.Table)
+		b.WriteByte('"')
+		if query.Where != nil {
+			b.WriteString(` WHERE `)
+			b.WriteString(whereExpr)
+		}
+		err = db.QueryRow(ctx, b.String()).Scan(&count)
+		if err != nil {
+			return nil, 0, warehouses.Error(err)
+		}
+		b.Reset()
 	}
 
 	// Build the query.
-	b.Reset()
 	b.WriteString(`SELECT `)
 	for i, c := range query.Columns {
 		if i > 0 {

@@ -247,13 +247,13 @@ type Warehouse interface {
 	// Settings returns the data warehouse settings.
 	Settings() []byte
 
-	// Query executes a query and returns the results as a Rows.
-	// It also returns an estimated count of the records that would be returned if
-	// First and Limit were not provided in the query.
+	// Query executes a query and returns the results as Rows. If includeCount is
+	// true, it also returns an estimated total count of the records that would be
+	// returned if the query did not include First and Limit clauses.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	Query(ctx context.Context, query RowQuery) (Rows, int, error)
+	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
 }
 
 // RecordsQuery represents the query for the Query method.

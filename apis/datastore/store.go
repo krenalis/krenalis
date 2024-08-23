@@ -709,7 +709,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		OrderDesc: orderDesc,
 		First:     query.First,
 		Limit:     query.Limit,
-	})
+	}, true)
 	if err != nil {
 		return nil, 0, err
 	}

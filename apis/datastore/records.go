@@ -75,7 +75,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		OrderDesc: orderDesc,
 		First:     query.First,
 		Limit:     query.Limit,
-	})
+	}, false)
 	if err != nil {
 		return nil, err
 	}

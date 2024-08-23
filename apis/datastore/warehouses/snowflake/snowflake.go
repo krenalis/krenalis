@@ -401,8 +401,8 @@ func (warehouse *Snowflake) PurgeIdentities(ctx context.Context, actions []int, 
 	return nil
 }
 
-// Query executes a query and returns the results as a Rows.
-func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery) (warehouses.Rows, int, error) {
+// Query executes a query and returns the results as Rows.
+func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
 	panic("not implemented")
 }
 
