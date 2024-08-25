@@ -168,8 +168,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 
 	// User represents a user to update or create.
 	type User struct {
-		ID     string           // External app identifier; is non-empty only for app users to update.
-		Record datastore.Record // User record.
+		ID            string           // External app identifier; is non-empty only for app users to update.
+		Record        datastore.Record // User record.
+		MatchingValue any              // External matching property value added to properties when creating an app user.
 	}
 
 	users := make([]User, 0, 100)
@@ -216,12 +217,11 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 				// Create the user.
 				inProp, _ := action.InSchema.Property(action.MatchingProperties.Internal)
 				in := record.Properties[action.MatchingProperties.Internal]
-				matchingPropValue, err := internalToExternalMatchingProperty(in, inProp, action.MatchingProperties.External)
+				matchingValue, err := internalToExternalMatchingProperty(in, inProp, action.MatchingProperties.External)
 				if err != nil {
 					return err
 				}
-				record.Properties[action.MatchingProperties.External.Name] = matchingPropValue
-				users = append(users, User{Record: record})
+				users = append(users, User{Record: record, MatchingValue: matchingValue})
 			}
 		} else {
 			users = append(users, User{Record: record})
@@ -234,6 +234,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 
 			if transformer == nil {
 				for _, user := range users {
+					if user.MatchingValue != nil {
+						record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
+					}
 					if ok := writer.Write(ctx, "", user.Record.Properties, user.Record.ID.(string)); !ok {
 						return writer.Close(ctx)
 					}
@@ -274,6 +277,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 				}
 				stats.PassedTransformation(1)
 				stats.PassedOutputValidation(1)
+				if user.MatchingValue != nil {
+					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
+				}
 				if len(record.Properties) == 0 {
 					continue
 				}
