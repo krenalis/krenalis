@@ -39,7 +39,7 @@ type AlterSchemaOperation struct {
 type MergeTable struct {
 	Name    string   // Name of the table
 	Columns []Column // Columns to merge
-	Keys    []Column // Merge keys
+	Keys    []string // Names of the merge keys
 }
 
 // OperationType represents an operation to perform on the data warehouse to

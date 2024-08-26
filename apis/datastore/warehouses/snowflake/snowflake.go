@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -162,8 +163,17 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 		for i := 0; i < len(deleted); i += n {
 			rows = append(rows, deleted[i:i+n])
 		}
+		keys := make([]warehouses.Column, len(table.Keys))
+		for i, key := range table.Keys {
+			for _, c := range table.Columns {
+				if c.Name == key {
+					keys[i] = c
+					break
+				}
+			}
+		}
 		var err error
-		deletedCSV, err = serializeRowsToCSV(table.Keys, rows, true)
+		deletedCSV, err = serializeRowsToCSV(keys, rows, true)
 		if err != nil {
 			return err
 		}
@@ -301,20 +311,17 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTab
 			q.WriteByte(',')
 		}
 		q.WriteString(`d."`)
-		q.WriteString(key.Name)
+		q.WriteString(key)
 		q.WriteString(`" = s."`)
-		q.WriteString(key.Name)
+		q.WriteString(key)
 		q.WriteByte('"')
 	}
 	if len(rows) > 0 {
 		q.WriteString("\nWHEN MATCHED AND NOT s.\"$purge\" THEN\n  UPDATE SET ")
 		i := 0
-	Set:
 		for _, c := range table.Columns {
-			for _, key := range table.Keys {
-				if c.Name == key.Name {
-					continue Set
-				}
+			if slices.Contains(table.Keys, c.Name) {
+				continue
 			}
 			if i > 0 {
 				q.WriteByte(',')
