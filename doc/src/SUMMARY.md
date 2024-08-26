@@ -28,6 +28,7 @@
     - [Methods](android-sdk/methods.md)
 - [Go SDK](./go-sdk.md)
 - [Node SDK](./node-sdk.md)
+- [Python SDK](./python-sdk.md)
 - [Data Validation](./data-validation.md)
 - [Changing User Schema](./changing-user-schema.md)
 - [Transformations](./transformations.md)
