@@ -35,13 +35,6 @@ type AlterSchemaOperation struct {
 	NewColumn string     // For "Rename" operations.
 }
 
-// MergeTable represents a table in which rows will be merged.
-type MergeTable struct {
-	Name    string   // Name of the table
-	Columns []Column // Columns to merge
-	Keys    []string // Names of the merge keys
-}
-
 // OperationType represents an operation to perform on the data warehouse to
 // alter the "users" (and "_user_identities") schema.
 type OperationType int
@@ -178,7 +171,7 @@ type Warehouse interface {
 	// exist.
 	// rows or deleted can be empty but not both.
 	// Note that rows may be changed by this method.
-	Merge(ctx context.Context, table MergeTable, rows [][]any, deleted []any) error
+	Merge(ctx context.Context, table Table, rows [][]any, deleted []any) error
 
 	// MergeIdentities merges existing identities, deletes them, and inserts new
 	// ones. columns are the columns whose values are present in the rows and
@@ -300,6 +293,13 @@ type Rows interface {
 	Err() error
 	Next() bool
 	Scan(dest ...any) error
+}
+
+// Table represents a table.
+type Table struct {
+	Name    string
+	Columns []Column
+	Keys    []string
 }
 
 // IsValidIdentifier reports whether name is a valid identifier.

@@ -221,8 +221,8 @@ var eventColumnByProperty map[string]warehouses.Column
 // It does not contain the "user" column, which is not written during the merge.
 var eventsColumnsForMerge []warehouses.Column
 
-// eventsMergeTable is the merge table used to merge the events.
-var eventsMergeTable warehouses.MergeTable
+// eventsMergeTable is the table used to merge the events.
+var eventsMergeTable warehouses.Table
 
 // init initializes eventColumnByProperty, eventsColumnsForMerge, and
 // eventsMergeTable.
@@ -245,7 +245,7 @@ func init() {
 		}
 	}
 
-	eventsMergeTable = warehouses.MergeTable{
+	eventsMergeTable = warehouses.Table{
 		Name:    "events",
 		Columns: eventsColumnsForMerge,
 		Keys:    []string{"source", "message_id"},

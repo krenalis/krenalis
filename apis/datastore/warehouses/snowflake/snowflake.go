@@ -138,7 +138,7 @@ func (warehouse *Snowflake) Init(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.MergeTable, rows [][]any, deleted []any) error {
+func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
