@@ -417,7 +417,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 					exe := ActionExecution{}
 					var actionID int
 					var storage *int
-					err := rows.Scan(&exe.ID, &actionID, &storage, &exe.Reload, &exe.StartTime)
+					err := rows.Scan(&exe.ID, &actionID, &storage, &exe.Cursor, &exe.Reload, &exe.StartTime)
 					if err != nil {
 						return err
 					}
