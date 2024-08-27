@@ -12,9 +12,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
-	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -262,50 +260,4 @@ func quoteString(b *strings.Builder, s string) {
 		}
 	}
 	b.WriteByte('\'')
-}
-
-// quoteValue quotes value and writes it into b.
-func quoteValue(b *strings.Builder, value any) {
-	if value == nil {
-		b.WriteString("NULL")
-		return
-	}
-	switch v := value.(type) {
-	case bool:
-		if v {
-			b.WriteString("true")
-		} else {
-			b.WriteString("false")
-		}
-	case int:
-		b.WriteString(strconv.FormatInt(int64(v), 10))
-	case int16:
-		b.WriteString(strconv.FormatInt(int64(v), 10))
-	case int32:
-		b.WriteString(strconv.FormatInt(int64(v), 10))
-	case int64:
-		b.WriteString(strconv.FormatInt(v, 10))
-	case uint:
-		b.WriteString(strconv.FormatUint(uint64(v), 10))
-	case uint16:
-		b.WriteString(strconv.FormatUint(uint64(v), 10))
-	case uint32:
-		b.WriteString(strconv.FormatUint(uint64(v), 10))
-	case uint64:
-		b.WriteString(strconv.FormatUint(v, 10))
-	case float32:
-		b.WriteString(strconv.FormatFloat(float64(v), 'G', -1, 32))
-	case float64:
-		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-	case netip.Addr:
-		quoteString(b, v.String())
-	case string:
-		quoteString(b, v)
-	case time.Time:
-		b.WriteByte('\'')
-		b.WriteString(v.Format("2006-01-02 15:04:05"))
-		b.WriteByte('\'')
-	default:
-		panic(fmt.Errorf("unsupported type '%T'", v))
-	}
 }

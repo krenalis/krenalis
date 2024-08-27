@@ -57,6 +57,10 @@ func Test_renderExpr(t *testing.T) {
 			query: `"a" = "b"`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Float(64)}, warehouses.OperatorIn, []any{5.3, 12.6, 9.0}),
+			query: `"a" IN (5.3,12.6,9)`,
+		},
+		{
 			expr: warehouses.NewMultiExpr(
 				warehouses.LogicalOperatorAnd,
 				[]warehouses.Expr{

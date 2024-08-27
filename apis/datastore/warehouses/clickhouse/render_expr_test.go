@@ -8,6 +8,7 @@
 package clickhouse
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 )
 
 func Test_renderExpr(t *testing.T) {
-	cases := []struct {
+	tests := []struct {
 		expr    warehouses.Expr
 		query   string
 		invalid bool
@@ -48,6 +49,14 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 168, time.UTC)),
 			query: "`timestamp` < '1900-01-02 23:32:11'",
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Text()}, warehouses.OperatorEqual, warehouses.Column{Name: "b", Type: types.Text()}),
+			query: "`a` = `b`",
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Int(32)}, warehouses.OperatorIn, []any{5, 12, 9}),
+			query: "`a` IN (5,12,9)",
 		},
 		{
 			expr: warehouses.NewMultiExpr(
@@ -93,20 +102,22 @@ func Test_renderExpr(t *testing.T) {
 			query: "(`id` = 'abc_42' OR `id` = 'abc_50' OR `id` = 'abc_60') AND (`count` = 100 OR `count` = 200 OR `count` = 300)",
 		},
 	}
-	for _, cas := range cases {
+	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			gotQuery, gotErr := renderExpr(cas.expr)
-			if cas.invalid {
-				if gotErr == nil {
-					t.Fatalf("expected invalid, got query %q", gotQuery)
+			var b strings.Builder
+			err := renderExpr(&b, test.expr)
+			if err != nil {
+				if !test.invalid {
+					t.Fatalf("expected query %q, got error: %s", test.query, err)
 				}
 				return
 			}
-			if gotErr != nil {
-				t.Fatalf("expected query %q, got error: %s", cas.query, gotErr)
+			got := b.String()
+			if test.invalid {
+				t.Fatalf("expected invalid, got query %q", got)
 			}
-			if cas.query != gotQuery {
-				t.Fatalf("\nexpected query:  %s\ngot:              %s", cas.query, gotQuery)
+			if test.query != got {
+				t.Fatalf("\nexpected query:  %s\ngot:              %s", test.query, got)
 			}
 		})
 	}

@@ -65,4 +65,6 @@ const (
 	OperatorLessEqual    Operator = "LessEqual"
 	OperatorIsNull       Operator = "IsNull"
 	OperatorIsNotNull    Operator = "IsNotNull"
+	OperatorIn           Operator = "In"
+	OperatorNotIn        Operator = "NotIn"
 )

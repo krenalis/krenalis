@@ -10,7 +10,6 @@ package snowflake
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -94,76 +93,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		case warehouses.OperatorLessEqual:
 			b.WriteString("<= ")
 		}
-
-		if c.Type.Kind() == types.JSONKind {
-			b.WriteString("PARSE_JSON(")
-			switch v := baseExpr.Value.(type) {
-			case json.RawMessage:
-				quoteBytes(b, v)
-			case json.Number:
-				quoteString(b, string(v))
-			case bool, string, float64, map[string]any, []any:
-				var s bytes.Buffer
-				enc := json.NewEncoder(&s)
-				enc.SetEscapeHTML(false)
-				err := enc.Encode(v)
-				if err != nil {
-					return err
-				}
-				s.Truncate(s.Len() - 1) // remove the trailing new line.
-				quoteBytes(b, s.Bytes())
-			default:
-				return fmt.Errorf("unexpected value of type %T for a JSON type", baseExpr.Value)
-			}
-			b.WriteByte(')')
-			return nil
-		}
-
-		switch v := baseExpr.Value.(type) {
-		case warehouses.Column:
-			b.WriteByte('"')
-			b.WriteString(v.Name)
-			b.WriteByte('"')
-		case bool:
-			if t := c.Type; t.Kind() != types.BooleanKind {
-				return unexpectedTypeErr(v, t)
-			}
-			if v {
-				b.WriteString("TRUE")
-			} else {
-				b.WriteString("FALSE")
-			}
-		case float64:
-			if t := c.Type; t.Kind() != types.FloatKind {
-				return unexpectedTypeErr(v, t)
-			}
-			b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-		case decimal.Decimal:
-			if t := c.Type; t.Kind() != types.DecimalKind {
-				return unexpectedTypeErr(v, t)
-			}
-			b.WriteString(v.String())
-		case time.Time:
-			b.WriteByte('\'')
-			switch t := c.Type; t.Kind() {
-			default:
-				return unexpectedTypeErr(v, t)
-			case types.DateTimeKind:
-				b.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
-			case types.DateKind:
-				b.WriteString(v.Format(time.DateTime))
-			case types.TimeKind:
-				b.WriteString(v.Format("15:04:05.999999999"))
-			}
-			b.WriteByte('\'')
-		case string:
-			if c.Type.Kind() != types.TextKind {
-				return unexpectedTypeErr(v, c.Type)
-			}
-			quoteString(b, v)
-		default:
-			return unexpectedTypeErr(v, c.Type)
-		}
+		serializeValue(b, baseExpr.Value, c.Type)
 
 	case warehouses.OperatorIsNull:
 		b.WriteString("IS NULL")
@@ -171,20 +101,83 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	case warehouses.OperatorIsNotNull:
 		b.WriteString("IS NOT NULL")
 
+	case warehouses.OperatorNotIn:
+		b.WriteString(" NOT ")
+		fallthrough
+
+	case warehouses.OperatorIn:
+		b.WriteString("IN (")
+		for i, v := range baseExpr.Value.([]any) {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			serializeValue(b, v, c.Type)
+		}
+		b.WriteString(")")
+
 	default:
 		return fmt.Errorf("invalid operator %q", baseExpr.Operator)
 	}
 
 	return nil
-
 }
 
-func unexpectedTypeErr(v any, t types.Type) error {
-	switch t.Kind() {
-	case types.ArrayKind:
-		return errors.New("cannot apply operators on Array type")
-	case types.MapKind:
-		return errors.New("cannot apply operators on Map type")
+// serializeValue serializes v with type t into b.
+// As special case, v can have type warehouse.Column.
+func serializeValue(b *strings.Builder, v any, t types.Type) {
+
+	if t.Kind() == types.JSONKind {
+		b.WriteString("PARSE_JSON(")
+		switch v := v.(type) {
+		case json.RawMessage:
+			quoteBytes(b, v)
+		case json.Number:
+			quoteString(b, string(v))
+		case bool, string, float64, map[string]any, []any:
+			var s bytes.Buffer
+			enc := json.NewEncoder(&s)
+			enc.SetEscapeHTML(false)
+			err := enc.Encode(v)
+			if err != nil {
+				panic(err)
+			}
+			s.Truncate(s.Len() - 1) // remove the trailing new line.
+			quoteBytes(b, s.Bytes())
+		}
+		b.WriteByte(')')
+		return
 	}
-	return fmt.Errorf("unexpected value %v (type %T) for the %s type", v, v, t)
+
+	switch v := v.(type) {
+	case nil:
+		b.WriteString("NULL")
+	case warehouses.Column:
+		b.WriteByte('"')
+		b.WriteString(v.Name)
+		b.WriteByte('"')
+	case bool:
+		if v {
+			b.WriteString("TRUE")
+		} else {
+			b.WriteString("FALSE")
+		}
+	case float64:
+		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case decimal.Decimal:
+		b.WriteString(v.String())
+	case time.Time:
+		b.WriteByte('\'')
+		switch t.Kind() {
+		case types.DateTimeKind:
+			b.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
+		case types.DateKind:
+			b.WriteString(v.Format(time.DateTime))
+		case types.TimeKind:
+			b.WriteString(v.Format("15:04:05.999999999"))
+		}
+		b.WriteByte('\'')
+	case string:
+		quoteString(b, v)
+	}
+
 }

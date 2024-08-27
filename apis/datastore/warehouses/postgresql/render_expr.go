@@ -8,7 +8,6 @@
 package postgresql
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -92,59 +91,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		case warehouses.OperatorLessEqual:
 			b.WriteString("<= ")
 		}
-
-		switch v := baseExpr.Value.(type) {
-		case warehouses.Column:
-			b.WriteByte('"')
-			b.WriteString(v.Name)
-			b.WriteByte('"')
-		case bool:
-			if t := c.Type; t.Kind() != types.BooleanKind {
-				return unexpectedTypeErr(v, t)
-			}
-			if v {
-				b.WriteString("TRUE")
-			} else {
-				b.WriteString("FALSE")
-			}
-		case int:
-			if t := c.Type; t.Kind() != types.IntKind {
-				return unexpectedTypeErr(v, t)
-			}
-			b.WriteString(strconv.Itoa(v))
-		case float64:
-			if t := c.Type; t.Kind() != types.FloatKind {
-				return unexpectedTypeErr(v, t)
-			}
-			b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-		case decimal.Decimal:
-			if t := c.Type; t.Kind() != types.DecimalKind {
-				return unexpectedTypeErr(v, t)
-			}
-			b.WriteString(v.String())
-		case time.Time:
-			b.WriteByte('\'')
-			switch t := c.Type; t.Kind() {
-			default:
-				return unexpectedTypeErr(v, t)
-			case types.DateTimeKind:
-				b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
-			case types.DateKind:
-				b.WriteString(v.Format(time.DateTime))
-			case types.TimeKind:
-				b.WriteString(v.Format("15:04:05.999999"))
-			}
-			b.WriteByte('\'')
-		case string:
-			switch t := c.Type; t.Kind() {
-			case types.UUIDKind, types.InetKind, types.TextKind:
-				quoteString(b, v)
-			default:
-				return unexpectedTypeErr(v, t)
-			}
-		default:
-			return unexpectedTypeErr(v, c.Type)
-		}
+		serializeValue(b, baseExpr.Value, c.Type)
 
 	case warehouses.OperatorIsNull:
 		b.WriteString("IS NULL")
@@ -152,22 +99,63 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	case warehouses.OperatorIsNotNull:
 		b.WriteString("IS NOT NULL")
 
+	case warehouses.OperatorNotIn:
+		b.WriteString(" NOT ")
+		fallthrough
+
+	case warehouses.OperatorIn:
+		b.WriteString("IN (")
+		for i, v := range baseExpr.Value.([]any) {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			serializeValue(b, v, c.Type)
+		}
+		b.WriteString(")")
+
 	default:
 		return fmt.Errorf("invalid operator %q", baseExpr.Operator)
 	}
 
 	return nil
-
 }
 
-func unexpectedTypeErr(v any, t types.Type) error {
-	switch t.Kind() {
-	case types.JSONKind:
-		return errors.New("cannot apply operators on JSON type")
-	case types.ArrayKind:
-		return errors.New("cannot apply operators on Array type")
+// serializeValue serializes v with type t into b.
+// As special case, v can have type warehouse.Column.
+func serializeValue(b *strings.Builder, v any, t types.Type) {
+	switch v := v.(type) {
+	case nil:
+		b.WriteString("NULL")
+	case warehouses.Column:
+		b.WriteByte('"')
+		b.WriteString(v.Name)
+		b.WriteByte('"')
+	case bool:
+		if v {
+			b.WriteString("TRUE")
+		} else {
+			b.WriteString("FALSE")
+		}
+	case int:
+		b.WriteString(strconv.Itoa(v))
+	case float64:
+		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+	case decimal.Decimal:
+		b.WriteString(v.String())
+	case time.Time:
+		b.WriteByte('\'')
+		switch t.Kind() {
+		case types.DateTimeKind:
+			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+		case types.DateKind:
+			b.WriteString(v.Format(time.DateTime))
+		case types.TimeKind:
+			b.WriteString(v.Format("15:04:05.999999"))
+		}
+		b.WriteByte('\'')
+	case string:
+		quoteString(b, v)
 	}
-	return fmt.Errorf("unexpected value %v (type %T) for the %s type", v, v, t)
 }
 
 // quoteString quotes s as a string and writes it into b.
