@@ -92,8 +92,6 @@ func (state *State) keep() {
 			state.setActionSettings(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
-		case "SetActionUserCursor":
-			state.setActionUserCursor(n)
 		case "SetConnection":
 			state.setConnection(n)
 		case "SetConnectionSettings":
@@ -704,6 +702,7 @@ type ExecuteAction struct {
 	Action    int
 	Storage   int
 	Reload    bool
+	Cursor    time.Time
 	StartTime time.Time
 }
 
@@ -725,6 +724,7 @@ func (state *State) executeAction(n notification) {
 		action:    a,
 		storage:   storage,
 		Reload:    e.Reload,
+		Cursor:    e.Cursor,
 		StartTime: e.StartTime,
 	}
 	a.mu.Unlock()
@@ -911,7 +911,6 @@ type SetAction struct {
 	TableName                string
 	TableKeyProperty         string
 	IdentityProperty         string
-	ResetUserCursor          bool
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	FileOrderingPropertyPath string
@@ -943,9 +942,6 @@ func (state *State) setAction(n notification) {
 		a.TableName = e.TableName
 		a.TableKeyProperty = e.TableKeyProperty
 		a.IdentityProperty = e.IdentityProperty
-		if e.ResetUserCursor {
-			a.UserCursor = time.Time{}
-		}
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
 		a.FileOrderingPropertyPath = e.FileOrderingPropertyPath
@@ -1007,24 +1003,6 @@ func (state *State) setActionStatus(n notification) {
 	}
 	state.replaceAction(e.ID, func(a *Action) {
 		a.Enabled = e.Enabled
-	})
-}
-
-// SetActionUserCursor is the event sent when the user cursor of an action is
-// set.
-type SetActionUserCursor struct {
-	ID         int
-	UserCursor time.Time
-}
-
-// setActionUserCursor sets the user cursor of an action.
-func (state *State) setActionUserCursor(n notification) {
-	e := SetActionUserCursor{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceAction(e.ID, func(a *Action) {
-		a.UserCursor = e.UserCursor
 	})
 }
 

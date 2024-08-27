@@ -45,7 +45,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 	case state.App:
 		var lastChangeTime time.Time
 		if !execution.Reload {
-			lastChangeTime = action.UserCursor
+			lastChangeTime = execution.Cursor
 		}
 		purge = lastChangeTime.IsZero()
 		records, err = this.app().Users(ctx, action.InSchema, lastChangeTime)
@@ -59,7 +59,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 				if execution.Reload {
 					v, _ = database.LastChangeTimeCondition(nil)
 				} else {
-					purge = action.UserCursor.IsZero()
+					purge = execution.Cursor.IsZero()
 					v, _ = database.LastChangeTimeCondition(action)
 				}
 				return v, true
@@ -72,7 +72,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 	case state.FileStorage:
 		var lastChangeTime time.Time
 		if !execution.Reload && action.LastChangeTimeProperty != "" {
-			lastChangeTime = action.UserCursor
+			lastChangeTime = execution.Cursor
 		}
 		purge = lastChangeTime.IsZero()
 		records, err = this.file().Records(ctx, lastChangeTime)
@@ -179,8 +179,8 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 				}
 			}
 
-			// Set the user cursor.
-			err = this.setUserCursor(ctx, cursor)
+			// Set the cursor.
+			err = this.setExecutionCursor(ctx, cursor)
 			if err != nil {
 				return err
 			}

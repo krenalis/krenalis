@@ -1106,7 +1106,7 @@ type Action struct {
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
-	UserCursor               time.Time
+	Reload                   bool
 	Health                   Health
 	FileOrderingPropertyPath string
 	ExportMode               *ExportMode
@@ -1190,6 +1190,7 @@ type ActionExecution struct {
 	action    *Action
 	storage   *Connection
 	Reload    bool
+	Cursor    time.Time
 	StartTime time.Time
 }
 

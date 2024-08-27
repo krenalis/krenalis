@@ -527,8 +527,8 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	// Check if the cursor needs to be reset.
-	n.ResetUserCursor = shouldResetCursor(this.action, &n)
+	// Check if the next execution of the action requires reloading.
+	reload := shouldReload(this.action, &n)
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		var function state.TransformationFunction
@@ -554,14 +554,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_properties = $11, "+
 			"transformation_out_properties = $12, query = $13, connector = $14, path = $15, sheet = $16, "+
 			"compression = $17, settings = $18, table_name = $19, table_key_property = $20, identity_property = $21, "+
-			"user_cursor = CASE WHEN $22 THEN '0001-01-01 00:00:00+00' ELSE user_cursor END, "+
-			"last_change_time_property = $23, last_change_time_format = $24, file_ordering_property_path = $25,"+
-			"export_mode = $26, matching_properties_internal = $27, matching_properties_external = $28,"+
-			"export_on_duplicated_users = $29\nWHERE id = $30",
+			"reload = reload OR $22, last_change_time_property = $23, last_change_time_format = $24, "+
+			"file_ordering_property_path = $25, export_mode = $26, matching_properties_internal = $27, "+
+			"matching_properties_external = $28, export_on_duplicated_users = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InProperties,
 			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.TableKeyProperty, n.IdentityProperty, n.ResetUserCursor, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.TableKeyProperty, n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
 			n.ExportOnDuplicatedUsers, n.ID,
 		)
@@ -578,22 +577,10 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	return err
 }
 
-// setUserCursor sets the user cursor of the action.
-func (this *Action) setUserCursor(ctx context.Context, cursor time.Time) error {
-	n := state.SetActionUserCursor{
-		ID:         this.action.ID,
-		UserCursor: cursor,
-	}
-	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE actions SET user_cursor = $1 WHERE id = $2", n.UserCursor, n.ID)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return nil
-		}
-		return tx.Notify(ctx, n)
-	})
+// setExecutionCursor sets the cursor of the action execution.
+func (this *Action) setExecutionCursor(ctx context.Context, cursor time.Time) error {
+	execution, _ := this.action.Execution()
+	_, err := this.apis.db.Exec(ctx, "UPDATE actions_executions SET cursor = $1 WHERE id = $2", cursor, execution.ID)
 	return err
 }
 
@@ -936,9 +923,9 @@ func onlyForMatching(schema types.Type) types.Type {
 	})
 }
 
-// shouldResetCursor reports whether the cursor of an action should be reset
-// based on whether the notification n is used to modify the action.
-func shouldResetCursor(a *state.Action, n *state.SetAction) bool {
+// shouldReload determines if the next execution of the action requires
+// reloading, based on whether the notification n is used to modify the action.
+func shouldReload(a *state.Action, n *state.SetAction) bool {
 	if c := a.Connection(); c.Role != state.Source || a.Target != state.Users {
 		return false
 	}

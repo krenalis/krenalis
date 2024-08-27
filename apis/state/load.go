@@ -330,7 +330,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
 			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_properties,\n"+
 			"transformation_out_properties, query, connector, path, sheet, compression::TEXT, settings, table_name,\n"+
-			"table_key_property, identity_property, last_change_time_property, last_change_time_format, user_cursor, health,\n"+
+			"table_key_property, identity_property, last_change_time_property, last_change_time_format, health,\n"+
 			"file_ordering_property_path, export_mode, matching_properties_internal, matching_properties_external,\n"+
 			"export_on_duplicated_users\n"+
 			"FROM actions",
@@ -349,8 +349,8 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 						&action.Transformation.InProperties, &action.Transformation.OutProperties, &action.Query, &connector,
 						&action.Path, &action.Sheet, &action.Compression, &action.Settings, &action.TableName,
 						&action.TableKeyProperty, &action.IdentityProperty, &action.LastChangeTimeProperty,
-						&action.LastChangeTimeFormat, &action.UserCursor, &action.Health, &action.FileOrderingPropertyPath,
-						&action.ExportMode, &matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)
+						&action.LastChangeTimeFormat, &action.Health, &action.FileOrderingPropertyPath, &action.ExportMode,
+						&matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)
 					if err != nil {
 						return err
 					}
@@ -410,7 +410,7 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 		}
 
 		// Read the non-terminated action executions.
-		err = state.db.QueryScan(ctx, "SELECT id, action, storage, reload, start_time\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, action, storage, cursor, reload, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {

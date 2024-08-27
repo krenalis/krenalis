@@ -88,20 +88,24 @@ func (database *Database) LastChangeTimeCondition(action *state.Action) (string,
 	if action == nil {
 		return database.inner.LastChangeTimeCondition("", types.Type{}, nil), nil
 	}
+	execution, ok := action.Execution()
+	if !ok {
+		return "", errors.New("action is not currently executing")
+	}
+	cursor := execution.Cursor
 	property := action.LastChangeTimeProperty
-	if property == "" || action.UserCursor.IsZero() {
+	if property == "" || cursor.IsZero() {
 		return database.inner.LastChangeTimeCondition("", types.Type{}, nil), nil
 	}
 	p, _ := action.InSchema.Property(property)
-	cursor := action.UserCursor
 	var value any
 	switch p.Type.Kind() {
 	case types.DateTimeKind:
-		value = cursor
+		value = execution.Cursor
 	case types.DateKind:
 		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
 	case types.TextKind, types.JSONKind:
-		value = formatLastChangeTimeProperty(action.LastChangeTimeFormat, action.UserCursor)
+		value = formatLastChangeTimeProperty(action.LastChangeTimeFormat, cursor)
 	}
 	return database.inner.LastChangeTimeCondition(property, p.Type, value), nil
 }
@@ -367,6 +371,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 		defer r.Close()
+		execution, _ := r.action.Execution()
 		n := 0 // number of properties per record
 		var identityIndex = -1
 		var lastChangeTimeIndex = -1
@@ -426,7 +431,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 					record.Err = err
 					continue Rows
 				}
-				if !record.LastChangeTime.IsZero() && record.LastChangeTime.Before(r.action.UserCursor) {
+				if !record.LastChangeTime.IsZero() && record.LastChangeTime.Before(execution.Cursor) {
 					continue Rows
 				}
 			}

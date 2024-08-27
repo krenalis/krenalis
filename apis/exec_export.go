@@ -336,8 +336,8 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 		// property has no value, then the user should be discarded.
 		v, ok := user.Properties[externalProp.Name]
 		if !ok || v == nil {
-			// Set the user cursor.
-			err = this.setUserCursor(ctx, user.LastChangeTime)
+			// Set the cursor.
+			err = this.setExecutionCursor(ctx, user.LastChangeTime)
 			if err != nil {
 				return err
 			}
@@ -349,8 +349,8 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 			return err
 		}
 
-		// Set the user cursor.
-		err = this.setUserCursor(ctx, user.LastChangeTime)
+		// Set the cursor.
+		err = this.setExecutionCursor(ctx, user.LastChangeTime)
 		if err != nil {
 			return err
 		}
