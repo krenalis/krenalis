@@ -124,6 +124,10 @@ type Warehouse interface {
 	// data warehouse's methods are in progress and no more will be made.
 	Close() error
 
+	// Delete deletes rows from the specified table that match the provided where
+	// expression. If the where is nil, the table is truncated.
+	Delete(ctx context.Context, table string, where Expr) error
+
 	// DestinationUsers returns the destination users of the action.
 	// In particular, returns the external app identifiers of the destination users
 	// of the action whose external matching property value matches with the given

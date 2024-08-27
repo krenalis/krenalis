@@ -11,6 +11,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -104,6 +105,32 @@ func (warehouse *PostgreSQL) Close() error {
 	}
 	warehouse.db.Close()
 	warehouse.db = nil
+	return nil
+}
+
+// Delete deletes rows from the specified table that match the provided where
+// expression. If the where is nil, the table is truncated.
+func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	var stmt string
+	if where == nil {
+		stmt = `TRUNCATE TABLE "` + table + `"`
+	} else {
+		var s strings.Builder
+		s.WriteString(`DELETE FROM "` + table + `" WHERE `)
+		err = renderExpr(&s, where)
+		if err != nil {
+			return fmt.Errorf("cannot build WHERE expression: %s", err)
+		}
+		stmt = s.String()
+	}
+	_, err = db.Exec(ctx, stmt)
+	if err != nil {
+		return warehouses.Error(err)
+	}
 	return nil
 }
 
