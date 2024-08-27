@@ -408,32 +408,6 @@ func (warehouse *Snowflake) Ping(ctx context.Context) error {
 	return nil
 }
 
-// PurgeIdentities purges identities associated with the provided actions.
-func (warehouse *Snowflake) PurgeIdentities(ctx context.Context, actions []int, execution int) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	var b strings.Builder
-	b.WriteString("DELETE FROM `_user_identities` WHERE `__action__` IN (")
-	for i, action := range actions {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(strconv.Itoa(action))
-	}
-	b.WriteByte(')')
-	if execution != 0 {
-		b.WriteString(" AND `__execution__` != ")
-		b.WriteString(strconv.Itoa(execution))
-	}
-	_, err = db.ExecContext(ctx, b.String())
-	if err != nil {
-		return warehouses.Error(err)
-	}
-	return nil
-}
-
 // Query executes a query and returns the results as Rows.
 func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
 	panic("not implemented")

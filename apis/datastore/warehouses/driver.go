@@ -207,12 +207,6 @@ type Warehouse interface {
 	// active and, if necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
-	// PurgeIdentities purges identities associated with the provided actions. If
-	// execution is non-zero, it purges only the identities of the provided actions
-	// that do not match the specified execution. If an error occurs with the data
-	// warehouse, it returns a *DataWarehouseError error.
-	PurgeIdentities(ctx context.Context, actions []int, execution int) error
-
 	// RunIdentityResolution runs the Identity Resolution.
 	//
 	// identifiers are the columns corresponding to the Identity Resolution

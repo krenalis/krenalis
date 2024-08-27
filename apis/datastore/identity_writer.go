@@ -79,7 +79,11 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		iw.ack(iw.ackIDs, nil)
 	}
 	if iw.purge {
-		err := iw.store.warehouse.PurgeIdentities(ctx, []int{iw.action}, iw.execution)
+		where := warehouses.NewMultiExpr(warehouses.LogicalOperatorAnd, []warehouses.Expr{
+			warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorEqual, iw.action),
+			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OperatorNotEqual, iw.execution),
+		})
+		err := iw.store.warehouse.Delete(ctx, "_user_identities", where)
 		if err != nil {
 			return err
 		}

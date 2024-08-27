@@ -391,7 +391,12 @@ func (store *Store) PurgeIdentities(ctx context.Context, actions []int) error {
 	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
-	return store.warehouse.PurgeIdentities(ctx, actions, 0)
+	value := make([]any, len(actions))
+	for i, action := range actions {
+		value[i] = action
+	}
+	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorIn, value)
+	return store.warehouse.Delete(ctx, "_user_identities", where)
 }
 
 // RunIdentityResolution runs the Identity Resolution.
