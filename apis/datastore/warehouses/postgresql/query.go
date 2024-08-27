@@ -27,10 +27,12 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	// Build the WHERE expression, if necessary.
 	var whereExpr string
 	if query.Where != nil {
-		whereExpr, err = renderExpr(query.Where)
+		var s strings.Builder
+		err = renderExpr(&s, query.Where)
 		if err != nil {
 			return nil, 0, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
+		whereExpr = s.String()
 	}
 
 	var b strings.Builder
@@ -41,6 +43,10 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		b.WriteString(`SELECT COUNT(*) FROM "`)
 		b.WriteString(query.Table)
 		b.WriteByte('"')
+		err = appendJoins(&b, query.Joins)
+		if err != nil {
+			return nil, 0, err
+		}
 		if query.Where != nil {
 			b.WriteString(` WHERE `)
 			b.WriteString(whereExpr)
@@ -65,6 +71,12 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	b.WriteString(` FROM "`)
 	b.WriteString(query.Table)
 	b.WriteByte('"')
+
+	err = appendJoins(&b, query.Joins)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	if query.Where != nil {
 		b.WriteString(` WHERE `)
 		b.WriteString(whereExpr)
@@ -94,4 +106,27 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	}
 
 	return rows, count, nil
+}
+
+// appendJoins appends the string serialization of the provided joins to b.
+func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
+	for _, join := range joins {
+		switch join.Type {
+		case warehouses.Inner:
+			b.WriteString(` JOIN "`)
+		case warehouses.Left:
+			b.WriteString(` LEFT JOIN "`)
+		case warehouses.Right:
+			b.WriteString(` RIGHT JOIN "`)
+		case warehouses.Full:
+			b.WriteString(` FULL JOIN "`)
+		}
+		b.WriteString(join.Table)
+		b.WriteString(`" ON `)
+		err := renderExpr(b, join.Condition)
+		if err != nil {
+			return fmt.Errorf("cannot build JOIN condition: %s", err)
+		}
+	}
+	return nil
 }

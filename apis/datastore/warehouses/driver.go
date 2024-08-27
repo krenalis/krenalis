@@ -260,6 +260,9 @@ type RowQuery struct {
 	// Table is the table from which the records are read.
 	Table string
 
+	// Joins.
+	Joins []Join
+
 	// Where, when not nil, filters the records to return.
 	Where Expr
 
@@ -284,6 +287,23 @@ type Column struct {
 	Name     string
 	Type     types.Type
 	Nullable bool
+}
+
+// JoinType represents a type of JOIN statement.
+type JoinType int
+
+const (
+	Inner JoinType = iota
+	Left
+	Right
+	Full
+)
+
+// Join represents a JOIN statement in a query.
+type Join struct {
+	Type      JoinType
+	Table     string
+	Condition Expr
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

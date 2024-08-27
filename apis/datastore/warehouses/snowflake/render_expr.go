@@ -25,9 +25,7 @@ import (
 
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
-func renderExpr(exp warehouses.Expr) (string, error) {
-
-	s := strings.Builder{}
+func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 	// Handle MultiExpr expression.
 	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
@@ -38,26 +36,25 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case warehouses.LogicalOperatorOr:
 			op = " OR "
 		default:
-			return "", fmt.Errorf("invalid operator %q", multiExpr.Operator)
+			return fmt.Errorf("invalid operator %q", multiExpr.Operator)
 		}
 		for i, operand := range multiExpr.Operands {
 			if i > 0 {
-				s.WriteString(op)
+				b.WriteString(op)
 			}
 			_, isMultiExpr := operand.(*warehouses.MultiExpr)
 			if isMultiExpr {
-				s.WriteByte('(')
+				b.WriteByte('(')
 			}
-			e, err := renderExpr(operand)
+			err := renderExpr(b, operand)
 			if err != nil {
-				return "", err
+				return err
 			}
-			s.WriteString(e)
 			if isMultiExpr {
-				s.WriteByte(')')
+				b.WriteByte(')')
 			}
 		}
-		return s.String(), nil
+		return nil
 	}
 
 	// Handle BaseExpr expressions.
@@ -66,12 +63,12 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 
 	// Validate the column name.
 	if !warehouses.IsValidIdentifier(c.Name) {
-		return "", fmt.Errorf("invalid property name %q", c.Name)
+		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
 	// Render the column identifier.
-	s.WriteString(postgres.QuoteIdent(c.Name))
-	s.WriteString(" ")
+	b.WriteString(postgres.QuoteIdent(c.Name))
+	b.WriteString(" ")
 
 	// Render the operator and, if necessary, the value.
 	switch baseExpr.Operator {
@@ -85,115 +82,109 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 
 		switch baseExpr.Operator {
 		case warehouses.OperatorEqual:
-			s.WriteString("= ")
+			b.WriteString("= ")
 		case warehouses.OperatorNotEqual:
-			s.WriteString("<> ")
+			b.WriteString("<> ")
 		case warehouses.OperatorGreater:
-			s.WriteString("> ")
+			b.WriteString("> ")
 		case warehouses.OperatorGreaterEqual:
-			s.WriteString(">= ")
+			b.WriteString(">= ")
 		case warehouses.OperatorLess:
-			s.WriteString("< ")
+			b.WriteString("< ")
 		case warehouses.OperatorLessEqual:
-			s.WriteString("<= ")
+			b.WriteString("<= ")
 		}
 
-		switch k := c.Type.Kind(); k {
-		case
-			types.BooleanKind:
-			v, ok := baseExpr.Value.(bool)
-			if !ok {
-				return "", fmt.Errorf("expected value of type bool, got %T", baseExpr.Value)
-			}
-			if v {
-				s.WriteString("TRUE")
-			} else {
-				s.WriteString("FALSE")
-			}
-		case
-			types.FloatKind:
-			v, ok := baseExpr.Value.(float64)
-			if !ok {
-				return "", fmt.Errorf("expected value of type float64, got %T", baseExpr.Value)
-			}
-			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-		case types.DecimalKind:
-			d, ok := baseExpr.Value.(decimal.Decimal)
-			if !ok {
-				return "", fmt.Errorf("expected value of type decimal.Dec, got %T", baseExpr.Value)
-			}
-			s.WriteString(d.String())
-		case types.DateTimeKind:
-			v, ok := baseExpr.Value.(time.Time)
-			if !ok {
-				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
-			}
-			s.WriteByte('\'')
-			s.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
-			s.WriteByte('\'')
-		case types.DateKind:
-			v, ok := baseExpr.Value.(time.Time)
-			if !ok {
-				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
-			}
-			s.WriteByte('\'')
-			s.WriteString(v.Format(time.DateTime))
-			s.WriteByte('\'')
-		case types.TimeKind:
-			v, ok := baseExpr.Value.(time.Time)
-			if !ok {
-				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
-			}
-			s.WriteByte('\'')
-			s.WriteString(v.Format("15:04:05.999999999"))
-			s.WriteByte('\'')
-		case types.JSONKind:
-			s.WriteString("PARSE_JSON(")
+		if c.Type.Kind() == types.JSONKind {
+			b.WriteString("PARSE_JSON(")
 			switch v := baseExpr.Value.(type) {
 			case json.RawMessage:
-				quoteBytes(&s, v)
+				quoteBytes(b, v)
 			case json.Number:
-				quoteString(&s, string(v))
+				quoteString(b, string(v))
 			case bool, string, float64, map[string]any, []any:
-				var b bytes.Buffer
-				enc := json.NewEncoder(&b)
+				var s bytes.Buffer
+				enc := json.NewEncoder(&s)
 				enc.SetEscapeHTML(false)
 				err := enc.Encode(v)
 				if err != nil {
-					return "", err
+					return err
 				}
-				b.Truncate(b.Len() - 1) // remove the trailing new line.
-				quoteBytes(&s, b.Bytes())
+				s.Truncate(s.Len() - 1) // remove the trailing new line.
+				quoteBytes(b, s.Bytes())
 			default:
-				return "", fmt.Errorf("expected value of type json.RawMessage, json.Number, bool, string, float64, map[string]any, or []any but got %T", baseExpr.Value)
+				return fmt.Errorf("unexpected value of type %T for a JSON type", baseExpr.Value)
 			}
-			s.WriteByte(')')
-		case types.TextKind:
-			v, ok := baseExpr.Value.(string)
-			if !ok {
-				return "", fmt.Errorf("expected value of type string, got %T", baseExpr.Value)
+			b.WriteByte(')')
+			return nil
+		}
+
+		switch v := baseExpr.Value.(type) {
+		case warehouses.Column:
+			b.WriteByte('"')
+			b.WriteString(v.Name)
+			b.WriteByte('"')
+		case bool:
+			if t := c.Type; t.Kind() != types.BooleanKind {
+				return unexpectedTypeErr(v, t)
 			}
-			quoteString(&s, v)
-		case types.ArrayKind:
-			// Snowflake allows comparison between arrays, but we currently do not support it in Meergo.
-			return "", errors.New("cannot apply operators on Array type")
-		case types.MapKind:
-			// Snowflake allows comparison between objects, but we currently do not support it in Meergo.
-			return "", errors.New("cannot apply operators on Map type")
+			if v {
+				b.WriteString("TRUE")
+			} else {
+				b.WriteString("FALSE")
+			}
+		case float64:
+			if t := c.Type; t.Kind() != types.FloatKind {
+				return unexpectedTypeErr(v, t)
+			}
+			b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+		case decimal.Decimal:
+			if t := c.Type; t.Kind() != types.DecimalKind {
+				return unexpectedTypeErr(v, t)
+			}
+			b.WriteString(v.String())
+		case time.Time:
+			b.WriteByte('\'')
+			switch t := c.Type; t.Kind() {
+			default:
+				return unexpectedTypeErr(v, t)
+			case types.DateTimeKind:
+				b.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
+			case types.DateKind:
+				b.WriteString(v.Format(time.DateTime))
+			case types.TimeKind:
+				b.WriteString(v.Format("15:04:05.999999999"))
+			}
+			b.WriteByte('\'')
+		case string:
+			if c.Type.Kind() != types.TextKind {
+				return unexpectedTypeErr(v, c.Type)
+			}
+			quoteString(b, v)
 		default:
-			return "", fmt.Errorf("unexpected column with type %q", k)
+			return unexpectedTypeErr(v, c.Type)
 		}
 
 	case warehouses.OperatorIsNull:
-		s.WriteString("IS NULL")
+		b.WriteString("IS NULL")
 
 	case warehouses.OperatorIsNotNull:
-		s.WriteString("IS NOT NULL")
+		b.WriteString("IS NOT NULL")
 
 	default:
-		return "", fmt.Errorf("invalid operator %q", baseExpr.Operator)
+		return fmt.Errorf("invalid operator %q", baseExpr.Operator)
 	}
 
-	return s.String(), nil
+	return nil
 
+}
+
+func unexpectedTypeErr(v any, t types.Type) error {
+	switch t.Kind() {
+	case types.ArrayKind:
+		return errors.New("cannot apply operators on Array type")
+	case types.MapKind:
+		return errors.New("cannot apply operators on Map type")
+	}
+	return fmt.Errorf("unexpected value %v (type %T) for the %s type", v, v, t)
 }

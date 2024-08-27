@@ -23,9 +23,7 @@ import (
 
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
-func renderExpr(exp warehouses.Expr) (string, error) {
-
-	s := strings.Builder{}
+func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 	// Handle MultiExpr expression.
 	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
@@ -36,26 +34,25 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 		case warehouses.LogicalOperatorOr:
 			op = " OR "
 		default:
-			return "", fmt.Errorf("invalid operator %q", multiExpr.Operator)
+			return fmt.Errorf("invalid operator %q", multiExpr.Operator)
 		}
 		for i, operand := range multiExpr.Operands {
 			if i > 0 {
-				s.WriteString(op)
+				b.WriteString(op)
 			}
 			_, isMultiExpr := operand.(*warehouses.MultiExpr)
 			if isMultiExpr {
-				s.WriteByte('(')
+				b.WriteByte('(')
 			}
-			e, err := renderExpr(operand)
+			err := renderExpr(b, operand)
 			if err != nil {
-				return "", err
+				return err
 			}
-			s.WriteString(e)
 			if isMultiExpr {
-				s.WriteByte(')')
+				b.WriteByte(')')
 			}
 		}
-		return s.String(), nil
+		return nil
 	}
 
 	// Handle BaseExpr expressions.
@@ -64,12 +61,12 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 
 	// Validate the column name.
 	if !warehouses.IsValidIdentifier(c.Name) {
-		return "", fmt.Errorf("invalid property name %q", c.Name)
+		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
 	// Render the column identifier.
-	s.WriteString(postgres.QuoteIdent(c.Name))
-	s.WriteString(" ")
+	b.WriteString(postgres.QuoteIdent(c.Name))
+	b.WriteString(" ")
 
 	// Render the operator and, if necessary, the value.
 	switch baseExpr.Operator {
@@ -83,97 +80,94 @@ func renderExpr(exp warehouses.Expr) (string, error) {
 
 		switch baseExpr.Operator {
 		case warehouses.OperatorEqual:
-			s.WriteString("= ")
+			b.WriteString("= ")
 		case warehouses.OperatorNotEqual:
-			s.WriteString("<> ")
+			b.WriteString("<> ")
 		case warehouses.OperatorGreater:
-			s.WriteString("> ")
+			b.WriteString("> ")
 		case warehouses.OperatorGreaterEqual:
-			s.WriteString(">= ")
+			b.WriteString(">= ")
 		case warehouses.OperatorLess:
-			s.WriteString("< ")
+			b.WriteString("< ")
 		case warehouses.OperatorLessEqual:
-			s.WriteString("<= ")
+			b.WriteString("<= ")
 		}
 
-		switch k := c.Type.Kind(); k {
-		case types.BooleanKind:
-			v, ok := baseExpr.Value.(bool)
-			if !ok {
-				return "", fmt.Errorf("expected value of type bool, got %T", baseExpr.Value)
+		switch v := baseExpr.Value.(type) {
+		case warehouses.Column:
+			b.WriteByte('"')
+			b.WriteString(v.Name)
+			b.WriteByte('"')
+		case bool:
+			if t := c.Type; t.Kind() != types.BooleanKind {
+				return unexpectedTypeErr(v, t)
 			}
 			if v {
-				s.WriteString("TRUE")
+				b.WriteString("TRUE")
 			} else {
-				s.WriteString("FALSE")
+				b.WriteString("FALSE")
 			}
-		case types.IntKind:
-			v, ok := baseExpr.Value.(int)
-			if !ok {
-				return "", fmt.Errorf("expected value of type int, got %T", baseExpr.Value)
+		case int:
+			if t := c.Type; t.Kind() != types.IntKind {
+				return unexpectedTypeErr(v, t)
 			}
-			s.WriteString(strconv.Itoa(v))
-		case types.FloatKind:
-			v, ok := baseExpr.Value.(float64)
-			if !ok {
-				return "", fmt.Errorf("expected value of type float64, got %T", baseExpr.Value)
+			b.WriteString(strconv.Itoa(v))
+		case float64:
+			if t := c.Type; t.Kind() != types.FloatKind {
+				return unexpectedTypeErr(v, t)
 			}
-			s.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
-		case types.DecimalKind:
-			d, ok := baseExpr.Value.(decimal.Decimal)
-			if !ok {
-				return "", fmt.Errorf("expected value of type decimal.Dec, got %T", baseExpr.Value)
+			b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
+		case decimal.Decimal:
+			if t := c.Type; t.Kind() != types.DecimalKind {
+				return unexpectedTypeErr(v, t)
 			}
-			s.WriteString(d.String())
-		case types.DateTimeKind:
-			v, ok := baseExpr.Value.(time.Time)
-			if !ok {
-				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
+			b.WriteString(v.String())
+		case time.Time:
+			b.WriteByte('\'')
+			switch t := c.Type; t.Kind() {
+			default:
+				return unexpectedTypeErr(v, t)
+			case types.DateTimeKind:
+				b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+			case types.DateKind:
+				b.WriteString(v.Format(time.DateTime))
+			case types.TimeKind:
+				b.WriteString(v.Format("15:04:05.999999"))
 			}
-			s.WriteByte('\'')
-			s.WriteString(v.Format("2006-01-02 15:04:05.999999"))
-			s.WriteByte('\'')
-		case types.DateKind:
-			v, ok := baseExpr.Value.(time.Time)
-			if !ok {
-				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
+			b.WriteByte('\'')
+		case string:
+			switch t := c.Type; t.Kind() {
+			case types.UUIDKind, types.InetKind, types.TextKind:
+				quoteString(b, v)
+			default:
+				return unexpectedTypeErr(v, t)
 			}
-			s.WriteByte('\'')
-			s.WriteString(v.Format(time.DateTime))
-			s.WriteByte('\'')
-		case types.TimeKind:
-			v, ok := baseExpr.Value.(time.Time)
-			if !ok {
-				return "", fmt.Errorf("expected value of type time.Time, got %T", baseExpr.Value)
-			}
-			s.WriteByte('\'')
-			s.WriteString(v.Format("15:04:05.999999"))
-			s.WriteByte('\'')
-		case types.UUIDKind, types.InetKind, types.TextKind:
-			v, ok := baseExpr.Value.(string)
-			if !ok {
-				return "", fmt.Errorf("expected value of type string, got %T", baseExpr.Value)
-			}
-			quoteString(&s, v)
-		case types.JSONKind:
-			return "", errors.New("cannot apply operators on JSON type")
-		case types.ArrayKind:
-			return "", errors.New("cannot apply operators on Array type")
 		default:
-			return "", fmt.Errorf("unexpected column with type %q", k)
+			return unexpectedTypeErr(v, c.Type)
 		}
 
 	case warehouses.OperatorIsNull:
-		s.WriteString("IS NULL")
+		b.WriteString("IS NULL")
 
 	case warehouses.OperatorIsNotNull:
-		s.WriteString("IS NOT NULL")
+		b.WriteString("IS NOT NULL")
+
 	default:
-		return "", fmt.Errorf("invalid operator %q", baseExpr.Operator)
+		return fmt.Errorf("invalid operator %q", baseExpr.Operator)
 	}
 
-	return s.String(), nil
+	return nil
 
+}
+
+func unexpectedTypeErr(v any, t types.Type) error {
+	switch t.Kind() {
+	case types.JSONKind:
+		return errors.New("cannot apply operators on JSON type")
+	case types.ArrayKind:
+		return errors.New("cannot apply operators on Array type")
+	}
+	return fmt.Errorf("unexpected value %v (type %T) for the %s type", v, v, t)
 }
 
 // quoteString quotes s as a string and writes it into b.
