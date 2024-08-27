@@ -163,15 +163,15 @@ type Writer interface {
 	// actual write operation to a later time. If it returns false, no further Write
 	// operations can be performed, and a call to Close will return an error.
 	//
-	// If the record is successfully written, the ack function is invoked with
-	// the ack ID and a nil error as arguments. If writing the record fails, the
-	// ack function is invoked with the ack ID and a non-nil error as arguments.
-	// The ack function is invoked even if Write returns false.
+	// If the record is successfully written, the ack function is invoked with id
+	// and a nil error as arguments. If writing the record fails, the ack function
+	// is invoked with id and a non-nil error as arguments. The ack function is
+	// invoked even if Write returns false.
 	//
 	// record must contain at least one property.
 	//
 	// It panics if called on a closed writer.
-	Write(ctx context.Context, id string, properties map[string]any, ackID string) bool
+	Write(ctx context.Context, id string, properties map[string]any) bool
 }
 
 // Connectors allows to interact with the apps, databases, files, file storages,

@@ -421,13 +421,13 @@ func (w *fileWriter) Commit(ctx context.Context) error {
 	return err
 }
 
-func (w *fileWriter) Write(ctx context.Context, id string, properties map[string]any, ackID string) bool {
+func (w *fileWriter) Write(ctx context.Context, id string, properties map[string]any) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
 	r := fileRecord{
+		id:     id,
 		record: properties,
-		ackID:  ackID,
 	}
 	select {
 	case w.records <- r:
@@ -552,11 +552,11 @@ type recordReader struct {
 }
 
 type fileRecord struct {
+	id     string
 	record map[string]any
-	ackID  string
 }
 
-// Ack acknowledges the processing of the record with the given ack ID.
+// Ack acknowledges the processing of the record with the given identifier.
 // err is the error occurred processing the record, if any.
 func (rr *recordReader) Ack(id string, err error) {
 	rr.ack([]string{id}, err)
@@ -575,7 +575,7 @@ func (rr *recordReader) Record(ctx context.Context) (string, map[string]any, err
 		if !ok {
 			return "", nil, io.EOF
 		}
-		return r.ackID, r.record, nil
+		return r.id, r.record, nil
 	case <-ctx.Done():
 		return "", nil, ctx.Err()
 	}

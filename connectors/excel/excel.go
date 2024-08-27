@@ -219,7 +219,7 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 	// Write the records.
 	values := make([]any, len(columns))
 	for i := 2; ; i++ {
-		ackID, record, err := records.Record(ctx)
+		id, record, err := records.Record(ctx)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -234,7 +234,7 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 		if err != nil {
 			return err
 		}
-		records.Ack(ackID, nil)
+		records.Ack(id, nil)
 	}
 
 	err = sw.Flush()

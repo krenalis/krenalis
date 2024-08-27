@@ -237,7 +237,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 					if user.MatchingValue != nil {
 						record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 					}
-					if ok := writer.Write(ctx, "", user.Record.Properties, user.Record.ID.(string)); !ok {
+					if ok := writer.Write(ctx, "", user.Record.Properties); !ok {
 						return writer.Close(ctx)
 					}
 				}
@@ -283,7 +283,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 				if len(record.Properties) == 0 {
 					continue
 				}
-				if ok := writer.Write(ctx, user.ID, record.Properties, user.Record.ID.(string)); !ok {
+				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
 					return writer.Close(ctx)
 				}
 			}

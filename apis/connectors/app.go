@@ -252,7 +252,7 @@ func (w *appWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *appWriter) Write(ctx context.Context, id string, properties map[string]any, ackID string) bool {
+func (w *appWriter) Write(ctx context.Context, id string, properties map[string]any) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
@@ -262,7 +262,7 @@ func (w *appWriter) Write(ctx context.Context, id string, properties map[string]
 	} else {
 		err = w.records.Update(ctx, w.target, id, properties)
 	}
-	w.ack([]string{ackID}, err)
+	w.ack([]string{id}, err)
 	return true
 }
 

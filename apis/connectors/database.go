@@ -240,7 +240,7 @@ type databaseWriter struct {
 	schema  types.Type
 	columns []types.Property
 	rows    []map[string]any
-	ackIDs  []string
+	ids     []string
 	inner   meergo.Database
 	closed  bool
 }
@@ -256,13 +256,13 @@ func (w *databaseWriter) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *databaseWriter) Write(ctx context.Context, id string, properties map[string]any, ackID string) bool {
+func (w *databaseWriter) Write(ctx context.Context, id string, properties map[string]any) bool {
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
 	// Append the row and the ack ids.
 	w.rows = append(w.rows, properties)
-	w.ackIDs = append(w.ackIDs, ackID)
+	w.ids = append(w.ids, id)
 	// Upsert the rows.
 	if len(w.rows) == 100 {
 		w.upsert(ctx)
@@ -274,9 +274,9 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 // records.
 func (w *databaseWriter) upsert(ctx context.Context) {
 	err := w.inner.Upsert(ctx, w.table, w.key, w.rows, w.columns)
-	w.ack(w.ackIDs, err)
+	w.ack(w.ids, err)
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
-	w.ackIDs = slices.Delete(w.ackIDs, 0, len(w.ackIDs))
+	w.ids = slices.Delete(w.ids, 0, len(w.ids))
 }
 
 // Rows is the result of a query.

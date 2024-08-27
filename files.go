@@ -80,9 +80,9 @@ type Sheets interface {
 // written.
 type RecordReader interface {
 
-	// Ack acknowledges the processing of the record with the given ack ID.
+	// Ack acknowledges the processing of the record with the given identifier.
 	// err is the error occurred processing the record, if any.
-	Ack(ackID string, err error)
+	Ack(id string, err error)
 
 	// Columns returns the columns of the records as properties.
 	Columns() []types.Property
