@@ -44,7 +44,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 	switch connector.Type {
 	case state.App:
 		var lastChangeTime time.Time
-		if !execution.Reimport {
+		if !execution.Reload {
 			lastChangeTime = action.UserCursor
 		}
 		purge = lastChangeTime.IsZero()
@@ -56,7 +56,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 			switch name {
 			case "last_change_time":
 				var v string
-				if execution.Reimport {
+				if execution.Reload {
 					v, _ = database.LastChangeTimeCondition(nil)
 				} else {
 					purge = action.UserCursor.IsZero()
@@ -71,7 +71,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 		records, err = database.Records(ctx, action, replacer)
 	case state.FileStorage:
 		var lastChangeTime time.Time
-		if !execution.Reimport && action.LastChangeTimeProperty != "" {
+		if !execution.Reload && action.LastChangeTimeProperty != "" {
 			lastChangeTime = action.UserCursor
 		}
 		purge = lastChangeTime.IsZero()

@@ -115,7 +115,7 @@ CREATE TABLE actions_executions (
     id SERIAL,
     action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     storage integer DEFAULT NULL REFERENCES connections ON DELETE SET NULL,
-    reimport boolean NOT NULL DEFAULT FALSE,
+    reload boolean NOT NULL DEFAULT FALSE,
     start_time timestamp NOT NULL,
     end_time timestamp DEFAULT NULL,
     passed integer DEFAULT 0 NOT NULL,

@@ -410,14 +410,14 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 		}
 
 		// Read the non-terminated action executions.
-		err = state.db.QueryScan(ctx, "SELECT id, action, storage, reimport, start_time\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, action, storage, reload, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					exe := ActionExecution{}
 					var actionID int
 					var storage *int
-					err := rows.Scan(&exe.ID, &actionID, &storage, &exe.Reimport, &exe.StartTime)
+					err := rows.Scan(&exe.ID, &actionID, &storage, &exe.Reload, &exe.StartTime)
 					if err != nil {
 						return err
 					}

@@ -36,11 +36,11 @@ func (err actionError) Error() string {
 }
 
 // addExecution adds an execution to the action.
-func (this *Action) addExecution(ctx context.Context, reimport bool) error {
+func (this *Action) addExecution(ctx context.Context, reload bool) error {
 
 	n := state.ExecuteAction{
 		Action:    this.action.ID,
-		Reimport:  reimport,
+		Reload:    reload,
 		StartTime: time.Now().UTC(),
 	}
 	c := this.action.Connection()

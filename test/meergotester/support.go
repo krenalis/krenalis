@@ -326,9 +326,9 @@ func (c *Meergo) DeleteConnection(conn int) {
 	c.MustCall("DELETE", method, nil, nil)
 }
 
-func (c *Meergo) ExecuteAction(conn, action int, reimport bool) {
+func (c *Meergo) ExecuteAction(conn, action int, reload bool) {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d/executions", c.ws, conn, action)
-	c.MustCall("POST", method, map[string]any{"Reimport": reimport}, nil)
+	c.MustCall("POST", method, map[string]any{"Reload": reload}, nil)
 }
 
 func (c *Meergo) Executions(conn int) []any {

@@ -110,13 +110,13 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 		return nil, err
 	}
 	var body struct {
-		Reimport bool
+		Reload bool
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.Execute(r.Context(), body.Reimport)
+	err = a.Execute(r.Context(), body.Reload)
 	return nil, err
 }
 

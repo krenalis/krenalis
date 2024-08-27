@@ -97,7 +97,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from dummy.
-	c.ExecuteAction(dummy, dummyAction, true) // reimport = true
+	c.ExecuteAction(dummy, dummyAction, true) // reload = true
 	c.WaitActionsToFinish(dummy)
 
 	// Check the users again.

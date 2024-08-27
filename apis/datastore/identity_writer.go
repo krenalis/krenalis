@@ -93,7 +93,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 
 // Keep keeps the identity with the identifier id. Use Keep instead of Write
 // when there is no need to modify the identity, but to ensure it is not purged
-// in case of reimports.
+// in case of reload.
 func (iw *BatchIdentityWriter) Keep(id string) {
 	if iw.closed {
 		panic("call Keep on a closed identity writer")

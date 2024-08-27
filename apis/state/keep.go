@@ -703,7 +703,7 @@ type ExecuteAction struct {
 	ID        int
 	Action    int
 	Storage   int
-	Reimport  bool
+	Reload    bool
 	StartTime time.Time
 }
 
@@ -724,7 +724,7 @@ func (state *State) executeAction(n notification) {
 		ID:        e.ID,
 		action:    a,
 		storage:   storage,
-		Reimport:  e.Reimport,
+		Reload:    e.Reload,
 		StartTime: e.StartTime,
 	}
 	a.mu.Unlock()

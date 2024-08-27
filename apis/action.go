@@ -313,9 +313,9 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-func (this *Action) Execute(ctx context.Context, reimport bool) error {
+func (this *Action) Execute(ctx context.Context, reload bool) error {
 	this.apis.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reimport", reimport)
+	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reload", reload)
 	defer span.End()
 	c := this.action.Connection()
 	if !c.Enabled {
@@ -342,7 +342,7 @@ func (this *Action) Execute(ctx context.Context, reimport bool) error {
 	case state.Maintenance:
 		return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
-	return this.addExecution(ctx, reimport)
+	return this.addExecution(ctx, reload)
 }
 
 // Set sets the action.

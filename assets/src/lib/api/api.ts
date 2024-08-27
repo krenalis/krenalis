@@ -342,7 +342,7 @@ class Connections {
 				action,
 			)}/executions`,
 			http.POST,
-			{ Reimport: false },
+			{ Reload: false },
 		);
 	};
 

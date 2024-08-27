@@ -1189,7 +1189,7 @@ type ActionExecution struct {
 	ID        int
 	action    *Action
 	storage   *Connection
-	Reimport  bool
+	Reload    bool
 	StartTime time.Time
 }
 
