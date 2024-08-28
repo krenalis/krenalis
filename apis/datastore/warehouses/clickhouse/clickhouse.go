@@ -100,25 +100,22 @@ func (warehouse *ClickHouse) Close() error {
 }
 
 // Delete deletes rows from the specified table that match the provided where
-// expression. If the where is nil, the table is truncated.
+// expression.
 func (warehouse *ClickHouse) Delete(ctx context.Context, table string, where warehouses.Expr) error {
+	if where == nil {
+		return errors.New("where is nil")
+	}
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-	var stmt string
-	if where == nil {
-		stmt = "TRUNCATE TABLE `" + table + "`"
-	} else {
-		var s strings.Builder
-		s.WriteString("DELETE FROM `" + table + "` WHERE ")
-		err = renderExpr(&s, where)
-		if err != nil {
-			return fmt.Errorf("cannot build WHERE expression: %s", err)
-		}
-		stmt = s.String()
+	var s strings.Builder
+	s.WriteString("DELETE FROM `" + table + "` WHERE ")
+	err = renderExpr(&s, where)
+	if err != nil {
+		return fmt.Errorf("cannot build WHERE expression: %s", err)
 	}
-	err = db.Exec(ctx, stmt)
+	err = db.Exec(ctx, s.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -198,6 +195,19 @@ func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, action int,
 func (warehouse *ClickHouse) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
 	return s
+}
+
+// Truncate truncates the specified table.
+func (warehouse *ClickHouse) Truncate(ctx context.Context, table string) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	err = db.Exec(ctx, "TRUNCATE TABLE `"+table+"`")
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // Query executes a query and returns the results as Rows.

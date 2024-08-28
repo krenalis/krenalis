@@ -125,7 +125,10 @@ type Warehouse interface {
 	Close() error
 
 	// Delete deletes rows from the specified table that match the provided where
-	// expression. If the where is nil, the table is truncated.
+	// expression. Returns an error if the expression is nil.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
 	Delete(ctx context.Context, table string, where Expr) error
 
 	// DestinationUsers returns the destination users of the action.
@@ -237,6 +240,12 @@ type Warehouse interface {
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte
+
+	// Truncate truncates the specified table.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	Truncate(ctx context.Context, table string) error
 
 	// Query executes a query and returns the results as Rows. If withCount is true,
 	// it also returns an estimated total count of the records that would be

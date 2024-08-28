@@ -11,6 +11,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -109,25 +110,22 @@ func (warehouse *PostgreSQL) Close() error {
 }
 
 // Delete deletes rows from the specified table that match the provided where
-// expression. If the where is nil, the table is truncated.
+// expression.
 func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {
+	if where == nil {
+		return errors.New("where is nil")
+	}
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
-	var stmt string
-	if where == nil {
-		stmt = `TRUNCATE TABLE "` + table + `"`
-	} else {
-		var s strings.Builder
-		s.WriteString(`DELETE FROM "` + table + `" WHERE `)
-		err = renderExpr(&s, where)
-		if err != nil {
-			return fmt.Errorf("cannot build WHERE expression: %s", err)
-		}
-		stmt = s.String()
+	var s strings.Builder
+	s.WriteString(`DELETE FROM "` + table + `" WHERE `)
+	err = renderExpr(&s, where)
+	if err != nil {
+		return fmt.Errorf("cannot build WHERE expression: %s", err)
 	}
-	_, err = db.Exec(ctx, stmt)
+	_, err = db.Exec(ctx, s.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -525,6 +523,19 @@ func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int,
 func (warehouse *PostgreSQL) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
 	return s
+}
+
+// Truncate truncates the specified table.
+func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(ctx, `TRUNCATE TABLE "`+table+`"`)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // connection returns the PostgreSQL connection.
