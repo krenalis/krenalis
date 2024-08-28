@@ -238,8 +238,8 @@ type Warehouse interface {
 	// Settings returns the data warehouse settings.
 	Settings() []byte
 
-	// Query executes a query and returns the results as Rows. If includeCount is
-	// true, it also returns an estimated total count of the records that would be
+	// Query executes a query and returns the results as Rows. If withCount is true,
+	// it also returns an estimated total count of the records that would be
 	// returned if the query did not include First and Limit clauses.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
