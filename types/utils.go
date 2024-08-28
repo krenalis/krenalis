@@ -170,7 +170,10 @@ func Properties(t Type) []Property {
 	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-Object type")
 	}
-	return slices.Clone(t.vl.([]Property))
+	properties := t.vl.([]Property)
+	pp := make([]Property, len(properties))
+	copy(pp, properties)
+	return pp
 }
 
 // PropertyByPath returns the property with the given path in the Object t, or
