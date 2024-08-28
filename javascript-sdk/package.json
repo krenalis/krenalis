@@ -10,7 +10,7 @@
 	"type": "module",
 	"devDependencies": {
 		"@swc/cli": "0.4.0",
-		"@swc/core": "1.6.13",
+		"@swc/core": "1.7.18",
 		"esbuild": "0.23.0"
 	}
 }
