@@ -194,12 +194,6 @@ type AppOAuth interface {
 	OAuthAccount(ctx context.Context) (string, error)
 }
 
-// Cursor represents a cursor used to implement pagination.
-type Cursor struct {
-	LastChangeTime time.Time // Most recent last change time among all users or groups in UTC.
-	Next           string    // Returned string value of the last call to Users or Groups.
-}
-
 // Record represents an app record.
 type Record struct {
 	ID             string         // Identifier.
@@ -230,15 +224,21 @@ type AppRecords interface {
 
 	// Records returns the records of the specified target. The target can only be
 	// either Users or Groups, and it must be a target supported by the connector.
-	// properties are the names of the properties to read, and cursor represents the
-	// position from which to start reading the records.
+	// If lastChangeTime is not the zero time, only the records changed or created
+	// at or after that time will be returned. If ids is not nil, only records with
+	// identifiers in ids will be returned, if any. properties are the names of the
+	// properties to read, and cursor represents the position from which to start
+	// reading the records; it is the cursor value returned by the previous call in
+	// a paginated query. Subsequent calls will use this cursor value to retrieve
+	// the next batch of records.
 	//
 	// The properties returned in records may include more than those requested and
-	// must conform to the schema as returned by the Schema method. next is passed
-	// as 'cursor.Next' in the subsequent call. It can be any UTF-8 encoded string,
-	// even an empty one. If there are no more records to return, it returns the
-	// last records read (if any) along with the io.EOF error.
-	Records(ctx context.Context, target Targets, properties []string, cursor Cursor) (records []Record, next string, err error)
+	// must conform to the schema returned by the Schema method. The string return
+	// value is used as the cursor in the subsequent call. It can be any UTF-8
+	// encoded string, including an empty string. If there are no more records to
+	// return, the method returns the last records read (if any) along with the
+	// io.EOF error.
+	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
 
 	// Update updates a record of the specified target. id is the identifier of the
 	// record to update. properties are the properties to update and must contain at

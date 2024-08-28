@@ -23,15 +23,17 @@ Let's start by looking at how to read records using the `Records` method.
 Meergo calls the connector's `Records` method to read records from the app:
 
 ```go
-Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) (records []meergo.Record, next string, err error)
+Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
 ```
 
 The parameters for this method are:
 
 - `ctx`: The context, which is always non-nil.
 - `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
+- `ids`: Identifiers of the records to return. If `nil`, `Records` returns all records.
+- `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after.
 - `properties`: Contains the names of the properties that must be returned for each record. The names correspond to the properties of the schema as returned by the `Schema` method.
-- `cursor`: Indicates from which record to start returning records.
+- `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
 
 > Normally, the `Records` method would return at least one record if there are no errors. However, it is permissible to return no records even in the absence of errors, enhancing flexibility in handling different situations.
 
@@ -56,34 +58,6 @@ type Record struct {
 - `Err`: Any error that occurred while reading the record. It must be `io.EOF` if there are no more records to read beyond those returned. If `Err` is different from `nil` and is not `io.EOF`, then only the `ID` field, along with `Err`, is significant.
 
 If a record encounters an error, meaning `Record.Err` is not `nil`, the import process is not halted but continues with subsequent records.
-
-### How to Use the Cursor
-
-The `Records` method does not necessarily have to return all records, instead, it should return only the records that it can return with a single call to the app.
-
-During an import, Meergo calls the method multiple times until all records have been returned, i.e., until `io.EOF` is returned. To allow `Records` to return all records over multiple calls, Meergo passes a cursor as an argument, defined by the `Cursor` type:
-
-```go
-type Cursor struct {
-    LastChangeTime time.Time
-    Next           string
-}
-```
-
-For the first call of a **complete** import (e.g., the first import after creating the import action), the cursor is the zero value of `Cursor`:
-
-```go
-Cursor{
-	LastChangeTime: time.Time{},
-	Next:           "",
-}
-```
-
-For subsequent calls in the same import process, `LastChangeTime` is most recent last change time among all records, while `Next` is the value of `next` returned by the last successful call.
-
-As a special case, the first call of an **incremental** import, unlike a complete import, receives a cursor with `LastChangeTime` being the most recent last change time among all records returned by the previous imports. This way, the import can resume from where the previous one ended.
-
-> For apps that do not return a "next" value in the response to use for reading the next records, the connector can still rely on the cursor's `LastChangeTime` field.
 
 ### Making HTTP Calls to the App
 

@@ -159,20 +159,20 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
+func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	path := "/lists/" + mc.settings.List + "/members"
 	values := url.Values{
 		"fields":     {serializeProperties(properties)},
-		"sort_field": {"last_changed"},
+		"sort_field": {"timestamp_signup"},
 		"sort_dir":   {"ASC"},
 		"count":      {"1000"},
 	}
-	if !cursor.LastChangeTime.IsZero() {
-		values.Set("since_last_changed", cursor.LastChangeTime.Format(time.RFC3339))
+	if !lastChangeTime.IsZero() {
+		values.Set("since_last_changed", lastChangeTime.Format(time.RFC3339))
 	}
-	if cursor.Next != "" {
-		values.Set("offset", cursor.Next)
+	if cursor != "" {
+		values.Set("offset", cursor)
 	}
 
 	var response struct {
@@ -197,9 +197,9 @@ func (mc *MailChimp) Records(ctx context.Context, target meergo.Targets, propert
 		}
 	}
 
-	offset, _ := strconv.Atoi(cursor.Next)
+	offset, _ := strconv.Atoi(cursor)
 	eof := offset+len(response.Members) >= response.TotalItems
-	if last := users[len(users)-1]; last.LastChangeTime.Equal(cursor.LastChangeTime) {
+	if last := users[len(users)-1]; last.LastChangeTime.Equal(lastChangeTime) {
 		offset += len(response.Members)
 	} else {
 		offset = 0

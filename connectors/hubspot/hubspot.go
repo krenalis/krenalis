@@ -117,7 +117,7 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	path := "/crm/v3/objects/"
 	var propertyName string
@@ -129,13 +129,17 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, propertie
 		propertyName = "hs_lastmodifieddate"
 	}
 
+	if cursor == "" {
+		if lastChangeTime.IsZero() {
+			cursor = "0"
+		} else {
+			cursor = strconv.FormatInt(lastChangeTime.UnixMilli(), 10)
+		}
+	}
+
 	hs.buf.Reset()
 	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
-	if cursor.LastChangeTime.IsZero() {
-		hs.buf.WriteByte('0')
-	} else {
-		hs.buf.WriteString(strconv.FormatInt(cursor.LastChangeTime.UnixMilli(), 10))
-	}
+	hs.buf.WriteString(cursor)
 	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
 		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
 	for i, p := range properties {
@@ -195,9 +199,12 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, propertie
 
 	if response.Paging.Next.After == "" {
 		return records, "", io.EOF
+	} else if len(records) > 0 {
+		last := records[len(records)-1]
+		cursor = strconv.FormatInt(last.LastChangeTime.UnixMilli(), 10)
 	}
 
-	return records, "", nil
+	return records, cursor, nil
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.

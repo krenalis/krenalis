@@ -208,12 +208,12 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meerg
 }
 
 // Records returns the records of the specified target.
-func (stripe *Stripe) Records(ctx context.Context, target meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
+func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, _ []string, cursor string) ([]meergo.Record, string, error) {
 
 	var body io.Reader
-	if cursor.Next != "" {
+	if cursor != "" {
 		form := url.Values{
-			"starting_after": {cursor.Next},
+			"starting_after": {cursor},
 		}
 		body = strings.NewReader(form.Encode())
 	}
@@ -239,9 +239,9 @@ func (stripe *Stripe) Records(ctx context.Context, target meergo.Targets, proper
 			LastChangeTime: time.Now().UTC(),
 		}
 	}
-	next := users[len(users)-1].ID
+	cursor = users[len(users)-1].ID
 
-	return users, next, nil
+	return users, cursor, nil
 }
 
 // Schema returns the schema of the specified target.

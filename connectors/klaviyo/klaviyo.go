@@ -134,11 +134,11 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, properties []string, cursor meergo.Cursor) ([]meergo.Record, string, error) {
+func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	var hasUpdatedProperty bool
 
-	url := cursor.Next
+	url := cursor
 	if url == "" {
 		var b strings.Builder
 		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")

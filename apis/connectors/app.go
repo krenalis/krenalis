@@ -315,9 +315,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 
-		cursor := meergo.Cursor{
-			LastChangeTime: r.lastChangeTime,
-		}
+		var cursor string
 
 		properties := types.Properties(r.schema)
 		names := make([]string, len(properties))
@@ -328,7 +326,9 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 		for {
 
 			// Retrieve the users.
-			users, next, err := r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, names, cursor)
+			var users []meergo.Record
+			var err error
+			users, cursor, err = r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, r.lastChangeTime, nil, names, cursor)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = err
@@ -339,12 +339,11 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					r.err = fmt.Errorf("%s returned zero users but did not return io.EOF", r.appName)
 					return
 				}
-				if next != "" {
+				if cursor != "" {
 					r.err = fmt.Errorf("%s returned zero users but returned a non-empty next value", r.appName)
 				}
 				return
 			}
-			cursor.Next = next
 			last := len(users) - 1
 
 			// Normalize the returned users.
@@ -359,8 +358,9 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 
 				record := Record{
-					ID:           user.ID,
-					Associations: user.Associations,
+					ID:             user.ID,
+					LastChangeTime: user.LastChangeTime.UTC(),
+					Associations:   user.Associations,
 				}
 
 				// Read the properties.
@@ -382,13 +382,9 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					record.Properties[p.Name] = v
 				}
 
-				// Read the last change time.
-				record.LastChangeTime = user.LastChangeTime.UTC()
+				// validate the last change time.
 				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
 					return
-				}
-				if record.LastChangeTime.After(cursor.LastChangeTime) {
-					cursor.LastChangeTime = record.LastChangeTime
 				}
 
 				r.last = i == last
