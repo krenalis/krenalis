@@ -145,6 +145,10 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 	// (4) ADD columns.
 	// (5) CREATE VIEW.
 
+	// Note that it is necessary to discard the view and rebuild it from
+	// scratch, as the table needs to be altered and it would be impossible to
+	// alter a column if there is a view that references it.
+
 	var queries []string
 
 	// DROP VIEW.
@@ -211,17 +215,23 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 	}
 
 	// CREATE VIEW "users".
-	queries = append(queries, createViewQuery(usersTableName, userColumns))
+	queries = append(queries, createViewQuery(usersTableName, userColumns, false))
 
 	return queries, nil
 }
 
-// createViewQuery returns the CREATE OR REPLACE VIEW query that creates the
+// createViewQuery returns the CREATE (OR REPLACE) VIEW query that creates the
 // "users" view on the "users" table with the given name.
 // userColumns contains the columns of such table.
-func createViewQuery(usersTableName string, userColumns []warehouses.Column) string {
+// replace indicates if the query that creates the VIEW should have the "OR
+// REPLACE" clause to replace the view if it already exist.
+func createViewQuery(usersTableName string, userColumns []warehouses.Column, replace bool) string {
 	b := strings.Builder{}
-	b.WriteString(`CREATE OR REPLACE VIEW "users" AS SELECT` + "\n")
+	b.WriteString(`CREATE `)
+	if replace {
+		b.WriteString(`OR REPLACE `)
+	}
+	b.WriteString(`VIEW "users" AS SELECT` + "\n")
 	metaProps := []string{"__id__", "__last_change_time__"}
 	for i, p := range metaProps {
 		if i > 0 {

@@ -301,7 +301,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			// Exclude from the test the queries that drop or create views.
 			gotQueries = slices.DeleteFunc(gotQueries, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||
-					strings.HasPrefix(query, "CREATE OR REPLACE VIEW")
+					strings.HasPrefix(query, "CREATE VIEW")
 			})
 			var gotErrStr string
 			if gotErr != nil {

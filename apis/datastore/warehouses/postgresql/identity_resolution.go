@@ -230,9 +230,10 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 		return warehouses.Error(err)
 	}
 
-	// Create a view that references the new 'users' table, which has a new
-	// name.
-	_, err = db.Exec(ctx, createViewQuery(newUsersName, userColumns))
+	// Replace the current "users" view with a new one using the "CREATE OR
+	// REPLACE VIEW" statement since the table "_users" that the view refers to
+	// has changed its name.
+	_, err = db.Exec(ctx, createViewQuery(newUsersName, userColumns, true))
 	if err != nil {
 		return warehouses.Error(err)
 	}
