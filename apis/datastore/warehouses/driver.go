@@ -210,6 +210,14 @@ type Warehouse interface {
 	// active and, if necessary, establishes a new connection.
 	Ping(ctx context.Context) error
 
+	// Query executes a query and returns the results as Rows. If withCount is true,
+	// it also returns an estimated total count of the records that would be
+	// returned if the query did not include First and Limit clauses.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
+
 	// RunIdentityResolution runs the Identity Resolution.
 	//
 	// identifiers are the columns corresponding to the Identity Resolution
@@ -246,14 +254,6 @@ type Warehouse interface {
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	Truncate(ctx context.Context, table string) error
-
-	// Query executes a query and returns the results as Rows. If withCount is true,
-	// it also returns an estimated total count of the records that would be
-	// returned if the query did not include First and Limit clauses.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
-	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
 }
 
 // RowQuery represents the query for the Query method.

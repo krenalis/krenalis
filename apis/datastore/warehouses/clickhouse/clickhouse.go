@@ -186,6 +186,16 @@ func (warehouse *ClickHouse) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Query executes a query and returns the results as Rows.
+func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
+	panic("not implemented")
+}
+
+// RunIdentityResolution runs the Identity Resolution.
+func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+	panic("TODO: not implemented")
+}
+
 // SetDestinationUser sets the destination user for an action.
 func (warehouse *ClickHouse) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
 	panic("TODO: not implemented")
@@ -208,16 +218,6 @@ func (warehouse *ClickHouse) Truncate(ctx context.Context, table string) error {
 		return warehouses.Error(err)
 	}
 	return nil
-}
-
-// Query executes a query and returns the results as Rows.
-func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
-	panic("not implemented")
-}
-
-// RunIdentityResolution runs the Identity Resolution.
-func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
-	panic("TODO: not implemented")
 }
 
 // connection returns the ClickHouse connection.
