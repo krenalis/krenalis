@@ -247,8 +247,7 @@ type Warehouse interface {
 	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
 }
 
-// RecordsQuery represents the query for the Query method.
-
+// RowQuery represents the query for the Query method.
 type RowQuery struct {
 
 	// Columns are the columns to return for each row.
