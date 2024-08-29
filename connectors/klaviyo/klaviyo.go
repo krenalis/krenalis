@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	urlPkg "net/url"
 	"strings"
 	"time"
 
@@ -137,7 +138,7 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	var hasIDProperty bool
 	var hasUpdatedProperty bool
@@ -165,6 +166,18 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _
 			b.WriteString(",updated")
 		}
 		b.WriteString("&page%5Bsize%5D=100&sort=created")
+		if ids != nil {
+			b.WriteString("&filter=any%28id%2C%5B")
+			for i, id := range ids {
+				if i > 0 {
+					b.WriteString("%2C")
+				}
+				b.WriteString(`%22`)
+				b.WriteString(urlPkg.QueryEscape(id))
+				b.WriteString(`%22`)
+			}
+			b.WriteString("%5D%29")
+		}
 		url = b.String()
 	}
 
