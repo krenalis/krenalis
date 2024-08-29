@@ -57,12 +57,16 @@ type normalizationError struct {
 func newNormalizationErrorf(path string, format string, a ...any) error {
 	return &normalizationError{
 		path: path,
-		msg:  fmt.Sprintf("property %q ", path) + fmt.Sprintf(format, a...),
+		msg:  fmt.Sprintf(format, a...),
 	}
 }
 
 func (err *normalizationError) Error() string {
-	return err.msg
+	return fmt.Sprintf("property %q ", err.path) + err.msg
+}
+
+func (err *normalizationError) prependPath(path string) {
+	err.path = path + err.path
 }
 
 func (err *normalizationError) PropertyPath() string {
@@ -544,8 +548,11 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				if !ok {
 					return nil, fmt.Errorf(`there is not a value for the "%s.%s" property`, name, p.Name)
 				}
-				src[p.Name], err = normalize(name, p.Type, value, p.Nullable, layouts)
+				src[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
 				if err != nil {
+					if err, ok := err.(*normalizationError); ok {
+						err.prependPath(name + ".")
+					}
 					return nil, err
 				}
 			}
