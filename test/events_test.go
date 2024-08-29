@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -160,20 +161,20 @@ func TestEvents(t *testing.T) {
 		const (
 			expectedAnonymousId = "baeeb556-96f3-4631-a22d-928431af8bf6"
 			expectedIP          = "127.0.0.1"
-			expectedUserAgent   = "analytics-go (version: 0.0.4)"
 			expectedEvent       = "Signed Up"
 			expectedProperties  = `{"plan":"Enterprise","some-index":44}`
 			expectedTraits      = "{}"
 			expectedType        = "track"
 			expectedUserId      = "f4ca124298"
 		)
+		var expectedUserAgent = regexp.MustCompile(`^analytics-go \(version: \d+\.\d+\.\d+\)$`)
 		if event["anonymousId"] != expectedAnonymousId {
 			t.Fatalf("expected anonymous ID %q, got %#v", expectedAnonymousId, event["anonymousId"])
 		}
 		if ip := event["context"].(map[string]any)["ip"]; ip != expectedIP {
 			t.Fatalf("expected IP %q, got %#v", expectedIP, ip)
 		}
-		if ua := event["context"].(map[string]any)["userAgent"]; ua != expectedUserAgent {
+		if ua := event["context"].(map[string]any)["userAgent"].(string); !expectedUserAgent.MatchString(ua) {
 			t.Fatalf("expected user agent %q, got %#v", expectedUserAgent, ua)
 		}
 		if event["event"] != expectedEvent {
