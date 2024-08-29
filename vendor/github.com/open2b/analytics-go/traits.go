@@ -15,8 +15,6 @@ import "time"
 //			.SetLastName("Skywalker")
 //			.Set("Role", "Jedi"),
 //	}
-//
-
 type Traits map[string]interface{}
 
 func NewTraits() Traits {

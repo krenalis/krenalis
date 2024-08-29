@@ -12,8 +12,6 @@ package analytics
 //			.Disable("Salesforce")
 //			.Disable("Marketo"),
 //	}
-//
-
 type Integrations map[string]interface{}
 
 func NewIntegrations() Integrations {

@@ -1,23 +1,20 @@
 package analytics
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"hash/crc32"
 	"io"
-	"net/http"
+	"io/ioutil"
 	"strconv"
 	"sync"
-	"time"
 
-	"github.com/tidwall/gjson"
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"time"
 )
 
 // Version of the client.
-const Version = "0.0.3"
+const Version = "0.0.4"
 
 // This interface is the main API exposed by the analytics package.
 // Values that satsify this interface are returned by the client constructors
@@ -56,23 +53,21 @@ type client struct {
 	// The first channel is closed to signal the backend goroutine that it has
 	// to stop, then the second one is closed by the backend goroutine to signal
 	// that it has finished flushing all queued messages.
-	quit       chan struct{}
-	shutdown   chan struct{}
-	totalNodes int
+	quit     chan struct{}
+	shutdown chan struct{}
+
 	// This HTTP client is used to send requests to the backend, it uses the
 	// HTTP transport provided in the configuration.
 	http http.Client
 }
 
-// Instantiate a new client that uses the write key passed as first argument to
+// Instantiate a new client that uses the write key and the endpoint to
 // send messages to the backend.
-// The client is created with the default configuration.
 func New(writeKey string, endpoint string) Client {
-	// Here we can ignore the error because the default config is always valid.
-	config := Config{
+	// Here we can ignore the error because the config is always valid.
+	c, _ := NewWithConfig(writeKey, Config{
 		Endpoint: endpoint,
-	}
-	c, _ := NewWithConfig(writeKey, config)
+	})
 	return c
 }
 
@@ -94,7 +89,6 @@ func NewWithConfig(writeKey string, config Config) (cli Client, err error) {
 		shutdown: make(chan struct{}),
 		http:     makeHttpClient(config.Transport),
 	}
-	c.totalNodes = 1
 
 	go c.loop()
 
@@ -112,64 +106,37 @@ func makeHttpClient(transport http.RoundTripper) http.Client {
 	return httpClient
 }
 
-func makeContext(context *Context) *Context {
-	if context == nil {
-		context = &Context{}
-	}
-	// context := Context{}
-	context.Library = LibraryInfo{
-		Name:    "analytics-go",
-		Version: Version,
-	}
-
-	return context
-}
-
-func makeAnonymousId(anonymousId string) string {
-	if anonymousId == "" {
-		return uid()
-	} else {
-		return anonymousId
-	}
-}
-
 func dereferenceMessage(msg Message) Message {
 	switch m := msg.(type) {
 	case *Alias:
 		if m == nil {
 			return nil
 		}
-
 		return *m
 	case *Group:
 		if m == nil {
 			return nil
 		}
-
 		return *m
 	case *Identify:
 		if m == nil {
 			return nil
 		}
-
 		return *m
 	case *Page:
 		if m == nil {
 			return nil
 		}
-
 		return *m
 	case *Screen:
 		if m == nil {
 			return nil
 		}
-
 		return *m
 	case *Track:
 		if m == nil {
 			return nil
 		}
-
 		return *m
 	}
 
@@ -182,66 +149,44 @@ func (c *client) Enqueue(msg Message) (err error) {
 		return
 	}
 
-	id := c.uid()
-	ts := c.now()
+	var id = c.uid()
+	var ts = c.now()
 
 	switch m := msg.(type) {
 	case Alias:
 		m.Type = "alias"
 		m.MessageId = makeMessageId(m.MessageId, id)
-		m.OriginalTimestamp = makeTimestamp(m.OriginalTimestamp, ts)
-		m.SentAt = m.OriginalTimestamp
-		m.Context = makeContext(m.Context)
-		m.Channel = "server"
+		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		msg = m
 
 	case Group:
 		m.Type = "group"
 		m.MessageId = makeMessageId(m.MessageId, id)
-		m.OriginalTimestamp = makeTimestamp(m.OriginalTimestamp, ts)
-		m.SentAt = m.OriginalTimestamp
-		m.AnonymousId = makeAnonymousId(m.AnonymousId)
-		m.Context = makeContext(m.Context)
-		m.Channel = "server"
+		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		msg = m
 
 	case Identify:
 		m.Type = "identify"
 		m.MessageId = makeMessageId(m.MessageId, id)
-		m.OriginalTimestamp = makeTimestamp(m.OriginalTimestamp, ts)
-		m.SentAt = m.OriginalTimestamp
-		m.Context = makeContext(m.Context)
-		m.Channel = "server"
+		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		msg = m
 
 	case Page:
 		m.Type = "page"
 		m.MessageId = makeMessageId(m.MessageId, id)
-		m.OriginalTimestamp = makeTimestamp(m.OriginalTimestamp, ts)
-		m.SentAt = m.OriginalTimestamp
-		m.AnonymousId = makeAnonymousId(m.AnonymousId)
-		m.Context = makeContext(m.Context)
-		m.Channel = "server"
+		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		msg = m
 
 	case Screen:
 		m.Type = "screen"
 		m.MessageId = makeMessageId(m.MessageId, id)
-		m.OriginalTimestamp = makeTimestamp(m.OriginalTimestamp, ts)
-		m.SentAt = m.OriginalTimestamp
-		m.AnonymousId = makeAnonymousId(m.AnonymousId)
-		m.Context = makeContext(m.Context)
-		m.Channel = "server"
+		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		msg = m
 
 	case Track:
 		m.Type = "track"
 		m.MessageId = makeMessageId(m.MessageId, id)
-		m.OriginalTimestamp = makeTimestamp(m.OriginalTimestamp, ts)
-		m.SentAt = m.OriginalTimestamp
-		m.AnonymousId = makeAnonymousId(m.AnonymousId)
-		m.Context = makeContext(m.Context)
-		m.Channel = "server"
+		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		msg = m
 
 	default:
@@ -291,7 +236,7 @@ func (c *client) sendAsync(msgs []message, wg *sync.WaitGroup, ex *executor) {
 				c.errorf("panic - %s", err)
 			}
 		}()
-		c.send(msgs, 0)
+		c.send(msgs)
 	}) {
 		wg.Done()
 		c.errorf("sending messages failed - %s", ErrTooManyRequests)
@@ -299,191 +244,59 @@ func (c *client) sendAsync(msgs []message, wg *sync.WaitGroup, ex *executor) {
 	}
 }
 
-// Split based on Anonymous ID
-func (c *client) getNodePayload(msgs []message) map[int][]message {
-	nodePayload := make(map[int][]message)
-	totalNodes := c.totalNodes
-	for _, msg := range msgs {
-		userId := gjson.GetBytes(msg.json, "userId").String()
-		anonymousId := gjson.GetBytes(msg.json, "anonymousId").String()
-		rudderId := userId + ":" + anonymousId
-		hashInt := crc32.ChecksumIEEE([]byte(rudderId))
-		nodePayload[int(hashInt)%totalNodes] = append(nodePayload[int(hashInt)%totalNodes], msg)
-	}
-	return nodePayload
-}
-
-/*
-In the nodepayload , we have sent the payloads till the nodeValue k,
-So we get the payloads for remaining nodes to recompuute the nodePayload
-based on the new targetNodes
-*/
-func (c *client) getRevisedMsgs(nodePayload map[int][]message, startFrom int) []message {
-	msgs := make([]message, 0)
-	for k, v := range nodePayload {
-		if k >= startFrom {
-			msgs = append(msgs, v...)
-		}
-	}
-	return msgs
-}
-
-func (c *client) setNodeCount() {
-	const attempts = 10
-	for i := 0; i < attempts; i++ {
-		url := c.Endpoint + "/cluster-info"
-		req, err := http.NewRequest("GET", url, bytes.NewReader([]byte{}))
-		if err != nil {
-			c.errorf("creating request - %s", err)
-			time.Sleep(200 * time.Millisecond)
-			continue
-		}
-
-		req.Header.Add("User-Agent", "analytics-go (version: "+Version+")")
-		req.SetBasicAuth(c.key, "")
-
-		res, err := c.http.Do(req)
-		if err != nil {
-			c.errorf("sending request - %s", err)
-			time.Sleep(200 * time.Millisecond)
-			continue
-		}
-		if res.StatusCode == 200 {
-			body, err := io.ReadAll(res.Body)
-			if err == nil {
-				c.totalNodes = int(gjson.GetBytes(body, "nodeCount").Int())
-				res.Body.Close()
-				return
-			} else {
-				res.Body.Close()
-				time.Sleep(200 * time.Millisecond)
-			}
-		} else {
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
-}
-
-func (c *client) getMarshalled(msgs []message) ([]byte, error) {
-	nodeBatch, err := json.Marshal(batch{
-		Messages: msgs,
-	})
-	return nodeBatch, err
-}
-
 // Send batch request.
-func (c *client) send(msgs []message, retryAttempt int) {
+func (c *client) send(msgs []message) {
 	const attempts = 10
 
-	nodePayload := c.getNodePayload(msgs)
-	for k, b := range nodePayload {
-		for i := 0; i != attempts; i++ {
-			// Get Node Count from Client
-			if c.totalNodes == 0 {
-				/*
-					Since we are running the setNodeCount in a seperate goroutine from the main thread,  we should not send out any packets till
-					we have atleast one API call made and totalNodes are set to 1.If the proxy server takes more time to send the response
-					we skip this attempt and move to the next attempt.
-				*/
-				continue
-			}
-			targetNode := strconv.Itoa(k % c.totalNodes)
-			marshalB, err := c.getMarshalled(b)
-			if err != nil {
-				c.errorf("marshalling messages - %s", err)
-				c.notifyFailure(b, err)
-				break
-			}
-			err = c.upload(marshalB, targetNode) // change the names of errors?
-			if err == nil {
-				c.notifySuccess(b)
-				break
-			} else if err.Error() == "451" {
-				/*In case we have a scaleup/scaledown in the kubernetes nodes, We would recieve a status code of 451 from the Proxy server
-				We would then reset the node count by making a call to configure-info end point, then regenerate the payload at a node level
-				for only those nodes where we failed in sending the data and then recursively call the send function with the updated payload.
-				*/
-				const maxSleepTime = 300 * time.Second
-				sleepTimeOut := time.Duration(retryAttempt*5) * time.Second
-				if sleepTimeOut > maxSleepTime {
-					sleepTimeOut = maxSleepTime
-				}
-				if sleepTimeOut > 0 {
-					c.debugf("Retrying in %d seconds", int(sleepTimeOut.Seconds()))
-					time.Sleep(sleepTimeOut)
-				}
-				c.setNodeCount()
-				newMsgs := c.getRevisedMsgs(nodePayload, k)
-				retryAttempt += 1
-				c.send(newMsgs, retryAttempt)
-				return
-			}
-			if i == attempts-1 {
-				c.errorf("%d messages dropped because they failed to be sent after %d attempts", len(b), attempts)
-				c.notifyFailure(b, err)
-			}
-			// Wait for either a retry timeout or the client to be closed.
-			select {
-			case <-time.After(c.RetryAfter(i)):
-			case <-c.quit:
-				c.errorf("%d messages dropped because they failed to be sent and the client was closed", len(b))
-				c.notifyFailure(b, err)
-				return
-			}
+	b, err := json.Marshal(batch{
+		MessageId: c.uid(),
+		SentAt:    c.now(),
+		Messages:  msgs,
+		Context:   c.DefaultContext,
+	})
+
+	if err != nil {
+		c.errorf("marshalling messages - %s", err)
+		c.notifyFailure(msgs, err)
+		return
+	}
+
+	for i := 0; i != attempts; i++ {
+		if err = c.upload(b); err == nil {
+			c.notifySuccess(msgs)
+			return
+		}
+
+		// Wait for either a retry timeout or the client to be closed.
+		select {
+		case <-time.After(c.RetryAfter(i)):
+		case <-c.quit:
+			c.errorf("%d messages dropped because they failed to be sent and the client was closed", len(msgs))
+			c.notifyFailure(msgs, err)
+			return
 		}
 	}
+
+	c.errorf("%d messages dropped because they failed to be sent after %d attempts", len(msgs), attempts)
+	c.notifyFailure(msgs, err)
 }
 
 // Upload serialized batch message.
-func (c *client) upload(b []byte, targetNode string) error {
+func (c *client) upload(b []byte) error {
 	url := c.Endpoint + "/v1/batch"
-	var (
-		req      *http.Request
-		reqError error
-	)
-	if !c.Config.DisableGzip {
-		gzipPayload := func(data []byte) (io.Reader, error) {
-			var b bytes.Buffer
-			gz, err := gzip.NewWriterLevel(&b, gzip.BestSpeed)
-			if err != nil {
-				return nil, err
-			}
-			if _, err := gz.Write(data); err != nil {
-				return nil, err
-			}
-			if err = gz.Close(); err != nil {
-				return nil, err
-			}
-			return &b, nil
-		}
-
-		payload, err := gzipPayload(b)
-		if err != nil {
-			c.errorf("gzip payload - %s", err)
-			return err
-		}
-		req, reqError = http.NewRequest("POST", url, payload)
-		req.Header.Add("Content-Encoding", "gzip")
-	} else {
-		req, reqError = http.NewRequest("POST", url, bytes.NewReader(b))
-	}
-
-	if reqError != nil {
-		c.errorf("creating request - %s", reqError)
-		return reqError
+	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
+	if err != nil {
+		c.errorf("creating request - %s", err)
+		return err
 	}
 
 	req.Header.Add("User-Agent", "analytics-go (version: "+Version+")")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Content-Length", strconv.Itoa(len(b)))
-	if !c.NoProxySupport {
-		req.Header.Add("RS-targetNode", targetNode)
-		req.Header.Add("RS-nodeCount", strconv.Itoa(c.totalNodes))
-		req.Header.Add("RS-userAgent", "serverSDK")
-	}
 	req.SetBasicAuth(c.key, "")
 
 	res, err := c.http.Do(req)
+
 	if err != nil {
 		c.errorf("sending request - %s", err)
 		return err
@@ -496,16 +309,13 @@ func (c *client) upload(b []byte, targetNode string) error {
 // Report on response body.
 func (c *client) report(res *http.Response) (err error) {
 	var body []byte
+
 	if res.StatusCode < 300 {
 		c.debugf("response %s", res.Status)
 		return
 	}
 
-	if res.StatusCode == 451 {
-		return errors.New(strconv.Itoa(res.StatusCode))
-	}
-
-	if body, err = io.ReadAll(res.Body); err != nil {
+	if body, err = ioutil.ReadAll(res.Body); err != nil {
 		c.errorf("response %d %s - %s", res.StatusCode, res.Status, err)
 		return
 	}
@@ -561,7 +371,7 @@ func (c *client) push(q *messageQueue, m Message, wg *sync.WaitGroup, ex *execut
 	var msg message
 	var err error
 
-	if msg, err = makeMessage(m, c.MaxMessageBytes); err != nil {
+	if msg, err = makeMessage(m, maxMessageBytes); err != nil {
 		c.errorf("%s - %v", err, m)
 		c.notifyFailure([]message{{m, nil}}, err)
 		return
@@ -597,8 +407,12 @@ func (c *client) errorf(format string, args ...interface{}) {
 }
 
 func (c *client) maxBatchBytes() int {
-	b, _ := json.Marshal(batch{})
-	return c.MaxBatchBytes - len(b)
+	b, _ := json.Marshal(batch{
+		MessageId: c.uid(),
+		SentAt:    c.now(),
+		Context:   c.DefaultContext,
+	})
+	return maxBatchBytes - len(b)
 }
 
 func (c *client) notifySuccess(msgs []message) {

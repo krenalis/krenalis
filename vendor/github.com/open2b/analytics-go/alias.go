@@ -4,21 +4,18 @@ import "time"
 
 var _ Message = (*Alias)(nil)
 
-// This type represents object sent in a alias call as described in
-
+// This type represents object sent in a alias call.
 type Alias struct {
 	// This field is exported for serialization purposes and shouldn't be set by
 	// the application, its value is always overwritten by the library.
 	Type string `json:"type,omitempty"`
 
-	MessageId         string       `json:"messageId,omitempty"`
-	PreviousId        string       `json:"previousId"`
-	UserId            string       `json:"userId"`
-	OriginalTimestamp time.Time    `json:"originalTimestamp,omitempty"`
-	SentAt            time.Time    `json:"sentAt,omitempty"`
-	Context           *Context     `json:"context,omitempty"`
-	Integrations      Integrations `json:"integrations,omitempty"`
-	Channel           string       `json:"channel,omitempty"`
+	MessageId    string       `json:"messageId,omitempty"`
+	PreviousId   string       `json:"previousId"`
+	UserId       string       `json:"userId"`
+	Timestamp    time.Time    `json:"timestamp,omitempty"`
+	Context      *Context     `json:"context,omitempty"`
+	Integrations Integrations `json:"integrations,omitempty"`
 }
 
 func (msg Alias) Validate() error {

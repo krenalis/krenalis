@@ -60,7 +60,10 @@ func makeTimestamp(t time.Time, def time.Time) time.Time {
 // export this type because it's only meant to be used internally to send groups
 // of messages in one API call.
 type batch struct {
-	Messages []message `json:"batch"`
+	MessageId string    `json:"messageId"`
+	SentAt    time.Time `json:"sentAt"`
+	Messages  []message `json:"batch"`
+	Context   *Context  `json:"context"`
 }
 
 type message struct {
@@ -120,6 +123,6 @@ func (q *messageQueue) flush() (msgs []message) {
 }
 
 const (
-	defMaxBatchBytes   = 512000 // ~500 KB
-	defMaxMessageBytes = 32768  // ~32 KB
+	maxBatchBytes   = 500000
+	maxMessageBytes = 32000
 )

@@ -12,6 +12,7 @@ package analytics
 //			.SetRevenue(10.0)
 //			.SetCurrency("USD"),
 //	}
+//
 type Properties map[string]interface{}
 
 func NewProperties() Properties {

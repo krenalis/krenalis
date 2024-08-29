@@ -30,7 +30,7 @@ import (
 func main() {
     // Instantiates a client to send messages to the Meergo API.
     
-    // Use your write key in the below placeholder:
+    // Use your write key and the endpoint in the below placeholders:
     
     client := analytics.New(<WRITE_KEY>, <ENDPOINT>)
 
@@ -55,13 +55,13 @@ import (
 )
 
 func main() {
-    // Instantiates a client to use send messages to the Meergo API.
+    // Instantiates a client to send messages to the Meergo API.
     
-    // User your write key in the below placeholder:
+    // Use your write key and the endpoint in the below placeholders:
     
-    client, _ := analytics.NewWithConfig(WRITE_KEY,
+    client, _ := analytics.NewWithConfig(<WRITE_KEY>,
 		analytics.Config{
-			Endpoint:  ENDPOINT,
+			Endpoint:  <ENDPOINT>,
 			Interval:  30 * time.Second,
 			BatchSize: 100,
 			Verbose:   true,
@@ -78,21 +78,6 @@ func main() {
     
     client.Close()
 }
-```
-
-## Gzip support
-
-The Go SDK supports Gzip compression and it is enabled by default. However, you can disable this feature by setting the `DisableGzip` parameter to `true` while initializing the SDK, as shown:
-
-```go
-client, _ := analytics.NewWithConfig(WRITE_KEY,
-		analytics.Config{
-			Endpoint:    ENDPOINT,
-			Interval:    30 * time.Second,
-			BatchSize:   100,
-			Verbose:     true,
-			DisableGzip: false  // Enables Gzip compression - set true to disable Gzip.
-		})
 ```
 
 ## Sending events

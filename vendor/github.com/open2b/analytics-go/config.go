@@ -14,6 +14,7 @@ import (
 // Each field's zero-value is either meaningful or interpreted as using the
 // default value defined by the library.
 type Config struct {
+
 	// The endpoint to which the client connect and send their messages, set to
 	// `DefaultEndpoint` by default.
 	Endpoint string
@@ -77,28 +78,11 @@ type Config struct {
 	// This field is not exported and only exposed internally to let unit tests
 	// mock the current time.
 	maxConcurrentRequests int
-
-	//This variable will disable checking for the cluster-info end point and
-	//split the payload at node level for multi node setup
-	NoProxySupport bool
-
-	// Maximum bytes in a message
-	MaxMessageBytes int
-
-	// Maximum bytes in a batch
-	MaxBatchBytes int
-
-	// Deprecated: Gzip is deprecated, will be removed in next releases. Use DisableGzip.
-	Gzip int
-
-	// Disable/enable gzip support.
-	DisableGzip bool
 }
 
 // This constant sets the default endpoint to which client instances send
 // messages if none was explictly set.
-
-const DefaultEndpoint = "https://example.com"
+const DefaultEndpoint = "https://api.example.com"
 
 // This constant sets the default flush interval used by client instances if
 // none was explicitly set.
@@ -124,22 +108,6 @@ func (c *Config) validate() error {
 			Reason: "negative batch sizes are not supported",
 			Field:  "BatchSize",
 			Value:  c.BatchSize,
-		}
-	}
-
-	if c.MaxMessageBytes < 0 {
-		return ConfigError{
-			Reason: "negetive value is not supported for MaxMessageBytes",
-			Field:  "MaxMessageBytes",
-			Value:  c.MaxMessageBytes,
-		}
-	}
-
-	if c.MaxBatchBytes < 0 {
-		return ConfigError{
-			Reason: "negetive value is not supported for MaxBatchBytes",
-			Field:  "MaxBatchBytes",
-			Value:  c.MaxBatchBytes,
 		}
 	}
 
@@ -174,7 +142,7 @@ func makeConfig(c Config) Config {
 	}
 
 	if c.RetryAfter == nil {
-		c.RetryAfter = backo.NewBacko(time.Millisecond*100, 2, 1, time.Second*30).Duration
+		c.RetryAfter = backo.DefaultBacko().Duration
 	}
 
 	if c.uid == nil {
@@ -187,18 +155,6 @@ func makeConfig(c Config) Config {
 
 	if c.maxConcurrentRequests == 0 {
 		c.maxConcurrentRequests = 1000
-	}
-
-	if c.MaxMessageBytes == 0 {
-		c.MaxMessageBytes = defMaxMessageBytes
-	}
-
-	if c.MaxBatchBytes == 0 {
-		c.MaxBatchBytes = defMaxBatchBytes
-	}
-
-	if c.Gzip != 0 {
-		c.DisableGzip = true
 	}
 
 	// We always overwrite the 'library' field of the default context set on the
