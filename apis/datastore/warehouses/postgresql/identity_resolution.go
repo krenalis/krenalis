@@ -70,9 +70,22 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 	}
 	newUsersVersion := usersVersion + 1
 	newUsersName := fmt.Sprintf("_users_%d", newUsersVersion)
-	_, err = db.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
+
+	// Create a copy of the current users table and set the related index in the
+	// operations table.
+	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
+		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
+		if err != nil {
+			return warehouses.Error(err)
+		}
+		_, err := db.Exec(ctx, `UPDATE _operations SET users_version = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, newUsersVersion)
+		if err != nil {
+			return warehouses.Error(err)
+		}
+		return nil
+	})
 	if err != nil {
-		return warehouses.Error(err)
+		return err
 	}
 
 	// Generate the SQL function that determines if two identities are the same
@@ -240,7 +253,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.Exec(ctx, `DROP TABLE "_users_`+strconv.Itoa(usersVersion)+`"`)
+	_, err = db.Exec(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
 		return warehouses.Error(err)
 	}

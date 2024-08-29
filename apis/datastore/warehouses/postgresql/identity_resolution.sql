@@ -136,12 +136,11 @@ AS $$
         );
 
     -- Mark the Identity Resolution execution as completed by setting a value
-    -- for end_time and setting the version of the "users" table.
+    -- for end_time.
     UPDATE
         _operations
     SET
-        end_time = (clock_timestamp() at time zone 'utc')::timestamp,
-        users_version = {{ new_users_version }}
+        end_time = (clock_timestamp() at time zone 'utc')::timestamp
     WHERE
         end_time IS NULL;
 
