@@ -131,31 +131,6 @@ type Warehouse interface {
 	// error.
 	Delete(ctx context.Context, table string, where Expr) error
 
-	// DestinationUsers returns the destination users of the action.
-	// In particular, returns the external app identifiers of the destination users
-	// of the action whose external matching property value matches with the given
-	// property value. If it cannot be found, then the empty string and false are
-	// returned.
-	DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error)
-
-	// DuplicatedDestinationUsers retrieves duplicated destination users.
-	// In particular, it returns the external app identifiers of two users on the
-	// action which have the same value for the matching property, along with true.
-	//
-	// If there are no users on the action matching this condition, no external app
-	// identifiers are returned and the returned boolean is false. If an error
-	// occurs with the data warehouse, it returns a *DataWarehouseError error.
-	DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error)
-
-	// DuplicatedUsers returns the GIDs of two duplicated users.
-	// Two users are duplicated if they have the same value for the given column;
-	// in that case, their GID is returned and 'true'.
-	// If there are no users matching this condition, no GIDs are returned and the
-	// returned boolean is false.
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
-	DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error)
-
 	// IdentityResolutionExecution returns information about the execution of the
 	// Identity Resolution.
 	//
@@ -239,12 +214,6 @@ type Warehouse interface {
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	RunIdentityResolution(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
-
-	// SetDestinationUser sets the destination user for an action.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
-	SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte

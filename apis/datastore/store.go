@@ -22,8 +22,6 @@ import (
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
-
-	"github.com/google/uuid"
 )
 
 const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse
@@ -47,6 +45,17 @@ var ErrIdentityResolutionInProgress = warehouses.ErrIdentityResolutionInProgress
 // IdentityWriterAckFunc is the function called when a batch of user identities
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
+
+// destinationsUsersTable represents the _destinations_users table.
+var destinationsUsersTable = warehouses.Table{
+	Name: "_destinations_users",
+	Columns: []warehouses.Column{
+		{Name: "__action__", Type: types.Int(32)},
+		{Name: "__user__", Type: types.Text()},
+		{Name: "__property__", Type: types.Text()},
+	},
+	Keys: []string{"__action__", "__user__"},
+}
 
 type Store struct {
 	ds               *Datastore
@@ -214,55 +223,23 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 	return &iw, nil
 }
 
-// DestinationUsers returns the external app identifiers of the destination
-// users of the action whose external matching property value matches with the
-// given property value. If it cannot be found, then an empty slice and false
-// are returned.
+// DeleteDestinationUsers deletes the destination users of the provided action.
 //
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) error {
 	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, ErrMaintenanceMode
+	switch store.Mode() {
+	case state.Inspection:
+		return ErrInspectionMode
+	case state.Maintenance:
+		return ErrMaintenanceMode
 	}
-	return store.warehouse.DestinationUsers(ctx, action, propertyValue)
-}
-
-// DuplicatedDestinationUsers returns the external app identifiers of two users
-// on the action which have the same value for the matching property, along with
-// true.
-//
-// If there are no users on the action matching this condition, no external app
-// identifiers are returned and the returned boolean is false.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
-	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return "", "", false, ErrMaintenanceMode
-	}
-	return store.warehouse.DuplicatedDestinationUsers(ctx, action)
-}
-
-// DuplicatedUsers returns the GIDs of two users which have the same value for
-// the given property, along with true.
-// If there are no users matching this condition, no GIDs are returned and the
-// returned boolean is false.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) DuplicatedUsers(ctx context.Context, property string) (uuid.UUID, uuid.UUID, bool, error) {
-	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return uuid.UUID{}, uuid.UUID{}, false, ErrMaintenanceMode
-	}
-	column := strings.ReplaceAll(property, ".", "_")
-	return store.warehouse.DuplicatedUsers(ctx, column)
+	where := warehouses.NewBaseExpr(
+		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorEqual, action)
+	return store.warehouse.Delete(ctx, "_user_identities", where)
 }
 
 // EventIdentityWriter returns an identity writer for writing user identities,
@@ -376,14 +353,14 @@ func (store *Store) Mode() state.WarehouseMode {
 	return mode
 }
 
-// PurgeIdentities purges the identities of the provided actions from the data
-// warehouse.
+// PurgeActions purges the provided actions from the data warehouse, deleting
+// their associated identities and destination users.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) PurgeIdentities(ctx context.Context, actions []int) error {
+func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
@@ -396,7 +373,11 @@ func (store *Store) PurgeIdentities(ctx context.Context, actions []int) error {
 		value[i] = action
 	}
 	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorIn, value)
-	return store.warehouse.Delete(ctx, "_user_identities", where)
+	err := store.warehouse.Delete(ctx, "_user_identities", where)
+	if err != nil {
+		return err
+	}
+	return store.warehouse.Delete(ctx, "_destinations_users", where)
 }
 
 // RunIdentityResolution runs the Identity Resolution.
@@ -459,13 +440,21 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	return err
 }
 
-// SetDestinationUser sets the destination user for an action.
+// DestinationUser represents a destination user to merge.
+type DestinationUser struct {
+	User     string
+	Property string
+}
+
+// MergeDestinationUsers merges the destination users for an action. users
+// contains the users to update or create. idsToDelete contains the identifiers
+// of the users to delete.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
+func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users []DestinationUser, idsToDelete []string) error {
 	store.mustBeOpen()
 	switch store.Mode() {
 	case state.Inspection:
@@ -473,7 +462,28 @@ func (store *Store) SetDestinationUser(ctx context.Context, action int, external
 	case state.Maintenance:
 		return ErrMaintenanceMode
 	}
-	return store.warehouse.SetDestinationUser(ctx, action, externalUserID, externalProperty)
+	var rows [][]any
+	if users != nil {
+		rows = make([][]any, len(users))
+		values := make([]any, 3*len(users))
+		for i, user := range users {
+			j := i * 3
+			values[j+0] = action
+			values[j+1] = user.User
+			values[j+2] = user.Property
+			rows[i] = values[j : j+3]
+		}
+	}
+	var deleted []any
+	if idsToDelete != nil {
+		deleted = make([]any, len(idsToDelete)*2)
+		for i, id := range idsToDelete {
+			j := i * 2
+			deleted[j] = action
+			deleted[j+1] = id
+		}
+	}
+	return store.warehouse.Merge(ctx, destinationsUsersTable, rows, deleted)
 }
 
 // Users returns the users according to the provided query.
@@ -516,7 +526,7 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 // ErrMaintenanceMode error. If the schema, which must be valid, does not
 // align with the user schema, it returns a *schemas.Error error. If an error
 // occurs with the data warehouse, it returns a *DataWarehouseError error.
-func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type) (*Records, error) {
+func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
 	store.mustBeOpen()
 	if store.Mode() == state.Maintenance {
 		return nil, ErrMaintenanceMode
@@ -538,7 +548,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	}
 	query.table = "users"
 	query.Properties = types.PropertyNames(schema)
-	return store.records(ctx, query, "__id__", store.userColumnByProperty(), true)
+	return store.records(ctx, query, "__id__", store.userColumnByProperty(), true, matching)
 }
 
 // close closes the store.

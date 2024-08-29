@@ -194,7 +194,7 @@ func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
 		return
 	}
 
-	err := p.purgeIdentities(id, actions)
+	err := p.purgeActions(id, actions)
 	if err != nil {
 		p.mu.Lock()
 		if _, ok := p.backoff[id]; !ok {
@@ -211,12 +211,12 @@ func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
 
 }
 
-// purgeIdentities purges the identities of the provided actions from the
-// workspace's data warehouse.
-func (p *actionPurger) purgeIdentities(ws int, actions []int) error {
+// purgeActions purges the identities and the destination users of the provided
+// actions from the workspace's data warehouse.
+func (p *actionPurger) purgeActions(ws int, actions []int) error {
 
 	store := p.datastore.Store(ws)
-	err := store.PurgeIdentities(p.close.ctx, actions)
+	err := store.PurgeActions(p.close.ctx, actions)
 	if err != nil {
 		return err
 	}

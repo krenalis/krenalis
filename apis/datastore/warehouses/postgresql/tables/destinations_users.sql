@@ -1,7 +1,7 @@
 
 CREATE TABLE _destinations_users (
-    action integer NOT NULL,
-    "user" text NOT NULL DEFAULT '',
-    property text NOT NULL,
-    PRIMARY KEY (action, "user")
+    __action__ integer NOT NULL,
+    __user__ text NOT NULL DEFAULT '',
+    __property__ text NOT NULL,
+    PRIMARY KEY (__action__, __user__)
 );

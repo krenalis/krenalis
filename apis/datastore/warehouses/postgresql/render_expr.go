@@ -112,9 +112,6 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			serializeValue(b, v, c.Type)
 		}
 		b.WriteString(")")
-
-	default:
-		return fmt.Errorf("invalid operator %q", baseExpr.Operator)
 	}
 
 	return nil

@@ -24,7 +24,6 @@ import (
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/postgres"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -130,112 +129,6 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 		return warehouses.Error(err)
 	}
 	return nil
-}
-
-// DestinationUsers returns the destination users of the action.
-func (warehouse *PostgreSQL) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := db.Query(ctx, `SELECT "user" FROM _destinations_users WHERE action = $1 AND property = $2`, action, propertyValue)
-	if err != nil {
-		return nil, warehouses.Error(err)
-	}
-	defer rows.Close()
-	ids := []string{}
-	for rows.Next() {
-		var id string
-		err := rows.Scan(&id)
-		if err != nil {
-			return nil, warehouses.Error(err)
-		}
-		ids = append(ids, id)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, warehouses.Error(err)
-	}
-	return ids, nil
-}
-
-// DuplicatedDestinationUsers retrieves duplicated destination users.
-func (warehouse *PostgreSQL) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return "", "", false, err
-	}
-	query := `SELECT user1, user2
-		FROM (
-			SELECT
-				min("user") AS user1,
-				max("user") as user2,
-				count(*) AS cnt
-			FROM _destinations_users
-			WHERE action = $1 
-			GROUP BY property) AS subquery
-		WHERE subquery.cnt > 1
-		LIMIT 1`
-	rows, err := db.Query(ctx, query, action)
-	if err != nil {
-		return "", "", false, warehouses.Error(err)
-	}
-	defer rows.Close()
-	var user1, user2 string
-	var found bool
-	for rows.Next() {
-		err := rows.Scan(&user1, &user2)
-		if err != nil {
-			return "", "", false, warehouses.Error(err)
-		}
-		found = true
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return "", "", false, warehouses.Error(err)
-	}
-	return user1, user2, found, nil
-}
-
-// DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *PostgreSQL) DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error) {
-	usersVersion, err := warehouse.usersVersion(ctx)
-	if err != nil {
-		return uuid.UUID{}, uuid.UUID{}, false, err
-	}
-	db, err := warehouse.connection()
-	if err != nil {
-		return uuid.UUID{}, uuid.UUID{}, false, err
-	}
-	query := `SELECT gid1, gid2
-		FROM (
-			SELECT
-				min("__id__"::text) AS gid1,
-				max("__id__"::text) as gid2,
-				count(*) AS cnt
-			FROM "_users_` + strconv.Itoa(usersVersion) + `"
-			GROUP BY "` + column + `") AS subquery
-		WHERE subquery.cnt > 1
-		LIMIT 1`
-	rows, err := db.Query(ctx, query)
-	if err != nil {
-		return uuid.UUID{}, uuid.UUID{}, false, warehouses.Error(err)
-	}
-	defer rows.Close()
-	var gid1, gid2 uuid.UUID
-	var found bool
-	for rows.Next() {
-		err := rows.Scan(&gid1, &gid2)
-		if err != nil {
-			return uuid.UUID{}, uuid.UUID{}, false, warehouses.Error(err)
-		}
-		found = true
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return uuid.UUID{}, uuid.UUID{}, false, warehouses.Error(err)
-	}
-	return gid1, gid2, found, nil
 }
 
 // Init initializes the data warehouse by creating the supporting tables.
@@ -497,22 +390,6 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 		return err
 	}
 	err = db.Ping(ctx)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-	return nil
-}
-
-// SetDestinationUser sets the destination user for an action.
-func (warehouse *PostgreSQL) SetDestinationUser(ctx context.Context, action int, externalUserID, externalProperty string) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec(ctx, "INSERT INTO _destinations_users (action, \"user\", property)\n"+
-		"VALUES ($1, $2, $3)\n"+
-		"ON CONFLICT (action, \"user\") DO UPDATE SET property = $3",
-		action, externalUserID, externalProperty)
 	if err != nil {
 		return warehouses.Error(err)
 	}

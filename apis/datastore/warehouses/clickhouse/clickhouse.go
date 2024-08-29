@@ -24,7 +24,6 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	chDriver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/google/uuid"
 )
 
 var (
@@ -120,21 +119,6 @@ func (warehouse *ClickHouse) Delete(ctx context.Context, table string, where war
 		return warehouses.Error(err)
 	}
 	return nil
-}
-
-// DestinationUsers returns the destination users of the action.
-func (warehouse *ClickHouse) DestinationUsers(ctx context.Context, action int, propertyValue string) ([]string, error) {
-	panic("TODO: not implemented")
-}
-
-// DuplicatedDestinationUsers retrieves duplicated destination users.
-func (warehouse *ClickHouse) DuplicatedDestinationUsers(ctx context.Context, action int) (string, string, bool, error) {
-	panic("TODO: not implemented")
-}
-
-// DuplicatedUsers returns the GIDs of two duplicated users.
-func (warehouse *ClickHouse) DuplicatedUsers(ctx context.Context, column string) (uuid.UUID, uuid.UUID, bool, error) {
-	panic("TODO: not implemented")
 }
 
 // IdentityResolutionExecution returns information about the execution of the

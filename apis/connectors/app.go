@@ -10,11 +10,13 @@ package connectors
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"iter"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -23,7 +25,12 @@ import (
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
+
+	"github.com/shopspring/decimal"
 )
+
+// appUpdateBatchSize is the number of app updates to process in each batch.
+const appUpdateBatchSize = 1000
 
 type (
 	EventRequest   = meergo.EventRequest
@@ -231,24 +238,43 @@ func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	w := appWriter{
-		ack:     ack,
-		target:  meergo.Targets(action.Target),
-		records: app.inner.(meergo.AppRecords),
-	}
-	return &w, nil
+	return newAppWriter(ack, action.Target, action.OutSchema, app.inner.(meergo.AppRecords)), nil
 }
 
 // appWriter implements the Writer interface for apps.
 type appWriter struct {
 	ack     AckFunc
 	target  meergo.Targets
+	types   map[string]types.Type
 	records meergo.AppRecords
-	closed  bool
+
+	// Following fields are used by the doUpdates method to update records in the app.
+	updates    map[string]map[string]any // id -> property -> value
+	properties []string
+	ids        []string
+
+	closed bool
+}
+
+func newAppWriter(ack AckFunc, target state.Target, schema types.Type, records meergo.AppRecords) *appWriter {
+	w := &appWriter{
+		ack:     ack,
+		target:  meergo.Targets(target),
+		types:   map[string]types.Type{},
+		records: records,
+		updates: map[string]map[string]any{},
+	}
+	for _, p := range schema.Properties() {
+		w.types[p.Name] = p.Type
+	}
+	return w
 }
 
 func (w *appWriter) Close(ctx context.Context) error {
 	w.closed = true
+	if len(w.updates) > 0 {
+		w.doUpdates(ctx)
+	}
 	return nil
 }
 
@@ -256,14 +282,93 @@ func (w *appWriter) Write(ctx context.Context, id string, properties map[string]
 	if w.closed {
 		panic("connectors: Write called on a closed writer")
 	}
-	var err error
 	if id == "" {
-		err = w.records.Create(ctx, w.target, properties)
-	} else {
-		err = w.records.Update(ctx, w.target, id, properties)
+		err := w.records.Create(ctx, w.target, properties)
+		w.ack([]string{id}, err)
+		return true
 	}
-	w.ack([]string{id}, err)
+	w.updates[id] = properties
+	if len(w.updates) == appUpdateBatchSize {
+		w.doUpdates(ctx)
+	}
 	return true
+}
+
+// ErrRecordNotExist is returned when a record with the specified identifier
+// does not exist in the application. It is returned in the Record.Err field.
+var ErrRecordNotExist = errors.New("record not exist")
+
+// doUpdates applies pending updates and avoids updating records that have not
+// changed.
+func (w *appWriter) doUpdates(ctx context.Context) {
+	var err error
+	defer func() {
+		if len(w.updates) > 0 {
+			if err == nil {
+				err = ErrRecordNotExist
+			}
+			w.ids = slices.Grow(w.ids, len(w.updates))
+			w.ids = w.ids[:len(w.updates)]
+			i := 0
+			for id := range w.updates {
+				w.ids[i] = id
+			}
+			w.ack(w.ids, err)
+		}
+		clear(w.updates)
+		w.properties = w.properties[0:0]
+		w.ids = w.ids[0:0]
+	}()
+	w.ids = slices.Grow(w.ids, len(w.updates))
+	w.ids = w.ids[:len(w.updates)]
+	i := 0
+	for id, properties := range w.updates {
+		w.ids[i] = id
+		for name := range properties {
+			if k, ok := slices.BinarySearch(w.properties, name); !ok {
+				w.properties = slices.Insert(w.properties, k, name)
+			}
+		}
+		i++
+	}
+	var cursor string
+	var records []meergo.Record
+	var eof bool
+	for !eof {
+		records, cursor, err = w.records.Records(ctx, w.target, time.Time{}, w.ids, w.properties, cursor)
+		if err != nil {
+			eof = err == io.EOF
+			if !eof {
+				return
+			}
+			err = nil
+		}
+		for _, record := range records {
+			properties, ok := w.updates[record.ID]
+			if !ok {
+				// Connectors may return more records than the requested ones.
+				continue
+			}
+			update := false
+			for name, v := range properties {
+				v2, ok := record.Properties[name]
+				if !ok {
+					update = true
+					break
+				}
+				t := w.types[name]
+				if !sameValue(t, v, v2) {
+					update = true
+					break
+				}
+			}
+			if update {
+				err = w.records.Update(ctx, w.target, record.ID, properties)
+			}
+			w.ack([]string{record.ID}, err)
+			delete(w.updates, record.ID)
+		}
+	}
 }
 
 // userSchema returns the user schema with the provided role.
@@ -292,6 +397,71 @@ func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, er
 	}
 	app.users.schemas = schemas
 	return app.users.schemas[role], nil
+}
+
+// sameValue checks if v and v2 have the same value, with t being the type of v.
+// If it returns true, it means that v and v2 have the same value; otherwise,
+// nothing can be concluded.
+func sameValue(t types.Type, v, v2 any) bool {
+	if v == nil {
+		return v2 == nil
+	}
+	switch t.Kind() {
+	default:
+		return v == v2
+	case types.DecimalKind:
+		v1 := v.(decimal.Decimal)
+		v2, ok := v2.(decimal.Decimal)
+		return ok && v1.Equal(v2)
+	case types.JSONKind:
+		v1, ok1 := v.(json.RawMessage)
+		v2, ok2 := v2.(json.RawMessage)
+		return ok1 && ok2 && bytes.Equal(v1, v2)
+	case types.ArrayKind:
+		v1 := v.([]any)
+		a2, ok := v2.([]any)
+		if !ok || len(v1) != len(a2) {
+			return false
+		}
+		et := t.Elem()
+		for i, e1 := range v1 {
+			if !sameValue(et, e1, a2[i]) {
+				return false
+			}
+		}
+		return true
+	case types.ObjectKind:
+		v1 := v.(map[string]any)
+		v2, ok := v2.(map[string]any)
+		if !ok || len(v1) != len(v2) {
+			return false
+		}
+		for _, p := range t.Properties() {
+			e1, ok := v1[p.Name]
+			if !ok {
+				continue
+			}
+			e2, ok := v2[p.Name]
+			if !ok || !sameValue(p.Type, e1, e2) {
+				return false
+			}
+		}
+		return true
+	case types.MapKind:
+		v1 := v.(map[string]any)
+		v2, ok := v2.(map[string]any)
+		if !ok || len(v1) != len(v2) {
+			return false
+		}
+		et := t.Elem()
+		for k, e1 := range v1 {
+			e2, ok := v2[k]
+			if !ok || !sameValue(et, e1, e2) {
+				return false
+			}
+		}
+		return true
+	}
 }
 
 // appRecords implements the Records interface for apps.

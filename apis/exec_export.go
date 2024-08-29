@@ -17,7 +17,6 @@ import (
 
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
-	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
@@ -34,45 +33,24 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	store := this.connection.store
 	connector := action.Connection().Connector()
 
+	var matching *datastore.Matching
+	var internalMatchingProperty types.Property
 	if connector.Type == state.App {
-		// Download the users from this connection to match the identities for the export.
-		err := this.downloadUsersForExportMatch(ctx)
+		// Synchronize destinations users with the app users.
+		err := this.syncDestinationUsers(ctx)
 		if err != nil {
 			if err, ok := err.(*schemas.Error); ok {
 				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
 			return newActionError(statistics.OutputValidationStep, err)
 		}
-		// If the export must be blocked in case of duplicated user on the
-		// destination, check if there are duplicated users on the destination.
-		if !*action.ExportOnDuplicatedUsers {
-			u1, u2, ok, err := store.DuplicatedDestinationUsers(ctx, action.ID)
-			if err != nil {
-				if err == datastore.ErrMaintenanceMode {
-					return newActionError(statistics.ReceivingStep, err)
-				}
-				return newActionError(statistics.ReceivingStep, fmt.Errorf("cannot look for duplicated destination users: %s", err))
-			}
-			if ok {
-				return newActionError(statistics.ReceivingStep, fmt.Errorf("there are two users on the connection (%q and %q)"+
-					" with the same value for the external matching property %q",
-					u1, u2, action.MatchingProperties.External.Name))
-			}
-		}
-		// Check if there are duplicated users within Meergo.
-		{
-			u1, u2, ok, err := store.DuplicatedUsers(ctx, action.MatchingProperties.Internal)
-			if err != nil {
-				if err == datastore.ErrMaintenanceMode {
-					return newActionError(statistics.ReceivingStep, err)
-				}
-				return newActionError(statistics.ReceivingStep, fmt.Errorf("cannot look for duplicated users on data warehouse: %s", err))
-			}
-			if ok {
-				return newActionError(statistics.ReceivingStep, fmt.Errorf("there are two users (%s and %s)"+
-					" with the same value for the internal matching property %q",
-					u1, u2, action.MatchingProperties.Internal))
-			}
+		internalMatchingProperty, _ = action.InSchema.Property(action.MatchingProperties.Internal)
+		p := action.MatchingProperties.External
+		matching = &datastore.Matching{
+			Action:          action.ID,
+			Property:        p.Name,
+			ExportMode:      *this.action.ExportMode,
+			AllowDuplicates: *action.ExportOnDuplicatedUsers,
 		}
 	}
 
@@ -111,7 +89,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	records, err := store.UserRecords(ctx, datastore.Query{
 		Where:   where,
 		OrderBy: orderBy,
-	}, action.InSchema)
+	}, action.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newActionError(statistics.ReceivingStep, err)
@@ -132,11 +110,17 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 
 	var writer connectors.Writer
 
+	// nonExistentUsers contains the destination users that no longer exist in the app.
+	var nonExistentUsers []string
+
 	ack := func(ids []string, err error) {
-		for range ids {
-			if err != nil {
+		for _, id := range ids {
+			if err != nil && err != connectors.ErrRecordNotExist {
 				stats.FailedFinalizing(1, err.Error())
 				continue
+			}
+			if err == connectors.ErrRecordNotExist {
+				nonExistentUsers = append(nonExistentUsers, id)
 			}
 			stats.PassedFinalizing(1)
 		}
@@ -190,40 +174,21 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 		stats.PassedInputValidation(1)
 
 		if connector.Type == state.App {
-			// Resolve the external identities.
-			ids, err := this.resolveExternalIdentities(ctx, record)
-			if err != nil {
-				if err == errNoMatchingProperty {
-					// Skip this user.
-					goto Next
-				}
-				if err == datastore.ErrMaintenanceMode {
-					return newActionError(statistics.ReceivingStep, err)
-				}
-				return err
-			}
-			// Determine if this user must be exported or not.
-			mode := *this.action.ExportMode
-			existsOnApp := len(ids) > 0
-			if (mode == state.CreateOnly && existsOnApp) || (mode == state.UpdateOnly && !existsOnApp) {
-				goto Next
-			}
-			if existsOnApp {
-				// Update the user(s).
-				for _, id := range ids {
-					users = append(users, User{ID: id, Record: record})
-				}
-			} else {
+			if record.MatchingID == "" {
 				// Create the user.
-				inProp, _ := action.InSchema.Property(action.MatchingProperties.Internal)
-				in := record.Properties[action.MatchingProperties.Internal]
-				matchingValue, err := internalToExternalMatchingProperty(in, inProp, action.MatchingProperties.External)
+				value := record.Properties[action.MatchingProperties.Internal]
+				value, err = internalToExternalMatchingProperty(value, internalMatchingProperty, action.MatchingProperties.External)
 				if err != nil {
 					return err
 				}
-				users = append(users, User{Record: record, MatchingValue: matchingValue})
+				// The matching property and its value will be added to the properties after the transformation.
+				users = append(users, User{Record: record, MatchingValue: value})
+			} else {
+				// Update the user.
+				users = append(users, User{ID: record.MatchingID, Record: record})
 			}
 		} else {
+			// Create the user.
 			users = append(users, User{Record: record})
 		}
 
@@ -308,22 +273,39 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 		return newActionError(statistics.FinalizingStep, err)
 	}
 
-	return nil
+	if nonExistentUsers != nil {
+		err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, nil, nonExistentUsers)
+	}
+
+	return err
 }
 
-// downloadUsersForExportMatch downloads the users of the external app for the
-// matching of the export.
-func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
+// syncDestinationUsers syncs the destination users of the action.
+func (this *Action) syncDestinationUsers(ctx context.Context) error {
+
+	execution, _ := this.action.Execution()
+	cursor := execution.Cursor
+
+	// Delete the outdated destination users.
+	if execution.Reload {
+		store := this.connection.store
+		err := store.DeleteDestinationUsers(ctx, this.action.ID)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Create a schema with only the matching property.
 	externalProp := this.action.MatchingProperties.External
 	schema := types.Object([]types.Property{externalProp})
 
-	records, err := this.app().Users(ctx, schema, time.Time{})
+	records, err := this.app().Users(ctx, schema, cursor)
 	if err != nil {
 		return err
 	}
 	defer records.Close()
+
+	var users []datastore.DestinationUser
 
 	// Importing users from a destination to match identities for the export.
 	for user := range records.All(ctx) {
@@ -332,27 +314,29 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 			return user.Err
 		}
 
-		// If the value for the external matching property is null, or if the
-		// property has no value, then the user should be discarded.
+		// Store the user only if it has a matching external property, and it is not nil.
 		v, ok := user.Properties[externalProp.Name]
-		if !ok || v == nil {
-			// Set the cursor.
-			err = this.setExecutionCursor(ctx, user.LastChangeTime)
+		if ok && v != nil {
+			users = append(users, datastore.DestinationUser{
+				User:     user.ID,
+				Property: matchingPropertyToString(v),
+			})
+		}
+
+		cursor = user.LastChangeTime
+
+		if len(users) > 0 && (len(users) == 10000 || records.Last()) {
+			// Merge destination users.
+			err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, users, nil)
 			if err != nil {
 				return err
 			}
-			continue
-		}
-		externalProp := matchingPropertyToString(v)
-		err = this.connection.store.SetDestinationUser(ctx, this.action.ID, user.ID, externalProp)
-		if err != nil {
-			return err
-		}
-
-		// Set the cursor.
-		err = this.setExecutionCursor(ctx, user.LastChangeTime)
-		if err != nil {
-			return err
+			// Set the user cursor.
+			err = this.setExecutionCursor(ctx, cursor)
+			if err != nil {
+				return err
+			}
+			users = users[0:0]
 		}
 
 	}
@@ -361,36 +345,6 @@ func (this *Action) downloadUsersForExportMatch(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-var errNoMatchingProperty = errors.New("internal matching property for record is null or missing")
-
-// resolves the external identities of the record and returns its external app
-// identifiers.
-//
-// If the external identity cannot be resolved because the record does not have
-// a value for the internal matching property, or has a value but it is null,
-// this method returns the error errNoMatchingProperty.
-//
-// If record has value for the internal matching property but the user does not
-// exist externally, the empty slice is returned, since there is no external
-// identity for the user.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// datastore.ErrMaintenanceMode error.
-func (this *Action) resolveExternalIdentities(ctx context.Context, record datastore.Record) ([]string, error) {
-	internalPropName := this.action.MatchingProperties.Internal
-	property, ok := record.Properties[internalPropName]
-	if !ok || property == nil {
-		return nil, errNoMatchingProperty
-	}
-	p := matchingPropertyToString(property)
-	c := this.connection
-	ids, err := c.store.DestinationUsers(ctx, this.action.ID, string(p))
-	if err != nil {
-		return nil, err
-	}
-	return ids, nil
 }
 
 // newPathPlaceholderReplacer returns a placeholder replacer that replaces the

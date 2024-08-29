@@ -14,12 +14,14 @@ import (
 	"iter"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 )
 
 // Record represents a record.
 type Record struct {
 	ID         any            // Identifier.
+	MatchingID string         // Matching identifier.
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -32,9 +34,20 @@ type Records struct {
 	normalize NormalizeFunc
 	unflat    unflatRowFunc
 	rows      warehouses.Rows
+	matching  *Matching
 	last      bool
 	err       error
 	closed    bool
+}
+
+// Matching specifies criteria for the UserRecords method when exporting users
+// to an app. It filters users based on whether they have or do not have a match
+// with the app users.
+type Matching struct {
+	Action          int
+	Property        string
+	ExportMode      state.ExportMode
+	AllowDuplicates bool
 }
 
 // records executes a query on the data warehouse and returns an iterator to
@@ -42,10 +55,11 @@ type Records struct {
 // value is returned as ID, columnByProperty is the mapping from the path of a
 // property to the relative column, and omitNil indicates whether properties
 // with a nil value should be omitted from each record.
-func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool) (*Records, error) {
+//
+// It returns, in Record.MatchingID, the matching ID if matching is not nil.
+func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
-	columns = append(columns, columnByProperty[idProperty])
 
 	var where warehouses.Expr
 	if query.Where != nil {
@@ -54,6 +68,39 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	var joins []warehouses.Join
+
+	if matching != nil {
+		c, ok := columnByProperty[matching.Property]
+		if !ok {
+			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.Property)
+		}
+		columns = append(columns, warehouses.Column{Name: "__user__", Type: types.Text(), Nullable: true})
+		joins = []warehouses.Join{
+			{
+				Type:  warehouses.Left,
+				Table: "_destinations_users",
+				Condition: warehouses.NewMultiExpr(warehouses.LogicalOperatorAnd, []warehouses.Expr{
+					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorEqual, matching.Action),
+					warehouses.NewBaseExpr(c, warehouses.OperatorEqual, warehouses.Column{Name: "__property__", Type: types.Text()}),
+				}),
+			},
+		}
+		switch matching.ExportMode {
+		case state.UpdateOnly:
+			joins[0].Type = warehouses.Inner
+		case state.CreateOnly:
+			expr := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorIsNull, nil)
+			if where == nil {
+				where = expr
+			} else {
+				where = warehouses.NewMultiExpr(warehouses.LogicalOperatorAnd, []warehouses.Expr{expr, where})
+			}
+		}
+		query.OrderBy = matching.Property
+		query.OrderDesc = false
 	}
 
 	var orderBy warehouses.Column
@@ -67,9 +114,12 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		orderDesc = query.OrderDesc
 	}
 
+	columns = append(columns, columnByProperty[idProperty])
+
 	rows, _, err := store.warehouse.Query(ctx, warehouses.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
+		Joins:     joins,
 		Where:     where,
 		OrderBy:   orderBy,
 		OrderDesc: orderDesc,
@@ -85,6 +135,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		unflat:    unflat,
 		rows:      rows,
 		normalize: store.warehouse.Normalize,
+		matching:  matching,
 	}
 
 	return records, err
@@ -99,10 +150,11 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			return
 		}
 		defer r.Close()
-		var previous Record
+		var record Record
 		last := len(r.columns) - 1
 		row := make([]any, len(r.columns))
 		values := newScanValues(r.columns, row, r.normalize)
+		i := 0
 		for r.rows.Next() {
 			select {
 			case <-ctx.Done():
@@ -110,23 +162,51 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				return
 			default:
 			}
-			if previous.Properties != nil || previous.Err != nil {
+			if err := r.rows.Scan(values...); err != nil {
+				r.err = err
+				return
+			}
+			id := row[last]
+			if r.matching == nil {
+				if i > 0 {
+					if !yield(record) {
+						return
+					}
+				}
+				record = Record{
+					ID:         id,
+					Properties: r.unflat(row[:last]),
+				}
+				i++
+				continue
+			}
+			previous := record
+			record = Record{ID: id}
+			if v := row[last-1]; v != nil {
+				record.MatchingID = v.(string)
+				if id == previous.ID {
+					record.Err = fmt.Errorf("duplicates found for the matching property %q in the exported users", r.matching.Property)
+				} else if i > 0 && !r.matching.AllowDuplicates && record.MatchingID == previous.MatchingID {
+					record.Err = fmt.Errorf("duplicates found for the matching property %q in the app users", r.matching.Property)
+				}
+			}
+			if record.Err == nil {
+				record.Properties = r.unflat(row[:last-1])
+			}
+			if i > 0 {
+				if record.Err != nil && previous.Err == nil {
+					previous.Properties = nil
+					previous.Err = record.Err
+				}
 				if !yield(previous) {
 					return
 				}
 			}
-			if err := r.rows.Scan(values...); err != nil {
-				previous = Record{Err: err}
-				continue
-			}
-			previous = Record{
-				ID:         row[last],
-				Properties: r.unflat(row[:last]),
-			}
+			i++
 		}
-		if previous.Properties != nil || previous.Err != nil {
+		if i > 0 {
 			r.last = true
-			if !yield(previous) {
+			if !yield(record) {
 				return
 			}
 		}

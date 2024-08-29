@@ -17,10 +17,10 @@ The property of app's users cannot be transformed; it is Meergo, in case of crea
 
 When exporting to an app, **two different types of conflicts** can occur, which are handled differently.
 
-| Case                                                                             | Consequences                                                                                  |
-|----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
-| **Multiple users within Meergo** have the same value for the specified property. | The **export is not initiated** and an error is shown.                                        |
-| **Multiple users on the app** have the same value for the specified property.    | Whether to proceed with the export or not **depends on the configuration** set in the action. |
+| Case                                                                             | Consequences                                                                                                 |
+|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| **Multiple users within Meergo** have the same value for the specified property. | **These users are not exported** and an error is shown.                                                      |
+| **Multiple users on the app** have the same value for the specified property.    | Whether to proceed with the export of these users or not **depends on the configuration** set in the action. |
 
 ### How Matching Occurs
 

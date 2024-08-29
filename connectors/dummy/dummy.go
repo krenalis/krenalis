@@ -17,6 +17,7 @@ import (
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -169,7 +170,7 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _, _ []string, _ string) ([]meergo.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, _ []string, _ string) ([]meergo.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -180,6 +181,9 @@ func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTim
 	users := make([]meergo.Record, 0, len(allUsers))
 	for id, props := range allUsers {
 		if usersLastChangeTimes[id].Before(lastChangeTime) {
+			continue
+		}
+		if ids != nil && !slices.Contains(ids, id) {
 			continue
 		}
 		users = append(users, meergo.Record{

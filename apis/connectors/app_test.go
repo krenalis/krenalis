@@ -1,0 +1,60 @@
+//
+// SPDX-License-Identifier: Elastic-2.0
+//
+//
+// Copyright (c) 2024 Open2b
+
+package connectors
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/meergo/meergo/types"
+)
+
+func Test_sameValue(t *testing.T) {
+
+	object := types.Object([]types.Property{
+		{Name: "foo", Type: types.Text()},
+		{Name: "boo", Type: types.Array(types.Boolean())},
+	})
+
+	tests := []struct {
+		t        types.Type
+		v, v2    any
+		expected bool
+	}{
+		{t: types.Text(), v: nil, v2: nil, expected: true},
+		{t: types.Text(), v: nil, v2: 5, expected: false},
+		{t: types.Int(32), v: 4, v2: 4, expected: true},
+		{t: types.Int(32), v: 4, v2: nil, expected: false},
+		{t: types.Float(64), v: 12.9037, v2: 12.9037, expected: true},
+		{t: types.JSON(), v: nil, v2: nil, expected: true},
+		{t: types.JSON(), v: json.RawMessage(`{"a":3,"b":[1,2]}`), v2: json.RawMessage(`{"a":3,"b":[1,2]}`), expected: true},
+		{t: types.JSON(), v: json.RawMessage(`{"a":3,"b":[1,2]}`), v2: json.RawMessage(`{"a":3,"c":true}`), expected: false},
+		{t: types.JSON(), v: json.RawMessage(`true`), v2: true, expected: false},
+		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: []any{"a", "b"}, expected: true},
+		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: []any{"b", "a"}, expected: false},
+		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: []any{}, expected: false},
+		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: nil, expected: false},
+		{t: object, v: map[string]any{}, v2: nil, expected: false},
+		{t: object, v: map[string]any{}, v2: map[string]any{}, expected: true},
+		{t: object, v: map[string]any{"foo": "a", "boo": []any{true, false, true}}, v2: map[string]any{"foo": "a", "boo": []any{true, false, true}}, expected: true},
+		{t: object, v: map[string]any{"foo": "a", "boo": []any{true, false, true}}, v2: map[string]any{"foo": "a", "boo": []any{true, true, true}}, expected: false},
+		{t: object, v: map[string]any{"foo": "a", "boo": []any{true, false, true}}, v2: nil, expected: false},
+		{t: types.Map(types.Int(32)), v: map[string]any{"a": 5, "b": 0}, v2: map[string]any{"a": 5, "b": 0}, expected: true},
+		{t: types.Map(types.Int(32)), v: map[string]any{"a": 5, "b": 0}, v2: map[string]any{"b": 0, "a": 5}, expected: true},
+		{t: types.Map(types.Int(32)), v: map[string]any{"a": 5, "b": 0}, v2: map[string]any{"b": 0, "a": 3}, expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got := sameValue(test.t, test.v, test.v2)
+			if test.expected != got {
+				t.Fatalf("expected %t, got %t", test.expected, got)
+			}
+		})
+	}
+
+}
