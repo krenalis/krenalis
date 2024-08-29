@@ -52,6 +52,9 @@ func init() {
 	}, New)
 }
 
+// apiRevision is the API revision to use for calls to the Klaviyo API methods.
+const apiRevision = "2024-07-15"
+
 // New returns a new Klaviyo connector instance.
 func New(conf *meergo.AppConfig) (*Klavyio, error) {
 	c := Klavyio{conf: conf}
@@ -92,7 +95,7 @@ func (ky *Klavyio) EventRequest(ctx context.Context, event *meergo.Event, eventT
 	req.Header.Set("Authorization", "Klaviyo-API-Key "+key)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Revision", "2023-01-24")
+	req.Header.Set("Revision", apiRevision)
 	var body struct {
 		Data struct {
 			Type       string `json:"type"`
@@ -136,13 +139,19 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 // Records returns the records of the specified target.
 func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
 
+	var hasIDProperty bool
 	var hasUpdatedProperty bool
 
 	url := cursor
 	if url == "" {
 		var b strings.Builder
 		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
-		for i, p := range properties {
+		i := 0
+		for _, p := range properties {
+			if p == "id" {
+				hasIDProperty = true
+				continue
+			}
 			if i > 0 {
 				b.WriteByte(',')
 			}
@@ -150,6 +159,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _
 			if p == "updated" {
 				hasUpdatedProperty = true
 			}
+			i++
 		}
 		if !hasUpdatedProperty {
 			b.WriteString(",updated")
@@ -190,6 +200,9 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _
 			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
 			continue
 		}
+		if hasIDProperty {
+			data.Attributes["id"] = users[i].ID
+		}
 		if !hasUpdatedProperty {
 			delete(data.Attributes, "updated")
 		}
@@ -226,6 +239,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 			Name:  "id",
 			Label: "ID",
 			Type:  types.Text(),
+			Role:  types.SourceRole,
 		},
 		{
 			Name:     "email",
@@ -327,13 +341,13 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 				{
 					Name:     "latitude",
 					Label:    "Latitude",
-					Type:     types.Text(),
+					Type:     types.Float(64),
 					Nullable: true,
 				},
 				{
 					Name:     "longitude",
 					Label:    "Longitude",
-					Type:     types.Text(),
+					Type:     types.Float(64),
 					Nullable: true,
 				},
 				{
@@ -352,6 +366,12 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 					Name:     "timezone",
 					Label:    "Timezone",
 					Type:     types.Text(),
+					Nullable: true,
+				},
+				{
+					Name:     "ip",
+					Label:    "IP",
+					Type:     types.Inet(),
 					Nullable: true,
 				},
 			}),
