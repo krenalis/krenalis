@@ -10,6 +10,7 @@
 package klaviyo
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -78,8 +79,8 @@ type Settings struct {
 }
 
 // Create creates a record for the specified target with the given properties.
-func (ky *Klavyio) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
-	panic("TODO: not implemented")
+func (ky *Klavyio) Create(ctx context.Context, _ meergo.Targets, properties map[string]any) error {
+	return ky.upsert(ctx, "", properties)
 }
 
 // EventRequest returns a request to dispatch an event to the app.
@@ -140,8 +141,8 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 // Records returns the records of the specified target.
 func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 
-	var hasIDProperty bool
-	var hasUpdatedProperty bool
+	var hasID bool
+	var hasUpdated bool
 
 	url := cursor
 	if url == "" {
@@ -150,7 +151,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 		i := 0
 		for _, p := range properties {
 			if p == "id" {
-				hasIDProperty = true
+				hasID = true
 				continue
 			}
 			if i > 0 {
@@ -158,11 +159,11 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 			}
 			b.WriteString(p)
 			if p == "updated" {
-				hasUpdatedProperty = true
+				hasUpdated = true
 			}
 			i++
 		}
-		if !hasUpdatedProperty {
+		if !hasUpdated {
 			b.WriteString(",updated")
 		}
 		b.WriteString("&page%5Bsize%5D=100&sort=updated")
@@ -218,10 +219,10 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 			users[i].Err = fmt.Errorf("Klaviyo has returned an invalid value for the 'updated' attribute: %q", updated)
 			continue
 		}
-		if hasIDProperty {
+		if hasID {
 			data.Attributes["id"] = users[i].ID
 		}
-		if !hasUpdatedProperty {
+		if !hasUpdated {
 			delete(data.Attributes, "updated")
 		}
 		users[i].Properties = data.Attributes
@@ -255,7 +256,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 	schema := types.Object([]types.Property{
 		{
 			Name:  "id",
-			Label: "ID",
+			Label: "Unique ID",
 			Type:  types.Text(),
 			Role:  types.SourceRole,
 		},
@@ -279,6 +280,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 		{
 			Name:     "anonymous_id",
 			Type:     types.Text(),
+			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
@@ -315,17 +317,20 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 			Name:     "created",
 			Label:    "Profile Created",
 			Type:     types.DateTime(),
+			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
 			Name:     "updated",
 			Label:    "Profile Updated",
 			Type:     types.DateTime(),
+			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
 			Name:     "last_event_date",
 			Type:     types.DateTime(),
+			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
@@ -395,8 +400,13 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 			}),
 			Nullable: true,
 		},
-	},
-	)
+		{
+			Name:     "properties",
+			Label:    "Custom Properties",
+			Type:     types.Map(types.JSON()),
+			Nullable: true,
+		},
+	})
 	return schema, nil
 }
 
@@ -427,8 +437,8 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, rol
 }
 
 // Update updates a record of the specified target.
-func (ky *Klavyio) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
-	panic("TODO: not implemented")
+func (ky *Klavyio) Update(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
+	return ky.upsert(ctx, id, properties)
 }
 
 // saveValues saves the user-entered values as settings.
@@ -487,6 +497,40 @@ func (err *klaviyoError) Error() string {
 	return fmt.Sprintf("unexpected error from Klaviyo (%d): %s", err.statusCode, &msg)
 }
 
+// upsert updates or creates a user.
+func (ky *Klavyio) upsert(ctx context.Context, id string, properties map[string]any) error {
+
+	customProperties, ok := properties["properties"]
+	if ok {
+		delete(properties, "properties")
+	}
+	body := bytes.NewBufferString(`{"data":{"type":"profile","attributes":`)
+	enc := json.NewEncoder(body)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(properties)
+	body.Truncate(body.Len() - 1) // remove the trailing new line.
+	if ok {
+		body.Truncate(body.Len() - 1) // remove '}'.
+		body.WriteString(`,"properties":`)
+		_ = enc.Encode(customProperties)
+		body.Truncate(body.Len() - 1) // remove the trailing new line.
+		body.WriteByte('}')           // add '}'.
+	}
+	if id != "" {
+		body.WriteString(`,"id":`)
+		_ = enc.Encode(id)
+		body.Truncate(body.Len() - 1) // remove the trailing new line.
+	}
+	body.WriteString(`}}`)
+
+	url := "https://a.klaviyo.com/api/profiles/"
+
+	if id == "" {
+		return ky.call(ctx, "POST", url, body, 201, nil)
+	}
+	return ky.call(ctx, "PATCH", url+urlPkg.PathEscape(id)+"/", body, 200, nil)
+}
+
 func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
@@ -497,7 +541,7 @@ func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader,
 	req.Header.Set("Authorization", "Klaviyo-API-Key "+ky.settings.PrivateAPIKey)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Revision", "2023-01-24")
+	req.Header.Set("Revision", apiRevision)
 
 	res, err := ky.conf.HTTPClient.Do(req)
 	if err != nil {
