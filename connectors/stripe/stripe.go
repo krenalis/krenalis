@@ -6,6 +6,7 @@
 //
 
 // Package stripe implements the Stripe connector.
+// (https://docs.stripe.com/api)
 package stripe
 
 import (
