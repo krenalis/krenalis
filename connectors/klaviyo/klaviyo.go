@@ -138,7 +138,7 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	var hasIDProperty bool
 	var hasUpdatedProperty bool
@@ -165,7 +165,12 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ time.Time, i
 		if !hasUpdatedProperty {
 			b.WriteString(",updated")
 		}
-		b.WriteString("&page%5Bsize%5D=100&sort=created")
+		b.WriteString("&page%5Bsize%5D=100&sort=updated")
+		if !lastChangeTime.IsZero() {
+			b.WriteString("&filter=greater-than%28updated%2C")
+			b.WriteString(urlPkg.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
+			b.WriteString("%29")
+		}
 		if ids != nil {
 			b.WriteString("&filter=any%28id%2C%5B")
 			for i, id := range ids {
