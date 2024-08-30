@@ -198,7 +198,7 @@ func (c *Client) DoIdempotent(req *http.Request, idempotent bool) (*http.Respons
 		if !idempotent {
 			return res, nil
 		}
-		if status := res.StatusCode; 200 <= status && status < 300 {
+		if status := res.StatusCode; status == 200 || status == 201 {
 			return res, nil
 		}
 
