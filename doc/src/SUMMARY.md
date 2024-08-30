@@ -30,6 +30,7 @@
 - [Node SDK](./node-sdk.md)
 - [Python SDK](./python-sdk.md)
 - [C# SDK](./csharp-sdk.md)
+- [Java SDK](./java-sdk.md)
 - [Data Validation](./data-validation.md)
 - [Changing User Schema](./changing-user-schema.md)
 - [Transformations](./transformations.md)
