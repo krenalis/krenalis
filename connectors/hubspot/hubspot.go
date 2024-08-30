@@ -99,40 +99,14 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	path := "/crm/v3/objects/"
-	var propertyName string
 	if target == meergo.Users {
-		path += "contacts/search"
-		propertyName = "lastmodifieddate"
+		path += "contacts/"
 	} else {
-		path += "companies/search"
-		propertyName = "hs_lastmodifieddate"
+		path += "companies/"
 	}
-
-	if cursor == "" {
-		if lastChangeTime.IsZero() {
-			cursor = "0"
-		} else {
-			cursor = strconv.FormatInt(lastChangeTime.UnixMilli(), 10)
-		}
-	}
-
-	hs.buf.Reset()
-	hs.buf.WriteString(`{"filterGroups":[{"filters":[{"value":"`)
-	hs.buf.WriteString(cursor)
-	hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
-		`]}],"sorts":["` + propertyName + `"],"limit":100,"properties":[`)
-	for i, p := range properties {
-		if i > 0 {
-			hs.buf.WriteByte(',')
-		}
-		hs.buf.WriteByte('"')
-		hs.buf.WriteString(p)
-		hs.buf.WriteByte('"')
-	}
-	hs.buf.WriteString(`]}`)
 
 	var response struct {
 		Results []struct {
@@ -147,7 +121,53 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		}
 	}
 
-	err := hs.call(ctx, "POST", path, &hs.buf, 200, &response)
+	var err error
+
+	hs.buf.Reset()
+	hs.buf.WriteByte('{')
+
+	if ids != nil {
+		hs.buf.WriteString(`"inputs":[`)
+		for i, id := range ids {
+			if i > 0 {
+				hs.buf.WriteByte(',')
+			}
+			hs.buf.WriteString(`{"id":"`)
+			hs.buf.WriteString(id)
+			hs.buf.WriteString(`"}`)
+		}
+		hs.buf.WriteString(`],`)
+		path += "batch/read"
+	} else {
+		propertyName := "lastmodifieddate"
+		if target == meergo.Groups {
+			propertyName = "hs_lastmodifieddate"
+		}
+		unix := lastChangeTime.UnixMilli()
+		if unix < 0 {
+			unix = 0
+		}
+		hs.buf.WriteString(`"filterGroups":[{"filters":[{"value":"`)
+		hs.buf.WriteString(strconv.FormatInt(unix, 10))
+		hs.buf.WriteString(`","propertyName":"` + propertyName + `","operator":"GTE"}` +
+			`]}],"sorts":["` + propertyName + `"],`)
+		path += "search"
+	}
+
+	hs.buf.WriteString(`"after":"`)
+	hs.buf.WriteString(cursor)
+	hs.buf.WriteString(`","limit":100,"properties":[`)
+	for i, p := range properties {
+		if i > 0 {
+			hs.buf.WriteByte(',')
+		}
+		hs.buf.WriteByte('"')
+		hs.buf.WriteString(p)
+		hs.buf.WriteByte('"')
+	}
+	hs.buf.WriteString(`]}`)
+
+	err = hs.call(ctx, "POST", path, &hs.buf, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -179,14 +199,12 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 		}
 	}
 
-	if response.Paging.Next.After == "" {
-		return records, "", io.EOF
-	} else if len(records) > 0 {
-		last := records[len(records)-1]
-		cursor = strconv.FormatInt(last.LastChangeTime.UnixMilli(), 10)
+	cursor = response.Paging.Next.After
+	if cursor == "" {
+		err = io.EOF
 	}
 
-	return records, cursor, nil
+	return records, cursor, err
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
