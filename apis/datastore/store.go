@@ -321,8 +321,9 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 //   - if it is in progress, returns its start time and nil for the end time;
 //   - if no Identity Resolution has ever been executed, returns nil and nil.
 //
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
 func (store *Store) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	store.mustBeOpen()
 	if store.Mode() == state.Maintenance {
