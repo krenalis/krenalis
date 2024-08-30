@@ -216,6 +216,7 @@ func (ds *Datastore) onSetAction(n state.SetAction) func() {
 	return store.onSetAction(n)
 }
 
+// onSetWarehouse is called when the data warehouse is changed.
 func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 	return func() {
 		// Change the data warehouse mode of the current store.
@@ -257,6 +258,7 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 	}
 }
 
+// onSetWarehouseMode is called when the mode of a data warehouse is changed.
 func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) func() {
 	return func() {
 		// Change the data warehouse mode.
