@@ -215,13 +215,6 @@ type Record struct {
 type AppRecords interface {
 	App
 
-	// Create creates a record for the specified target with the given properties.
-	// The target can only be either Users or Groups, and it must be a target
-	// supported by the connector. properties must contain at least one property,
-	// and the properties must conform to the schema as returned by the Schema
-	// method.
-	Create(ctx context.Context, target Targets, properties map[string]any) error
-
 	// Records returns the records of the specified target. The target can only be
 	// either Users or Groups, and it must be a target supported by the connector.
 	// If lastChangeTime is not the zero time, only the records changed or created
@@ -240,11 +233,12 @@ type AppRecords interface {
 	// io.EOF error.
 	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
 
-	// Update updates a record of the specified target. id is the identifier of the
-	// record to update. properties are the properties to update and must contain at
-	// least one property. The properties must conform to the schema as returned by
-	// the Schema method.
-	Update(ctx context.Context, target Targets, id string, properties map[string]any) error
+	// Upsert updates or creates a record for the specified target. id is the
+	// identifier of the record to update; it is empty when creating a new record.
+	// properties are the properties to update and must contain at least one
+	// property. The properties must conform to the schema as returned by the Schema
+	// method.
+	Upsert(ctx context.Context, target Targets, id string, properties map[string]any) error
 }
 
 // Webhooks is the interface implemented by app connectors that can receive

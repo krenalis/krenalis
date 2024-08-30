@@ -15,6 +15,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"maps"
 	"math/rand/v2"
 	"net/http"
 	"slices"
@@ -82,37 +83,6 @@ func newUserID() string {
 		b[i] = rune(rand.IntN(20) + 'a')
 	}
 	return "dummy_" + string(b)
-}
-
-// Create creates a record for the specified target with the given properties.
-func (dummy *Dummy) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-
-	// Write the user on the log.
-	propsDump, err := json.Marshal(properties)
-	if err != nil {
-		return err
-	}
-	log.Printf("[info] Dummy: CreateUser(%v)", string(propsDump))
-
-	// Update the in-memory users.
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	u := map[string]any{}
-	id := newUserID()
-	u["dummyId"] = id
-	for name, value := range properties {
-		u[name] = value
-	}
-	allUsers[id] = u
-	usersLastChangeTimes[id] = time.Now().UTC()
-
-	return nil
 }
 
 // EventRequest returns a request to dispatch an event to the app.
@@ -295,8 +265,8 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, ro
 	return ui, nil
 }
 
-// Update updates a record of the specified target.
-func (dummy *Dummy) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates a record for the specified target.
+func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
 
 	select {
 	case <-ctx.Done():
@@ -304,25 +274,33 @@ func (dummy *Dummy) Update(ctx context.Context, target meergo.Targets, id string
 	default:
 	}
 
-	// Write the user on the log.
+	// Prepare the properties to log.
 	propsDump, err := json.Marshal(properties)
 	if err != nil {
 		return err
 	}
-	log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
 
-	// Update the in-memory users.
 	usersLock.Lock()
 	defer usersLock.Unlock()
-	u, ok := allUsers[id]
-	if !ok {
-		u = map[string]any{}
+
+	if id == "" {
+		// Add a new users into the in-memory users.
+		log.Printf("[info] Dummy: CreateUser(%v)", string(propsDump))
+		user := maps.Clone(properties)
+		id = newUserID()
+		user["id"] = id
+		allUsers[id] = user
+	} else {
+		// Update the in-memory users.
+		user, ok := allUsers[id]
+		if !ok {
+			log.Printf("[info] Dummy: UpdateUser(%q, %v): user not found", id, string(propsDump))
+			return nil
+		}
+		log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
+		maps.Copy(user, properties)
 	}
-	u["dummyId"] = id
-	for name, value := range properties {
-		u[name] = value
-	}
-	allUsers[id] = u
+
 	usersLastChangeTimes[id] = time.Now().UTC()
 
 	return nil

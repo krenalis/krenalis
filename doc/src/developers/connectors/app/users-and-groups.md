@@ -12,7 +12,7 @@ meergo.RegisterApp(meergo.AppInfo{
 })
 ```
 
-After that, to read records from an app, the connector must implement the `Records`, `Create`, and `Update` methods. These methods take the target they should operate on as an argument, which can be either `Users` or `Groups`. They should only implement the targets that the connector supports.
+After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which can be either `Users` or `Groups`. They should only implement the targets that the connector supports.
 
 Here, we'll use the term "records" to refer to both users and groups interchangeably.
 
@@ -88,30 +88,18 @@ If you need to make direct HTTP calls without using the provided client, the `Cl
 
 If a method from `HTTPClient` returns an error, connector methods should return that exact error, without any modification or wrapping.
 
-## Create Records
+## Update and Create Records
 
-To create a record, Meergo invokes the connector's `Create` method:
+To update and to create a record, Meergo invokes the connector's `Upsert` method:
 
 ```go
-Create(ctx context.Context, target meergo.Targets, properties map[string]any) error
+Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error
 ```
 
-This is called during export when a new user or group should be created in the app. `target` can either be `Users` or `Groups`, limited to the supported targets by the connector.
+This is called during export when a user or group needs to be updated, or when a new user or group needs to be created in the app. `target` can either be `Users` or `Groups`, limited to the supported targets by the connector.
+
+The `id` parameter is the identifier of the user in the app to be updated; it is empty when creating a new record.
 
 The `properties` parameter specifies the properties for the new record to be created, adhering to the schema provided by the connector's `Schema` method. Note that `properties` is always populated; it is never empty.
 
-The `Create` method can use the HTTP client passed to the constructor for making HTTP calls to the app.
-
-## Update Records
-
-To update a record, Meergo invokes the connector's `Update` method:
-
-```go
-Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error
-```
-
-This is called during export when an app's user or group needs to be updated. `target` can either be `Users` or `Groups`, limited to the supported targets by the connector.
-
-The `properties` parameter represents the properties to update, with unchanged properties not being present. The properties' values follow the schema returned by the connector's `Schema` method. Note that `properties` is always populated; it is never empty.
-
-The `Update` method can use the HTTP client passed to the constructor to do HTTP calls to the app.
+The `Upsert` method can use the HTTP client passed to the constructor for making HTTP calls to the app.

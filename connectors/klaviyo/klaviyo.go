@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	urlPkg "net/url"
+	"net/url"
 	"strings"
 	"time"
 
@@ -76,11 +76,6 @@ type Klavyio struct {
 
 type Settings struct {
 	PrivateAPIKey string
-}
-
-// Create creates a record for the specified target with the given properties.
-func (ky *Klavyio) Create(ctx context.Context, _ meergo.Targets, properties map[string]any) error {
-	return ky.upsert(ctx, "", properties)
 }
 
 // EventRequest returns a request to dispatch an event to the app.
@@ -144,8 +139,8 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 	var hasID bool
 	var hasUpdated bool
 
-	url := cursor
-	if url == "" {
+	u := cursor
+	if u == "" {
 		var b strings.Builder
 		b.WriteString("https://a.klaviyo.com/api/profiles/?fields%5Bprofile%5D=")
 		i := 0
@@ -169,7 +164,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 		b.WriteString("&page%5Bsize%5D=100&sort=updated")
 		if !lastChangeTime.IsZero() {
 			b.WriteString("&filter=greater-than%28updated%2C")
-			b.WriteString(urlPkg.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
+			b.WriteString(url.QueryEscape(lastChangeTime.Add(-time.Second).Format(time.RFC3339)))
 			b.WriteString("%29")
 		}
 		if ids != nil {
@@ -179,12 +174,12 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 					b.WriteString("%2C")
 				}
 				b.WriteString(`%22`)
-				b.WriteString(urlPkg.QueryEscape(id))
+				b.WriteString(url.QueryEscape(id))
 				b.WriteString(`%22`)
 			}
 			b.WriteString("%5D%29")
 		}
-		url = b.String()
+		u = b.String()
 	}
 
 	var response struct {
@@ -197,7 +192,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, lastChangeTime
 		}
 	}
 
-	err := ky.call(ctx, "GET", url, nil, 200, &response)
+	err := ky.call(ctx, "GET", u, nil, 200, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -436,9 +431,38 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, rol
 	return ui, nil
 }
 
-// Update updates a record of the specified target.
-func (ky *Klavyio) Update(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
-	return ky.upsert(ctx, id, properties)
+// Upsert updates or creates a record for the specified target.
+func (ky *Klavyio) Upsert(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
+
+	customProperties, ok := properties["properties"]
+	if ok {
+		delete(properties, "properties")
+	}
+	body := bytes.NewBufferString(`{"data":{"type":"profile","attributes":`)
+	enc := json.NewEncoder(body)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(properties)
+	body.Truncate(body.Len() - 1) // remove the trailing new line.
+	if ok {
+		body.Truncate(body.Len() - 1) // remove '}'.
+		body.WriteString(`,"properties":`)
+		_ = enc.Encode(customProperties)
+		body.Truncate(body.Len() - 1) // remove the trailing new line.
+		body.WriteByte('}')           // add '}'.
+	}
+	if id != "" {
+		body.WriteString(`,"id":`)
+		_ = enc.Encode(id)
+		body.Truncate(body.Len() - 1) // remove the trailing new line.
+	}
+	body.WriteString(`}}`)
+
+	u := "https://a.klaviyo.com/api/profiles/"
+	if id == "" {
+		return ky.call(ctx, "POST", u, body, 201, nil)
+	}
+
+	return ky.call(ctx, "PATCH", u+url.PathEscape(id)+"/", body, 200, nil)
 }
 
 // saveValues saves the user-entered values as settings.
@@ -495,40 +519,6 @@ func (err *klaviyoError) Error() string {
 		_, _ = fmt.Fprintf(&msg, "%s: %s (error code is %q)", e.Title, e.Detail, e.Code)
 	}
 	return fmt.Sprintf("unexpected error from Klaviyo (%d): %s", err.statusCode, &msg)
-}
-
-// upsert updates or creates a user.
-func (ky *Klavyio) upsert(ctx context.Context, id string, properties map[string]any) error {
-
-	customProperties, ok := properties["properties"]
-	if ok {
-		delete(properties, "properties")
-	}
-	body := bytes.NewBufferString(`{"data":{"type":"profile","attributes":`)
-	enc := json.NewEncoder(body)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(properties)
-	body.Truncate(body.Len() - 1) // remove the trailing new line.
-	if ok {
-		body.Truncate(body.Len() - 1) // remove '}'.
-		body.WriteString(`,"properties":`)
-		_ = enc.Encode(customProperties)
-		body.Truncate(body.Len() - 1) // remove the trailing new line.
-		body.WriteByte('}')           // add '}'.
-	}
-	if id != "" {
-		body.WriteString(`,"id":`)
-		_ = enc.Encode(id)
-		body.Truncate(body.Len() - 1) // remove the trailing new line.
-	}
-	body.WriteString(`}}`)
-
-	url := "https://a.klaviyo.com/api/profiles/"
-
-	if id == "" {
-		return ky.call(ctx, "POST", url, body, 201, nil)
-	}
-	return ky.call(ctx, "PATCH", url+urlPkg.PathEscape(id)+"/", body, 200, nil)
 }
 
 func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {

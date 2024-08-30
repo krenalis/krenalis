@@ -94,18 +94,6 @@ func New(conf *meergo.AppConfig) (*Stripe, error) {
 	return &c, nil
 }
 
-// Create creates a record for the specified target with the given properties.
-func (stripe *Stripe) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
-
-	var body bytes.Buffer
-	err := encodeRequest(&body, properties, nil)
-	if err != nil {
-		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
-	}
-
-	return stripe.call(ctx, "POST", "/v1/customers", &body, 200, nil)
-}
-
 // ReceiveWebhook receives a webhook request and returns its payloads.
 func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error) {
 
@@ -285,16 +273,18 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, 
 	return ui, nil
 }
 
-// Update updates a record of the specified target.
-func (stripe *Stripe) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
-
+// Upsert updates or creates a record for the specified target.
+func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 	var body bytes.Buffer
 	err := encodeRequest(&body, properties, nil)
 	if err != nil {
 		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
-
-	return stripe.call(ctx, "POST", "/v1/customers/"+id, &body, 200, nil)
+	u := "/v1/customers"
+	if id != "" {
+		u += "/" + id
+	}
+	return stripe.call(ctx, "POST", u, &body, 200, nil)
 }
 
 func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {

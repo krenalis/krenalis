@@ -92,11 +92,6 @@ type Settings struct {
 	WebhookSecret string
 }
 
-// Create creates a record for the specified target with the given properties.
-func (mc *MailChimp) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
-	panic("TODO: not implemented")
-}
-
 // OAuthAccount returns the app's account associated with the OAuth
 // authorization.
 func (mc *MailChimp) OAuthAccount(ctx context.Context) (string, error) {
@@ -478,8 +473,12 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, r
 	return ui, nil
 }
 
-// Update updates a record of the specified target.
-func (mc *MailChimp) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates a record for the specified target.
+func (mc *MailChimp) Upsert(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
+
+	if id == "" {
+		panic("TODO: create not implemented")
+	}
 
 	var r struct {
 		Operations []batchOperation `json:"operations"`

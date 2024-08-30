@@ -40,11 +40,6 @@ func New(conf *meergo.AppConfig) (*Klaviyo, error) {
 	// ...
 }
 
-// Create creates a record for the specified target with the given properties.
-func (ky *Klavyio) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
-	// ...
-}
-
 // EventRequest returns a request to dispatch an event to the app.
 func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *meergo.Event, extra map[string]any, schema types.Type, redacted bool) (*meergo.EventRequest, error) {
 	// ...
@@ -70,8 +65,8 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 	// ...
 }
 
-// Update updates a record of the specified target.
-func (ky *Klavyio) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates a record for the specified target.
+func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 	// ...
 }
 ```

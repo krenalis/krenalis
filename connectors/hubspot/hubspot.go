@@ -82,24 +82,6 @@ type HubSpot struct {
 	buf         bytes.Buffer
 }
 
-// Create creates a record for the specified target with the given properties.
-func (hs *HubSpot) Create(ctx context.Context, target meergo.Targets, properties map[string]any) error {
-
-	if target == meergo.Groups {
-		return nil
-	}
-
-	var body bytes.Buffer
-	body.WriteString(`{"properties":`)
-	err := json.NewEncoder(&body).Encode(properties)
-	if err != nil {
-		return err
-	}
-	body.WriteString("}")
-
-	return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
-}
-
 // OAuthAccount returns the app's account associated with the OAuth
 // authorization.
 func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
@@ -368,14 +350,26 @@ func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meerg
 	return schema, nil
 }
 
-// Update updates a record of the specified target.
-func (hs *HubSpot) Update(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates a record for the specified target.
+func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
 
 	if target == meergo.Groups {
 		return nil
 	}
-
 	var body bytes.Buffer
+
+	// Create the user.
+	if id == "" {
+		body.WriteString(`{"properties":`)
+		err := json.NewEncoder(&body).Encode(properties)
+		if err != nil {
+			return err
+		}
+		body.WriteString("}")
+		return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
+	}
+
+	// Update the user.
 	body.WriteString(`{"inputs":[`)
 	idJSON, _ := json.Marshal(id)
 	body.WriteString(`{"id":`)
