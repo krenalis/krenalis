@@ -88,18 +88,32 @@ If you need to make direct HTTP calls without using the provided client, the `Cl
 
 If a method from `HTTPClient` returns an error, connector methods should return that exact error, without any modification or wrapping.
 
-## Update and Create Records
+## Updating and Creating Records
 
-To update and to create a record, Meergo invokes the connector's `Upsert` method:
+To update or create a record, Meergo uses the connector's `Upsert` method:
 
 ```go
-Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error
+Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error)
 ```
 
-This is called during export when a user or group needs to be updated, or when a new user or group needs to be created in the app. `target` can either be `Users` or `Groups`, limited to the supported targets by the connector.
+This method is called during an export when users or groups need to be updated or when new users or groups need to be created in the application. The `target` parameter can be either `Users` or `Groups`, depending on what the connector supports.
 
-The `id` parameter is the identifier of the user in the app to be updated; it is empty when creating a new record.
+The `records` parameter contains the records to be updated or created, with the following structure:
 
-The `properties` parameter specifies the properties for the new record to be created, adhering to the schema provided by the connector's `Schema` method. Note that `properties` is always populated; it is never empty.
+```go
+type UpsertRecord struct {
+	ID         string
+	Properties map[string]any
+}
+```
 
-The `Upsert` method can use the HTTP client passed to the constructor for making HTTP calls to the app.
+- **ID**: This is the identifier of the user or group in the app to be updated. It is left empty when creating a new record.
+- **Properties**: These are the properties of the record to be created or updated, following the schema provided by the connector's Schema method. Note that Properties always contain at least one property.
+
+The method does not need to process all records in a single call. It must process at least the first record and can process additional records based on the app’s API capabilities. For example, if the app’s API only supports updating one record at a time, the `Upsert` method will handle only the first record in each call. If updates and creations need to be handled separately, and the first record is for updating, the method may process all update records together.
+
+The `Upsert` method returns a slice of integers representing the indexes of the processed records, along with an error related to these records. Notably, index `0`, which corresponds to the first record, can be omitted from the returned slice. If the only record processed is the first one, the method can return `nil` instead of `[]int{0}`.
+
+If not all records are processed, Meergo will call `Upsert` again with the remaining records and any additional records as necessary.
+
+The `Upsert` method can use the HTTP client provided during construction to make HTTP requests to the application.

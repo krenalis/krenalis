@@ -65,8 +65,8 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 	// ...
 }
 
-// Upsert updates or creates a record for the specified target.
-func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates records in the app for the specified target.
+func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
 	// ...
 }
 ```

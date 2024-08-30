@@ -283,7 +283,7 @@ func (w *appWriter) Write(ctx context.Context, id string, properties map[string]
 		panic("connectors: Write called on a closed writer")
 	}
 	if id == "" {
-		err := w.records.Upsert(ctx, w.target, "", properties)
+		_, err := w.records.Upsert(ctx, w.target, []meergo.UpsertRecord{{ID: "", Properties: properties}})
 		w.ack([]string{id}, err)
 		return true
 	}
@@ -363,7 +363,7 @@ func (w *appWriter) doUpdates(ctx context.Context) {
 				}
 			}
 			if update {
-				err = w.records.Upsert(ctx, w.target, record.ID, properties)
+				_, err = w.records.Upsert(ctx, w.target, []meergo.UpsertRecord{{ID: record.ID, Properties: properties}})
 			}
 			w.ack([]string{record.ID}, err)
 			delete(w.updates, record.ID)

@@ -431,8 +431,11 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, rol
 	return ui, nil
 }
 
-// Upsert updates or creates a record for the specified target.
-func (ky *Klavyio) Upsert(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates records in the app for the specified target.
+func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
+
+	id := records[0].ID
+	properties := records[0].Properties
 
 	customProperties, ok := properties["properties"]
 	if ok {
@@ -459,10 +462,10 @@ func (ky *Klavyio) Upsert(ctx context.Context, _ meergo.Targets, id string, prop
 
 	u := "https://a.klaviyo.com/api/profiles/"
 	if id == "" {
-		return ky.call(ctx, "POST", u, body, 201, nil)
+		return nil, ky.call(ctx, "POST", u, body, 201, nil)
 	}
 
-	return ky.call(ctx, "PATCH", u+url.PathEscape(id)+"/", body, 200, nil)
+	return nil, ky.call(ctx, "PATCH", u+url.PathEscape(id)+"/", body, 200, nil)
 }
 
 // saveValues saves the user-entered values as settings.

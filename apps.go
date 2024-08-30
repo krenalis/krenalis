@@ -209,6 +209,16 @@ type Record struct {
 	Err error
 }
 
+// UpsertRecord represents a record to update or create in the app.
+type UpsertRecord struct {
+	// Identifier of the record. It is empty when creating a new record.
+	ID string
+
+	// Properties of the record. It contains at least one property and conforms
+	// to the schema as returned by the Schema method.
+	Properties map[string]any // Properties of the record.
+}
+
 // AppRecords is the interface implemented by app connectors that manage users,
 // groups, or both. The target parameter is Users or Groups depending on the
 // connector supported targets.
@@ -233,12 +243,14 @@ type AppRecords interface {
 	// io.EOF error.
 	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
 
-	// Upsert updates or creates a record for the specified target. id is the
-	// identifier of the record to update; it is empty when creating a new record.
-	// properties are the properties to update and must contain at least one
-	// property. The properties must conform to the schema as returned by the Schema
-	// method.
-	Upsert(ctx context.Context, target Targets, id string, properties map[string]any) error
+	// Upsert updates or creates records in the app for the specified target. It
+	// processes the first record in the records slice and may process additional
+	// records as needed based on the app's API capabilities.
+	//
+	// It returns a slice representing the indexes of the processed records, along
+	// with any error encountered. Index 0 may be omitted from the returned slice,
+	// and nil may be returned if the only record processed is the first one.
+	Upsert(ctx context.Context, target Targets, records []UpsertRecord) ([]int, error)
 }
 
 // Webhooks is the interface implemented by app connectors that can receive

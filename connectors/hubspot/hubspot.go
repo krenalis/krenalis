@@ -368,11 +368,14 @@ func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meerg
 	return schema, nil
 }
 
-// Upsert updates or creates a record for the specified target.
-func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates records in the app for the specified target.
+func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
+
+	id := records[0].ID
+	properties := records[0].Properties
 
 	if target == meergo.Groups {
-		return nil
+		return nil, nil
 	}
 	var body bytes.Buffer
 
@@ -381,10 +384,10 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, id string,
 		body.WriteString(`{"properties":`)
 		err := json.NewEncoder(&body).Encode(properties)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		body.WriteString("}")
-		return hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
+		return nil, hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
 	}
 
 	// Update the user.
@@ -395,11 +398,11 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, id string,
 	body.WriteString(`,"properties":`)
 	err := json.NewEncoder(&body).Encode(properties)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	body.WriteString(`}]}`)
 
-	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+	return nil, hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
 }
 
 // companyContacts returns the contacts of the given company.

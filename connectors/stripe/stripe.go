@@ -273,18 +273,22 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, 
 	return ui, nil
 }
 
-// Upsert updates or creates a record for the specified target.
-func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates records in the app for the specified target.
+func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
+
+	id := records[0].ID
+	properties := records[0].Properties
+
 	var body bytes.Buffer
 	err := encodeRequest(&body, properties, nil)
 	if err != nil {
-		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
+		return nil, fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
 	u := "/v1/customers"
 	if id != "" {
 		u += "/" + id
 	}
-	return stripe.call(ctx, "POST", u, &body, 200, nil)
+	return nil, stripe.call(ctx, "POST", u, &body, 200, nil)
 }
 
 func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {

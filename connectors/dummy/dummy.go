@@ -265,19 +265,16 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, ro
 	return ui, nil
 }
 
-// Upsert updates or creates a record for the specified target.
-func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates records in the app for the specified target.
+func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
+	id := records[0].ID
+	properties := records[0].Properties
 
 	// Prepare the properties to log.
 	propsDump, err := json.Marshal(properties)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	usersLock.Lock()
@@ -295,7 +292,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, id string, pro
 		user, ok := allUsers[id]
 		if !ok {
 			log.Printf("[info] Dummy: UpdateUser(%q, %v): user not found", id, string(propsDump))
-			return nil
+			return nil, nil
 		}
 		log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
 		maps.Copy(user, properties)
@@ -303,7 +300,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, id string, pro
 
 	usersLastChangeTimes[id] = time.Now().UTC()
 
-	return nil
+	return nil, nil
 }
 
 // saveValues validates the user-entered values and returns the settings.

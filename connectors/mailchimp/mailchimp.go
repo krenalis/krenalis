@@ -473,8 +473,11 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, r
 	return ui, nil
 }
 
-// Upsert updates or creates a record for the specified target.
-func (mc *MailChimp) Upsert(ctx context.Context, _ meergo.Targets, id string, properties map[string]any) error {
+// Upsert updates or creates records in the app for the specified target.
+func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
+
+	id := records[0].ID
+	properties := records[0].Properties
 
 	if id == "" {
 		panic("TODO: create not implemented")
@@ -486,7 +489,7 @@ func (mc *MailChimp) Upsert(ctx context.Context, _ meergo.Targets, id string, pr
 	var basePath = "/lists/" + mc.settings.List + "/members/"
 	body, err := json.Marshal(properties)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.Operations = append(r.Operations, batchOperation{
 		Method: "PUT",
@@ -496,13 +499,13 @@ func (mc *MailChimp) Upsert(ctx context.Context, _ meergo.Targets, id string, pr
 	})
 	rq, err := json.Marshal(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var response batchResponse
 	err = mc.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if response.Status != "finished" {
@@ -513,19 +516,19 @@ func (mc *MailChimp) Upsert(ctx context.Context, _ meergo.Targets, id string, pr
 			time.Sleep(time.Minute)
 			err = mc.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if response.Status != "finished" {
 				continue
 			}
 			if response.ErroredOperations != 0 {
-				return errors.New("could not update all users")
+				return nil, errors.New("could not update all users")
 			}
 		}
-		return errors.New("could not complete batch operation")
+		return nil, errors.New("could not complete batch operation")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // saveValues saves the user-entered values as settings.
