@@ -185,7 +185,7 @@ func init() {
 	for _, u := range rawUsers {
 		u.Properties["dummyId"] = u.ID
 		allUsers[u.ID] = u.Properties
-		usersLastChangeTimes[u.ID] = time.Now().UTC()
+		usersLastChangeTimes[u.ID] = time.Now().UTC().Truncate(time.Microsecond)
 	}
 	usersLock.Unlock()
 }
@@ -298,7 +298,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, records []meer
 		maps.Copy(user, properties)
 	}
 
-	usersLastChangeTimes[id] = time.Now().UTC()
+	usersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
 
 	return nil, nil
 }
