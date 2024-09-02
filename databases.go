@@ -76,11 +76,18 @@ type Database interface {
 	// Query executes the given query and returns the resulting rows and columns.
 	Query(ctx context.Context, query string) (Rows, []types.Property, error)
 
-	// Upsert creates or updates the provided rows in the specified table.
-	// The columns parameter specifies the columns of the rows, including a column
-	// key that serves as the table's key. If a column's value is not specified in a
-	// row, the default column value is used.
-	Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error
+	// Upsert inserts or updates the rows provided in the specified table. If a row
+	// with the same key value already exists in the database, it updates that row;
+	// otherwise, it inserts a new one. When inserting or updating a row, if a
+	// column is not provided, the column's default value is used.
+	Upsert(ctx context.Context, table Table, rows []map[string]any) error
+}
+
+// Table represents a table.
+type Table struct {
+	Name    string
+	Columns []types.Property
+	Key     string
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

@@ -226,27 +226,27 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 		return nil, err
 	}
 	w := databaseWriter{
-		ack:     ack,
-		table:   action.TableName,
-		key:     action.TableKeyProperty,
-		schema:  action.OutSchema,
-		columns: types.Properties(action.OutSchema),
-		inner:   database.inner,
+		ack: ack,
+		table: meergo.Table{
+			Name:    action.TableName,
+			Columns: types.Properties(action.OutSchema),
+			Key:     action.TableKeyProperty,
+		},
+		schema: action.OutSchema,
+		inner:  database.inner,
 	}
 	return &w, nil
 }
 
 // databaseWriter implements the Writer interface for databases.
 type databaseWriter struct {
-	ack     AckFunc
-	table   string
-	key     string
-	schema  types.Type
-	columns []types.Property
-	rows    []map[string]any
-	ids     []string
-	inner   meergo.Database
-	closed  bool
+	ack    AckFunc
+	table  meergo.Table
+	schema types.Type
+	rows   []map[string]any
+	ids    []string
+	inner  meergo.Database
+	closed bool
 }
 
 func (w *databaseWriter) Close(ctx context.Context) error {
@@ -277,7 +277,7 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 // upsert calls the Upsert method of the database connector with the collected
 // records.
 func (w *databaseWriter) upsert(ctx context.Context) {
-	err := w.inner.Upsert(ctx, w.table, w.key, w.rows, w.columns)
+	err := w.inner.Upsert(ctx, w.table, w.rows)
 	w.ack(w.ids, err)
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
 	w.ids = slices.Delete(w.ids, 0, len(w.ids))

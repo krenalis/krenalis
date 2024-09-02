@@ -137,8 +137,8 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, r
 	return ui, nil
 }
 
-// Upsert creates or updates the provided rows in the specified table.
-func (sf *Snowflake) Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error {
+// Upsert inserts or updates the rows provided in the specified table.
+func (sf *Snowflake) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
 	return errors.New("not implemented")
 }
 

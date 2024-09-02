@@ -189,14 +189,14 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte, 
 	return ui, nil
 }
 
-// Upsert creates or updates the provided rows in the specified table.
-func (ps *PostgreSQL) Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error {
+// Upsert inserts or updates the rows provided in the specified table.
+func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
 
 	var b strings.Builder
 	b.WriteString("INSERT INTO ")
-	b.WriteString(quoteTable(table))
+	b.WriteString(quoteTable(table.Name))
 	b.WriteString(" (")
-	for i, column := range columns {
+	for i, column := range table.Columns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
@@ -210,7 +210,7 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table, key string, rows []map[
 			b.WriteByte(',')
 		}
 		b.WriteString("(")
-		for j, column := range columns {
+		for j, column := range table.Columns {
 			if j > 0 {
 				b.WriteByte(',')
 			}
@@ -222,10 +222,10 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table, key string, rows []map[
 		}
 		b.WriteByte(')')
 	}
-	b.WriteString(` ON CONFLICT (` + quoteColumn(key) + `) DO UPDATE SET `)
+	b.WriteString(` ON CONFLICT (` + quoteColumn(table.Key) + `) DO UPDATE SET `)
 	i := 0
-	for _, column := range columns {
-		if column.Name == key {
+	for _, column := range table.Columns {
+		if column.Name == table.Key {
 			continue
 		}
 		if i > 0 {

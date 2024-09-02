@@ -148,19 +148,18 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role 
 	return ui, nil
 }
 
-// Upsert creates or updates the provided rows in the specified table.
-func (my *MySQL) Upsert(ctx context.Context, table, key string, rows []map[string]any, columns []types.Property) error {
+// Upsert inserts or updates the rows provided in the specified table.
+func (my *MySQL) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
 
-	var err error
-	table, err = quoteTable(table)
+	name, err := quoteTable(table.Name)
 	if err != nil {
 		return err
 	}
 	var b strings.Builder
 	b.WriteString("INSERT INTO ")
-	b.WriteString(table)
+	b.WriteString(name)
 	b.WriteString(" (")
-	for i, column := range columns {
+	for i, column := range table.Columns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
@@ -174,7 +173,7 @@ func (my *MySQL) Upsert(ctx context.Context, table, key string, rows []map[strin
 			b.WriteByte(',')
 		}
 		b.WriteString("(")
-		for j, column := range columns {
+		for j, column := range table.Columns {
 			if j > 0 {
 				b.WriteByte(',')
 			}
@@ -188,8 +187,8 @@ func (my *MySQL) Upsert(ctx context.Context, table, key string, rows []map[strin
 	}
 	b.WriteString(` ON DUPLICATE KEY UPDATE `)
 	i := 0
-	for _, column := range columns {
-		if column.Name == key {
+	for _, column := range table.Columns {
+		if column.Name == table.Key {
 			continue
 		}
 		if i > 0 {
