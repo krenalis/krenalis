@@ -8,6 +8,31 @@
 	background-color: var(--bg-gray);
 }
 
+.users-list__identity-resolution {
+	display: flex;
+	flex-flow: column;
+	align-items: center;
+	justify-content: start;
+	height: 48px;
+}
+
+.users-list__identity-resolution-button::part(base) {
+	min-width: 220px;
+}
+
+.users-list__identity-resolution-spinner {
+	--track-color: var(--text-onaccent);
+	position: relative;
+	bottom: 1px;
+}
+
+.users-list__identity-resolution-since-start,
+.users-list__identity-resolution-end-time {
+	font-size: 12px;
+	text-align: center;
+	color: var(--sl-color-neutral-500);
+}
+
 .users-list .grid {
 	border-top: 0;
 	border-right: 0;

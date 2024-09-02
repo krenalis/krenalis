@@ -16,7 +16,13 @@ import {
 import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseType } from './types/warehouse';
-import Workspace, { AddWorkspaceResponse, PrivacyRegion, DisplayedProperties, PrimarySources } from './types/workspace';
+import Workspace, {
+	AddWorkspaceResponse,
+	PrivacyRegion,
+	DisplayedProperties,
+	PrimarySources,
+	IdentityResolutionExecution,
+} from './types/workspace';
 import {
 	ConnectorUIResponse,
 	ConnectorValues,
@@ -743,6 +749,10 @@ class Workspaces {
 		r.start = new Date(r.start);
 		r.end = new Date(r.end);
 		return r;
+	};
+
+	identityResolutionExecution = async (): Promise<IdentityResolutionExecution> => {
+		return await call(`${this.apiURL}/identity-resolution/execution`, http.GET);
 	};
 }
 

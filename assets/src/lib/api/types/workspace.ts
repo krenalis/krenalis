@@ -27,5 +27,10 @@ interface AddWorkspaceResponse {
 	id: number;
 }
 
+interface IdentityResolutionExecution {
+	startTime: string;
+	endTime: string;
+}
+
 export default Workspace;
-export type { PrivacyRegion, AddWorkspaceResponse, DisplayedProperties, PrimarySources };
+export type { PrivacyRegion, AddWorkspaceResponse, DisplayedProperties, PrimarySources, IdentityResolutionExecution };
