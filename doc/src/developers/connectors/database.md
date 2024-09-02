@@ -57,8 +57,8 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []t
 	// ...
 }
 
-// Upsert creates or updates the provided rows in the specified table.
-func (ps *PostgreSQL) Upsert(ctx context.Context, table string, rows []map[string]any, columns []types.Property) error {
+// Upsert inserts or updates the rows provided in the specified table.
+func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
 	// ...
 }
 ```
@@ -218,9 +218,25 @@ The standard Go library's `sql.Rows` type implements this interface. So, the con
 ### Upsert Method
 
 ```go
-Upsert(ctx context.Context, table string, rows []map[string]any{}, columns []types.Property) error
+Upsert(ctx context.Context, table meergo.Table, rows []map[string]any{}) error
 ```
 
-The `Upsert` method is called by Meergo during an export operation. It either creates new rows or updates existing ones in the specified table. The `columns` parameter defines the columns of the rows being processed, including a mandatory "id" column that acts as the table's primary key. If a column's value is absent in a row, the default column value should be applied.
+The `Upsert` method is used by Meergo during data export to the database. It updates existing rows or inserts new rows into a specified table. The `table` parameter contains information about the table, including its name, columns, and key:
 
-If the specified table or any column does not exist, the method should return an error.
+```go
+type Table struct {
+	Name    string
+	Columns []types.Property
+	Key     string
+}
+```
+
+- `Name`: The name of the table.
+- `Columns`: The columns in the table that need to be updated. It may not include all the columns in the table.
+- `Key`: The column name to be used as the table's key, which generally is the primary key but not required to be.
+
+The `rows` parameter contains the rows to be updated or inserted. Each row has column names and their corresponding values. If a column's value is not provided, the default value for that column is used. The key column specified in `table.Key` is always present in the rows with a non-nil value.
+
+The `Upsert` method checks if a row with the same key already exists in the table. If it does, it updates the existing row; otherwise, it inserts a new row.
+
+A connector may require that the column specified in `table.Key` is the primary key of the table and return an error if it is not.
