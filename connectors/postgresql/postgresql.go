@@ -25,6 +25,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -244,6 +245,12 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map
 		return err
 	}
 	_, err := ps.db.ExecContext(ctx, query)
+	if err, ok := err.(*pgconn.PgError); ok {
+		// Clarify the "there is no unique or exclusion constraint matching the ON CONFLICT specification" error.
+		if err.Code == "42P10" {
+			return fmt.Errorf("table %q does not have a primary key named %q", table.Name, table.Key)
+		}
+	}
 
 	return err
 }
