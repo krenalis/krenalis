@@ -369,12 +369,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() {
-		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
+		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ, action.TableKeyProperty); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
 	if outSchema.Valid() {
-		if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ); err != nil {
+		if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ, action.TableKeyProperty); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
@@ -751,10 +751,12 @@ func unusedProperties(schema types.Type, used []string) []string {
 // io specifies whether the validation relates to "input" or "output", schema is
 // the schema of the input or output action, role and target are the role and
 // target of the action, and typ is the action's connection type.
-func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType) error {
+func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType, tableKey string) error {
 	isUserSchema := target == state.Users &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
+	isOutputDatabaseUserDestination := io == "output" && typ == state.Database && target == state.Users && role == state.Destination
 	for path, p := range types.Walk(schema) {
+		isTableKey := isOutputDatabaseUserDestination && p.Name == tableKey
 		if p.Placeholder != "" {
 			return errors.New("properties of an action schema cannot have placeholders")
 		}
@@ -767,8 +769,16 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 			}
 		}
 		if p.UpdateRequired {
-			if role != state.Destination || typ != state.App || target == state.Users || io != "output" {
-				return errors.New("only the output properties of destination app actions with Users target can be required for the update")
+			if !isTableKey && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
+				return errors.New("only the table key property and the output properties of destination app actions with Users target can be required for the update")
+			}
+		}
+		if isTableKey {
+			if !p.UpdateRequired {
+				return errors.New("table key property must be required for update")
+			}
+			if p.Nullable {
+				return errors.New("table key property cannot be nullable")
 			}
 		}
 		if isUserSchema {

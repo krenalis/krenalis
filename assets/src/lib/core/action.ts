@@ -640,7 +640,9 @@ const transformInActionToSet = async (
 		}
 
 		// the table key property must necessarily be transformed.
-		if (mapping != null) {
+		if (mapping == null && func == null) {
+			throw new Error('Table key property must be transformed');
+		} else if (mapping != null) {
 			if (!Object.keys(mapping).includes(action.TableKeyProperty)) {
 				throw new Error('Table key property must be transformed');
 			}
@@ -656,9 +658,8 @@ const transformInActionToSet = async (
 		if (i === -1) {
 			throw new Error('Table key property must be in the out schema of the action');
 		}
-
-		// TODO: see issue https://github.com/meergo/meergo/issues/909
-		// outSchema.properties[i].createRequired = true;
+		outSchema.properties[i].nullable = false;
+		outSchema.properties[i].updateRequired = true;
 	} else {
 		// the table key property must be defined for database type actions that
 		// export users.

@@ -338,13 +338,16 @@ func Test_validateAction(t *testing.T) {
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "name_in", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), UpdateRequired: true},
+					{Name: "name_out", Type: types.Text(), Nullable: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
 						"email_out": "email_in",
+						"name_out":  "name_in",
 					},
 				},
 				TableName:        "my_users_table",
@@ -362,7 +365,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), UpdateRequired: true},
 				}),
 				Transformation: Transformation{
 					Function: &TransformationFunction{
@@ -1511,6 +1514,52 @@ func Test_validateAction(t *testing.T) {
 			err:                     "table key property \"some_property\" not found within output schema",
 		},
 		{
+			name: "BAD: Destination/Database/Users - table key property is not required for update",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), UpdateRequired: false},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Database,
+			err:                     "table key property must be required for update",
+		},
+		{
+			name: "BAD: Destination/Database/Users - table key property is nullable",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), UpdateRequired: true, Nullable: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName:        "my_users_table",
+				TableKeyProperty: "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Database,
+			err:                     "table key property cannot be nullable",
+		},
+		{
 			name: "BAD: Destination/Database/Users - table key property has wrong type",
 			action: ActionToSet{
 				Name: "Export users",
@@ -1519,7 +1568,7 @@ func Test_validateAction(t *testing.T) {
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
-					{Name: "my_array_prop", Type: types.Array(types.Text())},
+					{Name: "my_array_prop", Type: types.Array(types.Text()), UpdateRequired: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1543,7 +1592,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "a", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), UpdateRequired: true},
 				}),
 				Transformation: Transformation{
 					Mapping: map[string]string{
@@ -1566,7 +1615,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), UpdateRequired: true},
 					{Name: "x", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -1614,7 +1663,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "a", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
+					{Name: "email_out", Type: types.Text(), UpdateRequired: true},
 					{Name: "b", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -1639,7 +1688,7 @@ func Test_validateAction(t *testing.T) {
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
-					{Name: "my_key", Type: types.Text()},
+					{Name: "my_key", Type: types.Text(), UpdateRequired: true},
 				}),
 				Transformation: Transformation{
 					Function: &TransformationFunction{
