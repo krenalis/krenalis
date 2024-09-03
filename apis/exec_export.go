@@ -246,6 +246,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 				}
 				if len(record.Properties) == 0 {
+					stats.PassedFinalizing(1)
 					continue
 				}
 				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
