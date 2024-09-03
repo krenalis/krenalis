@@ -215,9 +215,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 			clear(transformationRecords)
 			transformationRecords = transformationRecords[0:len(users)]
 			for i, user := range users {
-				purpose := transformers.Update
+				purpose := transformers.Create
 				if user.ID != "" {
-					purpose = transformers.Create
+					purpose = transformers.Update
 				}
 				transformationRecords[i].Purpose = purpose
 				transformationRecords[i].Properties = user.Record.Properties
