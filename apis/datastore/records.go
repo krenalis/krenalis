@@ -95,16 +95,16 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 			expr := warehouses.NewBaseExpr(c, warehouses.OpIsNotNull, nil)
 			if where == nil {
 				where = expr
-			} else if where, ok := where.(*warehouses.MultiExpr); ok && where.Operator == warehouses.OpAnd {
-				where.Operands = append(where.Operands, expr)
+			} else if w, ok := where.(*warehouses.MultiExpr); ok && w.Operator == warehouses.OpAnd {
+				w.Operands = append(w.Operands, expr)
 			} else {
 				where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, where})
 			}
 			if matching.ExportMode == state.CreateOnly {
 				// Add '__action__ IS NULL' to the WHERE condition to include only users without a corresponding match.
 				expr = warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull, nil)
-				if where, ok := where.(*warehouses.MultiExpr); ok && where.Operator == warehouses.OpAnd {
-					where.Operands = append(where.Operands, expr)
+				if w, ok := where.(*warehouses.MultiExpr); ok && w.Operator == warehouses.OpAnd {
+					w.Operands = append(w.Operands, expr)
 				} else {
 					where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, where})
 				}
