@@ -315,7 +315,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 	q.WriteString("\" s\nON ")
 	for i, key := range table.Keys {
 		if i > 0 {
-			q.WriteByte(',')
+			q.WriteString(" AND ")
 		}
 		q.WriteString(`d."`)
 		q.WriteString(key)
