@@ -173,7 +173,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
 	}
-	b.WriteString(`false AS "$purge" FROM "`)
+	b.WriteString(`FALSE AS "$purge" FROM "`)
 	b.WriteString(table.Name)
 	b.WriteString("\"\nWITH NO DATA")
 	_, err = db.Exec(ctx, b.String())
