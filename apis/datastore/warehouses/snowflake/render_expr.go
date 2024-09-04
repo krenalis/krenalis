@@ -30,9 +30,9 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
 		var op string
 		switch multiExpr.Operator {
-		case warehouses.LogicalOperatorAnd:
+		case warehouses.OpAnd:
 			op = " AND "
-		case warehouses.LogicalOperatorOr:
+		case warehouses.OpOr:
 			op = " OR "
 		default:
 			return fmt.Errorf("invalid operator %q", multiExpr.Operator)
@@ -72,40 +72,40 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	// Render the operator and, if necessary, the value.
 	switch baseExpr.Operator {
 	case
-		warehouses.OperatorEqual,
-		warehouses.OperatorNotEqual,
-		warehouses.OperatorGreater,
-		warehouses.OperatorGreaterEqual,
-		warehouses.OperatorLess,
-		warehouses.OperatorLessEqual:
+		warehouses.OpEqual,
+		warehouses.OpNotEqual,
+		warehouses.OpGreater,
+		warehouses.OpGreaterEqual,
+		warehouses.OpLess,
+		warehouses.OpLessEqual:
 
 		switch baseExpr.Operator {
-		case warehouses.OperatorEqual:
+		case warehouses.OpEqual:
 			b.WriteString("= ")
-		case warehouses.OperatorNotEqual:
+		case warehouses.OpNotEqual:
 			b.WriteString("<> ")
-		case warehouses.OperatorGreater:
+		case warehouses.OpGreater:
 			b.WriteString("> ")
-		case warehouses.OperatorGreaterEqual:
+		case warehouses.OpGreaterEqual:
 			b.WriteString(">= ")
-		case warehouses.OperatorLess:
+		case warehouses.OpLess:
 			b.WriteString("< ")
-		case warehouses.OperatorLessEqual:
+		case warehouses.OpLessEqual:
 			b.WriteString("<= ")
 		}
 		serializeValue(b, baseExpr.Value, c.Type)
 
-	case warehouses.OperatorIsNull:
+	case warehouses.OpIsNull:
 		b.WriteString("IS NULL")
 
-	case warehouses.OperatorIsNotNull:
+	case warehouses.OpIsNotNull:
 		b.WriteString("IS NOT NULL")
 
-	case warehouses.OperatorNotIn:
+	case warehouses.OpNotIn:
 		b.WriteString(" NOT ")
 		fallthrough
 
-	case warehouses.OperatorIn:
+	case warehouses.OpIn:
 		b.WriteString("IN (")
 		for i, v := range baseExpr.Value.([]any) {
 			if i > 0 {

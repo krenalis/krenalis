@@ -75,9 +75,9 @@ type WhereCondition struct {
 
 // exprFromWhere returns a warehouses.Expr expression from a where.
 func exprFromWhere(where *Where, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
-	op := warehouses.LogicalOperatorAnd
+	op := warehouses.OpAnd
 	if where.Logical == "any" {
-		op = warehouses.LogicalOperatorOr
+		op = warehouses.OpOr
 	}
 	exp := warehouses.NewMultiExpr(op, make([]warehouses.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
@@ -88,9 +88,9 @@ func exprFromWhere(where *Where, columnFromProperty map[string]warehouses.Column
 		var op warehouses.Operator
 		switch cond.Operator {
 		case "is":
-			op = warehouses.OperatorEqual
+			op = warehouses.OpEqual
 		case "is not":
-			op = warehouses.OperatorNotEqual
+			op = warehouses.OpNotEqual
 		default:
 			return nil, errors.New("invalid operator")
 		}

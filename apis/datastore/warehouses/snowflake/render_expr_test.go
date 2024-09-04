@@ -25,80 +25,80 @@ func Test_renderExpr(t *testing.T) {
 		invalid bool
 	}{
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "qwerty"),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpEqual, "qwerty"),
 			query: `"id" = 'qwerty'`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OperatorEqual, map[string]any{"foo": 2, "boo": true}),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpEqual, map[string]any{"foo": 2, "boo": true}),
 			query: `"values" = PARSE_JSON('{"boo":true,"foo":2}')`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OperatorGreaterEqual, 6.5),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpGreaterEqual, 6.5),
 			query: `"weight" >= 6.5`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorIsNull, nil),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIsNull, nil),
 			query: `"id" IS NULL`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorIsNotNull, nil),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIsNotNull, nil),
 			query: `"id" IS NOT NULL`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorGreaterEqual, decimal.NewFromInt(3289)),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpGreaterEqual, decimal.NewFromInt(3289)),
 			query: `"count" >= 3289`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpLess, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
 			query: `"timestamp" < '1900-01-02 23:32:11.940253'`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Text()}, warehouses.OperatorEqual, warehouses.Column{Name: "b", Type: types.Text()}),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Text()}, warehouses.OpEqual, warehouses.Column{Name: "b", Type: types.Text()}),
 			query: `"a" = "b"`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Float(64)}, warehouses.OperatorIn, []any{5.3, 12.6, 9.0}),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.Float(64)}, warehouses.OpIn, []any{5.3, 12.6, 9.0}),
 			query: `"a" IN (5.3,12.6,9)`,
 		},
 		{
 			expr: warehouses.NewMultiExpr(
-				warehouses.LogicalOperatorAnd,
+				warehouses.OpAnd,
 				[]warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpLess, time.Date(1900, 1, 2, 23, 32, 11, 870000000, time.UTC)),
 				}),
 			query: `"timestamp" < '1900-01-02 23:32:11.87'`,
 		},
 		{
 			expr: warehouses.NewMultiExpr(
-				warehouses.LogicalOperatorAnd,
+				warehouses.OpAnd,
 				[]warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: `"timestamp" > '1700-01-02 23:32:11' AND "timestamp" < '1900-01-02 23:32:11'`,
 		},
 		{
 			expr: warehouses.NewMultiExpr(
-				warehouses.LogicalOperatorOr,
+				warehouses.OpOr,
 				[]warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
-					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OperatorLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpGreater, time.Date(1700, 1, 2, 23, 32, 11, 0, time.UTC)),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpLess, time.Date(1900, 1, 2, 23, 32, 11, 0, time.UTC)),
 				}),
 			query: `"timestamp" > '1700-01-02 23:32:11' OR "timestamp" < '1900-01-02 23:32:11'`,
 		},
 		{
 			expr: warehouses.NewMultiExpr(
-				warehouses.LogicalOperatorAnd,
+				warehouses.OpAnd,
 				[]warehouses.Expr{
-					warehouses.NewMultiExpr(warehouses.LogicalOperatorOr, []warehouses.Expr{
-						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "abc_42"),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "abc_50"),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OperatorEqual, "abc_60"),
+					warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpEqual, "abc_42"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpEqual, "abc_50"),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpEqual, "abc_60"),
 					}),
-					warehouses.NewMultiExpr(warehouses.LogicalOperatorOr, []warehouses.Expr{
-						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorEqual, decimal.NewFromInt(100)),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorEqual, decimal.NewFromInt(200)),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OperatorEqual, decimal.NewFromInt(300)),
+					warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpEqual, decimal.NewFromInt(100)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpEqual, decimal.NewFromInt(200)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpEqual, decimal.NewFromInt(300)),
 					}),
 				}),
 			query: `("id" = 'abc_42' OR "id" = 'abc_50' OR "id" = 'abc_60') AND ("count" = 100 OR "count" = 200 OR "count" = 300)`,

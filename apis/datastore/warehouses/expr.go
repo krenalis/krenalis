@@ -32,8 +32,8 @@ func NewMultiExpr(operator LogicalOperator, operands []Expr) *MultiExpr {
 type LogicalOperator string
 
 const (
-	LogicalOperatorAnd LogicalOperator = "And"
-	LogicalOperatorOr  LogicalOperator = "Or"
+	OpAnd LogicalOperator = "And"
+	OpOr  LogicalOperator = "Or"
 )
 
 // BaseExpr represents an SQL expression that refers to a property, on which an
@@ -57,14 +57,14 @@ func NewBaseExpr(column Column, operator Operator, value any) *BaseExpr {
 type Operator string
 
 const (
-	OperatorEqual        Operator = "Equal"
-	OperatorNotEqual     Operator = "NotEqual"
-	OperatorGreater      Operator = "Greater"
-	OperatorGreaterEqual Operator = "GreaterEqual"
-	OperatorLess         Operator = "Less"
-	OperatorLessEqual    Operator = "LessEqual"
-	OperatorIsNull       Operator = "IsNull"
-	OperatorIsNotNull    Operator = "IsNotNull"
-	OperatorIn           Operator = "In"
-	OperatorNotIn        Operator = "NotIn"
+	OpEqual        Operator = "Equal"
+	OpNotEqual     Operator = "NotEqual"
+	OpGreater      Operator = "Greater"
+	OpGreaterEqual Operator = "GreaterEqual"
+	OpLess         Operator = "Less"
+	OpLessEqual    Operator = "LessEqual"
+	OpIsNull       Operator = "IsNull"
+	OpIsNotNull    Operator = "IsNotNull"
+	OpIn           Operator = "In"
+	OpNotIn        Operator = "NotIn"
 )

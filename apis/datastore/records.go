@@ -82,9 +82,9 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 			{
 				Type:  warehouses.Inner,
 				Table: "_destinations_users",
-				Condition: warehouses.NewMultiExpr(warehouses.LogicalOperatorAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorEqual, matching.Action),
-					warehouses.NewBaseExpr(c, warehouses.OperatorEqual, warehouses.Column{Name: "__property__", Type: types.Text()}),
+				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpEqual, matching.Action),
+					warehouses.NewBaseExpr(c, warehouses.OpEqual, warehouses.Column{Name: "__property__", Type: types.Text()}),
 				}),
 			},
 		}
@@ -92,21 +92,21 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 			// Use a Left JOIN instead.
 			joins[0].Type = warehouses.Left
 			// Add 'property IS NOT NULL' to the WHERE condition to exclude users with a NULL value for the matching property.
-			expr := warehouses.NewBaseExpr(c, warehouses.OperatorIsNotNull, nil)
+			expr := warehouses.NewBaseExpr(c, warehouses.OpIsNotNull, nil)
 			if where == nil {
 				where = expr
-			} else if where, ok := where.(*warehouses.MultiExpr); ok && where.Operator == warehouses.LogicalOperatorAnd {
+			} else if where, ok := where.(*warehouses.MultiExpr); ok && where.Operator == warehouses.OpAnd {
 				where.Operands = append(where.Operands, expr)
 			} else {
-				where = warehouses.NewMultiExpr(warehouses.LogicalOperatorAnd, []warehouses.Expr{expr, where})
+				where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, where})
 			}
 			if matching.ExportMode == state.CreateOnly {
 				// Add '__action__ IS NULL' to the WHERE condition to include only users without a corresponding match.
-				expr = warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OperatorIsNull, nil)
-				if where, ok := where.(*warehouses.MultiExpr); ok && where.Operator == warehouses.LogicalOperatorAnd {
+				expr = warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull, nil)
+				if where, ok := where.(*warehouses.MultiExpr); ok && where.Operator == warehouses.OpAnd {
 					where.Operands = append(where.Operands, expr)
 				} else {
-					where = warehouses.NewMultiExpr(warehouses.LogicalOperatorAnd, []warehouses.Expr{expr, where})
+					where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, where})
 				}
 			}
 		}
