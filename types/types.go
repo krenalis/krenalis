@@ -44,15 +44,6 @@ func (err RepeatedPropertyNameError) Error() string {
 	return fmt.Sprintf("property name %q is repeated", err.Name)
 }
 
-// PathNotExistError is returned by PropertyByPath when the path does not exist.
-type PathNotExistError struct {
-	Path string
-}
-
-func (err PathNotExistError) Error() string {
-	return fmt.Sprintf("property path %q does not exist", err.Path)
-}
-
 // one is the decimal.Decimal 1.
 var one = decimal.New(1, 0)
 

@@ -8,11 +8,21 @@
 package types
 
 import (
+	"fmt"
 	"iter"
 	"regexp"
 	"slices"
 	"strings"
 )
+
+// PathNotExistError is returned by PropertyByPath when the path does not exist.
+type PathNotExistError struct {
+	Path string
+}
+
+func (err PathNotExistError) Error() string {
+	return fmt.Sprintf("property path %q does not exist", err.Path)
+}
 
 // AsRole returns a new type with properties of t that are compatible with role.
 // If all properties of t are compatible with role, it returns t. If no
