@@ -62,7 +62,7 @@ type HTTP struct {
 type Settings struct {
 	Host    string
 	Port    int
-	Headers map[string]string
+	Headers []meergo.KV
 }
 
 // CompletePath returns the complete representation of the given path name.
@@ -165,8 +165,8 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 		return err
 	}
 	req.Header.Set("Content-Type", contentType)
-	for name, value := range h.settings.Headers {
-		req.Header[name] = []string{value}
+	for _, header := range h.settings.Headers {
+		req.Header[header.Key] = []string{header.Value}
 	}
 	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
@@ -196,11 +196,11 @@ func (h *HTTP) saveValues(ctx context.Context, values []byte) error {
 		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Headers.
-	for k, v := range s.Headers {
-		if n := utf8.RuneCountInString(k); n == 0 || n > 100 {
+	for _, header := range s.Headers {
+		if n := utf8.RuneCountInString(header.Key); n == 0 || n > 100 {
 			return meergo.NewInvalidUIValuesError("header key length must be in range [1,100]")
 		}
-		if n := utf8.RuneCountInString(v); n == 0 || n > 10000 {
+		if n := utf8.RuneCountInString(header.Value); n == 0 || n > 10000 {
 			return meergo.NewInvalidUIValuesError("header value length must be in range [1,10000]")
 		}
 	}

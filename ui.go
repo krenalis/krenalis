@@ -163,6 +163,13 @@ type FieldSet struct {
 	Role   Role
 }
 
+// KV represents a key-value pair.
+// A KeyValue component stores its data as a slice of KV, i.e., []KV.
+type KV struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type AlternativeFieldSets struct {
 	Label    string
 	HelpText string

@@ -18,7 +18,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 import { DraggableWrapper } from './DraggableWrapper/DraggableWrapper';
-import { OverlayRow } from './OverlayRow/OverlayRow';
+import { OverlayRow } from '../OverlayRow/OverlayRow';
 
 interface SortableGridProps {
 	columns: GridColumn[];

@@ -19,10 +19,15 @@
 
 .connector-keyvalue__cell {
 	border: 1px solid var(--sl-input-border-color);
-	border-bottom: 0;
+	border-top: 0;
 	border-right: 0;
 	display: flex;
 	align-items: center;
+}
+
+.connector-keyvalue__draggable-wrapper:nth-child(2) .connector-keyvalue__cell,
+.connector-keyvalue__grid > .connector-keyvalue__row:nth-child(2) .connector-keyvalue__cell {
+	border-top: 1px solid var(--sl-input-border-color);
 }
 
 .connector-keyvalue__cell > * {
@@ -33,24 +38,23 @@
 	border-right: 1px solid var(--sl-input-border-color);
 }
 
-.connector-keyvalue__row:nth-child(2) .connector-keyvalue__cell:first-child {
-	border-top-left-radius: 5px;
+.connector-keyvalue__draggable-wrapper {
+	position: relative;
 }
 
-.connector-keyvalue__row:nth-child(2) .connector-keyvalue__cell:last-child {
-	border-top-right-radius: 5px;
-}
-
-.connector-keyvalue__row:last-child .connector-keyvalue__cell:first-child {
-	border-bottom-left-radius: 5px;
-}
-
-.connector-keyvalue__row:last-child .connector-keyvalue__cell:last-of-type {
-	border-bottom-right-radius: 5px;
-}
-
-.connector-keyvalue__row:last-child .connector-keyvalue__cell {
-	border-bottom: 1px solid var(--sl-input-border-color);
+.connector-keyvalue__draggable-wrapper .draggable-wrapper__handle {
+	position: absolute;
+	left: -25px;
+	z-index: 999;
+	height: 100%;
+	border: 0;
+	cursor: pointer;
+	background-color: transparent;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--sl-color-primary-600);
 }
 
 .connector-keyvalue__cell ::part(form-control-label) {
@@ -71,7 +75,7 @@
 	font-size: 13px;
 	background-color: var(--bg-primary);
 	padding: 5px;
-	color: var(--sl-color-danger-500);
+	color: var(--sl-color-danger-600);
 	border-radius: 100%;
 }
 
@@ -84,4 +88,31 @@
 
 .connector-keyvalue sl-icon {
 	cursor: pointer;
+}
+
+.connector-keyvalue .overlay-row {
+	position: relative;
+}
+
+.connector-keyvalue .overlay-row .overlay-row__handle {
+	position: absolute;
+	left: -25px;
+	z-index: 999;
+	height: 100%;
+	border: 0;
+	cursor: pointer;
+	background-color: transparent;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--sl-color-primary-600);
+}
+
+.connector-keyvalue .overlay-row .connector-keyvalue__remove-row {
+	display: none;
+}
+
+.connector-keyvalue .overlay-row .connector-keyvalue__cell {
+	border-top: 1px solid var(--sl-input-border-color);
 }

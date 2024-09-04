@@ -4,11 +4,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 
 interface DraggableRowProps {
-	id: string;
+	id: string | number;
+	className?: string;
 	children: ReactNode;
 }
 
-const DraggableWrapper = ({ id, children }: DraggableRowProps) => {
+const DraggableWrapper = ({ id, className, children }: DraggableRowProps) => {
 	const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: id });
 
 	const style = {
@@ -17,7 +18,7 @@ const DraggableWrapper = ({ id, children }: DraggableRowProps) => {
 	};
 
 	return (
-		<div className='draggable-wrapper' ref={setNodeRef} style={style}>
+		<div className={`draggable-wrapper${className ? ` ${className}` : ''}`} ref={setNodeRef} style={style}>
 			<button className='draggable-wrapper__handle' {...listeners} {...attributes}>
 				<SlIcon name='grip-vertical' />
 			</button>
