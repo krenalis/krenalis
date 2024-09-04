@@ -264,7 +264,11 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 // IdentityResolutionExecution returns information about the execution of the
 // Identity Resolution.
 func (warehouse *PostgreSQL) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	return identityResolutionExecution(ctx, warehouse.db, warehouse.settings.Database)
+	db, err := warehouse.connection()
+	if err != nil {
+		return nil, nil, err
+	}
+	return identityResolutionExecution(ctx, db, warehouse.settings.Database)
 }
 
 type queryExec interface {
