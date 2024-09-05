@@ -597,17 +597,24 @@ class Workspaces {
 		return await call(`${this.apiURL}/warehouse/settings`, http.GET);
 	};
 
-	changeWarehouseMode = async (mode: WarehouseMode): Promise<void> => {
+	changeWarehouseMode = async (mode: WarehouseMode, cancelIncompatibleOperations: boolean): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/mode`, http.PUT, {
 			Mode: mode,
+			CancelIncompatibleOperations: cancelIncompatibleOperations,
 		});
 	};
 
-	changeWarehouseSettings = async (type: WarehouseType, mode: WarehouseMode, settings: any): Promise<void> => {
+	changeWarehouseSettings = async (
+		type: WarehouseType,
+		mode: WarehouseMode,
+		settings: any,
+		cancelIncompatibleOperations: boolean,
+	): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/settings`, http.PUT, {
 			Type: type,
 			Mode: mode,
 			Settings: settings,
+			CancelIncompatibleOperations: cancelIncompatibleOperations,
 		});
 	};
 

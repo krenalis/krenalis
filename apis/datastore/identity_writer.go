@@ -65,10 +65,25 @@ type BatchIdentityWriter struct {
 // is returned.
 //
 // If the writer is already closed, it does nothing and returns immediately.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+//
+// TODO(Gianluca): if these errors returned from Close seem strange, it's
+// because we still need to discuss the issue
+// https://github.com/meergo/meergo/issues/1002 and understand precisely what
+// model we want to implement for the operations and compatible methods.
 func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	if iw.closed {
 		return nil
 	}
+	ctx, done, err := iw.store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
 	iw.closed = true
 	if iw.rows != nil {
 		columns := identitiesMergeColumns(iw.columns)
@@ -181,16 +196,31 @@ type EventIdentityWriter struct {
 // is returned.
 //
 // If the writer is already closed, it does nothing and returns immediately.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+//
+// TODO(Gianluca): if these errors returned from Close seem strange, it's
+// because we still need to discuss the issue
+// https://github.com/meergo/meergo/issues/1002 and understand precisely what
+// model we want to implement for the operations and compatible methods.
 func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 	if iw.closed {
 		return nil
 	}
+	ctx, done, err := iw.store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
 	iw.closed = true
 	if iw.rows == nil {
 		return nil
 	}
 	columns := identitiesMergeColumns(iw.columns)
-	err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
+	err = iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
 	if err != nil {
 		return err
 	}

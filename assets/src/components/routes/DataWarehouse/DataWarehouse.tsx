@@ -169,7 +169,7 @@ const WarehouseInfo = ({
 	const onConfirmChangeMode = async () => {
 		setIsWarehouseModeLoading(true);
 		try {
-			await api.workspaces.changeWarehouseMode(warehouseModeToSet as WarehouseMode);
+			await api.workspaces.changeWarehouseMode(warehouseModeToSet as WarehouseMode, false);
 		} catch (err) {
 			setIsWarehouseModeLoading(false);
 			handleError(err);

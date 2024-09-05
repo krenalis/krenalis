@@ -80,7 +80,7 @@ const DataWarehouseSettings = ({
 	const onSave = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, mode, settings);
+			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, mode, settings, false);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'InvalidWarehouseType') {

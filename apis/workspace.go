@@ -782,10 +782,13 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 
 // ChangeWarehouseMode changes the mode of the data warehouse for the workspace.
 //
+// If cancelIncompatibleOperations is true, the operations currently in progress
+// on the warehouse that are incompatible with mode are cancelled.
+//
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 // NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMode) error {
+func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMode, cancelIncompatibleOperations bool) error {
 	this.apis.mustBeOpen()
 
 	switch mode {
@@ -800,8 +803,9 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	}
 
 	n := state.SetWarehouseMode{
-		Workspace: ws.ID,
-		Mode:      state.WarehouseMode(mode),
+		Workspace:                    ws.ID,
+		Mode:                         state.WarehouseMode(mode),
+		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -855,6 +859,9 @@ func (this *Workspace) IdentityResolutionExecution(ctx context.Context) (startTi
 // ChangeWarehouseSettings changes the mode and the settings of the data
 // warehouse for the workspace.
 //
+// If cancelIncompatibleOperations is true, the operations currently in progress
+// on the warehouse that are incompatible with mode are cancelled.
+//
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 //
@@ -863,7 +870,7 @@ func (this *Workspace) IdentityResolutionExecution(ctx context.Context) (startTi
 //     of a different type,
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte) error {
+func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
 	this.apis.mustBeOpen()
 
 	switch mode {
@@ -903,6 +910,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 			Mode:     state.WarehouseMode(mode),
 			Settings: settings,
 		},
+		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {

@@ -430,13 +430,14 @@ func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	body := struct {
-		Mode apis.WarehouseMode
+		Mode                         apis.WarehouseMode
+		CancelIncompatibleOperations bool
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeWarehouseMode(r.Context(), body.Mode)
+	err = ws.ChangeWarehouseMode(r.Context(), body.Mode, body.CancelIncompatibleOperations)
 	return nil, err
 }
 
@@ -448,15 +449,17 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 		return nil, err
 	}
 	body := struct {
-		Type     apis.WarehouseType
-		Settings rawJSON
-		Mode     apis.WarehouseMode
+		Type                         apis.WarehouseType
+		Settings                     rawJSON
+		Mode                         apis.WarehouseMode
+		CancelIncompatibleOperations bool
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeWarehouseSettings(r.Context(), body.Type, body.Mode, body.Settings)
+	err = ws.ChangeWarehouseSettings(r.Context(), body.Type, body.Mode,
+		body.Settings, body.CancelIncompatibleOperations)
 	return nil, err
 }
 

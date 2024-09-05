@@ -26,6 +26,10 @@ import (
 
 const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse
 
+// ErrNormalMode is returned by Store methods when they cannot execute due to
+// the data warehouse being in normal mode.
+var ErrNormalMode = errors.New("the data warehouse is in normal mode")
+
 // ErrInspectionMode is returned by Store methods when they cannot execute due
 // to the data warehouse being in inspection mode.
 var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
@@ -67,10 +71,10 @@ type Store struct {
 		identity map[string]warehouses.Column // including meta properties.
 	}
 	closed               atomic.Bool
-	mu                   sync.Mutex // for 'mode', 'events' and 'eventIdentityWriters' fields
-	mode                 state.WarehouseMode
+	mu                   sync.Mutex // for 'events' and 'eventIdentityWriters' fields
 	events               [][]any
 	eventIdentityWriters map[int]*EventIdentityWriter // action -> *EventIdentityWriter
+	mc                   *modeCoordinator
 }
 
 // newStore returns a new Store for the workspace ws.
@@ -79,9 +83,9 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store := &Store{
 		ds:                   ds,
 		workspace:            ws.ID,
-		mode:                 ws.Warehouse.Mode,
 		eventIdentityWriters: map[int]*EventIdentityWriter{},
 	}
+	store.mc = newModeCoordinator(ws.Warehouse.Mode)
 	var err error
 	store.warehouse, err = openWarehouse(ws.Warehouse.Type, ws.Warehouse.Settings)
 	if err != nil {
@@ -130,9 +134,11 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // *DataWarehouseError error.
 func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
 	store.mustBeOpen()
-	if store.Mode() == state.Inspection {
-		return ErrInspectionMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 	userColumns := propertiesToColumns(userSchema)
 	return store.warehouse.AlterSchema(ctx, userColumns, operations)
 }
@@ -152,6 +158,11 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 // error.
 func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
 	userColumns := propertiesToColumns(userSchema)
 	return store.warehouse.AlterSchemaQueries(ctx, userColumns, operations)
 }
@@ -161,13 +172,13 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Typ
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 func (store *Store) AddEvents(events [][]any) error {
+	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/989.
 	store.mustBeOpen()
-	switch store.Mode() {
-	case state.Inspection:
-		return ErrInspectionMode
-	case state.Maintenance:
-		return ErrMaintenanceMode
+	_, done, err := store.mc.StartOperation(context.Background(), normalMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 	store.mu.Lock()
 	store.events = append(store.events, events...)
 	store.mu.Unlock()
@@ -180,9 +191,6 @@ func (store *Store) AddEvents(events [][]any) error {
 // warehouse after all identities have been written. The ack parameter is the
 // acknowledgment function.
 //
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-//
 // If the action's output schema does not align with the user schema, it returns
 // a *schemas.Error error.
 //
@@ -191,12 +199,6 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 	store.mustBeOpen()
 	if ack == nil {
 		panic("nil ack function")
-	}
-	switch store.Mode() {
-	case state.Inspection:
-		return nil, ErrInspectionMode
-	case state.Maintenance:
-		return nil, ErrMaintenanceMode
 	}
 	connection := action.Connection()
 	execution, ok := action.Execution()
@@ -231,12 +233,11 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 // error.
 func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) error {
 	store.mustBeOpen()
-	switch store.Mode() {
-	case state.Inspection:
-		return ErrInspectionMode
-	case state.Maintenance:
-		return ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpEqual, action)
 	return store.warehouse.Delete(ctx, "_user_identities", where)
@@ -305,9 +306,11 @@ func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc)
 // returns a *DataWarehouseError error.
 func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
 	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, err
 	}
+	defer done()
 	query.table = "events"
 	records, _, err := store.query(ctx, query, eventColumnByProperty, false)
 	return records, err
@@ -326,9 +329,11 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // returns a *DataWarehouseError error.
 func (store *Store) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, nil, ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, nil, err
 	}
+	defer done()
 	return store.warehouse.IdentityResolutionExecution(ctx)
 }
 
@@ -340,18 +345,17 @@ func (store *Store) IdentityResolutionExecution(ctx context.Context) (startTime,
 // *DataWarehouseError error.
 func (store *Store) InitWarehouse(ctx context.Context) error {
 	store.mustBeOpen()
-	if store.Mode() == state.Inspection {
-		return ErrInspectionMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 	return store.warehouse.Init(ctx)
 }
 
 // Mode returns the data warehouse mode.
 func (store *Store) Mode() state.WarehouseMode {
-	store.mu.Lock()
-	mode := store.mode
-	store.mu.Unlock()
-	return mode
+	return store.mc.Mode()
 }
 
 // PurgeActions purges the provided actions from the data warehouse, deleting
@@ -363,18 +367,17 @@ func (store *Store) Mode() state.WarehouseMode {
 // error.
 func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 	store.mustBeOpen()
-	switch store.Mode() {
-	case state.Inspection:
-		return ErrInspectionMode
-	case state.Maintenance:
-		return ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 	value := make([]any, len(actions))
 	for i, action := range actions {
 		value[i] = action
 	}
 	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIn, value)
-	err := store.warehouse.Delete(ctx, "_user_identities", where)
+	err = store.warehouse.Delete(ctx, "_user_identities", where)
 	if err != nil {
 		return err
 	}
@@ -397,12 +400,11 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 func (store *Store) RunIdentityResolution(ctx context.Context) error {
 	store.mustBeOpen()
 
-	switch store.Mode() {
-	case state.Inspection:
-		return ErrInspectionMode
-	case state.Maintenance:
-		return ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 
 	// Retrieve the workspace.
 	ws, ok := store.ds.state.Workspace(store.workspace)
@@ -434,7 +436,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	err := store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
+	err = store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
 	if err != nil && err == warehouses.ErrIdentityResolutionInProgress {
 		err = ErrIdentityResolutionInProgress
 	}
@@ -457,12 +459,11 @@ type DestinationUser struct {
 // error.
 func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users []DestinationUser, idsToDelete []string) error {
 	store.mustBeOpen()
-	switch store.Mode() {
-	case state.Inspection:
-		return ErrInspectionMode
-	case state.Maintenance:
-		return ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
 	}
+	defer done()
 	var rows [][]any
 	if users != nil {
 		rows = make([][]any, len(users))
@@ -494,9 +495,11 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users
 // returns a *DataWarehouseError error.
 func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, 0, ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, 0, err
 	}
+	defer done()
 	query.table = "users"
 	query.count = true
 	return store.query(ctx, query, store.userColumnByProperty(), true)
@@ -509,9 +512,11 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 // returns a *DataWarehouseError error.
 func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, 0, ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, 0, err
 	}
+	defer done()
 	query.table = "_user_identities"
 	query.count = true
 	return store.query(ctx, query, store.identityColumnByProperty(), true)
@@ -529,9 +534,11 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 // occurs with the data warehouse, it returns a *DataWarehouseError error.
 func (store *Store) UserRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
 	store.mustBeOpen()
-	if store.Mode() == state.Maintenance {
-		return nil, ErrMaintenanceMode
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, err
 	}
+	defer done()
 	if query.Properties != nil {
 		return nil, errors.New("query.properties is not nil")
 	}
@@ -543,7 +550,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 		return nil, fmt.Errorf("workspace does not exist anymore")
 	}
 	// Check that schema is aligned with the user schema.
-	err := schemas.CheckAlignment(schema, workspace.UserSchema, nil)
+	err = schemas.CheckAlignment(schema, workspace.UserSchema, nil)
 	if err != nil {
 		return nil, err
 	}

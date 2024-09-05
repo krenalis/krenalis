@@ -1054,8 +1054,9 @@ func (state *State) setConnectionSettings(n notification) {
 // SetWarehouse is the event sent when the settings of a data warehouse are
 // changed.
 type SetWarehouse struct {
-	Workspace int
-	Warehouse *Warehouse
+	Workspace                    int
+	Warehouse                    *Warehouse
+	CancelIncompatibleOperations bool
 }
 
 // setWarehouse sets the settings of a data warehouse.
@@ -1078,8 +1079,9 @@ func (state *State) setWarehouse(n notification) {
 // SetWarehouseMode is the event sent when the mode of a data warehouse is
 // changed.
 type SetWarehouseMode struct {
-	Workspace int
-	Mode      WarehouseMode
+	Workspace                    int
+	Mode                         WarehouseMode
+	CancelIncompatibleOperations bool
 }
 
 // setWarehouseMode sets the mode of a data warehouse.

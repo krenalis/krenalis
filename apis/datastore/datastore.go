@@ -225,9 +225,7 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 			store := ds.store[n.Workspace]
 			ds.mu.Unlock()
 			if store != nil {
-				store.mu.Lock()
-				store.mode = n.Warehouse.Mode
-				store.mu.Unlock()
+				store.mc.ChangeMode(n.Warehouse.Mode, n.CancelIncompatibleOperations)
 			}
 		}
 		// Replace the current store with a new store.
@@ -261,13 +259,10 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 // onSetWarehouseMode is called when the mode of a data warehouse is changed.
 func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) func() {
 	return func() {
-		// Change the data warehouse mode.
 		ds.mu.Lock()
 		store := ds.store[n.Workspace]
 		ds.mu.Unlock()
-		store.mu.Lock()
-		store.mode = n.Mode
-		store.mu.Unlock()
+		store.mc.ChangeMode(n.Mode, n.CancelIncompatibleOperations)
 	}
 }
 
