@@ -158,11 +158,11 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 
 	n := state.AddWorkspace{
-		Organization:                       this.organization.ID,
-		Name:                               name,
-		UserSchema:                         defaultUserSchema,
-		RunIdentityResolutionOnBatchImport: true,
-		PrivacyRegion:                      state.PrivacyRegion(region),
+		Organization:                   this.organization.ID,
+		Name:                           name,
+		UserSchema:                     defaultUserSchema,
+		ResolveIdentitiesOnBatchImport: true,
+		PrivacyRegion:                  state.PrivacyRegion(region),
 	}
 
 	// Generate the identifier.
@@ -180,9 +180,9 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" user_schema, run_identity_resolution_on_batch_import, privacy_region)"+
+			" user_schema, resolve_identities_on_batch_import, privacy_region)"+
 			" VALUES ($1, $2, $3, $4, $5, $6)",
-			n.ID, n.Organization, n.Name, userSchema, n.RunIdentityResolutionOnBatchImport, n.PrivacyRegion)
+			n.ID, n.Organization, n.Name, userSchema, n.ResolveIdentitiesOnBatchImport, n.PrivacyRegion)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
@@ -458,18 +458,18 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		return nil, errors.NotFound("workspace %d does not exist", id)
 	}
 	workspace := Workspace{
-		apis:                               this.apis,
-		organization:                       this,
-		store:                              this.apis.datastore.Store(id),
-		workspace:                          ws,
-		ID:                                 ws.ID,
-		Name:                               ws.Name,
-		UserSchema:                         ws.UserSchema,
-		UserPrimarySources:                 maps.Clone(ws.UserPrimarySources),
-		RunIdentityResolutionOnBatchImport: ws.RunIdentityResolutionOnBatchImport,
-		Identifiers:                        ws.Identifiers,
-		PrivacyRegion:                      PrivacyRegion(ws.PrivacyRegion),
-		DisplayedProperties:                DisplayedProperties(ws.DisplayedProperties),
+		apis:                           this.apis,
+		organization:                   this,
+		store:                          this.apis.datastore.Store(id),
+		workspace:                      ws,
+		ID:                             ws.ID,
+		Name:                           ws.Name,
+		UserSchema:                     ws.UserSchema,
+		UserPrimarySources:             maps.Clone(ws.UserPrimarySources),
+		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
+		Identifiers:                    ws.Identifiers,
+		PrivacyRegion:                  PrivacyRegion(ws.PrivacyRegion),
+		DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
 	}
 	if ws.Warehouse != nil {
 		mode := WarehouseMode(ws.Warehouse.Mode)
@@ -485,18 +485,18 @@ func (this *Organization) Workspaces() []*Workspace {
 	infos := make([]*Workspace, len(workspaces))
 	for i, ws := range workspaces {
 		workspace := Workspace{
-			apis:                               this.apis,
-			organization:                       this,
-			store:                              this.apis.datastore.Store(ws.ID),
-			workspace:                          ws,
-			ID:                                 ws.ID,
-			Name:                               ws.Name,
-			UserSchema:                         ws.UserSchema,
-			UserPrimarySources:                 maps.Clone(ws.UserPrimarySources),
-			RunIdentityResolutionOnBatchImport: ws.RunIdentityResolutionOnBatchImport,
-			Identifiers:                        ws.Identifiers,
-			PrivacyRegion:                      PrivacyRegion(ws.PrivacyRegion),
-			DisplayedProperties:                DisplayedProperties(ws.DisplayedProperties),
+			apis:                           this.apis,
+			organization:                   this,
+			store:                          this.apis.datastore.Store(ws.ID),
+			workspace:                      ws,
+			ID:                             ws.ID,
+			Name:                           ws.Name,
+			UserSchema:                     ws.UserSchema,
+			UserPrimarySources:             maps.Clone(ws.UserPrimarySources),
+			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
+			Identifiers:                    ws.Identifiers,
+			PrivacyRegion:                  PrivacyRegion(ws.PrivacyRegion),
+			DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
 		}
 		if ws.Warehouse != nil {
 			mode := WarehouseMode(ws.Warehouse.Mode)

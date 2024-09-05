@@ -342,12 +342,12 @@ type TransformationFunction struct {
 }
 
 type Workspace struct {
-	ID                                 int
-	Name                               string
-	UserSchema                         types.Type
-	UserPrimarySources                 map[string]int
-	RunIdentityResolutionOnBatchImport bool
-	Identifiers                        []string
-	PrivacyRegion                      PrivacyRegion
-	DisplayedProperties                DisplayedProperties
+	ID                             int
+	Name                           string
+	UserSchema                     types.Type
+	UserPrimarySources             map[string]int
+	ResolveIdentitiesOnBatchImport bool
+	Identifiers                    []string
+	PrivacyRegion                  PrivacyRegion
+	DisplayedProperties            DisplayedProperties
 }

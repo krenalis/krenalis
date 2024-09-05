@@ -316,25 +316,27 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	return records, err
 }
 
-// IdentityResolutionExecution returns information about the execution of the
-// Identity Resolution.
+// LastIdentityResolution returns information about the last Identity
+// Resolution.
 //
-//   - if the procedure has been started and completed, returns its start time
-//     and end time;
+// In particular:
+//
+//   - if the Identity Resolution has been started and completed, returns its
+//     start time and end time;
 //   - if it is in progress, returns its start time and nil for the end time;
 //   - if no Identity Resolution has ever been executed, returns nil and nil.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (store *Store) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer done()
-	return store.warehouse.IdentityResolutionExecution(ctx)
+	return store.warehouse.LastIdentityResolution(ctx)
 }
 
 // InitWarehouse initializes the data warehouse creating the events and the
@@ -384,7 +386,7 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 	return store.warehouse.Delete(ctx, "_destinations_users", where)
 }
 
-// RunIdentityResolution runs the Identity Resolution.
+// ResolveIdentities resolves the identities of the store's workspace.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
@@ -397,7 +399,7 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) RunIdentityResolution(ctx context.Context) error {
+func (store *Store) ResolveIdentities(ctx context.Context) error {
 	store.mustBeOpen()
 
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
@@ -436,7 +438,7 @@ func (store *Store) RunIdentityResolution(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	err = store.warehouse.RunIdentityResolution(ctx, identifiers, userColumns, userPrimarySources)
+	err = store.warehouse.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
 	if err != nil && err == warehouses.ErrIdentityResolutionInProgress {
 		err = ErrIdentityResolutionInProgress
 	}

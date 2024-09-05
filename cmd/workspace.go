@@ -615,13 +615,13 @@ func (workspace workspace) RemoveEventListener(_ http.ResponseWriter, r *http.Re
 	return nil, nil
 }
 
-// RunIdentityResolution runs the Identity Resolution on a workspace.
-func (workspace workspace) RunIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
+// ResolveIdentities resolves the identities of a workspace.
+func (workspace workspace) ResolveIdentities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	err = ws.RunIdentityResolution(r.Context())
+	err = ws.ResolveIdentities(r.Context())
 	return nil, err
 }
 
@@ -733,14 +733,14 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}, nil
 }
 
-// IdentityResolutionExecution returns information about the execution of the
-// Identity Resolution of the workspace.
-func (workspace workspace) IdentityResolutionExecution(_ http.ResponseWriter, r *http.Request) (any, error) {
+// LastIdentityResolution returns information about the last Identity
+// Resolution of a workspace.
+func (workspace workspace) LastIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	startTime, endTime, err := ws.IdentityResolutionExecution(r.Context())
+	startTime, endTime, err := ws.LastIdentityResolution(r.Context())
 	if err != nil {
 		return nil, err
 	}

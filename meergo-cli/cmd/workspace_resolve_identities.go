@@ -13,14 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var runIdentityResolution = &cobra.Command{
-	Use:   "run-identity-resolution <workspace>",
-	Short: "Run the Identity Resolution",
+var resolveIdentities = &cobra.Command{
+	Use:   "resolve-identities <workspace>",
+	Short: "Resolve the identities of the workspace",
 	Run: func(cmd *cobra.Command, args []string) {
-		meergoapis.RunIdentityResolution(workspace(cmd))
+		meergoapis.ResolveIdentities(workspace(cmd))
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(runIdentityResolution)
+	rootCmd.AddCommand(resolveIdentities)
 }

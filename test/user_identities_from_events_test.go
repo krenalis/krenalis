@@ -60,7 +60,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 			},
 		},
 	})
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 
 	// Retrieve the user imported from the event.
@@ -103,7 +103,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 			"email": eventUserEmail,
 		},
 	})
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
 
 	// Check that the user has been created.
@@ -143,7 +143,7 @@ def transform(event: dict) -> dict:
 			"email": eventUserEmail,
 		},
 	})
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
 
 	// Check that the user has been created.

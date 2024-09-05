@@ -131,17 +131,19 @@ type Warehouse interface {
 	// error.
 	Delete(ctx context.Context, table string, where Expr) error
 
-	// IdentityResolutionExecution returns information about the execution of the
-	// Identity Resolution.
+	// LastIdentityResolution returns information about the last Identity
+	// Resolution.
 	//
-	// - if the procedure has been started and completed, returns its start time and
-	//   end time;
+	// In particular:
+	//
+	// - if the Identity Resolution has been started and completed, returns its
+	//   start time and end time;
 	// - if it is in progress, returns its start time and nil for the end time;
 	// - if no Identity Resolution has ever been executed, returns nil and nil.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error)
+	LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error)
 
 	// Init initializes the data warehouse by creating the supporting tables.
 	Init(ctx context.Context) error
@@ -193,7 +195,7 @@ type Warehouse interface {
 	// error.
 	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
 
-	// RunIdentityResolution runs the Identity Resolution.
+	// ResolveIdentities resolves the identities.
 	//
 	// identifiers are the columns corresponding to the Identity Resolution
 	// identifiers, ordered by priority.
@@ -213,7 +215,7 @@ type Warehouse interface {
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	RunIdentityResolution(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
+	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte

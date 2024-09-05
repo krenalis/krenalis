@@ -166,7 +166,7 @@ func WorkspaceInitWarehouse(workspace int) {
 	}
 }
 
-func RunIdentityResolution(workspace int) {
+func ResolveIdentities(workspace int) {
 	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/identity-resolutions", nil, nil)
 	if err != nil {
 		log.Fatal(err)

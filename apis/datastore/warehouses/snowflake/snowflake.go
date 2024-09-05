@@ -133,9 +133,9 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where ware
 	return nil
 }
 
-// IdentityResolutionExecution returns information about the execution of the
-// Identity Resolution.
-func (warehouse *Snowflake) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+// LastIdentityResolution returns information about the last Identity
+// Resolution.
+func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	panic("not implemented")
 }
 
@@ -481,8 +481,8 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 	return rows, count, nil
 }
 
-// RunIdentityResolution runs the Identity Resolution.
-func (warehouse *Snowflake) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+// ResolveIdentities resolves the identities.
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	panic("not implemented")
 }
 

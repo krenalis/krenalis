@@ -166,7 +166,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"email": "kbuessen0@example.com",
 			},
 		})
-		c.RunIdentityResolution()
+		c.ResolveIdentities()
 		c.WaitEventsStoredIntoWarehouse(ctx, 1)
 	}
 
@@ -178,7 +178,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 	// Set the "email" as identifier and run the Identity Resolution.
 	c.ChangeIdentityResolutionSettings(true, []string{"email"})
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	// Ensure that there are 10 users.
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 1000)

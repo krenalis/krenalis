@@ -15,7 +15,7 @@ interface DisplayedProperties {
 interface Workspace {
 	ID: number;
 	Name: string;
-	RunIdentityResolutionOnBatchImport: boolean;
+	ResolveIdentitiesOnBatchImport: boolean;
 	Identifiers: Identifiers;
 	PrivacyRegion: PrivacyRegion;
 	DisplayedProperties: DisplayedProperties;

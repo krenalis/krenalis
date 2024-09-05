@@ -148,7 +148,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Explicitly run the Identity Resolution, even if it has been executed at
 	// the end of the import action executions.
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	// Test that the execution of the Identity Resolution has ended and that its
 	// duration has a reasonable value.
@@ -200,7 +200,7 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 	c.ChangeUserSchema(schema, primarySources, nil)
 
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	users, _, count = c.Users(types.PropertyNames(schema), "", false, 0, 100)
 	if count != 1 {

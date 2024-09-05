@@ -22,18 +22,18 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Test the default value for RunIdentityResolutionOnBatchImport, when a
+	// Test the default value for ResolveIdentitiesOnBatchImport, when a
 	// workspace is created.
-	if ws := c.Workspace(); !ws.RunIdentityResolutionOnBatchImport {
-		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be true (which is the default), got %t", ws.RunIdentityResolutionOnBatchImport)
+	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
+		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true (which is the default), got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
 	c.ChangeIdentityResolutionSettings(true, []string{})
-	if ws := c.Workspace(); !ws.RunIdentityResolutionOnBatchImport {
-		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be true, got %t", ws.RunIdentityResolutionOnBatchImport)
+	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
+		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
@@ -77,16 +77,16 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", expected, err)
 	}
 
-	// Test the disabling of RunIdentityResolutionOnBatchImport.
+	// Test the disabling of ResolveIdentitiesOnBatchImport.
 	c.ChangeIdentityResolutionSettings(false, []string{})
-	if ws := c.Workspace(); ws.RunIdentityResolutionOnBatchImport {
-		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be false, got %t", ws.RunIdentityResolutionOnBatchImport)
+	if ws := c.Workspace(); ws.ResolveIdentitiesOnBatchImport {
+		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be false, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 
-	// Test the enabling of RunIdentityResolutionOnBatchImport.
+	// Test the enabling of ResolveIdentitiesOnBatchImport.
 	c.ChangeIdentityResolutionSettings(true, []string{})
-	if ws := c.Workspace(); !ws.RunIdentityResolutionOnBatchImport {
-		t.Fatalf("expected RunIdentityResolutionOnBatchImport to be true, got %t", ws.RunIdentityResolutionOnBatchImport)
+	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
+		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 
 }

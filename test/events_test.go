@@ -118,7 +118,7 @@ func TestEvents(t *testing.T) {
 		})
 	}
 
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	ctx := context.Background()
 
@@ -127,7 +127,7 @@ func TestEvents(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Run the identity resolution, so that the events GID are updated.
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	// Retrieve the user imported from the event.
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)

@@ -25,8 +25,8 @@ import (
 //go:embed identity_resolution.sql
 var identityResolutionQueries string
 
-// RunIdentityResolution runs the Identity Resolution.
-func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+// ResolveIdentities resolves the identities.
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -44,7 +44,7 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 		if inExecution {
 			return warehouses.ErrAlterSchemaInProgress
 		}
-		startTime, endTime, err := identityResolutionExecution(ctx, tx, warehouse.settings.Database)
+		startTime, endTime, err := lastIdentityResolution(ctx, tx, warehouse.settings.Database)
 		if err != nil {
 			return err
 		}
@@ -261,14 +261,14 @@ func (warehouse *PostgreSQL) RunIdentityResolution(ctx context.Context, identifi
 	return nil
 }
 
-// IdentityResolutionExecution returns information about the execution of the
-// Identity Resolution.
-func (warehouse *PostgreSQL) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+// LastIdentityResolution returns information about the last Identity
+// Resolution.
+func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	db, err := warehouse.connection()
 	if err != nil {
 		return nil, nil, err
 	}
-	return identityResolutionExecution(ctx, db, warehouse.settings.Database)
+	return lastIdentityResolution(ctx, db, warehouse.settings.Database)
 }
 
 type queryExec interface {
@@ -276,17 +276,19 @@ type queryExec interface {
 	Exec(ctx context.Context, query string, args ...any) (*postgres.Result, error)
 }
 
-// identityResolutionExecution returns information about the execution of the
-// Identity Resolution.
+// lastIdentityResolution returns information about the last Identity
+// Resolution.
 //
-//   - if the procedure has been started and completed, returns its start time
-//     and end time;
+// In particular:
+//
+//   - if the Identity Resolution has been started and completed, returns its
+//     start time and end time;
 //   - if it is in progress, returns its start time and nil for the end time;
 //   - if no Identity Resolution has ever been executed, returns nil and nil.
 //
 // If an error occurs with the data warehouse, it returns a
 // warehouses.DataWarehouseError.
-func identityResolutionExecution(ctx context.Context, db queryExec, databaseName string) (startTime, endTime *time.Time, err error) {
+func lastIdentityResolution(ctx context.Context, db queryExec, databaseName string) (startTime, endTime *time.Time, err error) {
 	query := "SELECT start_time, end_time FROM _operations WHERE operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
 	err = db.QueryRow(ctx, query).Scan(&startTime, &endTime)
 	if err != nil {

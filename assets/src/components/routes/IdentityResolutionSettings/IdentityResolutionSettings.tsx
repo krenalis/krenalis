@@ -35,7 +35,7 @@ const IdentityResolutionSettings = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
-			setRunOnBatchImport(workspace.RunIdentityResolutionOnBatchImport);
+			setRunOnBatchImport(workspace.ResolveIdentitiesOnBatchImport);
 			setIdentifiers(workspace.Identifiers);
 			let identifiersSchema: ObjectType;
 			try {

@@ -46,19 +46,19 @@ const (
 
 // Workspace represents a workspace.
 type Workspace struct {
-	apis                               *APIs
-	organization                       *Organization
-	store                              *datastore.Store
-	workspace                          *state.Workspace
-	ID                                 int
-	Name                               string
-	UserSchema                         types.Type
-	UserPrimarySources                 map[string]int
-	RunIdentityResolutionOnBatchImport bool
-	Identifiers                        []string
-	WarehouseMode                      *WarehouseMode
-	PrivacyRegion                      PrivacyRegion
-	DisplayedProperties                DisplayedProperties
+	apis                           *APIs
+	organization                   *Organization
+	store                          *datastore.Store
+	workspace                      *state.Workspace
+	ID                             int
+	Name                           string
+	UserSchema                     types.Type
+	UserPrimarySources             map[string]int
+	ResolveIdentitiesOnBatchImport bool
+	Identifiers                    []string
+	WarehouseMode                  *WarehouseMode
+	PrivacyRegion                  PrivacyRegion
+	DisplayedProperties            DisplayedProperties
 }
 
 // PrivacyRegion represents a privacy region.
@@ -707,8 +707,8 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 // ChangeIdentityResolutionSettings changes the settings of the Identity
 // Resolution of the workspace.
 //
-// runOnBatchImport determines whether the Identity Resolution should be
-// executed automatically every time a batch import is completed.
+// runOnBatchImport determines whether the identities should be resolved
+// automatically every time a batch import is completed.
 //
 // identifiers specify the Identity Resolution identifiers in the specified
 // order. An identifier must be a property in the user schema with a type of
@@ -739,9 +739,9 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 	}
 	ws := this.workspace
 	n := state.SetIdentityResolutionSettings{
-		Workspace:                          ws.ID,
-		RunIdentityResolutionOnBatchImport: runOnBatchImport,
-		Identifiers:                        identifiers,
+		Workspace:                      ws.ID,
+		ResolveIdentitiesOnBatchImport: runOnBatchImport,
+		Identifiers:                    identifiers,
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -769,8 +769,8 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 				}
 			}
 		}
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET run_identity_resolution_on_batch_import = $1,\n"+
-			"identifiers = $2 WHERE id = $3", n.RunIdentityResolutionOnBatchImport, n.Identifiers, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET resolve_identities_on_batch_import = $1,\n"+
+			"identifiers = $2 WHERE id = $3", n.ResolveIdentitiesOnBatchImport, n.Identifiers, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -830,11 +830,13 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// IdentityResolutionExecution returns information about the execution of the
-// Identity Resolution.
+// LastIdentityResolution returns information about the last Identity
+// Resolution of the workspace.
 //
-//   - if the procedure has been started and completed, returns its start time
-//     and end time;
+// In particular:
+//
+//   - if the Identity Resolution has been started and completed, returns its
+//     start time and end time;
 //   - if it is in progress, returns its start time and nil for the end time;
 //   - if no Identity Resolution has ever been executed, returns nil and nil.
 //
@@ -843,13 +845,13 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	this.apis.mustBeOpen()
 	ws := this.workspace
 	if this.store == nil {
 		return nil, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 	}
-	startTime, endTime, err = this.store.IdentityResolutionExecution(ctx)
+	startTime, endTime, err = this.store.LastIdentityResolution(ctx)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
@@ -1357,7 +1359,8 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 	return err
 }
 
-// RunIdentityResolution runs the Identity Resolution on the workspace.
+// ResolveIdentities resolves the identities of the workspace by creating and
+// starting an Identity Resolution operation.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -1369,12 +1372,12 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 //     progress on the warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
+func (this *Workspace) ResolveIdentities(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	err := this.store.RunIdentityResolution(ctx)
+	err := this.store.ResolveIdentities(ctx)
 	if err != nil {
 		if err == datastore.ErrAlterSchemaInProgress {
 			return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is in progress on the data warehouse")

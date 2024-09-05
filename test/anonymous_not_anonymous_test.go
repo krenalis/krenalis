@@ -93,7 +93,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Traits:      analytics.NewTraits().SetEmail("a@example.com"),
 	})
 
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	// Wait for the 2 identities to be imported successfully.
 	attempts := 0
@@ -140,7 +140,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Traits:      analytics.NewTraits().SetAge(20),
 	})
 
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	attempts = 0
 waitLoop:
@@ -180,7 +180,7 @@ waitLoop:
 
 	// Run the Identity Resolution explicitly (even though technically it should
 	// have already been done implicitly during import).
-	c.RunIdentityResolution()
+	c.ResolveIdentities()
 
 	// Check that there is actually only one user in the workspace.
 	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)

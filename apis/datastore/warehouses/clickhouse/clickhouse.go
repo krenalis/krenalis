@@ -121,9 +121,9 @@ func (warehouse *ClickHouse) Delete(ctx context.Context, table string, where war
 	return nil
 }
 
-// IdentityResolutionExecution returns information about the execution of the
-// Identity Resolution.
-func (warehouse *ClickHouse) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+// LastIdentityResolution returns information about the last Identity
+// Resolution.
+func (warehouse *ClickHouse) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	panic("not implemented")
 }
 
@@ -175,8 +175,8 @@ func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuer
 	panic("not implemented")
 }
 
-// RunIdentityResolution runs the Identity Resolution.
-func (warehouse *ClickHouse) RunIdentityResolution(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+// ResolveIdentities resolves the identities.
+func (warehouse *ClickHouse) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	panic("TODO: not implemented")
 }
 

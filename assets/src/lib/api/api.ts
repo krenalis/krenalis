@@ -641,7 +641,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/warehouse`, http.DELETE);
 	};
 
-	runIdentityResolution = async (): Promise<void> => {
+	resolveIdentities = async (): Promise<void> => {
 		return await call(`${this.apiURL}/identity-resolutions`, http.POST);
 	};
 

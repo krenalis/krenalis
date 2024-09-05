@@ -52,7 +52,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		}
 		// Check if the Identity Resolution is in progress, and return and error
 		// in that case.
-		starTime, endTime, err := identityResolutionExecution(ctx, tx, warehouse.settings.Database)
+		starTime, endTime, err := lastIdentityResolution(ctx, tx, warehouse.settings.Database)
 		if err != nil {
 			return err
 		}

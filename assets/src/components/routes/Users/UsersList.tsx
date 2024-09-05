@@ -21,8 +21,8 @@ import { IdentityResolutionExecution } from '../../../lib/api/types/workspace';
 const UsersList = () => {
 	const [selectedUser, setSelectedUser] = useState<string>('');
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
-	const [askRunIRConfirmation, setAskRunIRConfirmation] = useState<boolean>(false);
-	const [secondsSinceIRExecutionStart, setSecondsSinceIRExecutionStart] = useState<number>();
+	const [askRunIRConfirmation, setAskResolveIdentitiesConfirmation] = useState<boolean>(false);
+	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
 	const [lastIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 
 	const { api, handleError, showStatus } = useContext(AppContext);
@@ -64,12 +64,12 @@ const UsersList = () => {
 			end = endTime;
 		}
 
-		if (secondsSinceIRExecutionStart != null && sinceStart == null) {
+		if (secondsSinceIRStart != null && sinceStart == null) {
 			// identity resolution is concluded. Reload the users list.
 			fetchUsers();
 		}
 
-		setSecondsSinceIRExecutionStart(sinceStart);
+		setSecondsSinceIRStart(sinceStart);
 		setLastIRExecutionEnd(end);
 	};
 
@@ -86,13 +86,13 @@ const UsersList = () => {
 		fetchUsers();
 	};
 
-	const onRunIdentityResolution = async () => {
+	const onResolveIdentities = async () => {
 		setIsLoadingIdentityResolution(true);
-		setAskRunIRConfirmation(false);
-		setSecondsSinceIRExecutionStart(undefined);
+		setAskResolveIdentitiesConfirmation(false);
+		setSecondsSinceIRStart(undefined);
 		setLastIRExecutionEnd(undefined);
 		try {
-			await api.workspaces.runIdentityResolution();
+			await api.workspaces.resolveIdentities();
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
@@ -130,22 +130,22 @@ const UsersList = () => {
 				</SlDropdown>
 				<div className='users-list__identity-resolution'>
 					<SlButton
-						onClick={() => setAskRunIRConfirmation(true)}
+						onClick={() => setAskResolveIdentitiesConfirmation(true)}
 						variant='primary'
-						disabled={isLoadingIdentityResolution || secondsSinceIRExecutionStart != null}
+						disabled={isLoadingIdentityResolution || secondsSinceIRStart != null}
 						size='small'
 						className='users-list__identity-resolution-button'
 					>
-						{isLoadingIdentityResolution || secondsSinceIRExecutionStart ? (
+						{isLoadingIdentityResolution || secondsSinceIRStart ? (
 							<SlSpinner className='users-list__identity-resolution-spinner' slot='prefix' />
 						) : (
 							<SlIcon slot='prefix' name='play' />
 						)}
-						{secondsSinceIRExecutionStart ? 'Identity Resolution' : 'Run Identity Resolution'}
+						{secondsSinceIRStart ? 'Identity Resolution' : 'Resolve identities'}
 					</SlButton>
 					<span className='users-list__identity-resolution-progress'>
-						{secondsSinceIRExecutionStart ? (
-							<div className='users-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRExecutionStart)}s`}</div>
+						{secondsSinceIRStart ? (
+							<div className='users-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 						) : lastIRExecutionEnd ? (
 							<div className='users-list__identity-resolution-end-time'>
 								<span>Last execution:</span>
@@ -158,20 +158,20 @@ const UsersList = () => {
 				</div>
 				<AlertDialog
 					isOpen={askRunIRConfirmation}
-					onClose={() => setAskRunIRConfirmation(false)}
+					onClose={() => setAskResolveIdentitiesConfirmation(false)}
 					title='Are you sure?'
 					actions={
 						<>
-							<SlButton onClick={() => setAskRunIRConfirmation(false)}>Cancel</SlButton>
-							<SlButton variant='primary' onClick={onRunIdentityResolution}>
-								Run
+							<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
+							<SlButton variant='primary' onClick={onResolveIdentities}>
+								Run Identity Resolution
 							</SlButton>
 						</>
 					}
 				>
 					<p>
-						The time it takes to perform the Identity Resolution can vary significantly, from seconds to
-						hours, depending on the size of user data.
+						The time it takes to resolve the identities can vary significantly, from seconds to hours,
+						depending on the size of user data.
 					</p>
 				</AlertDialog>
 			</Toolbar>
