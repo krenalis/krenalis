@@ -838,8 +838,11 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 //   - if it is in progress, returns its start time and nil for the end time;
 //   - if no Identity Resolution has ever been executed, returns nil and nil.
 //
-// It returns an errors.UnprocessableError error with code DataWarehouseFailed,
-// if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code:
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) IdentityResolutionExecution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	this.apis.mustBeOpen()
 	ws := this.workspace
@@ -850,6 +853,9 @@ func (this *Workspace) IdentityResolutionExecution(ctx context.Context) (startTi
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
+		}
+		if err == datastore.ErrMaintenanceMode {
+			return nil, nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		return nil, nil, err
 	}
