@@ -45,7 +45,7 @@
 .connector-keyvalue__draggable-wrapper .draggable-wrapper__handle {
 	position: absolute;
 	left: -25px;
-	z-index: 999;
+	z-index: 99;
 	height: 100%;
 	border: 0;
 	cursor: pointer;
@@ -62,7 +62,8 @@
 }
 
 .connector-keyvalue__cell ::part(base),
-.connector-keyvalue__cell ::part(control) {
+.connector-keyvalue__cell ::part(control),
+.connector-keyvalue__cell ::part(combobox) {
 	border: 0;
 	box-shadow: none;
 }
