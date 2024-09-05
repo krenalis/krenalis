@@ -1368,7 +1368,6 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 	if this.store == nil {
 		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
 	}
-	slog.Info("running Identity Resolution", "workspace", this.workspace.ID)
 	err := this.store.RunIdentityResolution(ctx)
 	if err != nil {
 		if err == datastore.ErrAlterSchemaInProgress {
@@ -1385,7 +1384,6 @@ func (this *Workspace) RunIdentityResolution(ctx context.Context) error {
 		}
 		return err
 	}
-	slog.Info("execution of Identity Resolution is completed", "workspace", this.workspace.ID)
 	return nil
 }
 
