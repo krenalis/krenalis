@@ -1,8 +1,5 @@
 .grid {
 	display: grid;
-	-webkit-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
 	border: 1px solid var(--sl-color-neutral-200);
