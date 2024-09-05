@@ -156,7 +156,7 @@ type Settings struct {
 	MyRadios      string
 	MyRange       int
 	MySwitch      bool
-	MyKeyValue    map[string]string
+	MyKeyValue    []meergo.KV
 	FirstSet      *struct {
 		MySharedInput      string
 		MyFirstSetInput    string

@@ -56,7 +56,7 @@ type JSON struct {
 }
 
 type Settings struct {
-	Properties         map[string]string `json:",omitempty"`
+	Properties         []meergo.KV `json:",omitempty"`
 	Indent             bool
 	GenerateASCII      bool
 	AllowSpecialFloats bool
@@ -71,12 +71,12 @@ func (j *JSON) ContentType(ctx context.Context) string {
 func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.RecordWriter) error {
 
 	columns := make([]types.Property, 0, len(j.settings.Properties))
-	for name, required := range j.settings.Properties {
+	for _, property := range j.settings.Properties {
 		c := types.Property{
-			Name: name,
+			Name: property.Key,
 			Type: types.JSON(),
 		}
-		if required == "f" {
+		if property.Value == "f" {
 			c.ReadOptional = true
 		}
 		columns = append(columns, c)
@@ -258,21 +258,21 @@ func (j *JSON) saveValues(ctx context.Context, values []byte, role meergo.Role) 
 			return meergo.NewInvalidUIValuesError("must have at least one property")
 		}
 		hasName := map[string]struct{}{}
-		for name, required := range s.Properties {
-			if _, ok := hasName[name]; ok {
-				return meergo.NewInvalidUIValuesError(fmt.Sprintf("property name %q is repeated", name))
+		for _, property := range s.Properties {
+			if _, ok := hasName[property.Key]; ok {
+				return meergo.NewInvalidUIValuesError(fmt.Sprintf("property name %q is repeated", property.Key))
 			}
-			if name == "" {
+			if property.Key == "" {
 				return meergo.NewInvalidUIValuesError("a property name is empty")
 			}
-			if !types.IsValidPropertyName(name) {
+			if !types.IsValidPropertyName(property.Key) {
 				return meergo.NewInvalidUIValuesError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
-					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", name))
+					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", property.Key))
 			}
-			if required != "f" && required != "t" {
+			if property.Value != "f" && property.Value != "t" {
 				return meergo.NewInvalidUIValuesError("required is not valid")
 			}
-			hasName[name] = struct{}{}
+			hasName[property.Key] = struct{}{}
 		}
 	} else {
 		s.Properties = nil

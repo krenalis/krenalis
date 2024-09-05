@@ -521,16 +521,18 @@ func (c *Meergo) Workspace() Workspace {
 
 func UIJSONProperties(properties map[string]bool) []byte {
 	var uiValues = struct {
-		Properties map[string]string
+		Properties []KV
 	}{
-		Properties: map[string]string{},
+		Properties: []KV{},
 	}
 	for name, required := range properties {
+		kv := KV{Key: name}
 		if required {
-			uiValues.Properties[name] = "t"
+			kv.Value = "t"
 		} else {
-			uiValues.Properties[name] = "f"
+			kv.Value = "f"
 		}
+		uiValues.Properties = append(uiValues.Properties, kv)
 	}
 	return JSONEncodeUIValues(uiValues)
 }

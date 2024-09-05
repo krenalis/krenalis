@@ -135,6 +135,12 @@ type FilterCondition struct {
 	Operator string
 	Value    string
 }
+
+type KV struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type User struct {
 	ID             uuid.UUID      `json:"id"`
 	LastChangeTime time.Time      `json:"lastChangeTime"`
