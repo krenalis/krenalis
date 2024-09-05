@@ -31,7 +31,7 @@ The parameters for this method are:
 - `ctx`: The context, which is always non-nil.
 - `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
 - `ids`: Identifiers of the records to return. If `nil`, `Records` returns all records.
-- `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after.
+- `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
 - `properties`: Contains the names of the properties that must be returned for each record. The names correspond to the properties of the schema as returned by the `Schema` method.
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
 
@@ -53,7 +53,7 @@ type Record struct {
 
 - `ID`: The record's identifier in the app. It must be a valid, non-empty UTF-8 string.
 - `Properties`: The record's properties and their values. Additional properties not requested are not considered. The connector may omit a property for a user if that user does not have that property. This is distinct from a property with a `null` value. The values of requested properties should conform to their respective schemas, as returned by the connector's `Schema` method. If a requested property is always returned, its `Required` field in the schema must be `true`; if it may not be returned for some users, it must be `false`.
-- `LastChangeTime`:  The date and time the record was last changed. It can have any time zone. If the date is unknown, return the zero time `time.Time{}`.
+- `LastChangeTime`:  The date and time the record was last changed. It can have any time zone. The precision of this time is limited to microseconds; any precision beyond microseconds will be truncated. If the date is unknown, return the zero time `time.Time{}`.
 - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice.
 - `Err`: Any error that occurred while reading the record. It must be `io.EOF` if there are no more records to read beyond those returned. If `Err` is different from `nil` and is not `io.EOF`, then only the `ID` field, along with `Err`, is significant.
 

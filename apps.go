@@ -196,9 +196,13 @@ type AppOAuth interface {
 
 // Record represents an app record.
 type Record struct {
-	ID             string         // Identifier.
-	Properties     map[string]any // Properties.
-	LastChangeTime time.Time      // Last change time, whose location can be anything, not necessarily UTC.
+	ID         string         // Identifier.
+	Properties map[string]any // Properties.
+
+	// LastChangeTime is the record's last change time, whose location can be
+	// anything, not necessarily UTC. The precision of this time is limited to
+	// microseconds; any precision beyond microseconds will be truncated.
+	LastChangeTime time.Time
 
 	// Associations contains the identifiers of the user's groups or the group's users.
 	// It is not significant if it is nil.
@@ -228,12 +232,13 @@ type AppRecords interface {
 	// Records returns the records of the specified target. The target can only be
 	// either Users or Groups, and it must be a target supported by the connector.
 	// If lastChangeTime is not the zero time, only the records changed or created
-	// at or after that time will be returned. If ids is not nil, only records with
-	// identifiers in ids will be returned, if any. properties are the names of the
-	// properties to read, and cursor represents the position from which to start
-	// reading the records; it is the cursor value returned by the previous call in
-	// a paginated query. Subsequent calls will use this cursor value to retrieve
-	// the next batch of records.
+	// at or after that time will be returned, and its precision is limited to
+	// microseconds. If ids is not nil, only records with identifiers in ids will be
+	// returned, if any. properties are the names of the properties to read, and
+	// cursor represents the position from which to start reading the records; it is
+	// the cursor value returned by the previous call in a paginated query.
+	// Subsequent calls will use this cursor value to retrieve the next batch of
+	// records.
 	//
 	// The properties returned in records may include more than those requested and
 	// must conform to the schema returned by the Schema method. The string return

@@ -529,7 +529,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 				record := Record{
 					ID:             user.ID,
-					LastChangeTime: user.LastChangeTime.UTC(),
+					LastChangeTime: user.LastChangeTime.UTC().Truncate(time.Microsecond),
 					Associations:   user.Associations,
 				}
 
