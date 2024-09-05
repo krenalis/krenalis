@@ -507,9 +507,7 @@ const ConnectionOverview = () => {
 								);
 							})}
 							<div className='connection-overview__funnel-final' id={`funnel-circle-passed-6`}>
-								{isUsersSelected
-									? userFunnelData[5].passed - userFunnelData[5].failed
-									: eventFunnelData[5].passed - eventFunnelData[5].failed}
+								{isUsersSelected ? userFunnelData[5].passed : eventFunnelData[5].passed}
 							</div>
 						</div>
 						<div className='connection-overview__funnel-failed'>
