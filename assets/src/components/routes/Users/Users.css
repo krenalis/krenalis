@@ -1,5 +1,6 @@
 .users-list .toolbar {
 	justify-content: space-between;
+	height: 80px;
 }
 
 .users-list__content {
@@ -13,7 +14,12 @@
 	flex-flow: column;
 	align-items: center;
 	justify-content: start;
-	height: 48px;
+	position: relative;
+	bottom: 5px;
+}
+
+.users-list__identity-resolution--is-first-execution {
+	bottom: 0;
 }
 
 .users-list__identity-resolution-button::part(base) {
@@ -24,6 +30,11 @@
 	--track-color: var(--text-onaccent);
 	position: relative;
 	bottom: 1px;
+}
+
+.users-list__identity-resolution-progress {
+	position: absolute;
+	bottom: -18px;
 }
 
 .users-list__identity-resolution-since-start,

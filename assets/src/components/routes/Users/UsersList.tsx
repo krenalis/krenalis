@@ -128,12 +128,13 @@ const UsersList = () => {
 						})}
 					</SlMenu>
 				</SlDropdown>
-				<div className='users-list__identity-resolution'>
+				<div
+					className={`users-list__identity-resolution${!secondsSinceIRStart && !lastIRExecutionEnd && !isLoadingIdentityResolution ? ' users-list__identity-resolution--is-first-execution' : ''}`}
+				>
 					<SlButton
 						onClick={() => setAskResolveIdentitiesConfirmation(true)}
 						variant='primary'
 						disabled={isLoadingIdentityResolution || secondsSinceIRStart != null}
-						size='small'
 						className='users-list__identity-resolution-button'
 					>
 						{isLoadingIdentityResolution || secondsSinceIRStart ? (
