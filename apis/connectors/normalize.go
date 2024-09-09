@@ -449,13 +449,22 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			value, valid = parseUUID(s)
 		}
 	case types.JSONKind:
-		if !validJSON(src) {
-			return nil, fmt.Errorf("value of property %q is not valid JSON", name)
-		}
 		if raw, ok := src.(json.RawMessage); ok {
-			src = json.RawMessage(bytes.TrimSpace(raw))
+			if !utf8.Valid(raw) {
+				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
+			}
+			var b bytes.Buffer
+			err := json.Compact(&b, raw)
+			if err != nil {
+				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
+			}
+			value = json.RawMessage(b.Bytes())
+		} else {
+			if !validJSON(src) {
+				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
+			}
+			value = src
 		}
-		value = src
 		valid = true
 	case types.InetKind:
 		switch src := src.(type) {
@@ -717,26 +726,20 @@ func validJSON(src any) bool {
 		return !math.IsNaN(src) && !math.IsInf(src, 0)
 	case []any:
 		for _, v := range src {
-			if v != nil {
-				if ok := validJSON(v); !ok {
-					return false
-				}
+			if v != nil && !validJSON(v) {
+				return false
 			}
 		}
 		return true
 	case map[string]any:
-		for _, v := range src {
-			if v != nil {
-				if ok := validJSON(v); !ok {
-					return false
-				}
+		for k, v := range src {
+			if !utf8.ValidString(k) || v != nil && !validJSON(v) {
+				return false
 			}
 		}
 		return true
 	case json.Number:
 		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && json.Valid([]byte(src))
-	case json.RawMessage:
-		return json.Valid(src)
 	}
 	return false
 }
