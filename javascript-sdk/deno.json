@@ -1,8 +1,8 @@
 {
 	"imports": {
-		"@std/assert": "jsr:@std/assert@^1.0.2",
-		"@std/testing": "jsr:@std/testing@^1.0.0",
-		"@std/uuid": "jsr:@std/uuid@^1.0.1"
+		"@std/assert": "jsr:@std/assert@^1.0.4",
+		"@std/testing": "jsr:@std/testing@^1.0.2",
+		"@std/uuid": "jsr:@std/uuid@^1.0.3"
 	},
 	"tasks": {
 		"bundle": "deno lint && deno test --fail-fast && npx esbuild meergo.js --bundle --sourcemap --outfile=build/meergo.bundle.js",
