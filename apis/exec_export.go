@@ -199,9 +199,6 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 
 			if transformer == nil {
 				for _, user := range users {
-					if user.MatchingValue != nil {
-						record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
-					}
 					if ok := writer.Write(ctx, "", user.Record.Properties); !ok {
 						return writer.Close(ctx)
 					}
@@ -245,7 +242,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 				if user.MatchingValue != nil {
 					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 				}
-				if len(record.Properties) == 0 {
+				if connector.Type == state.App && len(record.Properties) == 0 {
 					stats.PassedFinalizing(1)
 					continue
 				}
