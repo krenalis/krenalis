@@ -452,6 +452,7 @@ func (s *psSettings) options() *postgres.Options {
 		Username: s.Username,
 		Password: s.Password,
 		Database: s.Database,
+		Schema:   s.Schema,
 	}
 }
 
