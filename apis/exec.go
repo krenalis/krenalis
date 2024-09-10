@@ -117,8 +117,8 @@ func (this *Action) exec(ctx context.Context) {
 	defer func() {
 
 		if err != nil {
-			if err, ok := err.(*actionError); ok {
-				errorStep = err.step
+			if actionErr, ok := err.(*actionError); ok {
+				errorStep = actionErr.step
 				errorMessage = err.Error()
 				statCollector.FailedStep(errorStep, 0, errorMessage)
 			} else {
