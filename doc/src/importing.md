@@ -69,3 +69,26 @@ In order for a user identity to be imported from an anonymous event, it is neces
 ### Deletion of Anonymous Identities
 
 When a non-anonymous identity is imported from a connection, all anonymous identities with the same Anonymous ID which have been previously imported from the same connection are deleted, and only the non-anonymous identity is retained.
+
+## Empty Objects When Importing Identities
+
+If a transformation returns an empty Object as the value for a property of an identity, this is equivalent to not returning any value for that property.
+
+Therefore, if a transformation returns something like:
+
+```json
+{
+    "a": 10,
+    "b": { },
+    "c": "Hello!"
+}
+```
+
+When the user is read, it will be returned as:
+
+```json
+{
+    "a": 10,
+    "c": "Hello!"
+}
+```
