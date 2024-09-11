@@ -291,7 +291,13 @@ const WarehouseInfo = ({
 					</>
 				}
 			>
-				<p>If you disconnect the data warehouse, you will no longer be able to import users and events</p>
+				<p>If you disconnect the data warehouse, you will no longer be able to import users and events.</p>
+				<br />
+				<p>
+					It is also important to note that a data warehouse should be disconnected only when there are no
+					operations currently running on it. Therefore, it is advised to disconnect it only when it is in
+					maintenance mode.
+				</p>
 			</AlertDialog>
 		</div>
 	);
