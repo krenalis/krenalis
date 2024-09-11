@@ -9,4 +9,6 @@ interface WarehouseResponse {
 	settings: WarehouseSettings;
 }
 
-export type { WarehouseType, WarehouseMode, WarehouseSettings, WarehouseResponse };
+type ConnectWarehouseBehavior = 'FailOnCheck' | 'InitializeWarehouse' | 'RepairWarehouse';
+
+export type { ConnectWarehouseBehavior, WarehouseType, WarehouseMode, WarehouseSettings, WarehouseResponse };

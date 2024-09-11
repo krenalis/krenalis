@@ -64,7 +64,7 @@ const DataWarehouseSettings = ({
 	const onConnect = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.connectWarehouse(selectedWarehouse.label, mode, settings);
+			await api.workspaces.connectWarehouse(selectedWarehouse.label, mode, settings, 'FailOnCheck');
 		} catch (err) {
 			handleError(err);
 			setIsActionButtonLoading(false);

@@ -97,6 +97,12 @@ func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, userColumns 
 	panic("TODO: not implemented")
 }
 
+// Check checks if the necessary database objects on the data warehouse are
+// correct to make Meergo work.
+func (warehouse *Snowflake) Check(ctx context.Context) error {
+	panic("TODO: not implemented")
+}
+
 // Close closes the data warehouse.
 func (warehouse *Snowflake) Close() error {
 	if warehouse.db == nil {
@@ -139,9 +145,10 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 	panic("not implemented")
 }
 
-// Init initializes the data warehouse by creating the supporting tables.
+// Init initializes the database objects on the data warehouse in order to make
+// it work with Meergo.
 func (warehouse *Snowflake) Init(ctx context.Context) error {
-	return nil
+	panic("TODO: not implemented")
 }
 
 // Merge performs a table merge operation.
@@ -484,6 +491,12 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 // ResolveIdentities resolves the identities.
 func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 	panic("not implemented")
+}
+
+// Repair repairs the database objects on the data warehouse in order to make it
+// work with Meergo.
+func (warehouse *Snowflake) Repair(ctx context.Context) error {
+	panic("TODO: not implemented")
 }
 
 // Settings returns the data warehouse settings.

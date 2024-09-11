@@ -1,4 +1,4 @@
-CREATE TABLE _user_identities (
+CREATE TABLE IF NOT EXISTS _user_identities (
     "__pk__" serial,
     "__action__" integer NOT NULL,
     "__is_anonymous__" boolean NOT NULL DEFAULT FALSE,

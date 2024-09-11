@@ -9,6 +9,9 @@ package warehouses
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/meergo/meergo/apis/errors"
 )
 
 // DataWarehouseError represents an error with the data warehouse.
@@ -44,4 +47,24 @@ func (e *SettingsError) Error() string {
 // fmt.Errorf(format, a...) error.
 func SettingsErrorf(format string, a ...any) error {
 	return &SettingsError{Err: fmt.Errorf(format, a...)}
+}
+
+// ErrDataWarehouseNotInitialized is the error indicating that the data
+// warehouse is not initialized.
+var ErrDataWarehouseNotInitialized = errors.New("data warehouse not initialized")
+
+// DataWarehouseNeedsRepairError represents an error indicating that the data
+// warehouse needs to be repaired.
+type DataWarehouseNeedsRepairError struct {
+	toRepair []string
+}
+
+// NewDataWarehouseNeedsRepairError returns a new DataWarehouseNeedsRepairError
+// error.
+func NewDataWarehouseNeedsRepairError(toRepair []string) error {
+	return &DataWarehouseNeedsRepairError{toRepair: toRepair}
+}
+
+func (e *DataWarehouseNeedsRepairError) Error() string {
+	return fmt.Sprintf("data warehouse needs repairing: %s", strings.Join(e.toRepair, "; "))
 }

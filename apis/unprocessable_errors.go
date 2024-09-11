@@ -22,6 +22,8 @@ const (
 	CurrentlyConnected           errors.Code = "CurrentlyConnected"
 	DataWarehouseFailed          errors.Code = "DataWarehouseFailed"
 	DatabaseFailed               errors.Code = "DatabaseFailed"
+	DataWarehouseNeedsRepair     errors.Code = "DataWarehouseNeedsRepair"
+	DataWarehouseNotInitialized  errors.Code = "DataWarehouseNotInitialized"
 	EventConnectionNotExist      errors.Code = "EventConnectionNotExist"
 	EventNotExist                errors.Code = "EventNotExist"
 	EventTypeNotExist            errors.Code = "EventTypeNotExist"

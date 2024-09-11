@@ -339,22 +339,6 @@ func (store *Store) LastIdentityResolution(ctx context.Context) (startTime, endT
 	return store.warehouse.LastIdentityResolution(ctx)
 }
 
-// InitWarehouse initializes the data warehouse creating the events and the
-// destinations_users tables.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If an error occurs with the data warehouse, it returns a
-// *DataWarehouseError error.
-func (store *Store) InitWarehouse(ctx context.Context) error {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	return store.warehouse.Init(ctx)
-}
-
 // Mode returns the data warehouse mode.
 func (store *Store) Mode() state.WarehouseMode {
 	return store.mc.Mode()

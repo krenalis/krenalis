@@ -120,6 +120,17 @@ type Warehouse interface {
 	// *warehouses.DataWarehouseError error.
 	AlterSchemaQueries(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) ([]string, error)
 
+	// Check checks if the necessary database objects on the data warehouse are
+	// correct to make Meergo work.
+	//
+	// It returns:
+	//
+	// - nil, if everything is correct;
+	// - ErrDataWarehouseNotInitialized, if the data warehouse is not initialized;
+	// - *DataWarehouseNeedsRepairError, if the data warehouse needs to be repaired;
+	// - *DataWarehouseError, if an error occurs with the data warehouse
+	Check(ctx context.Context) error
+
 	// Close closes the data warehouse. When Close is called, no other calls to
 	// data warehouse's methods are in progress and no more will be made.
 	Close() error
@@ -130,6 +141,13 @@ type Warehouse interface {
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	Delete(ctx context.Context, table string, where Expr) error
+
+	// Init initializes the database objects on the data warehouse in order to make
+	// it work with Meergo.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	Init(ctx context.Context) error
 
 	// LastIdentityResolution returns information about the last Identity
 	// Resolution.
@@ -144,9 +162,6 @@ type Warehouse interface {
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error)
-
-	// Init initializes the data warehouse by creating the supporting tables.
-	Init(ctx context.Context) error
 
 	// Merge performs a table merge operation.
 	// If handles row updates, inserts, and deletions. table specifies the target
@@ -216,6 +231,13 @@ type Warehouse interface {
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
 	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
+
+	// Repair repairs the database objects on the data warehouse in order to make it
+	// work with Meergo.
+	//
+	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+	// error.
+	Repair(ctx context.Context) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte

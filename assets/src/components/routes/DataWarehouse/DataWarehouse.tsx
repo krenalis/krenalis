@@ -7,7 +7,6 @@ import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import PasswordToggle from '../../base/PasswordToggle/PasswordToggle';
 import { WarehouseMode, WarehouseSettings, WarehouseType } from '../../../lib/api/types/warehouse';
 import Grid from '../../base/Grid/Grid';
-import * as icons from '../../../constants/icons';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -126,11 +125,10 @@ const WarehouseInfo = ({
 }: WarehouseInfoProps) => {
 	const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState<boolean>(false);
 	const [isDisconnectButtonLoading, setIsDisconnectButtonLoading] = useState<boolean>(false);
-	const [isInitWarehouseLoading, setIsInitWarehouseLoading] = useState<boolean>(false);
 	const [isWarehouseModeLoading, setIsWarehouseModeLoading] = useState<boolean>(false);
 	const [warehouseModeToSet, setWarehouseModeToSet] = useState<WarehouseMode | ''>('');
 
-	const { api, handleError, setIsLoadingState, setIsLoadingWorkspaces, showStatus } = useContext(appContext);
+	const { api, handleError, setIsLoadingState, setIsLoadingWorkspaces } = useContext(appContext);
 
 	useEffect(() => {
 		if (isWarehouseModeLoading) {
@@ -199,23 +197,6 @@ const WarehouseInfo = ({
 		setIsConfirmationDialogOpen(false);
 	};
 
-	const onInitWarehouse = async () => {
-		setIsInitWarehouseLoading(true);
-		try {
-			await api.workspaces.initWarehouse();
-		} catch (err) {
-			setTimeout(() => {
-				setIsInitWarehouseLoading(false);
-				handleError(err);
-			}, 300);
-			return;
-		}
-		setTimeout(() => {
-			setIsInitWarehouseLoading(false);
-			showStatus({ variant: 'success', icon: icons.OK, text: 'The warehouse has been successfully initialized' });
-		}, 300);
-	};
-
 	return (
 		<div className='warehouse-info'>
 			<div className='warehouse-info__info'>
@@ -256,14 +237,6 @@ const WarehouseInfo = ({
 							</div>
 						</SlOption>
 					</SlSelect>
-					<SlButton
-						className='warehouse-info__init'
-						onClick={onInitWarehouse}
-						loading={isInitWarehouseLoading}
-					>
-						<SlIcon slot='prefix' name='database-up' />
-						Init warehouse
-					</SlButton>
 				</div>
 			</div>
 			<div className='warehouse-info__settings'>

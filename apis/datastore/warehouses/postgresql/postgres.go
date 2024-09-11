@@ -38,6 +38,8 @@ var (
 	createUserIdentitiesTable string
 	//go:embed tables/users.sql
 	createUsersTable string
+	//go:embed tables/users_view.sql
+	createUsersView string
 )
 
 var _ warehouses.Warehouse = &PostgreSQL{}
@@ -131,26 +133,93 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 	return nil
 }
 
-// Init initializes the data warehouse by creating the supporting tables.
-func (warehouse *PostgreSQL) Init(ctx context.Context) error {
-	conn, err := warehouse.connection()
+// Check checks if the necessary database objects on the data warehouse are
+// correct to make Meergo work.
+func (warehouse *PostgreSQL) Check(ctx context.Context) error {
+
+	// Note that the checks here are partial, as full checks would require
+	// reading the tables, their types, constraints, default values, etc... And
+	// that would be very complex and broad. So, only basic checks are done
+	// here.
+	// Perhaps in the future, we will extend these checks.
+
+	schema := warehouse.settings.Schema
+	if schema == "" {
+		schema = "public"
+	}
+
+	db, err := warehouse.connection()
 	if err != nil {
 		return err
 	}
+
 	tables := []string{
-		createDestinationUsersTable,
-		createEventsTable,
-		createOperationsTable,
-		createUserIdentitiesTable,
-		createUsersTable,
+		"_destinations_users",
+		"_operations",
+		"_user_identities",
+		"_users_0",
+		"events",
 	}
+
+	types := []string{
+		"_operation",
+		"event_browser_name",
+		"event_os_name",
+		"event_type",
+	}
+
+	missingDBObjects := map[string]struct{}{}
+
+	// Check the existence of the tables.
 	for _, table := range tables {
-		_, err := conn.Exec(ctx, table)
+		var exists bool
+		err := db.QueryRow(ctx,
+			`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)`,
+			schema, table).Scan(&exists)
 		if err != nil {
 			return warehouses.Error(err)
 		}
+		if !exists {
+			missingDBObjects[table] = struct{}{}
+		}
 	}
+
+	// Check the existence of types.
+	for _, typ := range types {
+		var exists bool
+		err := db.QueryRow(ctx, `SELECT EXISTS (SELECT FROM pg_type WHERE typname = $1)`, typ).Scan(&exists)
+		if err != nil {
+			return warehouses.Error(err)
+		}
+		if !exists {
+			missingDBObjects[typ] = struct{}{}
+		}
+	}
+
+	// If there is any missing database object, return an
+	// ErrDataWarehouseNotInitialized error (in case every object is missing,
+	// meaning that the warehouse is not initialized yet) or a
+	// DataWarehouseNeedsRepairError error, indicating which objects are missing
+	// and thus needs to be repaired.
+	if len(missingDBObjects) > 0 {
+		if len(missingDBObjects) == len(tables)+len(types) {
+			return warehouses.ErrDataWarehouseNotInitialized
+		}
+		toRepair := make([]string, 0, len(missingDBObjects))
+		for decl := range missingDBObjects {
+			toRepair = append(toRepair, fmt.Sprintf("database object %q not found", decl))
+		}
+		slices.Sort(toRepair)
+		return warehouses.NewDataWarehouseNeedsRepairError(toRepair)
+	}
+
 	return nil
+}
+
+// Init initializes the database objects on the data warehouse in order to make
+// it work with Meergo.
+func (warehouse *PostgreSQL) Init(ctx context.Context) error {
+	return warehouse.initRepair(ctx, false)
 }
 
 // Merge performs a table merge operation.
@@ -396,6 +465,12 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	return nil
 }
 
+// Repair repairs the database objects on the data warehouse in order to make it
+// work with Meergo.
+func (warehouse *PostgreSQL) Repair(ctx context.Context) error {
+	return warehouse.initRepair(ctx, true)
+}
+
 // Settings returns the data warehouse settings.
 func (warehouse *PostgreSQL) Settings() []byte {
 	s, _ := json.Marshal(warehouse.settings)
@@ -528,5 +603,36 @@ func (c *copyForIdentities) Values() ([]any, error) {
 }
 
 func (c *copyForIdentities) Err() error {
+	return nil
+}
+
+// initRepair initializes (or repairs) the database objects (as tables, types,
+// etc...) on the data warehouse.
+func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error {
+	conn, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	queries := []string{
+		createDestinationUsersTable,
+		createEventsTable,
+		createOperationsTable,
+		createUserIdentitiesTable,
+		createUsersTable,
+	}
+	if !repair {
+		// Since the "CREATE VIEW IF EXISTS" statement does not exist in
+		// PostgreSQL, the view is recreated only if initializing, not when
+		// repairing, otherwise a "cannot drop columns from view" error is
+		// returned by PostgreSQL in cases where the users table has different
+		// columns than the default one.
+		queries = append(queries, createUsersView)
+	}
+	for _, query := range queries {
+		_, err := conn.Exec(ctx, query)
+		if err != nil {
+			return warehouses.Error(err)
+		}
+	}
 	return nil
 }

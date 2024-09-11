@@ -499,12 +499,13 @@ func (workspace workspace) ConnectWarehouse(_ http.ResponseWriter, r *http.Reque
 		Type     apis.WarehouseType
 		Mode     apis.WarehouseMode
 		Settings rawJSON
+		Behavior apis.ConnectWarehouseBehavior
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ConnectWarehouse(r.Context(), body.Type, body.Mode, body.Settings)
+	err = ws.ConnectWarehouse(r.Context(), body.Type, body.Mode, body.Settings, body.Behavior)
 	return nil, err
 }
 
@@ -536,17 +537,6 @@ func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 	return ws.IdentifiersSchema(), nil
-}
-
-// InitWarehouse initializes a data warehouse of the workspace by creating the
-// supporting tables.
-func (workspace workspace) InitWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	err = ws.InitWarehouse(r.Context())
-	return nil, err
 }
 
 // ListenedEvents returns the events listen to by a specified listener and the

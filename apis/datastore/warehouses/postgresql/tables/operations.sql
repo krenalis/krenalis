@@ -1,6 +1,11 @@
-CREATE TYPE _operation AS ENUM ('IdentityResolution', 'AlterSchema');
+DO $$
+    BEGIN
+    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = '_operation') THEN
+        CREATE TYPE _operation AS ENUM ('IdentityResolution', 'AlterSchema');
+    END IF;
+END$$;
 
-CREATE TABLE _operations (
+CREATE TABLE IF NOT EXISTS _operations (
     id serial,
     operation _operation NOT NULL,
     start_time timestamp without time zone DEFAULT NULL,

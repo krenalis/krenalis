@@ -1022,22 +1022,99 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
+// ConnectWarehouseBehavior represents a behavior when connecting a data
+// warehouse.
+type ConnectWarehouseBehavior int8
+
+const (
+	// FailOnCheck means that the data warehouse must be checked and, if the
+	// check fails, the connection of the warehouse should fail.
+	FailOnCheck ConnectWarehouseBehavior = iota + 1
+
+	// InitializeWarehouse means that the warehouse connection operation should
+	// initialize the warehouse before connecting it.
+	InitializeWarehouse
+
+	// RepairWarehouse means that the warehouse connection operation should
+	// repair the warehouse before connecting it.
+	RepairWarehouse
+)
+
+func (b ConnectWarehouseBehavior) String() string {
+	switch b {
+	case FailOnCheck:
+		return "FailOnCheck"
+	case InitializeWarehouse:
+		return "InitializeWarehouse"
+	case RepairWarehouse:
+		return "RepairWarehouse"
+	default:
+		return "<invalid value for behavior>"
+	}
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if mode is not a valid WarehouseMode value.
+func (b ConnectWarehouseBehavior) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + b.String() + `"`), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (b *ConnectWarehouseBehavior) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return nil
+	}
+	var v any
+	err := json.Unmarshal(data, &v)
+	if err != nil {
+		return err
+	}
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("json: cannot scan a %T value into an ConnectWarehouseBehavior value", v)
+	}
+	var behavior ConnectWarehouseBehavior
+	switch s {
+	case "FailOnCheck":
+		behavior = FailOnCheck
+	case "InitializeWarehouse":
+		behavior = InitializeWarehouse
+	case "RepairWarehouse":
+		behavior = RepairWarehouse
+	default:
+		return fmt.Errorf("json: invalid ConnectWarehouseBehavior: %s", s)
+	}
+	*b = behavior
+	return nil
+}
+
 // ConnectWarehouse connects the workspace to a data warehouse, with the given
-// settings. It also creates the tables in the connected data warehouse.
+// settings. behavior determines if the data warehouse must be checked,
+// initialized o repaired; see the documentation of ConnectWarehouseBehavior.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 //   - AlreadyConnected, if the workspace is already connected to a data
 //     warehouse.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - DataWarehouseNeedsRepair, if behavior is FailOnCheck and the data
+//     warehouse needs to be repaired.
+//   - DataWarehouseNotInitialized, if behavior is FailOnCheck and the data
+//     warehouse needs to be initialized.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte) error {
+func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte, behavior ConnectWarehouseBehavior) error {
 	this.apis.mustBeOpen()
 
 	switch mode {
 	case Normal, Inspection, Maintenance:
 	default:
 		return errors.BadRequest("mode %d is not valid", mode)
+	}
+
+	switch behavior {
+	case FailOnCheck, InitializeWarehouse, RepairWarehouse:
+	default:
+		return errors.BadRequest("behavior %d is not valid", behavior)
 	}
 
 	ws := this.workspace
@@ -1049,6 +1126,27 @@ func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, 
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+
+	switch behavior {
+	case FailOnCheck:
+		err = this.apis.datastore.Check(ctx, state.WarehouseType(typ), settings)
+		if err == datastore.ErrDataWarehouseNotInitialized {
+			return errors.Unprocessable(DataWarehouseNotInitialized, "the data warehouse is not initialized")
+		}
+		if err, ok := err.(*datastore.DataWarehouseNeedsRepairError); ok {
+			return errors.Unprocessable(DataWarehouseNeedsRepair, "%s", err.Error())
+		}
+	case InitializeWarehouse:
+		err = this.apis.datastore.Init(ctx, state.WarehouseType(typ), settings)
+	case RepairWarehouse:
+		err = this.apis.datastore.Repair(ctx, state.WarehouseType(typ), settings)
+	}
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
 		}
 		return err
 	}
@@ -1165,32 +1263,6 @@ func (this *Workspace) IdentifiersSchema() types.Type {
 	return types.SubsetFunc(this.workspace.UserSchema, func(p types.Property) bool {
 		return canBeIdentifier(p.Type)
 	})
-}
-
-// InitWarehouse initializes the data warehouse of the workspace by creating the
-// supporting tables.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - InspectionMode. if the data warehouse is in inspection mode.
-//   - NotConnected, if the workspace is not connected to a data warehouse.
-func (this *Workspace) InitWarehouse(ctx context.Context) error {
-	this.apis.mustBeOpen()
-	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
-	}
-	err := this.store.InitWarehouse(ctx)
-	if err != nil {
-		if err == datastore.ErrInspectionMode {
-			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-		}
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
-		}
-		return err
-	}
-	return nil
 }
 
 // ObservedEvent represents an observed event.

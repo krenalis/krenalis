@@ -274,16 +274,10 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		t.Fatalf("cannot log in into the API: %s", err)
 	}
 
-	// Connect the data warehouse.
-	err = c.connectWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
+	// Connect and initialize the data warehouse.
+	err = c.connectInitWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
 	if err != nil {
 		t.Fatalf("cannot connect warehouse: %s", err)
-	}
-
-	// Initialize the data warehouse.
-	err = c.initWarehouse()
-	if err != nil {
-		t.Fatalf("cannot init warehouse: %s", err)
 	}
 
 	// Change the user schema.
@@ -348,18 +342,14 @@ func (c *Meergo) UseWorkspace(workspace int) {
 	c.ws = workspace
 }
 
-func (c *Meergo) connectWarehouse(whType string, whSettings *DBSettings) error {
+func (c *Meergo) connectInitWarehouse(whType string, whSettings *DBSettings) error {
 	body := map[string]any{
 		"Type":     whType,
 		"Settings": whSettings,
+		"Behavior": InitializeWarehouse,
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/warehouse", c.ws)
 	return c.call("POST", method, body, nil)
-}
-
-func (c *Meergo) initWarehouse() error {
-	method := fmt.Sprintf("/api/workspaces/%d/warehouse/initializations", c.ws)
-	return c.call("POST", method, nil, nil)
 }
 
 func (c *Meergo) changeUserSchema() error {

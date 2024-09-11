@@ -1,10 +1,19 @@
 -- Keep in sync with the events.eventsMergeTable variable.
 
-CREATE TYPE event_os_name AS ENUM ('None', 'Android', 'Windows', 'iOS', 'macOS', 'Linux', 'Chrome OS', 'Other');
-CREATE TYPE event_browser_name AS ENUM ('None', 'Chrome', 'Safari', 'Edge', 'Firefox', 'Samsung Internet', 'Opera', 'Other');
-CREATE TYPE event_type AS ENUM ('alias', 'identify', 'group', 'page', 'screen', 'track');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'event_os_name') THEN
+        CREATE TYPE event_os_name AS ENUM ('None', 'Android', 'Windows', 'iOS', 'macOS', 'Linux', 'Chrome OS', 'Other');
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'event_browser_name') THEN
+        CREATE TYPE event_browser_name AS ENUM ('None', 'Chrome', 'Safari', 'Edge', 'Firefox', 'Samsung Internet', 'Opera', 'Other');
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'event_type') THEN
+        CREATE TYPE event_type AS ENUM ('alias', 'identify', 'group', 'page', 'screen', 'track');
+    END IF;
+END$$;
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     "user" UUID,
     "anonymous_id" varchar NOT NULL,
     "category" varchar NOT NULL,

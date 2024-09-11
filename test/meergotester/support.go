@@ -321,8 +321,24 @@ func (c *Meergo) ConnectionKeys(conn int) []string {
 	return keys
 }
 
+// ConnectWarehouse connects the warehouse specified in the tests configuration.
+func (c *Meergo) ConnectWarehouse(behavior ConnectWarehouseBehavior) {
+	req := map[string]any{
+		"Type":     testsSettings.WarehouseType,
+		"Settings": testsSettings.Warehouse,
+		"Behavior": behavior,
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse", c.ws)
+	c.MustCall("POST", method, req, nil)
+}
+
 func (c *Meergo) DeleteConnection(conn int) {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d", c.ws, conn)
+	c.MustCall("DELETE", method, nil, nil)
+}
+
+func (c *Meergo) DisconnectWarehouse() {
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse", c.ws)
 	c.MustCall("DELETE", method, nil, nil)
 }
 

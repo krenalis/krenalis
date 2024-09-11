@@ -88,6 +88,12 @@ func (warehouse *ClickHouse) AlterSchemaQueries(ctx context.Context, userColumns
 	panic("TODO: not implemented")
 }
 
+// Check checks if the necessary database objects on the data warehouse are
+// correct to make Meergo work.
+func (warehouse *ClickHouse) Check(ctx context.Context) error {
+	panic("TODO: not implemented")
+}
+
 // Close closes the data warehouse.
 func (warehouse *ClickHouse) Close() error {
 	if warehouse.conn == nil {
@@ -127,7 +133,8 @@ func (warehouse *ClickHouse) LastIdentityResolution(ctx context.Context) (startT
 	panic("not implemented")
 }
 
-// Init initializes the data warehouse by creating the supporting tables.
+// Init initializes the database objects on the data warehouse in order to make
+// it work with Meergo.
 func (warehouse *ClickHouse) Init(ctx context.Context) error {
 	conn, err := warehouse.connection()
 	if err != nil {
@@ -177,6 +184,12 @@ func (warehouse *ClickHouse) Query(ctx context.Context, query warehouses.RowQuer
 
 // ResolveIdentities resolves the identities.
 func (warehouse *ClickHouse) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+	panic("TODO: not implemented")
+}
+
+// Repair repairs the database objects on the data warehouse in order to make it
+// work with Meergo.
+func (warehouse *ClickHouse) Repair(ctx context.Context) error {
 	panic("TODO: not implemented")
 }
 

@@ -141,7 +141,6 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"POST   /api/workspaces/{workspace}/ui-event":                                                    workspace.ServeUI,
 		"POST   /api/workspaces/{workspace}/users":                                                       workspace.Users,
 		"POST   /api/workspaces/{workspace}/warehouse":                                                   workspace.ConnectWarehouse,
-		"POST   /api/workspaces/{workspace}/warehouse/initializations":                                   workspace.InitWarehouse,
 		"POST   /api/workspaces/{workspace}/warehouse/pings":                                             workspace.PingWarehouse,
 		"PUT    /api/members/current":                                                                    organization.SetMember,
 		"PUT    /api/members/invitations/{token}":                                                        api.AcceptInvitation,

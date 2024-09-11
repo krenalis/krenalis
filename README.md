@@ -11,10 +11,9 @@
   - [3. Build the assets](#3-build-the-assets)
   - [4. Compile the server command in dev mode](#4-compile-the-server-command-in-dev-mode)
   - [5. Populate the database](#5-populate-the-database)
-  - [6. Connect the data warehouse](#6-connect-the-data-warehouse)
-  - [7. Initialize the warehouse](#7-initialize-the-warehouse)
-  - [8. Run and open the browser](#8-run-and-open-the-browser)
-  - [9. Add properties to the user schema](#9-add-properties-to-the-user-schema)
+  - [6. Connect and initialize the data warehouse](#6-connect-and-initialize-the-data-warehouse)
+  - [7. Run and open the browser](#7-run-and-open-the-browser)
+  - [8. Add properties to the user schema](#8-add-properties-to-the-user-schema)
 - [Enable telemetry (optional)](#enable-telemetry-optional)
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
@@ -100,20 +99,20 @@ go build -tags dev,osusergo,netgo -trimpath ./cmd/meergo
 
 Populate the Meergo's database with the queries in [database/PostgreSQL.sql](database/PostgreSQL.sql).
 
-### 6. Connect the data warehouse
+### 6. Connect and initialize the data warehouse
 
 (note that these steps requires [the meergo-cli executable](#interact-with-meergo-using-meergo-cli) installed and available on your system)
 
-Connect the data warehouse with:
+Connect and initialize the data warehouse with:
 
 ```
-meergo-cli connect-warehouse PostgreSQL ./postgresql.json
+meergo-cli connect-warehouse PostgreSQL ./postgresql.json --init
 ```
 
 or 
 
 ```
-meergo-cli connect-warehouse ClickHouse ./clickhouse.json
+meergo-cli connect-warehouse ClickHouse ./clickhouse.json --init
 ```
 
 where `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
@@ -141,19 +140,17 @@ and `./clickhouse.json` is a JSON file containing the information to access the 
 }
 ```
 
-### 7. Initialize the warehouse
-
-Initialize the warehouse with:
+Note that, if your data warehouse has already been initialized, you can avoid passing the `--init` option:
 
 ```
-meergo-cli init-warehouse
+meergo-cli connect-warehouse PostgreSQL ./postgresql.json
 ```
 
-### 8. Run and open the browser
+### 7. Run and open the browser
 
 Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:9090/ui/.
 
-### 9. Add properties to the user schema
+### 8. Add properties to the user schema
 
 Within the root of the repository, run:
 

@@ -139,11 +139,37 @@ func WorkspaceChangeUserSchemaQueries(workspace int, schema types.Type, rePaths 
 	return resp.Queries
 }
 
-func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte) {
+type ConnectWarehouseBehavior int8
+
+const (
+	FailOnCheck ConnectWarehouseBehavior = iota + 1
+	InitializeWarehouse
+	RepairWarehouse
+)
+
+func (b ConnectWarehouseBehavior) String() string {
+	switch b {
+	case FailOnCheck:
+		return "FailOnCheck"
+	case InitializeWarehouse:
+		return "InitializeWarehouse"
+	case RepairWarehouse:
+		return "RepairWarehouse"
+	default:
+		return "<invalid value for behavior>"
+	}
+}
+
+func (b ConnectWarehouseBehavior) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + b.String() + `"`), nil
+}
+
+func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte, behavior ConnectWarehouseBehavior) {
 	req := struct {
 		Type     string
 		Settings json.RawMessage
-	}{typ, settings}
+		Behavior ConnectWarehouseBehavior
+	}{typ, settings, behavior}
 	b := &bytes.Buffer{}
 	_ = json.NewEncoder(b).Encode(req)
 	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse", b, nil)
@@ -154,13 +180,6 @@ func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte) {
 
 func WorkspaceDisconnectWarehouse(workspace int) {
 	err := callAPI("DELETE", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse", nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func WorkspaceInitWarehouse(workspace int) {
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/initializations", nil, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
