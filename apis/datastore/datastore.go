@@ -306,7 +306,11 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 		}
 		ds.mu.Lock()
 		prevStore := ds.store[ws.ID]
-		ds.store[ws.ID] = nextStore
+		if nextStore == nil {
+			delete(ds.store, ws.ID)
+		} else {
+			ds.store[ws.ID] = nextStore
+		}
 		ds.mu.Unlock()
 		// Close the previous store.
 		if prevStore != nil {
