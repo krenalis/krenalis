@@ -392,6 +392,18 @@ func Test_MarshalJavaScript(t *testing.T) {
 			}}},
 			result: []byte(`[{a:'null',b:null,c:'null'}]`),
 		},
+		{
+			name: "Spurious properties",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			records: []Record{{Properties: map[string]any{
+				"a": "foo",
+				"b": "boo",
+				"c": 24,
+			}}},
+			result: []byte(`[{a:'foo'}]`),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -582,6 +594,18 @@ func Test_MarshalPython(t *testing.T) {
 				"c": json.RawMessage("null"),
 			}}},
 			result: []byte(`[{'a':'null','b':None,'c':'null'}]`),
+		},
+		{
+			name: "Spurious properties",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text()},
+			}),
+			records: []Record{{Properties: map[string]any{
+				"a": "foo",
+				"b": "boo",
+				"c": 24,
+			}}},
+			result: []byte(`[{'a':'foo'}]`),
 		},
 	}
 	for _, test := range tests {

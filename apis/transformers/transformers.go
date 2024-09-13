@@ -54,9 +54,6 @@ type Transformer struct {
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
 // action.
-//
-// For functions, only the property names listed in 'transformation.Function'
-// are processed from the action's schemas.
 func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if m := action.Transformation.Mapping; m != nil {

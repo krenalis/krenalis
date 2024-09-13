@@ -299,6 +299,12 @@ func Test_Transform(t *testing.T) {
 			properties:  map[string]any{"a": "foo"},
 			expected:    map[string]any{"E": 3},
 		},
+		{
+			name:        `Spurious properties`,
+			expressions: map[string]string{"A": "a"},
+			properties:  map[string]any{"a": "foo", "b": "boo", "c": 24},
+			expected:    map[string]any{"A": "foo"},
+		},
 	}
 
 	for _, test := range tests {
