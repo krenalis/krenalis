@@ -71,8 +71,10 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
 				return nil, nil
 			}
-		case v == "" && dpt != types.TextKind:
-			return nil, nil
+		case v == "":
+			if dpt != types.TextKind && dpt != types.JSONKind {
+				return nil, nil
+			}
 		}
 	} else if v == nil {
 		if dpt == types.JSONKind {
@@ -195,6 +197,9 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		switch spt {
 		case types.FloatKind:
 			n = v.(float64)
+			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
+				return nil, errInvalidConversion
+			}
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
@@ -394,21 +399,31 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			return jsonToUUID(v)
 		}
 	case types.JSONKind:
-		switch v := v.(type) {
-		case json.RawMessage:
+		if spt == types.JSONKind {
 			return v, nil
-		case decimal.Decimal:
-			return json.RawMessage(v.String()), nil
-		default:
-			if v == "" {
-				return json.RawMessage("null"), nil
-			}
-			b, err := json.Marshal(v)
-			if err != nil {
+		}
+		switch v := v.(type) {
+		case bool, string:
+			return v, nil
+		case int:
+			return json.Number(strconv.Itoa(v)), nil
+		case uint:
+			return json.Number(strconv.FormatUint(uint64(v), 64)), nil
+		case float64:
+			if dt.IsReal() && (math.IsNaN(v) || math.IsInf(v, 0)) {
 				return nil, errInvalidConversion
 			}
-			return json.RawMessage(b), nil
+			return v, nil
 		}
+		var b bytes.Buffer
+		enc := json.NewEncoder(&b)
+		enc.SetEscapeHTML(false)
+		err := enc.Encode(v)
+		if err != nil {
+			return nil, errInvalidConversion
+		}
+		b.Truncate(b.Len() - 1)
+		return json.RawMessage(b.Bytes()), nil
 	case types.InetKind:
 		switch spt {
 		case types.InetKind:
