@@ -1,12 +1,12 @@
 # Data Types
 
-When defining data types and schemas in a connector or in a data warehouse driver, use the functions from the `types` package:
+When defining data types and schemas in a connector, use the functions from the `types` package:
 
 ```go
 "github.com/meergo/meergo/types"
 ```
 
-This package provides functions to construct data types to use in connectors and data warehouse drivers. For example, `types.Boolean()` returns a `Type` value representing the boolean type, and `types.Array(types.Int(32))` returns a `Type` value representing an array of 32-bit signed integers.
+This package provides functions to construct data types to use in connectors. For example, `types.Boolean()` returns a `Type` value representing the boolean type, and `types.Array(types.Int(32))` returns a `Type` value representing an array of 32-bit signed integers.
 
 In connectors, data types need to be defined for:
 
@@ -14,10 +14,6 @@ In connectors, data types need to be defined for:
 - Query result column types for [database connectors](./connectors/database.md).
 - Table column types for [database connectors](./connectors/database.md).
 - File column types for [file connectors](./connectors/file.md).
-
-In data warehouse drivers, data types need to be defined for:
-
-[[ TODO ]]
 
 ## How to Construct Data Types
 
