@@ -964,7 +964,7 @@ type Execution struct {
 	Error     string
 }
 
-// Executions returns the executions of the actions of the connections.
+// Executions returns the executions of the actions of the connection.
 // The connection must be an app, database, file, or stream connection.
 func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 
