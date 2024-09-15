@@ -116,8 +116,7 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.Execute(r.Context(), body.Reload)
-	return nil, err
+	return a.Execute(r.Context(), body.Reload)
 }
 
 func (action action) action(r *http.Request) (*apis.Action, error) {

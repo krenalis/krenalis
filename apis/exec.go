@@ -35,13 +35,13 @@ func (err actionError) Error() string {
 	return err.err.Error()
 }
 
-// addExecution adds an execution to the action.
+// addExecution adds an execution to the action and returns its identifier.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
 // It returns an errors.UnprocessableError error with code ExecutionInProgress
 // if the action is already in progress.
-func (this *Action) addExecution(ctx context.Context, reload bool) error {
+func (this *Action) addExecution(ctx context.Context, reload bool) (int, error) {
 
 	n := state.ExecuteAction{
 		Action:    this.action.ID,
@@ -94,8 +94,11 @@ func (this *Action) addExecution(ctx context.Context, reload bool) error {
 		}
 		return tx.Notify(ctx, n)
 	})
+	if err != nil {
+		return 0, err
+	}
 
-	return err
+	return n.ID, nil
 }
 
 // exec executes the action.

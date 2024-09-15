@@ -302,7 +302,8 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 }
 
 // Execute executes the action, which must be an app, database, or file storage
-// action with a target of Users or Groups.
+// action with a target of Users or Groups, creating an execution and returning
+// its identifier.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
@@ -313,34 +314,34 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoWarehouse, if the workspace does not have a data warehouse.
-func (this *Action) Execute(ctx context.Context, reload bool) error {
+func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reload", reload)
 	defer span.End()
 	c := this.action.Connection()
 	if !c.Enabled {
-		return errors.Unprocessable(ConnectionDisabled, "connection %d is disabled", c.ID)
+		return 0, errors.Unprocessable(ConnectionDisabled, "connection %d is disabled", c.ID)
 	}
 	if _, ok := this.action.Execution(); ok {
-		return errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
+		return 0, errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
 	if t := this.action.Target; t != state.Users && t != state.Groups {
-		return errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
+		return 0, errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
 	switch typ := c.Connector().Type; typ {
 	case state.App, state.Database, state.FileStorage:
 	default:
-		return errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
+		return 0, errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
 	}
 	if this.connection.store == nil {
 		ws := c.Workspace()
-		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
+		return 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 	switch this.connection.store.Mode() {
 	case state.Inspection:
-		return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		return 0, errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 	case state.Maintenance:
-		return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
 	return this.addExecution(ctx, reload)
 }
