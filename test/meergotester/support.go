@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/meergo/meergo/apis"
@@ -347,8 +346,8 @@ func (c *Meergo) ExecuteAction(conn, action int, reload bool) {
 	c.MustCall("POST", method, map[string]any{"Reload": reload}, nil)
 }
 
-func (c *Meergo) Executions(conn int) []any {
-	var executions []any
+func (c *Meergo) Executions(conn int) []Execution {
+	var executions []Execution
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/executions", c.ws, conn)
 	c.MustCall("GET", method, nil, &executions)
 	return executions
@@ -485,22 +484,17 @@ func (c *Meergo) WaitActionsToFinish(conn int) {
 	for {
 		stillRunning := false
 		for _, exec := range c.Executions(conn) {
-			e := exec.(map[string]any)
 			// If the action execution ended with an error,
 			// make the test fail.
-			if err := e["Error"].(string); err != "" {
-				actionID := string(e["Action"].(json.Number))
-				connID := string(e["ID"].(json.Number))
-				c.t.Fatalf("an error occurred when running action %q on connection %q: %s", actionID, connID, err)
+			if exec.Error != "" {
+				c.t.Fatalf("an error occurred when running action %q on connection %q: %s", exec.Action, exec.ID, exec.Error)
 			}
-			if e["EndTime"] == nil {
+			if exec.EndTime == nil {
 				stillRunning = true
 				break
 			}
-			if failed, _ := strconv.Atoi(string(e["Failed"].(json.Number))); failed > 0 {
-				actionID := string(e["Action"].(json.Number))
-				connID := string(e["ID"].(json.Number))
-				c.t.Fatalf("an error occurred when running action %q on connection %q: %d failed", actionID, connID, failed)
+			if exec.Failed > 0 {
+				c.t.Fatalf("an error occurred when running action %q on connection %q: %d failed", exec.Action, exec.ID, exec.Failed)
 			}
 		}
 		if stillRunning {

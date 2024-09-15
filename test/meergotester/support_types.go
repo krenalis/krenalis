@@ -133,6 +133,16 @@ type DummySettings struct {
 	URLForDispatchingEvents string
 }
 
+type Execution struct {
+	ID        int
+	Action    int
+	StartTime time.Time
+	EndTime   *time.Time
+	Passed    int
+	Failed    int
+	Error     string
+}
+
 type ExportMode string
 
 // These variables have been introduced to simplify the writing of tests.
