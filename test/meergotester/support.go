@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/meergo/meergo/apis"
@@ -341,9 +342,11 @@ func (c *Meergo) DisconnectWarehouse() {
 	c.MustCall("DELETE", method, nil, nil)
 }
 
-func (c *Meergo) ExecuteAction(conn, action int, reload bool) {
+func (c *Meergo) ExecuteAction(conn, action int, reload bool) int {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d/executions", c.ws, conn, action)
-	c.MustCall("POST", method, map[string]any{"Reload": reload}, nil)
+	var id int
+	c.MustCall("POST", method, map[string]any{"Reload": reload}, &id)
+	return id
 }
 
 func (c *Meergo) Executions(conn int) []Execution {
@@ -479,25 +482,27 @@ func (c *Meergo) Users(properties []string, order string, orderDesc bool, first,
 	return response.Users, response.Schema, response.Count
 }
 
-func (c *Meergo) WaitActionsToFinish(conn int) {
+func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
-		stillRunning := false
+		completed := true
 		for _, exec := range c.Executions(conn) {
-			// If the action execution ended with an error,
-			// make the test fail.
-			if exec.Error != "" {
-				c.t.Fatalf("an error occurred when running action %q on connection %q: %s", exec.Action, exec.ID, exec.Error)
+			if !slices.Contains(executions, exec.ID) {
+				continue
 			}
 			if exec.EndTime == nil {
-				stillRunning = true
-				break
+				completed = false
+				continue
+			}
+			// If the action execution ended with an error, make the test fail.
+			if exec.Error != "" {
+				c.t.Fatalf("an error occurred when running action %q on connection %q: %s", exec.Action, exec.ID, exec.Error)
 			}
 			if exec.Failed > 0 {
 				c.t.Fatalf("an error occurred when running action %q on connection %q: %d failed", exec.Action, exec.ID, exec.Failed)
 			}
 		}
-		if stillRunning {
+		if !completed {
 			time.Sleep(1 * time.Second)
 			continue
 		}

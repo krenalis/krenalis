@@ -59,8 +59,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		c.ExecuteAction(dummy, dummyAction, true)
-		c.WaitActionsToFinish(dummy)
+		exec := c.ExecuteAction(dummy, dummyAction, true)
+		c.WaitForExecutionsCompletion(dummy, exec)
 	}
 
 	// Ensure that there are 10 users.
@@ -114,8 +114,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"HasColumnNames": true,
 			}),
 		})
-		c.ExecuteAction(fs, csvAction, true)
-		c.WaitActionsToFinish(fs)
+		exec := c.ExecuteAction(fs, csvAction, true)
+		c.WaitForExecutionsCompletion(fs, exec)
 	}
 
 	// Ensure that there are 13 users (10 from Dummy + 3 from CSV).

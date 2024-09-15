@@ -61,8 +61,8 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	c.ExecuteAction(dummyID, importUsersID, true)
-	c.WaitActionsToFinish(dummyID)
+	exec := c.ExecuteAction(dummyID, importUsersID, true)
+	c.WaitForExecutionsCompletion(dummyID, exec)
 
 	// Retrieve the users.
 	const expectedTotalCount = 10

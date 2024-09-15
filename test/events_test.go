@@ -50,8 +50,8 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	})
-	c.ExecuteAction(dummySrc, importUsersID, true)
-	c.WaitActionsToFinish(dummySrc)
+	exec := c.ExecuteAction(dummySrc, importUsersID, true)
+	c.WaitForExecutionsCompletion(dummySrc, exec)
 
 	// Add a JavaScript connection with 2 actions (one for importing events, one
 	// for importing user identities) and retrieve its key.

@@ -139,12 +139,12 @@ func TestIdentityResolution2(t *testing.T) {
 	actionB := addJSONAction(sourceB, "B.json", properties)
 	actionC := addJSONAction(sourceC, "C.json", properties)
 
-	c.ExecuteAction(sourceA, actionA, true)
-	c.ExecuteAction(sourceB, actionB, true)
-	c.ExecuteAction(sourceC, actionC, true)
-	c.WaitActionsToFinish(sourceA)
-	c.WaitActionsToFinish(sourceB)
-	c.WaitActionsToFinish(sourceC)
+	exec1 := c.ExecuteAction(sourceA, actionA, true)
+	exec2 := c.ExecuteAction(sourceB, actionB, true)
+	exec3 := c.ExecuteAction(sourceC, actionC, true)
+	c.WaitForExecutionsCompletion(sourceA, exec1)
+	c.WaitForExecutionsCompletion(sourceB, exec2)
+	c.WaitForExecutionsCompletion(sourceC, exec3)
 
 	// Explicitly run the Identity Resolution, even if it has been executed at
 	// the end of the import action executions.

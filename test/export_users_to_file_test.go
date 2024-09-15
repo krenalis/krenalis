@@ -61,8 +61,8 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		c.ExecuteAction(dummySrc, importUsersID, true)
-		c.WaitActionsToFinish(dummySrc)
+		exec := c.ExecuteAction(dummySrc, importUsersID, true)
+		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
 	// Create the temporary storage.
@@ -144,10 +144,10 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		c.ExecuteAction(fsID, exportUsersActionID, true)
+		exec := c.ExecuteAction(fsID, exportUsersActionID, true)
 
 		// Wait for the import to finish.
-		c.WaitActionsToFinish(fsID)
+		c.WaitForExecutionsCompletion(fsID, exec)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath + ext)

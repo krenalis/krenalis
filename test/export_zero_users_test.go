@@ -60,8 +60,8 @@ func TestExportZeroUsers(t *testing.T) {
 			},
 			ExportOnDuplicatedUsers: &[]bool{false}[0],
 		})
-		c.ExecuteAction(dummyDest, exportUsersActionID, true)
-		c.WaitActionsToFinish(dummyDest)
+		exec := c.ExecuteAction(dummyDest, exportUsersActionID, true)
+		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}()
 
 	// Test the export of zero users to file (CSV).
@@ -116,10 +116,10 @@ func TestExportZeroUsers(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		c.ExecuteAction(fsID, exportUsersActionID, true)
+		exec := c.ExecuteAction(fsID, exportUsersActionID, true)
 
 		// Wait for the import to finish.
-		c.WaitActionsToFinish(fsID)
+		c.WaitForExecutionsCompletion(fsID, exec)
 
 		// Check if the file has been created successfully.
 		fi, err := os.Open(exportFilePath)

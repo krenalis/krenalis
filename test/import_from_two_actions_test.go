@@ -97,8 +97,8 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	})
 
 	// Import from the first action, which should import just the first name.
-	c.ExecuteAction(fsID, actionFirstName, true)
-	c.WaitActionsToFinish(fsID)
+	exec := c.ExecuteAction(fsID, actionFirstName, true)
+	c.WaitForExecutionsCompletion(fsID, exec)
 
 	// Check the users.
 	assertEq := func(msg string, expected, got any) {
@@ -121,8 +121,8 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 
 	// Import from the second action, which should import just the last name,
 	// and that should result in users with both first name and last name.
-	c.ExecuteAction(fsID, actionLastName, true)
-	c.WaitActionsToFinish(fsID)
+	exec = c.ExecuteAction(fsID, actionLastName, true)
+	c.WaitForExecutionsCompletion(fsID, exec)
 
 	// Check the users.
 	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)

@@ -53,10 +53,10 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Import from both actions - and implicitly trigger the identity resolution
 	// process.
-	c.ExecuteAction(dummy1, action1, true)
-	c.ExecuteAction(dummy2, action2, true)
-	c.WaitActionsToFinish(dummy1)
-	c.WaitActionsToFinish(dummy2)
+	exec1 := c.ExecuteAction(dummy1, action1, true)
+	exec2 := c.ExecuteAction(dummy2, action2, true)
+	c.WaitForExecutionsCompletion(dummy1, exec1)
+	c.WaitForExecutionsCompletion(dummy2, exec2)
 
 	// Ensure that the connection have the correct identities associated.
 	{

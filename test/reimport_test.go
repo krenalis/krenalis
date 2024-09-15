@@ -51,8 +51,8 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import the users from dummy.
-	c.ExecuteAction(dummy, dummyAction, true)
-	c.WaitActionsToFinish(dummy)
+	exec := c.ExecuteAction(dummy, dummyAction, true)
+	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check the users.
 	assertEq := func(msg string, expected, got any) {
@@ -97,8 +97,8 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from dummy.
-	c.ExecuteAction(dummy, dummyAction, true) // reload = true
-	c.WaitActionsToFinish(dummy)
+	exec = c.ExecuteAction(dummy, dummyAction, true) // reload = true
+	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check the users again.
 	//

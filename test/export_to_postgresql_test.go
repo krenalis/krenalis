@@ -49,8 +49,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		c.ExecuteAction(dummySrc, importUsersID, true)
-		c.WaitActionsToFinish(dummySrc)
+		exec := c.ExecuteAction(dummySrc, importUsersID, true)
+		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
 	ctx := context.Background()
@@ -99,8 +99,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	c.ExecuteAction(pgsql, exportAction, false)
-	c.WaitActionsToFinish(pgsql)
+	exec := c.ExecuteAction(pgsql, exportAction, false)
+	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.
 	const expectedCount = 10
@@ -131,8 +131,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	c.ExecuteAction(pgsql, exportAction, false)
-	c.WaitActionsToFinish(pgsql)
+	exec = c.ExecuteAction(pgsql, exportAction, false)
+	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.
 	c.QueryRowTestDatabase(ctx, &count,

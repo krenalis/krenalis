@@ -80,11 +80,11 @@ func Test_UserIdentities(t *testing.T) {
 		}),
 	})
 
-	c.ExecuteAction(fs1, action1, true)
-	c.ExecuteAction(fs2, action2, true)
+	exec1 := c.ExecuteAction(fs1, action1, true)
+	exec2 := c.ExecuteAction(fs2, action2, true)
 
-	c.WaitActionsToFinish(fs1)
-	c.WaitActionsToFinish(fs2)
+	c.WaitForExecutionsCompletion(fs1, exec1)
+	c.WaitForExecutionsCompletion(fs2, exec2)
 
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
 
