@@ -62,6 +62,9 @@ type Settings struct {
 	AllowSpecialFloats bool
 }
 
+var errInvalidJSON = errors.New("file does not contain valid JSON")
+var errInvalidFormat = fmt.Errorf("file contains valid JSON, but its structure is not supported")
+
 // ContentType returns the content type of the file.
 func (j *JSON) ContentType(ctx context.Context) string {
 	return "application/json; charset=UTF-8"
@@ -88,70 +91,93 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 
 	var tok json.Token
 	dec := json.NewDecoder(r)
+	dec.UseNumber()
 
-	// Read "[{".
-	for {
-		tok, err = dec.Token()
-		if err != nil {
-			break
-		}
-		if tok == json.Delim('[') {
-			tok, err = dec.Token()
-			if err != nil || tok == json.Delim('{') {
-				break
-			}
-		}
-	}
-	if err != nil {
+	isObject := false
+
+	jsonError := func(err error) error {
 		if err == io.EOF {
-			return nil
+			return errInvalidJSON
+		}
+		if _, ok := err.(*json.SyntaxError); ok {
+			return errInvalidJSON
+		}
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			return errInvalidFormat
 		}
 		return err
 	}
 
-	// Read the records.
-	record := map[string]any{}
-Records:
-	for {
+	// Read '[' or '{'.
+	tok, err = dec.Token()
+	if err != nil && tok == json.Delim('{') {
+		isObject = true
+		// Read a property name.
 		tok, err = dec.Token()
 		if err != nil {
-			break
+			return jsonError(err)
 		}
-		switch tok := tok.(type) {
-		case string:
-			var key = tok
-			var value any
-			err = dec.Decode(&value)
-			if err != nil {
-				break Records
+		if tok == json.Delim('}') {
+			return errInvalidFormat
+		}
+		// Read '['.
+		tok, err = dec.Token()
+	}
+	if err != nil {
+		return jsonError(err)
+	}
+	if tok != json.Delim('[') {
+		return errInvalidFormat
+	}
+
+	// Read the records.
+	record := map[string]any{}
+	for dec.More() {
+		// Read '{...}'.
+		err = dec.Decode(&record)
+		if err != nil {
+			return jsonError(err)
+		}
+		// Convert nil properties to json.RawMessage("null").
+		for p, v := range record {
+			if v == nil {
+				record[p] = json.RawMessage("null")
 			}
-			if value == nil {
-				value = json.RawMessage("null")
-			}
-			record[key] = value
-		case json.Delim:
-			switch tok {
-			case '}':
-				err = records.Record(record)
-				if err != nil {
-					return err
-				}
-			case '{':
-				for k := range record {
-					delete(record, k)
-				}
-			case ']':
-				break Records
-			}
-		default:
-			panic("unreachable code")
+		}
+		err = records.Record(record)
+		if err != nil {
+			return err
+		}
+		clear(record)
+	}
+
+	// Read ']'.
+	tok, err = dec.Token()
+	if err != nil {
+		return jsonError(err)
+	}
+
+	// Read '}'.
+	if isObject {
+		tok, err = dec.Token()
+		if err != nil {
+			return jsonError(err)
+		}
+		if tok != json.Delim('}') {
+			return errInvalidFormat
 		}
 	}
-	for err == nil {
-		_, err = dec.Token()
-	}
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("file contains invalid JSON: %s", err)
+
+	// Read EOF.
+	tok, err = dec.Token()
+	if err != io.EOF {
+		if err == nil {
+			return errInvalidFormat
+		}
+		if _, ok := err.(*json.SyntaxError); ok {
+			return errInvalidFormat
+		}
+		return err
 	}
 
 	return nil
