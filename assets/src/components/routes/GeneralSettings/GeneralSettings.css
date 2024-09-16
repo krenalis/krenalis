@@ -28,18 +28,6 @@
 	margin: 30px 0 50px 0;
 }
 
-.general-settings .schema-combobox-item {
-	font-size: 14px;
-	font-weight: 600;
-}
-
-.general-settings .schema-combobox-item__name,
-.general-settings .schema-combobox-item__type {
-	font-size: 13px;
-	opacity: 0.7;
-	font-weight: 400;
-}
-
 .general-settings__displayed-properties-title {
 	font-size: 18px;
 	font-weight: 600;

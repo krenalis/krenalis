@@ -1,0 +1,117 @@
+.combobox {
+	position: relative;
+}
+
+.combobox-list {
+	visibility: hidden;
+	opacity: 0;
+	transform: scale(0.75);
+	height: 0;
+	width: 0;
+	position: absolute;
+	left: 0;
+	top: 100%;
+	max-height: 300px;
+	transition:
+		opacity 0.5s,
+		transform 0.5s;
+	z-index: 10;
+	box-shadow: var(--sl-shadow-medium);
+}
+
+.combobox--open .combobox-list {
+	visibility: visible;
+	opacity: 1;
+	transform: scale(1);
+	width: 100%;
+	height: auto;
+}
+
+.combobox-input {
+	position: relative;
+}
+
+.combobox .combobox-input__caret-icon {
+	will-change: transform;
+	transition: transform 0.2s;
+	pointer-events: none;
+}
+
+.combobox--open .combobox-input__caret-icon {
+	transform: rotate(-180deg);
+}
+
+.combobox-input__error {
+	position: absolute;
+	font-size: 11px;
+	color: var(--sl-color-danger-500);
+	margin-top: 2px;
+}
+
+.combobox-input__error-icon {
+	color: var(--sl-color-danger-500);
+	font-size: 12px;
+}
+
+.combobox--expression .combobox-list {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+.combobox-input sl-input::part(input) {
+	font-family: 'Source Code Pro', monospace;
+	font-size: 14px;
+}
+
+.combobox-list__tabs::part(nav) {
+	position: sticky;
+	top: 0;
+	background-color: var(--bg-primary);
+	z-index: 10;
+}
+
+.combobox-list__function {
+	padding: var(--sl-spacing-medium);
+	background-color: var(--sl-color-neutral-100);
+	border-bottom: 1px solid var(--border-primary);
+}
+
+.combobox-list__function-signature,
+.combobox-list__function-param {
+	font-family: 'Source Code Pro', monospace !important;
+	font-size: 15px;
+}
+
+.combobox-list__function-param {
+	transition: color 0.3s;
+}
+
+.combobox-list__function-param--current {
+	color: var(--sl-color-primary-600);
+}
+
+.combobox-list__function-description {
+	font-size: 14px;
+	opacity: 0.8;
+}
+
+.combobox-list .function-item__head-name,
+.combobox-list .function-item__head-signature {
+	font-family: 'Source Code Pro', monospace !important;
+}
+
+.combobox-list .function-item__head-params {
+	opacity: 0.8;
+	margin-left: 5px;
+	font-size: 14px;
+	transition: opacity 0.3s;
+}
+
+.combobox-list sl-menu-item:hover .function-item__head-params {
+	opacity: 1;
+}
+
+.combobox-list .function-item__description {
+	font-size: 13px;
+	opacity: 0.8;
+}

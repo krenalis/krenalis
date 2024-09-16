@@ -8,8 +8,8 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getTableKeyComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getTableKeyComboboxItems } from '../../helpers/getSchemaComboboxItems';
+import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionTable = () => {
 	const { handleError, api } = useContext(AppContext);
@@ -27,7 +27,7 @@ const ActionTable = () => {
 
 	const tableConfirmationButtonRef = useRef<any>();
 	const tableKeySectionRef = useRef<any>();
-	const tableKeyListRef = useRef<any>();
+	const tableKeyRef = useRef<any>();
 	const tableRef = useRef({
 		lastConfirmation: '',
 		lastUpdate: '',
@@ -60,14 +60,13 @@ const ActionTable = () => {
 		setAction(a);
 	};
 
-	const onTableKeyPropertyUpdate = (e) => {
-		const value = e.target.value;
+	const onTableKeyPropertyUpdate = (_: string, value: string) => {
 		const a = { ...action };
 		a.TableKeyProperty = value;
 		setAction(a);
 	};
 
-	const onTableKeyPropertySelect = (_, value) => {
+	const onTableKeyPropertySelect = (_: string, value: string) => {
 		const a = { ...action };
 		a.TableKeyProperty = value;
 		setAction(a);
@@ -95,7 +94,7 @@ const ActionTable = () => {
 			setAction(a);
 			setTimeout(() => {
 				let scrollSection = transformationSectionRef.current;
-				if (tableKeyListRef.current != null) {
+				if (tableKeyRef.current != null) {
 					scrollSection = tableKeySectionRef.current;
 				}
 				const top = scrollSection.getBoundingClientRect().top;
@@ -135,17 +134,15 @@ const ActionTable = () => {
 					ref={tableKeySectionRef}
 					className={`action__table-key-section${isTransformationDisabled ? ' action__table-key-section--disabled' : ''}`}
 				>
-					<div className='action__table-key-property'>
-						<ComboBoxInput
-							value={action.TableKeyProperty}
-							comboBoxListRef={tableKeyListRef}
+					<div className='action__table-key-property' ref={tableKeyRef}>
+						<Combobox
+							initialValue={action.TableKeyProperty}
 							onInput={onTableKeyPropertyUpdate}
-							disabled={isTransformationDisabled}
-						/>
-						<ComboBoxList
-							ref={tableKeyListRef}
+							name='table-key'
 							items={tableKeyComboboxItems}
 							onSelect={onTableKeyPropertySelect}
+							disabled={isTransformationDisabled}
+							isExpression={false}
 						/>
 					</div>
 				</Section>

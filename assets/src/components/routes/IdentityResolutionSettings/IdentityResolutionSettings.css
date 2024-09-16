@@ -4,6 +4,10 @@
 	padding: 30px;
 }
 
+.identifiers .combobox {
+	width: 100%;
+}
+
 .identifiers > sl-spinner {
 	display: block;
 	margin: auto;
@@ -27,22 +31,6 @@
 
 .identifiers .combobox-input sl-input .combobox-input__error-icon {
 	font-size: 9px;
-}
-
-.identifiers .schema-combobox-item {
-	font-size: 14px;
-	font-weight: 600;
-}
-
-.identifiers .schema-combobox-item__name {
-	font-weight: 400;
-	font-size: 13px;
-	opacity: 0.7;
-}
-
-.identifiers .schema-combobox-item__type {
-	font-size: 13px;
-	opacity: 0.7;
 }
 
 .identifiers__identifier {

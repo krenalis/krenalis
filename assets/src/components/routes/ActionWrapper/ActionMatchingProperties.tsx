@@ -1,16 +1,13 @@
-import React, { useRef, useContext, useMemo } from 'react';
+import React, { useContext, useMemo } from 'react';
 import Section from '../../base/Section/Section';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
 import { flattenSchema, TransformedMapping } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
+import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionMatchingProperties = () => {
 	const { connection, action, setAction, actionType, mode } = useContext(ActionContext);
-
-	const internalMatchingPropertyListRef = useRef(null);
-	const externalMatchingPropertyListRef = useRef(null);
 
 	const flatInputMatchingSchema = useMemo(() => flattenSchema(actionType.InputMatchingSchema), [actionType]);
 
@@ -44,11 +41,9 @@ const ActionMatchingProperties = () => {
 		return checkIfPropertyExists(action.MatchingProperties.External, flatExternalMatchingPropertiesSchema);
 	}, [action]);
 
-	const onUpdateMatchingProperties = (e) => {
+	const onUpdateMatchingProperties = (name: string, value: string) => {
 		const a = { ...action };
-		const type = e.target.dataset.type;
-		const value = e.target.value;
-		if (type === 'Internal') {
+		if (name === 'internal') {
 			a.MatchingProperties!.Internal = value;
 		} else {
 			a.MatchingProperties!.External = value;
@@ -63,10 +58,9 @@ const ActionMatchingProperties = () => {
 		setAction(a);
 	};
 
-	const onSelectMatchingProperties = (input, value) => {
+	const onSelectMatchingProperties = (name: string, value: string) => {
 		const a = { ...action };
-		const type = input.dataset.type;
-		if (type === 'Internal') {
+		if (name === 'internal') {
 			a.MatchingProperties!.Internal = value;
 		} else {
 			a.MatchingProperties!.External = value;
@@ -88,35 +82,29 @@ const ActionMatchingProperties = () => {
 			padded={true}
 		>
 			<div className='action__matching-properties'>
-				<ComboBoxInput
-					comboBoxListRef={internalMatchingPropertyListRef}
+				<Combobox
 					onInput={onUpdateMatchingProperties}
-					value={action.MatchingProperties!.Internal}
+					initialValue={action.MatchingProperties!.Internal}
 					label={`User's schema property`}
-					data-type='Internal'
+					name='internal'
 					className='action__transformation-input-property'
-					caret={true}
-					error={internalPropertyError}
-				></ComboBoxInput>
-				<ComboBoxList
-					ref={internalMatchingPropertyListRef}
 					items={getSchemaComboboxItems(actionType.InputMatchingSchema)}
 					onSelect={onSelectMatchingProperties}
+					isExpression={false}
+					caret={true}
+					error={internalPropertyError}
 				/>
 				<div className='action__matching-properties-equal'>=</div>
-				<ComboBoxInput
-					comboBoxListRef={externalMatchingPropertyListRef}
+				<Combobox
 					onInput={onUpdateMatchingProperties}
 					label={`${connection.name}'s property`}
-					value={action.MatchingProperties!.External}
-					data-type='External'
-					caret={true}
-					error={externalPropertyError}
-				></ComboBoxInput>
-				<ComboBoxList
-					ref={externalMatchingPropertyListRef}
+					initialValue={action.MatchingProperties!.External}
+					name='external'
+					isExpression={false}
 					items={externalMatchingPropertiesItems}
 					onSelect={onSelectMatchingProperties}
+					caret={true}
+					error={externalPropertyError}
 				/>
 			</div>
 		</Section>

@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import './IdentityResolutionSettings.css';
 import Section from '../../base/Section/Section';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -13,10 +12,11 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Identifiers } from '../../../lib/api/types/identifiers';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import { Link } from '../../base/Link/Link';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import { Combobox } from '../../base/Combobox/Combobox';
 
 const IdentityResolutionSettings = () => {
 	const [runOnBatchImport, setRunOnBatchImport] = useState<boolean>(false);
@@ -29,8 +29,6 @@ const IdentityResolutionSettings = () => {
 
 	const { api, handleError, showStatus, workspaces, setIsLoadingWorkspaces, selectedWorkspace } =
 		useContext(AppContext);
-
-	const identifiersListRef = useRef(null);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -50,21 +48,13 @@ const IdentityResolutionSettings = () => {
 		fetchData();
 	}, [selectedWorkspace]);
 
-	const onSelectIdentifier = (input, value) => {
-		const pos = Number(input.name);
-		const ident = [...identifiers];
-		ident[pos - 1] = value;
-		setIdentifiers(ident);
-	};
-
 	const onAddIdentifier = () => {
 		const ident = [...identifiers];
 		ident.push('');
 		setIdentifiers(ident);
 	};
 
-	const onUpdateIdentifier = (e) => {
-		const { name, value } = e.target;
+	const onUpdateIdentifier = (name: string, value: string) => {
 		const pos = Number(name);
 		const ident = [...identifiers];
 		ident[pos - 1] = value;
@@ -176,12 +166,14 @@ const IdentityResolutionSettings = () => {
 							return (
 								<div key={position} className='identifiers__identifier'>
 									<div className='identifiers__identifier-position'>{position}</div>
-									<ComboBoxInput
+									<Combobox
 										className='identifiers__identifier-input'
-										comboBoxListRef={identifiersListRef}
 										name={String(position)}
-										value={identifier}
+										initialValue={identifier}
 										onInput={onUpdateIdentifier}
+										onSelect={onUpdateIdentifier}
+										isExpression={false}
+										items={identifiersComboboxItems}
 										size='small'
 									/>
 									<SlDropdown>
@@ -224,11 +216,6 @@ const IdentityResolutionSettings = () => {
 						>
 							<SlIcon name='plus' />
 						</SlButton>
-						<ComboBoxList
-							ref={identifiersListRef}
-							items={identifiersComboboxItems}
-							onSelect={onSelectIdentifier}
-						/>
 						<SlButton
 							className='identifiers__save-button'
 							onClick={onSave}

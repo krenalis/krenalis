@@ -12,23 +12,22 @@ import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { UnprocessableError } from '../../../lib/api/errors';
 import { ObjectType } from '../../../lib/api/types/types';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { flattenSchema } from '../../../lib/core/action';
 import { checkDisplayedProperty } from './GeneralSettings.helpers';
+import { Combobox } from '../../base/Combobox/Combobox';
 
 const GeneralSettings = () => {
 	const [userSchema, setUserSchema] = useState<ObjectType>();
 	const [name, setName] = useState<string>('');
 	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
-	const [image, setImage] = useState<string>('');
-	const [firstName, setFirstName] = useState<string>('');
-	const [lastName, setLastName] = useState<string>('');
-	const [information, setInformation] = useState<string>('');
+	const [image, setImage] = useState<string>();
+	const [firstName, setFirstName] = useState<string>();
+	const [lastName, setLastName] = useState<string>();
+	const [information, setInformation] = useState<string>();
 	const [isDeleteConfirmationDialogOpen, setIsDeleteConfirmationDialogOpen] = useState<boolean>(false);
 
 	const deleteButtonRef = useRef<any>();
-	const userSchemaListRef = useRef<any>();
 
 	const {
 		api,
@@ -103,13 +102,12 @@ const GeneralSettings = () => {
 		}
 	};
 
-	const onUpdateDisplayedProperty = (e) => {
-		updateProperty(e.target.name, e.target.value);
+	const onUpdateDisplayedProperty = (name: string, value: string) => {
+		updateProperty(name, value);
 	};
 
-	const onSelectDisplayedProperty = (input, v) => {
-		const n = input.name;
-		updateProperty(n, v);
+	const onSelectDisplayedProperty = (name: string, value: string) => {
+		updateProperty(name, value);
 	};
 
 	const onSave = async () => {
@@ -188,52 +186,63 @@ const GeneralSettings = () => {
 					The properties of the user schema shown in the user pages
 				</div>
 				<div className='general-settings__displayed-properties-fields'>
-					<ComboBoxInput
-						className='general-settings__displayed-first-name'
-						label='First name'
-						comboBoxListRef={userSchemaListRef}
-						onInput={onUpdateDisplayedProperty}
-						value={firstName}
-						name='firstName'
-						error={firstNameError && firstNameError}
-						caret={true}
-					/>
-					<ComboBoxInput
-						className='general-settings__displayed-last-name'
-						label='Last name'
-						comboBoxListRef={userSchemaListRef}
-						onInput={onUpdateDisplayedProperty}
-						value={lastName}
-						name='lastName'
-						error={lastNameError && lastNameError}
-						caret={true}
-					/>
-					<ComboBoxInput
-						className='general-settings__displayed-information'
-						label='Additional line'
-						comboBoxListRef={userSchemaListRef}
-						onInput={onUpdateDisplayedProperty}
-						value={information}
-						name='information'
-						error={informationError && informationError}
-						caret={true}
-					/>
-					<ComboBoxInput
-						className='general-settings__displayed-image'
-						label='Image'
-						comboBoxListRef={userSchemaListRef}
-						onInput={onUpdateDisplayedProperty}
-						value={image}
-						name='image'
-						error={imageError && imageError}
-						caret={true}
-					/>
+					{firstName !== undefined && (
+						<Combobox
+							className='general-settings__displayed-first-name'
+							label='First name'
+							onInput={onUpdateDisplayedProperty}
+							onSelect={onSelectDisplayedProperty}
+							items={userSchemaComboboxItems}
+							initialValue={firstName}
+							name='firstName'
+							isExpression={false}
+							error={firstNameError && firstNameError}
+							caret={true}
+						/>
+					)}
+					{lastName !== undefined && (
+						<Combobox
+							className='general-settings__displayed-last-name'
+							label='Last name'
+							onInput={onUpdateDisplayedProperty}
+							onSelect={onSelectDisplayedProperty}
+							items={userSchemaComboboxItems}
+							initialValue={lastName}
+							name='lastName'
+							isExpression={false}
+							error={lastNameError && lastNameError}
+							caret={true}
+						/>
+					)}
+					{information !== undefined && (
+						<Combobox
+							className='general-settings__displayed-information'
+							label='Additional line'
+							onInput={onUpdateDisplayedProperty}
+							onSelect={onSelectDisplayedProperty}
+							items={userSchemaComboboxItems}
+							initialValue={information}
+							name='information'
+							isExpression={false}
+							error={informationError && informationError}
+							caret={true}
+						/>
+					)}
+					{image !== undefined && (
+						<Combobox
+							className='general-settings__displayed-image'
+							label='Image'
+							onInput={onUpdateDisplayedProperty}
+							onSelect={onSelectDisplayedProperty}
+							items={userSchemaComboboxItems}
+							initialValue={image}
+							name='image'
+							isExpression={false}
+							error={imageError && imageError}
+							caret={true}
+						/>
+					)}
 				</div>
-				<ComboBoxList
-					ref={userSchemaListRef}
-					items={userSchemaComboboxItems}
-					onSelect={onSelectDisplayedProperty}
-				/>
 			</div>
 			<SlButton className='general-settings__save-workspace-button' variant='primary' onClick={onSave}>
 				Save

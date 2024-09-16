@@ -16,7 +16,7 @@ import { Compression } from '../api/types/connection';
 import { FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
-import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboBoxItems';
+import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
 
 const SCHEDULE_PERIODS = {
 	5: '5m',

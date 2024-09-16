@@ -4,7 +4,7 @@ import {
 	getSchemaComboboxItems,
 	getIdentityPropertyComboboxItems,
 	getLastChangeTimeComboboxItems,
-} from '../../helpers/getSchemaComboBoxItems';
+} from '../../helpers/getSchemaComboboxItems';
 import {
 	TransformedAction,
 	TransformedActionType,
@@ -16,7 +16,6 @@ import {
 } from '../../../lib/core/action';
 import { RAW_TRANSFORMATION_FUNCTIONS } from './Action.constants';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import Section from '../../base/Section/Section';
 import EditorWrapper from '../../base/EditorWrapper/EditorWrapper';
 import Accordion from '../../base/Accordion/Accordion';
@@ -49,7 +48,7 @@ import {
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
-import Type, { ObjectType, Property } from '../../../lib/api/types/types';
+import Type, { ObjectType, Property, typeNameToIconName } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -58,6 +57,8 @@ import Workspace from '../../../lib/api/types/workspace';
 import { ActionToSet, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
 import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
+import { Combobox } from '../../base/Combobox/Combobox';
+import { ComboboxItem } from '../../base/Combobox/Combobox.types';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -85,9 +86,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		isEditing,
 	} = useContext(ActionContext);
 
-	const mappingListRef = useRef(null);
-	const identityPropertyListRef = useRef(null);
-	const lastChangeTimePropertyListRef = useRef(null);
 	const isFirstCompilation = useRef(true);
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
 
@@ -278,14 +276,12 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const debouncedUpdateMapping = useMemo(() => debounceWithAbort(updateMapping, 500), [actionType, action]);
 
-	const onUpdateMapping = async (e: any) => {
-		const target = e.target;
-		let { name, value } = target;
+	const onUpdateMapping = async (name: string, value: string) => {
 		debouncedUpdateMapping(name, value);
 	};
 
-	const onSelectProperty = async (input, value) => {
-		if (input.name === 'identityProperty') {
+	const onSelectProperty = async (name: string, value: string) => {
+		if (name === 'identityProperty') {
 			const a = { ...action };
 			a.IdentityProperty = value;
 			setAction(a);
@@ -293,7 +289,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				isFirstCompilation.current = false;
 			}
 			return;
-		} else if (input.name === 'lastChangeTimeProperty') {
+		} else if (name === 'lastChangeTimeProperty') {
 			const a = { ...action };
 			a.LastChangeTimeProperty = value;
 			if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.InputSchema)) {
@@ -302,12 +298,11 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			setAction(a);
 			return;
 		}
-		await updateMapping(input.name, value);
+		await updateMapping(name, value);
 	};
 
-	const onUpdateIdentityProperty = async (e) => {
+	const onUpdateIdentityProperty = async (_: string, value: string) => {
 		const a = { ...action };
-		const value = e.target.value;
 		a.IdentityProperty = value;
 		setAction(a);
 		if (isFirstCompilation.current) {
@@ -315,9 +310,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const onUpdateLastChangeTimeProperty = async (e) => {
-		const target = e.target;
-		let { value } = target;
+	const onUpdateLastChangeTimeProperty = async (_: string, value: string) => {
 		const a = { ...action };
 		a.LastChangeTimeProperty = value;
 		if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.InputSchema)) {
@@ -371,8 +364,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			selectedWorkspace={selectedWorkspace}
 			action={action}
 			setAction={setAction}
-			mappingListRef={mappingListRef}
 			onUpdateMapping={onUpdateMapping}
+			mappingItems={mappingList}
+			onSelectMappingItem={onSelectProperty}
 			isTransformationDisabled={isTransformationDisabled}
 			transformationLanguages={transformationLanguages}
 			selectedLanguage={selectedLanguage}
@@ -399,13 +393,15 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								Identity
 								<span className='action__transformation-special-properties-asterisk'>*</span>:
 							</div>
-							<ComboBoxInput
-								comboBoxListRef={identityPropertyListRef}
+							<Combobox
 								onInput={onUpdateIdentityProperty}
-								value={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
+								onSelect={onUpdateIdentityProperty}
 								name='identityProperty'
+								initialValue={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
 								disabled={isTransformationDisabled || identityPropertyList.length === 0}
 								className='action__transformation-input-property'
+								isExpression={false}
+								items={identityPropertyList}
 								caret={true}
 								clearable={action.IdentityProperty?.length > 0}
 								error={
@@ -422,14 +418,16 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 						<div className='action__transformation-last-change-time-property'>
 							<div className='action__transformation-last-change-time'>
 								<div className='action__transformation-special-properties-label'>Last change time:</div>
-								<ComboBoxInput
-									comboBoxListRef={lastChangeTimePropertyListRef}
+								<Combobox
 									onInput={onUpdateLastChangeTimeProperty}
-									value={action.LastChangeTimeProperty!}
+									onSelect={onUpdateLastChangeTimeProperty}
+									initialValue={action.LastChangeTimeProperty!}
 									name='lastChangeTimeProperty'
 									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
+									isExpression={false}
 									caret={true}
+									items={lastChangeTimeList}
 									clearable={action.LastChangeTimeProperty?.length > 0}
 									error={lastChangeTimePropertyError}
 									size='small'
@@ -492,13 +490,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					inputSchema={actionType.InputSchema}
 					outputSchema={actionType.OutputSchema}
 				/>
-				<ComboBoxList ref={identityPropertyListRef} items={identityPropertyList} onSelect={onSelectProperty} />
-				<ComboBoxList
-					ref={lastChangeTimePropertyListRef}
-					items={lastChangeTimeList}
-					onSelect={onSelectProperty}
-				/>
-				<ComboBoxList ref={mappingListRef} items={mappingList} onSelect={onSelectProperty} />
 			</Section>
 		</div>
 	);
@@ -511,8 +502,9 @@ interface TransformationBoxProps {
 	selectedWorkspace: number;
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction>>;
-	mappingListRef: React.MutableRefObject<any>;
-	onUpdateMapping: (...args: any) => void;
+	onUpdateMapping: (name: string, value: string) => void;
+	mappingItems: ComboboxItem[];
+	onSelectMappingItem: (name: string, value: string) => void;
 	isTransformationDisabled: boolean;
 	transformationLanguages: string[];
 	selectedLanguage: string;
@@ -569,7 +561,8 @@ const TransformationBox = ({
 	selectedWorkspace,
 	action,
 	setAction,
-	mappingListRef,
+	mappingItems,
+	onSelectMappingItem,
 	onUpdateMapping,
 	isTransformationDisabled,
 	transformationLanguages,
@@ -692,16 +685,18 @@ const TransformationBox = ({
 						} as React.CSSProperties
 					}
 				>
-					<ComboBoxInput
-						comboBoxListRef={mappingListRef}
+					<Combobox
 						onInput={onUpdateMapping}
-						value={action.Transformation.Mapping[k].value}
+						initialValue={action.Transformation.Mapping[k].value}
 						name={k}
 						disabled={isTransformationDisabled || action.Transformation.Mapping[k].disabled === true}
 						className='action__transformation-input-property'
 						size='small'
 						error={action.Transformation.Mapping[k].error}
 						autocompleteExpressions={true}
+						isExpression={true}
+						items={mappingItems}
+						onSelect={onSelectMappingItem}
 					>
 						{isRequired && (
 							<div className='action__transformation-property-icon' slot='prefix'>
@@ -720,7 +715,7 @@ const TransformationBox = ({
 								</SlTooltip>
 							</div>
 						)}
-					</ComboBoxInput>
+					</Combobox>
 					<div className='action__transformation-mapping-arrow'>
 						<SlIcon name='arrow-right' />
 					</div>
@@ -736,7 +731,9 @@ const TransformationBox = ({
 								? ' action__transformation-output-property--indented'
 								: ''
 						}`}
-					/>
+					>
+						<SlIcon slot='suffix' name={typeNameToIconName[action.Transformation.Mapping[k].type]} />
+					</SlInput>
 				</div>,
 			);
 		}

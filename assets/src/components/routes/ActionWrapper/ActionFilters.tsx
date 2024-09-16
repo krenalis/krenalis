@@ -1,12 +1,12 @@
-import React, { useRef, useContext, ReactNode } from 'react';
+import React, { useContext, ReactNode } from 'react';
 import Section from '../../base/Section/Section';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboBoxItems';
+import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import { Combobox } from '../../base/Combobox/Combobox';
 
 const operatorOptions = {
 	1: 'is',
@@ -14,8 +14,6 @@ const operatorOptions = {
 };
 
 const ActionFilters = () => {
-	const conditionListRef = useRef(null);
-
 	const { action, setAction, actionType } = useContext(ActionContext);
 
 	const onAddCondition = () => {
@@ -37,24 +35,31 @@ const ActionFilters = () => {
 		setAction(a);
 	};
 
-	const onUpdateConditionFragment = (e) => {
+	const onUpdatePropertyFragment = (name: string, value: string) => {
 		const a = { ...action };
-		const id = e.target.closest('.action__filters-condition').dataset.id;
-		const fragment = e.target.dataset.fragment;
-		let value: string;
-		if (fragment === 'Operator') {
-			value = operatorOptions[e.target.value];
-		} else {
-			value = e.target.value;
-		}
-		a.Filter!.Conditions[id][fragment] = value;
+		const id = Number(name.split('-')[1]);
+		a.Filter!.Conditions[id]['Property'] = value;
 		setAction(a);
 	};
 
-	const onSelectConditionListItem = (input, value) => {
+	const onSelectPropertyFragment = (name: string, value: string) => {
 		const a = { ...action };
-		const id = input.closest('.action__filters-condition').dataset.id;
+		const id = Number(name.split('-')[1]);
 		a.Filter!.Conditions[id]['Property'] = value;
+		setAction(a);
+	};
+
+	const onChangeOperatorFragment = (e: any) => {
+		const a = { ...action };
+		const id = Number(e.target.name.split('-')[1]);
+		a.Filter!.Conditions[id]['Operator'] = operatorOptions[e.target.value];
+		setAction(a);
+	};
+
+	const onInputValueFragment = (e: any) => {
+		const a = { ...action };
+		const id = Number(e.target.name.split('-')[1]);
+		a.Filter!.Conditions[id]['Value'] = e.target.value;
 		setAction(a);
 	};
 
@@ -74,22 +79,24 @@ const ActionFilters = () => {
 		for (const [i, condition] of action.Filter.Conditions.entries()) {
 			let conditionInput: ReactNode, operatorSelect: ReactNode, valueInput: ReactNode;
 			conditionInput = (
-				<ComboBoxInput
-					comboBoxListRef={conditionListRef}
-					onInput={onUpdateConditionFragment}
-					value={condition.Property}
+				<Combobox
+					onInput={onUpdatePropertyFragment}
+					onSelect={onSelectPropertyFragment}
+					initialValue={condition.Property}
 					className='action__filters-property'
 					size='small'
-					data-fragment='Property'
+					name={`property-${i}`}
+					items={getSchemaComboboxItems(actionType.InputSchema)}
+					isExpression={false}
 				/>
 			);
 			operatorSelect = (
 				<SlSelect
-					data-fragment='Operator'
 					size='small'
+					name={`operator-${i}`}
 					className='action__filters-operator'
 					value={Object.keys(operatorOptions).find((key) => operatorOptions[key] === condition.Operator)}
-					onSlChange={onUpdateConditionFragment}
+					onSlChange={onChangeOperatorFragment}
 				>
 					{Object.keys(operatorOptions).map((k) => (
 						<SlOption key={k} value={k}>
@@ -100,15 +107,15 @@ const ActionFilters = () => {
 			);
 			valueInput = (
 				<SlInput
-					data-fragment='Value'
 					size='small'
 					className='action__filters-value'
 					value={condition.Value}
-					onSlInput={onUpdateConditionFragment}
+					onSlInput={onInputValueFragment}
+					name={`value-${i}`}
 				/>
 			);
 			conditions.push(
-				<div key={i} className='action__filters-condition' data-id={i}>
+				<div key={i} className='action__filters-condition'>
 					{conditionInput}
 					{operatorSelect}
 					{valueInput}
@@ -144,11 +151,6 @@ const ActionFilters = () => {
 				</SlSelect>
 			)}
 			{conditions}
-			<ComboBoxList
-				ref={conditionListRef}
-				items={getSchemaComboboxItems(actionType.InputSchema)}
-				onSelect={onSelectConditionListItem}
-			/>
 			<SlButton className='action__filters-add-condition' size='small' variant='neutral' onClick={onAddCondition}>
 				Add new condition
 			</SlButton>

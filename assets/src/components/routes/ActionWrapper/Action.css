@@ -121,22 +121,6 @@
 	margin: 10px 25px;
 }
 
-.action__filters-condition .schema-combobox-item {
-	font-size: 14px;
-	font-weight: 600;
-}
-
-.action__filters-condition .schema-combobox-item__name {
-	font-weight: 400;
-	font-size: 13px;
-	opacity: 0.7;
-}
-
-.action__filters-condition .schema-combobox-item__type {
-	font-size: 13px;
-	opacity: 0.7;
-}
-
 .action__filters-add-condition {
 	margin: 10px 25px;
 }
@@ -243,22 +227,6 @@
 
 .action__transformation-mapping:last-child {
 	margin-bottom: 0;
-}
-
-.action .schema-combobox-item {
-	font-size: 14px;
-	font-weight: 600;
-}
-
-.action .schema-combobox-item__name {
-	font-weight: 400;
-	font-size: 13px;
-	opacity: 0.7;
-}
-
-.action .schema-combobox-item__type {
-	font-size: 13px;
-	opacity: 0.7;
 }
 
 .action__transformation-mapping-arrow {

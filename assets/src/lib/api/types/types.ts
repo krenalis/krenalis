@@ -144,6 +144,26 @@ interface MapType {
 	valueType?: Type;
 }
 
+const typeNameToIconName: Record<TypeName, string> = {
+	Boolean: 'type-bold',
+	Int: '123',
+	Uint: '123',
+	Float: '123',
+	Decimal: '123',
+	DateTime: 'calendar-date',
+	Date: 'calendar-date',
+	Time: 'clock',
+	Year: '123',
+	UUID: 'fonts',
+	JSON: 'filetype-json',
+	Inet: 'fonts',
+	Text: 'fonts',
+	Array: 'input-cursor',
+	Object: 'braces',
+	Map: 'braces-asterisk',
+};
+
+export { typeNameToIconName };
 export default Type;
 export type {
 	Property,

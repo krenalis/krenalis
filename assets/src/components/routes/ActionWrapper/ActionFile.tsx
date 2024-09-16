@@ -30,11 +30,11 @@ import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import actionContext from '../../../context/ActionContext';
 import { flattenSchema } from '../../../lib/core/action';
 import { Popover } from '../../base/Popover/Popover';
-import { ComboBoxInput, ComboBoxList } from '../../base/ComboBox/ComboBox';
 import {
 	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,
-} from '../../helpers/getSchemaComboBoxItems';
+} from '../../helpers/getSchemaComboboxItems';
+import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionFile = () => {
 	const [fileFields, setFileFields] = useState<ConnectorFieldInterface[]>([]);
@@ -273,7 +273,6 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const getCompletePathTimeoutID = useRef<number>();
 	const sheetsSelectRef = useRef<any>();
 	const fileConfirmButtonRef = useRef<any>();
-	const fileOrderingPropertyListRef = useRef<any>();
 
 	const pathRef = useRef({
 		lastConfirmation: '',
@@ -521,16 +520,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		setAction(a);
 	};
 
-	const onOrderingPropertyChange = (e) => {
+	const onOrderingPropertyChange = (_: string, value: string) => {
 		const a = { ...action };
-		a.FileOrderingPropertyPath = e.target.value;
+		a.FileOrderingPropertyPath = value;
 		setAction(a);
 	};
 
-	const onOrderingPropertySelect = (input, value) => {
-		if (input.name !== 'ordering') {
-			return;
-		}
+	const onOrderingPropertySelect = (_: string, value: string) => {
 		const a = { ...action };
 		a.FileOrderingPropertyPath = value;
 		setAction(a);
@@ -751,19 +747,16 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			</SlSelect>
 			{actionType.Fields.includes('FileOrderingProperty') && (
 				<div className='action__file-ordering'>
-					<ComboBoxInput
-						value={action.FileOrderingPropertyPath}
-						comboBoxListRef={fileOrderingPropertyListRef}
+					<Combobox
+						initialValue={action.FileOrderingPropertyPath}
 						onInput={onOrderingPropertyChange}
+						onSelect={onOrderingPropertySelect}
+						items={getOrderingPropertyPathComboboxItems(actionType.InputSchema)}
 						label='Order users by'
+						isExpression={false}
 						error={orderingPropertyError && orderingPropertyError}
 						name='ordering'
 						caret={true}
-					/>
-					<ComboBoxList
-						ref={fileOrderingPropertyListRef}
-						items={getOrderingPropertyPathComboboxItems(actionType.InputSchema)}
-						onSelect={onOrderingPropertySelect}
 					/>
 				</div>
 			)}

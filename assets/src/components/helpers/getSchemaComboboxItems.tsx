@@ -1,7 +1,8 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import { TransformedMapping, flattenSchema } from '../../lib/core/action';
-import { DecimalType, ObjectType } from '../../lib/api/types/types';
-import { ComboboxItem } from '../base/ComboBox/ComboBox.types';
+import { DecimalType, ObjectType, typeNameToIconName } from '../../lib/api/types/types';
+import { ComboboxItem } from '../base/Combobox/Combobox.types';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): ComboboxItem[] => {
 	if (schema == null) {
@@ -93,13 +94,13 @@ const computeItems = (flatSchema: TransformedMapping) => {
 	const items: ComboboxItem[] = [];
 	for (const propertyName in flatSchema) {
 		let typ = flatSchema[propertyName].type;
-		if (typ === 'Int' || typ === 'Uint' || typ === 'Float') {
-			typ += `(${flatSchema[propertyName].size})`;
-		}
 		items.push({
 			content: (
-				<Fragment key={propertyName}>
-					<div className='schema-combobox-item'>
+				<div className='schema-combobox-item' key={propertyName}>
+					<div className='schema-combobox-item__type'>
+						<SlIcon name={typeNameToIconName[typ]} />
+					</div>
+					<div className='schema-combobox-item__text'>
 						{flatSchema[propertyName].label != null && flatSchema[propertyName].label !== '' ? (
 							<>
 								<div className='schema-combobox-item__label'>{flatSchema[propertyName].label}</div>
@@ -109,8 +110,7 @@ const computeItems = (flatSchema: TransformedMapping) => {
 							propertyName
 						)}
 					</div>
-					<div className='schema-combobox-item__type'>{typ}</div>
-				</Fragment>
+				</div>
 			),
 			term: propertyName,
 		});

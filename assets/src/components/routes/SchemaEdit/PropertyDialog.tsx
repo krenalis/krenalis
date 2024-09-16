@@ -13,6 +13,7 @@ import {
 	MapType,
 	TextType,
 	TypeName,
+	typeNameToIconName,
 	UintType,
 } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
@@ -666,6 +667,7 @@ const PropertyDialog = ({
 								>
 									{TYPE_NAMES.map((t) => (
 										<SlOption key={t} value={t}>
+											<SlIcon slot='prefix' name={typeNameToIconName[t]} />
 											{t}
 										</SlOption>
 									))}
@@ -685,6 +687,7 @@ const PropertyDialog = ({
 												if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
 													return (
 														<SlOption key={t} value={t}>
+															<SlIcon slot='prefix' name={typeNameToIconName[t]} />
 															{t}
 														</SlOption>
 													);
@@ -709,6 +712,7 @@ const PropertyDialog = ({
 												if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
 													return (
 														<SlOption key={t} value={t}>
+															<SlIcon slot='prefix' name={typeNameToIconName[t]} />
 															{t}
 														</SlOption>
 													);

@@ -349,3 +349,23 @@ sl-split-panel sl-icon[slot='divider'] {
 .rdrDateRangeWrapper .rdrDayToday .rdrDayNumber span:after {
 	background-color: var(--sl-color-primary-600) !important;
 }
+
+/* schema combobox items */
+
+.schema-combobox-item {
+	display: flex;
+	align-items: start;
+	gap: 10px;
+}
+
+.schema-combobox-item__name {
+	font-size: 13px;
+	opacity: 0.8;
+}
+
+.schema-combobox-item__type {
+	font-size: 18px;
+	opacity: 0.8;
+	position: relative;
+	top: 2px;
+}
