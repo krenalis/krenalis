@@ -147,40 +147,20 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 				if (i === expr.length) {
 					continue;
 				}
-				c = expr[i];
-				if (isComma(c)) {
-					if (stack.length === 0) {
-						return null;
-					}
-					stack[stack.length - 1].parameter += 1;
+				if (!isOpenParenthesis(expr[i])) {
+					i--;
 					continue;
 				}
-				if (isQuote(c)) {
-					state = 'string';
-					quote = c;
-					start = i;
-					continue;
+				const name = expr.slice(start, end);
+				if (name.includes('.')) {
+					return null;
 				}
-				if (isOpenParenthesis(c)) {
-					const name = expr.slice(start, end);
-					if (name.includes('.')) {
-						return null;
-					}
-					if (start <= index && index <= i) {
-						cursor.type = 'Function';
-					}
-					stack.push({ name: name, parameter: 0 });
-					continue;
+				if (start <= index && index <= i) {
+					cursor.type = 'Function';
+					cursor.pos = { start: start, end: end };
 				}
-				if (isCloseParenthesis(c)) {
-					if (stack.length === 0) {
-						return null;
-					}
-					stack.pop();
-					state = null;
-					continue;
-				}
-				return null;
+				stack.push({ name: name, parameter: 0 });
+				continue;
 			case 'string':
 				if (isBackslash(c)) {
 					i++;
