@@ -35,11 +35,15 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 	let end = 0;
 	let quote: string | null = null;
 
-	let i: number;
-	for (i = 0; i < expr.length; i++) {
+	const checkFunction = (i: number) => {
 		if (i === index && stack.length > 0) {
 			cursor.func = { ...stack[stack.length - 1] };
 		}
+	};
+
+	let i: number;
+	for (i = 0; i < expr.length; i++) {
+		checkFunction(i);
 		let c = expr[i];
 		switch (state) {
 			case null:
@@ -127,6 +131,7 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 					if (i === expr.length || !isAlfa(expr[i])) {
 						return null;
 					}
+					checkFunction(i);
 					continue;
 				}
 				state = null;
@@ -135,7 +140,10 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 					cursor.type = 'Property';
 					cursor.pos = { start: start, end: end };
 				}
-				i = skipSpaces(expr, i);
+				while (i < expr.length && isSpace(expr[i])) {
+					i++;
+					checkFunction(i);
+				}
 				if (i === expr.length) {
 					continue;
 				}
@@ -176,6 +184,7 @@ const parseMapExpression = (expr: string, index: number): ExpressionFragment | n
 			case 'string':
 				if (isBackslash(c)) {
 					i++;
+					checkFunction(i);
 					continue;
 				}
 				if (c === quote) {
@@ -241,13 +250,6 @@ function isQuote(c: string): boolean {
 
 function isSpace(c: string): boolean {
 	return c === ' ' || c === '\t' || c === '\n' || c === '\r';
-}
-
-function skipSpaces(s: string, i: number): number {
-	while (i < s.length && isSpace(s[i])) {
-		i++;
-	}
-	return i;
 }
 
 export { parseMapExpression, ExpressionFragment };
