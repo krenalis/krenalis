@@ -496,10 +496,10 @@ func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
 			}
 			// If the action execution ended with an error, make the test fail.
 			if exec.Error != "" {
-				c.t.Fatalf("an error occurred when running action %q on connection %q: %s", exec.Action, exec.ID, exec.Error)
+				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exec.Action, exec.ID, exec.Error)
 			}
 			if exec.Failed > 0 {
-				c.t.Fatalf("an error occurred when running action %q on connection %q: %d failed", exec.Action, exec.ID, exec.Failed)
+				c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exec.Action, exec.ID, exec.Failed)
 			}
 		}
 		if !completed {
