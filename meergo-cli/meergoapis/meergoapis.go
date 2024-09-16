@@ -86,7 +86,6 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Workspace", "1")
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot POST on %q: %s", url, err)

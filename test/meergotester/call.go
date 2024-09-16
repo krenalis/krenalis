@@ -69,7 +69,6 @@ func (c *Meergo) call(httpMethod, method string, body any, response any) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("X-Workspace", "1")
 
 	c.t.Logf("[info] %s %s", httpMethod, url)
 	resp, err := c.httpClient.Do(req)
