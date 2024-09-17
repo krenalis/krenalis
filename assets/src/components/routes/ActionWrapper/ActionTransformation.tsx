@@ -345,6 +345,17 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	};
 
 	const onOpenFullscreenTransformation = () => {
+		if (actionType.Fields.includes('MatchingProperties')) {
+			// If the matching properties are not defined, prevent the opening
+			// of testing mode and show an error. Displaying the same error
+			// during action testing in testing mode would be less clear.
+			const internal = action.MatchingProperties.Internal;
+			const external = action.MatchingProperties.External;
+			if (internal === '' || external === '') {
+				handleError('Matching properties cannot be empty');
+				return;
+			}
+		}
 		setIsFullscreenTransformationOpen(true);
 	};
 
