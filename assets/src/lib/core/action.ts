@@ -471,7 +471,15 @@ const transformInActionToSet = async (
 		inSchema = actionType.InputSchema;
 		outSchema = actionType.OutputSchema;
 		if (action.MatchingProperties?.External) {
-			outSchema.properties = outSchema.properties.filter((p) => p.name !== action.MatchingProperties.External);
+			// recompute the out schema to prevent updates in place on the
+			// version used by the UI.
+			const s = { name: 'Object', properties: [] };
+			for (const p of outSchema.properties) {
+				if (p.name !== action.MatchingProperties.External) {
+					s.properties.push(p);
+				}
+			}
+			outSchema = s as ObjectType;
 		}
 		func = {
 			Source: action.Transformation.Function.Source.trim(),
