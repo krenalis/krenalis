@@ -8,7 +8,7 @@ const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): Combob
 	if (schema == null) {
 		return [];
 	}
-	const isFlat = schema.name === null;
+	const isFlat = !Array.isArray(schema.properties);
 	if (!isFlat) {
 		schema = flattenSchema(schema as ObjectType);
 	}
