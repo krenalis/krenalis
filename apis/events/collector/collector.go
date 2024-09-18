@@ -196,23 +196,6 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// actions returns the app destination actions that are enabled, have the Events
-// target, and their connection is enabled.
-func (c *Collector) actions() []*state.Action {
-	var actions []*state.Action
-	for _, action := range c.state.Actions() {
-		if !action.Enabled || action.Target != state.Events {
-			continue
-		}
-		c := action.Connection()
-		if !c.Enabled || c.Role != state.Destination || c.Connector().Type != state.App {
-			continue
-		}
-		actions = append(actions, action)
-	}
-	return actions
-}
-
 // canCollectEvents reports whether the provided source connection can collect
 // events. It can collect events if it is enabled and has an enabled action, or
 // is enabled and has an enabled event destination with an enabled action on
@@ -235,7 +218,25 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	return nil, false
 }
 
-// HasEventDestinations reports whether source has an enabled event destination
+// eventDestinations returns the destination actions to which events from source
+// can be dispatched.
+func (c *Collector) eventDestinations(source *state.Connection) []*state.Action {
+	var actions []*state.Action
+	for _, id := range source.EventConnections {
+		c, ok := c.state.Connection(id)
+		if !ok || !c.Enabled {
+			continue
+		}
+		for _, action := range c.Actions() {
+			if action.Enabled && action.Target == state.Events {
+				actions = append(actions, action)
+			}
+		}
+	}
+	return actions
+}
+
+// hasEventDestinations reports whether source has an enabled event destination
 // with an enabled action on events.
 func (c *Collector) hasEventDestinations(source *state.Connection) bool {
 	for _, id := range source.EventConnections {
@@ -252,7 +253,7 @@ func (c *Collector) hasEventDestinations(source *state.Connection) bool {
 	return false
 }
 
-// HasImportEventsAction reports whether source has an enabled action that
+// hasImportEventsAction reports whether source has an enabled action that
 // import the events.
 func (c *Collector) hasImportEventsAction(source *state.Connection) bool {
 	for _, a := range source.Actions() {
@@ -263,7 +264,7 @@ func (c *Collector) hasImportEventsAction(source *state.Connection) bool {
 	return false
 }
 
-// HasImportUsersAction reports whether source has an enabled action that
+// hasImportUsersAction reports whether source has an enabled action that
 // import the users.
 func (c *Collector) hasImportUsersAction(source *state.Connection) bool {
 	for _, a := range source.Actions() {
@@ -689,17 +690,15 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	if c.hasEventDestinations(source) {
-		// Send the events to the dispatcher.
+	// Send the events to the dispatcher.
+	for _, action := range c.eventDestinations(source) {
 		for _, event := range batch {
-			for _, action := range c.actions() {
-				properties := event.AsProperties()
-				ok, err := filterApplies(action.Filter, properties)
-				if err != nil || !ok {
-					continue
-				}
-				c.dispatcher.Dispatch(event, action)
+			properties := event.AsProperties()
+			ok, err := filterApplies(action.Filter, properties)
+			if err != nil || !ok {
+				continue
 			}
+			c.dispatcher.Dispatch(event, action)
 		}
 	}
 
