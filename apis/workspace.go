@@ -543,23 +543,19 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
-	// Build the query to add and remove the connection from the respective event connections.
+	// Build the query to add the connection to the respective event connections.
 	var add string
 	if n.EventConnections != nil {
-		var ids string
-		if n.EventConnections != nil {
-			var b strings.Builder
-			for i, id := range n.EventConnections {
-				if i > 0 {
-					b.WriteByte(',')
-				}
-				b.WriteString(strconv.Itoa(id))
+		var b strings.Builder
+		for i, id := range n.EventConnections {
+			if i > 0 {
+				b.WriteByte(',')
 			}
-			ids = b.String()
+			b.WriteString(strconv.Itoa(id))
 		}
 		add = "UPDATE connections\n" +
 			"SET event_connections = (SELECT ARRAY(SELECT unnest(array_append(event_connections, $1)) ORDER BY 1))\n" +
-			"WHERE id IN (" + ids + ")"
+			"WHERE id IN (" + b.String() + ")"
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
