@@ -54,4 +54,4 @@
         - [File Storage connectors](./developers/connectors/file-storage.md)
         - [Settings and UI](./developers/connectors/settings-and-ui.md)
         - [Data values](./developers/connectors/data-values.md)
-    - [Data warehouse drivers](./developers/data-warehouse-drivers/index.md)
+
