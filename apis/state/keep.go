@@ -489,7 +489,9 @@ func (state *State) addWorkspace(n notification) {
 		organization:                   organization,
 		Name:                           e.Name,
 		UserSchema:                     e.UserSchema,
+		UserPrimarySources:             map[string]int{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
+		Identifiers:                    []string{},
 		PrivacyRegion:                  e.PrivacyRegion,
 		DisplayedProperties:            e.DisplayedProperties,
 	}
