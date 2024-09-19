@@ -47,8 +47,10 @@ func init() {
 	if err != nil {
 		log.Fatalf("invalid value for MEERGO_CLI_WORKSPACE: %s", err)
 	}
-
-	rootCmd.PersistentFlags().IntP("workspace", "w", defaultWs, "Workspace. Defaults to MEERGO_CLI_WORKSPACE, if set, otherwise to 1")
+	// TODO(Gianluca): the workspace flag is requested as a global flag, even if
+	// it is not necessary to some commands. See the issue
+	// https://github.com/meergo/meergo/issues/1026 for more details about this.
+	rootCmd.PersistentFlags().IntP("workspace", "w", defaultWs, "Workspace. Defaults to env variable MEERGO_CLI_WORKSPACE, if set, otherwise to 1")
 }
 
 func Execute() {

@@ -44,6 +44,31 @@ type Connection struct {
 	Name string
 }
 
+type PrivacyRegion string
+
+const (
+	PrivacyRegionNotSpecified PrivacyRegion = ""
+	PrivacyRegionEurope       PrivacyRegion = "Europe"
+)
+
+func CreateWorkspace(name string, privacyRegion PrivacyRegion) int {
+	req, err := json.Marshal(map[string]any{
+		"Name":          name,
+		"PrivacyRegion": privacyRegion,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	var response struct {
+		ID int `json:"id"`
+	}
+	err = callAPI("POST", "api/workspaces", bytes.NewReader(req), &response)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return response.ID
+}
+
 func DisableConnection(workspace, connection int) {
 	path := "api/workspaces/" + strconv.Itoa(workspace) + "/connections/" + strconv.Itoa(connection) + "/status"
 	err := callAPI("POST", path, strings.NewReader(`{"enabled":false}`), nil)

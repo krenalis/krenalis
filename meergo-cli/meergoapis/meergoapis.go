@@ -18,22 +18,19 @@ import (
 )
 
 var meergoAPIs struct {
-	url         string
-	workspaceID int
-	httpClient  *http.Client
+	url        string
+	httpClient *http.Client
 }
 
 var initialized bool
 
 // Init initializes this package to connect to the Meergo APIs. url is the URL
-// of the APIs, while workspaceID is the ID of the workspace which interacts
-// with the APIs. This method should be called only once.
-func Init(url string, workspaceID int) {
+// of the APIs. This method should be called only once.
+func Init(url string) {
 	if initialized {
 		panic("already initialized")
 	}
 	meergoAPIs.url = url
-	meergoAPIs.workspaceID = workspaceID
 	initialized = true
 }
 

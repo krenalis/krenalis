@@ -126,7 +126,8 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/api/workspaces/1/connections/"+strconv.Itoa(fsID)+"/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
+		wsID := c.WorkspaceID()
+		c.MustCall("PUT", "/api/workspaces/"+strconv.Itoa(wsID)+"/connections/"+strconv.Itoa(fsID)+"/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
 			Name: "Export users to the CSV on Filesystem",
 			Path: exportedFilename,
 			InSchema: types.Object([]types.Property{

@@ -33,8 +33,7 @@ func main() {
 	if !strings.HasSuffix(url, "/") {
 		url += "/"
 	}
-	workspaceID := viper.GetInt("workspace")
-	meergoapis.Init(url, workspaceID)
+	meergoapis.Init(url)
 
 	cmd.Execute()
 }

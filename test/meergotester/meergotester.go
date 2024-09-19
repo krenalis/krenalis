@@ -115,10 +115,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		t.Fatalf("cannot reset warehouse: %s", err)
 	}
 
-	c := Meergo{
-		t:  t,
-		ws: 1,
-	}
+	c := Meergo{t: t}
 
 	// Create the HTTP client.
 	jar, err := cookiejar.New(nil)
@@ -274,6 +271,13 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		t.Fatalf("cannot log in into the API: %s", err)
 	}
 
+	// Create the workspace and set it into the 'Meergo' instance.
+	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified)
+	if err != nil {
+		t.Fatalf("cannot create workspace: %s", err)
+	}
+	c.ws = id
+
 	// Connect and initialize the data warehouse.
 	err = c.connectInitWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
 	if err != nil {
@@ -335,13 +339,6 @@ func (c *Meergo) Stop() {
 	}
 }
 
-// UseWorkspace uses the given workspace in the next calls performed using the
-// support methods exposed by Meergo.
-// The default workspace, used when UseWorkspace is never called, is 1.
-func (c *Meergo) UseWorkspace(workspace int) {
-	c.ws = workspace
-}
-
 func (c *Meergo) connectInitWarehouse(whType string, whSettings *DBSettings) error {
 	body := map[string]any{
 		"Type":     whType,
@@ -368,6 +365,21 @@ func (c *Meergo) changeUserSchema() error {
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	return c.call("PUT", method, req, nil)
+}
+
+func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion) (int, error) {
+	req := map[string]any{
+		"Name":          name,
+		"PrivacyRegion": privacyRegion,
+	}
+	var response struct {
+		ID int `json:"id"`
+	}
+	err := c.call("POST", "/api/workspaces", req, &response)
+	if err != nil {
+		return 0, err
+	}
+	return response.ID, nil
 }
 
 func (c *Meergo) login() error {
@@ -448,6 +460,12 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 		c.t.Fatalf("cannot scan result of QueryRow: %s", err)
 	}
 	db.Close()
+}
+
+// WorkspaceID returns the ID of the workspace on which the instance of Meergo
+// operates.
+func (c *Meergo) WorkspaceID() int {
+	return c.ws
 }
 
 func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {

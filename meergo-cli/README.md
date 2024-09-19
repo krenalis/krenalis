@@ -16,8 +16,6 @@ Put inside the directory `meergo-cli` of this repository a YAML file named
 ```yaml
 apis:
   URL: https://localhost:9090
-
-workspace: 1
 ```
 
 ## How to compile

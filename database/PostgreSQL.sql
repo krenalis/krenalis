@@ -35,9 +35,6 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
-INSERT INTO workspaces (id, organization, name, user_schema, warehouse_type, warehouse_settings, resolve_identities_on_batch_import)
-VALUES (1, 1, 'Workspace', '{"name":"Object","properties":[{"name":"email","type":{"name":"Text","charLen":300},"readOptional":true}]}', NULL, '', true);
-
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
