@@ -117,6 +117,15 @@
 	width: 100%;
 }
 
+.connection-settings__snippet-copy > div:first-child {
+	margin-left: 3px;
+	margin-bottom: 8px;
+}
+
+.connection-settings__snippet-copy .editor-wrapper {
+	border-radius: 5px;
+}
+
 .connection-settings__snippet-copy .editor-wrapper * {
 	font-size: 14px !important;
 }
