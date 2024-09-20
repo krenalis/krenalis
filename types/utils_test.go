@@ -416,9 +416,12 @@ func Test_PropertyByPath(t *testing.T) {
 					{Name: "street", Type: Text()},
 				})},
 			}),
-			path:     "billing_address.city",
-			expected: Property{},
-			err:      errors.New("property path \"billing_address.city\" does not exist"),
+			path: "billing_address.city",
+			expected: Property{
+				Name: "billing_address", Type: Object([]Property{
+					{Name: "street", Type: Text()},
+				})},
+			err: errors.New("property path \"billing_address.city\" does not exist"),
 		},
 		{
 			name: "path with three components - property (Text within an Object within an Object) exists",
@@ -442,7 +445,7 @@ func Test_PropertyByPath(t *testing.T) {
 				})},
 			}),
 			path:     "movie.writer.address.last_name",
-			expected: Property{},
+			expected: Property{Name: "writer", Type: Text()},
 			err:      errors.New("property path \"movie.writer.address\" does not exist"),
 		},
 		{
@@ -457,7 +460,7 @@ func Test_PropertyByPath(t *testing.T) {
 				})},
 			}),
 			path:     "movie.writer.last_name",
-			expected: Property{},
+			expected: Property{Name: "writer", Type: Text()},
 			err:      errors.New("property path \"movie.writer.last_name\" does not exist"),
 		},
 	}
@@ -467,6 +470,9 @@ func Test_PropertyByPath(t *testing.T) {
 			if err != nil {
 				if cas.err == nil {
 					t.Fatalf("unexpected error: %s", err)
+				}
+				if err := sameProperty(cas.expected, got); err != nil {
+					t.Fatal(err)
 				}
 				if err.Error() != cas.err.Error() {
 					t.Fatalf("expected error %q, got error %q", cas.err.Error(), err.Error())

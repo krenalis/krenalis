@@ -186,8 +186,9 @@ func Properties(t Type) []Property {
 	return pp
 }
 
-// PropertyByPath returns the property with the given path in the Object t, or
-// a PathNotExistError error if the property does not exist.
+// PropertyByPath returns the property with the given path in the Object t.
+// If the property does not exist, it returns the last valid property found (if
+// any), and a PathNotExistError error.
 //
 // Unlike Walk, it does not traverse through Arrays and Maps. If path is "x.y"
 // and the type of "x" is not an Object, it returns a PathNotExistError error.
@@ -197,6 +198,7 @@ func PropertyByPath(t Type, path string) (Property, error) {
 	if t.kind != ObjectKind {
 		panic("cannot get the properties of a non-Object type")
 	}
+	var p *Property
 	name, rest := "", path
 Rest:
 	for {
@@ -212,7 +214,8 @@ Rest:
 			if rest == "" {
 				return properties[j], nil
 			}
-			t = properties[j].Type
+			p = &properties[j]
+			t = p.Type
 			continue Rest
 		}
 		break
@@ -220,8 +223,11 @@ Rest:
 	if !IsValidPropertyPath(path) {
 		panic("invalid property path")
 	}
-	path = strings.TrimSuffix(strings.TrimSuffix(path, rest), ".")
-	return Property{}, PathNotExistError{path}
+	err := PathNotExistError{strings.TrimSuffix(strings.TrimSuffix(path, rest), ".")}
+	if p == nil {
+		return Property{}, err
+	}
+	return *p, err
 }
 
 // PropertyExists reports whether property with the given path exists in the
