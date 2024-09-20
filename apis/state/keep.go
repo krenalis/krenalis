@@ -52,8 +52,6 @@ func (state *State) keep() {
 			state.addConnection(n)
 		case "AddConnectionKey":
 			state.addConnectionKey(n)
-		case "AddEventConnection":
-			state.addEventConnection(n)
 		case "AddWorkspace":
 			state.addWorkspace(n)
 		case "DeleteAction":
@@ -68,12 +66,12 @@ func (state *State) keep() {
 			state.endActionExecution(n)
 		case "ExecuteAction":
 			state.executeAction(n)
+		case "LinkConnection":
+			state.linkConnection(n)
 		case "LoadState":
 			state.loadState(n)
 		case "PurgeActions":
 			state.purgeActions(n)
-		case "RemoveEventConnection":
-			state.removeEventConnection(n)
 		case "RenameConnection":
 			state.renameConnection(n)
 		case "RenameWorkspace":
@@ -106,6 +104,8 @@ func (state *State) keep() {
 			state.setWorkspace(n)
 		case "SetWorkspaceUserSchema":
 			state.setWorkspaceUserSchema(n)
+		case "UnlinkConnection":
+			state.unlinkConnection(n)
 		default:
 			slog.Warn("unknown notification", "name", n.Name, "pid", n.PID, "payload", n.Payload)
 		}
@@ -328,12 +328,12 @@ type AddConnection struct {
 		RefreshToken string    // refresh token, can be empty.
 		ExpiresIn    time.Time // expiration time, can be the zero time.
 	}
-	Strategy         *Strategy    // strategy
-	SendingMode      *SendingMode // sending mode
-	WebsiteHost      string       // website host in form host:port
-	EventConnections []int        // event connections
-	Key              string       // server key to add
-	Settings         []byte
+	Strategy          *Strategy    // strategy
+	SendingMode       *SendingMode // sending mode
+	WebsiteHost       string       // website host in form host:port
+	LinkedConnections []int        // linked connections
+	Key               string       // server key to add
+	Settings          []byte
 }
 
 // addConnection adds a new connection.
@@ -380,21 +380,21 @@ func (state *State) addConnection(n notification) {
 		}
 	}
 	c := &Connection{
-		mu:               new(sync.Mutex),
-		organization:     workspace.organization,
-		workspace:        workspace,
-		ID:               e.ID,
-		Name:             e.Name,
-		Role:             e.Role,
-		Enabled:          e.Enabled,
-		connector:        connector,
-		account:          a,
-		Strategy:         e.Strategy,
-		SendingMode:      e.SendingMode,
-		WebsiteHost:      e.WebsiteHost,
-		EventConnections: e.EventConnections,
-		Settings:         e.Settings,
-		actions:          map[int]*Action{},
+		mu:                new(sync.Mutex),
+		organization:      workspace.organization,
+		workspace:         workspace,
+		ID:                e.ID,
+		Name:              e.Name,
+		Role:              e.Role,
+		Enabled:           e.Enabled,
+		connector:         connector,
+		account:           a,
+		Strategy:          e.Strategy,
+		SendingMode:       e.SendingMode,
+		WebsiteHost:       e.WebsiteHost,
+		LinkedConnections: e.LinkedConnections,
+		Settings:          e.Settings,
+		actions:           map[int]*Action{},
 	}
 	if e.Key != "" {
 		c.Keys = []string{e.Key}
@@ -409,10 +409,10 @@ func (state *State) addConnection(n notification) {
 	workspace.mu.Lock()
 	workspace.connections[c.ID] = c
 	workspace.mu.Unlock()
-	// Update the event connections.
-	for _, ec := range c.EventConnections {
+	// Update the linked connections.
+	for _, ec := range c.LinkedConnections {
 		state.replaceConnection(ec, func(ec *Connection) {
-			ec.EventConnections = addEventConnection(ec.EventConnections, c.ID)
+			ec.LinkedConnections = addLinkedConnection(ec.LinkedConnections, c.ID)
 		})
 	}
 	dispatchNotification(state, e)
@@ -440,28 +440,6 @@ func (state *State) addConnectionKey(n notification) {
 	state.mu.Lock()
 	state.connectionsByKey[e.Value] = c
 	state.mu.Unlock()
-}
-
-// AddEventConnection is the event sent when a connection is added as event
-// connection.
-type AddEventConnection struct {
-	Connections [2]int
-}
-
-// addEventConnection adds a connection as event connection.
-func (state *State) addEventConnection(n notification) {
-	e := AddEventConnection{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connections[0]]
-	if !slices.Contains(c.EventConnections, e.Connections[1]) {
-		for i := range 2 {
-			state.replaceConnection(e.Connections[i], func(c *Connection) {
-				c.EventConnections = addEventConnection(c.EventConnections, e.Connections[(i+1)%2])
-			})
-		}
-	}
 }
 
 // AddWorkspace is the event sent when a workspace is added.
@@ -602,10 +580,10 @@ func (state *State) deleteConnection(n notification) {
 		delete(state.actions, a.ID)
 	}
 	state.mu.Unlock()
-	// Remove the connection from event connections.
-	for _, ec := range e.connection.EventConnections {
+	// Remove the connection from the linked connections.
+	for _, ec := range e.connection.LinkedConnections {
 		state.replaceConnection(ec, func(ec *Connection) {
-			ec.EventConnections = removeEventConnection(ec.EventConnections, e.ID)
+			ec.LinkedConnections = removeLinkedConnection(ec.LinkedConnections, e.ID)
 		})
 	}
 	dispatchNotification(state, e)
@@ -733,6 +711,27 @@ func (state *State) executeAction(n notification) {
 	dispatchNotification(state, e)
 }
 
+// LinkConnection is the event sent when two unlinked connections are linked.
+type LinkConnection struct {
+	Connections [2]int
+}
+
+// addLinkedConnection links two unlinked connections.
+func (state *State) linkConnection(n notification) {
+	e := LinkConnection{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connections[0]]
+	if !slices.Contains(c.LinkedConnections, e.Connections[1]) {
+		for i := range 2 {
+			state.replaceConnection(e.Connections[i], func(c *Connection) {
+				c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[(i+1)%2])
+			})
+		}
+	}
+}
+
 // LoadState is the event sent when a state is loaded.
 type LoadState struct {
 	ID uuid.UUID
@@ -769,28 +768,6 @@ func (state *State) purgeActions(n notification) {
 	ws.mu.Lock()
 	ws.actionsToPurge = e.ActionsToPurge
 	ws.mu.Unlock()
-}
-
-// RemoveEventConnection is the event sent when a connection is removed as event
-// connection.
-type RemoveEventConnection struct {
-	Connections [2]int
-}
-
-// removeEventConnection removes a connection as event connection.
-func (state *State) removeEventConnection(n notification) {
-	e := RemoveEventConnection{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.connections[e.Connections[0]]
-	if slices.Contains(c.EventConnections, e.Connections[1]) {
-		for i := range 2 {
-			state.replaceConnection(e.Connections[i], func(c *Connection) {
-				c.EventConnections = removeEventConnection(c.EventConnections, e.Connections[(i+1)%2])
-			})
-		}
-	}
 }
 
 // RenameConnection is the event sent when a connection is renamed.
@@ -1169,10 +1146,31 @@ func (state *State) setWorkspaceUserSchema(n notification) {
 	dispatchNotification(state, e)
 }
 
-// addEventConnection adds id to connections. It returns a copy of connections
-// with id added in numerical order. It is assumed that connections is already
-// sorted and id does not already exist in connections.
-func addEventConnection(connections []int, id int) []int {
+// UnlinkConnection is the event sent when two linked connections are unlinked.
+type UnlinkConnection struct {
+	Connections [2]int
+}
+
+// unlinkConnection unlinks two linked connections.
+func (state *State) unlinkConnection(n notification) {
+	e := UnlinkConnection{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	c := state.connections[e.Connections[0]]
+	if slices.Contains(c.LinkedConnections, e.Connections[1]) {
+		for i := range 2 {
+			state.replaceConnection(e.Connections[i], func(c *Connection) {
+				c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[(i+1)%2])
+			})
+		}
+	}
+}
+
+// addLinkedConnection adds id to the provided linked connections. It returns
+// a copy of connections with id added in numerical order. It is assumed that
+// connections is already sorted and id does not already exist in connections.
+func addLinkedConnection(connections []int, id int) []int {
 	cc := make([]int, len(connections)+1)
 	j := 0
 	var added bool
@@ -1191,11 +1189,11 @@ func addEventConnection(connections []int, id int) []int {
 	return cc
 }
 
-// removeEventConnection removes id from connections. It returns a copy of
-// connections with id removed. It is assumed that connections is sorted and id
-// exists in connections. If id is the sole connection in connections, it
-// returns nil.
-func removeEventConnection(connections []int, id int) []int {
+// removeLinkedConnection removes id from the provided linked connections. It
+// returns a copy of connections with id removed. It is assumed that connections
+// is sorted and id exists in connections. If id is the sole connection in
+// connections, it returns nil.
+func removeLinkedConnection(connections []int, id int) []int {
 	if len(connections) == 1 {
 		return nil
 	}

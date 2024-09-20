@@ -152,8 +152,8 @@ const useApp = (
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
-				if (c.EventConnections) {
-					transformedConnection.eventConnections = c.EventConnections;
+				if (c.LinkedConnections) {
+					transformedConnection.linkedConnections = c.LinkedConnections;
 				}
 				transformedConnections.push(transformedConnection);
 			}
@@ -225,8 +225,8 @@ const useApp = (
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
-				if (c.EventConnections) {
-					transformedConnection.eventConnections = c.EventConnections;
+				if (c.LinkedConnections) {
+					transformedConnection.linkedConnections = c.LinkedConnections;
 				}
 				transformedConnections.push(transformedConnection);
 			}

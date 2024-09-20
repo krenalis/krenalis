@@ -775,24 +775,24 @@ type Strategy string
 
 // Connection represents a connection.
 type Connection struct {
-	mu               *sync.Mutex
-	organization     *Organization
-	workspace        *Workspace
-	ID               int
-	Name             string
-	Role             Role
-	Enabled          bool
-	connector        *Connector
-	account          *Account
-	Strategy         *Strategy
-	SendingMode      *SendingMode
-	WebsiteHost      string
-	EventConnections []int
-	Keys             []string
-	Settings         []byte
-	UsersQuery       string
-	actions          map[int]*Action
-	Health           Health
+	mu                *sync.Mutex
+	organization      *Organization
+	workspace         *Workspace
+	ID                int
+	Name              string
+	Role              Role
+	Enabled           bool
+	connector         *Connector
+	account           *Account
+	Strategy          *Strategy
+	SendingMode       *SendingMode
+	WebsiteHost       string
+	LinkedConnections []int
+	Keys              []string
+	Settings          []byte
+	UsersQuery        string
+	actions           map[int]*Action
+	Health            Health
 }
 
 // Action returns the action of the connection with identifier id.

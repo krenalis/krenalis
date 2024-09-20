@@ -1,6 +1,6 @@
-import './EventConnectionSelector.css';
+import './LinkedConnectionSelector.css';
 import React, { ReactNode, useMemo } from 'react';
-import { useEventConnectionsGrid } from './useEventConnectionsGrid';
+import { useLinkedConnectionsGrid } from './useLinkedConnectionsGrid';
 import TransformedConnection, { isEventConnection } from '../../../lib/core/connection';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -12,32 +12,32 @@ import LittleLogo from '../LittleLogo/LittleLogo';
 import Grid from '../Grid/Grid';
 
 interface ConnectionSelectorProps {
-	eventConnections: Number[] | null;
-	setEventConnections: React.Dispatch<React.SetStateAction<Number[] | null>>;
+	linkedConnections: Number[] | null;
+	setLinkedConnections: React.Dispatch<React.SetStateAction<Number[] | null>>;
 	connections: TransformedConnection[];
 	role: ConnectionRole;
 	title?: ReactNode;
 	description?: string;
-	onAdd?: (id: Number) => Promise<void>;
-	onRemove?: (id: Number) => Promise<void>;
+	onLink?: (id: Number) => Promise<void>;
+	onUnlink?: (id: Number) => Promise<void>;
 	isClickable?: boolean;
 	isShown?: boolean;
 	children?: ReactNode;
 }
 
-const EventConnectionSelector = ({
-	eventConnections,
-	setEventConnections,
+const LinkedConnectionSelector = ({
+	linkedConnections,
+	setLinkedConnections,
 	connections,
 	role,
 	title,
 	description,
-	onAdd,
-	onRemove,
+	onLink,
+	onUnlink,
 	isClickable,
 	isShown,
 }: ConnectionSelectorProps) => {
-	const { rows, columns } = useEventConnectionsGrid(eventConnections, setEventConnections, onRemove, isClickable);
+	const { rows, columns } = useLinkedConnectionsGrid(linkedConnections, setLinkedConnections, onUnlink, isClickable);
 
 	const { linkableConnections, selectableConnections } = useMemo(() => {
 		const linkableConnections: TransformedConnection[] = [];
@@ -45,60 +45,60 @@ const EventConnectionSelector = ({
 		for (const c of connections) {
 			if (isEventConnection(c.role, c.type, c.connector.targets) && c.role !== role) {
 				linkableConnections.push(c);
-				const isAlreadySelected = eventConnections?.find((id) => id === c.id) != null;
+				const isAlreadySelected = linkedConnections?.find((id) => id === c.id) != null;
 				if (!isAlreadySelected) {
 					selectableConnections.push(c);
 				}
 			}
 		}
 		return { linkableConnections, selectableConnections };
-	}, [connections, eventConnections]);
+	}, [connections, linkedConnections]);
 
-	const onSelectEventConnection = async (e) => {
+	const onSelectLinkedConnection = async (e) => {
 		const id = Number(e.detail.item.value);
 		let updated: Number[] = [];
-		if (eventConnections != null) {
-			updated = [...eventConnections];
+		if (linkedConnections != null) {
+			updated = [...linkedConnections];
 		}
 		updated.push(id);
-		if (onAdd) {
+		if (onLink) {
 			try {
-				await onAdd(id);
+				await onLink(id);
 			} catch (err) {
 				return;
 			}
 		}
-		setEventConnections(updated);
+		setLinkedConnections(updated);
 	};
 
 	const hasSelectableConnections = selectableConnections.length > 0;
 
 	return (
-		<div className='event-connection-selector'>
+		<div className='linked-connection-selector'>
 			{linkableConnections.length === 0 ? (
-				`Currently there is no event ${role === 'Source' ? 'destination' : 'source'}`
+				`Currently there is no linked ${role === 'Source' ? 'destination' : 'source'}`
 			) : (
-				<div className={'event-connection-selector__content'}>
+				<div className={'linked-connection-selector__content'}>
 					<div
-						className={`event-connection-selector__head${
+						className={`linked-connection-selector__head${
 							(title || description) && hasSelectableConnections
-								? ' event-connection-selector__head--flex'
+								? ' linked-connection-selector__head--flex'
 								: ''
 						}`}
 					>
-						<div className='event-connection-selector__head-text'>
+						<div className='linked-connection-selector__head-text'>
 							{title}
-							<div className='event-connection-selector__head-description'>{description}</div>
+							<div className='linked-connection-selector__head-description'>{description}</div>
 						</div>
 						{hasSelectableConnections && (
-							<SlDropdown className='event-connection-selector__dropdown'>
+							<SlDropdown className='linked-connection-selector__dropdown'>
 								<SlButton slot='trigger' caret>
 									<SlIcon slot='prefix' name='plus' />
-									Add {role === 'Source' ? 'destination' : 'source'}...
+									Link {role === 'Source' ? 'destination' : 'source'}...
 								</SlButton>
-								<SlMenu onSlSelect={onSelectEventConnection}>
+								<SlMenu onSlSelect={onSelectLinkedConnection}>
 									{selectableConnections.map((c) => {
-										const isAlreadySelected = eventConnections?.find((id) => id === c.id) != null;
+										const isAlreadySelected = linkedConnections?.find((id) => id === c.id) != null;
 										if (!isAlreadySelected) {
 											return (
 												<SlMenuItem key={c.id} value={String(c.id)}>
@@ -115,15 +115,15 @@ const EventConnectionSelector = ({
 					<Grid
 						rows={rows}
 						columns={columns}
-						noRowsMessage={`Select "Add ${role === 'Source' ? 'destination' : 'source'}..." to add a ${
+						noRowsMessage={`Select "Link ${role === 'Source' ? 'destination' : 'source'}..." to link a ${
 							role === 'Source' ? 'destination' : 'source'
 						} connection`}
 						isShown={isShown}
 					/>
 					{!hasSelectableConnections && (
-						<div className='event-connection-selector__no-connection-message'>
+						<div className='linked-connection-selector__no-connection-message'>
 							There are no other event {role === 'Source' ? 'destinations' : 'sources'} available to be
-							added, beyond those that have already been added.
+							linked, beyond those that have already been linked.
 						</div>
 					)}
 				</div>
@@ -132,4 +132,4 @@ const EventConnectionSelector = ({
 	);
 };
 
-export { EventConnectionSelector };
+export { LinkedConnectionSelector };

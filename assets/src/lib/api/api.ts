@@ -414,19 +414,19 @@ class Connections {
 		);
 	};
 
-	removeEventConnection = async (connection: number, eventConnection: number): Promise<void> => {
+	unlinkConnection = async (connection: number, connection2: number): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/connections/${encodeURIComponent(
-				eventConnection,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/linked-connections/${encodeURIComponent(
+				connection2,
 			)}`,
 			http.DELETE,
 		);
 	};
 
-	addEventConnection = async (connection: number, eventConnection: number): Promise<void> => {
+	linkConnection = async (connection: number, connection2: number): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/connections/${encodeURIComponent(
-				eventConnection,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/linked-connections/${encodeURIComponent(
+				connection2,
 			)}`,
 			http.POST,
 		);

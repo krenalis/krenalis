@@ -1,21 +1,21 @@
 import React, { useContext, useState } from 'react';
 import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
-import { EventConnectionSelector } from '../../base/EventConnectionSelector/EventConnectionSelector';
+import { LinkedConnectionSelector } from '../../base/LinkedConnectionSelector/LinkedConnectionSelector';
 
-interface EventConnectionProps {
+interface LinkedConnectionProps {
 	connection: TransformedConnection;
 	isShown: boolean;
 }
 
-const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
-	const [eventConnections, setEventConnections] = useState<Number[] | null>(connection.eventConnections);
+const LinkedConnections = ({ connection, isShown }: LinkedConnectionProps) => {
+	const [linkedConnections, setLinkedConnections] = useState<Number[] | null>(connection.linkedConnections);
 
 	const { connections, setIsLoadingConnections, api, handleError } = useContext(AppContext);
 
-	const onAdd = async (id: number) => {
+	const onLink = async (id: number) => {
 		try {
-			await api.workspaces.connections.addEventConnection(connection.id, id);
+			await api.workspaces.connections.linkConnection(connection.id, id);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -23,9 +23,9 @@ const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
 		setIsLoadingConnections(true);
 	};
 
-	const onRemove = async (id: number) => {
+	const onUnlink = async (id: number) => {
 		try {
-			await api.workspaces.connections.removeEventConnection(connection.id, id);
+			await api.workspaces.connections.unlinkConnection(connection.id, id);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -34,14 +34,14 @@ const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
 	};
 
 	return (
-		<div className='event-connections'>
-			<EventConnectionSelector
-				eventConnections={eventConnections}
-				setEventConnections={setEventConnections}
+		<div className='linked-connections'>
+			<LinkedConnectionSelector
+				linkedConnections={linkedConnections}
+				setLinkedConnections={setLinkedConnections}
 				connections={connections}
 				role={connection.role}
-				onAdd={onAdd}
-				onRemove={onRemove}
+				onLink={onLink}
+				onUnlink={onUnlink}
 				isClickable={true}
 				isShown={isShown}
 				description={
@@ -54,4 +54,4 @@ const EventConnections = ({ connection, isShown }: EventConnectionProps) => {
 	);
 };
 
-export { EventConnections };
+export { LinkedConnections };

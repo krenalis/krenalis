@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestAddAndRemoveEventConnection(t *testing.T) {
+func TestAddAndRemoveLinkedConnection(t *testing.T) {
 
 	tests := []struct {
 		id      int
@@ -26,10 +26,10 @@ func TestAddAndRemoveEventConnection(t *testing.T) {
 		{16, []int{1, 8, 15, 16}, []int{1, 8, 15}},
 	}
 
-	// Test the addEventConnection function.
+	// Test the addLinkedConnection function.
 	for _, test := range tests {
 		without := slices.Clone(test.without)
-		got := addEventConnection(test.without, test.id)
+		got := addLinkedConnection(test.without, test.id)
 		if got == nil {
 			t.Fatalf("expected %#v, got nil", test.with)
 		}
@@ -41,10 +41,10 @@ func TestAddAndRemoveEventConnection(t *testing.T) {
 		}
 	}
 
-	// Test the removeEventConnection function.
+	// Test the removeLinkedConnection function.
 	for _, test := range tests {
 		with := slices.Clone(test.with)
-		got := removeEventConnection(test.with, test.id)
+		got := removeLinkedConnection(test.with, test.id)
 		if test.without == nil && got != nil {
 			t.Fatalf("expected nil, got %#v", got)
 		}

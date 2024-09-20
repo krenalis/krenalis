@@ -54,7 +54,7 @@ const ConnectionsList = () => {
 			return;
 		}
 
-		const hasEventConnections = roleConnections.findIndex((c) => c.eventConnections != null) !== -1;
+		const hasEventConnections = roleConnections.findIndex((c) => c.linkedConnections != null) !== -1;
 		if (hasEventConnections) {
 			columns.push({
 				name: `${role === 'Source' ? 'Event destinations' : 'Event sources'}`,
@@ -77,9 +77,9 @@ const ConnectionsList = () => {
 				c.actionsCount,
 			];
 			if (hasEventConnections) {
-				if (c.eventConnections != null) {
+				if (c.linkedConnections != null) {
 					const fullEventConnections: TransformedConnection[] = [];
-					for (const id of c.eventConnections) {
+					for (const id of c.linkedConnections) {
 						const fullConnection = connections.find((c) => c.id === id);
 						fullEventConnections.push(fullConnection);
 					}

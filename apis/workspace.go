@@ -351,7 +351,7 @@ func (this *Workspace) ActionStatsPerTimeUnit(ctx context.Context, number int, u
 // It returns an errors.UnprocessableError error with code
 //
 //   - ConnectorNotExist, if the connector does not exist.
-//   - EventConnectionNotExist, if an event connection does not exist.
+//   - LinkedConnectionNotExist, if a linked connection does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
 func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
@@ -400,27 +400,27 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		return 0, errors.BadRequest("%s connections cannot have a website host", strings.ToLower(c.Type.String()))
 	}
 
-	// Validate the event connections.
-	err := validateEventConnections(connection.EventConnections, c, this.workspace, state.Role(connection.Role))
+	// Validate linked connections.
+	err := validateLinkedConnections(connection.LinkedConnections, c, this.workspace, state.Role(connection.Role))
 	if err != nil {
 		return 0, err
 	}
 
 	n := state.AddConnection{
-		Workspace:        this.workspace.ID,
-		Name:             connection.Name,
-		Role:             state.Role(connection.Role),
-		Enabled:          connection.Enabled,
-		Connector:        connection.Connector,
-		Strategy:         (*state.Strategy)(connection.Strategy),
-		SendingMode:      (*state.SendingMode)(connection.SendingMode),
-		WebsiteHost:      connection.WebsiteHost,
-		EventConnections: connection.EventConnections,
+		Workspace:         this.workspace.ID,
+		Name:              connection.Name,
+		Role:              state.Role(connection.Role),
+		Enabled:           connection.Enabled,
+		Connector:         connection.Connector,
+		Strategy:          (*state.Strategy)(connection.Strategy),
+		SendingMode:       (*state.SendingMode)(connection.SendingMode),
+		WebsiteHost:       connection.WebsiteHost,
+		LinkedConnections: connection.LinkedConnections,
 	}
 	if n.Name == "" {
 		n.Name = c.Name
 	}
-	slices.Sort(n.EventConnections)
+	slices.Sort(n.LinkedConnections)
 
 	// Validate the strategy.
 	if connection.Role == Source {
@@ -543,18 +543,18 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
-	// Build the query to add the connection to the respective event connections.
+	// Build the query to link connections.
 	var add string
-	if n.EventConnections != nil {
+	if n.LinkedConnections != nil {
 		var b strings.Builder
-		for i, id := range n.EventConnections {
+		for i, id := range n.LinkedConnections {
 			if i > 0 {
 				b.WriteByte(',')
 			}
 			b.WriteString(strconv.Itoa(id))
 		}
 		add = "UPDATE connections\n" +
-			"SET event_connections = (SELECT ARRAY(SELECT unnest(array_append(event_connections, $1)) ORDER BY 1))\n" +
+			"SET linked_connections = (SELECT ARRAY(SELECT unnest(array_append(linked_connections, $1)) ORDER BY 1))\n" +
 			"WHERE id IN (" + b.String() + ")"
 	}
 
@@ -582,24 +582,24 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
 			"(id, workspace, name, type, role, enabled, connector, account,"+
-			" strategy, sending_mode, website_host, event_connections, settings)"+
+			" strategy, sending_mode, website_host, linked_connections, settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Account.ID,
-			n.Strategy, n.SendingMode, n.WebsiteHost, n.EventConnections, string(n.Settings))
+			n.Strategy, n.SendingMode, n.WebsiteHost, n.LinkedConnections, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
 			}
 			return err
 		}
-		// Add the connection to the event connections.
-		if n.EventConnections != nil {
+		// Link connections.
+		if n.LinkedConnections != nil {
 			result, err := tx.Exec(ctx, add, n.ID)
 			if err != nil {
 				return err
 			}
-			if int(result.RowsAffected()) < len(n.EventConnections) {
-				return errors.Unprocessable(EventConnectionNotExist, "an event connection does not exist")
+			if int(result.RowsAffected()) < len(n.LinkedConnections) {
+				return errors.Unprocessable(LinkedConnectionNotExist, "a linked connection does not exist")
 			}
 		}
 		if n.Key != "" {
@@ -956,22 +956,22 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	conn := c.Connector()
 
 	connection := Connection{
-		apis:             this.apis,
-		store:            this.store,
-		connection:       c,
-		ID:               c.ID,
-		Name:             c.Name,
-		Type:             ConnectorType(conn.Type),
-		Role:             Role(c.Role),
-		Enabled:          c.Enabled,
-		Connector:        conn.Name,
-		Strategy:         (*Strategy)(c.Strategy),
-		SendingMode:      (*SendingMode)(c.SendingMode),
-		WebsiteHost:      c.WebsiteHost,
-		EventConnections: slices.Clone(c.EventConnections),
-		HasUI:            conn.HasUI,
-		ActionsCount:     len(c.Actions()),
-		Health:           Health(c.Health),
+		apis:              this.apis,
+		store:             this.store,
+		connection:        c,
+		ID:                c.ID,
+		Name:              c.Name,
+		Type:              ConnectorType(conn.Type),
+		Role:              Role(c.Role),
+		Enabled:           c.Enabled,
+		Connector:         conn.Name,
+		Strategy:          (*Strategy)(c.Strategy),
+		SendingMode:       (*SendingMode)(c.SendingMode),
+		WebsiteHost:       c.WebsiteHost,
+		LinkedConnections: slices.Clone(c.LinkedConnections),
+		HasUI:             conn.HasUI,
+		ActionsCount:      len(c.Actions()),
+		Health:            Health(c.Health),
 	}
 
 	// Set the actions.
@@ -992,22 +992,22 @@ func (this *Workspace) Connections() []*Connection {
 	for i, c := range connections {
 		conn := c.Connector()
 		connection := Connection{
-			apis:             this.apis,
-			store:            this.store,
-			connection:       c,
-			ID:               c.ID,
-			Name:             c.Name,
-			Type:             ConnectorType(conn.Type),
-			Role:             Role(c.Role),
-			Enabled:          c.Enabled,
-			Connector:        conn.Name,
-			Strategy:         (*Strategy)(c.Strategy),
-			SendingMode:      (*SendingMode)(c.SendingMode),
-			WebsiteHost:      c.WebsiteHost,
-			EventConnections: slices.Clone(c.EventConnections),
-			HasUI:            conn.HasUI,
-			ActionsCount:     len(c.Actions()),
-			Health:           Health(c.Health),
+			apis:              this.apis,
+			store:             this.store,
+			connection:        c,
+			ID:                c.ID,
+			Name:              c.Name,
+			Type:              ConnectorType(conn.Type),
+			Role:              Role(c.Role),
+			Enabled:           c.Enabled,
+			Connector:         conn.Name,
+			Strategy:          (*Strategy)(c.Strategy),
+			SendingMode:       (*SendingMode)(c.SendingMode),
+			WebsiteHost:       c.WebsiteHost,
+			LinkedConnections: slices.Clone(c.LinkedConnections),
+			HasUI:             conn.HasUI,
+			ActionsCount:      len(c.Actions()),
+			Health:            Health(c.Health),
 		}
 		infos[i] = &connection
 	}
@@ -1977,10 +1977,10 @@ type ConnectionToAdd struct {
 	// cannot be longer than 261 runes.
 	WebsiteHost string
 
-	// EventConnections, for connections supporting events, indicate the
-	// connections to which events can be sent or received. It is nil if
-	// there are no connections or if the connection do not support events.
-	EventConnections []int
+	// LinkedConnections, for connections supporting events, indicate the
+	// connections to which events can be sent or received. It is nil if there
+	// are no linked connections or if the connection do not support events.
+	LinkedConnections []int
 
 	// UIValues represents the user-entered values of the connector user interface
 	// in JSON format.

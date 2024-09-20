@@ -74,20 +74,6 @@ func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (
 	return c.AddAction(r.Context(), body.Target, body.EventType, body.Action)
 }
 
-// AddEventConnection adds an event connection to a connection and vice versa.
-func (connection connection) AddEventConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	c2, err := connection.connection2(r)
-	if err != nil {
-		return nil, err
-	}
-	err = c.AddEventConnection(r.Context(), c2)
-	return nil, err
-}
-
 // AppUsers returns the users of an app connection.
 func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -204,6 +190,20 @@ func (connection connection) GenerateKey(_ http.ResponseWriter, r *http.Request)
 	return c.GenerateKey(r.Context())
 }
 
+// LinkConnection links a connection to another connection and vice versa.
+func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	c2, err := connection.connection2(r)
+	if err != nil {
+		return nil, err
+	}
+	err = c.LinkConnection(r.Context(), c2)
+	return nil, err
+}
+
 // PreviewSendEvent previews sending an event.
 func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -251,21 +251,6 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	return map[string]any{"records": rawJSON(records), "schema": schema}, nil
-}
-
-// RemoveEventConnection removes an event connection from a connection and vice
-// versa.
-func (connection connection) RemoveEventConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	c2, err := connection.connection2(r)
-	if err != nil {
-		return nil, err
-	}
-	err = c.RemoveEventConnection(r.Context(), c2)
-	return nil, err
 }
 
 // RevokeKey revokes a write key of a connection.
@@ -352,6 +337,20 @@ func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request)
 		return nil, err
 	}
 	return c.TableSchema(r.Context(), r.PathValue("table"))
+}
+
+// UnlinkConnection unlink a connection from another connection and vice versa.
+func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	c2, err := connection.connection2(r)
+	if err != nil {
+		return nil, err
+	}
+	err = c.UnlinkConnection(r.Context(), c2)
+	return nil, err
 }
 
 func (connection connection) action(r *http.Request) (int, error) {

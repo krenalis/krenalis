@@ -934,7 +934,7 @@ const FullscreenTransformation = ({
 	}, [connection, actionType]);
 
 	const { startListening } = useEventListener(
-		isEventBasedUserImport ? [connection.id] : connection.eventConnections,
+		isEventBasedUserImport ? [connection.id] : connection.linkedConnections,
 		true,
 		true,
 		collectEvents,
@@ -1491,7 +1491,7 @@ const FullscreenTransformation = ({
 			</div>
 		);
 	} else if (isEventBasedUserImport || isAppEventsExport) {
-		if (isAppEventsExport && (connection.eventConnections == null || connection.eventConnections.length === 0)) {
+		if (isAppEventsExport && (connection.linkedConnections == null || connection.linkedConnections.length === 0)) {
 			inputPanelContent = (
 				<div className='fullscreen-transformation__no-sample'>
 					<SlIcon name='x-lg' />

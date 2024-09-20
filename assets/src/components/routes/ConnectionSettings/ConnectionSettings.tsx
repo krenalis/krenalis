@@ -11,24 +11,24 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import { isEventConnection } from '../../../lib/core/connection';
-import { EventConnections } from './EventConnections';
+import { LinkedConnections } from './LinkedConnections';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
 
 const ConnectionSettings = () => {
 	const [isDeleted, setIsDeleted] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [isEventConnectionsPanelShown, setIsEventConnectionsPanelShown] = useState<boolean>(false); // used to recompute the event connections grid.
+	const [isLinkedConnectionsPanelShown, setIsLinkedConnectionsPanelShown] = useState<boolean>(false); // used to recompute the event connections grid.
 	const [hasUIFields, setHasUIFields] = useState<boolean>(false);
 
 	const { redirect, api, handleError } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
 
 	const onTabShow = (e) => {
-		if (e.detail.name === 'event-connections') {
-			setIsEventConnectionsPanelShown(true);
+		if (e.detail.name === 'linked-connections') {
+			setIsLinkedConnectionsPanelShown(true);
 			return;
 		}
-		setIsEventConnectionsPanelShown(false);
+		setIsLinkedConnectionsPanelShown(false);
 	};
 
 	useEffect(() => {
@@ -92,14 +92,14 @@ const ConnectionSettings = () => {
 
 				{isEventConnection(c.role, c.type, c.connector.targets) && (
 					<>
-						<SlTab slot='nav' panel='event-connections'>
-							{c.isSource ? 'Event Destinations' : 'Event Sources'}
+						<SlTab slot='nav' panel='linked-connections'>
+							{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
 						</SlTab>
-						<SlTabPanel name='event-connections'>
+						<SlTabPanel name='linked-connections'>
 							<div className='connection-settings__panel-title'>
-								{c.isSource ? 'Event Destinations' : 'Event Sources'}
+								{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
 							</div>
-							<EventConnections connection={c} isShown={isEventConnectionsPanelShown} />
+							<LinkedConnections connection={c} isShown={isLinkedConnectionsPanelShown} />
 						</SlTabPanel>
 					</>
 				)}

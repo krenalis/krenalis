@@ -24,7 +24,7 @@ import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import { isEventConnection } from '../../../lib/core/connection';
-import { EventConnectionSelector } from '../../base/EventConnectionSelector/EventConnectionSelector';
+import { LinkedConnectionSelector } from '../../base/LinkedConnectionSelector/LinkedConnectionSelector';
 import * as icons from '../../../constants/icons';
 
 const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
@@ -39,7 +39,7 @@ const ConnectorSettings = () => {
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [SendingMode, setSendingMode] = useState<SendingModeType | null>(null);
-	const [eventConnections, setEventConnections] = useState<Number[]>();
+	const [linkedConnections, setLinkedConnections] = useState<Number[]>();
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
 	const [values, setValues] = useState<ConnectorValues>({});
@@ -186,7 +186,7 @@ const ConnectorSettings = () => {
 					websiteHost: websiteHost,
 					SendingMode: SendingMode,
 					uiValues: values,
-					eventConnections: eventConnections,
+					linkedConnections: linkedConnections,
 				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
 			} catch (err) {
@@ -306,18 +306,18 @@ const ConnectorSettings = () => {
 
 	const showStrategy = hasStrategy(connectionRole, c);
 
-	let eventConnectionsContainer: ReactNode = null;
+	let linkedConnectionsContainer: ReactNode = null;
 	if (isEventConnection(connectionRole, connector.type, connector.targets)) {
-		eventConnectionsContainer = (
-			<div className='connector-settings__event-connections'>
-				<EventConnectionSelector
-					eventConnections={eventConnections}
-					setEventConnections={setEventConnections}
+		linkedConnectionsContainer = (
+			<div className='connector-settings__linked-connections'>
+				<LinkedConnectionSelector
+					linkedConnections={linkedConnections}
+					setLinkedConnections={setLinkedConnections}
 					connections={connections}
 					role={connectionRole}
 					title={
-						<div className='connector-settings__event-connections-label'>
-							Event {connectionRole === 'Source' ? 'destinations' : 'sources'}
+						<div className='connector-settings__linked-connections-label'>
+							Linked {connectionRole === 'Source' ? 'destinations' : 'sources'}
 						</div>
 					}
 					description={
@@ -431,11 +431,11 @@ const ConnectorSettings = () => {
 							values={values}
 							onChange={onFieldChange}
 						>
-							{eventConnectionsContainer}
+							{linkedConnectionsContainer}
 						</ConnectorUI>
 					) : (
 						<>
-							{eventConnectionsContainer}
+							{linkedConnectionsContainer}
 							{buttonsToRender}
 						</>
 					)}

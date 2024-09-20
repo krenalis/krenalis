@@ -86,15 +86,15 @@ const (
 type Strategy string
 
 type ConnectionToAdd struct {
-	Name             string
-	Role             Role
-	Enabled          bool
-	Connector        string
-	Strategy         *Strategy
-	WebsiteHost      string
-	EventConnections []int
-	SendingMode      *SendingMode
-	UIValues         json.RawMessage
+	Name              string
+	Role              Role
+	Enabled           bool
+	Connector         string
+	Strategy          *Strategy
+	WebsiteHost       string
+	LinkedConnections []int
+	SendingMode       *SendingMode
+	UIValues          json.RawMessage
 }
 
 type ConnectWarehouseBehavior int8

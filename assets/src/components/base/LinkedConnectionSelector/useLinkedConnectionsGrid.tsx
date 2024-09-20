@@ -6,7 +6,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import StatusDot from '../StatusDot/StatusDot';
 
-const EVENT_CONNECTIONS_COLUMNS: GridColumn[] = [
+const LINKED_CONNECTIONS_COLUMNS: GridColumn[] = [
 	{
 		name: 'Name',
 	},
@@ -24,75 +24,75 @@ const EVENT_CONNECTIONS_COLUMNS: GridColumn[] = [
 	},
 ];
 
-const useEventConnectionsGrid = (
-	eventConnections: Number[] | null,
-	setEventConnections: React.Dispatch<React.SetStateAction<Number[] | null>>,
-	onRemove: (id: number) => Promise<void>,
+const useLinkedConnectionsGrid = (
+	linkedConnections: Number[] | null,
+	setLinkedConnections: React.Dispatch<React.SetStateAction<Number[] | null>>,
+	onUnlink: (id: number) => Promise<void>,
 	isClickable: boolean,
 ) => {
 	const { connections, redirect } = useContext(AppContext);
 
-	const fullEventConnections = useMemo(() => {
-		if (eventConnections == null) {
+	const fullLinkedConnections = useMemo(() => {
+		if (linkedConnections == null) {
 			return [];
 		}
 		const fc: TransformedConnection[] = [];
 		for (const c of connections) {
-			const isEventConnection = eventConnections.findIndex((ec) => ec === c.id) !== -1;
-			if (isEventConnection) {
+			const isLinkedConnection = linkedConnections.findIndex((ec) => ec === c.id) !== -1;
+			if (isLinkedConnection) {
 				fc.push(c);
 			}
 		}
 		return fc;
-	}, [eventConnections, connections]);
+	}, [linkedConnections, connections]);
 
-	const removeConnection = async (e, idToRemove: number) => {
+	const unlinkConnection = async (e, idToUnlink: number) => {
 		e.stopPropagation();
 		let updated: Number[] | null = [];
-		for (const id of eventConnections) {
-			if (id !== idToRemove) {
+		for (const id of linkedConnections) {
+			if (id !== idToUnlink) {
 				updated.push(id);
 			}
 		}
 		if (updated.length === 0) {
 			updated = null;
 		}
-		if (onRemove) {
+		if (onUnlink) {
 			try {
-				await onRemove(idToRemove);
+				await onUnlink(idToUnlink);
 			} catch (err) {
 				return;
 			}
 		}
-		setEventConnections(updated);
+		setLinkedConnections(updated);
 	};
 
 	const rows: GridRow[] = useMemo(() => {
 		const r: GridRow = [];
-		if (eventConnections == null) {
+		if (linkedConnections == null) {
 			return r;
 		}
-		for (const fc of fullEventConnections) {
+		for (const fc of fullLinkedConnections) {
 			const nameCell = (
-				<div className='event-connection-grid__name'>
+				<div className='linked-connection-grid__name'>
 					<LittleLogo icon={fc.connector.icon} />
 					{fc.name}
 				</div>
 			);
-			const removeButtonCell = (
-				<SlButton variant='danger' size='small' onClick={(e) => removeConnection(e, fc.id)}>
-					Remove
+			const unlinkButtonCell = (
+				<SlButton variant='danger' size='small' onClick={(e) => unlinkConnection(e, fc.id)}>
+					Unlink
 				</SlButton>
 			);
 			const healthCell = (
-				<div className='event-connection-grid__status'>
+				<div className='linked-connection-grid__status'>
 					<StatusDot status={fc.status} />
 					{fc.health}
 				</div>
 			);
 
 			const row: GridRow = {
-				cells: [nameCell, fc.type, fc.connector.name, healthCell, removeButtonCell],
+				cells: [nameCell, fc.type, fc.connector.name, healthCell, unlinkButtonCell],
 				key: String(fc.id),
 			};
 			if (isClickable) {
@@ -101,9 +101,9 @@ const useEventConnectionsGrid = (
 			r.push(row);
 		}
 		return r;
-	}, [eventConnections]);
+	}, [linkedConnections]);
 
-	return { rows: rows, columns: EVENT_CONNECTIONS_COLUMNS };
+	return { rows: rows, columns: LINKED_CONNECTIONS_COLUMNS };
 };
 
-export { useEventConnectionsGrid };
+export { useLinkedConnectionsGrid };

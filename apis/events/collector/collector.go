@@ -222,7 +222,7 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 // can be dispatched.
 func (c *Collector) eventDestinations(source *state.Connection) []*state.Action {
 	var actions []*state.Action
-	for _, id := range source.EventConnections {
+	for _, id := range source.LinkedConnections {
 		c, ok := c.state.Connection(id)
 		if !ok || !c.Enabled {
 			continue
@@ -236,10 +236,10 @@ func (c *Collector) eventDestinations(source *state.Connection) []*state.Action 
 	return actions
 }
 
-// hasEventDestinations reports whether source has an enabled event destination
+// hasEventDestinations reports whether source has an enabled linked destination
 // with an enabled action on events.
 func (c *Collector) hasEventDestinations(source *state.Connection) bool {
-	for _, id := range source.EventConnections {
+	for _, id := range source.LinkedConnections {
 		c, ok := c.state.Connection(id)
 		if !ok || !c.Enabled {
 			continue

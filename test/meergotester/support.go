@@ -171,15 +171,15 @@ func (c *Meergo) AddDummyWithSettings(name string, role Role, settings DummySett
 	return c.AddConnection(conn)
 }
 
-func (c *Meergo) AddJavaScriptSource(name, host string, eventConnections []int) int {
+func (c *Meergo) AddJavaScriptSource(name, host string, linkedConnections []int) int {
 	return c.AddConnection(ConnectionToAdd{
-		Name:             name,
-		Role:             Source,
-		Enabled:          true,
-		Connector:        "JavaScript",
-		Strategy:         &defaultStrategy,
-		WebsiteHost:      host,
-		EventConnections: eventConnections,
+		Name:              name,
+		Role:              Source,
+		Enabled:           true,
+		Connector:         "JavaScript",
+		Strategy:          &defaultStrategy,
+		WebsiteHost:       host,
+		LinkedConnections: linkedConnections,
 	})
 }
 

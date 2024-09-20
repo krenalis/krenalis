@@ -39,11 +39,11 @@
 	max-width: 350px;
 }
 
-.connector-settings__event-connections {
+.connector-settings__linked-connections {
 	margin-bottom: 50px;
 }
 
-.connector-settings__event-connections-label {
+.connector-settings__linked-connections-label {
 	font-weight: 600;
 }
 
