@@ -68,7 +68,7 @@ const SchemaEdit = () => {
 						Cancel
 					</SlButton>
 					<SlButton className='schema-edit__header-apply-button' variant='primary' onClick={onApplyChanges}>
-						Review Changes
+						Review and apply changes...
 					</SlButton>
 				</div>
 			</div>
@@ -127,7 +127,7 @@ const SchemaEdit = () => {
 									onClick={onConfirmChanges}
 									loading={isConfirmChangesLoading}
 								>
-									Apply Alter Schema
+									Apply alter schema
 								</SlButton>
 							</div>
 						</>

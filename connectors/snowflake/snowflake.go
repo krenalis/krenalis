@@ -130,7 +130,7 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, r
 		},
 		Values: values,
 		Buttons: []meergo.Button{
-			{Event: "test", Text: "Test Connection", Variant: "neutral"},
+			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
 

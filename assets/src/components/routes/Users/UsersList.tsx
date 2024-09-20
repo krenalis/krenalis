@@ -165,7 +165,7 @@ const UsersList = () => {
 						<>
 							<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
 							<SlButton variant='primary' onClick={onResolveIdentities}>
-								Run Identity Resolution
+								Run identity resolution
 							</SlButton>
 						</>
 					}

@@ -167,7 +167,7 @@ func (kafka *Kafka) ServeUI(ctx context.Context, event string, values []byte, ro
 		},
 		Values: values,
 		Buttons: []meergo.Button{
-			{Event: "test", Text: "Test Connection", Variant: "neutral"},
+			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
 	}
 
