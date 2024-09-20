@@ -226,5 +226,4 @@ func (this *Action) exec(ctx context.Context) {
 		err = this.exportUsers(ctx, statCollector)
 	}
 
-	return
 }

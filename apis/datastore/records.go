@@ -224,7 +224,6 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 		if err := r.rows.Err(); err != nil {
 			r.err = err
 		}
-		return
 	}
 }
 
