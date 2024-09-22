@@ -253,7 +253,7 @@ github.com/dvsekhvalnov/jose2go/compact
 github.com/dvsekhvalnov/jose2go/kdf
 github.com/dvsekhvalnov/jose2go/keys/ecc
 github.com/dvsekhvalnov/jose2go/padding
-# github.com/evanw/esbuild v0.23.1
+# github.com/evanw/esbuild v0.24.0
 ## explicit; go 1.13
 github.com/evanw/esbuild/internal/api_helpers
 github.com/evanw/esbuild/internal/ast
