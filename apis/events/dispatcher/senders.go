@@ -35,7 +35,7 @@ func startSenders(events <-chan *dispatchingEvent, sent chan<- *dispatchingEvent
 				select {
 				case event := <-events:
 					c := event.action.Connection()
-					if !c.Enabled || c.Workspace().Warehouse == nil {
+					if !c.Enabled {
 						sent <- event
 						continue
 					}

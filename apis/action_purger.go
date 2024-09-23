@@ -111,7 +111,7 @@ func (p *actionPurger) onDeleteAction(n state.DeleteAction) func() {
 		return nil
 	}
 	ws := c.Workspace()
-	if ws.Warehouse == nil || ws.Warehouse.Mode != state.Normal {
+	if ws.Warehouse.Mode != state.Normal {
 		return nil
 	}
 	go p.purgeWorkspace(ws.ID, nil)
@@ -125,7 +125,7 @@ func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) func() {
 		return nil
 	}
 	ws := c.Workspace()
-	if ws.Warehouse == nil || ws.Warehouse.Mode != state.Normal {
+	if ws.Warehouse.Mode != state.Normal {
 		return nil
 	}
 	for _, action := range c.Actions() {
@@ -139,7 +139,7 @@ func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) func() {
 
 // onSetWarehouse is called when the settings of a data warehouse are changed.
 func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) func() {
-	if n.Warehouse == nil || n.Warehouse.Mode != state.Normal {
+	if n.Warehouse.Mode != state.Normal {
 		return nil
 	}
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
@@ -183,10 +183,6 @@ func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
 		return
 	}
 	if ws.Warehouse.Mode != state.Normal {
-		return
-	}
-	store := p.datastore.Store(ws.ID)
-	if store == nil {
 		return
 	}
 	actions := ws.ActionsToPurge()

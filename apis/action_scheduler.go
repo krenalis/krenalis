@@ -325,8 +325,7 @@ func toExecute(action *state.Action) bool {
 	if !c.Enabled {
 		return false
 	}
-	ws := c.Workspace()
-	if wh := ws.Warehouse; wh == nil || wh.Mode != state.Normal {
+	if c.Workspace().Warehouse.Mode != state.Normal {
 		return false
 	}
 	if _, ok := action.Execution(); ok {

@@ -11,10 +11,9 @@
   - [3. Build the assets](#3-build-the-assets)
   - [4. Compile the server command in dev mode](#4-compile-the-server-command-in-dev-mode)
   - [5. Populate the database](#5-populate-the-database)
-  - [6. Create the workspace and take note of its ID](#6-create-the-workspace-and-take-note-of-its-id)
-  - [7. Connect and initialize the data warehouse](#7-connect-and-initialize-the-data-warehouse)
-  - [8. Run and open the browser](#8-run-and-open-the-browser)
-  - [9. Add properties to the user schema](#9-add-properties-to-the-user-schema)
+  - [6. Create the workspace, connect a warehouse and initialize it](#6-create-the-workspace-connect-a-warehouse-and-initialize-it)
+  - [7. Run and open the browser](#7-run-and-open-the-browser)
+  - [8. Add properties to the user schema](#8-add-properties-to-the-user-schema)
 - [Enable telemetry (optional)](#enable-telemetry-optional)
   - [For the first time](#for-the-first-time)
   - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
@@ -100,30 +99,14 @@ go build -tags dev,osusergo,netgo -trimpath ./cmd/meergo
 
 Populate the Meergo's database with the queries in [database/PostgreSQL.sql](database/PostgreSQL.sql).
 
-### 6. Create the workspace and take note of its ID
+### 6. Create the workspace, connect a warehouse and initialize it
 
 (note that these steps requires [the meergo-cli executable](#interact-with-meergo-using-meergo-cli) installed and available on your system)
 
-Create a workspace and get its ID with:
+Create the workspace, connect a PostgreSQL warehouse and initialize it with:
 
 ```
-meergo-cli create-workspace
-```
-
-> NOTE. Take note of the ID of the created workspace, as it will be necessary to pass it to the commands that operate on the workspace using the `-w` option. Alternatively, you can set the value of the environment variable `MEERGO_CLI_WORKSPACE` by assigning it the ID of the created workspace, thus avoiding the need to explicitly pass the workspace parameter to `meergo-cli` later on.
-
-### 7. Connect and initialize the data warehouse
-
-Connect and initialize the data warehouse with:
-
-```
-meergo-cli connect-warehouse PostgreSQL ./postgresql.json --init -w <workspace ID>
-```
-
-or 
-
-```
-meergo-cli connect-warehouse ClickHouse ./clickhouse.json --init -w <workspace ID>
+meergo-cli create-workspace PostgreSQL ./postgresql.json
 ```
 
 where `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
@@ -139,29 +122,13 @@ where `./postgresql.json` is a JSON file containing the information to access th
 }
 ```
 
-and `./clickhouse.json` is a JSON file containing the information to access the ClickHouse data warehouse, like:
+> NOTE: It is possible to specify other data warehouses besides PostgreSQL. For more details, see `meergo-cli create-workspace --help`.
 
-```json
-{
-    "Host": "localhost",
-    "Port": 9000,
-    "Username": "user",
-    "Password": "***********",
-    "Database": "warehouse"
-}
-```
-
-Note that, if your data warehouse has already been initialized, you can avoid passing the `--init` option:
-
-```
-meergo-cli connect-warehouse PostgreSQL ./postgresql.json -w <workspace ID>
-```
-
-### 8. Run and open the browser
+### 7. Run and open the browser
 
 Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:9090/ui/.
 
-### 9. Add properties to the user schema
+### 8. Add properties to the user schema
 
 Within the root of the repository, run:
 

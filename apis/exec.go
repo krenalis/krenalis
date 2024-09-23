@@ -190,18 +190,12 @@ func (this *Action) exec(ctx context.Context) {
 
 	}()
 
-	connection := this.action.Connection()
-
 	if this.Target == Groups {
 		statCollector.FailedReceiving(0, "groups import and export are not implemented")
 		return
 	}
 	if !this.isLanguageSupported() {
 		statCollector.FailedReceiving(0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
-		return
-	}
-	if this.connection.store == nil {
-		statCollector.FailedReceiving(0, fmt.Sprintf("workspace %d does not have a data warehouse", connection.Workspace().ID))
 		return
 	}
 
@@ -219,7 +213,7 @@ func (this *Action) exec(ctx context.Context) {
 		return
 	}
 
-	if connection.Role == state.Source {
+	if this.action.Connection().Role == state.Source {
 		err = this.importUsers(ctx, statCollector)
 		actionImportedUsers = true
 	} else {

@@ -51,10 +51,14 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
-func CreateWorkspace(name string, privacyRegion PrivacyRegion) int {
+func CreateWorkspace(name string, privacyRegion PrivacyRegion, warehouseType string, warehouseSettings []byte) int {
 	req, err := json.Marshal(map[string]any{
 		"Name":          name,
 		"PrivacyRegion": privacyRegion,
+		"Warehouse": map[string]any{
+			"Type":     warehouseType,
+			"Settings": json.RawMessage(warehouseSettings),
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -162,52 +166,6 @@ func WorkspaceChangeUserSchemaQueries(workspace int, schema types.Type, rePaths 
 		log.Fatal(err)
 	}
 	return resp.Queries
-}
-
-type ConnectWarehouseBehavior int8
-
-const (
-	FailOnCheck ConnectWarehouseBehavior = iota + 1
-	InitializeWarehouse
-	RepairWarehouse
-)
-
-func (b ConnectWarehouseBehavior) String() string {
-	switch b {
-	case FailOnCheck:
-		return "FailOnCheck"
-	case InitializeWarehouse:
-		return "InitializeWarehouse"
-	case RepairWarehouse:
-		return "RepairWarehouse"
-	default:
-		return "<invalid value for behavior>"
-	}
-}
-
-func (b ConnectWarehouseBehavior) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + b.String() + `"`), nil
-}
-
-func WorkspaceConnectWarehouse(workspace int, typ string, settings []byte, behavior ConnectWarehouseBehavior) {
-	req := struct {
-		Type     string
-		Settings json.RawMessage
-		Behavior ConnectWarehouseBehavior
-	}{typ, settings, behavior}
-	b := &bytes.Buffer{}
-	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse", b, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func WorkspaceDisconnectWarehouse(workspace int) {
-	err := callAPI("DELETE", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse", nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func ResolveIdentities(workspace int) {

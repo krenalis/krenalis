@@ -54,18 +54,12 @@ func init() {
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - NoEventsSchema, if the data warehouse does not have events schema.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
 	if limit < 1 || limit > 200 {
 		return nil, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	// Verify that the workspace has a data warehouse.
-	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 
 	// Retrieve the events records.
@@ -119,7 +113,6 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.apis.mustBeOpen()
 	if first < 0 {
@@ -127,9 +120,6 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdent
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
-	}
-	if this.store == nil {
-		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 		Property: "__gid__",
@@ -158,17 +148,11 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdent
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *User) Traits(ctx context.Context) ([]byte, error) {
 
 	this.apis.mustBeOpen()
 
 	ws := this.workspace
-
-	// Verify that the workspace has a data warehouse.
-	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
-	}
 
 	properties := types.PropertyNames(this.workspace.UserSchema)
 	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{

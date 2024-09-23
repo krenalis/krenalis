@@ -27,6 +27,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
@@ -140,14 +141,26 @@ var defaultUserSchema = types.Object([]types.Property{
 })
 
 // AddWorkspace adds a workspace with the given name and privacy region, and
-// returns its identifier. name must be between 1 and 100 runes long.
+// connects to a data warehouse of the given type and settings. Returns the
+// identifier of the workspace that has been created. name must be between 1 and
+// 100 runes long.
+//
+// whMode specifies the initial mode of the workspace's data warehouse
 //
 // It returns an errors.NotFoundError error if the organization does not exist
 // anymore.
-func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion) (int, error) {
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - DataWarehouseFailed, if an operation on the data warehouse fails;
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid;
+//   - WarehouseIsNotEmpty, if the warehouse to be connected is not empty and
+//     thus not ready to be initialized.
+func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whType WarehouseType, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.apis.mustBeOpen()
 
+	// Validate the parameters.
 	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
 		return 0, errors.BadRequest("name %q is not valid", name)
 	}
@@ -156,6 +169,48 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	default:
 		return 0, errors.BadRequest("privacy region is not valid")
 	}
+	switch whType {
+	case BigQuery, ClickHouse, PostgreSQL, Redshift, Snowflake:
+	default:
+		return 0, errors.BadRequest("warehouse type %d is not valid", whType)
+	}
+
+	// Normalize the warehouse settings.
+	whSettings, err := this.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(whType), whSettings)
+	if err != nil {
+		if err, ok := err.(*datastore.SettingsError); ok {
+			return 0, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return 0, err
+	}
+
+	// Check the data warehouse, ensuring that it is empty so that it can be
+	// initialized.
+	err = this.apis.datastore.Check(ctx, state.WarehouseType(whType), whSettings)
+	if err == nil {
+		return 0, errors.Unprocessable(WarehouseIsNotEmpty, "the data warehouse is not empty")
+	} else {
+		if err == datastore.ErrDataWarehouseNotInitialized {
+			// This is fine, as the data warehouse must be empty.
+		} else {
+			if _, ok := err.(*datastore.DataWarehouseNeedsRepairError); ok {
+				return 0, errors.Unprocessable(WarehouseIsNotEmpty, "the data warehouse is not empty")
+			}
+			if err, ok := err.(*datastore.DataWarehouseError); ok {
+				return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
+			}
+			return 0, err
+		}
+	}
+
+	// Initialize the data warehouse.
+	err = this.apis.datastore.Init(ctx, state.WarehouseType(whType), whSettings)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
+		}
+		return 0, err
+	}
 
 	n := state.AddWorkspace{
 		Organization:                   this.organization.ID,
@@ -163,10 +218,14 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		UserSchema:                     defaultUserSchema,
 		ResolveIdentitiesOnBatchImport: true,
 		PrivacyRegion:                  state.PrivacyRegion(region),
+		Warehouse: state.Warehouse{
+			Type:     state.WarehouseType(whType),
+			Mode:     state.WarehouseMode(whMode),
+			Settings: whSettings,
+		},
 	}
 
 	// Generate the identifier.
-	var err error
 	n.ID, err = generateRandomID()
 	if err != nil {
 		return 0, err
@@ -180,9 +239,11 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" user_schema, resolve_identities_on_batch_import, privacy_region)"+
-			" VALUES ($1, $2, $3, $4, $5, $6)",
-			n.ID, n.Organization, n.Name, userSchema, n.ResolveIdentitiesOnBatchImport, n.PrivacyRegion)
+			" user_schema, resolve_identities_on_batch_import, privacy_region,"+
+			" warehouse_type, warehouse_mode, warehouse_settings)"+
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+			n.ID, n.Organization, n.Name, userSchema, n.ResolveIdentitiesOnBatchImport,
+			n.PrivacyRegion, n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
@@ -468,12 +529,9 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		UserPrimarySources:             maps.Clone(ws.UserPrimarySources),
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
+		WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
 		PrivacyRegion:                  PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
-	}
-	if ws.Warehouse != nil {
-		mode := WarehouseMode(ws.Warehouse.Mode)
-		workspace.WarehouseMode = &mode
 	}
 	return &workspace, nil
 }
@@ -495,12 +553,9 @@ func (this *Organization) Workspaces() []*Workspace {
 			UserPrimarySources:             maps.Clone(ws.UserPrimarySources),
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
+			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
 			PrivacyRegion:                  PrivacyRegion(ws.PrivacyRegion),
 			DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
-		}
-		if ws.Warehouse != nil {
-			mode := WarehouseMode(ws.Warehouse.Mode)
-			workspace.WarehouseMode = &mode
 		}
 		infos[i] = &workspace
 	}

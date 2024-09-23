@@ -12,17 +12,13 @@ import (
 )
 
 const (
-	AlreadyConnected             errors.Code = "AlreadyConnected"
 	AlterSchemaInProgress        errors.Code = "AlterSchemaInProgress"
 	AuthenticationFailed         errors.Code = "AuthenticationFailed"
 	CannotSendEmails             errors.Code = "CannotSendEmails"
 	ConnectionDisabled           errors.Code = "ConnectionDisabled"
 	ConnectionNotExist           errors.Code = "ConnectionNotExist"
 	ConnectorNotExist            errors.Code = "ConnectorNotExist"
-	CurrentlyConnected           errors.Code = "CurrentlyConnected"
 	DataWarehouseFailed          errors.Code = "DataWarehouseFailed"
-	DataWarehouseNeedsRepair     errors.Code = "DataWarehouseNeedsRepair"
-	DataWarehouseNotInitialized  errors.Code = "DataWarehouseNotInitialized"
 	DatabaseFailed               errors.Code = "DatabaseFailed"
 	EventNotExist                errors.Code = "EventNotExist"
 	EventTypeNotExist            errors.Code = "EventTypeNotExist"
@@ -44,10 +40,8 @@ const (
 	MaintenanceMode              errors.Code = "MaintenanceMode"
 	MemberEmailAlreadyExists     errors.Code = "MemberEmailAlreadyExists"
 	NoColumns                    errors.Code = "NoColumns"
-	NoWarehouse                  errors.Code = "NoWarehouse"
 	NotAllowedType               errors.Code = "NotAllowedType"
 	NotCompatibleSchema          errors.Code = "NotCompatibleSchema"
-	NotConnected                 errors.Code = "NotConnected"
 	OrderNotExist                errors.Code = "OrderNotExist"
 	OrderTypeNotSortable         errors.Code = "OrderTypeNotSortable"
 	PropertyNotExist             errors.Code = "PropertyNotExist"
@@ -58,5 +52,6 @@ const (
 	TooManyListeners             errors.Code = "TooManyListeners"
 	TransformationFailed         errors.Code = "TransformationFailed"
 	UniqueKey                    errors.Code = "UniqueKey"
+	WarehouseIsNotEmpty          errors.Code = "WarehouseIsNotEmpty"
 	WorkspaceNotExist            errors.Code = "WorkspaceNotExist"
 )

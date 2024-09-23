@@ -441,7 +441,7 @@ type Warehouse struct {
 // Workspace represents a workspace.
 type Workspace struct {
 	mu                             *sync.Mutex
-	Warehouse                      *Warehouse
+	Warehouse                      Warehouse
 	connections                    map[int]*Connection
 	ID                             int
 	organization                   *Organization

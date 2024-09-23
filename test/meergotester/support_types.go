@@ -97,31 +97,6 @@ type ConnectionToAdd struct {
 	UIValues          json.RawMessage
 }
 
-type ConnectWarehouseBehavior int8
-
-const (
-	FailOnCheck ConnectWarehouseBehavior = iota + 1
-	InitializeWarehouse
-	RepairWarehouse
-)
-
-func (b ConnectWarehouseBehavior) String() string {
-	switch b {
-	case FailOnCheck:
-		return "FailOnCheck"
-	case InitializeWarehouse:
-		return "InitializeWarehouse"
-	case RepairWarehouse:
-		return "RepairWarehouse"
-	default:
-		return "<invalid value for behavior>"
-	}
-}
-
-func (b ConnectWarehouseBehavior) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + b.String() + `"`), nil
-}
-
 type DisplayedProperties struct {
 	Image       string
 	FirstName   string

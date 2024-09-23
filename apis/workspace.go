@@ -56,7 +56,7 @@ type Workspace struct {
 	UserPrimarySources             map[string]int
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
-	WarehouseMode                  *WarehouseMode
+	WarehouseMode                  WarehouseMode
 	PrivacyRegion                  PrivacyRegion
 	DisplayedProperties            DisplayedProperties
 }
@@ -782,8 +782,7 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 // on the warehouse that are incompatible with mode are cancelled.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore, and it returns an errors.UnprocessableError error with code
-// NotConnected, if the workspace is not connected to a data warehouse.
+// anymore.
 func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMode, cancelIncompatibleOperations bool) error {
 	this.apis.mustBeOpen()
 
@@ -794,9 +793,6 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	}
 
 	ws := this.workspace
-	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
-	}
 
 	n := state.SetWarehouseMode{
 		Workspace:                    ws.ID,
@@ -818,7 +814,6 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 				}
 				return err
 			}
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -840,13 +835,8 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	this.apis.mustBeOpen()
-	ws := this.workspace
-	if this.store == nil {
-		return nil, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
-	}
 	startTime, endTime, err = this.store.LastIdentityResolution(ctx)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
@@ -873,7 +863,6 @@ func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, e
 //   - InvalidWarehouseType, if the workspace is connected to a data warehouse
 //     of a different type,
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
 	this.apis.mustBeOpen()
 
@@ -884,9 +873,6 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 	}
 
 	ws := this.workspace
-	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
-	}
 	if ws.Warehouse.Type != state.WarehouseType(typ) {
 		return errors.Unprocessable(InvalidWarehouseType, "workspace %d is connected with a %s data warehouse, not %s", ws.ID, ws.Warehouse.Type, typ)
 	}
@@ -909,7 +895,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
-		Warehouse: &state.Warehouse{
+		Warehouse: state.Warehouse{
 			Type:     ws.Warehouse.Type,
 			Mode:     state.WarehouseMode(mode),
 			Settings: settings,
@@ -1018,178 +1004,11 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
-// ConnectWarehouseBehavior represents a behavior when connecting a data
-// warehouse.
-type ConnectWarehouseBehavior int8
-
-const (
-	// FailOnCheck means that the data warehouse must be checked and, if the
-	// check fails, the connection of the warehouse should fail.
-	FailOnCheck ConnectWarehouseBehavior = iota + 1
-
-	// InitializeWarehouse means that the warehouse connection operation should
-	// initialize the warehouse before connecting it.
-	InitializeWarehouse
-
-	// RepairWarehouse means that the warehouse connection operation should
-	// repair the warehouse before connecting it.
-	RepairWarehouse
-)
-
-func (b ConnectWarehouseBehavior) String() string {
-	switch b {
-	case FailOnCheck:
-		return "FailOnCheck"
-	case InitializeWarehouse:
-		return "InitializeWarehouse"
-	case RepairWarehouse:
-		return "RepairWarehouse"
-	default:
-		return "<invalid value for behavior>"
-	}
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-// It panics if mode is not a valid WarehouseMode value.
-func (b ConnectWarehouseBehavior) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + b.String() + `"`), nil
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (b *ConnectWarehouseBehavior) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
-	var v any
-	err := json.Unmarshal(data, &v)
-	if err != nil {
-		return err
-	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an ConnectWarehouseBehavior value", v)
-	}
-	var behavior ConnectWarehouseBehavior
-	switch s {
-	case "FailOnCheck":
-		behavior = FailOnCheck
-	case "InitializeWarehouse":
-		behavior = InitializeWarehouse
-	case "RepairWarehouse":
-		behavior = RepairWarehouse
-	default:
-		return fmt.Errorf("json: invalid ConnectWarehouseBehavior: %s", s)
-	}
-	*b = behavior
-	return nil
-}
-
-// ConnectWarehouse connects the workspace to a data warehouse, with the given
-// settings. behavior determines if the data warehouse must be checked,
-// initialized o repaired; see the documentation of ConnectWarehouseBehavior.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore, and it returns an errors.UnprocessableError error with code
-//   - AlreadyConnected, if the workspace is already connected to a data
-//     warehouse.
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - DataWarehouseNeedsRepair, if behavior is FailOnCheck and the data
-//     warehouse needs to be repaired.
-//   - DataWarehouseNotInitialized, if behavior is FailOnCheck and the data
-//     warehouse needs to be initialized.
-//   - InvalidWarehouseSettings, if the settings are not valid.
-func (this *Workspace) ConnectWarehouse(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte, behavior ConnectWarehouseBehavior) error {
-	this.apis.mustBeOpen()
-
-	switch mode {
-	case Normal, Inspection, Maintenance:
-	default:
-		return errors.BadRequest("mode %d is not valid", mode)
-	}
-
-	switch behavior {
-	case FailOnCheck, InitializeWarehouse, RepairWarehouse:
-	default:
-		return errors.BadRequest("behavior %d is not valid", behavior)
-	}
-
-	ws := this.workspace
-	if ws.Warehouse != nil {
-		return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
-	}
-
-	settings, err := this.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
-	if err != nil {
-		if err, ok := err.(*datastore.SettingsError); ok {
-			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return err
-	}
-
-	switch behavior {
-	case FailOnCheck:
-		err = this.apis.datastore.Check(ctx, state.WarehouseType(typ), settings)
-		if err == datastore.ErrDataWarehouseNotInitialized {
-			return errors.Unprocessable(DataWarehouseNotInitialized, "the data warehouse is not initialized")
-		}
-		if err, ok := err.(*datastore.DataWarehouseNeedsRepairError); ok {
-			return errors.Unprocessable(DataWarehouseNeedsRepair, "%s", err.Error())
-		}
-	case InitializeWarehouse:
-		err = this.apis.datastore.Init(ctx, state.WarehouseType(typ), settings)
-	case RepairWarehouse:
-		err = this.apis.datastore.Repair(ctx, state.WarehouseType(typ), settings)
-	}
-	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
-		}
-		return err
-	}
-
-	n := state.SetWarehouse{
-		Workspace: ws.ID,
-		Warehouse: &state.Warehouse{
-			Type:     state.WarehouseType(typ),
-			Mode:     state.WarehouseMode(mode),
-			Settings: settings,
-		},
-	}
-
-	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = $1, warehouse_mode = $2, warehouse_settings = $3, "+
-			"actions_to_purge = '{}'\nWHERE id = $4 AND warehouse_type IS NULL",
-			n.Warehouse.Type, n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			return errors.Unprocessable(AlreadyConnected, "workspace %d is already connected to a data warehouse", ws.ID)
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
 // Delete deletes the workspace with all its connections.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
-// If the workspace is currently connected to a data warehouse, it returns an
-// errors.UnprocessableError error with code CurrentlyConnected.
 func (this *Workspace) Delete(ctx context.Context) error {
 	this.apis.mustBeOpen()
-	ws := this.workspace
-	if ws.Warehouse != nil {
-		return errors.Unprocessable(CurrentlyConnected, "workspace %d is currently connected to %s data warehouse", ws.ID, ws.Warehouse.Type)
-	}
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
@@ -1207,43 +1026,6 @@ func (this *Workspace) Delete(ctx context.Context) error {
 				}
 				return err
 			}
-			return errors.Unprocessable(CurrentlyConnected, "workspace %d is currently connected to %s data warehouse", ws.ID, warehouseType)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
-// DisconnectWarehouse disconnects the workspace from the data warehouse.
-//
-// If the workspace does not exist anymore, it returns an errors.NotFoundError
-// error. If the workspace is not connected to a data warehouse, it returns an
-// errors.UnprocessableError error with code NotConnected.
-func (this *Workspace) DisconnectWarehouse(ctx context.Context) error {
-	this.apis.mustBeOpen()
-	ws := this.workspace
-	if ws.Warehouse == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
-	}
-	n := state.SetWarehouse{
-		Workspace: ws.ID,
-		Warehouse: nil,
-	}
-	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		var typ *state.WarehouseType
-		err := tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&typ)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return errors.NotFound("workspace %d does not exist", n.Workspace)
-			}
-			return err
-		}
-		if typ == nil {
-			return errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", n.Workspace)
-		}
-		_, err = tx.Exec(ctx, "UPDATE workspaces SET warehouse_type = NULL, warehouse_mode = NULL, warehouse_settings = '', actions_to_purge = NULL WHERE id = $1", n.Workspace)
-		if err != nil {
-			return err
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1439,12 +1221,8 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 //   - IdentityResolutionInProgress, if an Identity Resolution is already in
 //     progress on the warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NotConnected, if the workspace is not connected to a data warehouse.
 func (this *Workspace) ResolveIdentities(ctx context.Context) error {
 	this.apis.mustBeOpen()
-	if this.store == nil {
-		return errors.Unprocessable(NotConnected, "workspace %d is not connected to a warehouse", this.workspace.ID)
-	}
 	err := this.store.ResolveIdentities(ctx)
 	if err != nil {
 		if err == datastore.ErrAlterSchemaInProgress {
@@ -1638,7 +1416,6 @@ func (this *Workspace) User(id uuid.UUID) (*User, error) {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
@@ -1714,11 +1491,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *f
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, types.Type{}, 0, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	// Verify that the workspace has a data warehouse.
-	if this.store == nil {
-		return nil, types.Type{}, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 
 	// Read the users.
@@ -1801,15 +1573,9 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *f
 
 // WarehouseSettings returns the type and settings of the data warehouse for the
 // workspace.
-//
-// If the workspace is not connected to a data warehouse, it returns an
-// errors.UnprocessableError error with code NotConnected.
 func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
 	this.apis.mustBeOpen()
 	ws := this.workspace
-	if ws.Warehouse == nil {
-		return 0, nil, errors.Unprocessable(NotConnected, "workspace %d is not connected to a data warehouse", ws.ID)
-	}
 	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
 }
 

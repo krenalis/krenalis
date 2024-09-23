@@ -68,6 +68,7 @@ func New(st *state.State) *Datastore {
 	st.Freeze()
 	ds.listeners = []uint8{
 		ds.state.AddListener(ds.onAddAction),
+		ds.state.AddListener(ds.onAddWorkspace),
 		ds.state.AddListener(ds.onDeleteAction),
 		ds.state.AddListener(ds.onDeleteConnection),
 		ds.state.AddListener(ds.onSetAction),
@@ -76,9 +77,6 @@ func New(st *state.State) *Datastore {
 		ds.state.AddListener(ds.onSetWorkspaceUserSchema),
 	}
 	for _, ws := range st.Workspaces() {
-		if ws.Warehouse == nil {
-			continue
-		}
 		store, err := newStore(ds, ws)
 		if err != nil {
 			slog.Error("cannot create a store", "err", err)
@@ -176,6 +174,9 @@ func (ds *Datastore) Init(ctx context.Context, typ state.WarehouseType, settings
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *DataWarehouseError error if an error occurs with the data warehouse.
+//
+// TODO(Gianluca): although this method is currently unused, it is kept because
+// it may be useful when implementing https://github.com/meergo/meergo/issues/1017.
 func (ds *Datastore) Repair(ctx context.Context, typ state.WarehouseType, settings []byte) error {
 	ds.mustBeOpen()
 	dw, err := openWarehouse(typ, settings)
@@ -239,6 +240,17 @@ func (ds *Datastore) onAddAction(n state.AddAction) func() {
 	}
 }
 
+// onAddWorkspace is called when a workspace is added.
+func (ds *Datastore) onAddWorkspace(n state.AddWorkspace) func() {
+	return func() {
+		ws, _ := ds.state.Workspace(n.ID)
+		store, _ := newStore(ds, ws)
+		ds.mu.Lock()
+		ds.store[ws.ID] = store
+		ds.mu.Unlock()
+	}
+}
+
 // onDeleteAction is called when an action is deleted.
 func (ds *Datastore) onDeleteAction(n state.DeleteAction) func() {
 	ws := n.Action().Connection().Workspace()
@@ -284,43 +296,24 @@ func (ds *Datastore) onSetAction(n state.SetAction) func() {
 func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 	return func() {
 		// Change the data warehouse mode of the current store.
-		if n.Warehouse != nil {
-			ds.mu.Lock()
-			store := ds.store[n.Workspace]
-			ds.mu.Unlock()
-			if store != nil {
-				store.mc.ChangeMode(n.Warehouse.Mode, n.CancelIncompatibleOperations)
-			}
-		}
+		ds.mu.Lock()
+		store := ds.store[n.Workspace]
+		ds.mu.Unlock()
+		store.mc.ChangeMode(n.Warehouse.Mode, n.CancelIncompatibleOperations)
 		// Replace the current store with a new store.
-		var err error
-		var nextStore *Store
 		ws, _ := ds.state.Workspace(n.Workspace)
-		if ws.Warehouse != nil {
-			nextStore, err = newStore(ds, ws)
-			if err != nil {
-				go func(workspace int, err error) {
-					slog.Error("cannot create a new store", "workspace", workspace, "err", err)
-				}(ws.ID, err)
-			}
-		}
+		nextStore, _ := newStore(ds, ws)
 		ds.mu.Lock()
 		prevStore := ds.store[ws.ID]
-		if nextStore == nil {
-			delete(ds.store, ws.ID)
-		} else {
-			ds.store[ws.ID] = nextStore
-		}
+		ds.store[ws.ID] = nextStore
 		ds.mu.Unlock()
 		// Close the previous store.
-		if prevStore != nil {
-			go func(workspace int) {
-				err := prevStore.close()
-				if err != nil {
-					slog.Error("cannot close store", "workspace", workspace, "err", err)
-				}
-			}(ws.ID)
-		}
+		go func(workspace int) {
+			err := prevStore.close()
+			if err != nil {
+				slog.Error("cannot close store", "workspace", workspace, "err", err)
+			}
+		}(ws.ID)
 	}
 }
 
@@ -337,11 +330,8 @@ func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) func() {
 // onSetWorkspaceUserSchema is called when a workspace's user schema is set.
 func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) func() {
 	ds.mu.Lock()
-	store, ok := ds.store[n.Workspace]
+	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
-	if !ok {
-		return nil
-	}
 	return func() {
 		store.onSetWorkspaceUserSchema(n)
 	}

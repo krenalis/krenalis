@@ -57,7 +57,6 @@ import (
 //     progress on the warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaChange, if the schema change is invalid.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.apis.mustBeOpen()
 	if primarySources == nil {
@@ -100,10 +99,6 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 		if !source.Connector().Targets.Contains(state.Users) {
 			return errors.BadRequest("primary source %d does not support Users target", s)
 		}
-	}
-
-	if this.store == nil {
-		return errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 
 	// Update the identifiers.
@@ -224,7 +219,6 @@ Identifiers:
 // See the documentation of ChangeUserSchema for more details about this method.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 //   - InvalidSchemaChange, if the schema change is invalid.
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
@@ -247,9 +241,6 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
-	}
-	if this.store == nil {
-		return nil, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", this.workspace.ID)
 	}
 	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
 	if err != nil {

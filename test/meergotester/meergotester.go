@@ -271,18 +271,12 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		t.Fatalf("cannot log in into the API: %s", err)
 	}
 
-	// Create the workspace and set it into the 'Meergo' instance.
+	// Create the workspace and connect the warehouse.
 	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified)
 	if err != nil {
 		t.Fatalf("cannot create workspace: %s", err)
 	}
 	c.ws = id
-
-	// Connect and initialize the data warehouse.
-	err = c.connectInitWarehouse(testsSettings.WarehouseType, testsSettings.Warehouse)
-	if err != nil {
-		t.Fatalf("cannot connect warehouse: %s", err)
-	}
 
 	// Change the user schema.
 	if populateUserSchema {
@@ -339,16 +333,6 @@ func (c *Meergo) Stop() {
 	}
 }
 
-func (c *Meergo) connectInitWarehouse(whType string, whSettings *DBSettings) error {
-	body := map[string]any{
-		"Type":     whType,
-		"Settings": whSettings,
-		"Behavior": InitializeWarehouse,
-	}
-	method := fmt.Sprintf("/api/workspaces/%d/warehouse", c.ws)
-	return c.call("POST", method, body, nil)
-}
-
 func (c *Meergo) changeUserSchema() error {
 	f, err := os.Open("tests_user_schema.json")
 	if err != nil {
@@ -371,6 +355,10 @@ func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion) (int,
 	req := map[string]any{
 		"Name":          name,
 		"PrivacyRegion": privacyRegion,
+		"Warehouse": map[string]any{
+			"Type":     testsSettings.WarehouseType,
+			"Settings": testsSettings.Warehouse,
+		},
 	}
 	var response struct {
 		ID int `json:"id"`

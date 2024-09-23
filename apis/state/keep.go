@@ -451,6 +451,7 @@ type AddWorkspace struct {
 	ResolveIdentitiesOnBatchImport bool
 	PrivacyRegion                  PrivacyRegion
 	DisplayedProperties            DisplayedProperties
+	Warehouse                      Warehouse
 }
 
 // addWorkspace adds a workspace.
@@ -472,6 +473,8 @@ func (state *State) addWorkspace(n notification) {
 		Identifiers:                    []string{},
 		PrivacyRegion:                  e.PrivacyRegion,
 		DisplayedProperties:            e.DisplayedProperties,
+		Warehouse:                      e.Warehouse,
+		actionsToPurge:                 []int{},
 	}
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
@@ -479,6 +482,7 @@ func (state *State) addWorkspace(n notification) {
 	organization.mu.Lock()
 	organization.workspaces[e.ID] = &ws
 	organization.mu.Unlock()
+	dispatchNotification(state, e)
 }
 
 // DeleteAction is the event sent when an action is deleted.
@@ -506,7 +510,7 @@ func (state *State) deleteAction(n notification) {
 	delete(c.actions, e.ID)
 	c.mu.Unlock()
 	ws := c.workspace
-	if ws.actionsToPurge != nil && c.Role == Source && e.action.Target == Users {
+	if c.Role == Source && e.action.Target == Users {
 		actionsToPurge := append(ws.actionsToPurge, e.ID)
 		ws.mu.Lock()
 		ws.actionsToPurge = actionsToPurge
@@ -542,7 +546,7 @@ func (state *State) deleteConnection(n notification) {
 	// Update the workspace.
 	ws := e.connection.workspace
 	var actionsToPurge []int
-	if ws.actionsToPurge != nil && e.connection.Role == Source {
+	if e.connection.Role == Source {
 		actionsToPurge = ws.actionsToPurge
 		for _, action := range e.connection.actions {
 			if action.Target == Users {
@@ -559,9 +563,7 @@ func (state *State) deleteConnection(n notification) {
 			break
 		}
 	}
-	if actionsToPurge != nil {
-		ws.actionsToPurge = actionsToPurge
-	}
+	ws.actionsToPurge = actionsToPurge
 	ws.mu.Unlock()
 	if found {
 		sources := map[string]int{}
@@ -1034,7 +1036,7 @@ func (state *State) setConnectionSettings(n notification) {
 // changed.
 type SetWarehouse struct {
 	Workspace                    int
-	Warehouse                    *Warehouse
+	Warehouse                    Warehouse
 	CancelIncompatibleOperations bool
 }
 
@@ -1046,11 +1048,7 @@ func (state *State) setWarehouse(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = e.Warehouse
-		if w.Warehouse == nil {
-			w.actionsToPurge = nil
-		} else if w.actionsToPurge == nil {
-			w.actionsToPurge = []int{}
-		}
+		w.actionsToPurge = []int{}
 	})
 	dispatchNotification(state, e)
 }
@@ -1070,7 +1068,7 @@ func (state *State) setWarehouseMode(n notification) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.Warehouse = &Warehouse{
+		w.Warehouse = Warehouse{
 			Type:     w.Warehouse.Type,
 			Mode:     e.Mode,
 			Settings: w.Warehouse.Settings,

@@ -313,7 +313,6 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 //   - ExecutionInProgress, if the action is already in progress.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	this.apis.mustBeOpen()
 	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reload", reload)
@@ -332,10 +331,6 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	case state.App, state.Database, state.FileStorage:
 	default:
 		return 0, errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
-	}
-	if this.connection.store == nil {
-		ws := c.Workspace()
-		return 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
 	}
 	switch this.connection.store.Mode() {
 	case state.Inspection:

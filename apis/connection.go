@@ -973,7 +973,6 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoWarehouse, if the workspace does not have a data warehouse.
 func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.apis.mustBeOpen()
 	if first < 0 {
@@ -982,14 +981,10 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	ws := this.connection.Workspace()
-	if this.store == nil {
-		return nil, 0, errors.Unprocessable(NoWarehouse, "workspace %d does not have a data warehouse", ws.ID)
-	}
 	apisWs := &Workspace{
 		apis:      this.apis,
 		store:     this.store,
-		workspace: ws,
+		workspace: this.connection.Workspace(),
 	}
 	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
 		Property: "__connection__",

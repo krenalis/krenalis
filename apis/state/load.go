@@ -182,8 +182,8 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 			" displayed_information, actions_to_purge FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
-				var warehouseType *WarehouseType
-				var warehouseMode *WarehouseMode
+				var warehouseType WarehouseType
+				var warehouseMode WarehouseMode
 				var displayedImage string
 				var displayedFirstName string
 				var displayedLastName string
@@ -204,12 +204,10 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
-					if warehouseType != nil {
-						ws.Warehouse = &Warehouse{
-							Type:     *warehouseType,
-							Mode:     *warehouseMode,
-							Settings: warehouseSettings,
-						}
+					ws.Warehouse = Warehouse{
+						Type:     warehouseType,
+						Mode:     warehouseMode,
+						Settings: warehouseSettings,
 					}
 					err = json.Unmarshal(userSchema, &ws.UserSchema)
 					if err != nil {

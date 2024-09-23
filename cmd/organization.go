@@ -31,12 +31,17 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	body := struct {
 		Name          string
 		PrivacyRegion apis.PrivacyRegion
+		Warehouse     struct {
+			Type     apis.WarehouseType
+			Mode     apis.WarehouseMode
+			Settings rawJSON
+		}
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion)
+	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
 	}

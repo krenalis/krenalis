@@ -489,26 +489,6 @@ func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (
 	return ws.Connections(), nil
 }
 
-// ConnectWarehouse connects a workspace to a data warehouse.
-func (workspace workspace) ConnectWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	body := struct {
-		Type     apis.WarehouseType
-		Mode     apis.WarehouseMode
-		Settings rawJSON
-		Behavior apis.ConnectWarehouseBehavior
-	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.ConnectWarehouse(r.Context(), body.Type, body.Mode, body.Settings, body.Behavior)
-	return nil, err
-}
-
 // Delete deletes a workspace with all its connections.
 func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
@@ -516,16 +496,6 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	err = ws.Delete(r.Context())
-	return nil, err
-}
-
-// DisconnectWarehouse disconnects a workspace from its data warehouse.
-func (workspace workspace) DisconnectWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	err = ws.DisconnectWarehouse(r.Context())
 	return nil, err
 }
 
