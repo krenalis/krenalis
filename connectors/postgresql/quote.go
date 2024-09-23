@@ -96,8 +96,9 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 	case bool:
 		if v {
 			b.WriteString("TRUE")
+		} else {
+			b.WriteString("FALSE")
 		}
-		b.WriteString("FALSE")
 	case json.RawMessage:
 		quoteString(b, string(v))
 	default:
