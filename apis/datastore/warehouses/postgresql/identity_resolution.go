@@ -116,7 +116,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 			SFUNC=array_cat,
 			STYPE=anycompatiblearray
 		);`
-	_, err = warehouse.db.Exec(ctx, aggregateFunction)
+	_, err = db.Exec(ctx, aggregateFunction)
 	if err != nil {
 		return warehouses.Error(fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err))
 	}
@@ -231,7 +231,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_users_name }}", postgres.QuoteIdent(newUsersName))
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
-	_, err = warehouse.db.Exec(ctx, query)
+	_, err = db.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
 	}
