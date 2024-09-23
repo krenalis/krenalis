@@ -129,9 +129,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 		<div className='sidebar'>
 			<div className='sidebar__items'>
 				<div className='sidebar__top'>
-					<div className='sidebar__logo'>
-						<div className='sidebar__logo-image'>Logo</div>
-					</div>
+					<div className='sidebar__logo'>Meergo</div>
 					<WorkspaceSelector
 						setSelectedWorkspace={setSelectedWorkspace}
 						workspaces={workspaces}

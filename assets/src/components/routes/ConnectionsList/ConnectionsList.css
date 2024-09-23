@@ -19,14 +19,28 @@
 	align-items: center;
 }
 
+.connections-list__name-cell .little-logo {
+	margin-right: 5px;
+}
 .connections-list__name-cell svg {
 	height: 21px;
 }
 
 .connections-list__status-cell {
 	display: flex;
-	gap: 10px;
+	gap: 8px;
 	align-items: center;
+	background: #cdfee1;
+	border-radius: 10px;
+}
+
+.connections-list__status-cell > :first-child {
+	padding: 2px 0 2px 10px;
+}
+
+.connections-list__status-cell > :last-child {
+	color: #174a31;
+	padding: 2px 10px 2px 0;
 }
 
 .connections-list__event-connections-cell {
@@ -37,6 +51,10 @@
 
 .connections-list__event-connections-cell .little-logo svg {
 	height: 21px;
+}
+
+.connections-list .grid__header-cell:first-child .grid__cell-content {
+	margin-left: 36px;
 }
 
 .connections-list .status-dot__hover-area {

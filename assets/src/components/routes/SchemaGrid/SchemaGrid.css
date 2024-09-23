@@ -1,6 +1,10 @@
 .schema-grid__toolbar {
 	display: flex;
 	justify-content: space-between;
+	border: 1px solid var(--border-primary);
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	border-bottom: none;
 }
 
 .schema-grid__expansion-buttons {
@@ -27,8 +31,7 @@
 }
 
 .schema-grid > .grid {
-	border-radius: 0;
-	border: 0;
+	border: 1px solid var(--border-primary);
 	box-shadow: none;
 }
 

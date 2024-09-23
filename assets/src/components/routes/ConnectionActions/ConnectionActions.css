@@ -37,9 +37,13 @@
 	margin-top: 10px;
 }
 
+.connection-actions__action-name-name {
+	font-weight: 600;
+}
+
 .connection-actions__action-name-description {
-	font-size: 13px;
-	opacity: 0.7;
+	font-size: 14px;
+	color: #777;
 }
 
 .connection-actions__buttons {

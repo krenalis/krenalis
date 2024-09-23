@@ -19,7 +19,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 				<div
 					className={`connection-wrapper__link${tab === 'actions' ? ' connection-wrapper__link--selected' : ''}`}
 				>
-					<SlIcon name='send-exclamation'></SlIcon>
+					<SlIcon name='play-circle'></SlIcon>
 					Actions
 				</div>
 			</Link>
@@ -27,8 +27,8 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 				<div
 					className={`connection-wrapper__link${tab === 'overview' ? ' connection-wrapper__link--selected' : ''}`}
 				>
-					<SlIcon name='activity'></SlIcon>
-					Overview
+					<SlIcon name='bar-chart'></SlIcon>
+					Analytics
 				</div>
 			</Link>
 			{(connection.isMobile || connection.isWebsite || connection.isServer || connection.isStream) && (
@@ -36,8 +36,8 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 					<div
 						className={`connection-wrapper__link${tab === 'events' ? ' connection-wrapper__link--selected' : ''}`}
 					>
-						<SlIcon name='play'></SlIcon>
-						Live events
+						<SlIcon name='bug'></SlIcon>
+						Event debugger
 					</div>
 				</Link>
 			)}
@@ -55,7 +55,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 				<div
 					className={`connection-wrapper__link${tab === 'settings' ? ' connection-wrapper__link--selected' : ''}`}
 				>
-					<SlIcon name='sliders2'></SlIcon>
+					<SlIcon name='gear'></SlIcon>
 					Settings
 				</div>
 			</Link>

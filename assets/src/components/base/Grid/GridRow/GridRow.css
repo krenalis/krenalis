@@ -2,6 +2,7 @@
 	display: grid;
 	grid-template-columns: var(--grid-columns);
 	align-items: center;
+	border-top: 1px solid #f2f2f2;
 }
 
 .grid__row--clickable {

@@ -28,7 +28,8 @@
 }
 
 .grid__header-cell {
-	font-weight: 600;
+	color: #616261;
+	font-weight: 800;
 }
 
 .grid__header-cell,
@@ -101,7 +102,7 @@ sl-popup::part(arrow) {
 }
 
 .grid__header-cell {
-	font-size: 13px;
+	font-size: 14px;
 	background-color: var(--bg-gray);
 }
 
@@ -119,7 +120,7 @@ sl-popup::part(arrow) {
 }
 
 .grid__cell {
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .grid--show-column-border .grid__header-cell {

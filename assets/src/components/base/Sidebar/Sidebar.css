@@ -1,11 +1,11 @@
 .sidebar {
-	width: 280px;
+	width: 240px;
 	height: 100%;
 	position: fixed;
 	top: 0;
 	left: 0;
 	z-index: 20;
-	padding: 20px 0;
+	padding: 10px 0;
 	display: flex;
 	flex-flow: column;
 	justify-content: flex-start;
@@ -22,26 +22,19 @@
 	justify-content: space-between;
 	align-items: flex-start;
 	padding: 0 25px;
-	border-right: 1px solid var(--sl-color-neutral-200);
 }
 
 .sidebar__items > div {
 	width: 100%;
 }
 
-.sidebar__logo-image {
-	font-size: 12px;
-	background-color: var(--color-primary-600);
-	color: var(--text-onaccent);
-	width: 50px;
-	height: 50px;
-	border-radius: 100%;
+.sidebar__logo {
 	display: flex;
-	justify-content: center;
 	align-items: center;
 	font-weight: 600;
-	font-family: 'Source Code Pro', monospace;
+	font-size: 22px;
 	margin: auto;
+	color: var(--color-primary-500);
 }
 
 .workspace-selector {
@@ -174,7 +167,6 @@
 		border 0.3s,
 		background-color 0.3s;
 	border-radius: 5px;
-	margin-top: 10px;
 	color: var(--sl-color-neutral-700);
 	user-select: none;
 	border-left: 4px solid transparent;

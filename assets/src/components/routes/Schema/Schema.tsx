@@ -18,9 +18,11 @@ const Schema = () => {
 
 	return (
 		<div className='schema'>
-			<SchemaContext.Provider value={{ schema, isLoadingSchema, setIsLoadingSchema }}>
-				<Outlet />
-			</SchemaContext.Provider>
+			<div className='route-content'>
+				<SchemaContext.Provider value={{ schema, isLoadingSchema, setIsLoadingSchema }}>
+					<Outlet />
+				</SchemaContext.Provider>
+			</div>
 		</div>
 	);
 };

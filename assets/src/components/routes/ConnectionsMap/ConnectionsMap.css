@@ -67,7 +67,7 @@
 	align-items: center;
 	color: var(--text-onaccent);
 	font-size: 21px;
-	box-shadow: 0 0 #4f46e5;
+	box-shadow: 0 0 var(--color-primary-500);
 	animation: pulse 2s infinite;
 	border: 12px solid var(--color-primary-400);
 	font-weight: 600;

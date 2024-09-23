@@ -3,18 +3,25 @@
 	padding-top: 50px;
 }
 
+.connection-overview__title {
+	font-size: 18px;
+	color: var(--sl-color-gray-700);
+	margin-bottom: 24px;
+}
+
 .connection-overview__tabs {
-	width: 1400px;
-	margin: 10px auto 50px auto;
 	display: flex;
 	gap: 30px;
 	align-items: center;
-	justify-content: space-between;
 }
 
 .connection-overview__tabs sl-button::part(base) {
 	padding-left: 15px;
 	padding-right: 15px;
+}
+
+.connection-overview__tabs sl-button[variant='default']::part(base) {
+	background: var(--bg-primary);
 }
 
 .connection-overview__tabs-date-range {
@@ -38,11 +45,14 @@
 }
 
 .connection-overview__chart {
-	margin: 50px auto 0 auto;
+	margin: 20px auto 0 auto;
 	width: 100%;
-	max-width: 1400px;
-	height: 300px;
 	position: relative;
+	background-color: var(--bg-primary);
+	border-radius: var(--radius);
+	border: 1px solid var(--sl-color-neutral-200);
+	box-shadow: var(--sl-shadow-small);
+	padding: 30px;
 }
 
 .connection-overview__chart .recharts-responsive-container {
@@ -52,10 +62,11 @@
 .connection-overview__chart-heading,
 .connection-overview__errors-heading,
 .connection-overview__funnel-heading {
-	max-width: 1400px;
-	margin: auto;
-	margin-bottom: 20px;
-	padding-left: 29px;
+	color: var(--sl-color-gray-700);
+	margin-top: -8px;
+	margin-bottom: 30px;
+	font-size: 15px;
+	font-weight: 500;
 }
 
 .connection-overview__chart .recharts-wrapper {
@@ -65,21 +76,18 @@
 	margin-bottom: 80px;
 }
 
-.connection-overview__chart .recharts-wrapper text,
-.connection-overview__chart-now {
+.connection-overview__chart .recharts-wrapper text {
 	font-size: 12px;
 	font-weight: 500;
 }
 
-.connection-overview__chart-now {
-	position: absolute;
-	right: 7px;
-	bottom: -11px;
-	color: var(--sl-color-neutral-600);
-}
-
 .connection-overview__chart .recharts-wrapper .recharts-legend-item {
 	font-size: 13px;
+}
+
+.connection-overview__errors-heading {
+	margin: 40px 0 24px 5px;
+	font-size: 16px;
 }
 
 .connection-overview__errors .grid a {
@@ -92,19 +100,13 @@
 	font-weight: 500;
 }
 
-.connection-overview .grid {
-	max-width: 1350px;
-	margin: auto;
-}
-
 .connection-overview__funnel {
-	max-width: 1400px;
-	margin: 100px auto;
-	padding-left: 29px;
-}
-
-.connection-overview__funnel-heading {
-	padding-left: 0;
+	margin: 20px auto 0 auto;
+	background-color: var(--bg-primary);
+	border-radius: var(--radius);
+	border: 1px solid var(--sl-color-neutral-200);
+	box-shadow: var(--sl-shadow-small);
+	padding: 22px;
 }
 
 .connection-overview__funnel-passed,
@@ -135,7 +137,7 @@
 }
 
 .connection-overview__funnel-label {
-	background: var(--bg-gray);
+	background: var(--bg-primary);
 	font-size: 12px;
 	padding: 0px 10px;
 	font-weight: 600;

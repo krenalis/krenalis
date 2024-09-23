@@ -1,16 +1,21 @@
 .header {
-	padding: 15px 30px;
+	padding: 5px 30px 5px 18px;
 	display: grid;
 	grid-template-areas: 'title account';
-	border-bottom: 1px solid var(--sl-color-neutral-200);
 	justify-content: space-between;
 	align-items: baseline;
-	height: 70px;
+	height: 56px;
+	background: var(--bg-primary);
+	position: fixed;
+	top: 0;
+	left: 240px;
+	right: 0;
+	z-index: 20;
 }
 
 .header__title {
 	grid-area: title;
-	font-size: 17px;
+	font-size: 18px;
 	display: flex;
 	align-items: baseline;
 	gap: 15px;

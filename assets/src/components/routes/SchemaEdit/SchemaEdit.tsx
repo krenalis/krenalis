@@ -62,7 +62,7 @@ const SchemaEdit = () => {
 	return (
 		<div className='schema-edit'>
 			<div className='schema-edit__header'>
-				<div className='schema-edit__header-title'>Alter Schema</div>
+				<div className='schema-edit__header-title'>Alter schema</div>
 				<div className='schema-edit__header-buttons'>
 					<SlButton className='schema-edit__header-cancel-button' onClick={onCancelEdit}>
 						Cancel

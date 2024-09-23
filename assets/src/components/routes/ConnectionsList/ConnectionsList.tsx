@@ -72,7 +72,7 @@ const ConnectionsList = () => {
 				c.connector.name,
 				<div className='connections-list__status-cell'>
 					<StatusDot status={c.status} />
-					{c.status.text}
+					<div>{c.status.text}</div>
 				</div>,
 				c.actionsCount,
 			];

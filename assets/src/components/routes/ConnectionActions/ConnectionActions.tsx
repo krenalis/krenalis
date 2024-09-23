@@ -102,7 +102,7 @@ const ConnectionActions = () => {
 			<div className='connection-actions'>
 				{connection.actions!.length === 0 ? (
 					<div className='connection-actions__no-action'>
-						<IconWrapper name='send-exclamation' size={40} />
+						<IconWrapper name='play-circle' size={40} />
 						<div className='connection-actions__no-action-description'>
 							Add an action to {connection.description}
 						</div>

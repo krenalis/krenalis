@@ -65,7 +65,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		setIsLoadingConnections(true);
 	};
 
-	const onRemoveAction = async (actionID: number) => {
+	const onDeleteAction = async (actionID: number) => {
 		newActionID.current = 0; // avoid repainting with the animation on the new action's row
 		try {
 			await api.workspaces.connections.deleteAction(connection.id, actionID);
@@ -157,7 +157,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		setIsLoadingConnections(true);
 	};
 
-	const onEditClick = (action: Action) => {
+	const onManageClick = (action: Action) => {
 		for (const key in runButtonRefs.current) {
 			const button = runButtonRefs.current[key].current;
 			if (button != null) {
@@ -240,16 +240,16 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						</FeedbackButton>
 					</>
 				)}
-				<SlButton variant='default' size='small' onClick={() => onEditClick(a)}>
-					Edit...
+				<SlButton variant='default' size='small' onClick={() => onManageClick(a)}>
+					Manage...
 				</SlButton>
 				<SlButton
-					className='connection-actions__remove-action'
+					className='connection-actions__delete-action'
 					variant='danger'
 					size='small'
-					onClick={() => onRemoveAction(a.ID)}
+					onClick={() => onDeleteAction(a.ID)}
 				>
-					Remove
+					Delete
 				</SlButton>
 			</div>
 		);

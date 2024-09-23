@@ -18,7 +18,6 @@ const Settings = () => {
 	if (location.pathname.endsWith('settings')) {
 		content = (
 			<div className='settings__content'>
-				<p className='settings__title'>Workspace settings</p>
 				<Link path='settings/general'>
 					<ListTile
 						className='settings__setting'
@@ -52,7 +51,11 @@ const Settings = () => {
 		content = <Outlet />;
 	}
 
-	return <div className='settings'>{content}</div>;
+	return (
+		<div className='settings'>
+			<div className='route-content'>{content}</div>
+		</div>
+	);
 };
 
 export default Settings;

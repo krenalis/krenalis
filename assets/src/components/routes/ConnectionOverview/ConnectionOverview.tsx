@@ -383,27 +383,10 @@ const ConnectionOverview = () => {
 
 	return (
 		<div className='connection-overview'>
+			<div className='connection-overview__title'>Analytics & Log</div>
 			{supportedTargets.current.length > 0 ? (
 				<>
 					<div className='connection-overview__tabs'>
-						{hasBothTargets && (
-							<SlButtonGroup>
-								<SlButton
-									variant={isUsersSelected ? 'default' : 'primary'}
-									onClick={onSelectEvents}
-									size='small'
-								>
-									Events
-								</SlButton>
-								<SlButton
-									variant={isUsersSelected ? 'primary' : 'default'}
-									onClick={onSelectUsers}
-									size='small'
-								>
-									Users
-								</SlButton>
-							</SlButtonGroup>
-						)}
 						<SlButtonGroup>
 							<SlButton
 								variant={selectedStatisticsRange === 'last15Minutes' ? 'primary' : 'default'}
@@ -451,6 +434,24 @@ const ConnectionOverview = () => {
 								</div>
 							</div>
 						</SlButtonGroup>
+						{hasBothTargets && (
+							<SlButtonGroup>
+								<SlButton
+									variant={isUsersSelected ? 'default' : 'primary'}
+									onClick={onSelectEvents}
+									size='small'
+								>
+									Events
+								</SlButton>
+								<SlButton
+									variant={isUsersSelected ? 'primary' : 'default'}
+									onClick={onSelectUsers}
+									size='small'
+								>
+									Users
+								</SlButton>
+							</SlButtonGroup>
+						)}
 					</div>
 					<div className='connection-overview__chart'>
 						<div className='connection-overview__chart-heading'>
@@ -477,9 +478,6 @@ const ConnectionOverview = () => {
 								/>
 							</ComposedChart>
 						</ResponsiveContainer>
-						{selectedStatisticsRange !== 'Custom' && (
-							<div className='connection-overview__chart-now'>Now</div>
-						)}
 					</div>
 					<div className='connection-overview__funnel'>
 						<div className='connection-overview__funnel-heading'>Pipeline</div>
@@ -529,11 +527,11 @@ const ConnectionOverview = () => {
 						{funnelArrows}
 					</div>
 					<div className='connection-overview__errors'>
-						<div className='connection-overview__errors-heading'>Failures {titleRange}</div>
+						<div className='connection-overview__errors-heading'>Error log {titleRange}</div>
 						<Grid
 							columns={ERRORS_COLUMNS}
 							rows={isUsersSelected ? userActionErrorRows : eventActionErrorRows}
-							noRowsMessage={`No error has been returned ${titleRange}`}
+							noRowsMessage={`No errors have occurred ${titleRange}`}
 						/>
 					</div>
 				</>

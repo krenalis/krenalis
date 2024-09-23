@@ -1,12 +1,20 @@
 .users-list .toolbar {
 	justify-content: space-between;
-	height: 80px;
+	height: 90px;
+	border: 1px solid var(--border-primary);
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	border-bottom: none;
 }
 
 .users-list__content {
-	padding: 0;
-	min-height: calc(100vh - 140px);
-	background-color: var(--bg-gray);
+	min-height: calc(100vh - 163px);
+	border: 1px solid var(--border-primary);
+}
+
+.users-list__content .grid__cell {
+	padding-top: 10px;
+	padding-bottom: 10px;
 }
 
 .users-list__identity-resolution {
@@ -20,6 +28,10 @@
 
 .users-list__identity-resolution--is-first-execution {
 	bottom: 0;
+}
+
+.users-list__identity-resolution-button {
+	margin-bottom: 6px;
 }
 
 .users-list__identity-resolution-button::part(base) {
@@ -41,16 +53,11 @@
 .users-list__identity-resolution-end-time {
 	font-size: 12px;
 	text-align: center;
-	color: var(--sl-color-neutral-500);
+	color: var(--color-primary-500);
 }
 
 .users-list .grid {
-	border-top: 0;
-	border-right: 0;
-	border-left: 0;
-	box-shadow: none;
-	border-radius: 0;
-	border: 0;
+	border: none;
 }
 
 .users-list .grid::-webkit-scrollbar {

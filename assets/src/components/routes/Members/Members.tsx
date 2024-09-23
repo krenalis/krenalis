@@ -156,7 +156,7 @@ const Members = () => {
 					variant='danger'
 					isOpen={isRemoveAlertOpen}
 					onClose={onDeleteMemberCancel}
-					title='Are you sure?'
+					title='Delete the member?'
 					actions={
 						<>
 							<SlButton onClick={onDeleteMemberCancel}>Cancel</SlButton>
@@ -166,7 +166,7 @@ const Members = () => {
 						</>
 					}
 				>
-					If you delete the member they will no longer have access to your organization
+					If you delete the member they will no longer have access to your organization.
 				</AlertDialog>
 				<InviteMemberDialog
 					isOpen={isInviteMemberDialogOpen}
