@@ -251,16 +251,16 @@ func (ch *ClickHouse) saveValues(ctx context.Context, values []byte, test bool) 
 		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
 	}
 	// Validate Username.
-	if n := len(s.Username); n < 1 || n > 64 {
-		return meergo.NewInvalidUIValuesError("username length in bytes must be in range [1,64]")
+	if n := len(s.Username); n > 64 {
+		return meergo.NewInvalidUIValuesError("username length in bytes must be in range [0,64]")
 	}
 	// Validate Password.
-	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return meergo.NewInvalidUIValuesError("password length must be in range [1,100]")
+	if n := utf8.RuneCountInString(s.Password); n > 100 {
+		return meergo.NewInvalidUIValuesError("password length must be in range [0,100]")
 	}
 	// Validate Database.
-	if n := len(s.Database); n < 1 || n > 64 {
-		return meergo.NewInvalidUIValuesError("database length in bytes must be in range [1,64]")
+	if n := len(s.Database); n > 64 {
+		return meergo.NewInvalidUIValuesError("database length in bytes must be in range [0,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
