@@ -76,7 +76,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
 		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
 		if err != nil {
-			return warehouses.Error(err)
+			return warehouses.Error(fmt.Errorf("cannot create users table (with name %s): %s", postgres.QuoteIdent(newUsersName), err))
 		}
 		_, err := db.Exec(ctx, `UPDATE _operations SET users_version = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, newUsersVersion)
 		if err != nil {
