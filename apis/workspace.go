@@ -1758,10 +1758,7 @@ type ConnectionToAdd struct {
 type WarehouseType int
 
 const (
-	BigQuery WarehouseType = iota + 1
-	ClickHouse
-	PostgreSQL
-	Redshift
+	PostgreSQL WarehouseType = iota + 1
 	Snowflake
 )
 
@@ -1775,14 +1772,8 @@ func (typ WarehouseType) MarshalJSON() ([]byte, error) {
 // It panics if typ is not a valid WarehouseType value.
 func (typ WarehouseType) String() string {
 	switch typ {
-	case BigQuery:
-		return "BigQuery"
-	case ClickHouse:
-		return "ClickHouse"
 	case PostgreSQL:
 		return "PostgreSQL"
-	case Redshift:
-		return "Redshift"
 	case Snowflake:
 		return "Snowflake"
 	}
@@ -1805,14 +1796,8 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 	}
 	var t WarehouseType
 	switch s {
-	case "BigQuery":
-		t = BigQuery
-	case "ClickHouse":
-		t = ClickHouse
 	case "PostgreSQL":
 		t = PostgreSQL
-	case "Redshift":
-		t = Redshift
 	case "Snowflake":
 		t = Snowflake
 	default:

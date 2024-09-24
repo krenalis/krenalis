@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
-	"github.com/meergo/meergo/apis/datastore/warehouses/clickhouse"
 	"github.com/meergo/meergo/apis/datastore/warehouses/postgresql"
 	"github.com/meergo/meergo/apis/datastore/warehouses/snowflake"
 	"github.com/meergo/meergo/apis/state"
@@ -360,10 +359,6 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 // valid.
 func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehouse, error) {
 	switch typ {
-	case state.BigQuery, state.Redshift:
-		return nil, fmt.Errorf("warehouse type %s is not yet supported", typ)
-	case state.ClickHouse:
-		return clickhouse.Open(settings)
 	case state.PostgreSQL:
 		return postgresql.Open(settings)
 	case state.Snowflake:

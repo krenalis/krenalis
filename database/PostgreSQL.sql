@@ -12,7 +12,7 @@ CREATE TABLE organizations (
 
 INSERT INTO organizations (name) VALUES ('ACME inc');
 
-CREATE TYPE warehouse_type AS ENUM ('BigQuery', 'ClickHouse', 'PostgreSQL', 'Redshift', 'Snowflake');
+CREATE TYPE warehouse_type AS ENUM ('PostgreSQL', 'Snowflake');
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');
 

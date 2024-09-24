@@ -1,4 +1,4 @@
-type WarehouseType = 'BigQuery' | 'ClickHouse' | 'PostgreSQL' | 'Redshift' | 'Snowflake';
+type WarehouseType = 'PostgreSQL' | 'Snowflake';
 
 type WarehouseMode = 'Normal' | 'Inspection' | 'Maintenance';
 

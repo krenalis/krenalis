@@ -318,10 +318,7 @@ func (organization *Organization) Workspaces() []*Workspace {
 type WarehouseType int
 
 const (
-	BigQuery WarehouseType = iota + 1
-	ClickHouse
-	PostgreSQL
-	Redshift
+	PostgreSQL WarehouseType = iota + 1
 	Snowflake
 )
 
@@ -333,14 +330,8 @@ func (typ *WarehouseType) Scan(src any) error {
 	}
 	var t WarehouseType
 	switch s {
-	case "BigQuery":
-		t = BigQuery
-	case "ClickHouse":
-		t = ClickHouse
 	case "PostgreSQL":
 		t = PostgreSQL
-	case "Redshift":
-		t = Redshift
 	case "Snowflake":
 		t = Snowflake
 	default:
@@ -364,14 +355,8 @@ func (typ WarehouseType) String() string {
 // It returns an error if typ is not a valid WarehouseType.
 func (typ WarehouseType) Value() (driver.Value, error) {
 	switch typ {
-	case BigQuery:
-		return "BigQuery", nil
-	case ClickHouse:
-		return "ClickHouse", nil
 	case PostgreSQL:
 		return "PostgreSQL", nil
-	case Redshift:
-		return "Redshift", nil
 	case Snowflake:
 		return "Snowflake", nil
 	}

@@ -170,7 +170,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		return 0, errors.BadRequest("privacy region is not valid")
 	}
 	switch whType {
-	case BigQuery, ClickHouse, PostgreSQL, Redshift, Snowflake:
+	case PostgreSQL, Snowflake:
 	default:
 		return 0, errors.BadRequest("warehouse type %d is not valid", whType)
 	}
