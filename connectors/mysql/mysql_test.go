@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package postgresql
+package mysql
 
 import (
 	"bytes"
@@ -23,13 +23,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const settingsEnvKey = "MEERGO_TEST_PATH_POSTGRESQL"
+const settingsEnvKey = "MEERGO_TEST_PATH_MYSQL"
 
 // Test_Upsert_Query tests the Upsert and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
 //
-// Set the environment variable MEERGO_TEST_PATH_POSTGRESQL with the path to the
+// Set the environment variable MEERGO_TEST_PATH_MYSQL with the path to the
 // database credentials in JSON format for running the test.
 func Test_Upsert_Query(t *testing.T) {
 
@@ -39,24 +39,34 @@ func Test_Upsert_Query(t *testing.T) {
 		MeergoType  types.Type
 		MeergoValue any
 	}{
-		{"SERIAL", int64(1), types.Int(32), 1},
-		{"smallint", int64(1), types.Int(16), 1},
-		{"integer", int64(1), types.Int(32), 1},
-		{"bigint", int64(1), types.Int(64), 1},
-		{"numeric(10,3)", "1.123", types.Decimal(10, 3), decimal.RequireFromString("1.123")},
-		{"real", float64(float32(1.123)), types.Float(32), float64(float32(1.123))},
-		{"double precision", 1.123, types.Float(64), 1.123},
-		{"character varying", "foo", types.Text(), "foo"},
-		{"character varying(3)", "foo", types.Text().WithCharLen(3), "foo"},
-		{"text", "FOO", types.Text(), "FOO"},
-		{"timestamp without time zone", time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
-		{"timestamp with time zone", time.Date(2023, 1, 1, 1, 2, 3, 0, time.Local), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
-		{"date", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
-		{"time", "02:03:00", types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
-		{"boolean", true, types.Boolean(), true},
-		{"inet", "127.0.0.1", types.Inet(), "127.0.0.1"},
-		{"uuid", "4d92d698-687d-4447-b34f-6b29d74a9730", types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
-		{"jsonb", []byte(`{"foo": "boo"}`), types.JSON(), json.RawMessage(`{"foo":"boo"}`)},
+		{"TINYINT", int64(-112), types.Int(8), -112},
+		{"SMALLINT", int64(1427), types.Int(16), 1427},
+		{"MEDIUMINT", int64(5038561), types.Int(24), 5038561},
+		{"INT", int64(-105722812), types.Int(32), -105722812},
+		{"BIGINT", int64(4946287520337), types.Int(64), 4946287520337},
+		{"TINYINT UNSIGNED", int64(213), types.Uint(8), uint(213)},
+		{"SMALLINT UNSIGNED", int64(3092), types.Uint(16), uint(3092)},
+		{"MEDIUMINT UNSIGNED", int64(5038561), types.Uint(24), uint(5038561)},
+		{"INT UNSIGNED", int64(3841006923), types.Uint(32), uint(3841006923)},
+		{"BIGINT UNSIGNED", uint64(18192650825384015325), types.Uint(64), uint(18192650825384015325)},
+		{"FLOAT", float32(1.123), types.Float(32), float64(float32(1.123))},
+		{"DOUBLE", 390.491835234, types.Float(64), 390.491835234},
+		{"DECIMAL(10,3)", []byte("1.123"), types.Decimal(10, 3), decimal.RequireFromString("1.123")},
+		{"DATETIME(6)", time.Date(2023, 1, 1, 1, 2, 3, 830511000, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 830511000, time.UTC)},
+		{"DATE", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"TIME", []byte("02:03:00"), types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
+		{"YEAR", int64(2024), types.Year(), 2024},
+		{"JSON", []byte(`{"foo": "bar"}`), types.JSON(), json.RawMessage(`{"foo":"bar"}`)},
+		{"VARCHAR(100)", []byte("foo"), types.Text(), "foo"},
+		{"CHAR(10)", []byte("foo"), types.Text(), "foo"},
+		{"TEXT", []byte("foo"), types.Text(), "foo"},
+		{"MEDIUMTEXT", []byte("foo"), types.Text(), "foo"},
+		{"LONGTEXT", []byte("foo"), types.Text(), "foo"},
+		{"VARBINARY(100)", []byte("foo"), types.Text(), "foo"},
+		{"BINARY(10)", []byte("foo\x00\x00\x00\x00\x00\x00\x00"), types.Text(), "foo\x00\x00\x00\x00\x00\x00\x00"},
+		{"BLOB", []byte("foo"), types.Text(), "foo"},
+		{"MEDIUMBLOB", []byte("foo"), types.Text(), "foo"},
+		{"LONGBLOB", []byte("foo"), types.Text(), "foo"},
 	}
 
 	table := meergo.Table{
@@ -68,7 +78,7 @@ func Test_Upsert_Query(t *testing.T) {
 		table.Columns[i] = types.Property{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
-			Nullable: true,
+			Nullable: i > 0,
 		}
 	}
 
@@ -103,6 +113,8 @@ func Test_Upsert_Query(t *testing.T) {
 		create.WriteString(cols[i].DriverType)
 		if i == 0 {
 			create.WriteString(" PRIMARY KEY")
+		} else {
+			create.WriteString(" NULL")
 		}
 	}
 	create.WriteString("\n)")
@@ -160,7 +172,7 @@ func Test_Upsert_Query(t *testing.T) {
 		}
 		for i, v := range scanner.values {
 			if expected := cols[i].DriverValue; !reflect.DeepEqual(expected, v) {
-				t.Fatalf("column %q: expected %v (%T), got %v (%T)", table.Columns[i].Name, expected, expected, v, v)
+				t.Fatalf("column %q: expected %#v (%T), got %#v (%T)", table.Columns[i].Name, expected, expected, v, v)
 			}
 		}
 	}

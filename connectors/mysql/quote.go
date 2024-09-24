@@ -8,6 +8,7 @@
 package mysql
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -67,11 +68,8 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 			b.WriteString(v.Format("15:04:05.999999"))
 		}
 		b.WriteByte('"')
-	case bool:
-		if v {
-			b.WriteString("1")
-		}
-		b.WriteString("0")
+	case json.RawMessage:
+		quoteString(b, string(v))
 	default:
 		panic(fmt.Errorf("unsupported value type '%T'", v))
 	}
