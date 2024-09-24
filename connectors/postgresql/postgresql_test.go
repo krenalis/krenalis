@@ -25,14 +25,12 @@ import (
 
 const settingsEnvKey = "MEERGO_TEST_PATH_POSTGRESQL"
 
-// Test_Upsert_Query creates a table, inserts a row using the Upsert method with
-// all supported PostgreSQL types, and retrieves the data using the Query
-// method. It verifies that the returned columns and values match the expected
-// results.
+// Test_Upsert_Query tests the Upsert and Query methods on supported types. It
+// creates a table, inserts a row, and retrieves the data, verifying that the
+// returned columns and values match the expected results.
 //
-// Before running the test, set the environment variable
-// MEERGO_TEST_PATH_POSTGRESQL with the path to the database credentials in JSON
-// format.
+// Set the environment variable MEERGO_TEST_PATH_POSTGRESQL with the path to the
+// database credentials in JSON format for running the test.
 func Test_Upsert_Query(t *testing.T) {
 
 	cols := []struct {
@@ -90,8 +88,7 @@ func Test_Upsert_Query(t *testing.T) {
 		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
 	}
 	defer connector.Close()
-	err = connector.openDB()
-	if err != nil {
+	if err = connector.openDB(); err != nil {
 		t.Fatalf("cannot open the database: %s", err)
 	}
 
@@ -114,7 +111,7 @@ func Test_Upsert_Query(t *testing.T) {
 		t.Fatalf("cannot create table: %s", err)
 	}
 	defer func() {
-		_, err := connector.db.ExecContext(context.Background(), "DROP TABLE "+table.Name)
+		_, err = connector.db.ExecContext(context.Background(), "DROP TABLE "+table.Name)
 		if err != nil {
 			t.Logf("cannot drop %s table: %s", table.Name, err)
 		}
@@ -141,8 +138,13 @@ func Test_Upsert_Query(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query execution is failed: %s", err)
 	}
-	if !reflect.DeepEqual(table.Columns, columns) {
-		t.Fatalf("expected columns %#v, got %#v", table.Columns, columns)
+	if len(table.Columns) != len(columns) {
+		t.Fatalf("expected %d columns, got %d", len(table.Columns), len(columns))
+	}
+	for i, c := range table.Columns {
+		if !reflect.DeepEqual(c, columns[i]) {
+			t.Fatalf("unexpected column:\nexpected: %v\ngot:      %v", c, columns[i])
+		}
 	}
 	scanner := scanner{
 		values: make([]any, len(columns)),
@@ -157,8 +159,8 @@ func Test_Upsert_Query(t *testing.T) {
 			t.Fatalf("cannot scan row: %s", err)
 		}
 		for i, v := range scanner.values {
-			if !reflect.DeepEqual(cols[i].DriverValue, v) {
-				t.Fatalf("expected value %#v (type %T) for column %q, got %#v (type %T)", cols[i].DriverValue, cols[i].DriverValue, cols[i].DriverType, v, v)
+			if expected := cols[i].DriverValue; !reflect.DeepEqual(expected, v) {
+				t.Fatalf("column %q: expected %v (%T), got %v (%T)", table.Columns[i].Name, expected, expected, v, v)
 			}
 		}
 	}
