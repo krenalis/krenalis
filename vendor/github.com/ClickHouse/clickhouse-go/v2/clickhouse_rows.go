@@ -46,13 +46,15 @@ func (r *rows) Next() (result bool) {
 	}
 next:
 	if r.row >= r.block.Rows() {
+		if r.stream == nil {
+			return false
+		}
 		select {
 		case err := <-r.errors:
 			if err != nil {
 				r.err = err
 				return false
 			}
-			goto next
 		case block := <-r.stream:
 			if block == nil {
 				return false
@@ -63,6 +65,7 @@ next:
 			}
 			r.row, r.block = 0, block
 		}
+		goto next
 	}
 	r.row++
 	return r.row <= r.block.Rows()
@@ -95,26 +98,42 @@ func (r *rows) Columns() []string {
 }
 
 func (r *rows) Close() error {
-	active := 2
+	if r.errors == nil && r.stream == nil {
+		return r.err
+	}
+
+	if r.errors == nil {
+		for range r.stream {
+		}
+		return nil
+	}
+
+	if r.stream == nil {
+		for err := range r.errors {
+			r.err = err
+		}
+		return r.err
+	}
+
+	errorsClosed := false
+	streamClosed := false
 	for {
 		select {
 		case _, ok := <-r.stream:
 			if !ok {
-				active--
-				if active == 0 {
-					return r.err
-				}
+				streamClosed = true
 			}
 		case err, ok := <-r.errors:
 			if err != nil {
 				r.err = err
 			}
 			if !ok {
-				active--
-				if active == 0 {
-					return r.err
-				}
+				errorsClosed = true
 			}
+		}
+
+		if errorsClosed && streamClosed {
+			return r.err
 		}
 	}
 }

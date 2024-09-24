@@ -25,6 +25,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
+	"net"
 	"os"
 	"reflect"
 	"strings"
@@ -46,7 +48,11 @@ type stdConnOpener struct {
 func (o *stdConnOpener) Driver() driver.Driver {
 	var debugf = func(format string, v ...any) {}
 	if o.opt.Debug {
-		debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse-std] "), 0).Printf
+		if o.opt.Debugf != nil {
+			debugf = o.opt.Debugf
+		} else {
+			debugf = log.New(os.Stdout, "[clickhouse-std] ", 0).Printf
+		}
 	}
 	return &stdDriver{debugf: debugf}
 }
@@ -77,6 +83,7 @@ func (o *stdConnOpener) Connect(ctx context.Context) (_ driver.Conn, err error) 
 		return nil, ErrAcquireConnNoAddress
 	}
 
+	random := rand.Int()
 	for i := range o.opt.Addr {
 		var num int
 		switch o.opt.ConnOpenStrategy {
@@ -84,11 +91,17 @@ func (o *stdConnOpener) Connect(ctx context.Context) (_ driver.Conn, err error) 
 			num = i
 		case ConnOpenRoundRobin:
 			num = (int(connID) + i) % len(o.opt.Addr)
+		case ConnOpenRandom:
+			num = (random + i) % len(o.opt.Addr)
 		}
 		if conn, err = dialFunc(ctx, o.opt.Addr[num], connID, o.opt); err == nil {
 			var debugf = func(format string, v ...any) {}
 			if o.opt.Debug {
-				debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse-std][conn=%d][%s] ", num, o.opt.Addr[num]), 0).Printf
+				if o.opt.Debugf != nil {
+					debugf = o.opt.Debugf
+				} else {
+					debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse-std][conn=%d][%s] ", num, o.opt.Addr[num]), 0).Printf
+				}
 			}
 			return &stdDriver{
 				conn:   conn,
@@ -102,6 +115,8 @@ func (o *stdConnOpener) Connect(ctx context.Context) (_ driver.Conn, err error) 
 	return nil, err
 }
 
+var _ driver.Connector = (*stdConnOpener)(nil)
+
 func init() {
 	var debugf = func(format string, v ...any) {}
 	sql.Register("clickhouse", &stdDriver{debugf: debugf})
@@ -110,7 +125,10 @@ func init() {
 // isConnBrokenError returns true if the error class indicates that the
 // db connection is no longer usable and should be marked bad
 func isConnBrokenError(err error) bool {
-	if errors.Is(err, io.EOF) || errors.Is(err, syscall.EPIPE) {
+	if errors.Is(err, io.EOF) || errors.Is(err, syscall.EPIPE) || errors.Is(err, syscall.ECONNRESET) {
+		return true
+	}
+	if _, ok := err.(*net.OpError); ok {
 		return true
 	}
 	return false
@@ -125,7 +143,11 @@ func Connector(opt *Options) driver.Connector {
 
 	var debugf = func(format string, v ...any) {}
 	if o.Debug {
-		debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse-std][opener] "), 0).Printf
+		if o.Debugf != nil {
+			debugf = o.Debugf
+		} else {
+			debugf = log.New(os.Stdout, "[clickhouse-std][opener] ", 0).Printf
+		}
 	}
 	return &stdConnOpener{
 		opt:    o,
@@ -149,7 +171,11 @@ func OpenDB(opt *Options) *sql.DB {
 		settings = append(settings, "SetConnMaxLifetime")
 	}
 	if opt.Debug {
-		debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse-std][opener] "), 0).Printf
+		if opt.Debugf != nil {
+			debugf = opt.Debugf
+		} else {
+			debugf = log.New(os.Stdout, "[clickhouse-std][opener] ", 0).Printf
+		}
 	}
 	if len(settings) != 0 {
 		return sql.OpenDB(&stdConnOpener{
@@ -170,8 +196,8 @@ type stdConnect interface {
 	query(ctx context.Context, release func(*connect, error), query string, args ...any) (*rows, error)
 	exec(ctx context.Context, query string, args ...any) error
 	ping(ctx context.Context) (err error)
-	prepareBatch(ctx context.Context, query string, release func(*connect, error), acquire func(context.Context) (*connect, error)) (ldriver.Batch, error)
-	asyncInsert(ctx context.Context, query string, wait bool) error
+	prepareBatch(ctx context.Context, query string, options ldriver.PrepareBatchOptions, release func(*connect, error), acquire func(context.Context) (*connect, error)) (ldriver.Batch, error)
+	asyncInsert(ctx context.Context, query string, wait bool, args ...any) error
 }
 
 type stdDriver struct {
@@ -179,6 +205,12 @@ type stdDriver struct {
 	commit func() error
 	debugf func(format string, v ...any)
 }
+
+var _ driver.Conn = (*stdDriver)(nil)
+var _ driver.ConnBeginTx = (*stdDriver)(nil)
+var _ driver.ExecerContext = (*stdDriver)(nil)
+var _ driver.QueryerContext = (*stdDriver)(nil)
+var _ driver.ConnPrepareContext = (*stdDriver)(nil)
 
 func (std *stdDriver) Open(dsn string) (_ driver.Conn, err error) {
 	var opt Options
@@ -189,11 +221,13 @@ func (std *stdDriver) Open(dsn string) (_ driver.Conn, err error) {
 	o := opt.setDefaults()
 	var debugf = func(format string, v ...any) {}
 	if o.Debug {
-		debugf = log.New(os.Stdout, fmt.Sprintf("[clickhouse-std][opener] "), 0).Printf
+		debugf = log.New(os.Stdout, "[clickhouse-std][opener] ", 0).Printf
 	}
 	o.ClientInfo.comment = []string{"database/sql"}
 	return (&stdConnOpener{opt: o, debugf: debugf}).Connect(context.Background())
 }
+
+var _ driver.Driver = (*stdDriver)(nil)
 
 func (std *stdDriver) ResetSession(ctx context.Context) error {
 	if std.conn.isBad() {
@@ -203,9 +237,36 @@ func (std *stdDriver) ResetSession(ctx context.Context) error {
 	return nil
 }
 
-func (std *stdDriver) Ping(ctx context.Context) error { return std.conn.ping(ctx) }
+var _ driver.SessionResetter = (*stdDriver)(nil)
 
-func (std *stdDriver) Begin() (driver.Tx, error) { return std, nil }
+func (std *stdDriver) Ping(ctx context.Context) error {
+	if std.conn.isBad() {
+		std.debugf("Ping: connection is bad")
+		return driver.ErrBadConn
+	}
+
+	return std.conn.ping(ctx)
+}
+
+var _ driver.Pinger = (*stdDriver)(nil)
+
+func (std *stdDriver) Begin() (driver.Tx, error) {
+	if std.conn.isBad() {
+		std.debugf("Begin: connection is bad")
+		return nil, driver.ErrBadConn
+	}
+
+	return std, nil
+}
+
+func (std *stdDriver) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	if std.conn.isBad() {
+		std.debugf("BeginTx: connection is bad")
+		return nil, driver.ErrBadConn
+	}
+
+	return std, nil
+}
 
 func (std *stdDriver) Commit() error {
 	if std.commit == nil {
@@ -232,16 +293,26 @@ func (std *stdDriver) Rollback() error {
 	return nil
 }
 
+var _ driver.Tx = (*stdDriver)(nil)
+
 func (std *stdDriver) CheckNamedValue(nv *driver.NamedValue) error { return nil }
 
+var _ driver.NamedValueChecker = (*stdDriver)(nil)
+
 func (std *stdDriver) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
-	if options := queryOptions(ctx); options.async.ok {
-		if len(args) != 0 {
-			return nil, errors.New("clickhouse: you can't use parameters in an asynchronous insert")
-		}
-		return driver.RowsAffected(0), std.conn.asyncInsert(ctx, query, options.async.wait)
+	if std.conn.isBad() {
+		std.debugf("ExecContext: connection is bad")
+		return nil, driver.ErrBadConn
 	}
-	if err := std.conn.exec(ctx, query, rebind(args)...); err != nil {
+
+	var err error
+	if options := queryOptions(ctx); options.async.ok {
+		err = std.conn.asyncInsert(ctx, query, options.async.wait, rebind(args)...)
+	} else {
+		err = std.conn.exec(ctx, query, rebind(args)...)
+	}
+
+	if err != nil {
 		if isConnBrokenError(err) {
 			std.debugf("ExecContext got a fatal error, resetting connection: %v\n", err)
 			return nil, driver.ErrBadConn
@@ -253,6 +324,11 @@ func (std *stdDriver) ExecContext(ctx context.Context, query string, args []driv
 }
 
 func (std *stdDriver) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if std.conn.isBad() {
+		std.debugf("QueryContext: connection is bad")
+		return nil, driver.ErrBadConn
+	}
+
 	r, err := std.conn.query(ctx, func(*connect, error) {}, query, rebind(args)...)
 	if isConnBrokenError(err) {
 		std.debugf("QueryContext got a fatal error, resetting connection: %v\n", err)
@@ -273,7 +349,12 @@ func (std *stdDriver) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (std *stdDriver) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	batch, err := std.conn.prepareBatch(ctx, query, func(*connect, error) {}, func(context.Context) (*connect, error) { return nil, nil })
+	if std.conn.isBad() {
+		std.debugf("PrepareContext: connection is bad")
+		return nil, driver.ErrBadConn
+	}
+
+	batch, err := std.conn.prepareBatch(ctx, query, ldriver.PrepareBatchOptions{}, func(*connect, error) {}, func(context.Context) (*connect, error) { return nil, nil })
 	if err != nil {
 		if isConnBrokenError(err) {
 			std.debugf("PrepareContext got a fatal error, resetting connection: %v\n", err)
@@ -327,7 +408,10 @@ func (s *stdBatch) ExecContext(ctx context.Context, args []driver.NamedValue) (d
 	return s.Exec(values)
 }
 
+var _ driver.StmtExecContext = (*stdBatch)(nil)
+
 func (s *stdBatch) Query(args []driver.Value) (driver.Rows, error) {
+	// Note: not implementing driver.StmtQueryContext accordingly
 	return nil, errors.New("only Exec method supported in batch mode")
 }
 
@@ -345,6 +429,8 @@ func (r *stdRows) Columns() []string {
 func (r *stdRows) ColumnTypeScanType(idx int) reflect.Type {
 	return r.rows.block.Columns[idx].ScanType()
 }
+
+var _ driver.RowsColumnTypeScanType = (*stdRows)(nil)
 
 func (r *stdRows) ColumnTypeDatabaseTypeName(idx int) string {
 	return string(r.rows.block.Columns[idx].Type())
@@ -368,6 +454,12 @@ func (r *stdRows) ColumnTypePrecisionScale(idx int) (precision, scale int64, ok 
 	return 0, 0, false
 }
 
+var _ driver.Rows = (*stdRows)(nil)
+var _ driver.RowsNextResultSet = (*stdRows)(nil)
+var _ driver.RowsColumnTypeDatabaseTypeName = (*stdRows)(nil)
+var _ driver.RowsColumnTypeNullable = (*stdRows)(nil)
+var _ driver.RowsColumnTypePrecisionScale = (*stdRows)(nil)
+
 func (r *stdRows) Next(dest []driver.Value) error {
 	if len(r.rows.block.Columns) != len(dest) {
 		err := fmt.Errorf("expected %d destination arguments in Next, not %d", len(r.rows.block.Columns), len(dest))
@@ -389,6 +481,21 @@ func (r *stdRows) Next(dest []driver.Value) error {
 				}
 				dest[i] = v
 			default:
+				// We don't know what is the destination type at this stage,
+				// but destination type might be a sql.Null* type that expects to receive a value
+				// instead of a pointer to a value. ClickHouse-go returns pointers to values for nullable columns.
+				//
+				// This is a compatibility layer to make sure that the driver works with the standard library.
+				// Due to reflection used it has a performance cost.
+				if nullable {
+					if value == nil {
+						dest[i] = nil
+						continue
+					}
+					rv := reflect.ValueOf(value)
+					value = rv.Elem().Interface()
+				}
+
 				dest[i] = value
 			}
 		}
@@ -416,6 +523,8 @@ func (r *stdRows) NextResultSet() error {
 	return nil
 }
 
+var _ driver.RowsNextResultSet = (*stdRows)(nil)
+
 func (r *stdRows) Close() error {
 	err := r.rows.Close()
 	if err != nil {
@@ -423,3 +532,5 @@ func (r *stdRows) Close() error {
 	}
 	return err
 }
+
+var _ driver.Rows = (*stdRows)(nil)

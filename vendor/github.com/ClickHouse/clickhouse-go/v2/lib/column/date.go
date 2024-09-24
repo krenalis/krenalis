@@ -19,10 +19,12 @@ package column
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
-	"github.com/ClickHouse/ch-go/proto"
 	"reflect"
 	"time"
+
+	"github.com/ClickHouse/ch-go/proto"
 )
 
 var (
@@ -100,9 +102,6 @@ func (col *Date) Append(v any) (nulls []uint8, err error) {
 	switch v := v.(type) {
 	case []time.Time:
 		for _, t := range v {
-			if err := dateOverflow(minDate, maxDate, t, defaultDateFormatNoZone); err != nil {
-				return nil, err
-			}
 			col.col.Append(t)
 		}
 	case []*time.Time:
@@ -110,9 +109,6 @@ func (col *Date) Append(v any) (nulls []uint8, err error) {
 		for i, v := range v {
 			switch {
 			case v != nil:
-				if err := dateOverflow(minDate, maxDate, *v, defaultDateFormatNoZone); err != nil {
-					return nil, err
-				}
 				col.col.Append(*v)
 			default:
 				nulls[i] = 1
@@ -156,6 +152,18 @@ func (col *Date) Append(v any) (nulls []uint8, err error) {
 			}
 		}
 	default:
+		if valuer, ok := v.(driver.Valuer); ok {
+			val, err := valuer.Value()
+			if err != nil {
+				return nil, &ColumnConverterError{
+					Op:   "Append",
+					To:   "Date",
+					From: fmt.Sprintf("%T", v),
+					Hint: "could not get driver.Valuer value",
+				}
+			}
+			return col.Append(val)
+		}
 		return nil, &ColumnConverterError{
 			Op:   "Append",
 			To:   "Date",
@@ -168,16 +176,10 @@ func (col *Date) Append(v any) (nulls []uint8, err error) {
 func (col *Date) AppendRow(v any) error {
 	switch v := v.(type) {
 	case time.Time:
-		if err := dateOverflow(minDate, maxDate, v, defaultDateFormatNoZone); err != nil {
-			return err
-		}
 		col.col.Append(v)
 	case *time.Time:
 		switch {
 		case v != nil:
-			if err := dateOverflow(minDate, maxDate, *v, defaultDateFormatNoZone); err != nil {
-				return err
-			}
 			col.col.Append(*v)
 		default:
 			col.col.Append(time.Time{})
@@ -215,6 +217,18 @@ func (col *Date) AppendRow(v any) error {
 			col.col.Append(datetime)
 		}
 	default:
+		if valuer, ok := v.(driver.Valuer); ok {
+			val, err := valuer.Value()
+			if err != nil {
+				return &ColumnConverterError{
+					Op:   "AppendRow",
+					To:   "Date",
+					From: fmt.Sprintf("%T", v),
+					Hint: "could not get driver.Valuer value",
+				}
+			}
+			return col.AppendRow(val)
+		}
 		s, ok := v.(fmt.Stringer)
 		if ok {
 			return col.AppendRow(s.String())
@@ -232,19 +246,11 @@ func parseDate(value string, minDate time.Time, maxDate time.Time, location *tim
 	if location == nil {
 		location = time.Local
 	}
-
-	defer func() {
-		if err == nil {
-			err = dateOverflow(minDate, maxDate, tv, defaultDateFormatNoZone)
-		}
-	}()
 	if tv, err = time.Parse(defaultDateFormatWithZone, value); err == nil {
 		return tv, nil
 	}
 	if tv, err = time.Parse(defaultDateFormatNoZone, value); err == nil {
-		return time.Date(
-			tv.Year(), tv.Month(), tv.Day(), tv.Hour(), tv.Minute(), tv.Second(), tv.Nanosecond(), location,
-		), nil
+		return getTimeWithDifferentLocation(tv, location), nil
 	}
 	return time.Time{}, err
 }
@@ -264,10 +270,10 @@ func (col *Date) Encode(buffer *proto.Buffer) {
 func (col *Date) row(i int) time.Time {
 	t := col.col.Row(i)
 
-	if col.location != nil {
+	if col.location != nil && col.location != time.UTC {
 		// proto.Date is normalized as time.Time with UTC timezone.
 		// We make sure Date return from ClickHouse matches server timezone or user defined location.
-		t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), col.location)
+		t = getTimeWithDifferentLocation(t, col.location)
 	}
 	return t
 }

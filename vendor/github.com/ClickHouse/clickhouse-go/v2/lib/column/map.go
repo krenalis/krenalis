@@ -18,11 +18,14 @@
 package column
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
-	"github.com/ClickHouse/ch-go/proto"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/ClickHouse/ch-go/proto"
 )
 
 // https://github.com/ClickHouse/ClickHouse/blob/master/src/Columns/ColumnMap.cpp
@@ -41,6 +44,17 @@ type OrderedMap interface {
 	Keys() <-chan any
 }
 
+type MapIterator interface {
+	Next() bool
+	Key() any
+	Value() any
+}
+
+type IterableOrderedMap interface {
+	Put(key any, value any)
+	Iterator() MapIterator
+}
+
 func (col *Map) Reset() {
 	col.keys.Reset()
 	col.values.Reset()
@@ -53,7 +67,17 @@ func (col *Map) Name() string {
 
 func (col *Map) parse(t Type, tz *time.Location) (_ Interface, err error) {
 	col.chType = t
-	if types := strings.SplitN(t.params(), ",", 2); len(types) == 2 {
+	types := make([]string, 2, 2)
+	typeParams := t.params()
+	idx := strings.Index(typeParams, ",")
+	if strings.HasPrefix(typeParams, "Enum") {
+		idx = strings.Index(typeParams, "),") + 1
+	}
+	if idx > 0 {
+		types[0] = typeParams[:idx]
+		types[1] = typeParams[idx+1:]
+	}
+	if types[0] != "" && types[1] != "" {
 		if col.keys, err = Type(strings.TrimSpace(types[0])).Column(col.name, tz); err != nil {
 			return nil, err
 		}
@@ -88,9 +112,19 @@ func (col *Map) Row(i int, ptr bool) any {
 }
 
 func (col *Map) ScanRow(dest any, i int) error {
+	if scanner, ok := dest.(sql.Scanner); ok {
+		return scanner.Scan(col.row(i).Interface())
+	}
 	value := reflect.Indirect(reflect.ValueOf(dest))
 	if value.Type() == col.scanType {
 		value.Set(col.row(i))
+		return nil
+	}
+	if om, ok := dest.(IterableOrderedMap); ok {
+		keys, values := col.orderedRow(i)
+		for i := range keys {
+			om.Put(keys[i], values[i])
+		}
 		return nil
 	}
 	if om, ok := dest.(OrderedMap); ok {
@@ -111,6 +145,18 @@ func (col *Map) ScanRow(dest any, i int) error {
 func (col *Map) Append(v any) (nulls []uint8, err error) {
 	value := reflect.Indirect(reflect.ValueOf(v))
 	if value.Kind() != reflect.Slice {
+		if valuer, ok := v.(driver.Valuer); ok {
+			val, err := valuer.Value()
+			if err != nil {
+				return nil, &ColumnConverterError{
+					Op:   "Append",
+					To:   string(col.chType),
+					From: fmt.Sprintf("%T", v),
+					Hint: fmt.Sprintf("could not get driver.Valuer value, try using %s", col.scanType),
+				}
+			}
+			return col.Append(val)
+		}
 		return nil, &ColumnConverterError{
 			Op:   "Append",
 			To:   string(col.chType),
@@ -127,6 +173,15 @@ func (col *Map) Append(v any) (nulls []uint8, err error) {
 }
 
 func (col *Map) AppendRow(v any) error {
+	if v == nil {
+		return &ColumnConverterError{
+			Op:   "Append",
+			To:   string(col.chType),
+			From: fmt.Sprintf("%T", v),
+			Hint: fmt.Sprintf("try using %s", col.scanType),
+		}
+	}
+
 	value := reflect.Indirect(reflect.ValueOf(v))
 	if value.Type() == col.scanType {
 		var (
@@ -139,6 +194,27 @@ func (col *Map) AppendRow(v any) error {
 				return err
 			}
 			if err := col.values.AppendRow(iter.Value().Interface()); err != nil {
+				return err
+			}
+		}
+		var prev int64
+		if n := col.offsets.Rows(); n != 0 {
+			prev = col.offsets.col.Row(n - 1)
+		}
+		col.offsets.col.Append(prev + size)
+		return nil
+	}
+
+	if orderedMap, ok := v.(IterableOrderedMap); ok {
+		var size int64
+		iter := orderedMap.Iterator()
+		for iter.Next() {
+			key, value := iter.Key(), iter.Value()
+			size++
+			if err := col.keys.AppendRow(key); err != nil {
+				return err
+			}
+			if err := col.values.AppendRow(value); err != nil {
 				return err
 			}
 		}
@@ -171,6 +247,19 @@ func (col *Map) AppendRow(v any) error {
 		}
 		col.offsets.col.Append(prev + size)
 		return nil
+	}
+
+	if valuer, ok := v.(driver.Valuer); ok {
+		val, err := valuer.Value()
+		if err != nil {
+			return &ColumnConverterError{
+				Op:   "AppendRow",
+				To:   string(col.chType),
+				From: fmt.Sprintf("%T", v),
+				Hint: fmt.Sprintf("could not get driver.Valuer value, try using %s", col.scanType),
+			}
+		}
+		return col.AppendRow(val)
 	}
 
 	return &ColumnConverterError{

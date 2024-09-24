@@ -227,7 +227,7 @@ func (b *Block) Decode(reader *proto.Reader, revision uint64) (err error) {
 			if hasCustom {
 				return &BlockError{
 					Op:  "Decode",
-					Err: errors.New(fmt.Sprintf("custom serialization for column %s. not supported", columnName)),
+					Err: errors.New(fmt.Sprintf("custom serialization for column %s. not supported by clickhouse-go driver", columnName)),
 				}
 			}
 		}
@@ -301,8 +301,6 @@ func (e *BlockError) Error() string {
 	switch err := e.Err.(type) {
 	case *column.Error:
 		return fmt.Sprintf("clickhouse [%s]: (%s %s) %s", e.Op, e.ColumnName, err.ColumnType, err.Err)
-	case *column.DateOverflowError:
-		return fmt.Sprintf("clickhouse: dateTime overflow. %s must be between %s and %s", e.ColumnName, err.Min.Format(err.Format), err.Max.Format(err.Format))
 	}
 	return fmt.Sprintf("clickhouse [%s]: %s %s", e.Op, e.ColumnName, e.Err)
 }

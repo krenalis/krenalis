@@ -15,33 +15,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package column
+package clickhouse
 
-import (
-	"fmt"
-	"time"
-)
+import "context"
 
-const secInDay = 24 * 60 * 60
+// contextWatchdog is a helper function to run a callback when the context is done.
+// it has a cancellation function to prevent the callback from running.
+// Useful for interrupting some logic when the context is done,
+// but you want to not bother about context cancellation if your logic is already done.
+// Example:
+// stopCW := contextWatchdog(ctx, func() { /* do something */ })
+// // do something else
+// defer stopCW()
+func contextWatchdog(ctx context.Context, callback func()) (cancel func()) {
+	exit := make(chan struct{})
 
-func dateOverflow(min, max, v time.Time, format string) error {
-	if v.Before(min) || v.After(max) {
-		return &DateOverflowError{
-			Min:    min,
-			Max:    max,
-			Value:  v,
-			Format: format,
+	go func() {
+		for {
+			select {
+			case <-exit:
+				return
+			case <-ctx.Done():
+				callback()
+			}
 		}
+	}()
+
+	return func() {
+		exit <- struct{}{}
 	}
-	return nil
-}
-
-type DateOverflowError struct {
-	Min, Max time.Time
-	Value    time.Time
-	Format   string
-}
-
-func (e *DateOverflowError) Error() string {
-	return fmt.Sprintf("clickhouse: dateTime overflow. must be between %s and %s", e.Min.Format(e.Format), e.Max.Format(e.Format))
 }

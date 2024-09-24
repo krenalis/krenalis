@@ -49,12 +49,12 @@ github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/shared
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/pageblob
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service
-# github.com/ClickHouse/ch-go v0.58.2
-## explicit; go 1.18
+# github.com/ClickHouse/ch-go v0.61.5
+## explicit; go 1.21
 github.com/ClickHouse/ch-go/compress
 github.com/ClickHouse/ch-go/proto
-# github.com/ClickHouse/clickhouse-go/v2 v2.14.3 => github.com/open2b/clickhouse-go/v2 v2.12.0-fix
-## explicit; go 1.18
+# github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix => github.com/open2b/clickhouse-go/v2 v2.29.0-fix
+## explicit; go 1.21
 github.com/ClickHouse/clickhouse-go/v2
 github.com/ClickHouse/clickhouse-go/v2/contributors
 github.com/ClickHouse/clickhouse-go/v2/ext
@@ -297,8 +297,8 @@ github.com/gabriel-vasile/mimetype/internal/magic
 # github.com/go-faster/city v1.0.1
 ## explicit; go 1.17
 github.com/go-faster/city
-# github.com/go-faster/errors v0.6.1
-## explicit; go 1.18
+# github.com/go-faster/errors v0.7.1
+## explicit; go 1.20
 github.com/go-faster/errors
 # github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1
 ## explicit; go 1.23
@@ -452,7 +452,7 @@ github.com/open2b/analytics-go
 # github.com/oschwald/maxminddb-golang v1.13.1
 ## explicit; go 1.21
 github.com/oschwald/maxminddb-golang
-# github.com/paulmach/orb v0.10.0
+# github.com/paulmach/orb v0.11.1
 ## explicit; go 1.15
 github.com/paulmach/orb
 # github.com/pelletier/go-toml/v2 v2.2.2
@@ -515,7 +515,7 @@ github.com/segmentio/backo-go
 # github.com/shopspring/decimal v1.4.0
 ## explicit; go 1.10
 github.com/shopspring/decimal
-# github.com/sirupsen/logrus v1.9.0
+# github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/snowflakedb/gosnowflake v1.11.0
@@ -680,7 +680,7 @@ golang.org/x/exp/slog/internal/buffer
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.26.0
+# golang.org/x/net v0.28.0
 ## explicit; go 1.18
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -766,7 +766,7 @@ golang.org/x/tools/internal/versions
 ## explicit; go 1.18
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/genproto/googleapis/api v0.0.0-20240311132316-a219d84964c2
+# google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda
@@ -873,4 +873,4 @@ gopkg.in/ini.v1
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.12.0-fix
+# github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.29.0-fix

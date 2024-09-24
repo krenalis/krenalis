@@ -19,20 +19,22 @@ package column
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
-	"github.com/ClickHouse/ch-go/proto"
 	"math"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ClickHouse/ch-go/proto"
+
 	"github.com/ClickHouse/clickhouse-go/v2/lib/timezone"
 )
 
 var (
-	minDateTime64, _ = time.Parse("2006-01-02 15:04:05", "1925-01-01 00:00:00")
-	maxDateTime64, _ = time.Parse("2006-01-02 15:04:05", "2283-11-11 00:00:00")
+	minDateTime64, _ = time.Parse("2006-01-02 15:04:05", "1900-01-01 00:00:00")
+	maxDateTime64, _ = time.Parse("2006-01-02 15:04:05", "2262-04-11 23:47:16")
 )
 
 const (
@@ -141,7 +143,7 @@ func (col *DateTime64) Append(v any) (nulls []uint8, err error) {
 		nulls = make([]uint8, len(v))
 		for i := range v {
 			switch {
-			case v != nil:
+			case v[i] != nil:
 				col.col.Append(time.UnixMilli(*v[i]))
 			default:
 				col.col.Append(time.UnixMilli(0))
@@ -151,9 +153,6 @@ func (col *DateTime64) Append(v any) (nulls []uint8, err error) {
 	case []time.Time:
 		nulls = make([]uint8, len(v))
 		for i := range v {
-			if err := dateOverflow(minDateTime64, maxDateTime64, v[i], "2006-01-02 15:04:05"); err != nil {
-				return nil, err
-			}
 			col.col.Append(v[i])
 		}
 	case []*time.Time:
@@ -161,9 +160,6 @@ func (col *DateTime64) Append(v any) (nulls []uint8, err error) {
 		for i := range v {
 			switch {
 			case v[i] != nil:
-				if err := dateOverflow(minDateTime64, maxDateTime64, *v[i], "2006-01-02 15:04:05"); err != nil {
-					return nil, err
-				}
 				col.col.Append(*v[i])
 			default:
 				col.col.Append(time.Time{})
@@ -193,6 +189,18 @@ func (col *DateTime64) Append(v any) (nulls []uint8, err error) {
 			col.AppendRow(v[i])
 		}
 	default:
+		if valuer, ok := v.(driver.Valuer); ok {
+			val, err := valuer.Value()
+			if err != nil {
+				return nil, &ColumnConverterError{
+					Op:   "Append",
+					To:   "Datetime64",
+					From: fmt.Sprintf("%T", v),
+					Hint: "could not get driver.Valuer value",
+				}
+			}
+			return col.Append(val)
+		}
 		return nil, &ColumnConverterError{
 			Op:   "Append",
 			To:   "Datetime64",
@@ -214,16 +222,10 @@ func (col *DateTime64) AppendRow(v any) error {
 			col.col.Append(time.Time{})
 		}
 	case time.Time:
-		if err := dateOverflow(minDateTime64, maxDateTime64, v, "2006-01-02 15:04:05"); err != nil {
-			return err
-		}
 		col.col.Append(v)
 	case *time.Time:
 		switch {
 		case v != nil:
-			if err := dateOverflow(minDateTime64, maxDateTime64, *v, "2006-01-02 15:04:05"); err != nil {
-				return err
-			}
 			col.col.Append(*v)
 		default:
 			col.col.Append(time.Time{})
@@ -251,6 +253,18 @@ func (col *DateTime64) AppendRow(v any) error {
 	case nil:
 		col.col.Append(time.Time{})
 	default:
+		if valuer, ok := v.(driver.Valuer); ok {
+			val, err := valuer.Value()
+			if err != nil {
+				return &ColumnConverterError{
+					Op:   "AppendRow",
+					To:   "Datetime64",
+					From: fmt.Sprintf("%T", v),
+					Hint: "could not get driver.Valuer value",
+				}
+			}
+			return col.AppendRow(val)
+		}
 		s, ok := v.(fmt.Stringer)
 		if ok {
 			return col.AppendRow(s.String())
@@ -293,9 +307,7 @@ func (col *DateTime64) parseDateTime(value string) (tv time.Time, err error) {
 		return tv, nil
 	}
 	if tv, err = time.Parse(defaultDateTime64FormatNoZone, value); err == nil {
-		return time.Date(
-			tv.Year(), tv.Month(), tv.Day(), tv.Hour(), tv.Minute(), tv.Second(), tv.Nanosecond(), time.Local,
-		), nil
+		return getTimeWithDifferentLocation(tv, time.Local), nil
 	}
 	return time.Time{}, err
 }

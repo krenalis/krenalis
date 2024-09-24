@@ -15,35 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package clickhouse
+package column
 
-import (
-	"context"
-	"io"
-)
+import "time"
 
-func (h *httpConnect) asyncInsert(ctx context.Context, query string, wait bool, args ...any) error {
+// getTimeWithDifferentLocation returns the same time but with different location, e.g.
+// "2024-08-15 13:22:34 -03:00" will become "2024-08-15 13:22:34 +04:00".
+func getTimeWithDifferentLocation(t time.Time, loc *time.Location) time.Time {
+	year, month, day := t.Date()
+	hour, minute, sec := t.Clock()
 
-	options := queryOptions(ctx)
-	options.settings["async_insert"] = 1
-	options.settings["wait_for_async_insert"] = 0
-	if wait {
-		options.settings["wait_for_async_insert"] = 1
-	}
-	if len(args) > 0 {
-		var err error
-		query, err = bindQueryOrAppendParameters(true, &options, query, h.location, args...)
-		if err != nil {
-			return err
-		}
-	}
-
-	res, err := h.sendQuery(ctx, query, &options, h.headers)
-	if res != nil {
-		defer res.Body.Close()
-		// we don't care about result, so just discard it to reuse connection
-		_, _ = io.Copy(io.Discard, res.Body)
-	}
-
-	return err
+	return time.Date(year, month, day, hour, minute, sec, t.Nanosecond(), loc)
 }

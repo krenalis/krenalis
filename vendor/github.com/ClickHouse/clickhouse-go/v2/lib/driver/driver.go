@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/column"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/proto"
 )
 
@@ -54,9 +55,9 @@ type (
 		Select(ctx context.Context, dest any, query string, args ...any) error
 		Query(ctx context.Context, query string, args ...any) (Rows, error)
 		QueryRow(ctx context.Context, query string, args ...any) Row
-		PrepareBatch(ctx context.Context, query string) (Batch, error)
+		PrepareBatch(ctx context.Context, query string, opts ...PrepareBatchOption) (Batch, error)
 		Exec(ctx context.Context, query string, args ...any) error
-		AsyncInsert(ctx context.Context, query string, wait bool) error
+		AsyncInsert(ctx context.Context, query string, wait bool, args ...any) error
 		Ping(context.Context) error
 		Stats() Stats
 		Close() error
@@ -84,6 +85,8 @@ type (
 		Flush() error
 		Send() error
 		IsSent() bool
+		Rows() int
+		Columns() []column.Interface
 	}
 	BatchColumn interface {
 		Append(any) error
