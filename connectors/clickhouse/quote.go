@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/meergo/meergo/types"
 
@@ -89,13 +90,47 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, t.BitSize()))
 	case decimal.Decimal:
 		b.WriteString(v.String())
+	case time.Time:
+		b.WriteByte('\'')
+		switch t.Kind() {
+		case types.DateTimeKind:
+			b.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
+		case types.DateKind:
+			b.WriteString(v.Format("2006-01-02"))
+		}
+		b.WriteByte('\'')
 	case bool:
 		if v {
 			b.WriteString("TRUE")
+		} else {
+			b.WriteString("FALSE")
 		}
-		b.WriteString("FALSE")
 	case json.RawMessage:
 		quoteString(b, string(v))
+	case []any:
+		vt := t.Elem()
+		b.WriteString("array(")
+		for i, ev := range v {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			quoteValue(b, ev, vt)
+		}
+		b.WriteByte(')')
+	case map[string]any:
+		vt := t.Elem()
+		b.WriteByte('{')
+		i := 0
+		for k, ev := range v {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			quoteString(b, k)
+			b.WriteByte(':')
+			quoteValue(b, ev, vt)
+			i++
+		}
+		b.WriteByte('}')
 	default:
 		panic(fmt.Errorf("unsupported value type '%T'", v))
 	}
