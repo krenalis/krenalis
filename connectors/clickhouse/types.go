@@ -69,14 +69,10 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			t = types.Text()
 		case "UUID":
 			t = types.UUID()
-		case "Date":
+		case "Date", "Date32":
 			t = types.Date()
-		case "Date32":
-			t = types.Int(32)
 		case "DateTime":
 			t = types.DateTime()
-		case "JSON":
-			t = types.JSON()
 		case "IPv4", "IPv6":
 			t = types.Inet()
 		default:

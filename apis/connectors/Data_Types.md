@@ -31,7 +31,7 @@
 
 [^1]: the ClickHouse driver, for the `Date32` type, returns a `time.Time` value not corresponding to the stored value.
 
-[^2]: the `JSON` type in ClickHouse is experimental.
+[^2]: the `JSON` type in ClickHouse is [experimental](https://github.com/ClickHouse/ClickHouse/issues/68428).
 
 [^3]: JSON types: `json.RawMessage`, `bool`, `string`, `json.Number`, `float64`, `map[string]any`, and `[]any`. `nil` represents a `nil` value, not the JSON `null`.
 
