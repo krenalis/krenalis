@@ -509,7 +509,7 @@ func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
 func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.connection()
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	var v int
 	err = db.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
