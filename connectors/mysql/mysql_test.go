@@ -53,6 +53,7 @@ func Test_Upsert_Query(t *testing.T) {
 		{"DOUBLE", 390.491835234, types.Float(64), 390.491835234},
 		{"DECIMAL(10,3)", []byte("1.123"), types.Decimal(10, 3), decimal.RequireFromString("1.123")},
 		{"DATETIME(6)", time.Date(2023, 1, 1, 1, 2, 3, 830511000, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 830511000, time.UTC)},
+		{"TIMESTAMP", time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{"DATE", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{"TIME", []byte("02:03:00"), types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
 		{"YEAR", int64(2024), types.Year(), 2024},
@@ -67,6 +68,9 @@ func Test_Upsert_Query(t *testing.T) {
 		{"BLOB", []byte("foo"), types.Text(), "foo"},
 		{"MEDIUMBLOB", []byte("foo"), types.Text(), "foo"},
 		{"LONGBLOB", []byte("foo"), types.Text(), "foo"},
+		{"ENUM('x-small','small','medium','large','x-large')", []byte("small"), types.Text(), "small"},
+		// TODO(marco): SET can be implemented as an Array(Type), but the driver only returns the first element of the set.
+		//{"SET('one','two','three')", []byte("two,tree"), types.Array(types.Text()), []any{"two", "tree"}},
 	}
 
 	table := meergo.Table{

@@ -101,7 +101,7 @@ func (my *MySQL) LastChangeTimeCondition(column string, typ types.Type, value an
 	b := strings.Builder{}
 	b.WriteString(column)
 	b.WriteString(` >= `)
-	quoteValue(&b, value, typ)
+	_ = quoteValue(&b, value, typ)
 	return b.String()
 }
 
@@ -177,7 +177,9 @@ func (my *MySQL) Upsert(ctx context.Context, table meergo.Table, rows []map[stri
 				b.WriteByte(',')
 			}
 			if v, ok := row[column.Name]; ok {
-				quoteValue(&b, v, column.Type)
+				if err = quoteValue(&b, v, column.Type); err != nil {
+					return err
+				}
 			} else {
 				b.WriteString(`DEFAULT`)
 			}
@@ -350,8 +352,11 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Decimal(int(precision), int(scale)), nil
 	case "DOUBLE":
 		return types.Float(64), nil
-	case "ENUM", "SET":
+	case "ENUM":
 		return types.Text(), nil
+	// TODO(marco): SET can be implemented as an Array(Type), but the driver only returns the first element of the set.
+	//case "SET":
+	//return types.Array(types.Text()), nil
 	case "FLOAT":
 		return types.Float(32), nil
 	case "UNSIGNED MEDIUMINT":

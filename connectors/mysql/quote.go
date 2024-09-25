@@ -37,18 +37,18 @@ func quoteTable(name string) (string, error) {
 }
 
 // quoteValue quotes value and writes it into b.
-func quoteValue(b *strings.Builder, v any, t types.Type) {
+func quoteValue(b *strings.Builder, v any, t types.Type) error {
 	switch v := v.(type) {
 	case nil:
 		b.WriteString("NULL")
 	case string:
+		b.WriteByte('"')
 		if t.Kind() == types.TextKind {
 			quoteString(b, v)
 		} else {
-			b.WriteByte('"')
 			b.WriteString(v)
-			b.WriteByte('"')
 		}
+		b.WriteByte('"')
 	case int:
 		b.WriteString(strconv.FormatInt(int64(v), 10))
 	case uint:
@@ -69,19 +69,34 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		}
 		b.WriteByte('"')
 	case json.RawMessage:
+		b.WriteByte('"')
 		quoteString(b, string(v))
+		b.WriteByte('"')
+	// TODO(marco): SET can be implemented as an Array(Type), but the driver only returns the first element of the set.
+	//case []any:
+	//	b.WriteByte('"')
+	//	for i, s := range v {
+	//		s := s.(string)
+	//		if strings.Contains(s, ",") {
+	//			return errors.New("an array element contains commas")
+	//		}
+	//		if i > 0 {
+	//			b.WriteByte(',')
+	//		}
+	//		quoteString(b, s)
+	//	}
+	//	b.WriteByte('"')
 	default:
 		panic(fmt.Errorf("unsupported value type '%T'", v))
 	}
+	return nil
 }
 
 // quoteString quotes s as a string and writes it into b.
 func quoteString(b *strings.Builder, s string) {
 	if s == "" {
-		b.WriteString(`""`)
 		return
 	}
-	b.WriteByte('"')
 	for {
 		p := strings.IndexAny(s, "\x00'\"\b\n\r\t\032\\")
 		if p == -1 {
@@ -119,5 +134,4 @@ func quoteString(b *strings.Builder, s string) {
 			break
 		}
 	}
-	b.WriteByte('"')
 }
