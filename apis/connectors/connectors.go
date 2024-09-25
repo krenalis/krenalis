@@ -416,7 +416,6 @@ func connectorError(err error) error {
 	case ErrWebhookUnauthorized:
 	default:
 		switch err.(type) {
-		case *meergo.AccessDeniedError:
 		case meergo.InvalidPathError:
 		case meergo.InvalidUIValuesError:
 		case meergo.NotSupportedTypeError:

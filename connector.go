@@ -20,16 +20,6 @@ type ConnectorInfo interface {
 	ReflectType() reflect.Type
 }
 
-// An AccessDeniedError error is returned by a connector method when it is
-// unable to access a requested resource due to insufficient permissions.
-type AccessDeniedError struct {
-	Err error
-}
-
-func (err *AccessDeniedError) Error() string {
-	return err.Err.Error()
-}
-
 // A NotSupportedTypeError error is returned by File.Read and Database.Query
 // methods when a column type is not supported.
 type NotSupportedTypeError struct {
