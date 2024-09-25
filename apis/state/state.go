@@ -845,7 +845,6 @@ const (
 	Healthy Health = iota
 	NoRecentData
 	RecentError
-	AccessDenied
 )
 
 // Scan implements the sql.Scanner interface.
@@ -862,8 +861,6 @@ func (health *Health) Scan(src any) error {
 		h = NoRecentData
 	case "RecentError":
 		h = RecentError
-	case "AccessDenied":
-		h = AccessDenied
 	default:
 		return fmt.Errorf("invalid state.Health: %s", s)
 	}
@@ -881,8 +878,6 @@ func (health Health) String() string {
 		return "NoRecentData"
 	case RecentError:
 		return "RecentError"
-	case AccessDenied:
-		return "AccessDenied"
 	}
 	panic("invalid connection health")
 }
@@ -897,8 +892,6 @@ func (health Health) Value() (driver.Value, error) {
 		return "NoRecentData", nil
 	case RecentError:
 		return "RecentError", nil
-	case AccessDenied:
-		return "AccessDenied", nil
 	}
 	return nil, fmt.Errorf("not a valid Health: %d", health)
 }

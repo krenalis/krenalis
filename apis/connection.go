@@ -2063,7 +2063,6 @@ const (
 	Healthy Health = iota
 	NoRecentData
 	RecentError
-	AccessDenied
 )
 
 // MarshalJSON implements the json.Marshaler interface.
@@ -2082,8 +2081,6 @@ func (health Health) String() string {
 		return "NoRecentData"
 	case RecentError:
 		return "RecentError"
-	case AccessDenied:
-		return "AccessDenied"
 	}
 	panic("invalid connection health")
 }

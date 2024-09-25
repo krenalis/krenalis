@@ -39,7 +39,7 @@ CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'M
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
-CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError', 'AccessDenied');
+CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError');
 
 CREATE TYPE compression AS ENUM ('', 'Zip', 'Gzip', 'Snappy');
 

@@ -5,7 +5,7 @@ type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'S
 
 type ConnectionRole = 'Source' | 'Destination';
 
-type Health = 'Healthy' | 'NoRecentData' | 'RecentError' | 'AccessDenied';
+type Health = 'Healthy' | 'NoRecentData' | 'RecentError';
 
 interface Connection {
 	ID: number;
