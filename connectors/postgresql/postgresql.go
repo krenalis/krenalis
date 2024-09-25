@@ -346,17 +346,16 @@ func testConnection(ctx context.Context, settings *Settings) error {
 
 // propertyType returns the property type of the column type t.
 func propertyType(t *sql.ColumnType) (types.Type, error) {
-	switch t.DatabaseTypeName() {
+	name := t.DatabaseTypeName()
+	switch name {
 	case "BOOL":
 		return types.Boolean(), nil
 	case "BYTEA", "TEXT":
 		return types.Text(), nil
-	case "CHAR", "VARCHAR":
+	case "CHAR", "VARCHAR", "BPCHAR":
 		length, ok := t.Length()
-		if !ok {
-			return types.Type{}, errors.New("cannot get length")
-		}
-		if length > 0 {
+		// The driver returns false for char(n) (BPCHAR).
+		if ok && length > 0 {
 			return types.Text().WithCharLen(int(length)), nil
 		}
 		return types.Text(), nil
