@@ -43,7 +43,10 @@ func TestIdentityResolution2(t *testing.T) {
 	// Set the email as the only identifier, as the 3 identities, imported from
 	// the 3 connections, will all be put together in a single user as they
 	// share the same email.
-	c.ChangeIdentityResolutionSettings(true, []string{"email"})
+	//
+	// Also disable the automatic execution of the Identity Resolution, which
+	// will be explicitly executed later.
+	c.ChangeIdentityResolutionSettings(false, []string{"email"})
 
 	storage := meergotester.NewTempStorage(t)
 
@@ -146,8 +149,7 @@ func TestIdentityResolution2(t *testing.T) {
 	c.WaitForExecutionsCompletion(sourceB, exec2)
 	c.WaitForExecutionsCompletion(sourceC, exec3)
 
-	// Explicitly run the Identity Resolution, even if it has been executed at
-	// the end of the import action executions.
+	// Resolve the identities.
 	c.ResolveIdentities()
 
 	// Test that the execution of the Identity Resolution has ended and that its
