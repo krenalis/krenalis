@@ -75,7 +75,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 					return;
 				}
 			}
-			if (err.code === 'KeyNotExist') {
+			if (err.code === 'CannotDeleteLastKey') {
 				// if the error code is 'KeyNotExist', let the key be
 				// removed from the UI without showing errors.
 				return;

@@ -90,8 +90,8 @@ type emailToSend struct {
 // given template. It then creates a new invited member.
 //
 // It returns an errors.UnprocessableError error with code
-//   - MemberEmailAlreadyExists, if the email address has already been invited.
-//   - CannotSendEmails, if emails cannot be sent.
+//   - EmailSendFailed, if emails cannot be sent.
+//   - MemberEmailExists, if the email address has already been invited.
 func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
 	this.apis.mustBeOpen()
 	err := validateMemberEmail(email)
@@ -103,7 +103,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 		return err
 	}
 	if this.apis.smtp == nil {
-		return errors.Unprocessable(CannotSendEmails, "emails cannot be sent")
+		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
 	}
 	now := time.Now().UTC()
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
@@ -112,7 +112,7 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 			return err
 		}
 		if err == nil {
-			return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
+			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		_, err = this.apis.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
 			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
@@ -154,8 +154,8 @@ var defaultUserSchema = types.Object([]types.Property{
 //
 //   - DataWarehouseFailed, if an operation on the data warehouse fails;
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid;
-//   - WarehouseIsNotEmpty, if the warehouse to be connected is not empty and
-//     thus not ready to be initialized.
+//   - WarehouseNotEmpty, if the warehouse to be connected is not empty and thus
+//     not ready to be initialized.
 func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whType WarehouseType, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -188,13 +188,13 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	// initialized.
 	err = this.apis.datastore.Check(ctx, state.WarehouseType(whType), whSettings)
 	if err == nil {
-		return 0, errors.Unprocessable(WarehouseIsNotEmpty, "the data warehouse is not empty")
+		return 0, errors.Unprocessable(WarehouseNotEmpty, "the data warehouse is not empty")
 	} else {
 		if err == datastore.ErrDataWarehouseNotInitialized {
 			// This is fine, as the data warehouse must be empty.
 		} else {
 			if _, ok := err.(*datastore.DataWarehouseNeedsRepairError); ok {
-				return 0, errors.Unprocessable(WarehouseIsNotEmpty, "the data warehouse is not empty")
+				return 0, errors.Unprocessable(WarehouseNotEmpty, "the data warehouse is not empty")
 			}
 			if err, ok := err.(*datastore.DataWarehouseError); ok {
 				return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
@@ -405,7 +405,7 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 //
 // If the member does not exist, it returns an errors.NotFound error. If the
 // member to set has an email that is already used by another member, it returns
-// an errors.UnprocessableError error with code MemberEmailAlreadyExists.
+// an errors.UnprocessableError error with code MemberEmailExists.
 func (this *Organization) SetMember(ctx context.Context, id int, member MemberToSet) error {
 	this.apis.mustBeOpen()
 	if id < 0 || id > math.MaxInt32 {
@@ -435,7 +435,7 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 			return err
 		}
 		if err != sql.ErrNoRows {
-			return errors.Unprocessable(MemberEmailAlreadyExists, "a member with this email already exists")
+			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
 		}
 		_, err = this.apis.db.Exec(ctx, "UPDATE members SET name = $1, email = $2 WHERE id = $3 AND organization = $4",
 			member.Name, member.Email, id, this.organization.ID)

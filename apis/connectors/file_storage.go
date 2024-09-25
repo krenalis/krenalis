@@ -87,7 +87,7 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // there is no upper limit on the number of records returned.
 //
 // If the UI values are not valid, it returns an *InvalidUIValuesError error.
-// If the file has no columns, it returns the ErrNoColumns error. If the file
+// If the file has no columns, it returns the ErrNoColumnsFound error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
 func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if storage.err != nil {
@@ -145,7 +145,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, recordErr
 	}
 	if rw.properties == nil {
-		return nil, nil, ErrNoColumns
+		return nil, nil, ErrNoColumnsFound
 	}
 	return rw.properties, records, nil
 }

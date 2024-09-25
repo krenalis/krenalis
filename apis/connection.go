@@ -439,9 +439,8 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorNotExist, if the file connector of the action does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-//   - LanguageNotSupported, if the transformation language is not supported.
-//   - TargetAlreadyExist, if an action already exists for a target for the
-//     connection.
+//   - TargetExist, if an action already exists for a target for the connection.
+//   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Connection) AddAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -606,7 +605,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 				err = tx.QueryVoid(ctx, "SELECT FROM actions WHERE connection = $1 AND target = 'Events'", n.Connection)
 				if err != sql.ErrNoRows {
 					if err == nil {
-						err = errors.Unprocessable(TargetAlreadyExist,
+						err = errors.Unprocessable(TargetExist,
 							"action with target %s already exists for %s connection %d", n.Target, connector.Type, n.Connection)
 					}
 					return err
@@ -1158,7 +1157,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //
 //   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-//   - NoColumns, if the file has no columns.
+//   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
 
@@ -1227,8 +1226,8 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 	columns, records, err := this.storage().Read(ctx, file, path, sheet, uiValues, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
-		case connectors.ErrNoColumns:
-			err = errors.Unprocessable(NoColumns, "file does not have columns")
+		case connectors.ErrNoColumnsFound:
+			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
 		case connectors.ErrSheetNotExist:
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
@@ -1335,7 +1334,7 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the unique key of the server, it returns an
-// errors.UnprocessableError error with code UniqueKey.
+// errors.UnprocessableError error with code CannotDeleteLastKey.
 func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	this.apis.mustBeOpen()
 	if key == "" {
@@ -1365,7 +1364,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 			return err
 		}
 		if count == 1 {
-			return errors.Unprocessable(UniqueKey, "key cannot be revoked because it's the unique key of the connection")
+			return errors.Unprocessable(CannotDeleteLastKey, "key cannot be revoked because it's the unique key of the connection")
 		}
 		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
 		if err != nil {
@@ -1388,11 +1387,11 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 //
 // It returns an errors.UnprocessableError error with code:
 //   - EventTypeNotExist, if the event type does not exist for the connection.
-//   - LanguageNotSupported, if the transformation language is not supported.
-//   - NotCompatibleSchema, if the output schema is not compatible with the
-//     event type's schema.
+//   - SchemaNotAligned, if the output schema is not aligned with the event
+//     type's schema.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
+//   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
 
 	this.apis.mustBeOpen()
@@ -1464,11 +1463,11 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			switch transformation.Function.Language {
 			case "JavaScript":
 				if this.apis.transformerProvider == nil || !this.apis.transformerProvider.SupportLanguage(state.JavaScript) {
-					return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
+					return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language  is not supported")
 				}
 			case "Python":
 				if this.apis.transformerProvider == nil || !this.apis.transformerProvider.SupportLanguage(state.Python) {
-					return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
+					return nil, errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
 				}
 			case "":
 				return nil, errors.BadRequest("transformation language is empty")
@@ -1621,7 +1620,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		} else {
 			switch err.(type) {
 			case *connectors.SchemaError:
-				err = errors.Unprocessable(NotCompatibleSchema, "output schema is not compatible with the event type's schema: %w", err)
+				err = errors.Unprocessable(SchemaNotAligned, "output schema is not compatible with the event type's schema: %w", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("connector returned an error preparing the preview: %w", err)
 			}

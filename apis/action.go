@@ -354,7 +354,7 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 //
 //   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-//   - LanguageNotSupported, if the transformation language is not supported.
+//   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	this.apis.mustBeOpen()

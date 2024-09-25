@@ -68,7 +68,7 @@ type InvalidUIValuesError = meergo.InvalidUIValuesError
 
 var (
 	ErrEventTypeNotExist   = meergo.ErrEventTypeNotExist
-	ErrNoColumns           = errors.New("file has no columns")
+	ErrNoColumnsFound      = errors.New("file has no columns")
 	ErrNoWebhooks          = errors.New("app has no webhooks")
 	ErrSheetNotExist       = errors.New("sheet does not exist")
 	ErrUIEventNotExist     = meergo.ErrUIEventNotExist

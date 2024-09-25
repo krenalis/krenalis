@@ -84,7 +84,7 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 // If the action's sheet is not found in the file, the All method of the
 // iterator returns immediately, and a subsequent call to the Err method will
 // return the ErrSheetNotExist error. The same occurs if the file has no
-// columns; in this case, the error is ErrNoColumns.
+// columns; in this case, the error is ErrNoColumnsFound.
 //
 // It returns an error if a non-zero start time is provided and the action has
 // no last change property.
@@ -466,7 +466,7 @@ func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 		defer func() {
 			_ = r.Close()
 			if r.err == nil && r.rw.properties == nil {
-				r.err = ErrNoColumns
+				r.err = ErrNoColumnsFound
 			}
 		}()
 		r.rw.setYieldFunc(yield)

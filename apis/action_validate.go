@@ -60,7 +60,7 @@ type validationState struct {
 //
 //   - ConnectorNotExist, if the action is on file and the specified file
 //     connector does not exist.
-//   - LanguageNotSupported, if the transformation language is not supported.
+//   - UnsupportedLanguage, if the transformation language is not supported.
 func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
 	if target == state.Groups {
@@ -206,11 +206,11 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		switch function.Language {
 		case "JavaScript":
 			if v.provider == nil || !v.provider.SupportLanguage(state.JavaScript) {
-				return errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language is not supported")
+				return errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language is not supported")
 			}
 		case "Python":
 			if v.provider == nil || !v.provider.SupportLanguage(state.Python) {
-				return errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
+				return errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
 			}
 		case "":
 			return errors.BadRequest("transformation language is empty")

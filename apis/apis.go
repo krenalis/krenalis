@@ -573,9 +573,9 @@ const (
 // transformation and can be either "Create" or "Update".
 //
 // It returns an errors.UnprocessableError error with code:
-//   - LanguageNotSupported, if the transformation language is not supported.
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
+//   - UnsupportedLanguage, if the transformation language is not supported.
 func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) ([]byte, error) {
 
 	apis.mustBeOpen()
@@ -621,11 +621,11 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		switch transformation.Function.Language {
 		case "JavaScript":
 			if apis.transformerProvider == nil || !apis.transformerProvider.SupportLanguage(state.JavaScript) {
-				return nil, errors.Unprocessable(LanguageNotSupported, "JavaScript transformation language  is not supported")
+				return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language  is not supported")
 			}
 		case "Python":
 			if apis.transformerProvider == nil || !apis.transformerProvider.SupportLanguage(state.Python) {
-				return nil, errors.Unprocessable(LanguageNotSupported, "Python transformation language is not supported")
+				return nil, errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
 			}
 		case "":
 			return nil, errors.BadRequest("transformation language is empty")

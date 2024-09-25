@@ -716,10 +716,10 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - NotAllowedType, if an identifier path's type, as defined in the user
-//     schema, is not allowed for identifiers.
 //   - PropertyNotExist, if an identifier path does not exist in the user
 //     schema.
+//   - TypeNotAllowed, if an identifier path's type, as defined in the user
+//     schema, is not allowed for identifiers.
 func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
 
 	this.apis.mustBeOpen()
@@ -764,7 +764,7 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
 				}
 				if !canBeIdentifier(p.Type) {
-					return errors.Unprocessable(NotAllowedType, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
+					return errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
 				}
 			}
 		}
