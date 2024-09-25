@@ -134,7 +134,7 @@ func Test_Upsert_Query(t *testing.T) {
 	}
 	err = connector.Upsert(context.Background(), table, []map[string]any{row})
 	if err != nil {
-		t.Logf("cannot upsert: %s", err)
+		t.Fatalf("cannot upsert: %s", err)
 	}
 
 	// Execute the query.
