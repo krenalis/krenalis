@@ -86,8 +86,15 @@ type LastChangeTimeProperty struct {
 type PlaceholderError string
 
 // Error implements the interface "error" for PlaceholderError.
-func (e PlaceholderError) Error() string {
-	return string(e)
+func (e *PlaceholderError) Error() string {
+	return string(*e)
+}
+
+// placeholderErrorf formats according to a format specifier and returns a
+// *PlaceholderError value.
+func placeholderErrorf(format string, a ...any) error {
+	err := PlaceholderError(fmt.Sprintf(format, a...))
+	return &err
 }
 
 // UnavailableError represents an error that occurs when a connector cannot
@@ -385,15 +392,15 @@ func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
 		s = s[i+2:]
 		i = strings.IndexByte(s, '}')
 		if i < 0 {
-			return "", PlaceholderError("a placeholder is not closed")
+			return "", placeholderErrorf("a placeholder is not closed")
 		}
 		name, s = strings.TrimSpace(s[:i]), s[i+1:]
 		if strings.Contains(name, "${") {
-			return "", PlaceholderError("a placeholder is not closed")
+			return "", placeholderErrorf("a placeholder is not closed")
 		}
 		value, ok = f(name)
 		if !ok {
-			return "", PlaceholderError(fmt.Sprintf("placeholder %q does not exist", name))
+			return "", placeholderErrorf("placeholder %q does not exist", name)
 		}
 		b.WriteString(value)
 	}
@@ -416,9 +423,9 @@ func connectorError(err error) error {
 	case ErrWebhookUnauthorized:
 	default:
 		switch err.(type) {
-		case meergo.InvalidPathError:
-		case meergo.InvalidUIValuesError:
-		case meergo.NotSupportedTypeError:
+		case *meergo.InvalidPathError:
+		case *meergo.InvalidUIValuesError:
+		case *meergo.NotSupportedTypeError:
 		case *UnavailableError:
 		default:
 			err = &UnavailableError{Err: err}

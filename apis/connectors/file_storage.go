@@ -49,7 +49,7 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 // Write. name's length in runes must be in range [1, 1024].
 //
 // If nameReplacer is not nil, then the placeholders in name are replaced using
-// it; in this case, a PlaceholderError error may be returned in case of an
+// it; in this case, a *PlaceholderError error may be returned in case of an
 // error with placeholders.
 //
 // It returns an *UnavailableError error if the connector returns an error.
@@ -86,7 +86,7 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // and limit restricts the number of records to return. If limit is negative,
 // there is no upper limit on the number of records returned.
 //
-// If the UI values are not valid, it returns an InvalidUIValuesError error.
+// If the UI values are not valid, it returns an *InvalidUIValuesError error.
 // If the file has no columns, it returns the ErrNoColumns error. If the file
 // does not have the provided sheet, it returns the ErrSheetNotExist error.
 func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
@@ -156,7 +156,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // uiValues, if the file connector has a UI, represents the user-entered values
 // as a JSON object. compression indicates if the file is compressed and how.
 //
-// If the UI values are not valid, it returns an InvalidUIValuesError error.
+// If the UI values are not valid, it returns an *InvalidUIValuesError error.
 // It panics if the file connector does not support sheets.
 func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, uiValues []byte, compression state.Compression) ([]string, error) {
 	if storage.err != nil {

@@ -23,12 +23,12 @@ type InvalidUIValuesError struct {
 	Msg string
 }
 
-func (err InvalidUIValuesError) Error() string {
+func (err *InvalidUIValuesError) Error() string {
 	return err.Msg
 }
 
-func NewInvalidUIValuesError(msg string) InvalidUIValuesError {
-	return InvalidUIValuesError{msg}
+func NewInvalidUIValuesError(msg string) error {
+	return &InvalidUIValuesError{msg}
 }
 
 // UIHandler is implemented by connectors that have a UI.

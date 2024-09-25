@@ -30,10 +30,10 @@ type NotSupportedTypeError struct {
 // NewNotSupportedTypeError returns a NotSupportedTypeError error for the
 // given column and type.
 func NewNotSupportedTypeError(column, typ string) error {
-	return NotSupportedTypeError{Column: column, Type: typ}
+	return &NotSupportedTypeError{Column: column, Type: typ}
 }
 
-func (err NotSupportedTypeError) Error() string {
+func (err *NotSupportedTypeError) Error() string {
 	return fmt.Sprintf("type %s of the column %q is not supported", err.Type, err.Column)
 }
 

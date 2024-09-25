@@ -30,10 +30,10 @@ func TestCompletePath(storage FileStorage, tests []CompletePathTest) error {
 		}
 		got, err := s.CompletePath(ctx, test.Name)
 		if err != nil {
-			_, ok := err.(InvalidPathError)
+			_, ok := err.(*InvalidPathError)
 			if !ok {
 				if test.Expected == "" {
-					return fmt.Errorf("%q: expected an InvalidPathError, got error %#v", test.Name, err)
+					return fmt.Errorf("%q: expected an *InvalidPathError, got error %#v", test.Name, err)
 				}
 				return fmt.Errorf("%q: expected no errors, got %s", test.Name, err)
 			}

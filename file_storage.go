@@ -22,12 +22,12 @@ type InvalidPathError struct {
 }
 
 // InvalidPathErrorf formats according to a format specifier and returns a
-// InvalidPathError value.
+// *InvalidPathError value.
 func InvalidPathErrorf(format string, a ...any) error {
-	return InvalidPathError{fmt.Errorf(format, a...)}
+	return &InvalidPathError{fmt.Errorf(format, a...)}
 }
 
-func (err InvalidPathError) Error() string {
+func (err *InvalidPathError) Error() string {
 	return err.err.Error()
 }
 
@@ -68,7 +68,7 @@ type FileStorageNewFunc[T FileStorage] func(*FileStorageConfig) (T, error)
 type FileStorage interface {
 
 	// CompletePath returns the complete representation of the given path name. It
-	// returns InvalidPathError if name is not valid for use in calls to Reader and
+	// returns *InvalidPathError if name is not valid for use in calls to Reader and
 	// Write.
 	//
 	// name's length in runes will be in range [1, 1024].

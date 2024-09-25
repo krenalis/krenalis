@@ -123,7 +123,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // written.
 //
 // If pathReplacer is not nil, then the placeholders in path are replaced using
-// it; in this case, a PlaceholderError error may be returned in case of an
+// it; in this case, a *PlaceholderError error may be returned in case of an
 // error with placeholders.
 //
 // It returns an *UnavailableError error if the connector returns an error.

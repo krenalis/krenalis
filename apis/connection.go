@@ -588,7 +588,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
 			switch err.(type) {
-			case connectors.InvalidUIValuesError:
+			case *connectors.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -766,9 +766,9 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	path, err := this.storage().CompletePath(ctx, path, replacer)
 	if err != nil {
 		switch err.(type) {
-		case connectors.InvalidPathError:
+		case *connectors.InvalidPathError:
 			err = errors.Unprocessable(InvalidPath, "%s", err)
-		case connectors.PlaceholderError:
+		case *connectors.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		}
 		return "", err
@@ -893,7 +893,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	rows, err := database.Query(ctx, query, replacer)
 	if err != nil {
 		switch err.(type) {
-		case connectors.PlaceholderError:
+		case *connectors.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
@@ -1233,7 +1233,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
 			switch err.(type) {
-			case connectors.InvalidUIValuesError:
+			case *connectors.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("cannot read records: %w", err)
@@ -1767,7 +1767,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
 		} else {
 			switch err.(type) {
-			case connectors.InvalidUIValuesError:
+			case *connectors.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -1836,7 +1836,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 	sheets, err := this.storage().Sheets(ctx, file, path, uiValues, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
-		case connectors.InvalidUIValuesError:
+		case *connectors.InvalidUIValuesError:
 			err = errors.Unprocessable(InvalidUIValues, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("cannot read the file: %w", err)

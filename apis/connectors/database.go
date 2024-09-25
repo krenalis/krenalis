@@ -115,7 +115,7 @@ func (database *Database) LastChangeTimeCondition(action *state.Action) (string,
 
 // Query executes a query and returns the resulting rows.
 // If queryReplacer is not nil, then the placeholders in the query are replaced
-// using it; in this case, a PlaceholderError error may be returned in case of
+// using it; in this case, a *PlaceholderError error may be returned in case of
 // an error with placeholders. It returns an *UnavailableError error if the
 // connector returns an error.
 func (database *Database) Query(ctx context.Context, query string, queryReplacer PlaceholderReplacer) (*Rows, error) {
@@ -145,7 +145,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 // field, the properties of the action's input schema, with the same types.
 //
 // If queryReplacer is not nil, then the placeholders in the query are replaced
-// using it; in this case, a PlaceholderError error may be returned in case of
+// using it; in this case, a *PlaceholderError error may be returned in case of
 // an error with placeholders.
 //
 // If the action's input schema does not align with the query's results schema,

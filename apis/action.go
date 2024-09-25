@@ -295,7 +295,7 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
 		} else {
 			switch err.(type) {
-			case connectors.InvalidUIValuesError:
+			case *connectors.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -494,7 +494,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
 			switch err.(type) {
-			case connectors.InvalidUIValuesError:
+			case *connectors.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)

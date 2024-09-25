@@ -135,12 +135,12 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
 		writer, err = this.file().Writer(ctx, replacer, ack)
-		if err, ok := err.(connectors.PlaceholderError); ok {
+		if err, ok := err.(*connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
 	}
 	if err != nil {
-		if err, ok := err.(connectors.PlaceholderError); ok {
+		if err, ok := err.(*connectors.PlaceholderError); ok {
 			return fmt.Errorf("invalid file path: %s", err)
 		}
 		if err, ok := err.(*schemas.Error); ok {

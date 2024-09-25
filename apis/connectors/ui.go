@@ -25,7 +25,7 @@ import (
 // the event to be served, and values are the user-entered values.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
-// InvalidUIValuesError error if the values are not valid, and an
+// *InvalidUIValuesError error if the values are not valid, and an
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
@@ -51,7 +51,7 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 // is the event to be served, and values are the user-entered values.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
-// InvalidUIValuesError error if the values are not valid, and an
+// *InvalidUIValuesError error if the values are not valid, and an
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
@@ -132,7 +132,7 @@ type ConnectorConfig struct {
 // is the event to be served, and values are the user-entered values.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
-// InvalidUIValuesError error if the values are not valid, and an
+// *InvalidUIValuesError error if the values are not valid, and an
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
@@ -177,7 +177,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 // UpdatedSettings returns the settings, for the given connector, updated with
 // the provided user-entered values.
 //
-// It returns an InvalidUIValuesError error value if the values are not valid
+// It returns an *InvalidUIValuesError error value if the values are not valid
 // and an *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
