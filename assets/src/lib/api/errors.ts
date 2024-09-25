@@ -17,6 +17,17 @@ class BadRequestError extends Error {
 	}
 }
 
+class UnavailableError extends Error {
+	cause: string;
+
+	constructor(message: string, cause: string) {
+		super();
+		this.name = 'UnavailableError';
+		this.message = message;
+		this.cause = cause;
+	}
+}
+
 class UnprocessableError extends Error {
 	code: string;
 	cause: string;
@@ -37,4 +48,4 @@ class LoginRequiredError extends Error {
 	}
 }
 
-export { NotFoundError, BadRequestError, UnprocessableError, LoginRequiredError };
+export { NotFoundError, BadRequestError, UnavailableError, UnprocessableError, LoginRequiredError };

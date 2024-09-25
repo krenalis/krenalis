@@ -625,16 +625,6 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				limit,
 			);
 		} catch (err) {
-			if (err instanceof UnprocessableError) {
-				switch (err.code) {
-					case 'ReadFileFailed':
-						handleError(err.message);
-						break;
-					default:
-						handleError(err);
-				}
-				return;
-			}
 			handleError(err);
 			return;
 		}

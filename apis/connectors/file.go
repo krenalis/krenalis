@@ -125,6 +125,8 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // If pathReplacer is not nil, then the placeholders in path are replaced using
 // it; in this case, a PlaceholderError error may be returned in case of an
 // error with placeholders.
+//
+// It returns an *UnavailableError error if the connector returns an error.
 func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, ack AckFunc) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -148,7 +150,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 	}
 	sw, err := s.Writer(ctx, path, file.inner.ContentType(ctx), extension)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	columns := types.Properties(file.action.InSchema)
 	records := make(chan fileRecord, 100)
@@ -161,7 +163,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
 		}
-		result <- err
+		result <- connectorError(err)
 	}()
 	fw := &fileWriter{
 		cancelWrite: cancelWrite,
@@ -216,11 +218,12 @@ func newCompressedStorage(s meergo.FileStorage, c state.Compression) *compressor
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
 // from which to read the file and its last change time.
+// It returns an *UnavailableError error if the connector returns an error.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	r, t, err := cs.storage.Reader(ctx, name)
 	if err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, connectorError(err)
 	}
 	switch cs.compression {
 	case state.ZipCompression:
@@ -363,13 +366,13 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 		defer r.Close()
 		err := cs.storage.Write(ctx, r, path, contentType)
 		if err != nil {
-			_ = pr.CloseWithError(err)
+			_ = pr.CloseWithError(connectorError(err))
 		} else {
 			// errReadStopped will be returned to the file connector only if it
 			// calls w.Write when the storage is returned.
 			_ = pr.CloseWithError(errReadStopped)
 		}
-		ch <- err
+		ch <- connectorError(err)
 	}()
 	wc := newFuncWriteCloser(w, func(err error) error {
 		if w != pw {
@@ -474,9 +477,9 @@ func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 		}
 		if err != nil {
 			if err == meergo.ErrSheetNotExist {
-				err = ErrSheetNotExist
+				r.err = ErrSheetNotExist
 			}
-			r.err = err
+			r.err = connectorError(err)
 		}
 	}
 }

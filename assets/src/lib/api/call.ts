@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError, UnprocessableError, LoginRequiredError } from './errors';
+import { NotFoundError, BadRequestError, UnavailableError, UnprocessableError, LoginRequiredError } from './errors';
 
 const call = async (url: string, method: string, body?: any, opt?: any) => {
 	const request: RequestInit = {
@@ -25,6 +25,7 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 			case 400:
 			case 404:
 			case 422:
+			case 503:
 				let parsed = await res.json();
 				let { code, message, cause } = parsed.error;
 				if (res.status === 400) {
@@ -37,6 +38,8 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 					} else {
 						throw new UnprocessableError(code, message, cause);
 					}
+				} else if (res.status === 503) {
+					throw new UnavailableError(message, cause);
 				}
 				break;
 			default:

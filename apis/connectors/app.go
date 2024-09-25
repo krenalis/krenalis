@@ -90,9 +90,9 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 // If the event type does not have a schema, schema is the invalid schema and
 // properties is nil.
 //
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-// If the schema is not aligned to the event type's schema, it returns a
-// *schemas.Error error.
+// It returns the ErrEventTypeNotExist error if the event type does not exist,
+// a *schemas.Error error if the schema is not aligned to the event type's
+// schema, and an *UnavailableError error if the connector returns an error.
 //
 // It panics if the app does not support the Events target, or if schema is
 // valid but not an Object.
@@ -106,7 +106,7 @@ func (app *App) EventRequest(ctx context.Context, event *Event, eventType string
 	}
 	eventTypeSchema, err := app.inner.Schema(ctx, meergo.Events, meergo.Destination, eventType)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	// Check that schema is aligned with the event type's schema.
 	createOnly := state.CreateOnly
@@ -120,16 +120,25 @@ func (app *App) EventRequest(ctx context.Context, event *Event, eventType string
 		properties = map[string]any{}
 	}
 	// Return the event request.
-	return appEvents.EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
+	request, err := appEvents.EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
+	if err != nil {
+		return nil, connectorError(err)
+	}
+	return request, nil
 }
 
 // EventTypes returns the app's event types.
+// It returns an *UnavailableError error if the connector returns an error.
 // It panics if the app does not support the events target.
 func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	return app.inner.(meergo.AppEvents).EventTypes(ctx)
+	eventTypes, err := app.inner.(meergo.AppEvents).EventTypes(ctx)
+	if err != nil {
+		return nil, connectorError(err)
+	}
+	return eventTypes, nil
 }
 
 // Schema returns the app's schema for the provided target. If target is
@@ -148,28 +157,36 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 // SchemaAsRole is like Schema but returns the schema as the provided role,
 // instead of the role of the app's connection.
 // If the event type does not exist, it returns the ErrEventTypeNotExist error.
+// It returns an *UnavailableError error if the connector returns an error.
 func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {
 		return types.Type{}, app.err
 	}
 	switch target {
 	case state.Events:
-		return app.inner.Schema(ctx, meergo.Events, meergo.Role(role), eventType)
+		schema, err := app.inner.Schema(ctx, meergo.Events, meergo.Role(role), eventType)
+		if err != nil {
+			return types.Type{}, connectorError(err)
+		}
+		return schema, nil
 	case state.Users:
-		return app.userSchema(ctx, types.Role(role))
+		schema, err := app.userSchema(ctx, types.Role(role))
+		if err != nil {
+			return types.Type{}, connectorError(err)
+		}
+		return schema, nil
 	case state.Groups:
 		schema, err := app.inner.Schema(ctx, meergo.Groups, meergo.Role(role), "")
 		if err != nil {
-			return types.Type{}, err
+			return types.Type{}, connectorError(err)
 		}
 		if !schema.Valid() {
 			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.name)
 		}
 		schema = types.AsRole(schema, types.Role(role))
 		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connector has returned a schema without %s properties", strings.ToLower(role.String()))
+			return types.Type{}, fmt.Errorf("connector %s has returned a schema without %s properties", app.name, strings.ToLower(role.String()))
 		}
-		return schema, nil
 	}
 	panic("unexpected target")
 }
@@ -284,7 +301,7 @@ func (w *appWriter) Write(ctx context.Context, id string, properties map[string]
 	}
 	if id == "" {
 		_, err := w.records.Upsert(ctx, w.target, []meergo.UpsertRecord{{ID: "", Properties: properties}})
-		w.ack([]string{id}, err)
+		w.ack([]string{id}, connectorError(err))
 		return true
 	}
 	w.updates[id] = properties
@@ -365,13 +382,14 @@ func (w *appWriter) doUpdates(ctx context.Context) {
 			if update {
 				_, err = w.records.Upsert(ctx, w.target, []meergo.UpsertRecord{{ID: record.ID, Properties: properties}})
 			}
-			w.ack([]string{record.ID}, err)
+			w.ack([]string{record.ID}, connectorError(err))
 			delete(w.updates, record.ID)
 		}
 	}
 }
 
 // userSchema returns the user schema with the provided role.
+// It returns an *UnavailableError error if the connector returns an error.
 func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, error) {
 	select {
 	case <-ctx.Done():
@@ -386,7 +404,7 @@ func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, er
 	}
 	schema, err := app.inner.Schema(ctx, meergo.Users, meergo.Role(role), "")
 	if err != nil {
-		return types.Type{}, err
+		return types.Type{}, connectorError(err)
 	}
 	var schemas [3]types.Type
 	for r := types.BothRole; r <= types.DestinationRole; r++ {
@@ -501,7 +519,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			users, cursor, err = r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, r.lastChangeTime, nil, names, cursor)
 			eof := err == io.EOF
 			if err != nil && !eof {
-				r.err = err
+				r.err = connectorError(err)
 				return
 			}
 			if len(users) == 0 {

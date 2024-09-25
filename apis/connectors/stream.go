@@ -43,13 +43,15 @@ func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, err
 
 // Close closes the stream. When Close is called, no other calls to the
 // stream's methods must be in progress, and no more calls must be made.
+// It returns an *UnavailableError error if the connector returns an error.
 // Close is idempotent.
 func (stream *Stream) Close() error {
 	if stream.closed {
 		return nil
 	}
 	stream.closed = true
-	return stream.inner.Close()
+	err := stream.inner.Close()
+	return connectorError(err)
 }
 
 // Receive receives an event from the stream. The caller can call the ack
@@ -59,9 +61,15 @@ func (stream *Stream) Close() error {
 // The caller must not modify the event data, even temporarily, and must not
 // retain the event slice after the ack function has been called.
 //
+// It returns an *UnavailableError error if the connector returns an error.
+//
 // Receive can be used by multiple goroutines at the same time.
 func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), err error) {
-	return stream.inner.Receive(ctx)
+	event, ack, err = stream.inner.Receive(ctx)
+	if err != nil {
+		return nil, nil, connectorError(err)
+	}
+	return event, ack, nil
 }
 
 // Send sends an event to the stream. If ack is not nil, the stream calls ack
@@ -70,7 +78,10 @@ func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), er
 // Send can modify the event data, but the event slice is not retained after the
 // ack function has been called.
 //
+// It returns an *UnavailableError error if the connector returns an error.
+//
 // Send can be used by multiple goroutines at the same time.
 func (stream *Stream) Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error {
-	return stream.inner.Send(ctx, event, options, ack)
+	err := stream.inner.Send(ctx, event, options, ack)
+	return connectorError(err)
 }

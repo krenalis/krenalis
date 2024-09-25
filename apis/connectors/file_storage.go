@@ -51,6 +51,8 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 // If nameReplacer is not nil, then the placeholders in name are replaced using
 // it; in this case, a PlaceholderError error may be returned in case of an
 // error with placeholders.
+//
+// It returns an *UnavailableError error if the connector returns an error.
 func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
@@ -62,7 +64,11 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 			return "", err
 		}
 	}
-	return storage.inner.CompletePath(ctx, name)
+	path, err := storage.inner.CompletePath(ctx, name)
+	if err != nil {
+		return "", connectorError(err)
+	}
+	return path, nil
 }
 
 // Read reads the records from file in the storage at the provided path name

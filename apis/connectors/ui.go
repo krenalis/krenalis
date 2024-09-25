@@ -24,8 +24,10 @@ import (
 // returns the new serialized interface to be sent back to the client. event is
 // the event to be served, and values are the user-entered values.
 //
-// It returns the ErrUIEventNotExist error if the event does not exist.
-// It returns an InvalidUIValuesError error value if the values are not valid.
+// It returns the ErrUIEventNotExist error if the event does not exist, an
+// InvalidUIValuesError error if the values are not valid, and an
+// *UnavailableError error if the connector returns an error.
+//
 // It panics if the connector has no UI.
 func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values []byte) ([]byte, error) {
 	role := meergo.Role(action.Connection().Role)
@@ -39,7 +41,7 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 	}
 	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, role)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	return marshalUI(ui, role)
 }
@@ -48,8 +50,10 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 // returns the new serialized interface to be sent back to the client. event
 // is the event to be served, and values are the user-entered values.
 //
-// It returns the ErrUIEventNotExist error if the event does not exist.
-// It returns an InvalidUIValuesError error value if the values are not valid.
+// It returns the ErrUIEventNotExist error if the event does not exist, an
+// InvalidUIValuesError error if the values are not valid, and an
+// *UnavailableError error if the connector returns an error.
+//
 // It panics if the connector has no UI.
 func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values []byte) ([]byte, error) {
 	var accountID int
@@ -108,7 +112,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	}
 	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, meergo.Role(connection.Role))
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	return marshalUI(ui, meergo.Role(connection.Role))
 }
@@ -127,8 +131,10 @@ type ConnectorConfig struct {
 // returns the new serialized interface to be sent back to the client. event
 // is the event to be served, and values are the user-entered values.
 //
-// It returns the ErrUIEventNotExist error if the event does not exist.
-// It returns an InvalidUIValuesError error value if the values are not valid.
+// It returns the ErrUIEventNotExist error if the event does not exist, an
+// InvalidUIValuesError error if the values are not valid, and an
+// *UnavailableError error if the connector returns an error.
+//
 // It panics if the connector has no UI.
 func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values []byte) ([]byte, error) {
 	var inner any
@@ -163,7 +169,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	}
 	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, meergo.Role(conf.Role))
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	return marshalUI(ui, meergo.Role(conf.Role))
 }
@@ -171,7 +177,9 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 // UpdatedSettings returns the settings, for the given connector, updated with
 // the provided user-entered values.
 //
-// It returns an InvalidUIValuesError error value if the values are not valid.
+// It returns an InvalidUIValuesError error value if the values are not valid
+// and an *UnavailableError error if the connector returns an error.
+//
 // It panics if the connector has no UI.
 func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues []byte) ([]byte, error) {
 	var inner any
@@ -217,7 +225,7 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	}
 	_, err = inner.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(conf.Role))
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	return newSettings, nil
 }

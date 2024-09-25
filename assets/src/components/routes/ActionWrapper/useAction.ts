@@ -10,7 +10,7 @@ import {
 } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/core/connection';
-import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
+import { NotFoundError, UnavailableError, UnprocessableError } from '../../../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../../../lib/api/types/action';
 import {
 	ActionSchemasResponse,
@@ -154,20 +154,8 @@ const useAction = (
 					outputSchema = schema;
 				}
 			} catch (err) {
-				if (err instanceof UnprocessableError) {
-					let message: string;
-					if (err.code === 'DatabaseFailed') {
-						let errorMessage: string;
-						if (err.cause && err.cause !== '') {
-							errorMessage = err.cause;
-						} else {
-							errorMessage = err.message;
-						}
-						message = errorMessage;
-					} else {
-						message = err.message;
-					}
-					handleError(message);
+				if (err instanceof UnprocessableError || err instanceof UnavailableError) {
+					handleError(err.message);
 					// continue execution so that user can fix the action.
 				} else {
 					setTimeout(() => {

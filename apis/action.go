@@ -293,8 +293,13 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 	if err != nil {
 		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
-		} else if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-			err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+		} else {
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
+			}
 		}
 		return nil, err
 	}
@@ -488,8 +493,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
-			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-				err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
 			}
 			return err
 		}
@@ -648,6 +656,11 @@ func (this *Action) database() *connectors.Database {
 	return this.apis.connectors.Database(a.Connection())
 }
 
+// file returns the file of the action.
+func (this *Action) file() *connectors.File {
+	return this.apis.connectors.File(this.action, this.connection.connection.Role)
+}
+
 // isLanguageSupported reports whether the transformation language of the action
 // is supported. If the action does not have a transformation, it returns true.
 func (this *Action) isLanguageSupported() bool {
@@ -659,11 +672,6 @@ func (this *Action) isLanguageSupported() bool {
 		return true
 	}
 	return false
-}
-
-// file returns the file of the action.
-func (this *Action) file() *connectors.File {
-	return this.apis.connectors.File(this.action, this.connection.connection.Role)
 }
 
 // ActionToSet represents an action to set in a connection, by adding a new

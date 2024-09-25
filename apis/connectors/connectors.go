@@ -90,6 +90,16 @@ func (e PlaceholderError) Error() string {
 	return string(e)
 }
 
+// UnavailableError represents an error that occurs when a connector cannot
+// fulfill a request due to an internal error.
+type UnavailableError struct {
+	Err error
+}
+
+func (err *UnavailableError) Error() string {
+	return err.Err.Error()
+}
+
 // PlaceholderReplacer is the type of functions accepted by ReplacePlaceholders,
 // where name is the name of the placeholder, and the returned values are the
 // value to replace (if any, otherwise the empty string) and a boolean
@@ -392,6 +402,30 @@ func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
 	}
 	b.WriteString(s)
 	return b.String(), nil
+}
+
+// connectorError checks the type of err and returns it unwrapped if it is one
+// of the expected errors from a connector. Otherwise, it wraps err in an
+// *UnavailableError before returning.
+func connectorError(err error) error {
+	switch err {
+	case nil:
+	case ErrEventTypeNotExist:
+	case ErrSheetNotExist:
+	case ErrUIEventNotExist:
+	case ErrWebhookUnauthorized:
+	default:
+		switch err.(type) {
+		case *meergo.AccessDeniedError:
+		case meergo.InvalidPathError:
+		case meergo.InvalidUIValuesError:
+		case meergo.NotSupportedTypeError:
+		case *UnavailableError:
+		default:
+			err = &UnavailableError{Err: err}
+		}
+	}
+	return err
 }
 
 // formatLastChangeTimeProperty formats a time.Time value with the given format.

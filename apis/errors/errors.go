@@ -116,6 +116,49 @@ func (e *NotFoundError) WriteTo(w http.ResponseWriter) error {
 	return writeTo(w, http.StatusNotFound, "NotFound", e.Message, "")
 }
 
+// Unavailable returns an error with the given code that formats as the given
+// text, and its WriteTo method replies to the request with an HTTP 503
+// service unavailable error.
+//
+// If format includes a %w verb with an error operand, Unavailable returns
+// an error that implements an Unwrap method returning the operand, and the
+// WriteTo method reports the error message in the "cause" key.
+//
+// Unavailable should be used when a request cannot be fulfilled due to an
+// unexpected error from a connector. For instance, it could be utilized if a
+// connector encounters an error while trying to connect to a database.
+func Unavailable(format string, a ...any) error {
+	e := fmt.Errorf(format, a...)
+	return &unavailableError{s: e.Error(), err: Unwrap(e)}
+}
+
+// A unavailableError value is returned when a connector has returned an
+// unexpected error.
+type unavailableError struct {
+	s   string
+	err error
+}
+
+// Error implements the errors interface.
+func (e *unavailableError) Error() string {
+	return e.s
+}
+
+// Unwrap returns the wrapped error.
+func (e *unavailableError) Unwrap() error {
+	return e.err
+}
+
+// WriteTo implements the ResponseWriterTo interface.
+func (e *unavailableError) WriteTo(w http.ResponseWriter) error {
+	var cause string
+	if e.err != nil {
+		cause = e.err.Error()
+	}
+	message := e.s
+	return writeTo(w, http.StatusServiceUnavailable, "ServiceUnavailable", message, cause)
+}
+
 // Unprocessable returns an error with the given code that formats as the given
 // text, and its WriteTo method replies to the request with an HTTP 422
 // unprocessable entity error.

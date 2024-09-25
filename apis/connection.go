@@ -121,9 +121,8 @@ var dummyGroupsSchema = types.Object([]types.Property{
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
 //
-// It returns an errors.UnprocessableError error with code
-//   - EventTypeNotExist, if the event type does not exist for the connection.
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
+// It returns an errors.UnprocessableError error with code EventTypeNotExist, if
+// the event type does not exist for the connection.
 func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
 
 	this.apis.mustBeOpen()
@@ -150,14 +149,20 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			var err error
 			schema, err := this.app().Schema(ctx, state.Users, "")
 			if err != nil {
-				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+				if _, ok := err.(*connectors.UnavailableError); ok {
+					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+				}
+				return nil, err
 			}
 			if c.Role == state.Source {
 				return &ActionSchemas{In: schema, Out: users}, nil
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
 				if err != nil {
-					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+					if _, ok := err.(*connectors.UnavailableError); ok {
+						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+					}
+					return nil, err
 				}
 				actionSchemas := &ActionSchemas{In: users, Out: schema}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -170,14 +175,20 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			var err error
 			schema, err := this.app().Schema(ctx, state.Groups, "")
 			if err != nil {
-				return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+				if _, ok := err.(*connectors.UnavailableError); ok {
+					err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+				}
+				return nil, err
 			}
 			if c.Role == state.Source {
 				return &ActionSchemas{In: schema, Out: groups}, nil
 			} else {
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
 				if err != nil {
-					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+					if _, ok := err.(*connectors.UnavailableError); ok {
+						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+					}
+					return nil, err
 				}
 				actionSchemas := &ActionSchemas{In: groups, Out: schema}
 				actionSchemas.Matchings = &ActionSchemasMatchings{
@@ -250,10 +261,6 @@ type ActionType struct {
 // ActionTypes returns the action types for the connection.
 //
 // Refer to the specifications in the file "apis/Actions.md" for more details.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FetchSchemaFailed, if an error occurred fetching the schema.
 func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	var actionTypes []ActionType
 	c := this.connection
@@ -397,7 +404,10 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			if c.Role == state.Destination {
 				eventTypes, err := this.app().EventTypes(ctx)
 				if err != nil {
-					return nil, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+					if _, ok := err.(*connectors.UnavailableError); ok {
+						err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+					}
+					return nil, err
 				}
 				for _, et := range eventTypes {
 					id := et.ID
@@ -577,8 +587,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
-			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-				err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
 			}
 			return 0, err
 		}
@@ -675,6 +688,9 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	// Get the users.
 	records, err := this.app().Users(ctx, schema, lastChangeTime)
 	if err != nil {
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("%s", err)
+		}
 		return nil, "", err
 	}
 	defer records.Close()
@@ -749,11 +765,11 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	}
 	path, err := this.storage().CompletePath(ctx, path, replacer)
 	if err != nil {
-		switch err := err.(type) {
+		switch err.(type) {
 		case connectors.InvalidPathError:
-			return "", errors.Unprocessable(InvalidPath, "%w", err)
+			err = errors.Unprocessable(InvalidPath, "%s", err)
 		case connectors.PlaceholderError:
-			return "", errors.Unprocessable(InvalidPlaceholder, "%w", err)
+			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
 		}
 		return "", err
 	}
@@ -834,7 +850,6 @@ func (this *Connection) Delete(ctx context.Context) error {
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // It returns an errors.UnprocessableError error with code:
 //
-//   - DatabaseFailed, if a database error occurred.
 //   - InvalidPlaceholder, if the query contains an invalid placeholder.
 func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]byte, types.Type, error) {
 
@@ -877,10 +892,13 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	defer database.Close()
 	rows, err := database.Query(ctx, query, replacer)
 	if err != nil {
-		if err, ok := err.(connectors.PlaceholderError); ok {
-			return nil, types.Type{}, errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		switch err.(type) {
+		case connectors.PlaceholderError:
+			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		case *connectors.UnavailableError:
+			err = errors.Unavailable("%s", err)
 		}
-		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
+		return nil, types.Type{}, err
 	}
 	defer rows.Close()
 
@@ -889,13 +907,19 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	for rows.Next() {
 		row, err := rows.Scan()
 		if err != nil {
-			return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
+			if _, ok := err.(*connectors.UnavailableError); ok {
+				err = errors.Unavailable("%s", err)
+			}
+			return nil, types.Type{}, err
 		}
 		results = append(results, row)
 	}
 	err = rows.Err()
 	if err != nil {
-		return nil, types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("%s", err)
+		}
+		return nil, types.Type{}, err
 	}
 
 	schema := types.Object(rows.Columns())
@@ -1135,7 +1159,6 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
 //   - NoColumns, if the file has no columns.
-//   - ReadFileFailed, if an error occurred reading the file.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
 
@@ -1205,15 +1228,18 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 	if err != nil {
 		switch err {
 		case connectors.ErrNoColumns:
-			return nil, types.Type{}, errors.Unprocessable(NoColumns, "file does not have columns")
+			err = errors.Unprocessable(NoColumns, "file does not have columns")
 		case connectors.ErrSheetNotExist:
-			return nil, types.Type{}, errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
+			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
-			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-				return nil, types.Type{}, errors.Unprocessable(InvalidUIValues, "%w", err2)
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("cannot read records: %w", err)
 			}
 		}
-		return nil, types.Type{}, errors.Unprocessable(ReadFileFailed, "an error occurred reading the %s file: %w", c.Connector().Name, err)
+		return nil, types.Type{}, err
 	}
 
 	schema := types.Object(columns)
@@ -1592,8 +1618,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if err != nil {
 		if err == connectors.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
-		} else if err2, ok := err.(*connectors.SchemaError); ok {
-			err = errors.Unprocessable(NotCompatibleSchema, "output schema is not compatible with the event type's schema: %w", err2)
+		} else {
+			switch err.(type) {
+			case *connectors.SchemaError:
+				err = errors.Unprocessable(NotCompatibleSchema, "output schema is not compatible with the event type's schema: %w", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("connector returned an error preparing the preview: %w", err)
+			}
 		}
 		return nil, err
 	}
@@ -1734,8 +1765,13 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	if err != nil {
 		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
-		} else if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-			err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+		} else {
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
+			}
 		}
 		return nil, err
 	}
@@ -1753,7 +1789,6 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the file connector does not exist.
 //   - InvalidUIValues, if the UI values are not valid.
-//   - ReadFileFailed, if an error occurred reading the file.
 func (this *Connection) Sheets(ctx context.Context, fileConnector string, path string, uiValues []byte, compression Compression) ([]string, error) {
 
 	this.apis.mustBeOpen()
@@ -1800,10 +1835,13 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 
 	sheets, err := this.storage().Sheets(ctx, file, path, uiValues, state.Compression(compression))
 	if err != nil {
-		if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-			return nil, errors.Unprocessable(InvalidUIValues, "%w", err2)
+		switch err.(type) {
+		case connectors.InvalidUIValuesError:
+			err = errors.Unprocessable(InvalidUIValues, "%s", err)
+		case *connectors.UnavailableError:
+			err = errors.Unavailable("cannot read the file: %w", err)
 		}
-		return nil, errors.Unprocessable(ReadFileFailed, "%w", err)
+		return nil, err
 	}
 
 	return sheets, nil
@@ -1813,10 +1851,9 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 // connection must be a destination database connection, and table must be UTF-8
 // encoded with a length in range [1, 1024].
 //
-// It returns an error.Unprocessable error with code:
-//   - DatabaseFailed, if a database error occurred.
-//   - InvalidTable, if the table does not contain an unsigned 32-bit column
-//     named "id" or if there are no other columns apart from "id".
+// It returns an error.Unprocessable error with code InvalidTable, if the table
+// does not contain an unsigned 32-bit column named "id" or if there are no
+// other columns apart from "id".
 func (this *Connection) TableSchema(ctx context.Context, table string) (types.Type, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
@@ -1834,7 +1871,10 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	defer database.Close()
 	columns, err := database.Columns(ctx, table)
 	if err != nil {
-		return types.Type{}, errors.Unprocessable(DatabaseFailed, "a database error occurred: %w", err)
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("an error occurred fetching the columns: %w", err)
+		}
+		return types.Type{}, err
 	}
 	if len(columns) == 0 {
 		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q has no columns", table)
@@ -1868,9 +1908,8 @@ func (this *Connection) storage() *connectors.FileStorage {
 //
 // It returns an errors.BadRequestError error if target or eventType is not
 // valid, or the connection does not support them, and returns an
-// errors.UnprocessableError error with code:
-//   - EventTypeNotExist, if the connection does not have the event type.
-//   - FetchSchemaFailed, if an error occurred fetching the event type schema.
+// errors.UnprocessableError error with code EventTypeNotExist, if the
+// connection does not have the event type.
 func (this *Connection) validateTargetAndEventType(ctx context.Context, target Target, eventType string) (types.Type, error) {
 	// Perform a formal validation.
 	if target != Users && target != Groups && target != Events {
@@ -1915,9 +1954,11 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		schema, err := this.app().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {
-				return types.Type{}, errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+				err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+			} else if _, ok := err.(*connectors.UnavailableError); ok {
+				err = errors.Unavailable("an error occurred fetching the schema: %w", err)
 			}
-			return types.Type{}, errors.Unprocessable(FetchSchemaFailed, "an error occurred fetching the schema: %w", err)
+			return types.Type{}, err
 		}
 		return schema, nil
 	}

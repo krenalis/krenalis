@@ -52,6 +52,7 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 // Close closes the database. When Close is called, no other calls to the
 // database's methods must be in progress, and no more calls must be made.
 // Close is idempotent.
+// It returns an *UnavailableError error if the connector returns an error.
 func (database *Database) Close() error {
 	if database.err != nil {
 		return database.err
@@ -60,17 +61,19 @@ func (database *Database) Close() error {
 		return nil
 	}
 	database.closed = true
-	return database.inner.Close()
+	err := database.inner.Close()
+	return connectorError(err)
 }
 
 // Columns returns the columns of the provided table.
+// It returns an *UnavailableError error if the connector returns an error.
 func (database *Database) Columns(ctx context.Context, table string) ([]types.Property, error) {
 	if database.err != nil {
 		return nil, database.err
 	}
 	columns, err := database.inner.Columns(ctx, table)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	if _, err = types.ObjectOf(columns); err != nil {
 		return nil, rewriteColumnErrors(err)
@@ -113,7 +116,8 @@ func (database *Database) LastChangeTimeCondition(action *state.Action) (string,
 // Query executes a query and returns the resulting rows.
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a PlaceholderError error may be returned in case of
-// an error with placeholders.
+// an error with placeholders. It returns an *UnavailableError error if the
+// connector returns an error.
 func (database *Database) Query(ctx context.Context, query string, queryReplacer PlaceholderReplacer) (*Rows, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -127,7 +131,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	}
 	rows, columns, err := database.inner.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	if _, err = types.ObjectOf(columns); err != nil {
 		_ = rows.Close()
@@ -145,7 +149,8 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 // an error with placeholders.
 //
 // If the action's input schema does not align with the query's results schema,
-// it returns a *schemas.Error error.
+// it returns a *schemas.Error error. It returns an *UnavailableError error if
+// the connector returns an error.
 func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -165,7 +170,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	// Execute the query.
 	rows, columns, err := database.inner.Query(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	var records Records
 	defer func() {
@@ -215,7 +220,7 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	}
 	columns, err := database.inner.Columns(ctx, action.TableName)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	// The table key property is always required for updates and cannot be nullable.
 	// However, the current implementation of the connector's Columns method does not
@@ -291,7 +296,7 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 // records.
 func (w *databaseWriter) upsert(ctx context.Context) {
 	err := w.inner.Upsert(ctx, w.table, w.rows)
-	w.ack(w.ids, err)
+	w.ack(w.ids, connectorError(err))
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
 	w.ids = slices.Delete(w.ids, 0, len(w.ids))
 }

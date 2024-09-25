@@ -521,8 +521,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		conf.OAuth.AccessToken = n.Account.AccessToken
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, c, conf, values)
 		if err != nil {
-			if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-				err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
 			}
 			return 0, err
 		}
@@ -1309,8 +1312,13 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	if err != nil {
 		if err == connectors.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
-		} else if err2, ok := err.(connectors.InvalidUIValuesError); ok {
-			err = errors.Unprocessable(InvalidUIValues, "%w", err2)
+		} else {
+			switch err.(type) {
+			case connectors.InvalidUIValuesError:
+				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
+			}
 		}
 		return nil, err
 	}
