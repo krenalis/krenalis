@@ -1,14 +1,18 @@
 # Datastore
 
-## *types.Type* Support In Data Warehouses
+## Supported types in User Schema and Warehouse
 
-**IMPORTANT**. Please note that this table is under construction / revision, so verify the information before relying on them.
+**IMPORTANT**. This section is under construction and revision, see the issue [#1047](https://github.com/meergo/meergo/issues/1047).
+
+### Principles
 
 This table is based on the following principles:
 
-* a *types.Type* $T$ is considered supported by a data warehouse if the data warehouse provides a type whose set of values exactly matches the set of values of $T$. Note that in some cases, even if $T$ could be supported using databases's constraints, we are not going to use them for simplicity, for now;
-* if there is more than one data warehouse type that could support a certain *types.Type* $T$, the type is chosen based on criteria such as efficiency and implementation and usage issues;
-* the choice to support or not a certain *types.Type* $T$ in the user schema, depends on an arbitrary choice in relation to Meergo itself, and not to the support of data warehouses; it is therefore possible that certain $T$ types are supported in the user schema even if they are not currently supported by any data warehouse, or it is possible that certain $T$ types are supported by one or more data warehouses but we decide not to allow them in the user schema. In general, we try to allow as many types as possible in the user schema.
+* **Warehouse type support**. A *types.Type* $T$ is considered supported by a data warehouse if the data warehouse provides a type whose set of values **matches** or **is a superset** of the values of $T$;
+* **User schema type support**. The choice to support or not a certain *types.Type* $T$ in the user schema, depends on an arbitrary choice in relation to Meergo itself, and not to the support of data warehouses; it is therefore possible that certain $T$ types are supported in the user schema even if they are not currently supported by any data warehouse, or it is possible that certain $T$ types are supported by one or more data warehouses but we decide not to allow them in the user schema. In general, we try to allow as many types as possible in the user schema;
+* **Multiple warehouse types choice**. If there is more than one data warehouse type that could support a certain *types.Type* $T$, the type is chosen based on criteria such as efficiency and implementation and usage issues.
+
+### Table with Types Support
 
 | *types.Type*                      | User Schema                                                                       | PostgreSQL                                                                                                                                                                | Snowflake                                                                                                                   |
 |-----------------------------------|-----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
