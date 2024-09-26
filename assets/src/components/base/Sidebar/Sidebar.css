@@ -1,5 +1,5 @@
 .sidebar {
-	width: 240px;
+	width: 230px;
 	height: 100%;
 	position: fixed;
 	top: 0;
@@ -21,7 +21,7 @@
 	flex-flow: column;
 	justify-content: space-between;
 	align-items: flex-start;
-	padding: 0 25px;
+	padding: 0 20px;
 }
 
 .sidebar__items > div {
@@ -161,8 +161,8 @@
 	cursor: pointer;
 	display: flex;
 	align-items: center;
-	gap: 15px;
-	padding: 15px;
+	gap: 12px;
+	padding: 12px 10px;
 	transition:
 		border 0.3s,
 		background-color 0.3s;
@@ -191,8 +191,9 @@
 }
 
 .sidebar__item--selected {
-	background-color: var(--sl-color-neutral-50);
-	border-left: 4px solid var(--color-primary-500);
+	background: var(--color-primary-50);
+	border-radius: 6px;
+	color: var(--color-primary-600);
 }
 
 .sidebar__item--isChildrenSelected sl-icon,
@@ -205,7 +206,7 @@
 }
 
 .sidebar__item sl-icon {
-	font-size: 25px;
+	font-size: 20px;
 }
 
 .sidebar__item .sidebar__item-text {
@@ -219,10 +220,14 @@
 	display: flex;
 	align-items: center;
 	gap: 15px;
-	padding: 15px;
-	padding-left: 60px;
+	padding: 10px 15px 10px 54px;
 	color: var(--sl-color-neutral-700);
 	user-select: none;
+}
+
+.sidebar__sub-item--selected {
+	background: var(--color-primary-50);
+	border-radius: 6px;
 }
 
 .sidebar__sub-item--selected > sl-icon,
