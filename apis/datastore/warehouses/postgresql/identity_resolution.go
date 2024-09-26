@@ -228,9 +228,9 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		return warehouses.Error(err)
 	}
 
-	// Call the 'do_identity_resolution' stored procedure (which is declared in the
+	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, err = db.Exec(ctx, "CALL do_identity_resolution()")
+	_, err = db.Exec(ctx, "CALL resolve_identities()")
 	if err != nil {
 		return warehouses.Error(err)
 	}

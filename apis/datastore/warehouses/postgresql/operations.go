@@ -122,7 +122,7 @@ func (warehouse *PostgreSQL) fixOperationsTable(ctx context.Context) error {
 	// 			WHERE
 	// 				datname = ` + postgres.QuoteValue(warehouse.settings.Database) + `
 	// 					AND
-	// 				query = 'CALL do_identity_resolution()'
+	// 				query = 'CALL resolve_identities()'
 	// 		)`
 	// _, err = db.Query(ctx, query)
 	// if err != nil {

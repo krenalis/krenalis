@@ -23,7 +23,7 @@ CREATE TABLE edges (
 DROP TABLE IF EXISTS clusters_to_merge;
 CREATE TABLE clusters_to_merge(c1 int, c2 int);
 
-CREATE OR REPLACE PROCEDURE do_identity_resolution()
+CREATE OR REPLACE PROCEDURE resolve_identities()
 LANGUAGE sql
 AS $$
 
