@@ -135,14 +135,4 @@ AS $$
             ("events"."user_id" = '' AND "events"."anonymous_id" = ANY ("_user_identities"."__anonymous_ids__"))
         );
 
-    -- Mark the Identity Resolution execution as completed by setting a value
-    -- for end_time.
-    UPDATE
-        _operations
-    SET
-        end_time = (clock_timestamp() at time zone 'utc')::timestamp
-    WHERE
-        end_time IS NULL;
-
-
 $$;

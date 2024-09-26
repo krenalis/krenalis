@@ -11,8 +11,8 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -33,34 +33,26 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		return err
 	}
 
-	// Check if the Identity Resolution or an alter schema operation is already
-	// in progress; if they are, return an error. If not, «acquire a lock» on
-	// other executions by inserting a row into the '_operations' table.
-	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
-		inExecution, err := alterSchemaInProgress(ctx, tx)
-		if err != nil {
-			return err
-		}
-		if inExecution {
-			return warehouses.ErrAlterSchemaInProgress
-		}
-		startTime, endTime, err := lastIdentityResolution(ctx, tx, warehouse.settings.Database)
-		if err != nil {
-			return err
-		}
-		if startTime != nil && endTime == nil {
-			return warehouses.ErrIdentityResolutionInProgress
-		}
-		_, err = tx.Exec(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
-			`VALUES ('IdentityResolution', (clock_timestamp() at time zone 'utc')::timestamp, NULL)`)
-		if err != nil {
-			return warehouses.Error(err)
-		}
-		return nil
-	})
+	// Start an IdentityResolution operation on the data warehouse, then defer
+	// its ending.
+	opID, err := warehouse.startOperation(ctx, identityResolution)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		// In case there are no errors, the 'endOperation' has already been
+		// called in the normal execution flow, further down in the
+		// ResolveIdentities method. This call is intended to handle error
+		// cases, where the IdentityResolution is aborted prematurely.
+		err := warehouse.endOperation(ctx, opID, time.Now().UTC())
+		if err != nil {
+			if err != nil {
+				go func() {
+					slog.Error("cannot end data warehouse operation", "id", opID, "err", err)
+				}()
+			}
+		}
+	}()
 
 	// Determine the current version of the "users" table and create a copy of
 	// it with the incremented version.
@@ -78,7 +70,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		if err != nil {
 			return warehouses.Error(fmt.Errorf("cannot create users table (with name %s): %s", postgres.QuoteIdent(newUsersName), err))
 		}
-		_, err := db.Exec(ctx, `UPDATE _operations SET users_version = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, newUsersVersion)
+		_, err = tx.Exec(ctx, `UPDATE _operations SET users_version = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, newUsersVersion)
 		if err != nil {
 			return warehouses.Error(err)
 		}
@@ -243,6 +235,12 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		return warehouses.Error(err)
 	}
 
+	// End the IdentityResolution operation.
+	err = warehouse.endOperation(ctx, opID, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+
 	// Replace the current "users" view with a new one using the "CREATE OR
 	// REPLACE VIEW" statement since the table "_users" that the view refers to
 	// has changed its name.
@@ -268,72 +266,15 @@ func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startT
 	if err != nil {
 		return nil, nil, err
 	}
-	return lastIdentityResolution(ctx, db, warehouse.settings.Database)
-}
-
-type queryExec interface {
-	QueryRow(ctx context.Context, query string, args ...any) *postgres.Row
-	Exec(ctx context.Context, query string, args ...any) (*postgres.Result, error)
-}
-
-// lastIdentityResolution returns information about the last Identity
-// Resolution.
-//
-// In particular:
-//
-//   - if the Identity Resolution has been started and completed, returns its
-//     start time and end time;
-//   - if it is in progress, returns its start time and nil for the end time;
-//   - if no Identity Resolution has ever been executed, returns nil and nil.
-//
-// If an error occurs with the data warehouse, it returns a
-// warehouses.DataWarehouseError.
-func lastIdentityResolution(ctx context.Context, db queryExec, databaseName string) (startTime, endTime *time.Time, err error) {
-	query := "SELECT start_time, end_time FROM _operations WHERE operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
-	err = db.QueryRow(ctx, query).Scan(&startTime, &endTime)
+	err = warehouse.fixOperationsTable(ctx)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil, nil
-		}
+		return nil, nil, err
+	}
+	query := "SELECT start_time, end_time FROM _operations WHERE " +
+		"operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
+	err = db.QueryRow(ctx, query).Scan(&startTime, &endTime)
+	if err != nil && err != sql.ErrNoRows {
 		return nil, nil, warehouses.Error(err)
-	}
-	// Check the consistency of the start time and the end time.
-	if endTime != nil {
-		if startTime == nil {
-			return nil, nil, warehouses.Error(errors.New("table '_operations' has" +
-				" an Identity Resolution execution with end time but without start time"))
-		}
-		if startTime != nil && startTime.After(*endTime) {
-			return nil, nil, warehouses.Error(errors.New("table '_operations' has" +
-				" an Identity Resolution execution with start time after the end time"))
-		}
-	}
-	// If the end time is not set, ensure that an Identity Resolution procedure
-	// is actually running; otherwise it means that PostgreSQL went down while
-	// the Identity Resolution was running, and therefore the execution
-	// information must be updated and made consistent.
-	if endTime == nil {
-		var count int
-		query := `SELECT COUNT(*) FROM pg_stat_activity WHERE datname = $1 and query = 'CALL do_identity_resolution()'`
-		err := db.QueryRow(ctx, query, databaseName).Scan(&count)
-		if err != nil {
-			return nil, nil, warehouses.Error(err)
-		}
-		switch count {
-		case 0:
-			// Fix the end time.
-			now := time.Now().UTC()
-			_, err := db.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, now)
-			if err != nil {
-				return nil, nil, warehouses.Error(err)
-			}
-			endTime = &now
-		case 1:
-			// Ok, it means that there is actually an Identity Resolution in
-			// progress.
-		default:
-			return nil, nil, warehouses.Error(fmt.Errorf("the 'pg_stat_activity' table reported a total of %d Identity Resolution procedures", count))
-		}
 	}
 	return startTime, endTime, nil
 }

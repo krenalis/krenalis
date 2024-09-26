@@ -10,9 +10,11 @@ package postgresql
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/postgres"
@@ -22,6 +24,26 @@ import (
 // AlterSchema alters the user schema.
 func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
 
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+
+	// Start an AlterSchema operation on the data warehouse, then defer its
+	// ending.
+	opID, err := warehouse.startOperation(ctx, alterSchema)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := warehouse.endOperation(ctx, opID, time.Now().UTC())
+		if err != nil {
+			go func() {
+				slog.Error("cannot end data warehouse operation", "id", opID, "err", err)
+			}()
+		}
+	}()
+
 	// Retrieve the current version of the "users" table.
 	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {
@@ -30,43 +52,6 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 
 	// Determine the alter schema queries.
 	queries, err := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
-	if err != nil {
-		return err
-	}
-
-	// If there are no operations in progress, get the "lock" by inserting a row
-	// into the "_operations" table.
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
-		// Check if an alter schema operation is already in execution, and
-		// return an error in that case.
-		inExecution, err := alterSchemaInProgress(ctx, tx)
-		if err != nil {
-			return err
-		}
-		if inExecution {
-			return warehouses.ErrAlterSchemaInProgress
-		}
-		// Check if the Identity Resolution is in progress, and return and error
-		// in that case.
-		starTime, endTime, err := lastIdentityResolution(ctx, tx, warehouse.settings.Database)
-		if err != nil {
-			return err
-		}
-		if starTime != nil && endTime == nil {
-			return warehouses.ErrIdentityResolutionInProgress
-		}
-		// Add an entry to the "_operations" table.
-		_, err = tx.Exec(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
-			`VALUES ('AlterSchema', (clock_timestamp() at time zone 'utc')::timestamp, NULL)`)
-		if err != nil {
-			return warehouses.Error(err)
-		}
-		return nil
-	})
 	if err != nil {
 		return err
 	}
@@ -81,23 +66,6 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 		}
 		return nil
 	})
-
-	// Before checking the alter schema errors, mark the operation within
-	// "_operations" as completed, independently from any error.
-	_, err2 := db.Exec(ctx, "UPDATE _operations"+
-		" SET end_time = (clock_timestamp() at time zone 'utc')::timestamp"+
-		" WHERE end_time IS NULL")
-	if err2 != nil {
-		if err == nil {
-			return warehouses.Error(err2)
-		}
-		// Both the alter schema and the query that updates '_operations' have
-		// failed, so both errors must be reported.
-		return warehouses.Error(fmt.Errorf(
-			"alter schema failed with error %s, then setting the operation as"+
-				" completed failed too with error %s", err, err2,
-		))
-	}
 
 	return err
 }
@@ -118,18 +86,6 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 		queries[i] = q + ";"
 	}
 	return queries, nil
-}
-
-// alterSchemaInProgress reports whether an alter schema operation is progress
-// on the data warehouse.
-func alterSchemaInProgress(ctx context.Context, tx *postgres.Tx) (bool, error) {
-	query := "SELECT COUNT(*) FROM _operations WHERE operation = 'AlterSchema' AND end_time IS NULL"
-	var count int
-	err := tx.QueryRow(ctx, query).Scan(&count)
-	if err != nil {
-		return false, warehouses.Error(err)
-	}
-	return count == 1, nil
 }
 
 // alterSchemaQueries returns the queries that perform the given operations.
