@@ -46,62 +46,64 @@ const ConnectionsMap = () => {
 	return (
 		<div className='connections-map'>
 			<div className='route-content'>
-				<div className='connections-map__buttons'>
-					<Link path={`connectors?role=Source`}>
-						<SlButton className='connections-map__add-source' variant='text'>
-							<SlIcon slot='suffix' name='plus-circle' />
-							Add a new source
-						</SlButton>
-					</Link>
-					<Link path={`connectors?role=Destination`}>
-						<SlButton className='connections-map__add-destination' variant='text'>
-							<SlIcon slot='suffix' name='plus-circle' />
-							Add a new destination
-						</SlButton>
-					</Link>
-				</div>
-				<div className='connections-map__map'>
-					<div className='connections-map__sources'>{sourcesBlocks}</div>
-					<div className='connections-map__main'>
-						<div className='connections-map__central-logo' id='central-logo'>
-							CDP
-						</div>
-						<div className='connections-map__databases'>
-							<Link path='users'>
-								<div
-									className='connections-map__database connections-map__database--users'
-									id='users-database'
-								>
-									{warehouseMode === 'Normal' ? (
-										<SlTooltip content='The warehouse is in Normal mode (full read and write access)'>
-											<SlIcon name='database' />
-										</SlTooltip>
-									) : warehouseMode === 'Inspection' ? (
-										<SlTooltip content='The warehouse is in Inspection mode (read-only for data inspection)'>
-											<SlIcon name='database-lock' />
-										</SlTooltip>
-									) : (
-										<SlTooltip
-											content='The warehouse is in Maintenance mode (init and alter schema
-											operations only)'
-										>
-											<SlIcon name='database-gear' />
-										</SlTooltip>
-									)}
-									<div className='connections-map__database-name'>Users</div>
-								</div>
-							</Link>
-							<div
-								className='connections-map__database connections-map__database--events'
-								id='events-database'
-							>
-								<SlIcon name='database' />
-								<div className='connections-map__database-name'>Events</div>
-							</div>
-						</div>
-						{databaseArrows}
+				<div className='connections-map__content'>
+					<div className='connections-map__buttons'>
+						<Link path={`connectors?role=Source`}>
+							<SlButton className='connections-map__add-source' variant='text'>
+								<SlIcon slot='suffix' name='plus-circle' />
+								Add a new source
+							</SlButton>
+						</Link>
+						<Link path={`connectors?role=Destination`}>
+							<SlButton className='connections-map__add-destination' variant='text'>
+								<SlIcon slot='suffix' name='plus-circle' />
+								Add a new destination
+							</SlButton>
+						</Link>
 					</div>
-					<div className='connections-map__destinations'>{destinationsBlocks}</div>
+					<div className='connections-map__map'>
+						<div className='connections-map__sources'>{sourcesBlocks}</div>
+						<div className='connections-map__main'>
+							<div className='connections-map__central-logo' id='central-logo'>
+								CDP
+							</div>
+							<div className='connections-map__databases'>
+								<Link path='users'>
+									<div
+										className='connections-map__database connections-map__database--users'
+										id='users-database'
+									>
+										{warehouseMode === 'Normal' ? (
+											<SlTooltip content='The warehouse is in Normal mode (full read and write access)'>
+												<SlIcon name='database' />
+											</SlTooltip>
+										) : warehouseMode === 'Inspection' ? (
+											<SlTooltip content='The warehouse is in Inspection mode (read-only for data inspection)'>
+												<SlIcon name='database-lock' />
+											</SlTooltip>
+										) : (
+											<SlTooltip
+												content='The warehouse is in Maintenance mode (init and alter schema
+											operations only)'
+											>
+												<SlIcon name='database-gear' />
+											</SlTooltip>
+										)}
+										<div className='connections-map__database-name'>Users</div>
+									</div>
+								</Link>
+								<div
+									className='connections-map__database connections-map__database--events'
+									id='events-database'
+								>
+									<SlIcon name='database' />
+									<div className='connections-map__database-name'>Events</div>
+								</div>
+							</div>
+							{databaseArrows}
+						</div>
+						<div className='connections-map__destinations'>{destinationsBlocks}</div>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -2,6 +2,13 @@
 	position: relative;
 }
 
+.connections-map__content {
+	position: relative;
+	left: -115px;
+	max-width: 1600px;
+	margin: 0 auto;
+}
+
 .connections-map__buttons {
 	display: flex;
 	justify-content: space-between;
@@ -16,6 +23,14 @@
 	align-items: start;
 	margin-top: 30px;
 	animation: fade-in-entrance 1s;
+}
+
+@media (max-width: 2150px) {
+	.connections-map__content {
+		position: static;
+		left: 0;
+		margin-left: 0;
+	}
 }
 
 @media (max-width: 1580px) {
