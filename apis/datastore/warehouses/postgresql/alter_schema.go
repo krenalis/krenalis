@@ -273,7 +273,7 @@ func typeToPostgresType(t types.Type) (string, bool) {
 	case types.JSONKind:
 		return "jsonb", true
 	case types.InetKind:
-		return "", false
+		return "inet", true
 	case types.TextKind:
 		if _, ok := t.ByteLen(); ok {
 			return "", false

@@ -152,6 +152,14 @@
                 "readOptional": true
             },
             {
+                "name": "home_ip_address",
+                "label": "Home IP Address",
+                "type": {
+                    "name": "Inet"
+                },
+                "readOptional": true
+            },
+            {
                 "name": "favorite_movie",
                 "label": "Favorite movie",
                 "type": {

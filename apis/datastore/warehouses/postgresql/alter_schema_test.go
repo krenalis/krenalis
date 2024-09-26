@@ -373,7 +373,7 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.JSON(), "jsonb"},
 
 		// Inet.
-		{types.Inet(), ""},
+		{types.Inet(), "inet"},
 
 		// Text.
 		{types.Text(), "varchar"},
