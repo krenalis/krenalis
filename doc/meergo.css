@@ -66,7 +66,7 @@ table td {
 table td .hljs { background: none; box-shadow: none; }
 
 :root {
-    --content-max-width: 75%;
+    --content-max-width: 972px;
     --fg: #1C1E21;
     --icons: #000;
     --quote-bg: #eef9fd;
