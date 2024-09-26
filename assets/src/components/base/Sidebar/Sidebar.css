@@ -1,5 +1,9 @@
+:root {
+	--sidebar-with: 230px;
+}
+
 .sidebar {
-	width: 230px;
+	width: var(--sidebar-with);
 	height: 100%;
 	position: fixed;
 	top: 0;

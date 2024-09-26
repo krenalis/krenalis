@@ -116,7 +116,7 @@ body {
 
 #root > .app {
 	padding-top: 56px;
-	padding-left: 230px;
+	padding-left: var(--sidebar-with);
 }
 
 /* || buttons and links */
