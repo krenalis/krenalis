@@ -82,7 +82,6 @@ class API {
 		expression: string,
 		properties: Property[],
 		type: Type,
-		nullable: boolean,
 		signal?: AbortSignal,
 	): Promise<string> => {
 		return await call(
@@ -92,7 +91,6 @@ class API {
 				expression,
 				properties,
 				type: type,
-				nullable: nullable,
 			},
 			{ signal },
 		);

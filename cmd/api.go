@@ -142,13 +142,12 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 		Expression string
 		Properties []types.Property
 		Type       types.Type
-		Nullable   bool
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	message := api.apis.ValidateExpression(body.Expression, body.Properties, body.Type, body.Nullable)
+	message := api.apis.ValidateExpression(body.Expression, body.Properties, body.Type)
 	return message, nil
 }
 

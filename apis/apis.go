@@ -700,12 +700,11 @@ func (apis *APIs) TransformationLanguages() []string {
 }
 
 // ValidateExpression validates an expression. properties represents the allowed
-// properties in the expression. typ is the type of the expression, and nullable
-// indicates whether it can be nullable.
+// properties in the expression, and typ is the type of the expression.
 //
 // The returned string explains why the expression is not valid. It is empty if
 // the expression is valid.
-func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type, nullable bool) string {
+func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type) string {
 	apis.mustBeOpen()
 	_, err := mappings.Compile(expression, types.Object(properties), typ, nil)
 	if err != nil {

@@ -259,7 +259,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					value,
 					actionType.InputSchema.properties,
 					action.Transformation.Mapping![name].full.type,
-					action.Transformation.Mapping![name].full.nullable,
 					signal,
 				);
 			} catch (err) {
