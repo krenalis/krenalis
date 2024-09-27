@@ -147,8 +147,7 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	message := api.apis.ValidateExpression(body.Expression, body.Properties, body.Type)
-	return message, nil
+	return api.apis.ValidateExpression(body.Expression, body.Properties, body.Type)
 }
 
 func (api api) connector(r *http.Request) string {

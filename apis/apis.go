@@ -704,13 +704,17 @@ func (apis *APIs) TransformationLanguages() []string {
 //
 // The returned string explains why the expression is not valid. It is empty if
 // the expression is valid.
-func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type) string {
+func (apis *APIs) ValidateExpression(expression string, properties []types.Property, typ types.Type) (string, error) {
 	apis.mustBeOpen()
-	_, err := mappings.Compile(expression, types.Object(properties), typ, nil)
+	schema, err := types.ObjectOf(properties)
 	if err != nil {
-		return err.Error()
+		return "", errors.BadRequest("%s", err)
 	}
-	return ""
+	_, err = mappings.Compile(expression, schema, typ, nil)
+	if err != nil {
+		return err.Error(), nil
+	}
+	return "", nil
 }
 
 // mustBeOpen panics if apis has been closed.
