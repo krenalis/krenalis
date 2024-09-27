@@ -1,0 +1,35 @@
+# Stripe data source
+
+The **Stripe** data source allows you to read customers from Stripe and then unify them as users in Meergo.
+
+Stripe is a payment processing platform that enables businesses to accept online payments and manage transactions. It offers tools for handling credit card payments, subscriptions, and billing, as well as APIs for integrating payment solutions into websites and apps.
+
+### On this page
+
+* [Add a Stripe data source](#add-a-stripe-data-source)
+
+### Add a Stripe data source
+
+Before you can add a Stripe data source, you need to create an API key in your Stripe account:
+
+1. Log in to your <a href="https://stripe.com/" target="_blank">Stripe</a> account.
+2. Click **Developers**.
+3. On the **Developers** page, click **API keys**.
+4. On the **API keys** page, click **Create restricted key**.
+5. On the **Create restricted API key** page, in the **Key name** field, enter a name for the key, for example, "Meergo data source."
+6. In the row **Customers** and first column **PERMISSIONS**, click **Read**.
+7. Click **Create key**.
+8. On the **Your new API key** dialog window, copy the key.
+9. Click **Done**.
+
+Now proceed to add a Stripe data source:
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. On the **Sources** page, click **Add new destination**.
+3. Search for the **Stripe** source; you can use the search bar at the top to assist you.
+4. Next to the **Stripe** source, click the **+** icon. The source addition page will open.
+5. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
+6. In the **API Key** field, enter the previously copied key.
+7. Click **Add**.
+
+Once the Stripe data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the customers read from Stripe.

@@ -1,0 +1,33 @@
+# Klaviyo data destination
+
+The **Klaviyo** data destination allows you to add and update unified Meergo users in Klaviyo as profiles and allows to send the received events to Klaviyo.
+
+Klaviyo is an email marketing and automation platform that enables businesses to create personalized and targeted marketing campaigns. It is especially used by e-commerce companies to analyze customer data, segment audiences, and improve communication through personalized emails and messages.
+
+### On this page
+
+* [Add a Klaviyo data destination](#add-a-klaviyo-data-destination)
+
+### Add a Klaviyo data destination
+
+Before you can add a Klaviyo data destination, you need to create a private key in your Klaviyo account:
+
+1. Log in to your <a href="https://www.klaviyo.com/" target="_blank">Klaviyo</a> account.
+2. Click the account box at the bottom left and then click **Settings**.
+3. On the **Settings** page, click **Account > API Keys**.
+4. On the **API Keys** page, click **Create Private API Key**.
+5. In the **Private API Key Name** field, enter a name for the new key, for example, “Meergo data destination.”
+6. With the *Custom Key* option enabled, under the API scope **Profiles**, select **Read Access**.
+7. Copy your **Private Key**.
+
+Now proceed to add a Klaviyo data destination:
+
+1. From the Meergo admin, go to **Connections > Destinations**.
+2. On the **Destinations** page, click **Add new destination**.
+3. Search for the **Klaviyo** destination; you can use the search bar at the top to assist you.
+4. Next to the **Klaviyo** destination, click the **+** icon. The destination addition page will open.
+5. Optional: In the **Name** field, enter a name for the destination to easily recognize it later.
+6. In the **Your Private Key** field, enter the previously copied private key.
+7. Click **Add**.
+
+Once the Klaviyo data destination is added, the **Actions** page will be displayed, indicating the actions required to add and update profiles and send events to Klaviyo.

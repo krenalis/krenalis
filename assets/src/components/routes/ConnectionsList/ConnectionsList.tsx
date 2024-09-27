@@ -150,6 +150,18 @@ const ConnectionsList = () => {
 							</SlButton>
 						</Link>
 						<Grid columns={connectionsColumns} rows={connectionsRows} />
+						<div className='grid-learn-more'>
+							Learn more about{' '}
+							{role === 'Source' ? (
+								<a href='http://localhost:3000/sources/' target='_blank'>
+									sources
+								</a>
+							) : (
+								<a href='http://localhost:3000/destinations/' target='_blank'>
+									destinations
+								</a>
+							)}
+						</div>
 					</>
 				)}
 			</div>
