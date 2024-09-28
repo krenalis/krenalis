@@ -104,23 +104,23 @@ func TestPropertyDeserialization(t *testing.T) {
 	}{
 		{
 			JSON: `{}`,
-			Err:  "json: missing property name",
+			Err:  "missing property name",
 		},
 		{
 			JSON: `{"name":"a"}`,
-			Err:  "json: missing property type",
+			Err:  "missing property type",
 		},
 		{
 			JSON: `{"Name":"a"}`,
-			Err:  "json: unknown property 'Name'",
+			Err:  "unknown property 'Name'",
 		},
 		{
 			JSON: `2`,
-			Err:  "json: invalid property syntax",
+			Err:  "invalid property syntax",
 		},
 		{
 			JSON: `[]`,
-			Err:  "json: invalid property syntax",
+			Err:  "invalid property syntax",
 		},
 		{
 			JSON: ``,
