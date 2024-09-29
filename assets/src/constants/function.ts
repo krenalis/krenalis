@@ -57,6 +57,12 @@ const MEERGO_FUNCTIONS: MeergoFunction[] = [
 		description: 'The lower function returns its argument with all letters in lower case',
 	},
 	{
+		name: 'ltrim',
+		params: ['s: Text'],
+		return: 'Text',
+		description: 'The ltrim function returns its argument with all leading Unicode whitespace removed',
+	},
+	{
 		name: 'ne',
 		params: ['arg1: Any', 'arg2: Any'],
 		return: 'Boolean',
@@ -77,11 +83,23 @@ const MEERGO_FUNCTIONS: MeergoFunction[] = [
 			'The or function returns true if at least one of its arguments is true; otherwise, it returns false',
 	},
 	{
+		name: 'rtrim',
+		params: ['s: Text'],
+		return: 'Text',
+		description: 'The rtrim function returns its argument with all trailing Unicode whitespace removed',
+	},
+	{
 		name: 'substring',
 		params: ['s: Text', 'start: Integer', 'length: Integer'],
 		return: 'Text',
 		description:
 			'The substring function extracts a portion of a string based on a specified starting position and length. The indices are 1-based, meaning the first character of the string has an index of 1',
+	},
+	{
+		name: 'trim',
+		params: ['s: Text'],
+		return: 'Text',
+		description: 'The trim function returns its argument with all leading and trailing Unicode whitespace removed',
 	},
 	{
 		name: 'upper',

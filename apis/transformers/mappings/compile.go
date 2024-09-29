@@ -214,6 +214,18 @@ func checkLower(args [][]part, schema, dt types.Type, nullable bool, properties 
 	return dt, nil
 }
 
+// checkLTrim type checks a call to 'ltrim' with the given arguments.
+func checkLTrim(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) != 1 {
+		return types.Type{}, errors.New("'ltrim' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return types.Text(), nil
+}
+
 // checkNe type checks a call to 'ne' with the given arguments.
 func checkNe(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	if len(args) != 2 {
@@ -267,6 +279,18 @@ func checkOr(args [][]part, schema, dt types.Type, nullable bool, properties map
 	return booleanType, nil
 }
 
+// checkRTrim type checks a call to 'rtrim' with the given arguments.
+func checkRTrim(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) != 1 {
+		return types.Type{}, errors.New("'rtrim' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return types.Text(), nil
+}
+
 // checkSubstring type checks a call to 'substring' with the given arguments.
 func checkSubstring(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	n := len(args)
@@ -288,6 +312,18 @@ func checkSubstring(args [][]part, schema, dt types.Type, nullable bool, propert
 		}
 	}
 	return dt, nil
+}
+
+// checkTrim type checks a call to 'trim' with the given arguments.
+func checkTrim(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) != 1 {
+		return types.Type{}, errors.New("'trim' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return types.Text(), nil
 }
 
 // checkUpper type checks a call to 'upper' with the given arguments.
@@ -393,14 +429,20 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 			expr[i].typ, err = checkLen(p.args, schema, typ, n, properties)
 		case "lower":
 			expr[i].typ, err = checkLower(p.args, schema, typ, n, properties)
+		case "ltrim":
+			expr[i].typ, err = checkLTrim(p.args, schema, typ, n, properties)
 		case "ne":
 			expr[i].typ, err = checkNe(p.args, schema, typ, n, properties)
 		case "not":
 			expr[i].typ, err = checkNot(p.args, schema, typ, n, properties)
 		case "or":
 			expr[i].typ, err = checkOr(p.args, schema, typ, n, properties)
+		case "rtrim":
+			expr[i].typ, err = checkRTrim(p.args, schema, typ, n, properties)
 		case "substring":
 			expr[i].typ, err = checkSubstring(p.args, schema, typ, n, properties)
+		case "trim":
+			expr[i].typ, err = checkTrim(p.args, schema, typ, n, properties)
 		case "upper":
 			expr[i].typ, err = checkUpper(p.args, schema, typ, n, properties)
 		default:

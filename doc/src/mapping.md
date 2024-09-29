@@ -343,6 +343,24 @@ lower(null)  -> null
 
 The argument of the `lower` function should have type `text`, and the result has type `Text`.
 
+#### **ltrim** function
+
+The `ltrim` function returns its argument with all leading Unicode whitespace removed. For example:
+```
+┌─────────────────────────────────┐
+│ ltrim(email)                    │ ->  email
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+ltrim("  info@example.com") -> "info@example.com"
+ltrim("\t   hello world\n") -> "hello world\n"
+ltrim(null)  -> null
+```
+
+Both the argument and the result of the  `trim` function have type `Text`.
+
 #### **ne** function
 
 The `ne` function takes two values and returns `true` if they are not equal; otherwise, it returns `false`. For example:
@@ -400,6 +418,24 @@ or(null, false)  -> null
 
 The arguments of the `or` function should have type `Boolean`, and the result has type `Boolean`.
 
+#### **rtrim** function
+
+The `rtrim` function returns its argument with all trailing Unicode whitespace removed. For example:
+```
+┌─────────────────────────────────┐
+│ rtrim(email)                    │ ->  email
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+rtrim("info@example.com\n") -> "info@example.com"
+rtrim("\t   hello world\n") -> "\t   hello world"
+rtrim(null)  -> null
+```
+
+Both the argument and the result of the  `rtrim` function have type `Text`.
+
 #### **substring** function
 
 The `substring` function extracts a portion of a string based on a specified starting position and length. The indices are 1-based, meaning the first character of the string has an index of 1.
@@ -435,6 +471,24 @@ Note:
 - When `length` is greater than the number of characters remaining from `start` to the end of the string, the function returns the substring from `start` to the end of the string.
 
 The `start` and `length` arguments should be of type `integer`, and the `s` argument and the result are of type `Text`.
+
+#### **trim** function
+
+The `trim` function returns its argument with all leading and trailing Unicode whitespace removed. For example:
+```
+┌─────────────────────────────────┐
+│ trim(email)                     │ ->  email
+└─────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+trim("  info@example.com ") -> "info@example.com"
+trim("\t   hello world\n") -> "hello world"
+trim(null)  -> null
+```
+
+Both the argument and the result of the `trim` function have type `Text`.
 
 #### **upper** function
 

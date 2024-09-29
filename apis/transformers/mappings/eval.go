@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
@@ -363,6 +364,15 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return nil, types.Text(), nil
 		}
 		return strings.ToLower(v.(string)), types.Text(), nil
+	case "ltrim":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		return strings.TrimLeftFunc(v.(string), unicode.IsSpace), types.Text(), nil
 	case "ne":
 		v0, t0, err := eval(p.args[0], properties, layouts, purpose)
 		if err != nil {
@@ -416,6 +426,15 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return nil, types.Boolean(), nil
 		}
 		return false, types.Boolean(), nil
+	case "rtrim":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		return strings.TrimRightFunc(v.(string), unicode.IsSpace), types.Text(), nil
 	case "substring":
 		v0, _, err := eval(p.args[0], properties, layouts, purpose)
 		if err != nil {
@@ -450,6 +469,15 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			}
 		}
 		return substring(v0.(string), start, length), types.Text(), nil
+	case "trim":
+		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		return strings.TrimSpace(v.(string)), types.Text(), nil
 	case "upper":
 		v, _, err := eval(p.args[0], properties, layouts, purpose)
 		if err != nil {

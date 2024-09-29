@@ -40,10 +40,13 @@ var numArguments = map[string]int{
 	"initcap":   1,
 	"len":       1,
 	"lower":     1,
+	"ltrim":     1,
 	"ne":        2,
 	"not":       1,
 	"or":        2,
+	"rtrim":     1,
 	"substring": 3,
+	"trim":      1,
 	"upper":     1,
 }
 

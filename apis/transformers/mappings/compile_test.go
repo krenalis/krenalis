@@ -258,6 +258,15 @@ func Test_Compile(t *testing.T) {
 		{expr: "lower()", dt: types.Text(), compileErr: errors.New("'lower' function requires a single argument")},
 		{expr: "lower('New', 'York')", dt: types.Text(), compileErr: errors.New("'lower' function requires a single argument")},
 
+		// ltrim.
+		{expr: "ltrim('')", dt: types.Text(), expected: ""},
+		{expr: "ltrim('New York')", dt: types.Text(), expected: "New York"},
+		{expr: "ltrim(' New York\t\n')", dt: types.Text(), expected: "New York\t\n"},
+		{expr: "ltrim('\t\n \nNew \n York ')", dt: types.Text(), expected: "New \n York "},
+		{expr: "ltrim()", dt: types.Text(), compileErr: errors.New("'ltrim' function requires a single argument")},
+		{expr: "ltrim(' New', 'York ')", dt: types.Text(), compileErr: errors.New("'ltrim' function requires a single argument")},
+		{expr: "ltrim(null)", dt: types.Text(), expected: nil},
+
 		// ne.
 		{expr: "ne(1, 2)", dt: types.Boolean(), expected: true},
 		{expr: "ne(1, 1)", dt: types.Boolean(), expected: false},
@@ -278,6 +287,15 @@ func Test_Compile(t *testing.T) {
 		{expr: "not(null)", dt: types.Boolean(), expected: nil},
 		{expr: "not(true, false)", dt: types.Boolean(), compileErr: errors.New("'not' function requires a single argument")},
 		{expr: "not()", dt: types.Boolean(), compileErr: errors.New("'not' function requires a single argument")},
+
+		// rtrim.
+		{expr: "rtrim('')", dt: types.Text(), expected: ""},
+		{expr: "rtrim('New York')", dt: types.Text(), expected: "New York"},
+		{expr: "rtrim(' New York\t\n')", dt: types.Text(), expected: " New York"},
+		{expr: "rtrim(' New \n York\t\n \n')", dt: types.Text(), expected: " New \n York"},
+		{expr: "rtrim()", dt: types.Text(), compileErr: errors.New("'rtrim' function requires a single argument")},
+		{expr: "rtrim(' New', 'York ')", dt: types.Text(), compileErr: errors.New("'rtrim' function requires a single argument")},
+		{expr: "rtrim(null)", dt: types.Text(), expected: nil},
 
 		// substring.
 		{expr: "substring('Hello World', 7, 5)", dt: types.Text(), expected: "World"},
@@ -309,6 +327,15 @@ func Test_Compile(t *testing.T) {
 		{expr: "or(true, false)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
 		{expr: "or()", dt: types.Int(32), compileErr: errors.New("'or' function requires at least two argument")},
 		{expr: "or(1)", dt: types.Int(32), compileErr: errors.New("'or' function requires at least two argument")},
+
+		// trim.
+		{expr: "trim('')", dt: types.Text(), expected: ""},
+		{expr: "trim('New York')", dt: types.Text(), expected: "New York"},
+		{expr: "trim(' New York\t\n')", dt: types.Text(), expected: "New York"},
+		{expr: "trim('\t\n \r\nNew \n York  ')", dt: types.Text(), expected: "New \n York"},
+		{expr: "trim()", dt: types.Text(), compileErr: errors.New("'trim' function requires a single argument")},
+		{expr: "trim(' New', 'York ')", dt: types.Text(), compileErr: errors.New("'trim' function requires a single argument")},
+		{expr: "trim(null)", dt: types.Text(), expected: nil},
 
 		// upper.
 		{expr: "upper('')", dt: types.Text(), expected: ""},
@@ -363,6 +390,8 @@ func Test_Compile(t *testing.T) {
 				},
 				"jsonNull": json.RawMessage("null"),
 				"jsonNil":  nil,
+				"ip":       " 127.0.0.1  ",
+				"uuid":     "\n2e3e96c4-2bc8-41d5-b492-bd6745190691 ",
 			}
 
 			// Test Compile.
