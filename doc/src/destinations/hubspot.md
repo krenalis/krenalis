@@ -10,12 +10,12 @@ HubSpot is a cloud application that offers tools for customer relationship manag
 
 ### Add a HubSpot data destination
 
-Before you can add a HubSpot data destination, you need to create a private app in your HubSpot account and configure the Meergo settings file with OAuth credentials:
+Before you can add a HubSpot data destination, you need to create an app in HubSpot and configure the Meergo settings file with OAuth credentials:
 
-1. Create a <a href="https://developers.hubspot.com/" target="_blank">HubSpot developer account</a> or log in to an existing developer account.
+1. Create a <a href="https://developers.hubspot.com/" target="_blank">HubSpot developer account</a> or log in to an existing developer account. Note that this developer account will not be linked as a data destination; you will specify that later.
 2. Open the **Apps** page.
 3. Click on **Create app**.
-4. Optional: Fill in the **Public app name** and **Description** fields to help you recognize the app later. The app does not need to be published on the HubSpot marketplace, so it will never be public.
+4. Optional: Fill in the **Public app name** and **Description** fields to help you recognize the app later. The app does not need to be published on the HubSpot Marketplace, so it can remain private.
 5. Click on the **Auth** tab.
 6. Click **Add new scope** and add the scopes **crm.objects.contacts.read** and **crm.objects.contacts.write**.
 7. Click **Create app** and confirm the creation.

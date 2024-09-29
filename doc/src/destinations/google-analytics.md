@@ -10,7 +10,7 @@ Google Analytics is a web analytics service that provides insights into website 
 
 ### Add a Google Analytics data destination
 
-Before you can add a Google Analytics data destination, you need to create a private key in your Klaviyo account:
+Before you can add a Google Analytics data destination, you need to create a private key in your Google Analytics account:
 
 1. Log in to your <a href="https://360suite.google.com/" target="_blank">Google Analytics</a> account.
 2. Click **Admin** at the bottom left of the page.
