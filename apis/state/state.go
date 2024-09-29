@@ -64,15 +64,15 @@ type State struct {
 	}
 }
 
-// ConnectorSetting represents the static settings of a connector.
-type ConnectorSetting struct {
-	OAuthClientID     string `yaml:"oauthClientID"`
-	OAuthClientSecret string `yaml:"oauthClientSecret"`
+// ConnectorOAuth represents the OAuth client credentials for a connector.
+type ConnectorOAuth struct {
+	ClientID     string `yaml:"clientID"`
+	ClientSecret string `yaml:"clientSecret"`
 }
 
-// New returns a state given the database and the static settings of the
+// New returns a state given the database and the OAuth client credentials for
 // connectors.
-func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*State, error) {
+func New(db *postgres.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, error) {
 
 	id, err := uuid.NewUUID()
 	if err != nil {
@@ -100,7 +100,7 @@ func New(db *postgres.DB, connectorSettings map[string]*ConnectorSetting) (*Stat
 
 	state.close.ctx, state.close.CancelCtx = context.WithCancel(context.Background())
 
-	err = state.load(connectorSettings)
+	err = state.load(connectorsOAuth)
 	if err != nil {
 		state.notifications.stop()
 		return nil, err

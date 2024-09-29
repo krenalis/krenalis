@@ -24,7 +24,7 @@ var (
 )
 
 // load loads the state.
-func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
+func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 	n := LoadState{ID: state.id}
 
@@ -79,10 +79,10 @@ func (state *State) load(connectorSettings map[string]*ConnectorSetting) error {
 				c.BackoffPolicy = connector.BackoffPolicy
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.Icon = connector.Icon
-				if connectorSettings != nil {
-					if setting, ok := connectorSettings[c.Name]; ok {
-						c.OAuth.ClientID = setting.OAuthClientID
-						c.OAuth.ClientSecret = setting.OAuthClientSecret
+				if connectorsOAuth != nil {
+					if oAuth, ok := connectorsOAuth[c.Name]; ok {
+						c.OAuth.ClientID = oAuth.ClientID
+						c.OAuth.ClientSecret = oAuth.ClientSecret
 					}
 				}
 				ct = connector.ReflectType()

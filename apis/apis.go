@@ -76,10 +76,10 @@ type APIs struct {
 var hasBeenCalled bool
 
 type Config struct {
-	PostgreSQL  PostgreSQLConfig
-	Transformer any // must be a LambdaConfig or LocalConfig value
-	SMTP        SMTPConfig
-	Connectors  map[string]*state.ConnectorSetting
+	PostgreSQL      PostgreSQLConfig
+	Transformer     any // must be a LambdaConfig or LocalConfig value
+	SMTP            SMTPConfig
+	ConnectorsOAuth map[string]*state.ConnectorOAuth
 }
 
 type PostgreSQLConfig struct {
@@ -173,7 +173,7 @@ func New(conf *Config) (*APIs, error) {
 	}
 
 	// Instantiate the state.
-	apis.state, err = state.New(db, conf.Connectors)
+	apis.state, err = state.New(db, conf.ConnectorsOAuth)
 	if err != nil {
 		return nil, err
 	}

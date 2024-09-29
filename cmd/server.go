@@ -49,8 +49,8 @@ type Settings struct {
 		Lambda LambdaConfig
 		Local  LocalConfig
 	}
-	Connectors map[string]*state.ConnectorSetting
-	Telemetry  struct {
+	ConnectorsOAuth map[string]*state.ConnectorOAuth `yaml:"connectorsOAuth"`
+	Telemetry       struct {
 		Enable bool
 	}
 }
@@ -105,17 +105,17 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 
 	// Validate the settings of the connectors.
-	if settings.Connectors != nil {
-		for name, setting := range settings.Connectors {
-			if (setting.OAuthClientID == "") == (setting.OAuthClientSecret == "") {
+	if settings.ConnectorsOAuth != nil {
+		for name, setting := range settings.ConnectorsOAuth {
+			if (setting.ClientID == "") == (setting.ClientSecret == "") {
 				continue
 			}
-			if setting.OAuthClientID == "" {
+			if setting.ClientID == "" {
 				return fmt.Errorf("oAuthClientID value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
 			}
-			return fmt.Errorf("OAuthClientSecret value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
+			return fmt.Errorf("ClientSecret value for connector %q cannot be empty (hint: check your 'config.yaml' file)", name)
 		}
-		config.Connectors = maps.Clone(settings.Connectors)
+		config.ConnectorsOAuth = maps.Clone(settings.ConnectorsOAuth)
 	}
 
 	// Decode the UI session key.
