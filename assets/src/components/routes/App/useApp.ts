@@ -128,6 +128,14 @@ const useApp = (
 			try {
 				connections = await api.workspaces.connections.find();
 			} catch (err) {
+				if (err instanceof NotFoundError) {
+					// the workspace saved in the local storage doesn't exist
+					// anymore.
+					localStorage.removeItem('meergo_ui_workspace_id');
+					redirect('workspaces');
+					setIsLoadingState(false);
+					return;
+				}
 				handleError(err);
 				return;
 			}
