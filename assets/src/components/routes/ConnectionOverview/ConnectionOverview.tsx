@@ -251,10 +251,16 @@ const ConnectionOverview = () => {
 					await api.workspaces.actionStatsPerDate(customStatisticsRange[0].startDate, endDate, actionIds);
 			}
 
+			let target = selectedTarget;
+			if (userActionsIds.length === 0) {
+				target = 'Events';
+			}
+			setSelectedTarget(target);
+
 			let ids: number[] = [];
-			if (selectedTarget === 'Users' && userActionsIds.length > 0) {
+			if (target === 'Users') {
 				ids = userActionsIds;
-			} else if (selectedTarget === 'Events' && eventActionsIds.length > 0) {
+			} else if (target === 'Events') {
 				ids = eventActionsIds;
 			}
 
@@ -266,7 +272,7 @@ const ConnectionOverview = () => {
 				stopLoading();
 				return;
 			}
-			if (selectedTarget === 'Users') {
+			if (target === 'Users') {
 				setUserActionsStatistics(statistics);
 			} else {
 				setEventActionsStatistics(statistics);
@@ -280,7 +286,7 @@ const ConnectionOverview = () => {
 				stopLoading();
 				return;
 			}
-			if (selectedTarget === 'Users') {
+			if (target === 'Users') {
 				setUserActionsErrors(errorRes.errors);
 			} else {
 				setEventActionsErrors(errorRes.errors);
