@@ -176,7 +176,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role mee
 			&meergo.Input{Name: "Comment", Label: "Comment", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 1, Role: meergo.Source},
 			&meergo.Input{Name: "FieldsPerRecord", Label: "Fields per record", Placeholder: "", Type: "number", OnlyIntegerPart: true, Role: meergo.Source},
 			&meergo.Checkbox{Name: "TrimLeadingSpace", Label: "Trim leading space", Role: meergo.Source},
-			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF"},
+			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
 			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
 		},
 		Values: values,
