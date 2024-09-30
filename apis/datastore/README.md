@@ -8,7 +8,7 @@
 
 This table is based on the following principles:
 
-* **Warehouse type support**. A *types.Type* $T$ is considered supported by a data warehouse if the data warehouse provides a type whose set of values **matches** or **is a superset** of the values of $T$;
+* **Warehouse type support**. There is no formal criterion to determine whether a type should be supported in a data warehouse. Each case should be discussed individually. As general guidelines, a type $T$ is supported if there is a "logically" corresponding type in the warehouse (e.g., an integer type to implement the `Int` type, but not to implement `Uint`), and also if the set of values of the warehouse type **matches** or **is a superset** of the values of $T$;
 * **User schema type support**. The choice to support or not a certain *types.Type* $T$ in the user schema, depends on an arbitrary choice in relation to Meergo itself, and not to the support of data warehouses; it is therefore possible that certain $T$ types are supported in the user schema even if they are not currently supported by any data warehouse, or it is possible that certain $T$ types are supported by one or more data warehouses but we decide not to allow them in the user schema. In general, we try to allow as many types as possible in the user schema;
 * **Multiple warehouse types choice**. If there is more than one data warehouse type that could support a certain *types.Type* $T$, the type is chosen based on criteria such as efficiency and implementation and usage issues.
 
