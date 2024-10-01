@@ -210,9 +210,9 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role me
 				ValueComponent: &meergo.Select{Name: "Required", Label: "Required", Options: []meergo.Option{{Text: "Required", Value: "t"}, {Text: "Optional", Value: "f"}}},
 				Role:           meergo.Source,
 			},
-			&meergo.Switch{Name: "Indent", Label: "Indent the generated output", Role: meergo.Destination},
-			&meergo.Switch{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: meergo.Destination},
-			&meergo.Switch{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: meergo.Destination},
+			&meergo.Checkbox{Name: "Indent", Label: "Indent the generated output", Role: meergo.Destination},
+			&meergo.Checkbox{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: meergo.Destination},
+			&meergo.Checkbox{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: meergo.Destination},
 		},
 		Values: values,
 	}
