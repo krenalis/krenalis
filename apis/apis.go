@@ -61,7 +61,6 @@ type APIs struct {
 		dispatcher *dispatcher.Dispatcher
 	}
 	transformerProvider transformers.Provider
-	mu                  sync.Mutex // for the scheduler field
 	actionPurger        *actionPurger
 	actionScheduler     *actionScheduler
 	smtp                *SMTPConfig
