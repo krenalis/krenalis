@@ -1,6 +1,6 @@
 # SFTP Data Destination
 
-The SFTP data destination allows you to generate files containing unified user data (i.e., data consolidated through identity resolution) in various formats, such as CSV or Excel, and send them directly to an SFTP server. The files are uploaded securely using the SFTP protocol.
+The SFTP data destination allows you to export unified users (i.e., users consolidated through identity resolution) in various file formats, such as CSV or Excel, and send them directly to an SFTP server. The files are uploaded securely using the SFTP protocol.
 
 SFTP (Secure File Transfer Protocol) is a secure network protocol used for transferring files over a secure connection, providing encryption and data integrity.
 

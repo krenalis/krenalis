@@ -1,6 +1,6 @@
 # HubSpot data destination
 
-The **HubSpot** data destination allows you add and update unified Meergo users in HubSpot as contacts.
+The **HubSpot** data destination allows you to add and update unified Meergo users in HubSpot as contacts.
 
 HubSpot is a cloud application that offers tools for customer relationship management (CRM), marketing, and sales. It helps businesses organize contacts, automate marketing campaigns, and improve customer support.
 

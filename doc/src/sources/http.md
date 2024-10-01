@@ -1,6 +1,6 @@
 # HTTP data source
 
-The HTTP data source allows you to read user data from files accessed via HTTP endpoints and unify them as users within Meergo. You can retrieve files in various formats, such as CSV, Excel, and others, using a GET request.
+The HTTP data source allows you to import users from files accessed via HTTP endpoints. You can unify this data as users within Meergo by importing files in various formats, such as CSV, Excel, and others.
 
 Once the HTTP data source is configured, you can easily customize how the data is read and processed.
 

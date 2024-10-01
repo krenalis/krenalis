@@ -1,6 +1,6 @@
 # HTTP data destination
 
-The HTTP data destination allows you to generate files containing unified user data (i.e., data consolidated through identity resolution) in various formats, such as CSV or Excel, and send them directly to HTTP endpoints via POST. The receiving server is responsible for processing and saving the files.
+The HTTP data destination allows you to export unified users (i.e., users consolidated through identity resolution) in various file formats, such as CSV or Excel, and send them directly to HTTP endpoints via POST. The receiving server is responsible for processing and saving the files.
 
 Once the HTTP data destination is configured, you can easily customize the file generation. You can configure multiple files for export by selecting the file format, applying filters to determine which users to include, specifying the target endpoint, and setting a schedule for how frequently each export should occur.
 

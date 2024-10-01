@@ -1,6 +1,6 @@
 # SFTP Data Source
 
-The SFTP data source allows you to read user data from files stored on an SFTP server. You can unify this data as users within Meergo by retrieving files in various formats, such as CSV, Excel, and others.
+The SFTP data source allows you to import users from files stored on an SFTP server. You can unify this data as users within Meergo by importing files in various formats, such as CSV, Excel, and others.
 
 SFTP (Secure File Transfer Protocol) is a secure network protocol used for transferring files over a secure connection, providing encryption and data integrity.
 
