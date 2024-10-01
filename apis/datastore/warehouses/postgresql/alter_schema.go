@@ -91,6 +91,9 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 // alterSchemaQueries returns the queries that perform the given operations.
 // usersTableName is the current name of the users table, for example
 // "_users_42". operations must contain at least one operation.
+//
+// In case of incompatible type, returns a *warehouses.UnsupportedColumnType
+// error.
 func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
 
 	// The operations are performed in this order:
@@ -159,9 +162,7 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 					}
 					typ, ok := typeToPostgresType(op.Type)
 					if !ok {
-						return nil, warehouses.UnsupportedAlterSchemaErr(
-							fmt.Sprintf("the type of the column %q is not supported by the PostgreSQL driver", op.Column),
-						)
+						return nil, warehouses.NewUnsupportedColumnType(op.Column, op.Type)
 					}
 					b.WriteString(`ADD COLUMN "` + op.Column + `" ` + typ)
 				}

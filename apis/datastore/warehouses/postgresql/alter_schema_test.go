@@ -23,7 +23,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		userColumns     []warehouses.Column // without "__id__" and "__last_change_time__", which are added by the test
 		ops             []warehouses.AlterSchemaOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
-		expectedErr     string
+		expectedErr     error
 	}{
 		{
 			name: "Add a first level Text property",
@@ -72,7 +72,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the column \"f\" is not supported by the PostgreSQL driver",
+			expectedErr: warehouses.NewUnsupportedColumnType("f", types.Float(64).AsReal()),
 		},
 		{
 			name: "Unsupported type at first-level property",
@@ -82,7 +82,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the column \"f\" is not supported by the PostgreSQL driver",
+			expectedErr: warehouses.NewUnsupportedColumnType("f", types.Float(64).AsReal()),
 		},
 		{
 			name: "Unsupported type at second-level property",
@@ -93,7 +93,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			ops: []warehouses.AlterSchemaOperation{
 				{Operation: warehouses.OperationAddColumn, Column: "x_f", Type: types.Float(64).AsReal()},
 			},
-			expectedErr: "unsupported alter schema operation: the type of the column \"x_f\" is not supported by the PostgreSQL driver",
+			expectedErr: warehouses.NewUnsupportedColumnType("x_f", types.Float(64).AsReal()),
 		},
 		{
 			name: "Add a second level property",
@@ -298,18 +298,14 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, userColumns...)
 			gotQueries, gotErr := alterSchemaQueries("_users_0", userColumns, test.ops)
+			if !reflect.DeepEqual(test.expectedErr, gotErr) {
+				t.Fatalf("expected error '%v', got '%v'", test.expectedErr, gotErr)
+			}
 			// Exclude from the test the queries that drop or create views.
 			gotQueries = slices.DeleteFunc(gotQueries, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||
 					strings.HasPrefix(query, "CREATE VIEW")
 			})
-			var gotErrStr string
-			if gotErr != nil {
-				gotErrStr = gotErr.Error()
-			}
-			if gotErrStr != test.expectedErr {
-				t.Fatalf("expected error %q, got %q", test.expectedErr, gotErrStr)
-			}
 			if !reflect.DeepEqual(gotQueries, test.expectedQueries) {
 				t.Fatalf("expected queries %#v, got %#v", test.expectedQueries, gotQueries)
 			}
