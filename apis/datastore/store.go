@@ -440,11 +440,7 @@ func (store *Store) ResolveIdentities(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	err = store.warehouse.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
-	if err != nil && err == warehouses.ErrIdentityResolutionInProgress {
-		err = ErrIdentityResolutionInProgress
-	}
-	return err
+	return store.warehouse.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
 }
 
 // DestinationUser represents a destination user to merge.
