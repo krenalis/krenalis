@@ -90,7 +90,7 @@ type Warehouse interface {
 	//
 	// If one of the specified operations is not supported by the data warehouse,
 	// for example if a type is not supported, this method returns a
-	// warehouses.UnsupportedSchemaChangeErr error.
+	// warehouses.UnsupportedAlterSchemaErr error.
 	//
 	// If another alter schema operation is in progress on the data warehouse,
 	// returns an ErrAlterSchemaInProgress error.
@@ -112,9 +112,9 @@ type Warehouse interface {
 	// while operations is the set of operations to apply in order to migrate the
 	// current columns to userColumns.
 	//
-	// If one of the specified operations is not supported by the data
-	// warehouse, for example if a type is not supported, this method returns a
-	// warehouses.UnsupportedSchemaChangeErr error.
+	// If one of the specified operations is not supported by the data warehouse,
+	// for example if a type is not supported, this method returns a
+	// warehouses.UnsupportedAlterSchemaErr error.
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.

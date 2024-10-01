@@ -121,7 +121,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
-// UnsupportedSchemaChangeErr error.
+// UnsupportedAlterSchemaErr error.
 //
 // If another alter schema operation is in progress on the data warehouse,
 // returns a ErrAlterSchemaInProgress error.
@@ -152,7 +152,7 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 //
 // If one of the specified operations is not supported by the data warehouse,
 // for example if a type is not supported, this method returns a
-// UnsupportedSchemaChangeErr error.
+// UnsupportedAlterSchemaErr error.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
