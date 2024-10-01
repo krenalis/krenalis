@@ -5,8 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package server implements the .Net, Go, Java, Node.js, PHP and Python
-// connectors.
+// Package server implements the .Net, Go, Java, Node.js, and Python connectors.
 package server
 
 import (
@@ -26,9 +25,6 @@ var iconJava = "<svg></svg>"
 
 // Connector icon.
 var iconNode = "<svg></svg>"
-
-// Connector icon.
-var iconPHP = "<svg></svg>"
 
 // Connector icon.
 var iconPython = "<svg></svg>"
@@ -54,11 +50,6 @@ func init() {
 			Name:              "Node.js",
 			SourceDescription: "import events, users and groups from a server using Node.js",
 			Icon:              iconNode,
-		},
-		{
-			Name:              "PHP",
-			SourceDescription: "import events, users and groups from a server using PHP",
-			Icon:              iconPHP,
 		},
 		{
 			Name:              "Python",
