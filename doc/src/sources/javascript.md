@@ -10,7 +10,7 @@ The JavaScript data source requires the use of the [JavaScript SDK](../javascrip
 
 > The [JavaScript SDK](../javascript-sdk.md) is an open-source JavaScript library licensed under MIT, compatible with both Segment's Analytics.js and RudderStack's JavaScript SDK.
 
-### On this Page
+### On this page
 
 * [Add a JavaScript data source](#add-a-javascript-data-source)
 * [Add the JavaScript snippet to website](#add-the-javascript-snippet-to-website)

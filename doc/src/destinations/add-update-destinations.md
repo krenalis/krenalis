@@ -3,7 +3,7 @@
 
 You can add destinations or update existing ones from the **Destinations** page of your admin.
 
-## On this Page
+## On this page
 
 * [Add a destination](#add-a-destination)
 

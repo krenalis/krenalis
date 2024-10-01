@@ -3,7 +3,7 @@
 
 You can add sources or update existing ones from the **Sources** page of your admin.
 
-## On this Page
+## On this page
 
 * [Add a source](#add-a-source)
 
@@ -36,8 +36,8 @@ Choose the source you want to add:
     * [Android](android.md)
     * Apple
 * **Server**
-    * [C#](c-sharp.md)
+    * [.NET](dotnet.md)
     * [Go](go.md)
     * [Java](java.md)
-    * [Node](node.md)
+    * [Node.js](nodejs.md)
     * [Python](python.md)
