@@ -83,9 +83,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	//
 	// - Unchanged properties, that are properties that have not been
 	//   added/dropped or renamed. They do not appear in "rePaths".
-	// - New properties with the same name as a deleted property. They appear in
+	// - New properties with the same name of a deleted property. They appear in
 	//   "rePaths" (the key is the name of the created property, the value is
 	//   nil).
+	// - New properties with the same name of a renamed property. They appear in
+	//   "rePaths" (the key is the name of the created property, the value is
+	//   nil), just like new properties with the same name of a deleted
+	//   property, but they also appear in "rePaths" as value where the key is
+	//   the new name of the renamed property.
 	// - Deleted properties whose name has been reused by a renamed property.
 	//   They appear in "rePaths" (the key is the name of the property that
 	//   "occupied the name", the value is the name of the deleted property).
@@ -198,15 +203,35 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		newProp := newPropsByName[keptName]
 		keptPath := appendPath(path, keptName)
 
-		// New properties with the same name as a deleted property. They appear
-		// in "rePaths" (the key is the name of the created property, the value
-		// is nil).
 		if v, ok := rePaths[keptPath]; ok && v == nil {
-			operations = append(operations,
-				warehouses.AlterSchemaOperation{
-					Operation: warehouses.OperationDropColumn,
-					Column:    pathToColumn(keptPath),
-				})
+			var renamed bool
+			for _, v := range rePaths {
+				if v == keptPath {
+					renamed = true
+					break
+				}
+			}
+			if renamed {
+				// New properties with the same name of a renamed property. They
+				// appear in "rePaths" (the key is the name of the created
+				// property, the value is nil), just like new properties with
+				// the same name of a deleted property, but they also appear in
+				// "rePaths" as value where the key is the new name of the
+				// renamed property.
+				//
+				// The Rename operation has already been added in the block that
+				// handles AddedNames, so there is nothing to do here. The code
+				// outside this 'if' will only handle adding the Add operation.
+			} else {
+				// New properties with the same name as a deleted property. They
+				// appear in "rePaths" (the key is the name of the created
+				// property, the value is nil).
+				operations = append(operations,
+					warehouses.AlterSchemaOperation{
+						Operation: warehouses.OperationDropColumn,
+						Column:    pathToColumn(keptPath),
+					})
+			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range propertiesToColumns(newProp.Type) {
 					operations = append(operations, warehouses.AlterSchemaOperation{

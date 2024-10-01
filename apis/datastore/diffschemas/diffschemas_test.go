@@ -652,6 +652,91 @@ func TestDiff(t *testing.T) {
 			}),
 			expectedOps: []warehouses.AlterSchemaOperation{},
 		},
+		{
+			name: "Property renamed and added again with the same name, but different type",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Int(64), Nullable: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Text(), Nullable: true},
+				{Name: "a2", Type: types.Int(64), Nullable: true},
+			}),
+			rePaths: map[string]any{"a2": "a", "a": nil},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "a2"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Text()},
+			},
+		},
+		{
+			name: "Property renamed and added again with the same name and same type (Int(64))",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Int(64), Nullable: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Int(64), Nullable: true},
+				{Name: "a2", Type: types.Int(64), Nullable: true},
+			}),
+			rePaths: map[string]any{"a2": "a", "a": nil},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "a", NewColumn: "a2"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.Int(64)},
+			},
+		},
+		{
+			name: "Property renamed and added again with the same name and same type (Object)",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Int(64), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Int(64), Nullable: true},
+				})},
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Int(64), Nullable: true},
+				})}}),
+			rePaths: map[string]any{"x2": "x", "x": nil},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "x_a", NewColumn: "x2_a"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Int(64)},
+			},
+		},
+		{
+			name: "Property renamed and added again with the same name, but different type. Within an Object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Int(64), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "a2", Type: types.Int(64), Nullable: true},
+				})},
+			}),
+			rePaths: map[string]any{"x.a2": "x.a", "x.a": nil},
+			expectedOps: []warehouses.AlterSchemaOperation{
+				{Operation: warehouses.OperationRenameColumn, Column: "x_a", NewColumn: "x_a2"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.Text()},
+			},
+		},
+		{
+			name: "Rename an Object property and create a new property with the same name (but different type)",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text(), Nullable: true},
+					{Name: "b", Type: types.Text(), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text(), Nullable: true},
+					{Name: "a", Type: types.Text(), Nullable: true},
+				})},
+			}),
+			expectedOps: []warehouses.AlterSchemaOperation{},
+		},
 	}
 
 	for _, test := range tests {
