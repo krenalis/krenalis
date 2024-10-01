@@ -1581,10 +1581,10 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *f
 
 // WarehouseSettings returns the type and settings of the data warehouse for the
 // workspace.
-func (this *Workspace) WarehouseSettings() (WarehouseType, []byte, error) {
+func (this *Workspace) WarehouseSettings() (WarehouseType, []byte) {
 	this.apis.mustBeOpen()
 	ws := this.workspace
-	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings), nil
+	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings)
 }
 
 // userIdentities returns the user identities matching the provided where
