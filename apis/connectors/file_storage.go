@@ -134,15 +134,15 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	rw.close()
 	if err != nil && err != errRecordStop {
 		if err == meergo.ErrSheetNotExist {
-			err = ErrSheetNotExist
+			return nil, nil, ErrSheetNotExist
 		}
-		return nil, nil, err
+		return nil, nil, connectorError(err)
 	}
 	if err = r.Close(); err != nil {
-		return nil, nil, err
+		return nil, nil, connectorError(err)
 	}
 	if recordErr != nil {
-		return nil, nil, recordErr
+		return nil, nil, connectorError(recordErr)
 	}
 	if rw.properties == nil {
 		return nil, nil, ErrNoColumnsFound
