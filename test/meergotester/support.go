@@ -365,6 +365,11 @@ func (c *Meergo) Records(storage int, fileConnector string, path, sheet string, 
 	return response.Records, response.Schema
 }
 
+func (c *Meergo) RepairWarehouse() {
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse/repair", c.ws)
+	c.MustCall("POST", method, nil, nil)
+}
+
 func (c *Meergo) ResolveIdentities() {
 	method := fmt.Sprintf("/api/workspaces/%d/identity-resolutions", c.ws)
 	c.MustCall("POST", method, nil, nil)

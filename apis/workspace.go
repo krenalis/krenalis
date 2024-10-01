@@ -1212,6 +1212,23 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 	return err
 }
 
+// RepairWarehouse repairs the database objects needed by Meergo on the
+// workspace's data warehouse.
+//
+// It returns an errors.UnprocessableError error with code DataWarehouseFailed,
+// if an error occurred during the repairing of the data warehouse.
+func (this *Workspace) RepairWarehouse(ctx context.Context) error {
+	this.apis.mustBeOpen()
+	err := this.store.Repair(ctx)
+	if err != nil {
+		if err, ok := (err).(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %s", err.Err)
+		}
+		return err
+	}
+	return nil
+}
+
 // ResolveIdentities resolves the identities of the workspace by creating and
 // starting an Identity Resolution operation.
 //

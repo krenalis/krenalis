@@ -140,6 +140,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"POST   /api/workspaces/{workspace}/ui":                                                          workspace.ServeUI,
 		"POST   /api/workspaces/{workspace}/users":                                                       workspace.Users,
 		"POST   /api/workspaces/{workspace}/warehouse/pings":                                             workspace.PingWarehouse,
+		"POST   /api/workspaces/{workspace}/warehouse/repair":                                            workspace.RepairWarehouse,
 		"PUT    /api/members/current":                                                                    organization.SetMember,
 		"PUT    /api/members/invitations/{token}":                                                        api.AcceptInvitation,
 		"PUT    /api/workspaces/{workspace}":                                                             workspace.Set,

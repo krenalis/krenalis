@@ -465,8 +465,7 @@ func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Repair repairs the database objects on the data warehouse in order to make it
-// work with Meergo.
+// Repair repairs the database objects on the data warehouse needed by Meergo.
 func (warehouse *PostgreSQL) Repair(ctx context.Context) error {
 	return warehouse.initRepair(ctx, true)
 }

@@ -168,28 +168,6 @@ func (ds *Datastore) Init(ctx context.Context, typ state.WarehouseType, settings
 	return dw.Close()
 }
 
-// Repair repairs the database objects on the data warehouse in order to make it
-// work with Meergo.
-//
-// It returns a SettingsError error if the settings are not valid, and a
-// *DataWarehouseError error if an error occurs with the data warehouse.
-//
-// TODO(Gianluca): although this method is currently unused, it is kept because
-// it may be useful when implementing https://github.com/meergo/meergo/issues/1017.
-func (ds *Datastore) Repair(ctx context.Context, typ state.WarehouseType, settings []byte) error {
-	ds.mustBeOpen()
-	dw, err := openWarehouse(typ, settings)
-	if err != nil {
-		return err
-	}
-	defer dw.Close()
-	err = dw.Repair(ctx)
-	if err != nil {
-		return err
-	}
-	return dw.Close()
-}
-
 // PingWarehouse tries to establish a connection to the data warehouse with
 // the given settings.
 //

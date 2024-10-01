@@ -175,6 +175,13 @@ func ResolveIdentities(workspace int) {
 	}
 }
 
+func RepairWarehouse(workspace int) {
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/repair", nil, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func WorkspacePingWarehouse(workspace int, typ string, settings []byte) {
 	req := struct {
 		Type     string

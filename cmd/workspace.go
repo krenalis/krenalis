@@ -575,6 +575,17 @@ func (workspace workspace) RemoveEventListener(_ http.ResponseWriter, r *http.Re
 	return nil, nil
 }
 
+// RepairWarehouse repairs the database objects needed by Meergo on a
+// workspace's data warehouse.
+func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	err = ws.RepairWarehouse(r.Context())
+	return nil, err
+}
+
 // ResolveIdentities resolves the identities of a workspace.
 func (workspace workspace) ResolveIdentities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)

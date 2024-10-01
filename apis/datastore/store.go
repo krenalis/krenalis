@@ -370,6 +370,24 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 	return store.warehouse.Delete(ctx, "_destinations_users", where)
 }
 
+// Repair repairs the database objects on the data warehouse needed by Meergo.
+//
+// This method should only be called on warehouses that have already been
+// initialized, with the aim of correcting any extraordinary issues (such as
+// accidental table deletions) in an attempt to make Meergo functional again.
+//
+// If an error occurs with the data warehouse during the repair, it returns a
+// *DataWarehouseError error.
+func (store *Store) Repair(ctx context.Context) error {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	return store.warehouse.Repair(ctx)
+}
+
 // ResolveIdentities resolves the identities of the store's workspace.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode

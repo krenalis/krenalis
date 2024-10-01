@@ -254,11 +254,14 @@ type Warehouse interface {
 	// error.
 	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
-	// Repair repairs the database objects on the data warehouse in order to make it
-	// work with Meergo.
+	// Repair repairs the database objects on the data warehouse needed by Meergo.
 	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
+	// This method should only be called on warehouses that have already been
+	// initialized, with the aim of correcting any extraordinary issues (such as
+	// accidental table deletions) in an attempt to make Meergo functional again.
+	//
+	// If an error occurs with the data warehouse during the repair, it returns a
+	// *DataWarehouseError error.
 	Repair(ctx context.Context) error
 
 	// Settings returns the data warehouse settings.

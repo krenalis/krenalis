@@ -493,8 +493,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	panic("not implemented")
 }
 
-// Repair repairs the database objects on the data warehouse in order to make it
-// work with Meergo.
+// Repair repairs the database objects on the data warehouse needed by Meergo.
 func (warehouse *Snowflake) Repair(ctx context.Context) error {
 	panic("TODO: not implemented")
 }
