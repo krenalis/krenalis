@@ -317,11 +317,8 @@ func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meerg
 
 	properties := make([]types.Property, 0, len(response.Results))
 	for _, r := range response.Results {
-		typ, skip, err := propertyType(r.Name, r.Type)
-		if err != nil {
-			return types.Type{}, err
-		}
-		if skip {
+		typ := propertyType(r.Type)
+		if !typ.Valid() {
 			continue
 		}
 		property := types.Property{
@@ -534,25 +531,26 @@ func parseMilliseconds(s string) (time.Duration, error) {
 	return time.Duration(d) * time.Millisecond, nil
 }
 
-// propertyType returns the property type of the HubSpot property type t with name c.
+// propertyType returns the type of the HubSpot property with type t.
+// If the property type is not supported, it returns an invalid type.
 // (https://developers.hubspot.com/docs/api/crm/properties#property-type-and-fieldtype-values).
-func propertyType(c, t string) (types.Type, bool, error) {
+func propertyType(t string) types.Type {
 	switch t {
 	case "bool":
-		return types.Boolean(), false, nil
+		return types.Boolean()
 	case "date":
-		return types.Date(), false, nil
+		return types.Date()
 	case "datetime":
-		return types.DateTime(), false, nil
+		return types.DateTime()
 	case "enumeration":
-		return types.Text(), false, nil
+		return types.Text()
 	case "number":
-		return types.Decimal(types.MaxDecimalPrecision-1, 1), false, nil
+		return types.Decimal(types.MaxDecimalPrecision-1, 1)
 	case "object_coordinates", "json":
 		// These types are for internal use and are not visible in HubSpot.
-		return types.Type{}, true, nil
+		return types.Type{}
 	case "string", "phone_number":
-		return types.Text(), false, nil
+		return types.Text()
 	}
-	return types.Type{}, false, meergo.NewNotSupportedTypeError(c, t)
+	return types.Type{}
 }
