@@ -53,8 +53,6 @@ This table is based on the following principles:
 | `Object`                          | Yes                                                                        | Handled my Meergo, not implemented by the driver                                                                                                | Handled my Meergo, not implemented by the driver                                                                            |
 | `Map(T)`                          | Yes, but only if `T` is not `Array`, `Object` or `Map`[^arraymapcomposite] | <sub>*N/A*</sub>                                                                                                                                | <sub>*N/A*</sub>. Has `OBJECT`, but element types can be anything.                                                          |
 
-[^clickhouse]: The implementation to support ClickHouse does not appear to be coming anytime soon, so this column may be out of date and/or incorrect. It will be revised in the future.
-
 [^arraymapcomposite]: Supporting `Array(T)` or `Map(T)`, where `T` is of type `Array`, `Object` or `Map`, would open up major implementation issues, especially in the UI, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
 [^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for user schema properties but cannot be specified in the UI. See the issue [#956](https://github.com/meergo/meergo/issues/956) for more details.
