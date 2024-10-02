@@ -1245,6 +1245,9 @@ func (this *Workspace) ResolveIdentities(ctx context.Context) error {
 	this.apis.mustBeOpen()
 	err := this.store.ResolveIdentities(ctx)
 	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "an error occurred on the data warehouse: %w", err.Err)
+		}
 		if err == datastore.ErrAlterSchemaInProgress {
 			return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is in progress on the data warehouse")
 		}
