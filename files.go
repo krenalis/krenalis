@@ -61,6 +61,8 @@ type File interface {
 	// Read reads the records from r and writes them to records. If the connector
 	// has multiple sheets, sheet is the name of the sheet to be read.
 	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
+	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
+	// error
 	Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
 
 	// Write writes to w the records read from records. If the connector has

@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/postgres"
@@ -27,7 +28,7 @@ type dispatchingEvent struct {
 	*events.Event
 	connection int
 	action     *state.Action
-	request    *connectors.EventRequest
+	request    *meergo.EventRequest
 	err        error
 }
 

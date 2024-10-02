@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/state"
 )
@@ -105,7 +106,7 @@ func (apis *APIs) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 		case connectors.ErrNoWebhooks:
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
-		case connectors.ErrWebhookUnauthorized:
+		case meergo.ErrWebhookUnauthorized:
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -123,7 +124,7 @@ func (apis *APIs) receiveWebhook(req *http.Request) error {
 	if m == nil {
 		return errNotFound
 	}
-	var events []connectors.WebhookPayload
+	var events []meergo.WebhookPayload
 	var err error
 	switch m[1] {
 	case "a":

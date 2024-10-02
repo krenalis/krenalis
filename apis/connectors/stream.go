@@ -14,9 +14,6 @@ import (
 	"github.com/meergo/meergo/apis/state"
 )
 
-// SendOptions are the stream's Send options.
-type SendOptions = meergo.SendOptions
-
 // Stream represents the stream of a stream connection.
 type Stream struct {
 	closed bool
@@ -61,7 +58,7 @@ func (stream *Stream) Close() error {
 // The caller must not modify the event data, even temporarily, and must not
 // retain the event slice after the ack function has been called.
 //
-// It returns an *UnavailableError error if the connector returns an error.
+// If the connector returns an error, it returns a *UnavailableError error.
 //
 // Receive can be used by multiple goroutines at the same time.
 func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), err error) {
@@ -78,10 +75,10 @@ func (stream *Stream) Receive(ctx context.Context) (event []byte, ack func(), er
 // Send can modify the event data, but the event slice is not retained after the
 // ack function has been called.
 //
-// It returns an *UnavailableError error if the connector returns an error.
+// If the connector returns an error, it returns a *UnavailableError error.
 //
 // Send can be used by multiple goroutines at the same time.
-func (stream *Stream) Send(ctx context.Context, event []byte, options SendOptions, ack func(err error)) error {
+func (stream *Stream) Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error {
 	err := stream.inner.Send(ctx, event, options, ack)
 	return connectorError(err)
 }

@@ -587,7 +587,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -765,7 +765,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	path, err := this.storage().CompletePath(ctx, path, replacer)
 	if err != nil {
 		switch err.(type) {
-		case *connectors.InvalidPathError:
+		case *meergo.InvalidPathError:
 			err = errors.Unprocessable(InvalidPath, "%s", err)
 		case *connectors.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
@@ -850,6 +850,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidPlaceholder, if the query contains an invalid placeholder.
+//   - UnsupportedColumnType, if a column type is not supported.
 func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
@@ -894,6 +895,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		switch err.(type) {
 		case *connectors.PlaceholderError:
 			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		case *meergo.UnsupportedColumnTypeError:
+			err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
 		}
@@ -1159,6 +1162,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //   - InvalidUIValues, if the user-entered values are not valid.
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
+//   - UnsupportedColumnType, if a column type is not supported.
 func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
 
 	this.apis.mustBeOpen()
@@ -1228,12 +1232,14 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 		switch err {
 		case connectors.ErrNoColumnsFound:
 			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
-		case connectors.ErrSheetNotExist:
+		case meergo.ErrSheetNotExist:
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.UnsupportedColumnTypeError:
+				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("cannot read records: %w", err)
 			}
@@ -1615,7 +1621,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 
 	req, err := this.app().EventRequest(ctx, &ev, eventType, outSchema, properties, true)
 	if err != nil {
-		if err == connectors.ErrEventTypeNotExist {
+		if err == meergo.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 		} else {
 			switch err.(type) {
@@ -1762,11 +1768,11 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 	}
 	ui, err := this.apis.connectors.ServeConnectionUI(ctx, this.connection, event, values)
 	if err != nil {
-		if err == connectors.ErrUIEventNotExist {
+		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
 		} else {
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -1835,7 +1841,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 	sheets, err := this.storage().Sheets(ctx, file, path, uiValues, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
-		case *connectors.InvalidUIValuesError:
+		case *meergo.InvalidUIValuesError:
 			err = errors.Unprocessable(InvalidUIValues, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("cannot read the file: %w", err)
@@ -1850,9 +1856,8 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 // connection must be a destination database connection, and table must be UTF-8
 // encoded with a length in range [1, 1024].
 //
-// It returns an error.Unprocessable error with code InvalidTable, if the table
-// does not contain an unsigned 32-bit column named "id" or if there are no
-// other columns apart from "id".
+// If the table contains a column with an unsupported type, it returns an
+// errors.UnprocessableError error.
 func (this *Connection) TableSchema(ctx context.Context, table string) (types.Type, error) {
 	this.apis.mustBeOpen()
 	c := this.connection
@@ -1870,13 +1875,13 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	defer database.Close()
 	columns, err := database.Columns(ctx, table)
 	if err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
+		switch err.(type) {
+		case *meergo.UnsupportedColumnTypeError:
+			err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
+		case *connectors.UnavailableError:
 			err = errors.Unavailable("an error occurred fetching the columns: %w", err)
 		}
 		return types.Type{}, err
-	}
-	if len(columns) == 0 {
-		return types.Type{}, errors.Unprocessable(InvalidTable, "table %q has no columns", table)
 	}
 	schema, err := types.ObjectOf(columns)
 	if err != nil {
@@ -1952,7 +1957,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	if eventType != "" {
 		schema, err := this.app().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
-			if err == connectors.ErrEventTypeNotExist {
+			if err == meergo.ErrEventTypeNotExist {
 				err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
 			} else if _, ok := err.(*connectors.UnavailableError); ok {
 				err = errors.Unavailable("an error occurred fetching the schema: %w", err)

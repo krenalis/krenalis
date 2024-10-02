@@ -303,7 +303,7 @@ func (s *Settings) options() *clickhouse.Options {
 func propertyType(t driver.ColumnType) (types.Type, bool, error) {
 	typ, nullable := columnType(t.DatabaseTypeName())
 	if !typ.Valid() {
-		return types.Type{}, false, meergo.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+		return types.Type{}, false, meergo.NewUnsupportedColumnTypeError(t.Name(), t.DatabaseTypeName())
 	}
 	return typ, nullable, nil
 }

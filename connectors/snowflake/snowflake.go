@@ -309,5 +309,5 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "VARIANT":
 		return types.JSON(), nil
 	}
-	return types.Type{}, meergo.NewNotSupportedTypeError(t.Name(), t.DatabaseTypeName())
+	return types.Type{}, meergo.NewUnsupportedColumnTypeError(t.Name(), t.DatabaseTypeName())
 }

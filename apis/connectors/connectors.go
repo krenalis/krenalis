@@ -62,17 +62,9 @@ type CommittableWriter interface {
 	Commit(ctx context.Context) error
 }
 
-// An InvalidUIValuesError is returned by UI-related functions when the
-// user-entered values passed as an argument are not valid.
-type InvalidUIValuesError = meergo.InvalidUIValuesError
-
 var (
-	ErrEventTypeNotExist   = meergo.ErrEventTypeNotExist
-	ErrNoColumnsFound      = errors.New("file has no columns")
-	ErrNoWebhooks          = errors.New("app has no webhooks")
-	ErrSheetNotExist       = errors.New("sheet does not exist")
-	ErrUIEventNotExist     = meergo.ErrUIEventNotExist
-	ErrWebhookUnauthorized = errors.New("webhook request was not unauthorized")
+	ErrNoColumnsFound = errors.New("file has no columns")
+	ErrNoWebhooks     = errors.New("app has no webhooks")
 )
 
 // LastChangeTimeProperty represents the lat change time property passed to the
@@ -274,10 +266,10 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 // ReceivePerAccountWebhook receives a per account webhook request and returns
 // its payloads. The context is the request's context.
 //
-// It returns the ErrNoWebhooks error if the connector of the account
-// is not an app, or it does not support per account webhooks. It returns the
-// ErrWebhookUnauthorized error if the request was not authorized.
-func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]WebhookPayload, error) {
+// If the connector of the account is not an app or does not support per account
+// webhooks, it returns the ErrNoWebhooks error. If the request is not
+// authorized, it returns the meergo.ErrWebhookUnauthorized error.
+func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, req *http.Request) ([]meergo.WebhookPayload, error) {
 	connector := account.Connector()
 	if connector.WebhooksPer != state.WebhooksPerAccount {
 		return nil, ErrNoWebhooks
@@ -296,9 +288,6 @@ func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, r
 	if inner, ok := inner.(meergo.Webhooks); ok {
 		payload, err := inner.ReceiveWebhook(req, meergo.Both)
 		if err != nil {
-			if err == meergo.ErrWebhookUnauthorized {
-				err = ErrWebhookUnauthorized
-			}
 			return nil, err
 		}
 		return payload, nil
@@ -309,10 +298,10 @@ func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, r
 // ReceivePerConnectionWebhook receives a per connection webhook request and
 // returns its payloads. The context is the request's context.
 //
-// It returns the ErrNoWebhooks error if the connection is not an app,
-// or it does not support per connection webhooks. It returns the
-// ErrWebhookUnauthorized error if the request was not authorized.
-func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]WebhookPayload, error) {
+// if the connection is not an app, or it does not support per connection
+// webhooks, it returns the ErrNoWebhooks error. If the request is not
+// authorized, it returns the meergo.ErrWebhookUnauthorized error.
+func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Connection, req *http.Request) ([]meergo.WebhookPayload, error) {
 	connector := connection.Connector()
 	if connector.WebhooksPer != state.WebhooksPerConnection {
 		return nil, ErrNoWebhooks
@@ -337,9 +326,6 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	if inner, ok := inner.(meergo.Webhooks); ok {
 		payload, err := inner.ReceiveWebhook(req, meergo.Role(connection.Role))
 		if err != nil {
-			if err == meergo.ErrWebhookUnauthorized {
-				err = ErrWebhookUnauthorized
-			}
 			return nil, err
 		}
 		return payload, nil
@@ -350,10 +336,10 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 // ReceivePerConnectorWebhook receives a per connector webhook request and
 // returns its payloads. The context is the request's context.
 //
-// It returns the ErrNoWebhooks error if the connector is not an app,
-// or it does not support per connector webhooks. It returns the
-// ErrWebhookUnauthorized error if the request was not authorized.
-func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]WebhookPayload, error) {
+// If the connector is not an app, or it does not support per connector
+// webhooks, it returns the ErrNoWebhooks error. If the request was not
+// authorized, it returns the meergo.ErrWebhookUnauthorized error.
+func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connector, req *http.Request) ([]meergo.WebhookPayload, error) {
 	if connector.WebhooksPer != state.WebhooksPerConnector {
 		return nil, ErrNoWebhooks
 	}
@@ -364,9 +350,6 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if inner, ok := inner.(meergo.Webhooks); ok {
 		payload, err := inner.ReceiveWebhook(req, meergo.Both)
 		if err != nil {
-			if err == meergo.ErrWebhookUnauthorized {
-				err = ErrWebhookUnauthorized
-			}
 			return nil, err
 		}
 		return payload, nil
@@ -417,15 +400,15 @@ func ReplacePlaceholders(s string, f PlaceholderReplacer) (string, error) {
 func connectorError(err error) error {
 	switch err {
 	case nil:
-	case ErrEventTypeNotExist:
-	case ErrSheetNotExist:
-	case ErrUIEventNotExist:
-	case ErrWebhookUnauthorized:
+	case meergo.ErrEventTypeNotExist:
+	case meergo.ErrSheetNotExist:
+	case meergo.ErrUIEventNotExist:
+	case meergo.ErrWebhookUnauthorized:
 	default:
 		switch err.(type) {
 		case *meergo.InvalidPathError:
 		case *meergo.InvalidUIValuesError:
-		case *meergo.NotSupportedTypeError:
+		case *meergo.UnsupportedColumnTypeError:
 		case *UnavailableError:
 		default:
 			err = &UnavailableError{Err: err}

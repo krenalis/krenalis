@@ -49,6 +49,7 @@ const (
 	TransformationFailed         errors.Code = "TransformationFailed"
 	TypeNotAllowed               errors.Code = "TypeNotAllowed"
 	UnsupportedLanguage          errors.Code = "UnsupportedLanguage"
+	UnsupportedColumnType        errors.Code = "UnsupportedColumnType"
 	WarehouseNotEmpty            errors.Code = "WarehouseNotEmpty"
 	WorkspaceNotExist            errors.Code = "WorkspaceNotExist"
 )

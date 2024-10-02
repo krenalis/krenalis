@@ -20,21 +20,21 @@ type ConnectorInfo interface {
 	ReflectType() reflect.Type
 }
 
-// A NotSupportedTypeError error is returned by File.Read and Database.Query
-// methods when a column type is not supported.
-type NotSupportedTypeError struct {
+// A UnsupportedColumnTypeError error is returned by File.Read and
+// Database.Query methods when a column type is not supported.
+type UnsupportedColumnTypeError struct {
 	Column string
 	Type   string
 }
 
-// NewNotSupportedTypeError returns a NotSupportedTypeError error for the
-// given column and type.
-func NewNotSupportedTypeError(column, typ string) error {
-	return &NotSupportedTypeError{Column: column, Type: typ}
+// NewUnsupportedColumnTypeError returns a UnsupportedColumnTypeError error for
+// the given column and type.
+func NewUnsupportedColumnTypeError(column, typ string) error {
+	return &UnsupportedColumnTypeError{Column: column, Type: typ}
 }
 
-func (err *NotSupportedTypeError) Error() string {
-	return fmt.Sprintf("type %s of the column %q is not supported", err.Type, err.Column)
+func (err *UnsupportedColumnTypeError) Error() string {
+	return fmt.Sprintf("column %q has an unsupported type %s", err.Column, err.Type)
 }
 
 // A SetSettingsFunc value is a function used by connectors to set settings.

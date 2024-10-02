@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
@@ -152,7 +153,7 @@ func (processor *processor) setEventWithError(id [20]byte, action int, terr erro
 	}
 }
 
-func dumpEventRequest(req *connectors.EventRequest) ([]byte, error) {
+func dumpEventRequest(req *meergo.EventRequest) ([]byte, error) {
 	var b bytes.Buffer
 	b.WriteString(req.Method)
 	b.WriteString(" ")

@@ -57,6 +57,8 @@ type Database interface {
 	Close() error
 
 	// Columns returns the columns of the given table.
+	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
+	// error.
 	Columns(ctx context.Context, table string) ([]types.Property, error)
 
 	// LastChangeTimeCondition returns the query condition used for the
@@ -74,6 +76,8 @@ type Database interface {
 	LastChangeTimeCondition(column string, typ types.Type, value any) string
 
 	// Query executes the given query and returns the resulting rows and columns.
+	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
+	// error.
 	Query(ctx context.Context, query string) (Rows, []types.Property, error)
 
 	// Upsert inserts or updates the rows provided in the specified table. If a row

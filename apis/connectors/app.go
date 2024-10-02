@@ -32,14 +32,6 @@ import (
 // appUpdateBatchSize is the number of app updates to process in each batch.
 const appUpdateBatchSize = 1000
 
-type (
-	EventRequest   = meergo.EventRequest
-	WebhookPayload = meergo.WebhookPayload
-)
-
-// ErrUnsupportedTarget indicates that a target is not supported.
-var ErrUnsupportedTarget = errors.New("target is not supported")
-
 // App represents the app of an app connection.
 type App struct {
 	name        string
@@ -90,13 +82,14 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 // If the event type does not have a schema, schema is the invalid schema and
 // properties is nil.
 //
-// It returns the ErrEventTypeNotExist error if the event type does not exist,
-// a *schemas.Error error if the schema is not aligned to the event type's
-// schema, and an *UnavailableError error if the connector returns an error.
+// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// error. If the schema is not aligned to the event type's schema, it returns a
+// *schemas.Error error. If the connector returns an error it returns a
+// *UnavailableError error.
 //
 // It panics if the app does not support the Events target, or if schema is
 // valid but not an Object.
-func (app *App) EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error) {
+func (app *App) EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
@@ -128,7 +121,7 @@ func (app *App) EventRequest(ctx context.Context, event *Event, eventType string
 }
 
 // EventTypes returns the app's event types.
-// It returns an *UnavailableError error if the connector returns an error.
+// If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the app does not support the events target.
 func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if app.err != nil {
@@ -148,16 +141,17 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 // properties compatible with the app's role. For the events target, the
 // returned schema can be the invalid schema.
 //
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-// It panics if the app does not support the provided target.
+// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// error. It panics if the app does not support the provided target.
 func (app *App) Schema(ctx context.Context, target state.Target, eventType string) (types.Type, error) {
 	return app.SchemaAsRole(ctx, app.role, target, eventType)
 }
 
 // SchemaAsRole is like Schema but returns the schema as the provided role,
 // instead of the role of the app's connection.
-// If the event type does not exist, it returns the ErrEventTypeNotExist error.
-// It returns an *UnavailableError error if the connector returns an error.
+// If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
+// error. If the connector returns an error, it returns a *UnavailableError
+// error.
 func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {
 		return types.Type{}, app.err
@@ -192,7 +186,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 }
 
 // SendEvent sends an event to the app and returns the HTTP response.
-func (app *App) SendEvent(ctx context.Context, req *EventRequest) (*http.Response, error) {
+func (app *App) SendEvent(ctx context.Context, req *meergo.EventRequest) (*http.Response, error) {
 	r, err := http.NewRequestWithContext(ctx, req.Method, req.URL, bytes.NewReader(req.Body))
 	if err != nil {
 		return nil, err
@@ -389,7 +383,7 @@ func (w *appWriter) doUpdates(ctx context.Context) {
 }
 
 // userSchema returns the user schema with the provided role.
-// It returns an *UnavailableError error if the connector returns an error.
+// If the connector returns an error, it returns an *UnavailableError error.
 func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, error) {
 	select {
 	case <-ctx.Done():

@@ -140,6 +140,8 @@ Meergo invokes the `Columns` method when creating or updating a database destina
 
 The `Columns` method returns the table's columns as a slice of `Property` values, detailing the names and types of each column. 
 
+If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.  
+
 ### LastChangeTimeCondition method
 
 ```go
@@ -214,6 +216,8 @@ type Rows interface {
 ```
 
 The standard Go library's `sql.Rows` type implements this interface. So, the connector can just return a `sql.Rows` value.
+
+If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.
 
 ### Upsert Method
 

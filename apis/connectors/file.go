@@ -83,8 +83,9 @@ func (file *File) ContentType(ctx context.Context) (string, error) {
 //
 // If the action's sheet is not found in the file, the All method of the
 // iterator returns immediately, and a subsequent call to the Err method will
-// return the ErrSheetNotExist error. The same occurs if the file has no
-// columns; in this case, the error is ErrNoColumnsFound.
+// return the meergo.ErrSheetNotExist error. The same occurs if the file has no
+// columns; in this case, the error is ErrNoColumnsFound, and if a column type
+// is not supported, the error is a *meergo.UnsupportedColumnType error.
 //
 // It returns an error if a non-zero start time is provided and the action has
 // no last change property.
@@ -472,13 +473,7 @@ func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 		r.rw.setYieldFunc(yield)
 		err := r.inner.Read(ctx, r.rc, r.sheet, r.rw)
 		r.rw.close()
-		if err == errRecordStop {
-			return
-		}
-		if err != nil {
-			if err == meergo.ErrSheetNotExist {
-				r.err = ErrSheetNotExist
-			}
+		if err != nil && err != errRecordStop {
 			r.err = connectorError(err)
 		}
 	}

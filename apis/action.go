@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/errors"
@@ -291,11 +292,11 @@ func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([
 	}
 	ui, err := this.apis.connectors.ServeActionUI(ctx, this.action, event, values)
 	if err != nil {
-		if err == connectors.ErrUIEventNotExist {
+		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
 		} else {
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -494,7 +495,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
 		if err != nil {
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)

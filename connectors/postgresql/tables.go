@@ -15,6 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"
@@ -46,6 +47,9 @@ type tableSchema struct {
 // Therefore, if none of the tables indicated in tableNames exists, this
 // function returns an empty slice.
 // tableNames must always contain at least one table name.
+//
+// It returns a *meergo.UnsupportedColumnTypeError error, if a column type is
+// not supported.
 func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []string) ([]*tableSchema, error) {
 
 	if len(tableNames) == 0 {
@@ -182,10 +186,10 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		}
 		column.Type, err = columnType(row, enums, attTypMods)
 		if err != nil {
+			if _, ok := err.(*meergo.UnsupportedColumnTypeError); ok {
+				return nil, err
+			}
 			return nil, fmt.Errorf("database has returned an invalid type: %s", err)
-		}
-		if !column.Type.Valid() {
-			return nil, fmt.Errorf("type of column %s.%s is not supported", row.table, column.Name)
 		}
 		if description != nil {
 			column.Note = *description
@@ -256,8 +260,8 @@ func tableFds(ctx context.Context, tx pgx.Tx, table string, cols []string) ([]pg
 // an array element); may not contain a key if the column type has no associated
 // type-specific data.
 //
-// It returns an invalid type if typ is not supported. It returns an error if an
-// argument is not valid.
+// It returns an error if an argument is not valid. If typ is not supported, it
+// returns a *meergo.UnsupportedColumnTypeError error.
 func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[string]map[string]*int) (types.Type, error) {
 	var t types.Type
 	switch column.dataType {
@@ -371,17 +375,20 @@ func columnType(column pgTypeInfo, enums map[string]types.Type, attTypMods map[s
 				et = types.Text()
 			}
 		}
-		if et.Valid() {
-			t = types.Array(et)
+		if !et.Valid() {
+			return types.Type{}, meergo.NewUnsupportedColumnTypeError(column.column, fmt.Sprintf("ARRAY of %s", column.udtName))
 		}
+		t = types.Array(et)
 	case "USER-DEFINED":
 		// Check if the user-defined type is an enum.
 		if typ, ok := enums[column.udtName]; ok {
 			t = typ
 		} else {
 			// Composite types are not supported.
-			return types.Type{}, nil
 		}
+	}
+	if !t.Valid() {
+		return types.Type{}, meergo.NewUnsupportedColumnTypeError(column.column, column.dataType)
 	}
 	return t, nil
 }

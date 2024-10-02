@@ -65,8 +65,9 @@ func (database *Database) Close() error {
 	return connectorError(err)
 }
 
-// Columns returns the columns of the provided table.
-// It returns an *UnavailableError error if the connector returns an error.
+// Columns returns the columns of the provided table. If a column type is not
+// supported, it returns a *meergo.UnsupportedColumnTypeError error. If the
+// connector returns an error, it returns an *UnavailableError error.
 func (database *Database) Columns(ctx context.Context, table string) ([]types.Property, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -74,6 +75,9 @@ func (database *Database) Columns(ctx context.Context, table string) ([]types.Pr
 	columns, err := database.inner.Columns(ctx, table)
 	if err != nil {
 		return nil, connectorError(err)
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("no columns defined for table")
 	}
 	if _, err = types.ObjectOf(columns); err != nil {
 		return nil, rewriteColumnErrors(err)
@@ -116,8 +120,9 @@ func (database *Database) LastChangeTimeCondition(action *state.Action) (string,
 // Query executes a query and returns the resulting rows.
 // If queryReplacer is not nil, then the placeholders in the query are replaced
 // using it; in this case, a *PlaceholderError error may be returned in case of
-// an error with placeholders. It returns an *UnavailableError error if the
-// connector returns an error.
+// an error with placeholders. If a column type is not supported, it returns a
+// *meergo.UnsupportedColumnTypeError error. If the connector returns an error,
+// it returns an *UnavailableError error.
 func (database *Database) Query(ctx context.Context, query string, queryReplacer PlaceholderReplacer) (*Rows, error) {
 	if database.err != nil {
 		return nil, database.err
@@ -149,8 +154,9 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 // an error with placeholders.
 //
 // If the action's input schema does not align with the query's results schema,
-// it returns a *schemas.Error error. It returns an *UnavailableError error if
-// the connector returns an error.
+// it returns a *schemas.Error error. If a column type is not supported, it
+// returns a *meergo.UnsupportedColumnTypeError error. If the connector returns
+// an error, it returns an *UnavailableError error.
 func (database *Database) Records(ctx context.Context, action *state.Action, queryReplacer PlaceholderReplacer) (Records, error) {
 	if database.err != nil {
 		return nil, database.err

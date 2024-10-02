@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/schemas"
@@ -200,7 +201,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
 			return newActionError(statistics.InputValidationStep, err)
 		}
-		if err == connectors.ErrSheetNotExist {
+		if err == meergo.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}
 		return newActionError(statistics.ReceivingStep, err)

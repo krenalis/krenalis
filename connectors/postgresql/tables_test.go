@@ -8,8 +8,11 @@
 package postgresql
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
 )
 
@@ -83,17 +86,21 @@ func TestUnsupportedTypes(t *testing.T) {
 		``, ` `, "\x00", "\xFF", `a`,
 	}
 
-	for _, test := range tests {
-		row := pgTypeInfo{
-			dataType: test,
-		}
-		got, err := columnType(row, nil, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		if got.Valid() {
-			t.Errorf("%s: expected an invalid type, got a valid type: %#v", test, got)
-		}
+	for i, test := range tests {
+		t.Run(test, func(t *testing.T) {
+			row := pgTypeInfo{
+				dataType: test,
+				column:   fmt.Sprintf("c%d", i),
+			}
+			got, err := columnType(row, nil, nil)
+			expected := meergo.NewUnsupportedColumnTypeError(row.column, row.dataType)
+			if !reflect.DeepEqual(expected, err) {
+				t.Fatalf("expected error '%v' (type %T), got error '%v' (type %T)", expected, expected, err, err)
+			}
+			if got.Valid() {
+				t.Fatalf("expected an invalid type, got %s", got)
+			}
+		})
 	}
 }
 

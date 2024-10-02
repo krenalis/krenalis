@@ -24,6 +24,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/encoding"
@@ -522,7 +523,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		n.Settings, err = this.apis.connectors.UpdatedSettings(ctx, c, conf, values)
 		if err != nil {
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
@@ -1330,11 +1331,11 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 	// before saving to database
 	ui, err := this.apis.connectors.ServeConnectorUI(ctx, c, conf, event, values)
 	if err != nil {
-		if err == connectors.ErrUIEventNotExist {
+		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
 		} else {
 			switch err.(type) {
-			case *connectors.InvalidUIValuesError:
+			case *meergo.InvalidUIValuesError:
 				err = errors.Unprocessable(InvalidUIValues, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)

@@ -159,6 +159,8 @@ The `sheet` parameter is only used if the connector supports multiple sheets, me
 > The columns passed to the `Columns` method must have valid property names. To assist with this, you can use the `meergo.SuggestPropertyName` function, which suggests column names that are valid.
 > For example, if a column in the file is named `"Prénom"`, calling `SuggestPropertyName("Prénom")` will suggest `"Prenom"`, which is a valid property name that can be used with the `Columns` method.
 
+If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.
+
 ### Write method
 
 ```go
