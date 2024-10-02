@@ -87,19 +87,25 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 	// Read the columns.
 	var int96Columns []string
 	parquetColumns := fr.Columns()
-	columns := make([]types.Property, len(parquetColumns))
-	for i, c := range parquetColumns {
-		name := strings.Join(c.Path(), ".")
+	columns := make([]types.Property, 0, len(parquetColumns))
+	for _, c := range parquetColumns {
 		element := c.Element()
-		columns[i].Name = name
-		columns[i].Type, err = propertyType(name, element)
-		columns[i].Nullable = true
+		typ, err := propertyType(element)
 		if err != nil {
 			return err
 		}
+		if !typ.Valid() {
+			continue
+		}
+		name := strings.Join(c.Path(), ".")
 		if *element.Type == parquet.Type_INT96 {
 			int96Columns = append(int96Columns, name)
 		}
+		columns = append(columns, types.Property{
+			Name:     name,
+			Type:     typ,
+			Nullable: true,
+		})
 	}
 	// Write the columns.
 	err = records.Columns(columns)
@@ -147,9 +153,10 @@ func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records
 	return nil
 }
 
-// propertyType returns the property type of the Parquet column with the given
-// name and type (https://github.com/apache/parquet-format).
-func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error) {
+// propertyType returns the type of the Parquet column specified by the given
+// SchemaElement. If the property type is not supported, it returns an invalid type.
+// (https://github.com/apache/parquet-format).
+func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 
 	if elem.Type == nil {
 		return types.Type{}, errors.New("unexpected Parquet nil type")
@@ -276,7 +283,7 @@ func propertyType(column string, elem *parquet.SchemaElement) (types.Type, error
 		return types.Text(), nil
 	}
 
-	return types.Type{}, meergo.NewNotSupportedTypeError(column, (*elem.Type).String())
+	return types.Type{}, nil
 }
 
 // Convert an int96 type value to a time.Time value.
