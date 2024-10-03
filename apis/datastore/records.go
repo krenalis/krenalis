@@ -31,7 +31,7 @@ type Record struct {
 // Records represents records read from the data warehouse.
 type Records struct {
 	columns   []warehouses.Column
-	normalize NormalizeFunc
+	normalize warehouses.NormalizeFunc
 	unflat    unflatRowFunc
 	rows      warehouses.Rows
 	matching  *Matching
@@ -48,6 +48,15 @@ type Matching struct {
 	Property        string
 	ExportMode      state.ExportMode
 	AllowDuplicates bool
+}
+
+// SchemaError represents an error with a schema.
+type SchemaError struct {
+	Msg string
+}
+
+func (err *SchemaError) Error() string {
+	return err.Msg
 }
 
 // records executes a query on the data warehouse and returns an iterator to
@@ -249,31 +258,16 @@ func (r *Records) Last() bool {
 	return r.last
 }
 
-func (sv *scanValue) Scan(src any) error {
-	c := sv.columns[sv.index]
-	value, err := sv.normalize(c.Name, c.Type, src, c.Nullable)
-	if err != nil {
-		return err
-	}
-	sv.row[sv.index] = value
-	sv.index = (sv.index + 1) % len(sv.columns)
-	return nil
-}
-
-// NormalizeFunc is a function type representing the normalization function
-// exposed by data warehouse drivers to normalize values returned by them.
-type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
-
 // scanValue implements the sql.Scanner interface to read the database values.
 type scanValue struct {
 	columns   []warehouses.Column
 	row       []any
-	normalize NormalizeFunc
+	normalize warehouses.NormalizeFunc
 	index     int
 }
 
 // newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFunc) []any {
+func newScanValues(columns []warehouses.Column, row []any, normalize warehouses.NormalizeFunc) []any {
 	values := make([]any, len(columns))
 	value := &scanValue{
 		columns:   columns,
@@ -286,11 +280,13 @@ func newScanValues(columns []warehouses.Column, row []any, normalize NormalizeFu
 	return values
 }
 
-// SchemaError represents an error with a schema.
-type SchemaError struct {
-	Msg string
-}
-
-func (err *SchemaError) Error() string {
-	return err.Msg
+func (sv *scanValue) Scan(src any) error {
+	c := sv.columns[sv.index]
+	value, err := sv.normalize(c.Name, c.Type, src, c.Nullable)
+	if err != nil {
+		return err
+	}
+	sv.row[sv.index] = value
+	sv.index = (sv.index + 1) % len(sv.columns)
+	return nil
 }

@@ -330,6 +330,10 @@ type Join struct {
 	Condition Expr
 }
 
+// NormalizeFunc is a function type representing the normalization function
+// exposed by data warehouse drivers to normalize values returned by them.
+type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
+
 // Rows is the result of a database query. Its cursor starts before the first
 // row of the result set. Use Next to advance from row to row.
 type Rows interface {
