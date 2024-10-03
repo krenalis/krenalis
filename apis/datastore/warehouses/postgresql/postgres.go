@@ -314,6 +314,9 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 			b.WriteByte('"')
 			i++
 		}
+		if i == 0 {
+			return errors.New("postgresql.Merge: there must be at least one column in 'columns' apart from the keys")
+		}
 		b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
