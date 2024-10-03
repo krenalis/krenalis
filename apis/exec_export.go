@@ -73,21 +73,9 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 		// the results.
 	}
 
-	// Where condition.
-	var where *datastore.Where
-	if action.Filter != nil {
-		where = &datastore.Where{
-			Logical:    datastore.WhereLogical(action.Filter.Logical),
-			Conditions: make([]datastore.WhereCondition, len(action.Filter.Conditions)),
-		}
-		for i, condition := range action.Filter.Conditions {
-			where.Conditions[i] = (datastore.WhereCondition)(condition)
-		}
-	}
-
 	// Read the users.
 	records, err := store.UserRecords(ctx, datastore.Query{
-		Where:   where,
+		Where:   action.Filter,
 		OrderBy: orderBy,
 	}, action.InSchema, matching)
 	if err != nil {

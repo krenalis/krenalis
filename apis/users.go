@@ -65,10 +65,10 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	// Retrieve the events records.
 	evs, err := this.store.Events(ctx, datastore.Query{
 		Properties: eventProperties,
-		Where: &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
+		Where: &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 			Property: "user",
-			Operator: "is",
-			Value:    this.id.String(),
+			Operator: state.OpIs,
+			Values:   []any{this.id.String()},
 		}}},
 		OrderBy:   "timestamp",
 		OrderDesc: true,
@@ -84,10 +84,10 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		// Verify that the user exists.
 		_, count, err := this.store.Users(ctx, datastore.Query{
 			Properties: []string{"__id__"},
-			Where: &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
+			Where: &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 				Property: "__id__",
-				Operator: "is",
-				Value:    this.id.String(),
+				Operator: state.OpIs,
+				Values:   []any{this.id.String()},
 			}}},
 			Limit: 1,
 		})
@@ -121,10 +121,10 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdent
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: "__gid__",
-		Operator: "is",
-		Value:    this.id.String(),
+		Operator: state.OpIs,
+		Values:   []any{this.id.String()},
 	}}}
 	ws := &Workspace{
 		apis:      this.apis,
@@ -155,10 +155,10 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 	ws := this.workspace
 
 	properties := types.PropertyNames(this.workspace.UserSchema)
-	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: "__id__",
-		Operator: "is",
-		Value:    this.id.String(),
+		Operator: state.OpIs,
+		Values:   []any{this.id.String()},
 	}}}
 
 	// Retrieve the user traits.

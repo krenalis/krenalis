@@ -12,6 +12,7 @@ import {
 	TransformationPurpose,
 	ActionStep,
 	ActionStatistics,
+	Filter,
 } from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
@@ -36,7 +37,6 @@ import {
 	RecordsResponse,
 	TransformationLanguagesResponse,
 	TransformDataResponse,
-	Filter,
 	FindUsersResponse,
 	AppUsersResponse,
 	EventPreviewResponse,

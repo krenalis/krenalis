@@ -74,6 +74,7 @@
 - [C# SDK](./csharp-sdk.md)
 - [Java SDK](./java-sdk.md)
 - [Data Validation](./data-validation.md)
+- [Filters](./filters.md)
 - [Changing User Schema](./changing-user-schema.md)
 - [Transformations](./transformations.md)
     - [Mapping](./mapping.md)

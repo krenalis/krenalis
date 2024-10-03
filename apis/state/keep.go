@@ -245,7 +245,7 @@ type AddAction struct {
 	SchedulePeriod           int16
 	InSchema                 types.Type
 	OutSchema                types.Type
-	Filter                   *Filter
+	Filter                   json.RawMessage `json:",omitempty"`
 	Transformation           Transformation
 	Query                    string
 	Connector                string
@@ -285,7 +285,6 @@ func (state *State) addAction(n notification) {
 		SchedulePeriod:           e.SchedulePeriod,
 		InSchema:                 e.InSchema,
 		OutSchema:                e.OutSchema,
-		Filter:                   e.Filter,
 		Transformation:           e.Transformation,
 		Query:                    e.Query,
 		Path:                     e.Path,
@@ -301,6 +300,9 @@ func (state *State) addAction(n notification) {
 		ExportMode:               e.ExportMode,
 		MatchingProperties:       e.MatchingProperties,
 		ExportOnDuplicatedUsers:  e.ExportOnDuplicatedUsers,
+	}
+	if e.Filter != nil {
+		action.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
 
 	state.mu.Lock()
@@ -881,7 +883,7 @@ type SetAction struct {
 	Enabled                  bool
 	InSchema                 types.Type
 	OutSchema                types.Type
-	Filter                   *Filter
+	Filter                   json.RawMessage `json:",omitempty"`
 	Transformation           Transformation
 	Query                    string
 	Connector                string
@@ -907,13 +909,17 @@ func (state *State) setAction(n notification) {
 		return
 	}
 	connector := state.connectors[e.Connector]
+	var filter *Where
+	if e.Filter != nil {
+		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
+	}
 	state.replaceAction(e.ID, func(a *Action) {
 		a.connector = connector
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.InSchema = e.InSchema
 		a.OutSchema = e.OutSchema
-		a.Filter = e.Filter
+		a.Filter = filter
 		a.Transformation = e.Transformation
 		a.Query = e.Query
 		a.Path = e.Path

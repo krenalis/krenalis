@@ -44,10 +44,10 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Filter: &meergotester.Filter{
-			Logical: "any",
+			Logical: "or",
 			Conditions: []meergotester.FilterCondition{
-				{Property: "messageId", Operator: "is", Value: "message1"}, // message of the anonymous identity
-				{Property: "messageId", Operator: "is", Value: "message3"}, // message of the not-anonymous identity
+				{Property: "messageId", Operator: "is", Values: []string{"message1"}}, // message of the anonymous identity
+				{Property: "messageId", Operator: "is", Values: []string{"message3"}}, // message of the not-anonymous identity
 			},
 		},
 		Transformation: meergotester.Transformation{
@@ -67,9 +67,9 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		Filter: &meergotester.Filter{
-			Logical: "any",
+			Logical: "or",
 			Conditions: []meergotester.FilterCondition{
-				{Property: "messageId", Operator: "is", Value: "message2"}, // message of the anonymous identity
+				{Property: "messageId", Operator: "is", Values: []string{"message2"}}, // message of the anonymous identity
 			},
 		},
 		Transformation: meergotester.Transformation{

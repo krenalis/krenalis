@@ -16,7 +16,6 @@ import (
 
 	"github.com/meergo/meergo/apis"
 	"github.com/meergo/meergo/apis/errors"
-	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/types"
 
 	"github.com/relvacode/iso8601"
@@ -360,7 +359,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 		Sources       []int
 		OnlyValid     bool
 		HasUserTraits bool
-		Filter        *filters.Filter
+		Filter        *apis.Filter
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -683,7 +682,7 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}
 	var body struct {
 		Properties []string
-		Filter     *filters.Filter
+		Filter     *apis.Filter
 		Order      string
 		OrderDesc  bool
 		First      int

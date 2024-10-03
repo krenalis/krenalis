@@ -143,7 +143,7 @@ type FilterLogical string
 type FilterCondition struct {
 	Property string
 	Operator string
-	Value    string
+	Values   []string
 }
 
 type KV struct {

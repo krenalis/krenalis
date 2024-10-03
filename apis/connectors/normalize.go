@@ -703,6 +703,7 @@ func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 // parseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
 // and returns it in the canonical form without uppercase letters. The boolean
 // return value reports whether s is a UUID in the standard form.
+// Keep in sync with the function on the "apis" package.
 func parseUUID(s string) (string, bool) {
 	if len(s) != 36 {
 		return "", false

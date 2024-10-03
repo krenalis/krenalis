@@ -362,12 +362,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					action.mu = new(sync.Mutex)
 					action.connection = c
 					action.EventType = eventType
-					if len(filter) > 0 {
-						err = json.Unmarshal(filter, &action.Filter)
-						if err != nil {
-							return err
-						}
-					}
 					err = action.InSchema.UnmarshalJSON(rawInSchema)
 					if err != nil {
 						// TODO(marco) disable the action instead of returning an error
@@ -377,6 +371,12 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					if err != nil {
 						// TODO(marco) disable the action instead of returning an error
 						return err
+					}
+					if len(filter) > 0 {
+						action.Filter, err = unmarshalWhere(filter, action.InSchema)
+						if err != nil {
+							return err
+						}
 					}
 					if len(mapping) > 0 {
 						err = json.Unmarshal(mapping, &action.Transformation.Mapping)

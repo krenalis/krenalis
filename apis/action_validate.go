@@ -20,7 +20,6 @@ import (
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
-	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/apis/transformers/mappings"
@@ -155,7 +154,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := filters.Validate(action.Filter, inSchema)
+		properties, err := validateFilter(action.Filter, inSchema)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}

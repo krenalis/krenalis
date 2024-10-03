@@ -31,7 +31,6 @@ import (
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/events/collector"
-	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
@@ -679,7 +678,7 @@ func (this *Workspace) AddCollectedEventListener(size int, sources []int, onlyVa
 //
 //   - ConnectionNotExist, if a source connection does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUserTraits bool, filter *filters.Filter) (string, error) {
+func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUserTraits bool, filter *Filter) (string, error) {
 	this.apis.mustBeOpen()
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -688,13 +687,15 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 	if err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
+	var where *state.Where
 	if filter != nil {
-		_, err := filters.Validate(filter, events.Schema)
+		_, err := validateFilter(filter, events.Schema)
 		if err != nil {
 			return "", errors.BadRequest("filter is not valid: %w", err)
 		}
+		where = convertFilterToWhere(filter, events.Schema)
 	}
-	id, err := this.apis.events.observer.AddEnrichedListener(size, sources, hasUserTraits, filter)
+	id, err := this.apis.events.observer.AddEnrichedListener(size, sources, hasUserTraits, where)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
@@ -1448,7 +1449,7 @@ func (this *Workspace) User(id uuid.UUID) (*User, error) {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *filters.Filter, order string, orderDesc bool, first, limit int) ([]byte, types.Type, int, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]byte, types.Type, int, error) {
 
 	this.apis.mustBeOpen()
 
@@ -1479,22 +1480,16 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *f
 			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
-	var where *datastore.Where
+	var where *state.Where
 	if filter != nil {
-		_, err := filters.Validate(filter, ws.UserSchema)
+		_, err := validateFilter(filter, ws.UserSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = &datastore.Where{
-			Logical:    datastore.WhereLogical(filter.Logical),
-			Conditions: make([]datastore.WhereCondition, len(filter.Conditions)),
-		}
-		for i, condition := range filter.Conditions {
-			where.Conditions[i] = (datastore.WhereCondition)(condition)
-		}
+		where = convertFilterToWhere(filter, ws.UserSchema)
 	}
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
@@ -1620,7 +1615,7 @@ func (this *Workspace) WarehouseSettings() (WarehouseType, []byte) {
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) userIdentities(ctx context.Context, where *datastore.Where, first, limit int) ([]UserIdentity, int, error) {
+func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, first, limit int) ([]UserIdentity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
 	records, count, err := this.store.UserIdentities(ctx, datastore.Query{

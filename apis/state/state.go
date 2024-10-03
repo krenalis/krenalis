@@ -1072,7 +1072,7 @@ type Action struct {
 	SchedulePeriod           int16
 	InSchema                 types.Type
 	OutSchema                types.Type
-	Filter                   *Filter
+	Filter                   *Where
 	Transformation           Transformation
 	Query                    string
 	Path                     string
@@ -1187,23 +1187,6 @@ func (ex *ActionExecution) Storage() (*Connection, bool) {
 	s := ex.storage
 	ex.mu.Unlock()
 	return s, s != nil
-}
-
-// Filter represents a filter.
-type Filter struct {
-	Logical    FilterLogical     // can be "all" or "any".
-	Conditions []FilterCondition // cannot be empty.
-}
-
-// FilterLogical represents the logical operator of a filter.
-// It can be "all" or "any".
-type FilterLogical string
-
-// FilterCondition represents the condition of a filter.
-type FilterCondition struct {
-	Property string // A property identifier or selector (e.g. "street1" or "traits.address.street1").
-	Operator string // "is", "is not".
-	Value    string // "Track", "Page", ...
 }
 
 // Connection returns the connection of the action.

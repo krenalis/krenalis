@@ -239,7 +239,7 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 	}
 	defer done()
 	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpEqual, action)
+		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, action)
 	return store.warehouse.Delete(ctx, "_user_identities", where)
 }
 
@@ -358,11 +358,11 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 		return err
 	}
 	defer done()
-	value := make([]any, len(actions))
+	values := make([]any, len(actions))
 	for i, action := range actions {
-		value[i] = action
+		values[i] = action
 	}
-	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIn, value)
+	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
 	err = store.warehouse.Delete(ctx, "_user_identities", where)
 	if err != nil {
 		return err

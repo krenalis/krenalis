@@ -5,18 +5,35 @@ import {
 	ActionType,
 	ExportMode,
 	ExpressionToBeExtracted,
+	Filter,
+	FilterCondition,
+	FilterOperator,
 	Mapping,
 	MatchingProperties,
 	SchedulePeriod,
 	TransformationFunction,
 	TransformationPurpose,
 } from '../api/types/action';
-import { Filter, ConnectorValues } from '../api/types/responses';
+import { ConnectorValues } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
-import { FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
+import Type, { ArrayType, FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
+import {
+	formatText,
+	isDate,
+	isDateTime,
+	isDecimal,
+	isFloat,
+	isInet,
+	isInt,
+	isUint,
+	isUUID,
+	isValidPropertyPath,
+	isYear,
+	parseText,
+} from '../../utils/filters';
 
 const SCHEDULE_PERIODS = {
 	5: '5m',
@@ -30,6 +47,94 @@ const SCHEDULE_PERIODS = {
 	720: '12h',
 	1440: '24h',
 };
+
+const FILTER_OPERATORS: FilterOperator[] = [
+	'is',
+	'is not',
+	'is less than',
+	'is less than or equal to',
+	'is greater than',
+	'is greater than or equal to',
+	'is between',
+	'is not between',
+	'contains',
+	'does not contain',
+	'is one of',
+	'is not one of',
+	'starts with',
+	'ends with',
+	'is before',
+	'is on or before',
+	'is after',
+	'is on or after',
+	'is true',
+	'is false',
+	'is null',
+	'is not null',
+	'exists',
+	'does not exist',
+];
+
+const typesByFilterOperator: string[][] = [
+	['Int', 'Uint', 'Float', 'Decimal', 'DateTime', 'Date', 'Time', 'Year', 'UUID', 'JSON', 'Inet', 'Text'], // is
+	['Int', 'Uint', 'Float', 'Decimal', 'DateTime', 'Date', 'Time', 'Year', 'UUID', 'JSON', 'Inet', 'Text'], // is not
+	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is less than
+	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is less than or equal to
+	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is greater than
+	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is greater than or equal to
+	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is between
+	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is not between
+	['JSON', 'Text', 'Array'], // contains
+	['JSON', 'Text', 'Array'], // does not contain
+	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is one of
+	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is not one of
+	['JSON', 'Text'], // starts with
+	['JSON', 'Text'], // ends with
+	['DateTime', 'Date', 'Time', 'Year'], // is before
+	['DateTime', 'Date', 'Time', 'Year'], // is on or before
+	['DateTime', 'Date', 'Time', 'Year'], // is after
+	['DateTime', 'Date', 'Time', 'Year'], // is on or after
+	['Boolean', 'JSON'], // is true
+	['Boolean', 'JSON'], // is false
+	[
+		'Boolean',
+		'Int',
+		'Uint',
+		'Float',
+		'Decimal',
+		'DateTime',
+		'Date',
+		'Year',
+		'Time',
+		'UUID',
+		'JSON',
+		'Inet',
+		'Text',
+		'Array',
+		'Object',
+		'Map',
+	], // is null
+	[
+		'Boolean',
+		'Int',
+		'Uint',
+		'Float',
+		'Decimal',
+		'DateTime',
+		'Date',
+		'Year',
+		'Time',
+		'UUID',
+		'JSON',
+		'Inet',
+		'Text',
+		'Array',
+		'Object',
+		'Map',
+	], // is not null
+	['JSON'], // exists
+	['JSON'], // does not exist
+];
 
 type TransformedExportMode = 'Create and update' | 'Create only' | 'Update only';
 
@@ -118,6 +223,101 @@ interface TransformedAction {
 	Compression?: Compression;
 	Connector?: string;
 }
+
+const getCompatibleFilterOperators = (property: TransformedProperty): number[] => {
+	if (property == null) {
+		return [];
+	}
+	const operators: number[] = [];
+	for (const i of Object.keys(FILTER_OPERATORS)) {
+		// 'is null' and 'is not null' are compatible only with nullable
+		// properties or JSON type properties.
+		if (FILTER_OPERATORS[i] === 'is null' || FILTER_OPERATORS[i] === 'is not null') {
+			const isNullable = property.full.nullable === true;
+			const isJSON = property.type === 'JSON';
+			if (!isNullable && !isJSON) {
+				continue;
+			}
+		}
+
+		// 'contains' and 'does not contain' should only be shown if the type of
+		// the Array element is supported by the 'is' operator.
+		if (
+			(FILTER_OPERATORS[i] === 'contains' || FILTER_OPERATORS[i] === 'does not contain') &&
+			property.type === 'Array'
+		) {
+			const elementType = (property.full.type as ArrayType).elementType;
+			const isOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === 'is');
+			if (!typesByFilterOperator[isOperatorIndex].includes(elementType.name)) {
+				continue;
+			}
+		}
+
+		if (typesByFilterOperator[i].includes(property.type)) {
+			operators.push(Number(i));
+		}
+	}
+	return operators;
+};
+
+const isUnaryOperator = (operator: string): boolean => {
+	return (
+		operator === 'is true' ||
+		operator === 'is false' ||
+		operator === 'is null' ||
+		operator === 'is not null' ||
+		operator === 'exists' ||
+		operator === 'does not exist'
+	);
+};
+
+const isBetweenOperator = (operator: string): boolean => {
+	return operator === 'is between' || operator === 'is not between';
+};
+
+const isOneOfOperator = (operator: string): boolean => {
+	return operator === 'is one of' || operator === 'is not one of';
+};
+
+const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMapping): [string, string] => {
+	const name = propertyName.trim();
+
+	const split = name.split('.');
+	let base = '';
+	for (const s of split) {
+		let b = '';
+		if (base === '') {
+			b = s;
+		} else {
+			b = `${base}.${s}`;
+		}
+		if (flatSchema[b] != null) {
+			base = b;
+		} else {
+			break;
+		}
+	}
+
+	let path = '';
+	if (base !== '') {
+		path = name.replace(base, '');
+		if (path !== '' && path.startsWith('.')) {
+			// remove the initial period.
+			path = path.slice(1);
+		}
+	}
+
+	const property = flatSchema[base];
+	const isJSON = property?.type === 'JSON';
+	if (!isJSON && path !== '') {
+		// handle cases where the user has typed an invalid subproperty and for
+		// this reason the subproperty name was incorrectly considered as a
+		// path.
+		return ['', ''];
+	}
+
+	return [base, path];
+};
 
 const hasTransformationFunction = (action: ActionToSet) => {
 	return action.transformation?.Function != null;
@@ -358,6 +558,25 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		};
 	}
 
+	if (action.Filter) {
+		const conditions: FilterCondition[] = [];
+		for (const condition of action.Filter.Conditions) {
+			let cond = { ...condition };
+			let values: string[] | null = [];
+			if (condition.Values == null) {
+				values = null;
+			} else {
+				for (const v of condition.Values) {
+					const formatted = formatText(v);
+					values.push(formatted);
+				}
+			}
+			cond.Values = values;
+			conditions.push(cond);
+		}
+		action.Filter.Conditions = conditions;
+	}
+
 	return {
 		ID: action.ID,
 		Connection: action.Connection,
@@ -584,20 +803,86 @@ const transformInActionToSet = async (
 		}
 	}
 
+	let filter: Filter = null;
 	if (action.Filter != null) {
 		if (inSchema == null) {
 			inSchema = { name: 'Object', properties: [] };
 		}
-		for (const condition of action.Filter.Conditions) {
+
+		let f = { Logical: action.Filter.Logical, Conditions: [] };
+
+		// Exclude conditions that have empty properties.
+		let conditions = action.Filter.Conditions.filter((condition) => condition.Property !== '');
+
+		for (const condition of conditions) {
 			const propertyName = condition.Property;
-			const isPropertyAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === propertyName) !== -1;
-			if (!isPropertyAlreadyInSchema) {
-				const property = flattenedInputSchema[propertyName];
-				if (property == null) {
-					throw new Error('Filter property must be a valid property');
-				}
-				inSchema.properties.push(property.full);
+			const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
+			const property = flattenedInputSchema[base];
+
+			if (property == null) {
+				throw new Error(`Property "${propertyName}" does not exist`);
 			}
+
+			if (property.type === 'JSON' && path.trim() !== '') {
+				const isValid = isValidPropertyPath(path);
+				if (!isValid) {
+					throw new Error(`Property path "${path}" of filter condition is not valid`);
+				}
+			}
+
+			if (condition.Operator == '') {
+				throw new Error(`Operator of filter condition is required`);
+			}
+
+			let isJsonOrText = property.type === 'JSON' || property.type === 'Text';
+			if (property.type === 'Array') {
+				const typ = property.full.type as ArrayType;
+				if (typ.elementType.name === 'JSON' || typ.elementType.name === 'Text') {
+					isJsonOrText = true;
+				}
+			}
+
+			let values: string[] | null = [];
+			if (isJsonOrText && condition.Values != null) {
+				for (const [i, v] of condition.Values.entries()) {
+					if ((i === 0 && v === '') || (i === 1 && v === '' && isBetweenOperator(condition.Operator))) {
+						throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
+					}
+					if (v === '') {
+						// discard empty values.
+						continue;
+					}
+					let parsed: string;
+					try {
+						parsed = parseText(v);
+					} catch (err) {
+						throw new Error(`Value "${v}" of filter condition is not valid: ${err.message}`);
+					}
+					values.push(parsed);
+				}
+			} else {
+				values = condition.Values;
+			}
+
+			try {
+				validateFilterConditionValues(property.full.type, condition.Values, propertyName);
+			} catch (err) {
+				throw err;
+			}
+
+			const rootProperty = flattenedInputSchema[property.root].full;
+			const isPropertyAlreadyInSchema =
+				inSchema.properties!.findIndex((p) => p.name === rootProperty.name) !== -1;
+			if (!isPropertyAlreadyInSchema) {
+				inSchema.properties.push(rootProperty);
+			}
+
+			const c: FilterCondition = { Property: condition.Property, Operator: condition.Operator, Values: values };
+			f.Conditions.push(c);
+		}
+
+		if (f.Conditions.length > 0) {
+			filter = f;
 		}
 	}
 
@@ -688,7 +973,7 @@ const transformInActionToSet = async (
 	const actionToSet: ActionToSet = {
 		name: action.Name,
 		enabled: action.Enabled,
-		filter: action.Filter,
+		filter: filter,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: {
@@ -862,8 +1147,47 @@ const getTransformationFunctionParameterName = (
 	}
 };
 
+const validateFilterConditionValues = (type: Type, values: string[] | null, propertyName: string) => {
+	const throwIfInvalid = (isValid: boolean, typeName: string) => {
+		if (!isValid) {
+			throw new Error(`The filter value on the property "${propertyName}" is not a valid ${typeName}`);
+		}
+	};
+
+	if (values == null) {
+		return;
+	}
+
+	for (const v of values) {
+		if (type.name === 'Int') {
+			throwIfInvalid(isInt(v), type.name);
+		} else if (type.name === 'Uint') {
+			throwIfInvalid(isUint(v), type.name);
+		} else if (type.name === 'Float') {
+			throwIfInvalid(isFloat(v, type.bitSize), type.name);
+		} else if (type.name === 'Decimal') {
+			throwIfInvalid(isDecimal(v), type.name);
+		} else if (type.name === 'DateTime') {
+			throwIfInvalid(isDateTime(v), type.name);
+		} else if (type.name === 'Date') {
+			throwIfInvalid(isDate(v), type.name);
+		} else if (type.name === 'Year') {
+			throwIfInvalid(isYear(v), type.name);
+		} else if (type.name === 'UUID') {
+			throwIfInvalid(isUUID(v), type.name);
+		} else if (type.name === 'Inet') {
+			throwIfInvalid(isInet(v), type.name);
+		} else if (type.name === 'Array') {
+			if (type.elementType.name !== 'JSON' && type.elementType.name !== 'Text') {
+				validateFilterConditionValues(type.elementType, [v], propertyName);
+			}
+		}
+	}
+};
+
 export {
 	SCHEDULE_PERIODS,
+	FILTER_OPERATORS,
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	computeDefaultAction,
@@ -871,6 +1195,11 @@ export {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
+	getCompatibleFilterOperators,
+	isUnaryOperator,
+	isBetweenOperator,
+	isOneOfOperator,
+	splitPropertyAndPath,
 	doesLastChangeTimePropertyNeedFormat,
 	getTransformationFunctionParameterName,
 };

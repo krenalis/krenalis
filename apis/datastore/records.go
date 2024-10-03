@@ -83,8 +83,8 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 				Type:  warehouses.Inner,
 				Table: "_destinations_users",
 				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpEqual, matching.Action),
-					warehouses.NewBaseExpr(c, warehouses.OpEqual, warehouses.Column{Name: "__property__", Type: types.Text()}),
+					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, matching.Action),
+					warehouses.NewBaseExpr(c, warehouses.OpIs, warehouses.Column{Name: "__property__", Type: types.Text()}),
 				}),
 			},
 		}
@@ -92,7 +92,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 			// Use a Left JOIN instead.
 			joins[0].Type = warehouses.Left
 			// Add 'property IS NOT NULL' to the WHERE condition to exclude users with a NULL value for the matching property.
-			expr := warehouses.NewBaseExpr(c, warehouses.OpIsNotNull, nil)
+			expr := warehouses.NewBaseExpr(c, warehouses.OpIsNotNull)
 			if where == nil {
 				where = expr
 			} else if w, ok := where.(*warehouses.MultiExpr); ok && w.Operator == warehouses.OpAnd {
@@ -102,7 +102,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 			}
 			if matching.ExportMode == state.CreateOnly {
 				// Add '__action__ IS NULL' to the WHERE condition to include only users without a corresponding match.
-				expr = warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull, nil)
+				expr = warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull)
 				if w, ok := where.(*warehouses.MultiExpr); ok && w.Operator == warehouses.OpAnd {
 					w.Operands = append(w.Operands, expr)
 				} else {

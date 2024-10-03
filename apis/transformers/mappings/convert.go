@@ -1081,11 +1081,13 @@ func jsonToYear(v any) (int, error) {
 	return 0, errInvalidConversion
 }
 
-// parseTime parses a time formatted as "hh:nn:ss.nnnnnnnnn" and returns it as
+// parseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as
 // the time on January 1, 1970 UTC. The sub-second part can contain from 1 to 9
 // digits or can be missing. The hour must be in range [0, 23], minute and second
 // must be in range [0, 59], and any trailing characters are discarded.
 // The boolean return value indicates whether the time was successfully parsed.
+//
+// Keep in sync with the parseTime function in the apis package.
 func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 	if len(p) < 8 {
 		return

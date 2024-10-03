@@ -22,6 +22,8 @@ interface ComboboxProps {
 	className?: string;
 	error?: string;
 	caret?: boolean;
+	controlled?: boolean;
+	autoResize?: boolean;
 	disabled?: boolean;
 	children?: ReactNode;
 	[key: string]: any;
@@ -40,7 +42,9 @@ const Combobox = ({
 	isExpression,
 	className,
 	error,
-	caret,
+	caret = false,
+	controlled = false,
+	autoResize,
 	disabled,
 	children,
 	...rest
@@ -48,14 +52,16 @@ const Combobox = ({
 	const [value, setValue] = useState<string>(initialValue);
 	const [cursorPosition, setCursorPosition] = useState<number>();
 	const [isOpen, setIsOpen] = useState<boolean>(false);
+	const [listWidth, setListWidth] = useState<number>();
 
 	const inputRef = useRef<any>();
 	const listRef = useRef<any>();
+	const tabGroupRef = useRef<any>();
 
-	const updateCursorPosition = () => {
+	const updateCursorPosition = (setStart?: boolean) => {
 		const inputElement = inputRef.current?.input;
 		if (inputElement) {
-			setCursorPosition(inputElement.selectionStart);
+			setCursorPosition(setStart ? 0 : inputElement.selectionStart);
 		}
 	};
 
@@ -63,6 +69,7 @@ const Combobox = ({
 		if (
 			['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)
 		) {
+			setIsOpen(true);
 			updateCursorPosition();
 		} else if (event.key === 'Escape') {
 			setIsOpen(false);
@@ -71,7 +78,12 @@ const Combobox = ({
 
 	const onClick = () => {
 		setIsOpen(true);
-		updateCursorPosition();
+		if (isExpression) {
+			updateCursorPosition();
+		} else {
+			// Set the cursor to the start to show every item in the list.
+			updateCursorPosition(true);
+		}
 	};
 
 	useEffect(() => {
@@ -101,6 +113,69 @@ const Combobox = ({
 	}, [inputRef.current]);
 
 	useEffect(() => {
+		if (inputRef.current == null || !caret) {
+			return;
+		}
+
+		setTimeout(() => {
+			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="suffix"]');
+			inputSuffix.addEventListener('click', () => {
+				inputRef.current.focus();
+				setIsOpen(true);
+				updateCursorPosition(true);
+			});
+		});
+	}, [inputRef.current, caret]);
+
+	useEffect(() => {
+		if (controlled) {
+			setValue(initialValue);
+			if (autoResize) {
+				// Resize the combobox after a delay to allow the shadow DOM to
+				// fully load.
+				setTimeout(() => {
+					resizeCombobox();
+				}, 50);
+			}
+		}
+	}, [initialValue]);
+
+	useEffect(() => {
+		if (!isOpen || listRef.current == null || listWidth != null) {
+			return;
+		}
+		setTimeout(() => {
+			// See if the list is overflowing the width of the input and in that
+			// case expand the list to avoid horizontal scrollbar.
+			let maxItemWidth = 0;
+			const menu = listRef.current;
+			const menuItems = menu.querySelectorAll('sl-menu-item');
+			for (const item of menuItems) {
+				const contentWidth = item.children[0].offsetWidth;
+				const w = 70 + contentWidth; // 70 is the width of suffix plus prefix elements.
+				if (w > maxItemWidth) {
+					maxItemWidth = w;
+				}
+			}
+			const inputWidth = inputRef.current.offsetWidth;
+			const isOverflowing = inputWidth < maxItemWidth;
+			if (isOverflowing) {
+				setListWidth(maxItemWidth + 30); // Insert additional spacing.
+			}
+		});
+	}, [items, isOpen]);
+
+	useEffect(() => {
+		if (autoResize) {
+			// Resize the combobox after a delay to allow the shadow DOM to
+			// fully load.
+			setTimeout(() => {
+				resizeCombobox();
+			}, 50);
+		}
+	}, []);
+
+	useEffect(() => {
 		const onPageClick = (e) => {
 			const target = e.target;
 			const isInCombobox = target.closest('.combobox') != null;
@@ -116,8 +191,6 @@ const Combobox = ({
 			window.removeEventListener('click', onPageClick);
 		};
 	}, []);
-
-	useEffect(() => {}, [value, cursorPosition, items]);
 
 	const onInput = (e) => {
 		if (!isOpen) {
@@ -150,6 +223,30 @@ const Combobox = ({
 		onInputFunc(name, newValue);
 	};
 
+	const resizeCombobox = () => {
+		const text = inputRef.current.value;
+		const canvas = document.createElement('canvas');
+		const context = canvas.getContext('2d');
+		const inputElement = inputRef.current.shadowRoot.querySelector('input');
+		if (inputElement == null) {
+			return;
+		}
+		const style = window.getComputedStyle(inputElement);
+		context.font = style.font;
+		let textWidth = context.measureText(text).width;
+		if (textWidth === 0) {
+			textWidth = 100; // min width.
+		}
+		const wrapper = inputRef.current.closest('.combobox');
+		wrapper.style.width = `${textWidth + 50}px`;
+	};
+
+	const onInputBlur = () => {
+		if (autoResize) {
+			resizeCombobox();
+		}
+	};
+
 	let functionItems = useMemo(() => {
 		if (!isExpression) {
 			return [];
@@ -158,7 +255,7 @@ const Combobox = ({
 	}, []);
 
 	let fragment = useMemo(() => {
-		return parseMapExpression(value, cursorPosition);
+		return parseMapExpression(value == null ? '' : value, cursorPosition);
 	}, [value, cursorPosition, items]);
 
 	let { filteredProperties, filteredFunctions } = useMemo(() => {
@@ -218,10 +315,21 @@ const Combobox = ({
 				val = `${expressionStart}${expressionEnd}`;
 			}
 		}
-
+		if (type === 'property' && fragment.func == null) {
+			// if a property has been selected and is not an argument for a
+			// function, the combobox list can be closed.
+			setIsOpen(false);
+		} else if (type === 'function') {
+			// probably now the user wants to select a property to pass as
+			// argument to the function.
+			tabGroupRef.current.show('properties');
+		}
 		setValue(val);
 		inputRef.current.focus();
 		setTimeout(() => {
+			if (autoResize) {
+				resizeCombobox();
+			}
 			inputRef.current.setSelectionRange(position, position);
 			updateCursorPosition();
 		});
@@ -234,7 +342,7 @@ const Combobox = ({
 
 	return (
 		<div
-			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}`}
+			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${className ? ` ${className}` : ''}`}
 			data-id={name}
 		>
 			<div className='combobox-input'>
@@ -242,7 +350,7 @@ const Combobox = ({
 					data-is-combobox-input
 					value={value}
 					onSlInput={disabled ? undefined : onInput}
-					className={className}
+					onSlBlur={onInputBlur}
 					disabled={disabled}
 					autocomplete='off'
 					ref={inputRef}
@@ -259,7 +367,12 @@ const Combobox = ({
 				{error && <div className='combobox-input__error'>{error}</div>}
 			</div>
 			{isOpen && (
-				<SlMenu data-is-combobox-list className='combobox-list' ref={listRef}>
+				<SlMenu
+					data-is-combobox-list
+					className='combobox-list'
+					ref={listRef}
+					style={listWidth != null ? { width: `${listWidth}px` } : null}
+				>
 					{isExpression && selectedFunction != null && (
 						<div className='combobox-list__function'>
 							<div className='combobox-list__function-signature'>
@@ -286,7 +399,7 @@ const Combobox = ({
 					{((filteredProperties != null && filteredProperties.length > 0) ||
 						(filteredFunctions != null && filteredFunctions.length > 0)) &&
 					isExpression ? (
-						<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick}>
+						<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
 							<SlTab slot='nav' panel='properties'>
 								Properties ({filteredProperties.length})
 							</SlTab>

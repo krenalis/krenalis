@@ -16,7 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/types"
@@ -254,13 +253,13 @@ func Test_validateAction(t *testing.T) {
 			name: "GOOD: Destination/App/Users - with mapping and filters",
 			action: ActionToSet{
 				Name: "Export users",
-				Filter: &filters.Filter{
-					Logical: "all",
-					Conditions: []filters.Condition{
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
 						{
 							Property: "email_in",
-							Operator: "is not",
-							Value:    "a@b",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
 						},
 					},
 				},
@@ -1005,13 +1004,13 @@ func Test_validateAction(t *testing.T) {
 			name: "BAD: Source/App/Users - filters are not allowed",
 			action: ActionToSet{
 				Name: "Import users",
-				Filter: &filters.Filter{
-					Logical: "all",
-					Conditions: []filters.Condition{
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
 						{
 							Property: "email_in",
-							Operator: "is",
-							Value:    "a@b",
+							Operator: OpIs,
+							Values:   []string{"a@b"},
 						},
 					},
 				},
@@ -1934,13 +1933,13 @@ func Test_validateAction(t *testing.T) {
 			name: "BAD: Destination/App/Users - filter refers to a property not in input schema",
 			action: ActionToSet{
 				Name: "Export users",
-				Filter: &filters.Filter{
-					Logical: "all",
-					Conditions: []filters.Condition{
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
 						{
 							Property: "__id__",
-							Operator: "is not",
-							Value:    "a@b",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
 						},
 					},
 				},
@@ -1971,13 +1970,13 @@ func Test_validateAction(t *testing.T) {
 			name: "BAD: Destination/App/Users - filter refers to a meta property in input schema",
 			action: ActionToSet{
 				Name: "Export users",
-				Filter: &filters.Filter{
-					Logical: "all",
-					Conditions: []filters.Condition{
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
 						{
 							Property: "__id__",
-							Operator: "is not",
-							Value:    "a@b",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
 						},
 					},
 				},

@@ -29,11 +29,11 @@ func NewMultiExpr(operator LogicalOperator, operands []Expr) *MultiExpr {
 }
 
 // LogicalOperator represents the logical operator of a MultiExpr.
-type LogicalOperator string
+type LogicalOperator int
 
 const (
-	OpAnd LogicalOperator = "And"
-	OpOr  LogicalOperator = "Or"
+	OpAnd LogicalOperator = iota
+	OpOr
 )
 
 // BaseExpr represents an SQL expression that refers to a property, on which an
@@ -41,30 +41,42 @@ const (
 type BaseExpr struct {
 	Column   Column
 	Operator Operator
-	Value    any // may be nil for unary expressions.
+	Values   []any // may be nil for unary expressions.
 }
 
 func (*BaseExpr) expr() {}
 
 // NewBaseExpr returns a new BaseExpr expression that applies to the given
-// column with the given operator and value.
+// column with the given operator and values.
 // If the operator is unary, value should be nil.
-func NewBaseExpr(column Column, operator Operator, value any) *BaseExpr {
-	return &BaseExpr{Column: column, Operator: operator, Value: value}
+func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
+	return &BaseExpr{Column: column, Operator: operator, Values: values}
 }
 
 // Operator presents a unary or binary operator of a BaseExpr.
-type Operator string
+type Operator int
 
 const (
-	OpEqual        Operator = "Equal"
-	OpNotEqual     Operator = "NotEqual"
-	OpGreater      Operator = "Greater"
-	OpGreaterEqual Operator = "GreaterEqual"
-	OpLess         Operator = "Less"
-	OpLessEqual    Operator = "LessEqual"
-	OpIsNull       Operator = "IsNull"
-	OpIsNotNull    Operator = "IsNotNull"
-	OpIn           Operator = "In"
-	OpNotIn        Operator = "NotIn"
+	OpIs                     Operator = iota // is
+	OpIsNot                                  // is not
+	OpIsLessThan                             // is less than
+	OpIsLessThanOrEqualTo                    // is less than or equal to
+	OpIsGreaterThan                          // is greater than
+	OpIsGreaterThanOrEqualTo                 // is greater than or equal to
+	OpIsBetween                              // is between
+	OpIsNotBetween                           // is not between
+	OpContains                               // contains
+	OpDoesNotContain                         // does not contain
+	OpIsOneOf                                // is one of
+	OpIsNotOneOf                             // is not one of
+	OpStartsWith                             // starts with
+	OpEndsWith                               // ends with
+	OpIsBefore                               // is before
+	OpIsOnOrBefore                           // is on or before
+	OpIsAfter                                // is after
+	OpIsOnOrAfter                            // is on or after
+	OpIsTrue                                 // is true
+	OpIsFalse                                // is false
+	OpIsNull                                 // is null
+	OpIsNotNull                              // is not null
 )

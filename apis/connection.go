@@ -512,20 +512,9 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		n.Transformation.OutProperties = m.OutProperties()
 	}
 
-	// Add the filter to the notification and marshal it.
-	var filter []byte
+	// Add the filter to the notification.
 	if action.Filter != nil {
-		n.Filter = &state.Filter{
-			Logical:    state.FilterLogical(action.Filter.Logical),
-			Conditions: make([]state.FilterCondition, len(action.Filter.Conditions)),
-		}
-		for i, condition := range action.Filter.Conditions {
-			n.Filter.Conditions[i] = (state.FilterCondition)(condition)
-		}
-		filter, err = json.Marshal(action.Filter)
-		if err != nil {
-			return 0, err
-		}
+		n.Filter, _ = convertFilterToWhere(action.Filter, inSchema).MarshalJSON()
 	}
 
 	// Determine the connector name, for file actions.
@@ -642,7 +631,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-			string(filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
+			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
 			n.Transformation.InProperties, n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet,
 			n.Compression, string(n.Settings), n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty,
 			n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
@@ -1012,10 +1001,10 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 		store:     this.store,
 		workspace: this.connection.Workspace(),
 	}
-	where := &datastore.Where{Logical: "all", Conditions: []datastore.WhereCondition{{
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
 		Property: "__connection__",
-		Operator: "is",
-		Value:    strconv.Itoa(this.connection.ID),
+		Operator: state.OpIs,
+		Values:   []any{strconv.Itoa(this.connection.ID)},
 	}}}
 	identities, count, err := apisWs.userIdentities(ctx, where, first, limit)
 	if err != nil {

@@ -9,6 +9,7 @@
 	--text-primary: var(--sl-color-neutral-900);
 	--text-onaccent: var(--sl-color-neutral-0);
 	--text-gray: var(--sl-color-neutral-400);
+	--text-light: #616161;
 	--border-primary: #e6e6e6;
 	--radius: 5px;
 
@@ -38,6 +39,8 @@
 	--color-primary-900: var(--sl-color-primary-900);
 	--color-primary-950: var(--sl-color-primary-950);
 
+	--sl-input-color: var(--text-light) !important;
+
 	background-color: var(--bg-primary);
 }
 
@@ -50,13 +53,15 @@ body,
 
 *,
 *::before,
-*::after {
+*::after,
+*::placeholder {
 	font-family: 'DM Sans', sans-serif;
 	box-sizing: border-box;
 	outline-color: var(--color-primary-500);
 }
 
-*::part(base) {
+*::part(base),
+*::part(display-input) {
 	font-family: 'DM Sans', sans-serif;
 }
 
@@ -239,6 +244,12 @@ sl-drawer::part(body)::-webkit-scrollbar-track {
 	background: transparent;
 }
 
+sl-input::part(input)::placeholder,
+sl-textarea::part(textarea)::placeholder {
+	color: var(--sl-color-neutral-400);
+	font-weight: 400;
+}
+
 /* || Forms */
 
 sl-select::part(control) {
@@ -247,14 +258,14 @@ sl-select::part(control) {
 
 ::part(form-control-label) {
 	font-weight: 300;
-	color: #616161;
+	color: var(--text-light);
 	padding-bottom: 4px;
 	margin-left: 1px;
 }
 
 sl-switch::part(label) {
 	font-weight: 300;
-	color: #616161;
+	color: var(--text-light);
 }
 
 /* || Panels */
@@ -379,14 +390,15 @@ sl-split-panel sl-icon[slot='divider'] {
 	gap: 10px;
 }
 
-.schema-combobox-item__name {
+.schema-combobox-item__text {
 	font-size: 13px;
-	opacity: 0.8;
+}
+
+.schema-combobox-item__label {
+	font-weight: 600;
 }
 
 .schema-combobox-item__type {
 	font-size: 18px;
 	opacity: 0.8;
-	position: relative;
-	top: 2px;
 }

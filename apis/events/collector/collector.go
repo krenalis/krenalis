@@ -35,6 +35,7 @@ import (
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/events/dispatcher"
+	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
@@ -317,8 +318,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				continue
 			}
 			properties := event.AsProperties()
-			ok, err := filterApplies(action.Filter, properties)
-			if err != nil || !ok {
+			if !filters.Applies(action.Filter, properties) {
 				continue
 			}
 			// If the action has a transformation, apply it to the event and
@@ -694,8 +694,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	for _, action := range c.eventDestinations(source) {
 		for _, event := range batch {
 			properties := event.AsProperties()
-			ok, err := filterApplies(action.Filter, properties)
-			if err != nil || !ok {
+			if !filters.Applies(action.Filter, properties) {
 				continue
 			}
 			c.dispatcher.Dispatch(event, action)

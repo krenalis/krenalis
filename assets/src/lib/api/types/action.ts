@@ -1,4 +1,4 @@
-import { Filter, ConnectorValues } from './responses';
+import { ConnectorValues } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType, Property } from './types';
 
@@ -35,6 +35,45 @@ interface ExpressionToBeExtracted {
 interface MatchingProperties {
 	Internal: string;
 	External: Property | null;
+}
+
+type FilterLogical = 'and' | 'or';
+
+type FilterOperator =
+	| 'is'
+	| 'is not'
+	| 'is less than'
+	| 'is less than or equal to'
+	| 'is greater than'
+	| 'is greater than or equal to'
+	| 'is between'
+	| 'is not between'
+	| 'contains'
+	| 'does not contain'
+	| 'is one of'
+	| 'is not one of'
+	| 'starts with'
+	| 'ends with'
+	| 'is before'
+	| 'is on or before'
+	| 'is after'
+	| 'is on or after'
+	| 'is true'
+	| 'is false'
+	| 'is null'
+	| 'is not null'
+	| 'exists'
+	| 'does not exist';
+
+interface FilterCondition {
+	Property: string;
+	Operator: FilterOperator | '';
+	Values: string[] | null;
+}
+
+interface Filter {
+	Logical: FilterLogical;
+	Conditions: FilterCondition[];
 }
 
 interface Action {
@@ -120,6 +159,10 @@ export type {
 	ExportMode,
 	MatchingProperties,
 	SchedulePeriod,
+	Filter,
+	FilterOperator,
+	FilterLogical,
+	FilterCondition,
 	Action,
 	ActionType,
 	ActionToSet,

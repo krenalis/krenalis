@@ -65,55 +65,101 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
-	// Render the column identifier.
-	b.WriteString(postgres.QuoteIdent(c.Name))
-	b.WriteString(" ")
-
-	// Render the operator and, if necessary, the value.
-	switch baseExpr.Operator {
+	// Render the column identifier, the operator, and, if necessary, the values.
+	switch op := baseExpr.Operator; op {
 	case
-		warehouses.OpEqual,
-		warehouses.OpNotEqual,
-		warehouses.OpGreater,
-		warehouses.OpGreaterEqual,
-		warehouses.OpLess,
-		warehouses.OpLessEqual:
+		warehouses.OpIs,
+		warehouses.OpIsNot,
+		warehouses.OpIsLessThan,
+		warehouses.OpIsLessThanOrEqualTo,
+		warehouses.OpIsGreaterThan,
+		warehouses.OpIsGreaterThanOrEqualTo,
+		warehouses.OpIsBefore,
+		warehouses.OpIsOnOrBefore,
+		warehouses.OpIsAfter,
+		warehouses.OpIsOnOrAfter:
 
-		switch baseExpr.Operator {
-		case warehouses.OpEqual:
-			b.WriteString("= ")
-		case warehouses.OpNotEqual:
-			b.WriteString("<> ")
-		case warehouses.OpGreater:
-			b.WriteString("> ")
-		case warehouses.OpGreaterEqual:
-			b.WriteString(">= ")
-		case warehouses.OpLess:
-			b.WriteString("< ")
-		case warehouses.OpLessEqual:
-			b.WriteString("<= ")
+		b.WriteString(postgres.QuoteIdent(c.Name))
+
+		switch op {
+		case warehouses.OpIs:
+			b.WriteString(" = ")
+		case warehouses.OpIsNot:
+			b.WriteString(" <> ")
+		case warehouses.OpIsLessThan, warehouses.OpIsBefore:
+			b.WriteString(" < ")
+		case warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsOnOrBefore:
+			b.WriteString(" <= ")
+		case warehouses.OpIsGreaterThan, warehouses.OpIsAfter:
+			b.WriteString(" > ")
+		case warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsOnOrAfter:
+			b.WriteString(" >= ")
 		}
-		serializeValue(b, baseExpr.Value, c.Type)
+		serializeValue(b, baseExpr.Values[0], c.Type)
 
-	case warehouses.OpIsNull:
-		b.WriteString("IS NULL")
+	case warehouses.OpIsBetween, warehouses.OpIsNotBetween:
+		b.WriteString(postgres.QuoteIdent(c.Name))
+		if op == warehouses.OpIsNotBetween {
+			b.WriteString(" NOT")
+		}
+		b.WriteString(" BETWEEN ")
+		serializeValue(b, baseExpr.Values[0], c.Type)
+		b.WriteString(" AND ")
+		serializeValue(b, baseExpr.Values[1], c.Type)
 
-	case warehouses.OpIsNotNull:
-		b.WriteString("IS NOT NULL")
+	case warehouses.OpContains, warehouses.OpDoesNotContain:
+		if op == warehouses.OpDoesNotContain {
+			b.WriteString("NOT ")
+		}
+		b.WriteString("CONTAINS(")
+		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(", ")
+		serializeValue(b, baseExpr.Values[0], c.Type)
+		b.WriteString(")")
 
-	case warehouses.OpNotIn:
-		b.WriteString(" NOT ")
-		fallthrough
-
-	case warehouses.OpIn:
-		b.WriteString("IN (")
-		for i, v := range baseExpr.Value.([]any) {
+	case warehouses.OpIsOneOf, warehouses.OpIsNotOneOf:
+		b.WriteString(postgres.QuoteIdent(c.Name))
+		if op == warehouses.OpIsOneOf {
+			b.WriteString(" IN (")
+		} else {
+			b.WriteString(" NOT IN (")
+		}
+		for i, v := range baseExpr.Values {
 			if i > 0 {
 				b.WriteByte(',')
 			}
 			serializeValue(b, v, c.Type)
 		}
 		b.WriteString(")")
+
+	case warehouses.OpStartsWith, warehouses.OpEndsWith:
+		if op == warehouses.OpStartsWith {
+			b.WriteString("STARTSWITH(")
+		} else {
+			b.WriteString("ENDSWITH(")
+		}
+		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(", ")
+		serializeValue(b, baseExpr.Values[0], c.Type)
+		b.WriteString(")")
+
+	case warehouses.OpIsTrue:
+		b.WriteString(postgres.QuoteIdent(c.Name))
+
+	case warehouses.OpIsFalse:
+		b.WriteString("NOT ")
+		b.WriteString(postgres.QuoteIdent(c.Name))
+
+	case warehouses.OpIsNull:
+		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(" IS NULL")
+
+	case warehouses.OpIsNotNull:
+		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(" IS NOT NULL")
+
+	default:
+		panic(fmt.Sprintf("unexpected operator %q", op))
 	}
 
 	return nil
@@ -168,13 +214,15 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		case types.DateTimeKind:
 			b.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
 		case types.DateKind:
-			b.WriteString(v.Format(time.DateTime))
+			b.WriteString(v.Format(time.DateOnly))
 		case types.TimeKind:
 			b.WriteString(v.Format("15:04:05.999999999"))
 		}
 		b.WriteByte('\'')
 	case string:
 		quoteString(b, v)
+	default:
+		panic(fmt.Sprintf("unexpected type %T", v))
 	}
 
 }

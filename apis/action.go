@@ -23,7 +23,6 @@ import (
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
-	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/apis/transformers/mappings"
@@ -47,7 +46,7 @@ type Action struct {
 	SchedulePeriod           *SchedulePeriod
 	InSchema                 types.Type
 	OutSchema                types.Type
-	Filter                   *filters.Filter
+	Filter                   *Filter
 	Transformation           Transformation
 	Query                    *string
 	Connector                string
@@ -118,13 +117,7 @@ func (this *Action) fromState(apis *APIs, store *datastore.Store, action *state.
 	this.InSchema = action.InSchema
 	this.OutSchema = action.OutSchema
 	if action.Filter != nil {
-		this.Filter = &filters.Filter{
-			Logical:    filters.Logical(action.Filter.Logical),
-			Conditions: make([]filters.Condition, len(action.Filter.Conditions)),
-		}
-		for i, condition := range action.Filter.Conditions {
-			this.Filter.Conditions[i] = filters.Condition(condition)
-		}
+		this.Filter = convertWhereToFilter(action.Filter, action.InSchema)
 	}
 	if mapping := action.Transformation.Mapping; mapping != nil {
 		this.Transformation.Mapping = make(map[string]string, len(mapping))
@@ -423,20 +416,9 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		n.Transformation.OutProperties = m.OutProperties()
 	}
 
-	// Add the filter to the notification and marshal it.
-	var filter []byte
+	// Add the filter to the notification.
 	if action.Filter != nil {
-		n.Filter = &state.Filter{
-			Logical:    state.FilterLogical(action.Filter.Logical),
-			Conditions: make([]state.FilterCondition, len(action.Filter.Conditions)),
-		}
-		for i, condition := range action.Filter.Conditions {
-			n.Filter.Conditions[i] = (state.FilterCondition)(condition)
-		}
-		filter, err = json.Marshal(action.Filter)
-		if err != nil {
-			return err
-		}
+		n.Filter, _ = convertFilterToWhere(action.Filter, inSchema).MarshalJSON()
 	}
 
 	// Determine the connector name, for file actions.
@@ -562,7 +544,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"reload = reload OR $22, last_change_time_property = $23, last_change_time_format = $24, "+
 			"file_ordering_property_path = $25, export_mode = $26, matching_properties_internal = $27, "+
 			"matching_properties_external = $28, export_on_duplicated_users = $29\nWHERE id = $30",
-			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(filter), mapping,
+			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InProperties,
 			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
 			n.TableKeyProperty, n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
@@ -694,7 +676,7 @@ type ActionToSet struct {
 	Enabled bool
 
 	// Filter is the filter of the action, if it has one, otherwise is nil.
-	Filter *filters.Filter
+	Filter *Filter
 
 	// InSchema is the input schema of the action.
 	//
@@ -969,10 +951,7 @@ func shouldReload(a *state.Action, n *state.SetAction) bool {
 		if a.Filter == nil || n.Filter == nil {
 			return true
 		}
-		if a.Filter.Logical != n.Filter.Logical {
-			return true
-		}
-		if !slices.Equal(a.Filter.Conditions, n.Filter.Conditions) {
+		if filter, _ := a.Filter.MarshalJSON(); !bytes.Equal(filter, n.Filter) {
 			return true
 		}
 	}

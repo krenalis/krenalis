@@ -1,12 +1,8 @@
 import { useEffect, useContext, useState } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
-import {
-	ObservedEvent,
-	AddEventListenerResponse,
-	EventListenerEventsResponse,
-	Filter,
-} from '../lib/api/types/responses';
+import { ObservedEvent, AddEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
+import { Filter } from '../lib/api/types/action';
 
 interface EventListenerEvent {
 	id: number;

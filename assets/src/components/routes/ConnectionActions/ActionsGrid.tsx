@@ -189,17 +189,29 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				<div className='connection-actions__action-name-description'>{linkedActionType.Description}</div>
 			</div>
 		);
-		const conditionsCell: ReactNode[] = [];
+		let conditionsCell: ReactNode;
 		if (a.Filter != null) {
+			const cells: ReactNode[] = [];
 			for (const [i, c] of a.Filter.Conditions.entries()) {
-				conditionsCell.push(
+				cells.push(
 					<div key={i}>
-						{c.Property} {c.Operator} {c.Value}
+						{c.Property} {c.Operator}{' '}
+						{c.Values != null
+							? c.Values.map((val, i) => {
+									let v = '';
+									if (i > 0) {
+										v += '-';
+									}
+									v += val;
+									return v;
+								})
+							: ''}
 					</div>,
 				);
 			}
+			conditionsCell = <div className='connection-actions__action-filter'>{cells}</div>;
 		} else {
-			conditionsCell.push('-');
+			conditionsCell = '-';
 		}
 		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
 		const actionsCell = (

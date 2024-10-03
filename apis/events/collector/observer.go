@@ -23,6 +23,7 @@ import (
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/apis/state"
 
 	"github.com/google/uuid"
 )
@@ -62,7 +63,7 @@ type listener struct {
 	sources       []int
 	hasUserTraits bool
 	onlyValid     bool
-	filter        *filters.Filter
+	filter        *state.Where
 	sync.Mutex    // for the events and discarded fields
 	events        []ObservedEvent
 	times         []string
@@ -147,7 +148,7 @@ func (observer *Observer) AddCollectedListener(size int, sources []int, onlyVali
 //
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
-func (observer *Observer) AddEnrichedListener(size int, sources []int, hasUserTraits bool, filter *filters.Filter) (string, error) {
+func (observer *Observer) AddEnrichedListener(size int, sources []int, hasUserTraits bool, filter *state.Where) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
 		id:            id,
@@ -330,7 +331,7 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 			if properties == nil {
 				properties = event.AsProperties()
 			}
-			if ok, err := filters.Applies(listener.filter, properties); err != nil || !ok {
+			if !filters.Applies(listener.filter, properties) {
 				continue
 			}
 		}

@@ -70,19 +70,6 @@ interface TransformDataResponse {
 	data: Record<string, any>;
 }
 
-type FilterLogical = 'all' | 'any';
-
-interface FilterCondition {
-	Property: string;
-	Operator: string;
-	Value: string;
-}
-
-interface Filter {
-	Logical: FilterLogical;
-	Conditions: FilterCondition[];
-}
-
 interface ResponseUser {
 	id: string;
 	lastChangeTime: string;
@@ -188,9 +175,6 @@ export type {
 	SheetsResponse,
 	TransformationLanguagesResponse,
 	TransformDataResponse,
-	FilterLogical,
-	FilterCondition,
-	Filter,
 	FindUsersResponse,
 	AppUsersResponse,
 	UserEventsResponse,

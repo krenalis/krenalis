@@ -1,0 +1,263 @@
+const MIN_INT = BigInt('-9223372036854775808');
+const MAX_INT = BigInt('9223372036854775807');
+const MAX_UINT = BigInt('18446744073709551615');
+const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
+const MIN_YEAR = 1;
+const MAX_YEAR = 9999;
+
+// formatText formats a Text value as a string.
+const formatText = (text: string): string => {
+	if (!/^[\s"']/.test(text) && !/[\s"']$/.test(text)) {
+		return text;
+	}
+	const quote = text.includes('"') ? "'" : '"';
+	let s = quote;
+	for (let i = 0; i < text.length; i++) {
+		const c = text[i];
+		if (c === '\\' || c === quote) {
+			s += '\\';
+		}
+		s += c;
+	}
+	s += quote;
+	return s;
+};
+
+// isDate checks whether the string s represents a valid Date value that can be
+// used as a filter value.
+const isDate = (s: string): boolean => {
+	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	if (m == null) {
+		return false;
+	}
+	const date = new Date(s);
+	if (Number.isNaN(date.valueOf())) {
+		return false;
+	}
+	const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
+		return false;
+	}
+	return MIN_YEAR <= year && year <= MAX_YEAR;
+};
+
+// isDateTime checks whether the string s represents a valid DateTime value that
+// can be used as a filter value.
+const isDateTime = (s: string): boolean => {
+	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
+	if (m == null) {
+		return false;
+	}
+	const date = new Date(s);
+	if (Number.isNaN(date.valueOf())) {
+		return false;
+	}
+	let [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
+		return false;
+	}
+	year = date.getUTCFullYear();
+	return MIN_YEAR <= year && year <= MAX_YEAR;
+};
+
+// isDecimal checks whether the string s represents a valid Decimal value that
+// can be used as a filter value.
+const isDecimal = (s: string): boolean => {
+	if (s === '') {
+		return false;
+	}
+	if (s[0] === '-' || s[0] === '+') {
+		s = s.slice(1);
+	}
+	let i = parseDecimalDigits(s);
+	if (i === 0) {
+		return false;
+	}
+	if (i === s.length) {
+		return true;
+	}
+	let c = s[i];
+	s = s.slice(i + 1);
+	if (c === '.') {
+		i = parseDecimalDigits(s);
+		if (i === 0) {
+			return false;
+		}
+		if (i === s.length) {
+			return true;
+		}
+		c = s[i];
+		s = s.slice(i + 1);
+	}
+	if ((c !== 'e' && c !== 'E') || s === '') {
+		return false;
+	}
+	c = s[0];
+	if (c === '-' || c === '+') {
+		s = s.slice(1);
+	}
+	i = parseDecimalDigits(s);
+	return i === s.length;
+};
+
+const IPv4 = /^(?:25[0-5]|2[0-4]\d|1\d{2}|\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|\d{1,2})){3}$/;
+const IPv6 =
+	/^((?:[0-9a-f]{1,4}:){7}(?:[0-9a-f]{1,4}|:)|(?:[0-9a-f]{1,4}:){1,7}:|(?:[0-9a-f]{1,4}:){1,6}(?::[0-9a-f]{1,4}){1,1}|(?:[0-9a-f]{1,4}:){1,5}(?::[0-9a-f]{1,4}){1,2}|(?:[0-9a-f]{1,4}:){1,4}(?::[0-9a-f]{1,4}){1,3}|(?:[0-9a-f]{1,4}:){1,3}(?::[0-9a-f]{1,4}){1,4}|(?:[0-9a-f]{1,4}:){1,2}(?::[0-9a-f]{1,4}){1,5}|[0-9a-f]?(?::(?::[0-9a-f]{1,4}){1,6})|::(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})$/i;
+
+// isInet checks whether the string s represents a valid Inet value that can be
+// used as a filter value.
+const isInet = (s: string): boolean => {
+	return IPv4.test(s) || IPv6.test(s);
+};
+
+// isInt checks whether the string s represents a valid Int value that can be
+// used as a filter value.
+const isInt = (s: string): boolean => {
+	let t = s;
+	if ((s.length > 0 && s[0] === '-') || s[0] === '+') {
+		t = s.slice(1);
+	}
+	if (!isUint(t)) {
+		return false;
+	}
+	const n = BigInt(s);
+	return MIN_INT <= n && n <= MAX_INT;
+};
+
+// isYear checks whether the string s represents a valid Year value that can be
+// used as a filter value.
+const isYear = (s: string): boolean => {
+	if (s === '' || s.length > 4) {
+		return false;
+	}
+	for (const c of s) {
+		if (c < '0' || c > '9') {
+			return false;
+		}
+	}
+	const year = parseInt(s);
+	return MIN_YEAR <= year && year <= MAX_YEAR;
+};
+
+// isFloat checks whether the string s represents a valid Float value with the
+// specified bit size, which can be either 32 or 64, and can be used as a filter
+// value.
+const isFloat = (s: string, bitSize: number): boolean => {
+	if (!isDecimal(s)) {
+		return false;
+	}
+	const n = parseFloat(s);
+	if (bitSize == 32) {
+		return -MAX_FLOAT32 <= n && n <= MAX_FLOAT32;
+	}
+	return n !== Infinity && n !== -Infinity;
+};
+
+// isTime checks whether the string s represents a valid Time value that can be
+// used as a filter value.
+const isTime = (s: string): boolean => {
+	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?$/);
+	if (m == null) {
+		return false;
+	}
+	const [hour, minute, second] = [Number(m[1]), Number(m[2]), Number(m[3])];
+	return 0 <= hour && hour <= 23 && 0 <= minute && minute <= 59 && 0 <= second && second <= 59;
+};
+
+// isUUID checks whether the string s represents a valid UUID value that can be
+// used as a filter value.
+const isUUID = (s: string): boolean => {
+	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-9][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+};
+
+// isUint checks whether the string s represents a valid Uint value that can be
+// used as a filter value.
+const isUint = (s: string): boolean => {
+	if (s.length === 0) {
+		return false;
+	}
+	if (s === '0') {
+		return true;
+	}
+	for (let i = 0; i < s.length; i++) {
+		const c = s[i];
+		if (c < '0' || c > '9' || (i == 0 && c == '0')) {
+			return false;
+		}
+	}
+	const n = BigInt(s);
+	return n <= MAX_UINT;
+};
+
+// isValidPropertyPath checks whether s is a valid property path.
+// A property path is formed by property names separated by periods.
+const isValidPropertyPath = (s: string): boolean => {
+	return /^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$/.test(s);
+};
+
+// parseDecimalDigits parses the string s and returns the index of the first
+// character in s that is not a decimal digit (0-9).
+const parseDecimalDigits = (s: string): number => {
+	let i = 0;
+	for (; i < s.length; i++) {
+		const c = s[i];
+		if (c < '0' || c > '9') {
+			break;
+		}
+	}
+	return i;
+};
+
+const EmptyTextError = new Error('text is empty');
+const InvalidTextError = new Error('text is not valid');
+
+// parseText parses s and returns the corresponding Text value.
+// If the resulting Text value is empty, it throws the EmptyTextError error.
+// If the resulting Text is not valid, it throws the InvalidTextError error.
+const parseText = (s: string): string => {
+	s = s.trim();
+	if (s === '') {
+		throw EmptyTextError;
+	}
+	const quote = s[0];
+	if (quote !== '"' && quote !== "'") {
+		return s;
+	}
+	if (s.length < 3) {
+		throw EmptyTextError;
+	}
+	if (s[s.length - 1] !== quote) {
+		throw InvalidTextError;
+	}
+	let text = '';
+	for (let i = 1; i < s.length - 1; i++) {
+		switch (s[i]) {
+			case '\\':
+				i++;
+				if (i === s.length - 1) {
+					throw InvalidTextError;
+				}
+				break;
+			case quote:
+				throw InvalidTextError;
+		}
+		text += s[i];
+	}
+	return text;
+};
+
+export {
+	formatText,
+	isInt,
+	isUint,
+	isFloat,
+	isDecimal,
+	isDateTime,
+	isDate,
+	isTime,
+	isYear,
+	isUUID,
+	isInet,
+	isValidPropertyPath,
+	parseText,
+};
