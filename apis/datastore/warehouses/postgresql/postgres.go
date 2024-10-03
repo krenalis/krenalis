@@ -61,7 +61,7 @@ type psSettings struct {
 
 // Open opens a PostgreSQL data warehouse with the given settings.
 // It returns a SettingsError error if the settings are not valid.
-func Open(settings []byte) (warehouses.Warehouse, error) {
+func Open(settings []byte) (*PostgreSQL, error) {
 	var s psSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {

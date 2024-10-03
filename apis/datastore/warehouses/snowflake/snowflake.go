@@ -50,7 +50,7 @@ type sfSettings struct {
 
 // Open opens a Snowflake data warehouse with the given settings.
 // It returns a SettingsError error if the settings are not valid.
-func Open(settings []byte) (warehouses.Warehouse, error) {
+func Open(settings []byte) (*Snowflake, error) {
 	var s sfSettings
 	err := json.Unmarshal(settings, &s)
 	if err != nil {
