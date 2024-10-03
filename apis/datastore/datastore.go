@@ -149,19 +149,19 @@ func (ds *Datastore) Check(ctx context.Context, typ state.WarehouseType, setting
 	return dw.Close()
 }
 
-// Init initializes the database objects on the data warehouse in order to make
-// it work with Meergo.
+// Initialize initializes the database objects on the data warehouse in order to
+// make it work with Meergo.
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *DataWarehouseError error if an error occurs with the data warehouse.
-func (ds *Datastore) Init(ctx context.Context, typ state.WarehouseType, settings []byte) error {
+func (ds *Datastore) Initialize(ctx context.Context, typ state.WarehouseType, settings []byte) error {
 	ds.mustBeOpen()
 	dw, err := openWarehouse(typ, settings)
 	if err != nil {
 		return err
 	}
 	defer dw.Close()
-	err = dw.Init(ctx)
+	err = dw.Initialize(ctx)
 	if err != nil {
 		return err
 	}

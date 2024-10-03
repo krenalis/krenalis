@@ -164,12 +164,12 @@ type Warehouse interface {
 	// error.
 	Delete(ctx context.Context, table string, where Expr) error
 
-	// Init initializes the database objects on the data warehouse in order to make
-	// it work with Meergo.
+	// Initialize initializes the database objects on the data warehouse in order to
+	// make it work with Meergo.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
-	Init(ctx context.Context) error
+	Initialize(ctx context.Context) error
 
 	// LastIdentityResolution returns information about the last Identity
 	// Resolution.

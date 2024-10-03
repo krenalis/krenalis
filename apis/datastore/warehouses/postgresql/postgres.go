@@ -216,9 +216,9 @@ func (warehouse *PostgreSQL) Check(ctx context.Context) error {
 	return nil
 }
 
-// Init initializes the database objects on the data warehouse in order to make
-// it work with Meergo.
-func (warehouse *PostgreSQL) Init(ctx context.Context) error {
+// Initialize initializes the database objects on the data warehouse in order to
+// make it work with Meergo.
+func (warehouse *PostgreSQL) Initialize(ctx context.Context) error {
 	return warehouse.initRepair(ctx, false)
 }
 

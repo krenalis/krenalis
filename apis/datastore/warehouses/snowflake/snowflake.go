@@ -145,9 +145,9 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 	panic("not implemented")
 }
 
-// Init initializes the database objects on the data warehouse in order to make
-// it work with Meergo.
-func (warehouse *Snowflake) Init(ctx context.Context) error {
+// Initialize initializes the database objects on the data warehouse in order to
+// make it work with Meergo.
+func (warehouse *Snowflake) Initialize(ctx context.Context) error {
 	panic("TODO: not implemented")
 }
 

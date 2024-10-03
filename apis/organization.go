@@ -204,7 +204,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 
 	// Initialize the data warehouse.
-	err = this.apis.datastore.Init(ctx, state.WarehouseType(whType), whSettings)
+	err = this.apis.datastore.Initialize(ctx, state.WarehouseType(whType), whSettings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
