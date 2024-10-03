@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -189,4 +190,37 @@ func (sv *scanner) Scan(src any) error {
 
 func (sv *scanner) reset() {
 	sv.index = 0
+}
+
+func Test_quoteJSON(t *testing.T) {
+	tests := []struct {
+		s        string
+		expected string
+	}{
+		{`5`, `'5'`},
+		{`""`, `'""'`},
+		{`"abc"`, `'"abc"'`},
+		{`"hello\u0020world"`, `'"hello\u0020world"'`},
+		{`"'hello'\u0020'world'"`, `'"''hello''\u0020''world''"'`},
+		{`"\u0000"`, `'""'`},
+		{`"hello\u0000world"`, `'"helloworld"'`},
+		{`"'hello'\u0000'world'"`, `'"''hello''''world''"'`},
+		{`"hello\\u0000world"`, `'"hello\\u0000world"'`},
+		{`"hello\\\u0000world"`, `'"hello\\world"'`},
+		{`"hello\\\\u0000world"`, `'"hello\\\\u0000world"'`},
+		{`"hello\\\\\u0000world"`, `'"hello\\\\world"'`},
+		{`"hello\n\u0000world"`, `'"hello\nworld"'`},
+		{`"\u0000world"`, `'"world"'`},
+		{`"hello\u0000"`, `'"hello"'`},
+		{`"hello\u0000world' \u0000' hello \\u0000 world"`, `'"helloworld'' '' hello \\u0000 world"'`},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			var got strings.Builder
+			quoteJSON(&got, []byte(test.s))
+			if test.expected != got.String() {
+				t.Fatalf("expected %q, got %q", test.expected, got.String())
+			}
+		})
+	}
 }

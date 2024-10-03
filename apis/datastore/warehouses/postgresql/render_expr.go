@@ -156,23 +156,20 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 }
 
 // quoteString quotes s as a string and writes it into b.
+// Null bytes ('\x00') in s are removed.
 //
 // See the documentation at
-// https://www.postgresql.org/docs/16/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
+// https://www.postgresql.org/docs/17/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
 // (for the escaping of single quotes) and at
-// https://www.postgresql.org/docs/13/datatype-character.html (for the character
+// https://www.postgresql.org/docs/17/datatype-character.html (for the character
 // with code 0).
 //
 // NOTE: keep this function in sync with the one within the PostgreSQL
 // connector.
 func quoteString(b *strings.Builder, s string) {
-	if s == "" {
-		b.WriteString("''")
-		return
-	}
 	b.WriteByte('\'')
-	for {
-		p := strings.IndexByte(s, '\'')
+	for len(s) > 0 {
+		p := strings.IndexAny(s, "'\x00")
 		if p == -1 {
 			p = len(s)
 		}
@@ -180,11 +177,10 @@ func quoteString(b *strings.Builder, s string) {
 		if p == len(s) {
 			break
 		}
-		b.WriteString("''")
-		s = s[p+1:]
-		if len(s) == 0 {
-			break
+		if s[p] == '\'' {
+			b.WriteString("''")
 		}
+		s = s[p+1:]
 	}
 	b.WriteByte('\'')
 }
