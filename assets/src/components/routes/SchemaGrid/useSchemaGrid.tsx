@@ -11,7 +11,6 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
-	{ name: 'Nullable', alignment: 'center' },
 	{ name: 'Label' },
 	{ name: 'Primary source' },
 ];
@@ -75,12 +74,6 @@ const getRows = (
 
 const buildRow = (property: TransformedProperty, primarySource?: TransformedConnection | null) => {
 	const typeCell = enrichPropertyType(property.full.type);
-	let nullableCell: ReactNode;
-	if (property.full.nullable) {
-		nullableCell = 'Yes';
-	} else {
-		nullableCell = 'No';
-	}
 	let primarySourceCell: ReactNode;
 	if (property.full.type.name !== 'Object' && property.full.type.name !== 'Array') {
 		if (primarySource) {
@@ -94,7 +87,7 @@ const buildRow = (property: TransformedProperty, primarySource?: TransformedConn
 			primarySourceCell = 'None';
 		}
 	}
-	return { cells: [property.full.name, typeCell, nullableCell, property.label, primarySourceCell] };
+	return { cells: [property.full.name, typeCell, property.label, primarySourceCell] };
 };
 
 export { useSchemaGrid };
