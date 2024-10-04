@@ -469,6 +469,9 @@ func ValidateUUID(name string, s string) (any, error) {
 
 // ValidateJSON validates a JSON value.
 func ValidateJSON(name string, v any) (any, error) {
+	if b, ok := v.(json.RawMessage); ok {
+		return ValidateJSONRaw(name, b)
+	}
 	if !isValidJSON(v) {
 		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
 	}
@@ -477,11 +480,14 @@ func ValidateJSON(name string, v any) (any, error) {
 
 // ValidateJSONRaw validates a JSON value represented as a json.RawMessage.
 func ValidateJSONRaw(name string, b json.RawMessage) (any, error) {
-	if !json.Valid(b) {
+	if !utf8.Valid(b) {
 		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
 	}
-	b = bytes.TrimSpace(b)
-	return b, nil
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, b); err != nil {
+		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
+	}
+	return json.RawMessage(buf.Bytes()), nil
 }
 
 // ValidateInet validates an Inet value.
@@ -548,8 +554,6 @@ func isValidJSON(src any) bool {
 		return true
 	case json.Number:
 		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && json.Valid([]byte(src))
-	case json.RawMessage:
-		return json.Valid(src)
 	}
 	return false
 }
