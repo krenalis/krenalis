@@ -154,7 +154,7 @@ const UsersList = () => {
 								<div className='users-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 							) : lastIRExecutionEnd ? (
 								<div className='users-list__identity-resolution-end-time'>
-									<span>Last execution:</span>
+									<span>Last Identity Resolution:</span>
 									<SlRelativeTime lang='en-US' date={lastIRExecutionEnd} />
 								</div>
 							) : (
