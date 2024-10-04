@@ -178,7 +178,7 @@ const GeneralSettings = () => {
 				checked={useEuropeRegion}
 				onSlChange={onUseEuropeRegionChange}
 			>
-				Use the European Privacy Region for this workspace
+				Use the European Privacy Region for app connections, if allowed
 			</SlCheckbox>
 			<div className='general-settings__displayed-properties'>
 				<div className='general-settings__displayed-properties-title'>Displayed user properties</div>
