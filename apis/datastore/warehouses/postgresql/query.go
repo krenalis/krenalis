@@ -14,12 +14,14 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Query executes a query and returns the results as Rows.
 func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
 
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -51,7 +53,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 			b.WriteString(` WHERE `)
 			b.WriteString(whereExpr)
 		}
-		err = db.QueryRow(ctx, b.String()).Scan(&count)
+		err = pool.QueryRow(ctx, b.String()).Scan(&count)
 		if err != nil {
 			return nil, 0, warehouses.Error(err)
 		}
@@ -100,12 +102,21 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	}
 
 	// Execute the query.
-	rows, err := db.Query(ctx, b.String())
+	rows, err := pool.Query(ctx, b.String())
 	if err != nil {
 		return nil, 0, warehouses.Error(err)
 	}
 
-	return rows, count, nil
+	return whRows{rows}, count, nil
+}
+
+// whRows implements the warehouses.Rows interface using pgx.Rows.
+type whRows struct {
+	pgx.Rows
+}
+
+func (rows whRows) Close() error {
+	return nil
 }
 
 // appendJoins appends the string serialization of the provided joins to b.
@@ -129,4 +140,10 @@ func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
 		}
 	}
 	return nil
+}
+
+// quoteIdent quotes the identifier name.
+func quoteIdent(name string) string {
+	name = strings.ReplaceAll(name, `"`, `""`)
+	return `"` + name + `"`
 }

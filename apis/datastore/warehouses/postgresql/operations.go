@@ -9,11 +9,11 @@ package postgresql
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
-	"github.com/meergo/meergo/apis/postgres"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // warehouseOperation represents an operation on the data warehouse.
@@ -36,16 +36,12 @@ const (
 //
 // If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return 0, nil
-	}
-	err = warehouse.fixOperationsTable(ctx)
+	err := warehouse.fixOperationsTable(ctx)
 	if err != nil {
 		return 0, err
 	}
 	var opID int
-	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, "LOCK TABLE _operations")
 		if err != nil {
 			return warehouses.Error(err)
@@ -53,7 +49,7 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 		var runningOp *warehouseOperation
 		err = tx.QueryRow(ctx, "SELECT operation FROM _operations "+
 			"WHERE start_time IS NOT NULL AND end_time IS NULL ORDER BY id DESC LIMIT 1 ").Scan(&runningOp)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && err != pgx.ErrNoRows {
 			return warehouses.Error(err)
 		}
 		if runningOp != nil {
@@ -85,11 +81,11 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 //
 // If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *PostgreSQL) endOperation(ctx context.Context, opID int, endTime time.Time) error {
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE id = $2 AND end_time IS NULL`, endTime, opID)
+	_, err = pool.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE id = $2 AND end_time IS NULL`, endTime, opID)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -120,7 +116,7 @@ func (warehouse *PostgreSQL) fixOperationsTable(ctx context.Context) error {
 	// 			SELECT pid
 	// 			FROM pg_stat_activity
 	// 			WHERE
-	// 				datname = ` + postgres.QuoteValue(warehouse.settings.Database) + `
+	// 				datname = ` + quoteIdent(warehouse.settings.Database) + `
 	// 					AND
 	// 				query = 'CALL resolve_identities()'
 	// 		)`

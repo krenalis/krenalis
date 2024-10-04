@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
-	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -77,7 +76,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		warehouses.OpIsAfter,
 		warehouses.OpIsOnOrAfter:
 
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 
 		switch op {
 		case warehouses.OpIs:
@@ -96,7 +95,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case warehouses.OpIsBetween, warehouses.OpIsNotBetween:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		if op == warehouses.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
@@ -111,7 +110,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			b.WriteString("POSITION(")
 			serializeValue(b, baseExpr.Values[0], c.Type)
 			b.WriteString(" IN ")
-			b.WriteString(postgres.QuoteIdent(c.Name))
+			b.WriteString(quoteIdent(c.Name))
 			if op == warehouses.OpContains {
 				b.WriteString(") > 0")
 			} else {
@@ -123,7 +122,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			}
 			serializeValue(b, baseExpr.Values[0], c.Type.Elem())
 			b.WriteString(" = ANY(")
-			b.WriteString(postgres.QuoteIdent(c.Name))
+			b.WriteString(quoteIdent(c.Name))
 			b.WriteByte(')')
 			if op == warehouses.OpDoesNotContain {
 				b.WriteByte(')')
@@ -131,7 +130,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 
 	case warehouses.OpIsOneOf, warehouses.OpIsNotOneOf:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		if op == warehouses.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
@@ -151,25 +150,25 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		} else {
 			b.WriteString("RIGHT(")
 		}
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(", LENGTH(")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")) = ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case warehouses.OpIsTrue:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 
 	case warehouses.OpIsFalse:
 		b.WriteString("NOT ")
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 
 	case warehouses.OpIsNull:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(" IS NULL")
 
 	case warehouses.OpIsNotNull:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(" IS NOT NULL")
 
 	default:

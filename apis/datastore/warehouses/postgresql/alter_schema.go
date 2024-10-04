@@ -17,17 +17,13 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
-	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/types"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // AlterSchema alters the user schema.
 func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
-
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
 
 	// Start an AlterSchema operation on the data warehouse, then defer its
 	// ending.
@@ -57,7 +53,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 	}
 
 	// Execute the alter schema queries within a transaction.
-	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		for _, query := range queries {
 			_, err := tx.Exec(ctx, query)
 			if err != nil {
@@ -124,7 +120,7 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 		if len(toDrop) > 0 {
 			for _, table := range []string{usersTableName, "_user_identities"} {
 				b := strings.Builder{}
-				b.WriteString("ALTER TABLE " + postgres.QuoteIdent(table) + "\n\t")
+				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, c := range toDrop {
 					if i > 0 {
 						b.WriteString(",\n\t")
@@ -139,7 +135,7 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 	// ALTER TABLE ... RENAME COLUMN.
 	for _, op := range operations {
 		if op.Operation == warehouses.OperationRenameColumn {
-			queries = append(queries, `ALTER TABLE `+postgres.QuoteIdent(usersTableName)+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
+			queries = append(queries, `ALTER TABLE `+quoteIdent(usersTableName)+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
 			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
 		}
 	}
@@ -155,7 +151,7 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 		if len(toAdd) > 0 {
 			for _, table := range []string{usersTableName, "_user_identities"} {
 				b := strings.Builder{}
-				b.WriteString("ALTER TABLE " + postgres.QuoteIdent(table) + "\n\t")
+				b.WriteString("ALTER TABLE " + quoteIdent(table) + "\n\t")
 				for i, op := range toAdd {
 					if i > 0 {
 						b.WriteString(",\n\t")
@@ -204,7 +200,7 @@ func createViewQuery(usersTableName string, userColumns []warehouses.Column, rep
 		b.WriteRune('"')
 	}
 	b.WriteString("\nFROM ")
-	b.WriteString(postgres.QuoteIdent(usersTableName))
+	b.WriteString(quoteIdent(usersTableName))
 	return b.String()
 }
 

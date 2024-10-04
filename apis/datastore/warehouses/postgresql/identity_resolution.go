@@ -9,7 +9,6 @@ package postgresql
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
 	"fmt"
 	"log/slog"
@@ -20,6 +19,8 @@ import (
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/types"
+
+	"github.com/jackc/pgx/v5"
 )
 
 //go:embed identity_resolution.sql
@@ -28,7 +29,7 @@ var identityResolutionQueries string
 // ResolveIdentities resolves the identities.
 func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
 
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 
 	// Create a copy of the current users table and set the related index in the
 	// operations table.
-	err = db.Transaction(ctx, func(tx *postgres.Tx) error {
+	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
 		if err != nil {
 			return warehouses.Error(fmt.Errorf("cannot create users table (with name %s): %s", postgres.QuoteIdent(newUsersName), err))
@@ -108,7 +109,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 			SFUNC=array_cat,
 			STYPE=anycompatiblearray
 		);`
-	_, err = db.Exec(ctx, aggregateFunction)
+	_, err = pool.Exec(ctx, aggregateFunction)
 	if err != nil {
 		return warehouses.Error(fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err))
 	}
@@ -116,7 +117,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// Generate the SQL queries that merge the identities to obtain the users.
 	var mergeUsers strings.Builder
 	mergeUsers.WriteString(`INSERT INTO `)
-	mergeUsers.WriteString(postgres.QuoteIdent(newUsersName))
+	mergeUsers.WriteString(quoteIdent(newUsersName))
 	mergeUsers.WriteString(` (`)
 	for _, c := range userColumns {
 		mergeUsers.WriteByte('"')
@@ -202,7 +203,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// the same GID, which is incorrect. So this query, in that situation,
 	// replaces the GID of both users with new random GIDs.
 	mergeUsers.WriteString(`UPDATE `)
-	mergeUsers.WriteString(postgres.QuoteIdent(newUsersName))
+	mergeUsers.WriteString(quoteIdent(newUsersName))
 	mergeUsers.WriteString(` u
 		SET
 			"__id__" = gen_random_uuid()
@@ -211,7 +212,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 				SELECT
 					"u2"."__id__"
 				FROM
-					` + postgres.QuoteIdent(newUsersName) + ` "u2"
+					` + quoteIdent(newUsersName) + ` "u2"
 				GROUP BY
 					"u2"."__id__"
 				HAVING
@@ -221,16 +222,16 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// Replace the placeholders in the Identity Resolution queries and run them.
 	query := strings.Replace(identityResolutionQueries, "{{ same_user }}", sameUser.String(), 1)
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
-	query = strings.ReplaceAll(query, "{{ new_users_name }}", postgres.QuoteIdent(newUsersName))
+	query = strings.ReplaceAll(query, "{{ new_users_name }}", quoteIdent(newUsersName))
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
-	_, err = db.Exec(ctx, query)
+	_, err = pool.Exec(ctx, query)
 	if err != nil {
 		return warehouses.Error(err)
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, err = db.Exec(ctx, "CALL resolve_identities()")
+	_, err = pool.Exec(ctx, "CALL resolve_identities()")
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -244,14 +245,14 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// Replace the current "users" view with a new one using the "CREATE OR
 	// REPLACE VIEW" statement since the table "_users" that the view refers to
 	// has changed its name.
-	_, err = db.Exec(ctx, createViewQuery(newUsersName, userColumns, true))
+	_, err = pool.Exec(ctx, createViewQuery(newUsersName, userColumns, true))
 	if err != nil {
 		return warehouses.Error(err)
 	}
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.Exec(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
+	_, err = pool.Exec(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -262,7 +263,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 // LastIdentityResolution returns information about the last Identity
 // Resolution.
 func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -272,8 +273,8 @@ func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startT
 	}
 	query := "SELECT start_time, end_time FROM _operations WHERE " +
 		"operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
-	err = db.QueryRow(ctx, query).Scan(&startTime, &endTime)
-	if err != nil && err != sql.ErrNoRows {
+	err = pool.QueryRow(ctx, query).Scan(&startTime, &endTime)
+	if err != nil && err != pgx.ErrNoRows {
 		return nil, nil, warehouses.Error(err)
 	}
 	return startTime, endTime, nil

@@ -14,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,9 +24,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
-	"github.com/meergo/meergo/apis/postgres"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -45,8 +47,8 @@ var (
 var _ warehouses.Warehouse = &PostgreSQL{}
 
 type PostgreSQL struct {
-	mu       sync.Mutex // for the db field
-	db       *postgres.DB
+	mu       sync.Mutex // for the pool field
+	pool     *pgxpool.Pool
 	settings *psSettings
 }
 
@@ -102,11 +104,11 @@ func Open(settings []byte) (*PostgreSQL, error) {
 
 // Close closes the data warehouse.
 func (warehouse *PostgreSQL) Close() error {
-	if warehouse.db == nil {
+	if warehouse.pool == nil {
 		return nil
 	}
-	warehouse.db.Close()
-	warehouse.db = nil
+	warehouse.pool.Close()
+	warehouse.pool = nil
 	return nil
 }
 
@@ -116,7 +118,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 	if where == nil {
 		return errors.New("where is nil")
 	}
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
@@ -126,7 +128,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 	if err != nil {
 		return fmt.Errorf("cannot build WHERE expression: %s", err)
 	}
-	_, err = db.Exec(ctx, s.String())
+	_, err = pool.Exec(ctx, s.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -148,7 +150,7 @@ func (warehouse *PostgreSQL) Check(ctx context.Context) error {
 		schema = "public"
 	}
 
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
@@ -173,7 +175,7 @@ func (warehouse *PostgreSQL) Check(ctx context.Context) error {
 	// Check the existence of the tables.
 	for _, table := range tables {
 		var exists bool
-		err := db.QueryRow(ctx,
+		err := pool.QueryRow(ctx,
 			`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)`,
 			schema, table).Scan(&exists)
 		if err != nil {
@@ -187,7 +189,7 @@ func (warehouse *PostgreSQL) Check(ctx context.Context) error {
 	// Check the existence of types.
 	for _, typ := range types {
 		var exists bool
-		err := db.QueryRow(ctx, `SELECT EXISTS (SELECT FROM pg_type WHERE typname = $1)`, typ).Scan(&exists)
+		err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT FROM pg_type WHERE typname = $1)`, typ).Scan(&exists)
 		if err != nil {
 			return warehouses.Error(err)
 		}
@@ -225,7 +227,7 @@ func (warehouse *PostgreSQL) Initialize(ctx context.Context) error {
 // Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
@@ -245,12 +247,12 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 	b.WriteString(`FALSE AS "$purge" FROM "`)
 	b.WriteString(table.Name)
 	b.WriteString("\"\nWITH NO DATA")
-	_, err = db.Exec(ctx, b.String())
+	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
 	defer func() {
-		_, err := warehouse.db.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
+		_, err := pool.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
 		if err != nil {
 			slog.Error("cannot drop temporary table from data warehouse", "table", tempTableName, "err", err)
 		}
@@ -262,7 +264,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 		for i, c := range table.Columns {
 			columnNames[i] = c.Name
 		}
-		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, postgres.CopyFromRows(rows))
+		_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, pgx.CopyFromRows(rows))
 		if err != nil {
 			return warehouses.Error(err)
 		}
@@ -274,7 +276,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 		copy(columnNames, table.Keys)
 		columnNames[len(columnNames)-1] = "$purge"
 		rowSrc := newCopyForDeleteFrom(len(table.Keys), deleted)
-		_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, rowSrc)
+		_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, rowSrc)
 		if err != nil {
 			return warehouses.Error(err)
 		}
@@ -340,7 +342,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 	if len(deleted) > 0 {
 		b.WriteString("\nWHEN MATCHED THEN\n  DELETE")
 	}
-	_, err = db.Exec(ctx, b.String())
+	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -361,7 +363,7 @@ var immutableMergeIdentitiesColumns = []string{
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
@@ -379,12 +381,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		b.WriteString(`",`)
 	}
 	b.WriteString("FALSE AS \"$purge\" FROM \"_user_identities\"\nWITH NO DATA")
-	_, err = db.Exec(ctx, b.String())
+	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
 	defer func() {
-		_, err := warehouse.db.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
+		_, err := pool.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
 		if err != nil {
 			slog.Error("cannot drop temporary table from data warehouse", "table", tempTableName, "err", err)
 		}
@@ -396,7 +398,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		columnNames[i] = c.Name
 	}
 	columnNames[len(columns)] = `$purge`
-	_, err = db.CopyFrom(ctx, postgres.Identifier{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
+	_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -447,7 +449,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	}
 	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" IS FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
 	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS TRUE THEN\n  DELETE")
-	_, err = db.Exec(ctx, b.String())
+	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -457,11 +459,11 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 
 // Ping checks the connection to the data warehouse.
 func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
-	err = db.Ping(ctx)
+	err = pool.Ping(ctx)
 	if err != nil {
 		return warehouses.Error(err)
 	}
@@ -481,56 +483,89 @@ func (warehouse *PostgreSQL) Settings() []byte {
 
 // Truncate truncates the specified table.
 func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(ctx, `TRUNCATE TABLE "`+table+`"`)
+	_, err = pool.Exec(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
 		return warehouses.Error(err)
 	}
 	return nil
 }
 
-// connection returns the PostgreSQL connection.
-func (warehouse *PostgreSQL) connection() (*postgres.DB, error) {
+// connection returns the PostgreSQL connection pool.
+func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool, error) {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
-	if warehouse.db != nil {
-		return warehouse.db, nil
+	if warehouse.pool != nil {
+		return warehouse.pool, nil
 	}
-	db, err := postgres.Open(warehouse.settings.options())
+	s := warehouse.settings
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(s.Username, s.Password),
+		Host:   net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
+		Path:   "/" + url.PathEscape(s.Database),
+	}
+	if s.Schema != "" {
+		u.RawQuery = "search_path=" + url.QueryEscape(s.Schema)
+	}
+	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
 		return nil, warehouses.Error(err)
 	}
-	warehouse.db = db
-	return db, nil
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		return nil, warehouses.Error(err)
+	}
+	warehouse.pool = pool
+	return pool, nil
+}
+
+// execTransaction executes the function f within a transaction. If f returns an
+// error o panics, the transaction will be rolled back.
+func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx) error) error {
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	return func() error {
+		defer func() {
+			if err := recover(); err != nil {
+				_ = tx.Rollback(ctx)
+				panic(err)
+			}
+		}()
+		err := f(tx)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return warehouses.Error(err)
+		}
+		err = tx.Commit(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			return warehouses.Error(err)
+		}
+		return nil
+	}()
 }
 
 // usersVersion returns the version of the "users" table.
 func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
-	db, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return 0, err
 	}
 	var v int
-	err = db.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
+	err = pool.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
 	if err != nil {
 		return 0, warehouses.Error(err)
 	}
 	return v, nil
-}
-
-// dsn returns the connection string, from s, in the URL format.
-func (s *psSettings) options() *postgres.Options {
-	return &postgres.Options{
-		Host:     s.Host,
-		Port:     s.Port,
-		Username: s.Username,
-		Password: s.Password,
-		Database: s.Database,
-		Schema:   s.Schema,
-	}
 }
 
 // copyForDeleteFrom implements the pgx.CopyFromSource interface.
@@ -611,7 +646,7 @@ func (c *copyForIdentities) Err() error {
 // initRepair initializes (or repairs) the database objects (as tables, types,
 // etc...) on the data warehouse.
 func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error {
-	conn, err := warehouse.connection()
+	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
@@ -631,7 +666,7 @@ func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error 
 		queries = append(queries, createUsersView)
 	}
 	for _, query := range queries {
-		_, err := conn.Exec(ctx, query)
+		_, err := pool.Exec(ctx, query)
 		if err != nil {
 			return warehouses.Error(err)
 		}
