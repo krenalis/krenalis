@@ -524,7 +524,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool,
 }
 
 // execTransaction executes the function f within a transaction. If f returns an
-// error o panics, the transaction will be rolled back.
+// error or panics, the transaction will be rolled back.
 func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx) error) error {
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -534,24 +534,16 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	if err != nil {
 		return warehouses.Error(err)
 	}
-	return func() error {
-		defer func() {
-			if err := recover(); err != nil {
-				_ = tx.Rollback(ctx)
-				panic(err)
-			}
-		}()
-		err := f(tx)
-		if err != nil {
-			_ = tx.Rollback(ctx)
-			return warehouses.Error(err)
-		}
-		err = tx.Commit(ctx)
-		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			return warehouses.Error(err)
-		}
-		return nil
-	}()
+	defer tx.Rollback(ctx)
+	err = f(tx)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	err = tx.Commit(ctx)
+	if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		return warehouses.Error(err)
+	}
+	return nil
 }
 
 // usersVersion returns the version of the "users" table.
