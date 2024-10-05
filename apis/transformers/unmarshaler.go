@@ -359,7 +359,12 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if err != nil {
 			return nil, err
 		}
-		return json.RawMessage(slices.Clone(v)), nil
+		var b bytes.Buffer
+		err = json.Compact(&b, v)
+		if err != nil {
+			return nil, err
+		}
+		return json.RawMessage(b.Bytes()), nil
 	}
 	switch d.peekKind() {
 	case '[':
@@ -679,10 +684,11 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 	case types.JSONKind:
 		if v.Kind() == '"' {
 			data := d.unquoteBytes(v)
-			if !json.Valid(data) {
+			var b bytes.Buffer
+			if err := json.Compact(&b, data); err != nil {
 				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", data), "", d.opts.terms)
 			}
-			return json.RawMessage(data), nil
+			return json.RawMessage(b.Bytes()), nil
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {
