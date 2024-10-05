@@ -40,7 +40,7 @@ The table below shows, for each data type, which Go type a connector can return.
  
 [^5]: `nil` represents a `nil` value, not the JSON `null`. A JSON `null` is represented by `json.RawMessage("null")`.
 
-[^6]: A `json.RawMessage` value, representing a JSON type, is valid JSON and does not have leading or trailing spaces.
+[^6]: `json.RawMessage` and `[]byte` values must contain valid JSON; `json.Number` values must contain valid JSON numbers; `float64` values cannot be NaN or infinity; and `map[string]any` and `[]any` values cannot contain NaN or infinity floats.
 
 [^7]: If the returned type is `string`, the value must represent a JSON Array.
 
