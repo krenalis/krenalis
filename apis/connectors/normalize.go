@@ -449,12 +449,19 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			value, valid = parseUUID(s)
 		}
 	case types.JSONKind:
-		if raw, ok := src.(json.RawMessage); ok {
-			if !utf8.Valid(raw) {
+		var data []byte
+		switch src := src.(type) {
+		case json.RawMessage:
+			data = src
+		case []byte:
+			data = src
+		}
+		if data != nil {
+			if !utf8.Valid(data) {
 				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
 			}
 			var b bytes.Buffer
-			err := json.Compact(&b, raw)
+			err := json.Compact(&b, data)
 			if err != nil {
 				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
 			}

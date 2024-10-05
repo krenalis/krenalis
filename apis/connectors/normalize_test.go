@@ -101,11 +101,12 @@ func Test_normalize(t *testing.T) {
 		// UUID.
 		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", nil},
 		// JSON.
-		{types.JSON(), json.RawMessage(`{"a":5}`), json.RawMessage(`{"a":5}`), nil},
+		{types.JSON(), json.RawMessage(`{"a": 5}`), json.RawMessage(`{"a":5}`), nil},
 		{types.JSON(), json.RawMessage(` { "a" : 5 } `), json.RawMessage(`{"a":5}`), nil},
 		{types.JSON(), json.RawMessage(" \t503\n"), json.RawMessage(`503`), nil},
 		{types.JSON(), json.Number("302"), json.Number("302"), nil},
-		{types.JSON(), `{"a":5}`, `{"a":5}`, nil},
+		{types.JSON(), []byte(`{"a": 5}`), json.RawMessage(`{"a":5}`), nil},
+		{types.JSON(), `{"a": 5}`, `{"a": 5}`, nil},
 		{types.JSON(), map[string]any{"a": 5.0}, map[string]any{"a": 5.0}, nil},
 		// Inet.
 		{types.Inet(), "127.0.0.1", "127.0.0.1", nil},
