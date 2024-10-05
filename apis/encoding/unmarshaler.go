@@ -537,10 +537,11 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 	case types.JSONKind:
 		if v.Kind() == '"' {
 			data := d.unquoteBytes(v)
-			if !json.Valid(data) {
+			var b bytes.Buffer
+			if err := json.Compact(&b, data); err != nil {
 				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", data), "")
 			}
-			return json.RawMessage(data), nil
+			return json.RawMessage(b.Bytes()), nil
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {
