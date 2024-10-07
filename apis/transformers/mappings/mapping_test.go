@@ -8,12 +8,12 @@
 package mappings
 
 import (
-	"encoding/json"
 	"reflect"
 	"slices"
 	"testing"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
@@ -176,12 +176,12 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `An empty string assigned to a JSON property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "''"},
-			expected:    map[string]any{"C": ""},
+			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 		{
 			name:        `A non-empty string assigned to a JSON property -> the string as JSON`,
 			expressions: map[string]string{"C": "'boo'"},
-			expected:    map[string]any{"C": "boo"},
+			expected:    map[string]any{"C": json.Value(`"boo"`)},
 		},
 		{
 			name:        `null assigned to a non-nullable JSON property -> the string as JSON`,
@@ -203,18 +203,18 @@ func Test_Transform(t *testing.T) {
 			name:        `A property with an empty string assigned to a non-nullable JSON property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "a"},
 			properties:  map[string]any{"a": ""},
-			expected:    map[string]any{"C": ""},
+			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 
 		{
 			name:        `An empty string assigned to a nullable JSON property -> the empty string as JSON`,
 			expressions: map[string]string{"D": "''"},
-			expected:    map[string]any{"D": ""},
+			expected:    map[string]any{"D": json.Value(`""`)},
 		},
 		{
 			name:        `A non-empty string assigned to a nullable JSON property -> the string as JSON`,
 			expressions: map[string]string{"D": "'boo'"},
-			expected:    map[string]any{"D": "boo"},
+			expected:    map[string]any{"D": json.Value(`"boo"`)},
 		},
 		{
 			name:        `null assigned to a nullable JSON property -> nil`,
@@ -236,7 +236,7 @@ func Test_Transform(t *testing.T) {
 			name:        `A property with an empty string assigned to a non-nullable JSON property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "a"},
 			properties:  map[string]any{"a": ""},
-			expected:    map[string]any{"C": ""},
+			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 
 		{
@@ -253,8 +253,8 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A JSON property with a JSON null value assigned to a non-nullable JSON property -> no properties`,
 			expressions: map[string]string{"C": "d"},
-			properties:  map[string]any{"d": json.RawMessage(`null`)},
-			expected:    map[string]any{"C": json.RawMessage(`null`)},
+			properties:  map[string]any{"d": json.Value(`null`)},
+			expected:    map[string]any{"C": json.Value(`null`)},
 		},
 		{
 			name:        `A JSON property without a value assigned to a nullable JSON property -> nil`,
@@ -270,20 +270,20 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A JSON property with a JSON null value assigned to a nullable JSON property -> no properties`,
 			expressions: map[string]string{"D": "e"},
-			properties:  map[string]any{"e": json.RawMessage(`null`)},
-			expected:    map[string]any{"D": json.RawMessage(`null`)},
+			properties:  map[string]any{"e": json.Value(`null`)},
+			expected:    map[string]any{"D": json.Value(`null`)},
 		},
 
 		{
 			name:        `A JSON property with a JSON null value assigned to a non-nullable property -> no properties`,
 			expressions: map[string]string{"A": "e"},
-			properties:  map[string]any{"e": json.RawMessage(`null`)},
+			properties:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{},
 		},
 		{
 			name:        `A JSON property with a JSON null value assigned to a nullable property -> nil`,
 			expressions: map[string]string{"B": "e"},
-			properties:  map[string]any{"e": json.RawMessage(`null`)},
+			properties:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{"B": nil},
 		},
 

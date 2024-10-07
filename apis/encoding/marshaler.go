@@ -11,7 +11,6 @@
 package encoding
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -21,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
@@ -57,22 +57,6 @@ func MarshalSlice(schema types.Type, values []map[string]any) ([]byte, error) {
 func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 	if v == nil {
 		return append(b, "null"...), nil
-	}
-	if t.Kind() == types.JSONKind {
-		var buf strings.Builder
-		enc := json.NewEncoder(&buf)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(v)
-		if err != nil {
-			return nil, fmt.Errorf("apis/encoding: cannot marshal to JSON: %s", err)
-		}
-		s := buf.String()
-		s = s[:len(s)-1]
-		b, err = jsontext.AppendQuote(b, s)
-		if err != nil {
-			return nil, err
-		}
-		return b, nil
 	}
 	switch v := v.(type) {
 	case bool:
@@ -125,6 +109,8 @@ func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 			b = v.AppendFormat(b, "15:04:05.999999999")
 		}
 		b = append(b, '"')
+	case json.Value:
+		b, _ = jsontext.AppendQuote(b, v)
 	case string:
 		var err error
 		b, err = jsontext.AppendQuote(b, v)

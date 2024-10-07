@@ -11,7 +11,6 @@ package connectors
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"iter"
@@ -27,6 +26,7 @@ import (
 	"github.com/meergo/meergo/apis/connectors/httpclient"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/itchyny/timefmt-go"
@@ -482,7 +482,6 @@ func parseIdentityProperty(name string, typ types.Type, value any, layouts *stat
 	case nil:
 		return "", fmt.Errorf("identify value is null")
 	case int:
-
 		return strconv.FormatInt(int64(id), 10), nil
 	case uint:
 		return strconv.FormatUint(uint64(id), 10), nil
@@ -495,25 +494,17 @@ func parseIdentityProperty(name string, typ types.Type, value any, layouts *stat
 		if int(math.Round(id)) == int(id) {
 			return strconv.FormatInt(int64(id), 10), nil
 		}
-	case json.Number:
-		var n int64
-		err := json.Unmarshal([]byte(id), &n)
-		if err == nil {
-			return strconv.FormatInt(n, 10), nil
-		}
-	case json.RawMessage:
-		if id[0] == '"' {
-			var s string
-			_ = json.Unmarshal(id, &s)
+	case json.Value:
+		switch id.Kind() {
+		case json.String:
+			s := id.String()
 			if s == "" {
 				return "", fmt.Errorf("identify value is empty")
 			}
 			return s, nil
-		} else {
-			var n int64
-			err := json.Unmarshal(id, &n)
-			if err == nil {
-				return strconv.FormatInt(n, 10), nil
+		case json.Number:
+			if _, err := id.Int(); err == nil {
+				return string(id), nil
 			}
 		}
 	}
@@ -551,13 +542,11 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 			return time.Time{}, err
 		}
 		return t, nil
-	case json.RawMessage:
-		var s string
-		err := json.Unmarshal(v, &s)
-		if err != nil {
+	case json.Value:
+		if !v.IsString() {
 			return time.Time{}, fmt.Errorf("last change time is not a JSON string")
 		}
-		t, err := parseLastChangeTimePropertyWithFormat(format, s)
+		t, err := parseLastChangeTimePropertyWithFormat(format, v.String())
 		if err != nil {
 			return time.Time{}, err
 		}

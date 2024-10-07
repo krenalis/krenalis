@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -67,8 +68,13 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 		}
 	case types.JSONKind:
 		// Go type is string for both the PostgreSQL types "json" and "jsonb".
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateJSONRaw(name, []byte(v))
+		if s, ok := v.(string); ok {
+			// PostgreSQL returns JSON with insignificant whitespace characters.
+			data, err := json.Compact([]byte(s))
+			if err != nil {
+				return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
+			}
+			return json.Value(data), nil
 		}
 	case types.InetKind:
 		if v, ok := v.(string); ok {

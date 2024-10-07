@@ -9,15 +9,15 @@ package transformers
 
 import (
 	"bytes"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -71,29 +71,19 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 	}
 	k := t.Kind()
 	if k == types.JSONKind {
+		raw := v.(json.Value)
 		if preserveJSON {
-			var buf strings.Builder
-			enc := json.NewEncoder(&buf)
-			enc.SetEscapeHTML(false)
-			err := enc.Encode(v)
-			if err != nil {
-				return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
-			}
-			s := buf.String()
-			s = s[:len(s)-1]
 			b = append(b, '\'')
-			b = jsStringEscape(b, s)
+			b = jsStringEscape(b, string(raw))
 			b = append(b, '\'')
 			return b, nil
 		}
-		if raw, ok := v.(json.RawMessage); ok {
-			dec := json.NewDecoder(bytes.NewReader(raw))
-			dec.UseNumber()
-			v = nil
-			err := dec.Decode(&v)
-			if err != nil {
-				return nil, fmt.Errorf("apis/transformers: cannot unmarshal JSON: %s", err)
-			}
+		dec := stdjson.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		v = nil
+		err := dec.Decode(&v)
+		if err != nil {
+			return nil, fmt.Errorf("apis/transformers: cannot unmarshal JSON: %s", err)
 		}
 		return marshalJavaScriptFromJSON(b, v), nil
 	}
@@ -218,7 +208,7 @@ func marshalJavaScriptFromJSON(b []byte, v any) []byte {
 		b = append(b, '\'')
 		b = jsStringEscape(b, v)
 		b = append(b, '\'')
-	case json.Number:
+	case stdjson.Number:
 		b = append(b, v...)
 	case []any:
 		b = append(b, '[')
@@ -254,29 +244,19 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 	}
 	k := t.Kind()
 	if k == types.JSONKind {
+		raw := v.(json.Value)
 		if preserveJSON {
-			var buf strings.Builder
-			enc := json.NewEncoder(&buf)
-			enc.SetEscapeHTML(false)
-			err := enc.Encode(v)
-			if err != nil {
-				return nil, fmt.Errorf("apis/transformers: cannot marshal to JSON: %s", err)
-			}
-			s := buf.String()
-			s = s[:len(s)-1]
 			b = append(b, '\'')
-			b = pyStringEscape(b, s)
+			b = pyStringEscape(b, string(raw))
 			b = append(b, '\'')
 			return b, nil
 		}
-		if raw, ok := v.(json.RawMessage); ok {
-			dec := json.NewDecoder(bytes.NewReader(raw))
-			dec.UseNumber()
-			v = nil
-			err := dec.Decode(&v)
-			if err != nil {
-				return nil, fmt.Errorf("apis/transformers: cannot unmarshal JSON: %s", err)
-			}
+		dec := stdjson.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		v = nil
+		err := dec.Decode(&v)
+		if err != nil {
+			return nil, fmt.Errorf("apis/transformers: cannot unmarshal JSON: %s", err)
 		}
 		return marshalPythonFromJSON(b, v), nil
 	}
@@ -408,7 +388,7 @@ func marshalPythonFromJSON(b []byte, v any) []byte {
 		b = append(b, '\'')
 		b = pyStringEscape(b, v)
 		b = append(b, '\'')
-	case json.Number:
+	case stdjson.Number:
 		b = append(b, v...)
 	case []any:
 		b = append(b, '[')

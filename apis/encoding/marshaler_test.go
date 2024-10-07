@@ -9,11 +9,11 @@ package encoding
 
 import (
 	"bytes"
-	"encoding/json"
 	"math"
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -109,31 +109,7 @@ var schema = types.Object([]types.Property{
 		Type: types.UUID(),
 	},
 	{
-		Name: "JSON_RawMessage",
-		Type: types.JSON(),
-	},
-	{
-		Name: "JSON_bool",
-		Type: types.JSON(),
-	},
-	{
-		Name: "JSON_string",
-		Type: types.JSON(),
-	},
-	{
-		Name: "JSON_float64",
-		Type: types.JSON(),
-	},
-	{
-		Name: "JSON_Number",
-		Type: types.JSON(),
-	},
-	{
-		Name: "JSON_slice",
-		Type: types.JSON(),
-	},
-	{
-		Name: "JSON_map",
+		Name: "JSON",
 		Type: types.JSON(),
 	},
 	{
@@ -194,14 +170,8 @@ var value = map[string]any{
 	"Time":                      time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
 	"Year":                      2023,
 	"UUID":                      "550e8400-e29b-41d4-a716-446655440000",
-	"JSON_RawMessage":           json.RawMessage(`{"foo":5,"boo":true}`),
-	"JSON_bool":                 true,
-	"JSON_string":               `foo & boo \u`,
-	"JSON_float64":              23.871,
-	"JSON_Number":               json.Number("85802.7305"),
-	"JSON_slice":                []any{"foo", 3, true},
-	"JSON_map":                  map[string]any{"a": 1, "b": 2},
-	"JSON_null":                 json.RawMessage(`null`),
+	"JSON":                      json.Value(`{"foo":5,"boo":true}`),
+	"JSON_null":                 json.Value(`null`),
 	"Inet":                      "192.158.1.38",
 	"Text":                      "some text",
 	"Array":                     []any{"foo", "boo"},
@@ -220,7 +190,7 @@ func Test_Marshal(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			value:  value,
-			result: []byte(`{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON_RawMessage":"{\"foo\":5,\"boo\":true}","JSON_bool":"true","JSON_string":"\"foo & boo \\\\u\"","JSON_float64":"23.871","JSON_Number":"85802.7305","JSON_slice":"[\"foo\",3,true]","JSON_map":"{\"a\":1,\"b\":2}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
+			result: []byte(`{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\":5,\"boo\":true}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
 		},
 		{
 			name:   "Empty",

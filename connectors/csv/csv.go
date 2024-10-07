@@ -13,7 +13,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/csv"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -48,7 +49,7 @@ func init() {
 func New(conf *meergo.FileConfig) (*CSV, error) {
 	c := CSV{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := stdjson.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
@@ -163,7 +164,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role mee
 		} else {
 			s = *c.settings
 		}
-		values, _ = json.Marshal(s)
+		values, _ = stdjson.Marshal(s)
 	case "save":
 		return nil, c.saveValues(ctx, values, role)
 	default:
@@ -235,7 +236,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 // saveValues saves the user-entered values as settings.
 func (c *CSV) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := stdjson.Unmarshal(values, &s)
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,7 @@ func (c *CSV) saveValues(ctx context.Context, values []byte, role meergo.Role) e
 		s.TrimLeadingSpace = false
 		s.HasColumnNames = false
 	}
-	b, err := json.Marshal(s)
+	b, err := stdjson.Marshal(s)
 	if err != nil {
 		return err
 	}
@@ -319,7 +320,7 @@ func toString(v any, t types.Type) string {
 	case types.UUIDKind, types.InetKind, types.TextKind:
 		return v.(string)
 	case types.JSONKind:
-		return string(v.(json.RawMessage))
+		return string(v.(json.Value))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:
 		return string(meergo.MarshalJSON(v, t))
 	default:

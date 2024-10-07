@@ -8,13 +8,13 @@
 package clickhouse
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -105,7 +105,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		} else {
 			b.WriteString("FALSE")
 		}
-	case json.RawMessage:
+	case json.Value:
 		quoteString(b, string(v))
 	case []any:
 		vt := t.Elem()

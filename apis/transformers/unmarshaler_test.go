@@ -9,7 +9,6 @@ package transformers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"math"
@@ -21,6 +20,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -211,8 +211,8 @@ func Test_Unmarshal(t *testing.T) {
 				"Time":                time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
 				"Year":                2023,
 				"UUID":                "550e8400-e29b-41d4-a716-446655440000",
-				"JSON":                json.RawMessage(`{"foo":5,"boo":true}`),
-				"JSON_null":           json.RawMessage(`null`),
+				"JSON":                json.Value(`{"foo": 5,"boo": true}`),
+				"JSON_null":           json.Value(`null`),
 				"Inet":                "192.158.1.38",
 				"Text":                "some text",
 				"Text_nil":            nil,
@@ -249,7 +249,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Millisecond,
-			data:         `{"records":[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\" :true}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836Z","Date":"2023-10-17T00:00:00.000Z","Time":"1970-01-01T09:34:25.836Z","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","Inet":"192.158.1.38","Text":"some text","Text_nil":null,"Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -608,11 +608,11 @@ func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 		}
 		return nil
 	case types.JSONKind:
-		j2, ok := v2.(json.RawMessage)
+		j2, ok := v2.(json.Value)
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
-		j1 := v1.(json.RawMessage)
+		j1 := v1.(json.Value)
 		if !bytes.Equal(j1, j2) {
 			return fmt.Errorf("expected value %q (%T), got %q (%T)", string(j1), v1, string(j2), v2)
 		}

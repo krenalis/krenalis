@@ -8,11 +8,11 @@
 package mappings
 
 import (
-	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -186,16 +186,10 @@ func Test_valueOf(t *testing.T) {
 				"e]": []any{3},
 			},
 		},
-		"f": nil,                  // Text
-		"g": json.Number("12.53"), // JSON
-		"h": map[string]any{ // JSON
-			"i":   true,
-			"i?":  5,
-			":i?": "boo",
-			"[i":  "foo",
-			"i]":  "zoo",
-		},
-		"l": json.RawMessage(`{"name":"Bob","email":"bob@axample.com"}`),
+		"f": nil, // Text
+		"g": json.Value("12.53"),
+		"h": json.Value(`{"i":true,"i?":5,":i?":"boo","[i":"foo","i]":"zoo"}`),
+		"l": json.Value(`{"name":"Bob","email":"bob@axample.com"}`),
 	}
 
 	tests := []struct {
@@ -213,25 +207,25 @@ func Test_valueOf(t *testing.T) {
 		{path{"b", "d", ":[e]]"}, []any{3}, nil},
 		{path{"b", "d", ":x"}, nil, nil},
 		{path{"f"}, nil, nil},
-		{path{"g"}, json.Number("12.53"), nil},
+		{path{"g"}, json.Value("12.53"), nil},
 		{path{"g", ":x"}, nil, errors.New(`invalid g.x: g is not a JSON object, it is a JSON number`)},
 		{path{"g", ":[x]"}, nil, errors.New(`invalid g["x"]: g is not a JSON object, it is a JSON number`)},
-		{path{"h", ":i"}, true, nil},
-		{path{"h", ":i?"}, true, nil},
-		{path{"h", ":[i?]?"}, 5, nil},
-		{path{"h", ":[:i?]"}, "boo", nil},
-		{path{"h", ":[:i?]?"}, "boo", nil},
-		{path{"h", ":[[i]"}, "foo", nil},
-		{path{"h", ":[[i]?"}, "foo", nil},
-		{path{"h", ":[i]]"}, "zoo", nil},
-		{path{"h", ":[i]]?"}, "zoo", nil},
+		{path{"h", ":i"}, json.Value("true"), nil},
+		{path{"h", ":i?"}, json.Value("true"), nil},
+		{path{"h", ":[i?]?"}, json.Value("5"), nil},
+		{path{"h", ":[:i?]"}, json.Value(`"boo"`), nil},
+		{path{"h", ":[:i?]?"}, json.Value(`"boo"`), nil},
+		{path{"h", ":[[i]"}, json.Value(`"foo"`), nil},
+		{path{"h", ":[[i]?"}, json.Value(`"foo"`), nil},
+		{path{"h", ":[i]]"}, json.Value(`"zoo"`), nil},
+		{path{"h", ":[i]]?"}, json.Value(`"zoo"`), nil},
 		{path{"h", ":i", ":x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
 		{path{"h", ":i", ":x?"}, nil, nil},
 		{path{"h", ":x"}, nil, nil},
 		{path{"h", ":i", ":[x]?"}, nil, nil},
 		{path{"x"}, nil, nil},
-		{path{"l", "email"}, "bob@axample.com", nil},
-		{path{"l", "name"}, "Bob", nil},
+		{path{"l", "email"}, json.Value(`"bob@axample.com"`), nil},
+		{path{"l", "name"}, json.Value(`"Bob"`), nil},
 	}
 
 	for _, test := range tests {

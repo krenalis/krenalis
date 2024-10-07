@@ -33,6 +33,7 @@ require (
 	github.com/relvacode/iso8601 v1.4.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/snowflakedb/gosnowflake v1.11.0
+	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.17.1
 	github.com/xuri/excelize/v2 v2.8.1
 	go.opentelemetry.io/otel v1.26.0
@@ -106,6 +107,8 @@ require (
 	github.com/segmentio/backo-go v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.8.0 // indirect
 	github.com/xuri/efp v0.0.0-20231025114914-d1ff6096ae53 // indirect
 	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect

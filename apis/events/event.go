@@ -8,11 +8,11 @@
 package events
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 
 	"github.com/shopspring/decimal"
 )
@@ -37,17 +37,17 @@ type Event struct {
 	Context      Context
 	Event        string
 	GroupId      string
-	Integrations json.RawMessage
+	Integrations json.Value
 	MessageId    string
 	Name         string
 	ReceivedAt   time.Time
 	SentAt       time.Time
 	Timestamp    time.Time
-	Traits       map[string]any
+	Traits       json.Value
 	Type         *string
 	UserId       string
 	PreviousId   string
-	Properties   map[string]any
+	Properties   json.Value
 }
 
 type Context struct {

@@ -9,7 +9,6 @@ package encoding
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"reflect"
@@ -19,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -189,8 +189,8 @@ func Test_Unmarshal(t *testing.T) {
 		"Time":        time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
 		"Year":        2023,
 		"UUID":        "550e8400-e29b-41d4-a716-446655440000",
-		"JSON":        json.RawMessage(`{"foo":5,"boo":true}`),
-		"JSON_null":   json.RawMessage(`null`),
+		"JSON":        json.Value(`{"foo": 5,"boo": true}`),
+		"JSON_null":   json.Value(`null`),
 		"JSON_nil":    nil,
 		"Inet":        "192.158.1.38",
 		"Text":        "some text",
@@ -471,11 +471,11 @@ func equalValues(t types.Type, v1, v2 any) error {
 		}
 		return nil
 	case types.JSONKind:
-		j2, ok := v2.(json.RawMessage)
+		j2, ok := v2.(json.Value)
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
-		j1 := v1.(json.RawMessage)
+		j1 := v1.(json.Value)
 		if !bytes.Equal(j1, j2) {
 			return fmt.Errorf("expected value %q (%T), got %q (%T)", string(j1), v1, string(j2), v2)
 		}

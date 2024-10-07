@@ -22,7 +22,7 @@
 | Time      | time.Time       | string                       | -               | string      | []byte    | time.Time   |              | -               | -      | -      |
 | Year      | int             | float64, json.Number         | -               | -           | int64     | -           | -            | -               | -      | -      |
 | UUID      | string          | string                       | string          | string      | -         | -           |              | -               | -      | -      |
-| JSON      | JSON types [^3] | JSON types [^3]              | - [^2]          | []byte [^7] | []byte    | string [^5] |              | JSON types [^3] | -      | -      |
+| JSON      | json.Value      | JSON types [^3]              | - [^2]          | []byte [^7] | []byte    | string [^5] |              | JSON types [^3] | -      | -      |
 | Inet      | string          | string                       | net.IP          | string      | -         | -           | -            | -               | -      | -      |
 | Text      | string          | string                       | string          | string      | []byte    | string      | []byte       | -               | string | string |
 | Array(T)  | []any           | []any                        | []T             | []T [^4]    | -         | string [^6] | -            | -               | -      | -      |

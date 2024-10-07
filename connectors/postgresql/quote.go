@@ -9,12 +9,12 @@ package postgresql
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -144,7 +144,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		} else {
 			b.WriteString("FALSE")
 		}
-	case json.RawMessage:
+	case json.Value:
 		quoteJSON(b, v)
 	default:
 		panic(fmt.Errorf("unsupported value type '%T'", v))

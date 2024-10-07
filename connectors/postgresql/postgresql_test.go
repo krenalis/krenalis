@@ -10,7 +10,6 @@ package postgresql
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -60,8 +60,8 @@ func Test_Upsert_Query(t *testing.T) {
 		{"boolean", true, types.Boolean(), true},
 		{"inet", "127.0.0.1", types.Inet(), "127.0.0.1"},
 		{"uuid", "4d92d698-687d-4447-b34f-6b29d74a9730", types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
-		{"json", []byte(`{"foo":"boo"}`), types.JSON(), json.RawMessage(`{"foo":"boo"}`)},
-		{"jsonb", []byte(`{"foo": "boo"}`), types.JSON(), json.RawMessage(`{"foo":"boo"}`)},
+		{"json", []byte(`{"foo":"boo"}`), types.JSON(), json.Value(`{"foo":"boo"}`)},
+		{"jsonb", []byte(`{"foo": "boo"}`), types.JSON(), json.Value(`{"foo":"boo"}`)},
 	}
 
 	table := meergo.Table{

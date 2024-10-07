@@ -8,9 +8,8 @@
 package warehouses
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"math"
 	"net/netip"
@@ -19,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -469,8 +469,8 @@ func ValidateUUID(name string, s string) (any, error) {
 
 // ValidateJSON validates a JSON value.
 func ValidateJSON(name string, v any) (any, error) {
-	if b, ok := v.(json.RawMessage); ok {
-		return ValidateJSONRaw(name, b)
+	if data, ok := v.(stdjson.RawMessage); ok {
+		return ValidateJSONRaw(name, data)
 	}
 	if !isValidJSON(v) {
 		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
@@ -479,15 +479,12 @@ func ValidateJSON(name string, v any) (any, error) {
 }
 
 // ValidateJSONRaw validates a JSON value represented as a json.RawMessage.
-func ValidateJSONRaw(name string, b json.RawMessage) (any, error) {
-	if !utf8.Valid(b) {
+func ValidateJSONRaw(name string, data stdjson.RawMessage) (any, error) {
+	v := json.Value(data)
+	if !json.Valid(v) {
 		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
 	}
-	var buf bytes.Buffer
-	if err := json.Compact(&buf, b); err != nil {
-		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
-	}
-	return json.RawMessage(buf.Bytes()), nil
+	return v, nil
 }
 
 // ValidateInet validates an Inet value.
@@ -552,8 +549,8 @@ func isValidJSON(src any) bool {
 			}
 		}
 		return true
-	case json.Number:
-		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && json.Valid([]byte(src))
+	case stdjson.Number:
+		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && stdjson.Valid([]byte(src))
 	}
 	return false
 }

@@ -10,11 +10,11 @@ package json
 import (
 	"bytes"
 	_ "embed"
-	"encoding/json"
 	"math"
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -94,7 +94,7 @@ func TestEncoder(t *testing.T) {
 		"time":          time.Date(1970, 1, 1, 12, 37, 22, 792021695, time.UTC),
 		"year":          2023,
 		"uuid":          "123e4567-e89b-12d3-a456-426614174000",
-		"json":          json.RawMessage(`{"foo":"boo","values":[1,2,3]}`),
+		"json":          json.Value(`{"foo":"boo","values":[1,2,3]}`),
 		"inet":          "2001:db8:85a3::8a2e:370:7334",
 		"text":          "abc \x00 \b\t\n\v\f\r \x18 \"&'<>\\ é 日 🌍 \u2028 \u2029",
 		"array_int":     []any{846, 106728, -23719},

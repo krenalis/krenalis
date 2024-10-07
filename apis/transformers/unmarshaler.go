@@ -9,7 +9,6 @@ package transformers
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
@@ -359,12 +359,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if err != nil {
 			return nil, err
 		}
-		var b bytes.Buffer
-		err = json.Compact(&b, v)
-		if err != nil {
-			return nil, err
-		}
-		return json.RawMessage(b.Bytes()), nil
+		return json.Value(bytes.Clone(v)), nil
 	}
 	switch d.peekKind() {
 	case '[':
@@ -479,7 +474,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						if p.Type.Kind() != types.JSONKind || preserveJSON {
 							return nil, newErrInvalidValue("cannot be "+d.opts.terms["null"], p.Name, d.opts.terms)
 						}
-						value = json.RawMessage("null")
+						value = json.Value("null")
 					}
 				} else {
 					value, err = d.unmarshal(p.Type, preserveJSON, purpose)
@@ -677,18 +672,19 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.ParseBytes(d.unquoteBytes(v)); err == nil {
-				return u.String(), nil
+			if s, err := json.Unquote(v); err == nil {
+				if u, err := uuid.ParseBytes(s); err == nil {
+					return u.String(), nil
+				}
 			}
 		}
 	case types.JSONKind:
 		if v.Kind() == '"' {
-			data := d.unquoteBytes(v)
-			var b bytes.Buffer
-			if err := json.Compact(&b, data); err != nil {
+			data, err := json.Unquote(v)
+			if err != nil {
 				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", data), "", d.opts.terms)
 			}
-			return json.RawMessage(b.Bytes()), nil
+			return json.Value(data), nil
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {
@@ -741,15 +737,9 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 	return nil, newErrInvalidValue("does not have a valid value: "+value, "", d.opts.terms)
 }
 
-// unquoteBytes unquote a JSON string.
-func (d decoder) unquoteBytes(v []byte) []byte {
-	b, _ := jsontext.AppendUnquote(nil, v)
-	return b
-}
-
 // unquoteString unquote a JSON string.
 func (d decoder) unquoteString(v []byte) string {
-	b, _ := jsontext.AppendUnquote(nil, v)
+	b, _ := json.Unquote(v)
 	return string(b)
 }
 

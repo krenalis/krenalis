@@ -10,7 +10,6 @@ package connectors
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +23,7 @@ import (
 	"github.com/meergo/meergo/apis/connectors/httpclient"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -426,9 +426,7 @@ func sameValue(t types.Type, v, v2 any) bool {
 		v2, ok := v2.(decimal.Decimal)
 		return ok && v1.Equal(v2)
 	case types.JSONKind:
-		v1, ok1 := v.(json.RawMessage)
-		v2, ok2 := v2.(json.RawMessage)
-		return ok1 && ok2 && bytes.Equal(v1, v2)
+		return bytes.Equal(v.(json.Value), v2.(json.Value))
 	case types.ArrayKind:
 		v1 := v.([]any)
 		a2, ok := v2.([]any)

@@ -8,12 +8,11 @@
 package snowflake
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -62,40 +61,56 @@ func (warehouse *Snowflake) Normalize(name string, typ types.Type, v any, nullab
 		if !ok {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
 		}
-		if v == "" || v[0] != '[' {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		if v == "" {
+			return nil, fmt.Errorf("data warehouse returned an empty string for column %s which is an Array type", name)
 		}
 		// Snowflake only supports JSON as the item type.
 		if typ.Elem().Kind() != types.JSONKind {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
 		}
-		dec := json.NewDecoder(strings.NewReader(v))
-		dec.UseNumber()
-		var a any
-		err := dec.Decode(&a)
-		if err != nil {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
+		ev := json.Value(v)
+		if json.Valid(ev) {
+			return nil, fmt.Errorf("data warehouse returned a string with invalid JSON for column %s", name)
 		}
-		return a, nil
+		if !ev.IsArray() {
+			return nil, fmt.Errorf("data warehouse returned a JSON %s for column %s which is an Array type", ev.Kind(), name)
+		}
+		min := typ.MinElements()
+		max := typ.MaxElements()
+		arr := make([]any, 0, min)
+		for i, elem := range ev.Elements() {
+			if i == max {
+				return nil, fmt.Errorf("data warehouse returned an array with more than %d elements for column %s", max, name)
+			}
+			arr = append(arr, elem)
+		}
+		if len(arr) < min {
+			return nil, fmt.Errorf("data warehouse returned an array with less than %d elements for column %s", min, name)
+		}
+		return arr, nil
 	case types.MapKind:
 		// The driver returns the value as a JSON object.
 		v, ok := v.(string)
 		if !ok {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
 		}
-		if v == "" || v[0] != '{' {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		if v == "" {
+			return nil, fmt.Errorf("data warehouse returned an empty string for column %s which is an Array type", name)
 		}
 		// Snowflake only supports JSON as the item type.
-		if typ.Elem().Kind() == types.JSONKind {
+		if typ.Elem().Kind() != types.JSONKind {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
 		}
-		dec := json.NewDecoder(strings.NewReader(v))
-		dec.UseNumber()
-		var m any
-		err := dec.Decode(&m)
-		if err != nil {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		ev := json.Value(v)
+		if json.Valid(ev) {
+			return nil, fmt.Errorf("data warehouse returned a string with invalid JSON for column %s", name)
+		}
+		if !ev.IsObject() {
+			return nil, fmt.Errorf("data warehouse returned a JSON %s for column %s which is a Map type", ev.Kind(), name)
+		}
+		m := map[string]any{}
+		for k, v := range ev.Properties() {
+			m[k] = v
 		}
 		return m, nil
 	}

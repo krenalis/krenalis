@@ -12,7 +12,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha1"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -40,6 +40,7 @@ import (
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
 	"github.com/meergo/meergo/apis/transformers"
+	"github.com/meergo/meergo/json"
 
 	"github.com/google/uuid"
 	"github.com/mssola/useragent"
@@ -80,25 +81,25 @@ type collectedEvent struct {
 
 	id [20]byte
 
-	AnonymousId       string          `json:"anonymousId,omitempty"`
-	Category          string          `json:"category,omitempty"`
-	Context           events.Context  `json:"context,omitempty"`
-	Event             string          `json:"event,omitempty"`
-	GroupId           string          `json:"groupId,omitempty"`
-	Integrations      json.RawMessage `json:"integrations,omitempty"`
-	MessageId         string          `json:"messageId,omitempty"`
-	Name              string          `json:"name,omitempty"`
+	AnonymousId       string         `json:"anonymousId,omitempty"`
+	Category          string         `json:"category,omitempty"`
+	Context           events.Context `json:"context,omitempty"`
+	Event             string         `json:"event,omitempty"`
+	GroupId           string         `json:"groupId,omitempty"`
+	Integrations      json.Value     `json:"integrations,omitempty"`
+	MessageId         string         `json:"messageId,omitempty"`
+	Name              string         `json:"name,omitempty"`
 	originalTimestamp time.Time
 	receivedAt        time.Time
 	SentAt            string `json:"sentAt,omitempty"`
 	sentAt            time.Time
 	Timestamp         string `json:"timestamp,omitempty"`
 	timestamp         time.Time
-	Traits            map[string]any `json:"traits,omitempty"`
-	Type              *string        `json:"type"`
-	UserId            string         `json:"userId,omitempty"`
-	PreviousId        string         `json:"previousId,omitempty"`
-	Properties        map[string]any `json:"properties,omitempty"`
+	Traits            json.Value `json:"traits,omitempty"`
+	Type              *string    `json:"type"`
+	UserId            string     `json:"userId,omitempty"`
+	PreviousId        string     `json:"previousId,omitempty"`
+	Properties        json.Value `json:"properties,omitempty"`
 
 	WriteKey string `json:"writeKey,omitempty"`
 }
@@ -375,7 +376,7 @@ func (c *Collector) persistEvents(events []*collectedEvent) <-chan error {
 	ack := make(chan error, 1)
 	go func() {
 		var b bytes.Buffer
-		enc := json.NewEncoder(&b)
+		enc := stdjson.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
 		for _, event := range events {
 			header := event.header
@@ -433,7 +434,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
 	w.Header().Set("Access-Control-Allow-Origin", origin)
-	enc := json.NewEncoder(w)
+	enc := stdjson.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	_ = enc.Encode(map[string]any{
 		"strategy": strategy,
@@ -1134,13 +1135,17 @@ func (c *Collector) enrichEvent(event *collectedEvent, sourceType state.Connecto
 	}
 
 	// Traits.
-	if t := *event.Type; (t == "identify" || t == "group") && event.Traits == nil {
-		event.Traits = map[string]any{}
+	if t := *event.Type; t == "identify" || t == "group" {
+		if event.Traits == nil {
+			event.Traits = json.Value("{}")
+		}
 	}
 
 	// Properties.
-	if t := *event.Type; (t == "page" || t == "screen" || t == "track") && event.Properties == nil {
-		event.Properties = map[string]any{}
+	if t := *event.Type; t == "page" || t == "screen" || t == "track" {
+		if event.Properties == nil {
+			event.Properties = json.Value("{}")
+		}
 	}
 
 }
@@ -1167,6 +1172,8 @@ func (c *Collector) setEventAsReceived(event *collectedEvent) error {
 	return nil
 }
 
+var emptyJSONObject = json.Value("{}")
+
 // storeEvents store the events in the data warehouse.
 //
 // If the data warehouse is in inspection mode, it returns the
@@ -1179,46 +1186,9 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 		return nil
 	}
 
-	var traits bytes.Buffer
-	traitsEnc := json.NewEncoder(&traits)
-	traitsEnc.SetEscapeHTML(false)
-	var properties bytes.Buffer
-	propertiesEnc := json.NewEncoder(&properties)
-	propertiesEnc.SetEscapeHTML(false)
-
 	rows := make([][]any, len(events))
 
 	for i, e := range events {
-
-		var err error
-
-		// Set traits.
-		traits.Reset()
-		if *e.Type == "identify" || *e.Type == "group" {
-			err = traitsEnc.Encode(e.Traits)
-		} else if e.Context.Traits != nil {
-			err = traitsEnc.Encode(e.Context.Traits)
-		} else {
-			traits.WriteString("{}\n")
-		}
-		if err != nil {
-			slog.Error("cannot marshal event", "err", err)
-			continue
-		}
-		traits.Truncate(traits.Len() - 1) // remove the new line added by json.Encode
-
-		// Set properties.
-		properties.Reset()
-		if e.Properties == nil {
-			properties.WriteString("{}")
-		} else {
-			err = propertiesEnc.Encode(e.Properties)
-			if err != nil {
-				slog.Error("cannot marshal event", "err", err)
-				continue
-			}
-			properties.Truncate(properties.Len() - 1) // remove the new line added by json.Encode
-		}
 
 		// Set groupId.
 		groupId := e.GroupId
@@ -1230,6 +1200,18 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 		ip := e.Context.IP
 		if ip == "" {
 			ip = "0.0.0.0"
+		}
+
+		// Set traits.
+		traits := e.Traits
+		if traits == nil {
+			traits = emptyJSONObject
+		}
+
+		// Set properties.
+		properties := e.Properties
+		if properties == nil {
+			properties = emptyJSONObject
 		}
 
 		rows[i] = []any{
@@ -1288,14 +1270,14 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 			groupId,                            // group_id
 			e.MessageId,                        // message_id
 			e.Name,                             // name
-			json.RawMessage(slices.Clone(properties.Bytes())), // properties
-			e.ReceivedAt,    // received_at
-			e.SentAt,        // sent_at
-			e.Header.Source, // source
-			e.Timestamp,     // timestamp
-			json.RawMessage(slices.Clone(traits.Bytes())), // traits
-			*e.Type,  // type
-			e.UserId, // user_id
+			properties,                         // properties
+			e.ReceivedAt,                       // received_at
+			e.SentAt,                           // sent_at
+			e.Header.Source,                    // source
+			e.Timestamp,                        // timestamp
+			traits,                             // traits
+			*e.Type,                            // type
+			e.UserId,                           // user_id
 		}
 
 	}

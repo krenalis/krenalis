@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -37,8 +38,8 @@ func Test_renderExpr(t *testing.T) {
 			query: `"a" = "b"`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, map[string]any{"foo": 2, "boo": true}),
-			query: `"values" = PARSE_JSON('{"boo":true,"foo":2}')`,
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
+			query: `"values" = PARSE_JSON('{"foo":2,"boo":true}')`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),

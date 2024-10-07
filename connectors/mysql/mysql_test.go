@@ -10,7 +10,6 @@ package mysql
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -57,7 +57,7 @@ func Test_Upsert_Query(t *testing.T) {
 		{"DATE", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{"TIME", []byte("02:03:00"), types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
 		{"YEAR", int64(2024), types.Year(), 2024},
-		{"JSON", []byte(`{"foo": "bar"}`), types.JSON(), json.RawMessage(`{"foo":"bar"}`)},
+		{"JSON", []byte(`{"foo": "bar"}`), types.JSON(), json.Value(`{"foo":"bar"}`)},
 		{"VARCHAR(100)", []byte("foo"), types.Text(), "foo"},
 		{"CHAR(10)", []byte("foo"), types.Text(), "foo"},
 		{"TEXT", []byte("foo"), types.Text(), "foo"},

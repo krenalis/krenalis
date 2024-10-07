@@ -9,7 +9,7 @@ package connectors
 
 import (
 	"bytes"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -17,12 +17,12 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -164,7 +164,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				v, err = strconv.ParseUint(src.String(), 10, 64)
 				value = err != nil
 			}
-		case json.Number:
+		case stdjson.Number:
 			var err error
 			v, err = strconv.ParseUint(string(src), 10, 64)
 			if err != nil {
@@ -261,7 +261,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if valid && typ.BitSize() == 32 {
 				valid = float64(float32(v)) == v
 			}
-		case json.Number:
+		case stdjson.Number:
 			var err error
 			v, err = strconv.ParseFloat(string(src), typ.BitSize())
 			valid = err == nil
@@ -329,7 +329,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case decimal.Decimal:
 			v = src
 			valid = true
-		case json.Number:
+		case stdjson.Number:
 			var err error
 			v, err = decimal.NewFromString(string(src))
 			valid = err == nil
@@ -373,7 +373,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				t, err = time.Parse(layouts.DateTime, src)
 				valid = err == nil
 			}
-		case json.Number:
+		case stdjson.Number:
 			if n, err := src.Int64(); err == nil {
 				t, valid = dateTimeFromUnixInt(n, layouts.DateTime)
 			} else if f, err := src.Float64(); err == nil {
@@ -451,26 +451,29 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.JSONKind:
 		var data []byte
 		switch src := src.(type) {
-		case json.RawMessage:
+		case stdjson.RawMessage:
 			data = src
 		case []byte:
 			data = src
 		}
 		if data != nil {
-			if !utf8.Valid(data) {
+			if !json.Valid(data) {
 				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
 			}
-			var b bytes.Buffer
-			err := json.Compact(&b, data)
-			if err != nil {
-				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
-			}
-			value = json.RawMessage(b.Bytes())
+			value = json.Value(data)
 		} else {
 			if !validJSON(src) {
 				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
 			}
-			value = src
+			var b bytes.Buffer
+			enc := stdjson.NewEncoder(&b)
+			enc.SetEscapeHTML(false)
+			err := enc.Encode(src)
+			if err != nil {
+				return nil, err
+			}
+			b.Truncate(b.Len() - 1)
+			value = json.Value(b.Bytes())
 		}
 		valid = true
 	case types.InetKind:
@@ -521,10 +524,24 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the item type. The driver returns the value as a JSON array.
 			if s != "" && s[0] == '[' && typ.Elem().Kind() == types.JSONKind {
-				dec := json.NewDecoder(strings.NewReader(s))
-				dec.UseNumber()
-				err := dec.Decode(&value)
-				valid = err == nil
+				v := json.Value(s)
+				if !json.Valid(v) {
+					return nil, fmt.Errorf("value of property %q is not valid JSON", name)
+				}
+				min := typ.MinElements()
+				max := typ.MaxElements()
+				arr := make([]any, 0, min)
+				for i, element := range v.Elements() {
+					if i == max {
+						return nil, newNormalizationErrorf(name, "is an array with more than %d elements; they must be in range [%d, %d]", min, min, max)
+					}
+					arr = append(arr, element)
+				}
+				if len(arr) < max {
+					return nil, newNormalizationErrorf(name, "is an array with less than %d elements; they must be in range [%d, %d]", min, min, max)
+				}
+				value = arr
+				valid = true
 			}
 		} else {
 			rv := reflect.ValueOf(src)
@@ -590,10 +607,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if s, ok := src.(string); ok {
 			// Snowflake only supports JSON as the value type. The driver returns the value as a JSON object.
 			if s != "" && s[0] == '{' && typ.Elem().Kind() == types.JSONKind {
-				dec := json.NewDecoder(strings.NewReader(s))
-				dec.UseNumber()
-				err := dec.Decode(&value)
-				valid = err == nil
+				v := json.Value(s)
+				if json.Valid(v) {
+					m := map[string]any{}
+					for k, v := range v.Properties() {
+						m[k] = v
+					}
+					value = m
+					valid = true
+				}
 			}
 		} else {
 			rv := reflect.ValueOf(src)
@@ -651,7 +673,7 @@ func asInt64(v any) (int64, bool) {
 		return int64(v), !math.IsInf(v, 0) && v == math.Trunc(v)
 	case decimal.Decimal:
 		return v.IntPart(), v.IsInteger() && v.GreaterThanOrEqual(minIntDecimal) && v.LessThanOrEqual(maxIntDecimal)
-	case json.Number:
+	case stdjson.Number:
 		value, err := v.Int64()
 		if err != nil {
 			if d, err := decimal.NewFromString(string(v)); err == nil {
@@ -746,8 +768,8 @@ func validJSON(src any) bool {
 			}
 		}
 		return true
-	case json.Number:
-		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && json.Valid([]byte(src))
+	case stdjson.Number:
+		return src != "" && (src[0] == '-' || '0' <= src[0] && src[0] <= '9') && stdjson.Valid([]byte(src))
 	}
 	return false
 }

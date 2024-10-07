@@ -9,7 +9,7 @@ package mappings
 
 import (
 	"bytes"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -21,8 +21,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
+	"github.com/go-json-experiment/json/jsontext"
 	"github.com/shopspring/decimal"
 )
 
@@ -103,18 +105,13 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	case types.TimeKind:
 		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
 	case types.JSONKind:
-		switch v := v.(type) {
-		case float64:
-			return strconv.AppendFloat(b, v, 'g', -1, 64), nil
-		case json.Number:
+		v := v.(json.Value)
+		switch v.Kind() {
+		case json.Array, json.Object:
+		case json.String:
+			return jsontext.AppendUnquote(b, v)
+		default:
 			return append(b, v...), nil
-		case bool:
-			strconv.AppendBool(b, v)
-		case json.RawMessage:
-			s, err := jsonToText(v)
-			if err == nil {
-				return append(b, s...), nil
-			}
 		}
 	}
 	return b, errInvalidConversion
@@ -235,18 +232,27 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return true, types.Boolean(), nil
 	case "array":
-		a := make([]any, len(p.args))
+		var b bytes.Buffer
+		enc := stdjson.NewEncoder(&b)
+		enc.SetEscapeHTML(false)
+		arr := make([]any, len(p.args))
 		for i, arg := range p.args {
 			v, _, err := eval(arg, properties, layouts, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			if v == nil {
-				v = json.RawMessage("null")
+			switch v.(type) {
+			case nil:
+				v = json.Value("null")
+			case json.Value:
+			default:
+				b.Reset()
+				_ = enc.Encode(v)
+				v = json.Value(bytes.Clone(b.Bytes()))
 			}
-			a[i] = v
+			arr[i] = v
 		}
-		return a, types.Array(types.JSON()), nil
+		return arr, types.Array(types.JSON()), nil
 	case "coalesce":
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, properties, layouts, purpose)
@@ -309,8 +315,8 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		if v, ok := v.(json.RawMessage); ok {
-			dec := json.NewDecoder(bytes.NewReader(v))
+		if v2, ok := v.(json.Value); ok {
+			dec := stdjson.NewDecoder(bytes.NewReader(v2))
 			dec.UseNumber()
 			v = nil
 			_ = dec.Decode(&v)
@@ -351,7 +357,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			length = len(v)
 		case map[string]any:
 			length = len(v)
-		case json.Number:
+		case stdjson.Number:
 			length = len(v)
 		}
 		return length, types.Int(32), nil
@@ -533,14 +539,13 @@ func substring(s string, start, length int) string {
 //
 // For non-object JSON values, accessing a key returns nil if the key is
 // followed by "?"; otherwise, it returns an error.
-//
-// For a JSON property of type json.RawMessage, the function unmarshals the
-// value and replaces it with the unmarshalled value in the properties map.
 func valueOf(path path, properties map[string]any) (any, error) {
 	var v any
 	var ok bool
 	last := len(path) - 1
-	for i, name := range path {
+	var i int
+	for i = 0; i < len(path); i++ {
+		name := path[i]
 		if name[0] == ':' {
 			name = name[1:]
 			if n := len(name) - 1; name[n] == '?' {
@@ -554,40 +559,51 @@ func valueOf(path path, properties map[string]any) (any, error) {
 		if !ok {
 			return nil, nil
 		}
-		if i != last {
-			var ok bool
-			switch v2 := v.(type) {
-			case map[string]any:
-				properties, ok = v2, true
-			case json.RawMessage:
-				if v2[0] == '{' {
-					dec := json.NewDecoder(bytes.NewReader(v2))
-					dec.UseNumber()
-					v = nil
-					_ = dec.Decode(&v)
-					properties[name] = v
-					properties, ok = v.(map[string]any), true
-				}
+		if i == last {
+			return v, nil
+		}
+		properties, ok = v.(map[string]any)
+		if !ok {
+			break
+		}
+	}
+	v2 := v.(json.Value)
+	for i++; i < len(path); i++ {
+		name := path[i]
+		if !v2.IsObject() {
+			if name[len(name)-1] == '?' {
+				return nil, nil
 			}
-			if !ok {
-				if name := path[i+1]; name[len(name)-1] == '?' {
-					return nil, nil
-				}
-				var t string
-				switch v.(type) {
-				case nil:
-					t = "JSON null"
-				case bool:
-					t = "a JSON boolean"
-				case float64, json.Number:
-					t = "a JSON number"
-				case string:
-					t = "a JSON string"
-				default:
-					t = "a JSON array"
-				}
-				return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", path[:i+2], path[:i+1], t)}
+			var t string
+			switch v2.Kind() {
+			case json.Null:
+				t = "JSON null"
+			case json.False, json.True:
+				t = "a JSON boolean"
+			case json.Number:
+				t = "a JSON number"
+			case json.String:
+				t = "a JSON string"
+			default:
+				t = "a JSON array"
 			}
+			return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", path[:i+1], path[:i], t)}
+		}
+		if name[0] == ':' {
+			name = name[1:]
+			if n := len(name) - 1; name[n] == '?' {
+				name = name[:n]
+			}
+		}
+		if name[0] == '[' {
+			name = name[1 : len(name)-1]
+		}
+		v2, ok = v2.Lookup(name)
+		if !ok {
+			return nil, nil
+		}
+		if i == last {
+			return v2, nil
 		}
 	}
 	return v, nil

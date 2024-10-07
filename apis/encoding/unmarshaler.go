@@ -9,7 +9,6 @@ package encoding
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
@@ -392,15 +392,9 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 	}
 }
 
-// unquoteBytes unquote a JSON string.
-func (d decoder) unquoteBytes(v []byte) []byte {
-	b, _ := jsontext.AppendUnquote(nil, v)
-	return b
-}
-
 // unquoteString unquote a JSON string.
 func (d decoder) unquoteString(v []byte) string {
-	b, _ := jsontext.AppendUnquote(nil, v)
+	b, _ := json.Unquote(v)
 	return string(b)
 }
 
@@ -495,10 +489,12 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.DateTimeKind:
 		if v.Kind() == '"' {
-			if t, err := iso8601.Parse(d.unquoteBytes(v)); err == nil {
-				t = t.UTC()
-				if y := t.Year(); 1 <= y && y <= 9999 {
-					return t, nil
+			if v, err := json.Unquote(v); err == nil {
+				if t, err := iso8601.Parse(v); err == nil {
+					t = t.UTC()
+					if y := t.Year(); 1 <= y && y <= 9999 {
+						return t, nil
+					}
 				}
 			}
 		}
@@ -530,18 +526,19 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.ParseBytes(d.unquoteBytes(v)); err == nil {
-				return u.String(), nil
+			if v, err := json.Unquote(v); err == nil {
+				if u, err := uuid.ParseBytes(v); err == nil {
+					return u.String(), nil
+				}
 			}
 		}
 	case types.JSONKind:
 		if v.Kind() == '"' {
-			data := d.unquoteBytes(v)
-			var b bytes.Buffer
-			if err := json.Compact(&b, data); err != nil {
-				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", data), "")
+			s, err := json.Unquote(v)
+			if err != nil {
+				return nil, newErrInvalidValue(fmt.Sprint("contains invalid JSON"), "")
 			}
-			return json.RawMessage(b.Bytes()), nil
+			return json.Value(s), nil
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {

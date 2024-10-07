@@ -35,7 +35,6 @@ func parse(r io.Reader, batch bool) (*batchEvents, error) {
 	// Read the events.
 	nr := norm.NFC.Reader(bytes.NewReader(b))
 	dec := json.NewDecoder(nr)
-	dec.UseNumber()
 
 	var request batchEvents
 	if batch {

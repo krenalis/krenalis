@@ -12,7 +12,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +24,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -52,7 +53,7 @@ type sfSettings struct {
 // It returns a SettingsError error if the settings are not valid.
 func Open(settings []byte) (*Snowflake, error) {
 	var s sfSettings
-	err := json.Unmarshal(settings, &s)
+	err := stdjson.Unmarshal(settings, &s)
 	if err != nil {
 		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
@@ -500,7 +501,7 @@ func (warehouse *Snowflake) Repair(ctx context.Context) error {
 
 // Settings returns the data warehouse settings.
 func (warehouse *Snowflake) Settings() []byte {
-	s, _ := json.Marshal(warehouse.settings)
+	s, _ := stdjson.Marshal(warehouse.settings)
 	return s
 }
 
@@ -583,6 +584,8 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 				b.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
 			case decimal.Decimal:
 				b.WriteString(v.String())
+			case json.Value:
+				quoteCSVBytes(&b, v)
 			case string:
 				if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
 					quoteCSVString(&b, v)
@@ -591,22 +594,15 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 				}
 			default:
 				switch k := columns[j].Type.Kind(); k {
-				case types.JSONKind, types.ArrayKind, types.MapKind:
-					switch v := v.(type) {
-					case json.RawMessage:
-						quoteCSVBytes(&b, v)
-					case json.Number:
-						b.WriteString(string(v))
-					default:
-						bj.Reset()
-						enc := json.NewEncoder(&bj)
-						enc.SetEscapeHTML(false)
-						err := enc.Encode(v)
-						if err != nil {
-							return nil, err
-						}
-						quoteCSVBytes(&b, bj.Bytes())
+				case types.ArrayKind, types.MapKind:
+					bj.Reset()
+					enc := stdjson.NewEncoder(&bj)
+					enc.SetEscapeHTML(false)
+					err := enc.Encode(v)
+					if err != nil {
+						return nil, err
 					}
+					quoteCSVBytes(&b, bj.Bytes())
 				case types.DateTimeKind:
 					b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.999999999"))
 				case types.DateKind:

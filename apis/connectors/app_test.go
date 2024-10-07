@@ -7,9 +7,9 @@
 package connectors
 
 import (
-	"encoding/json"
 	"testing"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -31,9 +31,9 @@ func Test_sameValue(t *testing.T) {
 		{t: types.Int(32), v: 4, v2: nil, expected: false},
 		{t: types.Float(64), v: 12.9037, v2: 12.9037, expected: true},
 		{t: types.JSON(), v: nil, v2: nil, expected: true},
-		{t: types.JSON(), v: json.RawMessage(`{"a":3,"b":[1,2]}`), v2: json.RawMessage(`{"a":3,"b":[1,2]}`), expected: true},
-		{t: types.JSON(), v: json.RawMessage(`{"a":3,"b":[1,2]}`), v2: json.RawMessage(`{"a":3,"c":true}`), expected: false},
-		{t: types.JSON(), v: json.RawMessage(`true`), v2: true, expected: false},
+		{t: types.JSON(), v: json.Value(`null`), v2: json.Value(`null`), expected: true},
+		{t: types.JSON(), v: json.Value(`{"a":3,"b":[1,2]}`), v2: json.Value(`{"a":3,"b":[1,2]}`), expected: true},
+		{t: types.JSON(), v: json.Value(`{"a":3,"b":[1,2]}`), v2: json.Value(`{"a":3,"c":true}`), expected: false},
 		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: []any{"a", "b"}, expected: true},
 		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: []any{"b", "a"}, expected: false},
 		{t: types.Array(types.Text()), v: []any{"a", "b"}, v2: []any{}, expected: false},

@@ -8,13 +8,13 @@
 package mysql
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -68,7 +68,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 			b.WriteString(v.Format("15:04:05.999999"))
 		}
 		b.WriteByte('"')
-	case json.RawMessage:
+	case json.Value:
 		b.WriteByte('"')
 		quoteString(b, string(v))
 		b.WriteByte('"')

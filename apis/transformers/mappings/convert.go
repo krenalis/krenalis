@@ -9,7 +9,7 @@ package mappings
 
 import (
 	"bytes"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -20,6 +20,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -68,7 +69,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		case v == nil:
 			return nil, nil
 		case spt == types.JSONKind && dpt != types.JSONKind:
-			if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
+			if v := v.(json.Value); v.IsNull() {
 				return nil, nil
 			}
 		case v == "":
@@ -78,11 +79,11 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		}
 	} else if v == nil {
 		if dpt == types.JSONKind {
-			return json.RawMessage("null"), nil
+			return json.Value("null"), nil
 		}
 		return nil, errInvalidConversion
 	} else if spt == types.JSONKind && dpt != types.JSONKind {
-		if v, ok := v.(json.RawMessage); ok && v[0] == 'n' {
+		if v := v.(json.Value); v.IsNull() {
 			return nil, errInvalidConversion
 		}
 	}
@@ -108,7 +109,10 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				return true, nil
 			}
 		case types.JSONKind:
-			return jsonToBoolean(v)
+			v := v.(json.Value)
+			if v.IsBool() {
+				return v.Bool(), nil
+			}
 		}
 	case types.IntKind:
 		var err error
@@ -138,7 +142,8 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		case types.TextKind:
 			n, err = strconv.Atoi(v.(string))
 		case types.JSONKind:
-			n, err = jsonToInt(v)
+			v := v.(json.Value)
+			n, err = v.Int()
 		default:
 			err = errInvalidConversion
 		}
@@ -179,7 +184,8 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			u, err = strconv.ParseUint(v.(string), 10, 64)
 			n = uint(u)
 		case types.JSONKind:
-			n, err = jsonToUint(v)
+			v := v.(json.Value)
+			n, err = v.Uint()
 		default:
 			return nil, errInvalidConversion
 		}
@@ -215,7 +221,8 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		case types.TextKind:
 			n, err = strconv.ParseFloat(v.(string), dt.BitSize())
 		case types.JSONKind:
-			n, err = jsonToFloat(v, dt.BitSize())
+			v := v.(json.Value)
+			n, err = v.Float(dt.BitSize())
 		default:
 			return nil, errInvalidConversion
 		}
@@ -245,7 +252,8 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		case types.TextKind:
 			n, err = decimal.NewFromString(v.(string))
 		case types.JSONKind:
-			n, err = jsonToDecimal(v)
+			v := v.(json.Value)
+			n, err = v.Decimal()
 		default:
 			return nil, errInvalidConversion
 		}
@@ -272,8 +280,16 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				return nil, errInvalidConversion
 			}
 		case types.JSONKind:
-			t, err = jsonToDateTime(v)
+			v := v.(json.Value)
+			if !v.IsString() {
+				return nil, errInvalidConversion
+			}
+			t, err = iso8601.Parse(v.Bytes())
 			if err != nil {
+				return nil, errInvalidConversion
+			}
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
 				return nil, errInvalidConversion
 			}
 		default:
@@ -313,9 +329,17 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				return nil, errInvalidConversion
 			}
 		case types.JSONKind:
-			t, err = jsonToDate(v)
+			v := v.(json.Value)
+			if !v.IsString() {
+				return nil, errInvalidConversion
+			}
+			t, err = time.Parse(time.DateOnly, v.String())
 			if err != nil {
-				return nil, err
+				return nil, errInvalidConversion
+			}
+			t = t.UTC()
+			if y := t.Year(); y < 1 || y > 9999 {
+				return nil, errInvalidConversion
 			}
 		default:
 			return nil, errInvalidConversion
@@ -330,7 +354,6 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		return t, nil
 	case types.TimeKind:
 		var t time.Time
-		var err error
 		switch spt {
 		case types.TimeKind:
 			t = v.(time.Time)
@@ -344,9 +367,14 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				return nil, errInvalidConversion
 			}
 		case types.JSONKind:
-			t, err = jsonToTime(v)
-			if err != nil {
-				return nil, err
+			v := v.(json.Value)
+			if !v.IsString() {
+				return nil, errInvalidConversion
+			}
+			var ok bool
+			t, ok = parseTime(v.Bytes())
+			if !ok {
+				return nil, errInvalidConversion
 			}
 		}
 		if layouts != nil {
@@ -378,7 +406,11 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			n, err = strconv.Atoi(s)
 		case types.JSONKind:
-			n, err = jsonToYear(v)
+			v := v.(json.Value)
+			n, err = v.Int()
+			if err != nil {
+				return nil, errInvalidConversion
+			}
 		default:
 			return nil, errInvalidConversion
 		}
@@ -396,34 +428,27 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			return u.String(), nil
 		case types.JSONKind:
-			return jsonToUUID(v)
+			v := v.(json.Value)
+			u, err := uuid.ParseBytes(v.Bytes())
+			if err != nil {
+				return nil, errInvalidConversion
+			}
+			return u.String(), nil
 		}
 	case types.JSONKind:
 		if spt == types.JSONKind {
 			return v, nil
 		}
-		switch v := v.(type) {
-		case bool, string:
-			return v, nil
-		case int:
-			return json.Number(strconv.Itoa(v)), nil
-		case uint:
-			return json.Number(strconv.FormatUint(uint64(v), 64)), nil
-		case float64:
-			if dt.IsReal() && (math.IsNaN(v) || math.IsInf(v, 0)) {
-				return nil, errInvalidConversion
-			}
-			return v, nil
-		}
 		var b bytes.Buffer
-		enc := json.NewEncoder(&b)
+		enc := stdjson.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
 		err := enc.Encode(v)
 		if err != nil {
 			return nil, errInvalidConversion
 		}
 		b.Truncate(b.Len() - 1)
-		return json.RawMessage(b.Bytes()), nil
+		// TODO(marco): time types are not correctly marshaled
+		return json.Value(b.Bytes()), nil
 	case types.InetKind:
 		switch spt {
 		case types.InetKind:
@@ -435,7 +460,15 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			return ip.String(), nil
 		case types.JSONKind:
-			return jsonToInet(v)
+			v := v.(json.Value)
+			if !v.IsString() {
+				return nil, errInvalidConversion
+			}
+			ip, err := netip.ParseAddr(v.String())
+			if err != nil {
+				return nil, errInvalidConversion
+			}
+			return ip.String(), nil
 		}
 	case types.TextKind:
 		var s string
@@ -466,11 +499,12 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		case types.UUIDKind, types.InetKind:
 			s = v.(string)
 		case types.JSONKind:
-			var err error
-			s, err = jsonToText(v)
-			if err != nil {
+			v := v.(json.Value)
+			switch v.Kind() {
+			case json.Array, json.Object:
 				return nil, errInvalidConversion
 			}
+			s = v.String()
 		default:
 			return nil, errInvalidConversion
 		}
@@ -520,30 +554,47 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			return []any{v}, nil
 		case types.JSONKind:
-			s, err := jsonToArray(v)
-			if err != nil {
+			v := v.(json.Value)
+			if v.Kind() == json.Object {
 				return nil, errInvalidConversion
 			}
-			if len(s) < dt.MinElements() || len(s) > dt.MaxElements() {
-				return nil, errInvalidConversion
-			}
-			it2 := dt.Elem()
-			for i, item := range s {
-				s[i], err = convert(item, types.JSON(), it2, false, layouts, purpose)
+			et := dt.Elem()
+			min := dt.MinElements()
+			max := dt.MaxElements()
+			if v.Kind() != json.Array {
+				if min > 1 || max == 0 {
+					return nil, errInvalidConversion
+				}
+				elem, err := convert(v, types.JSON(), et, false, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
+				return []any{elem}, nil
+			}
+			arr := make([]any, 0, min)
+			for i, elem := range v.Elements() {
+				if i == max {
+					return nil, errInvalidConversion
+				}
+				e, err := convert(elem, types.JSON(), et, false, layouts, purpose)
+				if err != nil {
+					return nil, err
+				}
+				arr = append(arr, e)
+			}
+			if len(arr) < min {
+				return nil, errInvalidConversion
 			}
 			if dt.Unique() {
-				for i, item := range s {
-					for _, item2 := range s[i:] {
-						if item == item2 {
+				for i, it := range arr {
+					for _, it2 := range arr[i:] {
+						if it == it2 {
 							return nil, errInvalidConversion
 						}
 					}
 				}
 			}
-			return s, nil
+			return arr, nil
 		case types.ArrayKind:
 			s := v.([]any)
 			if len(s) < dt.MinElements() || len(s) > dt.MaxElements() {
@@ -581,6 +632,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			if types.Equal(st, dt) {
 				return obj, nil
 			}
+			var err error
 			for name, value := range obj {
 				p2, ok := dt.Property(name)
 				if !ok {
@@ -593,7 +645,6 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 					}
 					continue
 				}
-				var err error
 				p1, ok := st.Property(name)
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
@@ -604,29 +655,21 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				}
 			}
 		case types.JSONKind:
-			var err error
-			obj, err = jsonToMap(v)
-			if err != nil {
+			v := v.(json.Value)
+			if v.Kind() != json.Object {
 				return nil, errInvalidConversion
 			}
-			for name, value := range obj {
+			var err error
+			obj = map[string]any{}
+			for name, value := range v.Properties() {
 				if !types.IsValidPropertyName(name) {
-					delete(obj, name)
 					continue
 				}
-				p2, ok := dt.Property(name)
+				p, ok := dt.Property(name)
 				if !ok {
-					delete(obj, name)
 					continue
 				}
-				if value == nil {
-					if !p2.Nullable {
-						return nil, errInvalidConversion
-					}
-					continue
-				}
-				var err error
-				obj[name], err = convert(value, types.JSON(), p2.Type, p2.Nullable, layouts, purpose)
+				obj[name], err = convert(value, types.JSON(), p.Type, p.Nullable, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -671,18 +714,20 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			}
 			return m, nil
 		case types.JSONKind:
-			s, err := jsonToMap(v)
-			if err != nil {
+			v := v.(json.Value)
+			if v.Kind() != json.Object {
 				return nil, errInvalidConversion
 			}
-			vt2 := dt.Elem()
-			for key, value := range s {
-				s[key], err = convert(value, types.JSON(), vt2, false, layouts, purpose)
+			vt := dt.Elem()
+			m := map[string]any{}
+			var err error
+			for name, value := range v.Properties() {
+				m[name], err = convert(value, types.JSON(), vt, false, layouts, purpose)
 				if err != nil {
 					return nil, err
 				}
 			}
-			return s, nil
+			return m, nil
 		}
 	}
 	return nil, errInvalidConversion
@@ -788,297 +833,6 @@ func isSimpleFloat(s string) bool {
 		}
 	}
 	return true
-}
-
-// jsonToArray converts v of type JSON to Array.
-func jsonToArray(v any) ([]any, error) {
-	switch v := v.(type) {
-	case bool, string, float64, json.Number:
-		return []any{v}, nil
-	case []any:
-		return v, nil
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		enc.UseNumber()
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToArray(s)
-		}
-	}
-	return nil, errInvalidConversion
-}
-
-// jsonToBoolean converts v of type JSON to Boolean.
-func jsonToBoolean(v any) (bool, error) {
-	switch v := v.(type) {
-	case bool:
-		return v, nil
-	case json.RawMessage:
-		if v[0] == 'f' {
-			return false, nil
-		}
-		if v[0] == 't' {
-			return true, nil
-		}
-	}
-	return false, errInvalidConversion
-}
-
-// jsonToDateTime converts v of type JSON to DateTime.
-func jsonToDateTime(v any) (time.Time, error) {
-	switch v := v.(type) {
-	case string:
-		t, err := iso8601.ParseString(v)
-		if err == nil {
-			t = t.UTC()
-			if y := t.Year(); 1 <= y && y <= 9999 {
-				return t, nil
-			}
-		}
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToDateTime(s)
-		}
-	}
-	return time.Time{}, errInvalidConversion
-}
-
-// jsonToDecimal converts v of type JSON to Decimal.
-func jsonToDecimal(v any) (decimal.Decimal, error) {
-	switch v := v.(type) {
-	case float64:
-		if !math.IsNaN(v) && !math.IsInf(v, 0) {
-			return decimal.NewFromFloat(v), nil
-		}
-	case json.Number:
-		return decimal.NewFromString(string(v))
-	case json.RawMessage:
-		return decimal.NewFromString(string(v))
-	}
-	return decimal.Decimal{}, errInvalidConversion
-}
-
-// jsonToFloat converts v of type JSON to Float with the provided bit size that
-// can be 32 or 64.
-func jsonToFloat(v any, bitSize int) (float64, error) {
-	switch v := v.(type) {
-	case float64:
-		if bitSize == 32 {
-			return float64(float32(v)), nil
-		}
-		return v, nil
-	case json.Number:
-		n, err := strconv.ParseFloat(string(v), bitSize)
-		if err == nil {
-			return n, nil
-		}
-		d, err := decimal.NewFromString(string(v))
-		if err == nil {
-			n, _ = d.Float64()
-			if bitSize == 32 {
-				n = float64(float32(n))
-			}
-			return n, nil
-		}
-	case json.RawMessage:
-		return jsonToFloat(json.Number(v), bitSize)
-	}
-	return 0, errInvalidConversion
-}
-
-// jsonToInt converts v of type JSON to Int.
-func jsonToInt(v any) (int, error) {
-	switch v := v.(type) {
-	case float64:
-		if v < minFloatConvertibleToInt64 || v > maxFloatConvertibleToInt64 {
-			return 0, errInvalidConversion
-		}
-		return int(math.Round(v)), nil
-	case json.Number:
-		return strconv.Atoi(string(v))
-	case json.RawMessage:
-		return strconv.Atoi(string(v))
-	}
-	return 0, errInvalidConversion
-}
-
-// jsonToUint converts v of type JSON to Uint.
-func jsonToUint(v any) (uint, error) {
-	switch v := v.(type) {
-	case float64:
-		if v < 0 || v > maxFloatConvertibleToUint64 {
-			return 0, errInvalidConversion
-		}
-		return uint(math.Round(v)), nil
-	case json.Number:
-		n, err := strconv.ParseUint(string(v), 10, 64)
-		if err == nil {
-			return uint(n), nil
-		}
-		var f float64
-		f, err = strconv.ParseFloat(string(v), 64)
-		if err == nil {
-			return uint(f), nil
-		}
-		var d decimal.Decimal
-		d, err = decimal.NewFromString(string(v))
-		if err == nil {
-			f, _ = d.Float64()
-			return uint(f), nil
-		}
-	case json.RawMessage:
-		return jsonToUint(json.Number(v))
-	}
-	return 0, errInvalidConversion
-}
-
-// jsonToDate converts v of type JSON to Date.
-func jsonToDate(v any) (time.Time, error) {
-	switch v := v.(type) {
-	case string:
-		t, err := time.Parse(time.DateOnly, v)
-		if err == nil {
-			t = t.UTC()
-			if y := t.Year(); 1 <= y && y <= 9999 {
-				return t, nil
-			}
-		}
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToDate(s)
-		}
-	}
-	return time.Time{}, errInvalidConversion
-}
-
-// jsonToInet converts v of type JSON to Inet.
-func jsonToInet(v any) (string, error) {
-	switch v := v.(type) {
-	case string:
-		if ip, err := netip.ParseAddr(v); err == nil {
-			return ip.String(), nil
-		}
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s string
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToInet(s)
-		}
-	}
-	return "", errInvalidConversion
-}
-
-// jsonToMap converts v of type JSON to Object/Map.
-func jsonToMap(v any) (map[string]any, error) {
-	switch v := v.(type) {
-	case map[string]any:
-		return v, nil
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		enc.UseNumber()
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToMap(s)
-		}
-	}
-	return nil, errInvalidConversion
-}
-
-// jsonToText converts v of type JSON to Text.
-func jsonToText(v any) (string, error) {
-	switch v := v.(type) {
-	case string:
-		return v, nil
-	case float64:
-		return strconv.FormatFloat(v, 'g', -1, 64), nil
-	case json.Number:
-		return string(v), nil
-	case bool:
-		if v {
-			return "true", nil
-		}
-		return "false", nil
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		enc.UseNumber()
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			if s == nil {
-				return "", nil
-			}
-			return jsonToText(s)
-		}
-	}
-	return "", errInvalidConversion
-}
-
-// jsonToTime converts v of type JSON to Time.
-func jsonToTime(v any) (time.Time, error) {
-	switch v := v.(type) {
-	case string:
-		t, ok := parseTime(v)
-		if ok {
-			return t, nil
-		}
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s any
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToTime(s)
-		}
-	}
-	return time.Time{}, errInvalidConversion
-}
-
-// jsonToUUID converts v of type JSON to UUID.
-func jsonToUUID(v any) (string, error) {
-	switch v := v.(type) {
-	case string:
-		if u, err := uuid.Parse(v); err == nil {
-			return u.String(), nil
-		}
-	case json.RawMessage:
-		enc := json.NewDecoder(bytes.NewReader(v))
-		var s string
-		err := enc.Decode(&s)
-		if err == nil {
-			return jsonToUUID(s)
-		}
-	}
-	return "", errInvalidConversion
-}
-
-// jsonToYear converts v of type JSON to Year.
-func jsonToYear(v any) (int, error) {
-	switch v := v.(type) {
-	case float64:
-		if 1 <= v && v <= 9999 {
-			return int(math.Round(v)), nil
-		}
-	case json.Number:
-		n, err := strconv.Atoi(string(v))
-		if err == nil {
-			return n, nil
-		}
-		f, err := strconv.ParseFloat(string(v), 64)
-		if err == nil && 1 <= f && f <= 9999 {
-			return int(math.Round(f)), nil
-		}
-	case json.RawMessage:
-		return jsonToYear(json.Number(v))
-	}
-	return 0, errInvalidConversion
 }
 
 // parseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as

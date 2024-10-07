@@ -8,13 +8,13 @@
 package mappings
 
 import (
-	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
@@ -75,47 +75,47 @@ func Test_Compile(t *testing.T) {
 		{expr: "engine.afterburner", dt: types.JSON(), nullable: false, expected: nil},
 		{expr: "properties.no_key", dt: types.JSON(), nullable: true, expected: nil},
 		{expr: "properties.no_key", dt: types.JSON(), nullable: false, expected: nil},
-		{expr: "jsonNull", dt: types.JSON(), nullable: false, expected: json.RawMessage("null")},
-		{expr: "jsonNull", dt: types.JSON(), nullable: true, expected: json.RawMessage("null")},
+		{expr: "jsonNull", dt: types.JSON(), nullable: false, expected: json.Value("null")},
+		{expr: "jsonNull", dt: types.JSON(), nullable: true, expected: json.Value("null")},
 		{expr: "jsonNil", dt: types.JSON(), nullable: false, expected: nil},
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
 
 		{expr: "' '   '  '", dt: types.Text(), expected: "   "},
-		{expr: "''", dt: types.JSON(), expected: ""},
-		{expr: "'100'", dt: types.JSON(), expected: "100"},
+		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
+		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},
 		{expr: "'42'", dt: types.Int(32), expected: 42},
 		{expr: "'42'", dt: types.Text(), expected: "42"},
 		{expr: "'Afterburner: ' coalesce('yes', 'no afterburner')", dt: types.Text(), expected: "Afterburner: yes"},
 		{expr: "'Afterburner: ' coalesce(engine.afterburner, 'no afterburner')", dt: types.Text(), expected: "Afterburner: no afterburner"},
 		{expr: "'Afterburner: ' coalesce(engine.afterburner, engine.afterburner, 'no afterburner')", dt: types.Text(), expected: "Afterburner: no afterburner"},
 		{expr: "42", dt: types.Int(32), expected: 42},
-		{expr: "42", dt: types.JSON(), expected: json.Number("42")},
+		{expr: "42", dt: types.JSON(), expected: json.Value("42")},
 		{expr: "42", dt: types.Text(), expected: "42"},
 		{expr: "cx cx", dt: types.Text(), expected: "0.1420.142"},
 		{expr: "engine.name", dt: types.Text(), expected: "TurboX"},
 		{expr: "engine.power ' x ' 1.36", dt: types.Text(), expected: "7000 x 1.36"},
 		{expr: "engine['power']", dt: types.Float(64), expected: 7000.0},
-		{expr: "engine", dt: types.JSON(), expected: json.RawMessage(`{"afterburner":null,"name":"TurboX","power":7000}`)},
+		{expr: "engine", dt: types.JSON(), expected: json.Value(`{"afterburner":null,"name":"TurboX","power":7000}`)},
 		{expr: "manufacturer ' ' model", dt: types.Text(), expected: "MyPlaneCompany SuperFast"},
-		{expr: "manufacturer", dt: types.JSON(), expected: "MyPlaneCompany"},
+		{expr: "manufacturer", dt: types.JSON(), expected: json.Value(`"MyPlaneCompany"`)},
 		{expr: "manufacturer", dt: types.Text(), expected: "MyPlaneCompany"},
 		{expr: "revision_dates", dt: types.Array(types.Date()), expected: []any{d}},
 		{expr: "map", dt: types.Map(types.Int(32)), expected: map[string]any{"x": 1, "y": 2}},
-		{expr: `""`, dt: types.JSON(), expected: ""},
+		{expr: `""`, dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "other", dt: types.Int(32), nullable: true, expected: nil},
 		{expr: "other", dt: types.Int(32), expected: nil},
 
 		{expr: "map['x']", dt: types.Int(32), expected: 1},
 		{expr: "map.x", dt: types.Int(32), expected: 1},
 		{expr: "map['not-exist']", dt: types.Int(32), expected: nil},
-		{expr: "deep['a']", dt: types.JSON(), expected: json.RawMessage(`{"b":{"p":{"x":1,"y":2}}}`)},
-		{expr: "deep['a']['b']", dt: types.JSON(), expected: json.RawMessage(`{"p":{"x":1,"y":2}}`)},
-		{expr: "deep['a']['b'].p", dt: types.JSON(), expected: json.RawMessage(`{"x":1,"y":2}`)},
-		{expr: "deep.a.b.p", dt: types.JSON(), expected: json.RawMessage(`{"x":1,"y":2}`)},
+		{expr: "deep['a']", dt: types.JSON(), expected: json.Value(`{"b":{"p":{"x":1,"y":2}}}`)},
+		{expr: "deep['a']['b']", dt: types.JSON(), expected: json.Value(`{"p":{"x":1,"y":2}}`)},
+		{expr: "deep['a']['b'].p", dt: types.JSON(), expected: json.Value(`{"x":1,"y":2}`)},
+		{expr: "deep.a.b.p", dt: types.JSON(), expected: json.Value(`{"x":1,"y":2}`)},
 		{expr: "deep['a']['not-exist'].p", dt: types.JSON(), expected: nil},
 		{expr: "deep['a']['b'].p['x']", dt: types.Int(32), expected: 1},
 
-		{expr: "properties", dt: types.JSON(), expected: map[string]any{":": 7.0, ":x": 8.0, "?": 4.0, "[x": 1.0, "[x]": 3.0, "[x]?": 6.0, "a": 1.0, "b": map[string]any{"c": []any{1.0, 2.0}}, "x?": 5.0, "x]": 2.0}},
+		{expr: "properties", dt: types.JSON(), expected: json.Value(`{"a":1.0,"b":{"c":[1.0,2.0]},"[x":1.0,"x]":2.0,"[x]":3.0,"?":4.0,"x?":5.0,"[x]?":6.0,":":7.0,":x":8.0}`)},
 		{expr: "properties.a", dt: types.Int(32), expected: 1},
 		{expr: "properties.a.x", dt: types.Int(32), evalErr: errors.New(`invalid properties.a.x: properties.a is not a JSON object, it is a JSON number`)},
 		{expr: "properties.a.x?", dt: types.Int(32), expected: nil},
@@ -176,9 +176,9 @@ func Test_Compile(t *testing.T) {
 		// array.
 		{expr: "array()", dt: types.Array(types.JSON()), nullable: true, expected: []any{}},
 		{expr: "array(1)", dt: types.Array(types.Int(32)), nullable: false, expected: []any{1}},
-		{expr: "array(1, \"a\", false)", dt: types.Array(types.JSON()), nullable: true, expected: []any{json.Number("1"), "a", false}},
+		{expr: "array(1, \"a\", false)", dt: types.Array(types.JSON()), nullable: true, expected: []any{json.Value("1"), json.Value(`"a"`), json.Value("false")}},
 		{expr: "array(array(1,2,3))", dt: types.Array(types.Array(types.Int(32))), nullable: true, expected: []any{[]any{1, 2, 3}}},
-		{expr: "array(null)", dt: types.Array(types.JSON()), expected: []any{json.RawMessage("null")}},
+		{expr: "array(null)", dt: types.Array(types.JSON()), expected: []any{json.Value("null")}},
 
 		// coalesce.
 		{expr: "coalesce(1, 2)", dt: types.Int(32), nullable: true, expected: 1},
@@ -373,25 +373,12 @@ func Test_Compile(t *testing.T) {
 						},
 					},
 				},
-				"other": nil,
-				"properties": map[string]any{
-					"a": 1.0,
-					"b": map[string]any{
-						"c": []any{1.0, 2.0},
-					},
-					"[x":   1.0,
-					"x]":   2.0,
-					"[x]":  3.0,
-					"?":    4.0,
-					"x?":   5.0,
-					"[x]?": 6.0,
-					":":    7.0,
-					":x":   8.0,
-				},
-				"jsonNull": json.RawMessage("null"),
-				"jsonNil":  nil,
-				"ip":       " 127.0.0.1  ",
-				"uuid":     "\n2e3e96c4-2bc8-41d5-b492-bd6745190691 ",
+				"other":      nil,
+				"properties": json.Value(`{"a":1.0,"b":{"c":[1.0,2.0]},"[x":1.0,"x]":2.0,"[x]":3.0,"?":4.0,"x?":5.0,"[x]?":6.0,":":7.0,":x":8.0}`),
+				"jsonNull":   json.Value("null"),
+				"jsonNil":    nil,
+				"ip":         " 127.0.0.1  ",
+				"uuid":       "\n2e3e96c4-2bc8-41d5-b492-bd6745190691 ",
 			}
 
 			// Test Compile.
@@ -424,7 +411,7 @@ func Test_Compile(t *testing.T) {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
 			if !cmp.Equal(test.expected, got) {
-				if j, ok := got.(json.RawMessage); ok {
+				if j, ok := got.(json.Value); ok {
 					t.Fatalf("expected value %#v, got %#v (which represents the string %q)", test.expected, got, string(j))
 				}
 				t.Fatalf("unexpected value:\n\texpected: %#v\n\tgot:      %#v\n\n%s\n", test.expected, got, cmp.Diff(test.expected, got))

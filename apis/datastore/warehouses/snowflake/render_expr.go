@@ -8,8 +8,6 @@
 package snowflake
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -168,29 +167,6 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 // serializeValue serializes v with type t into b.
 // As special case, v can have type warehouse.Column.
 func serializeValue(b *strings.Builder, v any, t types.Type) {
-
-	if t.Kind() == types.JSONKind {
-		b.WriteString("PARSE_JSON(")
-		switch v := v.(type) {
-		case json.RawMessage:
-			quoteBytes(b, v)
-		case json.Number:
-			quoteString(b, string(v))
-		case bool, string, float64, map[string]any, []any:
-			var s bytes.Buffer
-			enc := json.NewEncoder(&s)
-			enc.SetEscapeHTML(false)
-			err := enc.Encode(v)
-			if err != nil {
-				panic(err)
-			}
-			s.Truncate(s.Len() - 1) // remove the trailing new line.
-			quoteBytes(b, s.Bytes())
-		}
-		b.WriteByte(')')
-		return
-	}
-
 	switch v := v.(type) {
 	case nil:
 		b.WriteString("NULL")
@@ -219,10 +195,13 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 			b.WriteString(v.Format("15:04:05.999999999"))
 		}
 		b.WriteByte('\'')
+	case json.Value:
+		b.WriteString("PARSE_JSON(")
+		quoteBytes(b, v)
+		b.WriteByte(')')
 	case string:
 		quoteString(b, v)
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
-
 }
