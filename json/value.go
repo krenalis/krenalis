@@ -308,6 +308,34 @@ func Compact(data []byte) ([]byte, error) {
 	return v, nil
 }
 
+var zeroByte = []byte(`\u0000`)
+
+// StripZeroBytes removes all zero bytes ('\u0000') from the provided data,
+// which may contain valid JSON code, and modifies the original slice in place.
+// It returns the modified slice.
+func StripZeroBytes(data []byte) []byte {
+	p := data
+	for {
+		i := bytes.Index(p, zeroByte)
+		if i == -1 {
+			break
+		}
+		// Check if it is preceded by an even number or zero of backslashes.
+		even := true
+		for j := i - 1; j >= 0 && p[j] == '\\'; j-- {
+			even = !even
+		}
+		if even {
+			copy(p[i:], p[i+6:])
+			p = p[:len(p)-6]
+			data = data[:len(data)-6]
+		} else {
+			p = p[i+6:]
+		}
+	}
+	return data
+}
+
 var space = [256]uint8{'\t': 1, '\n': 1, '\r': 1, ' ': 1}
 
 // TrimSpace returns a subslice of data with all leading and trailing whitespace

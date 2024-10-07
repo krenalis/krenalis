@@ -380,6 +380,37 @@ func Test_Value(t *testing.T) {
 		}
 	})
 
+	t.Run("StripZeroBytes", func(t *testing.T) {
+		tests := []struct {
+			s        string
+			expected string
+		}{
+			{`5`, `5`},
+			{`""`, `""`},
+			{`"abc"`, `"abc"`},
+			{`"hello\u0020world"`, `"hello\u0020world"`},
+			{`"\u0000"`, `""`},
+			{`"hello\u0000world"`, `"helloworld"`},
+			{`"hello\\u0000world"`, `"hello\\u0000world"`},
+			{`"hello\\\u0000world"`, `"hello\\world"`},
+			{`"hello\\\\u0000world"`, `"hello\\\\u0000world"`},
+			{`"hello\\\\\u0000world"`, `"hello\\\\world"`},
+			{`"hello\n\u0000world"`, `"hello\nworld"`},
+			{`"\u0000world"`, `"world"`},
+			{`"hello\u0000"`, `"hello"`},
+			{`"hello\u0000world \u0000 hello \\u0000 world"`, `"helloworld  hello \\u0000 world"`},
+			{`{"hello":1,"hello\u0000":2}`, `{"hello":1,"hello":2}`},
+		}
+		for _, test := range tests {
+			t.Run("", func(t *testing.T) {
+				got := StripZeroBytes([]byte(test.s))
+				if !bytes.Equal([]byte(test.expected), got) {
+					t.Fatalf("expected %q, got %q", test.expected, string(got))
+				}
+			})
+		}
+	})
+
 	t.Run("TrimSpace", func(t *testing.T) {
 		tests := []struct {
 			data     string
