@@ -10,7 +10,6 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
-import { UnprocessableError } from '../../../lib/api/errors';
 import { ObjectType } from '../../../lib/api/types/types';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { flattenSchema } from '../../../lib/core/action';
@@ -135,16 +134,6 @@ const GeneralSettings = () => {
 		try {
 			await api.workspaces.delete();
 		} catch (err) {
-			if (err instanceof UnprocessableError) {
-				if (err.code === 'CurrentlyConnected') {
-					setTimeout(() => {
-						deleteButtonRef.current!.stop();
-						setIsDeleteConfirmationDialogOpen(false);
-						handleError('You must disconnect the data warehouse first');
-					}, CONFIRM_ANIMATION_DURATION);
-					return;
-				}
-			}
 			setTimeout(() => {
 				deleteButtonRef.current!.stop();
 				setIsDeleteConfirmationDialogOpen(false);

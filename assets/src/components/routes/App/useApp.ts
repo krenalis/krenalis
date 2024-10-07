@@ -181,9 +181,6 @@ const useApp = (
 			} catch (err) {
 				setTimeout(() => setIsLoadingState(false), 300);
 				setWarehouse(null);
-				if (err.code === 'NotConnected') {
-					return;
-				}
 				handleError(err);
 				return;
 			}

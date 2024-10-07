@@ -32,6 +32,8 @@ import SignUp from './components/routes/SignUp/SignUp';
 import { FileConnector } from './components/routes/FileConnector/FileConnector';
 import { Schema } from './components/routes/Schema/Schema';
 import { SchemaEditWrapper } from './components/routes/SchemaEdit/SchemaEditWrapper';
+import { WorkspaceAdd } from './components/routes/WorkspaceAdd/WorkspaceAdd';
+import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/WorkspacesWrapper';
 
 const router = createBrowserRouter([
 	{
@@ -41,7 +43,20 @@ const router = createBrowserRouter([
 		children: [
 			{ path: '', element: <Login /> },
 			{ path: 'sign-up/:token', element: <SignUp /> },
-			{ path: 'workspaces', element: <Workspaces /> },
+			{
+				path: 'workspaces',
+				element: <WorkspacesWrapper />,
+				children: [
+					{
+						path: '',
+						element: <Workspaces />,
+					},
+					{
+						path: 'add',
+						element: <WorkspaceAdd />,
+					},
+				],
+			},
 			{
 				element: <AppLayout />,
 				children: [

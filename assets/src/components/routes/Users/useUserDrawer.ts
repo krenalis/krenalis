@@ -28,10 +28,6 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 					return;
 				}
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'NoWarehouse') {
-						handleError('The workspace is not connected to any data warehouse');
-						return;
-					}
 					if (err.code === 'DataWarehouseFailed') {
 						handleError('An error occurred with the data warehouse');
 						return;
@@ -72,10 +68,6 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 						return;
 					}
 					if (err instanceof UnprocessableError) {
-						if (err.code === 'NoWarehouse') {
-							handleError('The workspace is not connected to any data warehouse');
-							return;
-						}
 						if (err.code === 'DataWarehouseFailed') {
 							handleError('An error occurred with the data warehouse');
 							return;
@@ -103,10 +95,6 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 						return;
 					}
 					if (err instanceof UnprocessableError) {
-						if (err.code === 'NoWarehouse') {
-							handleError('The workspace is not connected to any data warehouse');
-							return;
-						}
 						if (err.code === 'DataWarehouseFailed') {
 							handleError('An error occurred with the data warehouse');
 							return;

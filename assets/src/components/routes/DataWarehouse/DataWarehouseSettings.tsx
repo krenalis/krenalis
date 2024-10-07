@@ -1,6 +1,5 @@
 import React, { useContext, useState, useLayoutEffect } from 'react';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -10,6 +9,8 @@ import * as icons from '../../../constants/icons';
 import { WarehouseMode, WarehouseSettings } from '../../../lib/api/types/warehouse';
 import objectKeysToLower from '../../../utils/objectKeysToLower';
 import { UnprocessableError } from '../../../lib/api/errors';
+import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
+import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 
 interface DataWarehouseSettingsProps {
 	selectedWarehouse: Warehouse;
@@ -29,8 +30,7 @@ const DataWarehouseSettings = ({
 	const [isPingLoading, setIsPingLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
-	const { setTitle, api, handleError, showStatus, setIsLoadingState, setIsLoadingWorkspaces } =
-		useContext(appContext);
+	const { setTitle, api, handleError, showStatus, setIsLoadingWorkspaces } = useContext(appContext);
 
 	useLayoutEffect(() => {
 		setTitle(`${selectedWarehouse.label} settings`);
@@ -59,22 +59,6 @@ const DataWarehouseSettings = ({
 		});
 		clearTimeout(timeout);
 		setIsPingLoading(false);
-	};
-
-	const onConnect = async () => {
-		setIsActionButtonLoading(true);
-		try {
-			await api.workspaces.connectWarehouse(selectedWarehouse.label, mode, settings, 'FailOnCheck');
-		} catch (err) {
-			handleError(err);
-			setIsActionButtonLoading(false);
-			return;
-		}
-		setTimeout(() => {
-			setIsActionButtonLoading(false);
-			setSelectedWarehouse(null);
-			setIsLoadingState(true);
-		}, 500);
 	};
 
 	const onSave = async () => {
@@ -158,186 +142,12 @@ const DataWarehouseSettings = ({
 					disabled={isPingLoading || isActionButtonLoading}
 					loading={isActionButtonLoading}
 					variant='primary'
-					onClick={currentSettings ? onSave : onConnect}
+					onClick={onSave}
 				>
-					{currentSettings ? 'Save' : 'Connect'}
+					Save
 				</SlButton>
 			</div>
 		</div>
-	);
-};
-
-interface settingsProps {
-	setSettings: React.Dispatch<React.SetStateAction<any>>;
-	settings: WarehouseSettings | undefined;
-}
-
-const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
-	const onSettingChange = (e) => {
-		const name = e.currentTarget.name;
-		let value = e.currentTarget.value;
-		if (name === 'port') {
-			value = Number(value);
-		}
-		setSettings((prevSettings: any) => {
-			return {
-				...prevSettings,
-				[name]: value,
-			};
-		});
-	};
-
-	return (
-		<>
-			<SlInput
-				name='host'
-				label='Host'
-				placeholder='example.com'
-				minlength={1}
-				maxlength={253}
-				onSlChange={onSettingChange}
-				value={settings?.host || ''}
-			/>
-			<SlInput
-				name='port'
-				label='Port'
-				placeholder='5432'
-				type='number'
-				minlength={1}
-				maxlength={5}
-				onSlChange={onSettingChange}
-				value={settings?.port || ''}
-			/>
-			<SlInput
-				name='username'
-				label='Username'
-				placeholder='username'
-				type='text'
-				minlength={1}
-				maxlength={63}
-				onSlChange={onSettingChange}
-				value={settings?.username || ''}
-			/>
-			<SlInput
-				name='password'
-				label='Password'
-				placeholder='password'
-				type='password'
-				minlength={1}
-				maxlength={100}
-				onSlChange={onSettingChange}
-				value={settings?.password || ''}
-				password-toggle
-			/>
-			<SlInput
-				name='database'
-				label='Database name'
-				placeholder='database'
-				type='text'
-				minlength={1}
-				maxlength={63}
-				onSlChange={onSettingChange}
-				value={settings?.database || ''}
-			/>
-			<SlInput
-				name='schema'
-				label='Schema'
-				placeholder='public'
-				type='text'
-				minlength={1}
-				maxlength={63}
-				onSlChange={onSettingChange}
-				value={settings?.schema || ''}
-			/>
-		</>
-	);
-};
-
-const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
-	const onSettingChange = (e) => {
-		const name = e.currentTarget.name;
-		const value = e.currentTarget.value;
-		setSettings((prevSettings: any) => {
-			return {
-				...prevSettings,
-				[name]: value,
-			};
-		});
-	};
-
-	return (
-		<>
-			<SlInput
-				name='account'
-				label='Account'
-				placeholder='ABCDEFG-TUVWXYZ'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.account || ''}
-			/>
-			<SlInput
-				name='username'
-				label='Username'
-				placeholder=''
-				type='text'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.username || ''}
-			/>
-			<SlInput
-				name='password'
-				label='Password'
-				placeholder=''
-				type='password'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.password || ''}
-				password-toggle
-			/>
-			<SlInput
-				name='database'
-				label='Database'
-				placeholder=''
-				type='text'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.database || ''}
-			/>
-			<SlInput
-				name='schema'
-				label='Schema'
-				placeholder=''
-				type='text'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.schema || ''}
-			/>
-			<SlInput
-				name='warehouse'
-				label='Warehouse'
-				placeholder=''
-				type='text'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.warehouse || ''}
-			/>
-			<SlInput
-				name='role'
-				label='Role'
-				placeholder=''
-				type='text'
-				minlength={1}
-				maxlength={255}
-				onSlChange={onSettingChange}
-				value={settings?.role || ''}
-			/>
-		</>
 	);
 };
 

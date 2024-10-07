@@ -1,0 +1,11 @@
+.workspaces {
+	background-color: var(--bg-gray);
+	min-height: 100%;
+}
+
+.workspaces__content {
+	max-width: 700px;
+	margin: auto;
+	padding: 30px;
+	animation: fade-in-entrance 1s;
+}

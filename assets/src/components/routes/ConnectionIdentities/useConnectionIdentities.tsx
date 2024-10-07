@@ -24,10 +24,6 @@ const useConnectionIdentities = () => {
 			} catch (err) {
 				setTimeout(() => setIsLoading(false), 200);
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'NoWarehouse') {
-						handleError('The workspace is not connected to any data warehouse');
-						return;
-					}
 					if (err.code === 'DataWarehouseFailed') {
 						handleError('An error occurred with the data warehouse');
 						return;

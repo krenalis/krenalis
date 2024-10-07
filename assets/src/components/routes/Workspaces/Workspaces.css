@@ -1,15 +1,3 @@
-.workspace-list {
-	height: 100%;
-	background-color: var(--bg-gray);
-}
-
-.workspace-list__content {
-	max-width: 700px;
-	margin: auto;
-	padding: 30px;
-	animation: fade-in-entrance 1s;
-}
-
 .workspace-list__title-and-button {
 	display: flex;
 	justify-content: space-between;
@@ -36,23 +24,4 @@
 .workspace-list__add-button {
 	display: block;
 	margin-left: auto;
-}
-
-.workspace-list__add-dialog::part(base) {
-	padding-left: 0;
-}
-
-.workspace-list__new-workspace-use-europe-region {
-	margin-top: 15px;
-	margin-bottom: 30px;
-}
-
-.workspace-list__new-workspace-use-europe-region > span {
-	font-size: 13px;
-	opacity: 0.8;
-}
-
-.workspace-list__new-workspace-add-workspace-button {
-	display: block;
-	margin: auto;
 }
