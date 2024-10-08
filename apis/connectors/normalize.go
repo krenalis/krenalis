@@ -8,8 +8,6 @@
 package connectors
 
 import (
-	"bytes"
-	stdjson "encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -164,15 +162,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				v, err = strconv.ParseUint(src.String(), 10, 64)
 				value = err != nil
 			}
-		case stdjson.Number:
-			var err error
-			v, err = strconv.ParseUint(string(src), 10, 64)
-			if err != nil {
-				var f float64
-				f, err = src.Float64()
-				v = uint64(f)
-			}
-			valid = err == nil
 		case string:
 			var err error
 			v, err = strconv.ParseUint(src, 10, 64)
@@ -261,10 +250,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if valid && typ.BitSize() == 32 {
 				valid = float64(float32(v)) == v
 			}
-		case stdjson.Number:
-			var err error
-			v, err = strconv.ParseFloat(string(src), typ.BitSize())
-			valid = err == nil
 		case string:
 			var err error
 			v, err = strconv.ParseFloat(src, typ.BitSize())
@@ -329,10 +314,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case decimal.Decimal:
 			v = src
 			valid = true
-		case stdjson.Number:
-			var err error
-			v, err = decimal.NewFromString(string(src))
-			valid = err == nil
 		case string:
 			var err error
 			v, err = decimal.NewFromString(src)
@@ -372,12 +353,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				var err error
 				t, err = time.Parse(layouts.DateTime, src)
 				valid = err == nil
-			}
-		case stdjson.Number:
-			if n, err := src.Int64(); err == nil {
-				t, valid = dateTimeFromUnixInt(n, layouts.DateTime)
-			} else if f, err := src.Float64(); err == nil {
-				t, valid = dateTimeFromUnixFloat(f, layouts.DateTime)
 			}
 		}
 		if valid {
@@ -451,31 +426,26 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.JSONKind:
 		var data []byte
 		switch src := src.(type) {
-		case stdjson.RawMessage:
+		case json.Value:
 			data = src
 		case []byte:
 			data = src
+		case string:
+			data = []byte(src)
+		case json.Marshaler:
+			var err error
+			data, err = src.MarshalJSON()
+			if err != nil {
+				return nil, fmt.Errorf("error occurred calling the MarshalJSON method of the property %q: %s", name, err)
+			}
 		}
 		if data != nil {
 			if !json.Valid(data) {
 				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
 			}
 			value = json.Value(data)
-		} else {
-			if !validJSON(src) {
-				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
-			}
-			var b bytes.Buffer
-			enc := stdjson.NewEncoder(&b)
-			enc.SetEscapeHTML(false)
-			err := enc.Encode(src)
-			if err != nil {
-				return nil, err
-			}
-			b.Truncate(b.Len() - 1)
-			value = json.Value(b.Bytes())
+			valid = true
 		}
-		valid = true
 	case types.InetKind:
 		switch src := src.(type) {
 		case string:
@@ -673,14 +643,6 @@ func asInt64(v any) (int64, bool) {
 		return int64(v), !math.IsInf(v, 0) && v == math.Trunc(v)
 	case decimal.Decimal:
 		return v.IntPart(), v.IsInteger() && v.GreaterThanOrEqual(minIntDecimal) && v.LessThanOrEqual(maxIntDecimal)
-	case stdjson.Number:
-		value, err := v.Int64()
-		if err != nil {
-			if d, err := decimal.NewFromString(string(v)); err == nil {
-				return d.IntPart(), d.IsInteger() && d.GreaterThanOrEqual(minIntDecimal) && d.LessThanOrEqual(maxIntDecimal)
-			}
-		}
-		return value, err == nil
 	case string:
 		value, err := strconv.ParseInt(v, 10, 64)
 		return value, err == nil
@@ -742,34 +704,4 @@ func parseUUID(s string) (string, bool) {
 		return "", false
 	}
 	return id.String(), true
-}
-
-// validJSON reports whether src is a valid JSON value as returned by a
-// connector.
-func validJSON(src any) bool {
-	switch src := src.(type) {
-	case string:
-		return utf8.ValidString(src)
-	case bool:
-		return true
-	case float64:
-		return !math.IsNaN(src) && !math.IsInf(src, 0)
-	case []any:
-		for _, v := range src {
-			if v != nil && !validJSON(v) {
-				return false
-			}
-		}
-		return true
-	case map[string]any:
-		for k, v := range src {
-			if !utf8.ValidString(k) || v != nil && !validJSON(v) {
-				return false
-			}
-		}
-		return true
-	case stdjson.Number:
-		return src != "" && (src[0] == '-' || '0' <= src[0] && src[0] <= '9') && stdjson.Valid([]byte(src))
-	}
-	return false
 }

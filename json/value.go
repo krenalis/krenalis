@@ -62,6 +62,20 @@ func (k Kind) String() string {
 	panic("unexpected kind")
 }
 
+// Marshaler is an interface implemented by types that can marshal themselves
+// into a valid JSON representation. It is the same of the json.Marshaler of the
+// Go standard library.
+type Marshaler interface {
+	MarshalJSON() ([]byte, error)
+}
+
+// Unmarshaler is an interface implemented by types that can unmarshal a JSON
+// representation of themselves. It is the same of the json.UnmarshalJSON of the
+// Go standard library.
+type Unmarshaler interface {
+	UnmarshalJSON([]byte) error
+}
+
 // Value is a JSON-encoded value.
 //
 // All methods of Value assume that it contains valid JSON, potentially with

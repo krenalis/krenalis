@@ -469,22 +469,28 @@ func ValidateUUID(name string, s string) (any, error) {
 
 // ValidateJSON validates a JSON value.
 func ValidateJSON(name string, v any) (any, error) {
-	if data, ok := v.(stdjson.RawMessage); ok {
-		return ValidateJSONRaw(name, data)
+	var data []byte
+	switch v := v.(type) {
+	case json.Value:
+		data = v
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	case json.Marshaler:
+		var err error
+		data, err = v.MarshalJSON()
+		if err != nil {
+			data = nil
+		}
 	}
-	if !isValidJSON(v) {
-		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
+	if data == nil {
+		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not a JSON type", name)
 	}
-	return v, nil
-}
-
-// ValidateJSONRaw validates a JSON value represented as a json.RawMessage.
-func ValidateJSONRaw(name string, data stdjson.RawMessage) (any, error) {
-	v := json.Value(data)
-	if !json.Valid(v) {
-		return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
+	if !json.Valid(data) {
+		return nil, fmt.Errorf("data warehouse returned an invalid JSON for column %s", name)
 	}
-	return v, nil
+	return json.Value(data), nil
 }
 
 // ValidateInet validates an Inet value.

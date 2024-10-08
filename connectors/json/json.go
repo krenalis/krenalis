@@ -12,12 +12,13 @@ package json
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -42,7 +43,7 @@ func init() {
 func New(conf *meergo.FileConfig) (*JSON, error) {
 	c := JSON{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := stdjson.Unmarshal(conf.Settings, &c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of JSON connector")
 		}
@@ -89,8 +90,8 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		return err
 	}
 
-	var tok json.Token
-	dec := json.NewDecoder(r)
+	var tok stdjson.Token
+	dec := stdjson.NewDecoder(r)
 	dec.UseNumber()
 
 	isObject := false
@@ -99,10 +100,10 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err == io.EOF {
 			return errInvalidJSON
 		}
-		if _, ok := err.(*json.SyntaxError); ok {
+		if _, ok := err.(*stdjson.SyntaxError); ok {
 			return errInvalidJSON
 		}
-		if _, ok := err.(*json.UnmarshalTypeError); ok {
+		if _, ok := err.(*stdjson.UnmarshalTypeError); ok {
 			return errInvalidFormat
 		}
 		return err
@@ -110,14 +111,14 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 
 	// Read '[' or '{'.
 	tok, err = dec.Token()
-	if err != nil && tok == json.Delim('{') {
+	if err != nil && tok == stdjson.Delim('{') {
 		isObject = true
 		// Read a property name.
 		tok, err = dec.Token()
 		if err != nil {
 			return jsonError(err)
 		}
-		if tok == json.Delim('}') {
+		if tok == stdjson.Delim('}') {
 			return errInvalidFormat
 		}
 		// Read '['.
@@ -126,7 +127,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 	if err != nil {
 		return jsonError(err)
 	}
-	if tok != json.Delim('[') {
+	if tok != stdjson.Delim('[') {
 		return errInvalidFormat
 	}
 
@@ -134,15 +135,28 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 	record := map[string]any{}
 	for dec.More() {
 		// Read '{...}'.
-		err = dec.Decode(&record)
+		tok, err = dec.Token()
 		if err != nil {
 			return jsonError(err)
 		}
-		// Convert nil properties to json.RawMessage("null").
-		for p, v := range record {
-			if v == nil {
-				record[p] = json.RawMessage("null")
+		if tok != stdjson.Delim('{') {
+			return errInvalidFormat
+		}
+		for dec.More() {
+			tok, err = dec.Token()
+			if err != nil {
+				return jsonError(err)
 			}
+			name := tok.(string)
+			var value json.Value
+			err = dec.Decode(&value)
+			if err != nil {
+				return jsonError(err)
+			}
+			record[name] = value
+		}
+		if _, err = dec.Token(); err != nil {
+			return jsonError(err)
 		}
 		err = records.Record(record)
 		if err != nil {
@@ -152,8 +166,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 	}
 
 	// Read ']'.
-	tok, err = dec.Token()
-	if err != nil {
+	if _, err = dec.Token(); err != nil {
 		return jsonError(err)
 	}
 
@@ -163,7 +176,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err != nil {
 			return jsonError(err)
 		}
-		if tok != json.Delim('}') {
+		if tok != stdjson.Delim('}') {
 			return errInvalidFormat
 		}
 	}
@@ -174,7 +187,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err == nil {
 			return errInvalidFormat
 		}
-		if _, ok := err.(*json.SyntaxError); ok {
+		if _, ok := err.(*stdjson.SyntaxError); ok {
 			return errInvalidFormat
 		}
 		return err
@@ -192,7 +205,7 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role me
 		if j.settings != nil {
 			s = *j.settings
 		}
-		values, _ = json.Marshal(s)
+		values, _ = stdjson.Marshal(s)
 	case "save":
 		return nil, j.saveValues(ctx, values, role)
 	default:
@@ -274,7 +287,7 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 // saveValues saves the user-entered values as settings.
 func (j *JSON) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := stdjson.Unmarshal(values, &s)
 	if err != nil {
 		return err
 	}
@@ -303,7 +316,7 @@ func (j *JSON) saveValues(ctx context.Context, values []byte, role meergo.Role) 
 	} else {
 		s.Properties = nil
 	}
-	b, err := json.Marshal(s)
+	b, err := stdjson.Marshal(s)
 	if err != nil {
 		return err
 	}
