@@ -24,9 +24,18 @@ interface GridNestedRowsProps {
 	nesting: number;
 	onSortRow?: (overRowID: string, movedRowID: string) => void;
 	isSortable?: boolean;
+	reloadColumnsWidths: () => void;
 }
 
-const GridNestedRows = ({ rows, columns, className, nesting, onSortRow, isSortable }: GridNestedRowsProps) => {
+const GridNestedRows = ({
+	rows,
+	columns,
+	className,
+	nesting,
+	onSortRow,
+	isSortable,
+	reloadColumnsWidths,
+}: GridNestedRowsProps) => {
 	const [activeRow, setActiveRow] = useState(null);
 	const [isExpanded, setIsExpanded] = useState(false);
 	const sensors = useSensors(
@@ -36,18 +45,23 @@ const GridNestedRows = ({ rows, columns, className, nesting, onSortRow, isSortab
 		}),
 	);
 
-	function onDragEnd(e) {
+	const onDragEnd = (e) => {
 		const { over, active } = e;
 		if (over.id !== active.id) {
 			onSortRow(over.id, active.id);
 		}
 		setActiveRow(null);
-	}
+	};
 
-	function onDragStart(e) {
+	const onDragStart = (e) => {
 		const { active } = e;
 		setActiveRow(active.id);
-	}
+	};
+
+	const onExpand = () => {
+		setIsExpanded(!isExpanded);
+		reloadColumnsWidths();
+	};
 
 	let parentComponent: ReactNode = null;
 	let childrenComponents: any[] = [];
@@ -63,6 +77,7 @@ const GridNestedRows = ({ rows, columns, className, nesting, onSortRow, isSortab
 					nesting={nesting + 1}
 					onSortRow={onSortRow}
 					isSortable={isSortable}
+					reloadColumnsWidths={reloadColumnsWidths}
 				/>
 			);
 			if (isSortable) {
@@ -79,13 +94,7 @@ const GridNestedRows = ({ rows, columns, className, nesting, onSortRow, isSortab
 			if (i === 0) {
 				parentComponent = (
 					<Fragment key={i}>
-						<SlIcon
-							className='grid__row-expand'
-							name='caret-right-fill'
-							onClick={() => {
-								setIsExpanded(!isExpanded);
-							}}
-						></SlIcon>
+						<SlIcon className='grid__row-expand' name='caret-right-fill' onClick={onExpand}></SlIcon>
 						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' id={r.id} />
 					</Fragment>
 				);

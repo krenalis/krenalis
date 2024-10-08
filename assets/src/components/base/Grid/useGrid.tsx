@@ -9,6 +9,7 @@ const useGrid = (
 	isShown?: boolean,
 ) => {
 	const [columnsWidths, setColumnsWidths] = useState<string>();
+	const [reloadWidths, setReloadWidths] = useState<boolean>();
 
 	useLayoutEffect(() => {
 		const computeColumnsWidths = () => {
@@ -46,10 +47,15 @@ const useGrid = (
 		if (gridRef.current == null) {
 			return;
 		}
+		if (reloadWidths === true) {
+			// reset the boolean and trigger a new computation of the widths.
+			setReloadWidths(null);
+			return;
+		}
 		setTimeout(computeColumnsWidths);
-	}, [rows, columns, isLoading, isShown]);
+	}, [rows, columns, isLoading, isShown, reloadWidths]);
 
-	return { columnsWidths };
+	return { columnsWidths, reloadColumnsWidths: () => setReloadWidths(true) };
 };
 
 export { useGrid };

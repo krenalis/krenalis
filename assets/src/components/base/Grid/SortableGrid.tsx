@@ -51,7 +51,7 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 
 	const gridRef = useRef<any>(null);
 
-	const { columnsWidths } = useGrid(gridRef, rows, columns);
+	const { columnsWidths, reloadColumnsWidths } = useGrid(gridRef, rows, columns);
 
 	useImperativeHandle(
 		ref,
@@ -93,6 +93,7 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 						nesting={1}
 						onSortRow={onSortRow}
 						isSortable={true}
+						reloadColumnsWidths={reloadColumnsWidths}
 					/>
 				);
 				const isSortable = row[0].dragKey != null && row[0].dragKey !== '';

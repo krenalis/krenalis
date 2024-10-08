@@ -33,7 +33,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 	({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }, ref) => {
 		const gridRef = useRef<any>();
 
-		const { columnsWidths } = useGrid(gridRef, rows, columns, isLoading, isShown);
+		const { columnsWidths, reloadColumnsWidths } = useGrid(gridRef, rows, columns, isLoading, isShown);
 
 		useImperativeHandle(
 			ref,
@@ -48,6 +48,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 								expandIcon.click();
 							}
 						}
+						reloadColumnsWidths();
 					},
 					collapse: () => {
 						const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
@@ -58,6 +59,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 								expandIcon.click();
 							}
 						}
+						reloadColumnsWidths();
 					},
 				};
 			},
@@ -81,6 +83,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 							columns={columns}
 							className={`grid__nested-rows ${className}`}
 							nesting={1}
+							reloadColumnsWidths={reloadColumnsWidths}
 						/>,
 					);
 					continue;
