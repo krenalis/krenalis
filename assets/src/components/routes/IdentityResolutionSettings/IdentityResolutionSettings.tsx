@@ -173,6 +173,7 @@ const IdentityResolutionSettings = () => {
 										onInput={onUpdateIdentifier}
 										onSelect={onUpdateIdentifier}
 										isExpression={false}
+										controlled={true}
 										items={identifiersComboboxItems}
 										size='small'
 									/>
