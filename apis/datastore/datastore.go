@@ -25,7 +25,6 @@ type (
 	DataWarehouseError            = warehouses.DataWarehouseError
 	DataWarehouseNeedsRepairError = warehouses.DataWarehouseNeedsRepairError
 	SettingsError                 = warehouses.SettingsError
-	UnsupportedColumnType         = warehouses.UnsupportedColumnType
 )
 
 var ErrDataWarehouseNotInitialized = warehouses.ErrDataWarehouseNotInitialized

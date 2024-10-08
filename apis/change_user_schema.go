@@ -177,10 +177,6 @@ Identifiers:
 			if err, ok := err.(*datastore.DataWarehouseError); ok {
 				return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
 			}
-			if err, ok := err.(*datastore.UnsupportedColumnType); ok {
-				typ, _ := this.WarehouseSettings()
-				return errors.Unprocessable(InvalidSchemaChange, "%s does not support the '%s' type used in the '%s' column", typ, err.Type(), err.ColumnName())
-			}
 			return err
 		}
 
@@ -247,10 +243,6 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
-		}
-		if err, ok := err.(*datastore.UnsupportedColumnType); ok {
-			typ, _ := this.WarehouseSettings()
-			return nil, errors.Unprocessable(InvalidSchemaChange, "%s does not support the '%s' type used in the '%s' column", typ, err.Type(), err.ColumnName())
 		}
 		return nil, err
 	}

@@ -119,10 +119,6 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // operations is the set of operations to apply in order to migrate the current
 // schema to userSchema.
 //
-// If one of the specified operations is not supported by the data warehouse,
-// for example if a type is not supported, this method returns a
-// *UnsupportedColumnType error.
-//
 // If another alter schema operation is in progress on the data warehouse,
 // returns a ErrAlterSchemaInProgress error.
 //
@@ -149,10 +145,6 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 // useful for obtaining type information and for creating views), while
 // operations is the set of operations to apply in order to migrate the current
 // schema to userSchema.
-//
-// If one of the specified operations is not supported by the data warehouse,
-// for example if a type is not supported, this method returns a
-// *UnsupportedColumnType error.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.

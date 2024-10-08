@@ -8,11 +8,13 @@
 package postgresql
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
 	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var errPostgreSQLInvalidData = errors.New("PostgreSQL has returned invalid data")
@@ -39,8 +42,26 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 			return v, nil
 		}
 	case types.IntKind:
-		if v, ok := v.(int64); ok {
+		switch v := v.(type) {
+		case int:
+			return warehouses.ValidateInt(name, typ, v)
+		case int64:
 			return warehouses.ValidateInt(name, typ, int(v))
+		}
+	case types.UintKind:
+		switch v := v.(type) {
+		case int:
+			if v >= 0 {
+				return warehouses.ValidateUint(name, typ, uint(v))
+			}
+		case int64:
+			if v >= 0 {
+				return warehouses.ValidateUint(name, typ, uint(v))
+			}
+		case string:
+			if v, err := strconv.ParseUint(v, 10, 64); err == nil {
+				return warehouses.ValidateUint(name, typ, uint(v))
+			}
 		}
 	case types.FloatKind:
 		if v, ok := v.(float64); ok {
@@ -59,18 +80,34 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 			return warehouses.ValidateDate(name, v)
 		}
 	case types.TimeKind:
-		if v, ok := v.(string); ok {
+		switch v := v.(type) {
+		case time.Time:
+			return warehouses.ValidateTime(v)
+		case string:
 			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
+		}
+	case types.YearKind:
+		switch v := v.(type) {
+		case int:
+			return warehouses.ValidateYear(name, v)
+		case int64:
+			return warehouses.ValidateYear(name, int(v))
 		}
 	case types.UUIDKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateUUID(name, v)
 		}
 	case types.JSONKind:
-		// Go type is string for both the PostgreSQL types "json" and "jsonb".
-		if s, ok := v.(string); ok {
+		var data []byte
+		switch v := v.(type) {
+		case []byte:
+			data = v
+		case string:
+			data = []byte(v)
+		}
+		if data != nil {
 			// PostgreSQL returns JSON with insignificant whitespace characters.
-			data, err := json.Compact([]byte(s))
+			data, err := json.Compact(data)
 			if err != nil {
 				return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
 			}
@@ -94,7 +131,17 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 			return warehouses.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
-		v, err := scanArray(v)
+		pool, err := warehouse.connectionPool(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		conn, err := pool.Acquire(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Release()
+		tm := conn.Conn().TypeMap()
+		v, err := scanArray(tm, v)
 		if err != nil {
 			return nil, err
 		}
@@ -111,12 +158,16 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 			}
 		}
 		return v, nil
+	case types.MapKind:
+		if v, err := json.UnmarshalBySchema(strings.NewReader(v.(string)), typ); err == nil {
+			return v, nil
+		}
 	}
 	return nil, fmt.Errorf("PostgreSQL has returned an unsupported type %T for column %s", v, name)
 }
 
 // scanArray scans an array and returns the values.
-func scanArray(src any) ([]any, error) {
+func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 	data, ok := src.([]byte)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
@@ -281,6 +332,28 @@ func scanArray(src any) ([]any, error) {
 			us := time.Duration(int64(binary.BigEndian.Uint64(data[p:p+8]))) * time.Microsecond
 			values[i] = epoch.Add(us)
 			p += 8
+		}
+	case 1700: // numeric
+		var s string
+		ps := tm.PlanScan(oid, pgtype.BinaryFormatCode, &s)
+		for i := range values {
+			if len(data) < p+4 {
+				return nil, errPostgreSQLInvalidData
+			}
+			l := int(int32(binary.BigEndian.Uint32(data[p:])))
+			if l <= 0 {
+				return nil, errPostgreSQLInvalidData
+			}
+			p += 4
+			if len(data) < p+l {
+				return nil, errPostgreSQLInvalidData
+			}
+			err := ps.Scan(data[p:p+l], &s)
+			if err != nil {
+				return nil, err
+			}
+			values[i] = s
+			p += l
 		}
 	case 2950: // uuid
 		if len(data) < p+20*size {

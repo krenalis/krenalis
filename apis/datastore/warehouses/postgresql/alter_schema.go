@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -47,10 +46,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []ware
 	}
 
 	// Determine the alter schema queries.
-	queries, err := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
-	if err != nil {
-		return err
-	}
+	queries := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
@@ -72,10 +68,7 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 	if err != nil {
 		return nil, err
 	}
-	queries, err := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
-	if err != nil {
-		return nil, err
-	}
+	queries := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
@@ -87,10 +80,7 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 // alterSchemaQueries returns the queries that perform the given operations.
 // usersTableName is the current name of the users table, for example
 // "_users_42". operations must contain at least one operation.
-//
-// In case of incompatible type, returns a *warehouses.UnsupportedColumnType
-// error.
-func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) []string {
 
 	// The operations are performed in this order:
 	//
@@ -156,10 +146,7 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 					if i > 0 {
 						b.WriteString(",\n\t")
 					}
-					typ, ok := typeToPostgresType(op.Type)
-					if !ok {
-						return nil, warehouses.NewUnsupportedColumnType(op.Column, op.Type)
-					}
+					typ := typeToPostgresType(op.Type)
 					b.WriteString(`ADD COLUMN "` + op.Column + `" ` + typ)
 				}
 				queries = append(queries, b.String())
@@ -170,7 +157,7 @@ func alterSchemaQueries(usersTableName string, userColumns []warehouses.Column, 
 	// CREATE VIEW "users".
 	queries = append(queries, createViewQuery(usersTableName, userColumns, false))
 
-	return queries, nil
+	return queries
 }
 
 // createViewQuery returns the CREATE (OR REPLACE) VIEW query that creates the
@@ -204,90 +191,80 @@ func createViewQuery(usersTableName string, userColumns []warehouses.Column, rep
 	return b.String()
 }
 
-func typeToPostgresType(t types.Type) (string, bool) {
+func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.BooleanKind:
-		return "boolean", true
+		return "boolean"
 	case types.IntKind:
-		min, max := t.IntRange()
 		switch t.BitSize() {
+		case 8:
+			return "smallint"
 		case 16:
-			if min > types.MinInt16 || max < types.MaxInt16 {
-				return "", false
-			}
-			return "smallint", true
+			return "smallint"
+		case 24:
+			return "integer"
 		case 32:
-			if min > types.MinInt32 || max < types.MaxInt32 {
-				return "", false
-			}
-			return "integer", true
+			return "integer"
 		case 64:
-			if min > types.MinInt64 || max < types.MaxInt64 {
-				return "", false
-			}
-			return "bigint", true
-		default:
-			return "", false
+			return "bigint"
 		}
 	case types.UintKind:
-		return "", false
-	case types.FloatKind:
-		if t.IsReal() {
-			return "", false
+		switch t.BitSize() {
+		case 8:
+			return "smallint"
+		case 16:
+			return "integer"
+		case 24:
+			return "integer"
+		case 32:
+			return "bigint"
+		case 64:
+			return "decimal(20, 0)"
 		}
-		min, max := t.FloatRange()
+	case types.FloatKind:
 		switch t.BitSize() {
 		case 32:
-			if min > -math.MaxFloat32 || max < math.MaxFloat32 {
-				return "", false
-			}
-			return "real", true
+			return "real"
 		case 64:
-			if min > -math.MaxFloat64 || max < math.MaxFloat64 {
-				return "", false
-			}
-			return "double precision", true
+			return "double precision"
 		}
 	case types.DecimalKind:
-		// TODO(Gianluca): for decimal types specifying a minimum and a maximum
-		// value, see https://github.com/meergo/meergo/issues/578.
-		p := t.Precision()
-		s := t.Scale()
-		if p < 1 || p > 76 || s > 37 {
-			return "", false
-		}
-		return fmt.Sprintf("decimal(%d, %d)", p, s), true
+		return fmt.Sprintf("decimal(%d, %d)", t.Precision(), t.Scale())
 	case types.DateTimeKind:
-		return "timestamp without time zone", true
+		return "timestamp without time zone"
 	case types.DateKind:
-		return "date", true
+		return "date"
 	case types.TimeKind:
-		return "time without time zone", true
+		return "time without time zone"
 	case types.YearKind:
-		return "", false
+		return "smallint"
 	case types.UUIDKind:
-		return "uuid", true
+		return "uuid"
 	case types.JSONKind:
-		return "jsonb", true
+		return "jsonb"
 	case types.InetKind:
-		return "inet", true
+		return "inet"
 	case types.TextKind:
-		if _, ok := t.ByteLen(); ok {
-			return "", false
+		var charLen int
+		if l, ok := t.ByteLen(); ok {
+			charLen = l // we represent N bytes len as N chars len in PostgreSQL.
 		}
-		typ := "varchar"
 		if l, ok := t.CharLen(); ok {
-			typ += "(" + strconv.Itoa(l) + ")"
+			if charLen == 0 {
+				charLen = l
+			} else {
+				charLen = min(l, charLen)
+			}
 		}
-		return typ, true
+		if charLen > 0 {
+			return "varchar(" + strconv.Itoa(charLen) + ")"
+		}
+		return "varchar"
 	case types.ArrayKind:
-		typ, ok := typeToPostgresType(t.Elem())
-		if !ok {
-			return "", false
-		}
-		return typ + "[]", true
+		typ := typeToPostgresType(t.Elem())
+		return typ + "[]"
 	case types.MapKind:
-		return "", false
+		return "jsonb"
 	}
-	return "", false
+	panic(fmt.Sprintf("unexpected type %s", t))
 }

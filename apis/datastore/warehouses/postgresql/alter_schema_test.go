@@ -14,6 +14,8 @@ import (
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/types"
+
+	"github.com/shopspring/decimal"
 )
 
 func Test_alterSchemaQueries(t *testing.T) {
@@ -63,37 +65,6 @@ func Test_alterSchemaQueries(t *testing.T) {
 				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"f\" double precision",
 				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"f\" double precision",
 			},
-		},
-		{
-			name: "Float64 real properties are not supported",
-			userColumns: []warehouses.Column{
-				{Name: "f", Type: types.Float(64).AsReal(), Nullable: true},
-			},
-			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
-			},
-			expectedErr: warehouses.NewUnsupportedColumnType("f", types.Float(64).AsReal()),
-		},
-		{
-			name: "Unsupported type at first-level property",
-			userColumns: []warehouses.Column{
-				{Name: "f", Type: types.Float(64).AsReal(), Nullable: true},
-			},
-			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "f", Type: types.Float(64).AsReal()},
-			},
-			expectedErr: warehouses.NewUnsupportedColumnType("f", types.Float(64).AsReal()),
-		},
-		{
-			name: "Unsupported type at second-level property",
-			userColumns: []warehouses.Column{
-				{Name: "x_a", Type: types.Text(), Nullable: true},
-				{Name: "x_f", Type: types.Float(64).AsReal(), Nullable: true},
-			},
-			ops: []warehouses.AlterSchemaOperation{
-				{Operation: warehouses.OperationAddColumn, Column: "x_f", Type: types.Float(64).AsReal()},
-			},
-			expectedErr: warehouses.NewUnsupportedColumnType("x_f", types.Float(64).AsReal()),
 		},
 		{
 			name: "Add a second level property",
@@ -297,17 +268,14 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "__id__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, userColumns...)
-			gotQueries, gotErr := alterSchemaQueries("_users_0", userColumns, test.ops)
-			if !reflect.DeepEqual(test.expectedErr, gotErr) {
-				t.Fatalf("expected error '%v', got '%v'", test.expectedErr, gotErr)
-			}
+			got := alterSchemaQueries("_users_0", userColumns, test.ops)
 			// Exclude from the test the queries that drop or create views.
-			gotQueries = slices.DeleteFunc(gotQueries, func(query string) bool {
+			got = slices.DeleteFunc(got, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||
 					strings.HasPrefix(query, "CREATE VIEW")
 			})
-			if !reflect.DeepEqual(gotQueries, test.expectedQueries) {
-				t.Fatalf("expected queries %#v, got %#v", test.expectedQueries, gotQueries)
+			if !reflect.DeepEqual(got, test.expectedQueries) {
+				t.Fatalf("expected queries %#v, got %#v", test.expectedQueries, got)
 			}
 		})
 	}
@@ -324,31 +292,34 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Boolean(), "boolean"},
 
 		// Int.
-		{types.Int(8), ""},
+		{types.Int(8), "smallint"},
 		{types.Int(16), "smallint"},
-		{types.Int(24), ""},
+		{types.Int(16).WithIntRange(0, 10), "smallint"},
+		{types.Int(24), "integer"},
 		{types.Int(32), "integer"},
 		{types.Int(64), "bigint"},
-		{types.Int(16).WithIntRange(0, 10), ""},
+		{types.Int(64).WithIntRange(0, 10), "bigint"},
 
 		// Uint.
-		{types.Uint(8), ""},
-		{types.Uint(16), ""},
-		{types.Uint(24), ""},
-		{types.Uint(32), ""},
-		{types.Uint(64), ""},
-		{types.Uint(16).WithUintRange(0, 10), ""},
+		{types.Uint(8), "smallint"},
+		{types.Uint(16), "integer"},
+		{types.Uint(16).WithUintRange(0, 10), "integer"},
+		{types.Uint(24), "integer"},
+		{types.Uint(32), "bigint"},
+		{types.Uint(64), "decimal(20, 0)"},
+		{types.Uint(64).WithUintRange(1, 200), "decimal(20, 0)"},
 
 		// Float.
 		{types.Float(32), "real"},
+		{types.Float(32).AsReal(), "real"},
+		{types.Float(32).WithFloatRange(0, 100), "real"},
 		{types.Float(64), "double precision"},
-		{types.Float(64).WithFloatRange(0, 100), ""},
-		{types.Float(64).AsReal(), ""},
+		{types.Float(64).AsReal(), "double precision"},
+		{types.Float(64).WithFloatRange(0, 100), "double precision"},
 
 		// Decimal.
 		{types.Decimal(10, 3), "decimal(10, 3)"},
-		// TODO(Gianluca): see https://github.com/meergo/meergo/issues/578.
-		// {types.Decimal(10, 3).WithDecimalRange(decimal.NewFromInt(0), decimal.NewFromInt(1000)), "decimal(10, 3)"},
+		{types.Decimal(10, 3).WithDecimalRange(decimal.NewFromInt(0), decimal.NewFromInt(1000)), "decimal(10, 3)"},
 
 		// DateTime.
 		{types.DateTime(), "timestamp without time zone"},
@@ -360,7 +331,7 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Time(), "time without time zone"},
 
 		// Year.
-		{types.Year(), ""},
+		{types.Year(), "smallint"},
 
 		// UUID.
 		{types.UUID(), "uuid"},
@@ -373,28 +344,24 @@ func Test_typeToPostgresType(t *testing.T) {
 
 		// Text.
 		{types.Text(), "varchar"},
-		{types.Text().WithByteLen(256), ""},
+		{types.Text().WithByteLen(256), "varchar(256)"},
 		{types.Text().WithCharLen(300), "varchar(300)"},
+		{types.Text().WithByteLen(10).WithCharLen(10), "varchar(10)"},
+		{types.Text().WithByteLen(5).WithCharLen(10), "varchar(5)"},
+		{types.Text().WithByteLen(500).WithCharLen(10), "varchar(10)"},
 
 		// Array.
 		{types.Array(types.Text()), "varchar[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
+		{types.Array(types.Uint(32)), "bigint[]"},
 
 		// Map.
-		{types.Map(types.Text()), ""},
+		{types.Map(types.Text()), "jsonb"},
 	}
 
 	for _, test := range tests {
 		t.Run(fmt.Sprint(test.typ), func(t *testing.T) {
-
-			gotType, gotOk := typeToPostgresType(test.typ)
-
-			if gotType == "" && gotOk {
-				t.Fatal("unexpected 'ok' when returned type is empty")
-			} else if gotType != "" && !gotOk {
-				t.Fatal("expected 'ok' when returned type is not empty")
-			}
-
+			gotType := typeToPostgresType(test.typ)
 			if test.expected != gotType {
 				t.Fatalf("expected %q to be returned, got %q instead", test.expected, gotType)
 			}

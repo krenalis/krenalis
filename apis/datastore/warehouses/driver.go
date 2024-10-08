@@ -62,36 +62,6 @@ func (op OperationType) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + op.String() + `"`), nil
 }
 
-// NewUnsupportedColumnType returns a new UnsupportedColumnType error which
-// refers to a column with the given name and type.
-func NewUnsupportedColumnType(columnName string, typ types.Type) error {
-	return &UnsupportedColumnType{columnName: columnName, typ: typ}
-}
-
-// UnsupportedColumnType is an error indicating that a column type is not
-// supported by a data warehouse driver.
-type UnsupportedColumnType struct {
-	// TODO(Gianluca): the fact that the column name is used here instead of the
-	// property name is part of a broader discussion, addressed in issue
-	// https://github.com/meergo/meergo/issues/862.
-	columnName string
-	typ        types.Type
-}
-
-func (e *UnsupportedColumnType) Error() string {
-	return fmt.Sprintf("unsupported column %q with type %q", e.columnName, e.typ)
-}
-
-// ColumnName returns the name of the column with the incompatible type.
-func (e *UnsupportedColumnType) ColumnName() string {
-	return e.columnName
-}
-
-// Type returns the incompatible type.
-func (e *UnsupportedColumnType) Type() types.Type {
-	return e.typ
-}
-
 var (
 	ErrAlterSchemaInProgress        = errors.New("alter schema currently in progress on the data warehouse")
 	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
@@ -109,10 +79,6 @@ type Warehouse interface {
 	// parameters is useful for obtaining type information and for creating views),
 	// while operations is the set of operations to apply in order to migrate the
 	// current columns to userColumns.
-	//
-	// If one of the specified operations is not supported by the data warehouse,
-	// for example if a type is not supported, this method returns a
-	// *warehouses.UnsupportedColumnType error.
 	//
 	// If another alter schema operation is in progress on the data warehouse,
 	// returns an ErrAlterSchemaInProgress error.
@@ -133,10 +99,6 @@ type Warehouse interface {
 	// parameters is useful for obtaining type information and for creating views),
 	// while operations is the set of operations to apply in order to migrate the
 	// current columns to userColumns.
-	//
-	// If one of the specified operations is not supported by the data warehouse,
-	// for example if a type is not supported, this method returns a
-	// *warehouses.UnsupportedColumnType error.
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
@@ -456,6 +418,14 @@ func ValidateTimeString(name string, format string, s string) (any, error) {
 	}
 	t = t.UTC()
 	return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
+}
+
+// ValidateYear validates a year value.
+func ValidateYear(name string, year int) (any, error) {
+	if year < types.MinYear || year > types.MaxYear {
+		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not a Year type", year, name)
+	}
+	return year, nil
 }
 
 // ValidateUUID validates an UUID value.
