@@ -316,7 +316,7 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	row["__identity_id__"] = key.identityID
 	row["__connection__"] = iw.connection
 	if !key.isAnonymous {
-		row["__anonymous_ids__"] = []string{identity.AnonymousID}
+		row["__anonymous_ids__"] = []any{identity.AnonymousID}
 	}
 	row["__last_change_time__"] = identity.LastChangeTime
 
