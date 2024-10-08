@@ -11,7 +11,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -27,13 +27,13 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
-	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/events/collector"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -482,7 +482,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
 		var account authorizedOAuthAccount
-		err = json.Unmarshal(data, &account)
+		err = stdjson.Unmarshal(data, &account)
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
@@ -506,7 +506,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if c.HasUI {
 		values := connection.UIValues
 		if values == nil {
-			values = json.RawMessage("{}")
+			values = stdjson.RawMessage("{}")
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -756,7 +756,7 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 				return err
 			}
 			var schema types.Type
-			err = json.Unmarshal(s, &schema)
+			err = stdjson.Unmarshal(s, &schema)
 			if err != nil {
 				return err
 			}
@@ -1160,7 +1160,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 		return "", err
 	}
 
-	account, err := json.Marshal(authorizedOAuthAccount{
+	account, err := stdjson.Marshal(authorizedOAuthAccount{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
 		Code:         auth.AccountCode,
@@ -1310,7 +1310,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
-		err = json.Unmarshal(data, &a)
+		err = stdjson.Unmarshal(data, &a)
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
@@ -1572,7 +1572,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		delete(user, "__id__")
 		lastChangeTime := user["__last_change_time__"].(time.Time)
 		delete(user, "__last_change_time__")
-		marshaledUser, err := encoding.Marshal(schema, user)
+		marshaledUser, err := json.MarshalBySchema(user, schema)
 		if err != nil {
 			return nil, types.Type{}, 0, err
 		}
@@ -1582,7 +1582,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		marshaledUsers.WriteString(`{"id":"`)
 		marshaledUsers.WriteString(id)
 		marshaledUsers.WriteString(`","lastChangeTime":`)
-		err = json.NewEncoder(&marshaledUsers).Encode(lastChangeTime)
+		err = stdjson.NewEncoder(&marshaledUsers).Encode(lastChangeTime)
 		if err != nil {
 			return nil, types.Type{}, 0, err
 		}
@@ -1775,7 +1775,7 @@ type ConnectionToAdd struct {
 	// UIValues represents the user-entered values of the connector user interface
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
-	UIValues json.RawMessage
+	UIValues stdjson.RawMessage
 }
 
 // WarehouseType represents a data warehouse type.
@@ -1810,7 +1810,7 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := json.Unmarshal(data, &v)
+	err := stdjson.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -1866,7 +1866,7 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := json.Unmarshal(data, &v)
+	err := stdjson.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}

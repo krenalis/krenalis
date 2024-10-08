@@ -10,7 +10,7 @@ package collector
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	stdjson "encoding/json"
 	"log/slog"
 	"math/rand/v2"
 	"slices"
@@ -18,12 +18,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 
 	"github.com/google/uuid"
 )
@@ -276,7 +276,7 @@ func (observer *Observer) addCollectedEvent(source int, event *collectedEvent, e
 		}
 		if oe.Data == nil {
 			var b bytes.Buffer
-			enc := json.NewEncoder(&b)
+			enc := stdjson.NewEncoder(&b)
 			enc.SetEscapeHTML(false)
 			_ = enc.Encode(event)
 			data := b.Bytes()
@@ -349,7 +349,7 @@ func (observer *Observer) addEnrichedEvent(source int, event *events.Event) {
 			if properties == nil {
 				properties = event.AsProperties()
 			}
-			data, _ := encoding.Marshal(events.Schema, properties)
+			data, _ := json.MarshalBySchema(properties, events.Schema)
 			oe = ObservedEvent{
 				Source: source,
 				Header: event.Header,

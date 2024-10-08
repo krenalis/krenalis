@@ -25,7 +25,6 @@ import (
 
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
-	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events/collector"
 	"github.com/meergo/meergo/apis/events/dispatcher"
@@ -36,6 +35,7 @@ import (
 	"github.com/meergo/meergo/apis/transformers/lambda"
 	"github.com/meergo/meergo/apis/transformers/local"
 	"github.com/meergo/meergo/apis/transformers/mappings"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
@@ -652,7 +652,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
 
-	properties, err := encoding.Unmarshal(bytes.NewReader(data), inSchema)
+	properties, err := json.UnmarshalBySchema(bytes.NewReader(data), inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
@@ -679,7 +679,7 @@ func (apis *APIs) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 	}
 
-	return encoding.Marshal(outSchema, records[0].Properties)
+	return json.MarshalBySchema(records[0].Properties, outSchema)
 }
 
 // TransformationLanguages returns the supported transformation languages.

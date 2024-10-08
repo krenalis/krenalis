@@ -12,9 +12,9 @@ import (
 	"log/slog"
 
 	"github.com/meergo/meergo/apis/datastore"
-	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -99,7 +99,12 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		}
 	}
 
-	return encoding.MarshalSlice(datastore.EventSchema, evs)
+	es := make([]any, len(evs))
+	for i, e := range evs {
+		es[i] = e
+	}
+
+	return json.MarshalBySchema(es, types.Array(datastore.EventSchema))
 }
 
 // Identities returns the user identities of the user, and an estimate of their
@@ -182,5 +187,5 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 		return nil, errors.NotFound("user %s does not exist", this.id)
 	}
 
-	return encoding.Marshal(ws.UserSchema, records[0])
+	return json.MarshalBySchema(records[0], ws.UserSchema)
 }

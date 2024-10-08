@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package encoding
+package json
 
 import (
 	"bytes"
@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
@@ -170,8 +169,8 @@ var value = map[string]any{
 	"Time":                      time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
 	"Year":                      2023,
 	"UUID":                      "550e8400-e29b-41d4-a716-446655440000",
-	"JSON":                      json.Value(`{"foo":5,"boo":true}`),
-	"JSON_null":                 json.Value(`null`),
+	"JSON":                      Value(`{"foo":5,"boo":true}`),
+	"JSON_null":                 Value(`null`),
 	"Inet":                      "192.158.1.38",
 	"Text":                      "some text",
 	"Array":                     []any{"foo", "boo"},
@@ -179,7 +178,7 @@ var value = map[string]any{
 	"Map":                       map[string]any{"a": 1, "b": 2, "c": 3},
 }
 
-func Test_Marshal(t *testing.T) {
+func Test_MarshalBySchema(t *testing.T) {
 	tests := []struct {
 		name   string
 		schema types.Type
@@ -213,108 +212,12 @@ func Test_Marshal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Marshal(test.schema, test.value)
+			got, err := MarshalBySchema(test.value, test.schema)
 			if err != nil {
-				t.Fatalf("Marshal: unexpected error: %s", err)
+				t.Fatalf("MarshalBySchema: unexpected error: %s", err)
 			}
 			if !bytes.Equal(test.result, got) {
-				t.Fatalf("Marshal: expected %s, got %s", string(test.result), string(got))
-			}
-		})
-	}
-}
-
-func Test_MarshalSlice(t *testing.T) {
-	tests := []struct {
-		name   string
-		schema types.Type
-		values []map[string]any
-		result []byte
-	}{
-		{
-			name: "Slice",
-			schema: types.Object([]types.Property{
-				{
-					Name: "a",
-					Type: types.Boolean(),
-				},
-				{
-					Name: "b",
-					Type: types.Int(8),
-				},
-			}),
-			values: []map[string]any{{"a": true, "b": 3}, {"a": false, "b": 1}, {"a": true, "b": 14}},
-			result: []byte(`[{"a":true,"b":3},{"a":false,"b":1},{"a":true,"b":14}]`),
-		},
-		{
-			name: "Text encoding",
-			schema: types.Object([]types.Property{
-				{
-					Name: "a",
-					Type: types.Text(),
-				},
-			}),
-			values: []map[string]any{
-				{"a": ``},
-				{"a": `'`},
-				{"a": `"`},
-			},
-			result: []byte(`[{"a":""},{"a":"'"},{"a":"\""}]`),
-		},
-		{
-			name: "ReadOptional property",
-			schema: types.Object([]types.Property{
-				{
-					Name: "a",
-					Type: types.Text(),
-				},
-				{
-					Name:         "b",
-					Type:         types.Boolean(),
-					ReadOptional: true,
-				},
-			}),
-			values: []map[string]any{
-				{"a": "foo", "b": true},
-				{"a": "foo"},
-			},
-			result: []byte(`[{"a":"foo","b":true},{"a":"foo"}]`),
-		},
-		{
-			name: "Mix",
-			schema: types.Object([]types.Property{
-				{
-					Name: "a",
-					Type: types.Text(),
-				},
-				{
-					Name: "b",
-					Type: types.Object([]types.Property{
-						{Name: "x", Type: types.Int(32), ReadOptional: true},
-						{Name: "y", Type: types.Int(32)},
-					}),
-					ReadOptional: true,
-					Nullable:     true,
-				},
-			}),
-			values: []map[string]any{
-				{},
-				{"a": "foo"},
-				{"a": "foo", "b": nil},
-				{"a": "foo", "b": map[string]any{"y": 45}},
-				{"a": "foo", "b": map[string]any{"x": 12, "y": 45}},
-			},
-			result: []byte(`[{},{"a":"foo"},{"a":"foo","b":null},{"a":"foo","b":{"y":45}},{"a":"foo","b":{"x":12,"y":45}}]`),
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := MarshalSlice(test.schema, test.values)
-			if err != nil {
-				t.Fatalf("MarshalSlice: unexpected error: %s", err)
-			}
-			if !bytes.Equal(test.result, got) {
-				t.Fatalf("MarshalSlice: expected %s, got %s", string(test.result), string(got))
+				t.Fatalf("MarshalBySchema: expected %s, got %s", string(test.result), string(got))
 			}
 		})
 	}

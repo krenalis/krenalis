@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package encoding
+package json
 
 import (
 	"bytes"
@@ -18,13 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/shopspring/decimal"
 )
 
-func Test_Unmarshal(t *testing.T) {
+func Test_UnmarshalBySchema(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{
@@ -189,8 +188,8 @@ func Test_Unmarshal(t *testing.T) {
 		"Time":        time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
 		"Year":        2023,
 		"UUID":        "550e8400-e29b-41d4-a716-446655440000",
-		"JSON":        json.Value(`{"foo": 5,"boo": true}`),
-		"JSON_null":   json.Value(`null`),
+		"JSON":        Value(`{"foo": 5,"boo": true}`),
+		"JSON_null":   Value(`null`),
 		"JSON_nil":    nil,
 		"Inet":        "192.158.1.38",
 		"Text":        "some text",
@@ -230,7 +229,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			data: `5`,
-			err:  ErrSyntaxInvalid,
+			err:  newErrInvalidValue("does not have a valid value: 5", ""),
 		},
 		{
 			data: `{"Boolean":}`,
@@ -246,7 +245,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			data: `[{"Boolean":true}]`,
-			err:  ErrSyntaxInvalid,
+			err:  newErrInvalidValue("cannot be an array", ""),
 		},
 		{
 			data: `{"Object":{"d":5}}`,
@@ -301,125 +300,24 @@ func Test_Unmarshal(t *testing.T) {
 			if !test.schema.Valid() {
 				testSchema = schema
 			}
-			got, err := Unmarshal(b, testSchema)
+			got, err := UnmarshalBySchema(b, testSchema)
 			if err != nil {
 				if test.err == nil {
-					t.Fatalf("Unmarshal: expected no error, got error %s", err)
+					t.Fatalf("UnmarshalBySchema: expected no error, got error %s", err)
 				}
 				if !reflect.DeepEqual(test.err, err) {
-					t.Fatalf("Unmarshal: expected error %q, got error %q", test.err, err)
+					t.Fatalf("UnmarshalBySchema: expected error '%v' (type %T), got error '%v' (type %T)", test.err, test.err, err, err)
 				}
 				if got != nil {
-					t.Fatalf("Unmarshal: expected nil, got %#v", got)
+					t.Fatalf("UnmarshalBySchema: expected nil, got %#v", got)
 				}
 				return
 			}
 			if test.err != nil {
-				t.Fatalf("Unmarshal: expected error %q, got no error", test.err)
+				t.Fatalf("UnmarshalBySchema: expected error %q, got no error", test.err)
 			}
 			if err := equalValues(schema, test.expected, got); err != nil {
-				t.Fatalf("Unmarshal:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
-			}
-		})
-	}
-
-}
-
-func Test_UnmarshalSlice(t *testing.T) {
-
-	schema := types.Object([]types.Property{
-		{
-			Name: "foo",
-			Type: types.Boolean(),
-		},
-		{
-			Name:         "boo",
-			Type:         types.Int(32),
-			ReadOptional: true,
-		},
-	})
-
-	tests := []struct {
-		data     string
-		expected []map[string]any
-		err      error
-	}{
-		{
-			data: ``,
-			err:  ErrSyntaxInvalid,
-		},
-		{
-			data: `{}`,
-			err:  ErrSyntaxInvalid,
-		},
-		{
-			data:     `[]`,
-			expected: []map[string]any{},
-		},
-		{
-			data: `[5]`,
-			err:  newErrInvalidValue(`does not have a valid value: 5`, "data[0]"),
-		},
-		{
-			data: `[{"foo":}]`,
-			err:  ErrSyntaxInvalid,
-		},
-		{
-			data: `[{"foo":true`,
-			err:  ErrSyntaxInvalid,
-		},
-		{
-			data:     `[{"foo":true}]`,
-			expected: []map[string]any{{"foo": true}},
-		},
-		{
-			data: `[{"foo":true}] ,`,
-			err:  ErrSyntaxInvalid,
-		},
-		{
-			data: `[{"foo":true}],[{"foo":false}]`,
-			err:  ErrSyntaxInvalid,
-		},
-		{
-			data:     `[{"foo":true},{"foo": false,"boo":547}]`,
-			expected: []map[string]any{{"foo": true}, {"foo": false, "boo": 547}},
-		},
-		{
-			data: `[{"ops":5},{"boo":547}]`,
-			err:  newErrPropertyNotExist("data[0].ops"),
-		},
-		{
-			data: `[{"foo":3},{"boo":547}]`,
-			err:  newErrInvalidValue(`does not have a valid value: 3`, "data[0].foo"),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			b := strings.NewReader(test.data)
-			got, err := UnmarshalSlice(b, "data", schema)
-			if err != nil {
-				if test.err == nil {
-					t.Fatalf("UnmarshalSlice: expected no error, got error %s", err)
-				}
-				if !reflect.DeepEqual(test.err, err) {
-					t.Fatalf("UnmarshalSlice: expected error %q, got error %q", test.err, err)
-				}
-				if got != nil {
-					t.Fatalf("UnmarshalSlice: expected nil, got %#v", got)
-				}
-				return
-			}
-			if test.err != nil {
-				t.Fatalf("UnmarshalSlice: expected error %q, got no error", test.err)
-			}
-			if len(test.expected) != len(got) {
-				t.Fatalf("UnmarshalSlice: expected %d values, got %d", len(test.expected), len(got))
-			}
-			for i, value := range test.expected {
-				if err := equalValues(schema, value, got[i]); err != nil {
-					t.Fatalf("UnmarshalSlice data[%d]:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", i, value, got[i], err)
-				}
+				t.Fatalf("UnmarshalBySchema:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
 			}
 		})
 	}
@@ -471,11 +369,11 @@ func equalValues(t types.Type, v1, v2 any) error {
 		}
 		return nil
 	case types.JSONKind:
-		j2, ok := v2.(json.Value)
+		j2, ok := v2.(Value)
 		if !ok {
 			return fmt.Errorf("expected value %#v (%T), got %#v (%T)", v1, v1, v2, v2)
 		}
-		j1 := v1.(json.Value)
+		j1 := v1.(Value)
 		if !bytes.Equal(j1, j2) {
 			return fmt.Errorf("expected value %q (%T), got %q (%T)", string(j1), v1, string(j2), v2)
 		}

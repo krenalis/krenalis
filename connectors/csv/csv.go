@@ -322,7 +322,8 @@ func toString(v any, t types.Type) string {
 	case types.JSONKind:
 		return string(v.(json.Value))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:
-		return string(meergo.MarshalJSON(v, t))
+		data, _ := json.MarshalBySchema(v, t)
+		return string(data)
 	default:
 		panic(fmt.Sprintf("unexpected kind %s", k))
 	}

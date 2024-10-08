@@ -5,13 +5,9 @@
 // Copyright (c) 2023 Open2b
 //
 
-// Package encoding provides functions for unmarshalling data received from the
-// API, validating it based on a specified schema, and marshalling data returned
-// from the API according to a defined schema.
-package encoding
+package json
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -20,41 +16,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/shopspring/decimal"
 )
 
-// Marshal encodes the given value, based on its schema, into a JSON object,
-// and returns it. The schema must be an Object.
+// MarshalBySchema encodes the given value, based on the provided schema, into
+// JSON, and returns it. schema cannot be the invalid type.
 //
-// Unlike Unmarshal, this function does not validate the value. Its behavior is
-// undefined if the value does not validate against the schema.
-func Marshal(schema types.Type, value map[string]any) ([]byte, error) {
-	if k := schema.Kind(); k != types.ObjectKind {
-		if k == types.InvalidKind {
-			return nil, errors.New("apis/encoding: schema is the invalid schema")
-		}
-		return nil, errors.New("apis/encoding: schema is not an object")
-	}
-	return marshal(nil, schema, value)
+// Unlike UnmarshalBySchema, this function does not validate the value. Its
+// behavior is undefined if the value does not validate against the type.
+func MarshalBySchema(value any, schema types.Type) ([]byte, error) {
+	return marshalBySchema(nil, schema, value)
 }
 
-// MarshalSlice is like Marshal but encodes a slice of values as a JSON array.
-func MarshalSlice(schema types.Type, values []map[string]any) ([]byte, error) {
-	if k := schema.Kind(); k != types.ObjectKind {
-		if k == types.InvalidKind {
-			return nil, errors.New("apis/encoding: schema is the invalid schema")
-		}
-		return nil, errors.New("apis/encoding: schema is not an object")
-	}
-	return marshal(nil, types.Array(schema), values)
-}
-
-// marshal marshals v as a JSON value and appends it to b.
-func marshal(b []byte, t types.Type, v any) ([]byte, error) {
+// marshalBySchema marshals v as a JSON value and appends it to b.
+func marshalBySchema(b []byte, t types.Type, v any) ([]byte, error) {
 	if v == nil {
 		return append(b, "null"...), nil
 	}
@@ -109,7 +87,7 @@ func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 			b = v.AppendFormat(b, "15:04:05.999999999")
 		}
 		b = append(b, '"')
-	case json.Value:
+	case Value:
 		b, _ = jsontext.AppendQuote(b, v)
 	case string:
 		var err error
@@ -129,7 +107,7 @@ func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 				item := rv.Index(i).Interface()
 				var err error
-				b, err = marshal(b, t.Elem(), item)
+				b, err = marshalBySchema(b, t.Elem(), item)
 				if err != nil {
 					return nil, err
 				}
@@ -150,7 +128,7 @@ func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, '"')
 				b = append(b, p.Name...)
 				b = append(b, '"', ':')
-				b, err = marshal(b, p.Type, rv.Interface())
+				b, err = marshalBySchema(b, p.Type, rv.Interface())
 				if err != nil {
 					return nil, err
 				}
@@ -185,14 +163,14 @@ func marshal(b []byte, t types.Type, v any) ([]byte, error) {
 					return nil, err
 				}
 				b = append(b, ':')
-				b, err = marshal(b, vt, e.v)
+				b, err = marshalBySchema(b, vt, e.v)
 				if err != nil {
 					return nil, err
 				}
 			}
 			b = append(b, '}')
 		default:
-			return nil, fmt.Errorf("apis/encoding: unexpected type %s", t)
+			return nil, fmt.Errorf("json: unexpected type %s", t)
 		}
 	}
 	return b, nil

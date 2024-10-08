@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package encoding
+package json
 
 import (
 	"bytes"
@@ -20,7 +20,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
@@ -35,90 +34,23 @@ var (
 	negInfinity = []byte("-Infinity")
 )
 
-// ErrSyntaxInvalid is the error returned by Unmarshal when the data being
+// ErrSyntaxInvalid is the error returned by UnmarshalBySchema when the data being
 // unmarshaled is not valid JSON, or does not conform to the expected structure.
 var ErrSyntaxInvalid = errors.New("syntax is not valid")
-
-// SchemaValidationError represents a validation error related to the output
-// schema. It can be returned by Unmarshal for each single result in the
-// Result.Error field.
-type SchemaValidationError struct {
-	kind schemaValidationKind
-	msg  string
-	path string
-}
-
-type schemaValidationKind int
-
-const (
-	propertyNotExist schemaValidationKind = iota
-	missingProperty
-	invalidValue
-)
-
-func (err *SchemaValidationError) Error() string {
-	switch err.kind {
-	case propertyNotExist:
-		return fmt.Sprintf("property %q does not exist", err.path)
-	case missingProperty:
-		return fmt.Sprintf("non-optional property %q is missing", err.path)
-	case invalidValue:
-		if err.path != "" && err.path[len(err.path)-1] == ']' {
-			return fmt.Sprintf("%q %s", err.path, err.msg)
-		}
-		return fmt.Sprintf("property %q %s", err.path, err.msg)
-	}
-	panic("invalid SchemaValidationError's kind")
-}
-
-// newErrPropertyNotExist returns a new SchemaValidationError with kind
-// propertyNotExist.
-func newErrPropertyNotExist(path string) error {
-	return &SchemaValidationError{kind: propertyNotExist, path: path}
-}
-
-// newErrMissingProperty returns a new SchemaValidationError with kind
-// missingProperty.
-func newErrMissingProperty(path string) error {
-	return &SchemaValidationError{kind: missingProperty, path: path}
-}
-
-// newErrInvalidValue returns a new SchemaValidationError with kind
-// invalidValue.
-func newErrInvalidValue(msg, path string) error {
-	return &SchemaValidationError{kind: invalidValue, msg: msg, path: path}
-}
-
-func (err *SchemaValidationError) appendIndexToPath(i int) {
-	path := err.path
-	err.path = "[" + strconv.Itoa(i) + "]"
-	if path != "" {
-		err.path += "." + path
-	}
-}
-
-func (err *SchemaValidationError) appendNameToPath(name string) {
-	if err.path == "" {
-		err.path = name
-	} else if err.path[0] == '[' {
-		err.path = name + err.path
-	} else {
-		err.path = name + "." + err.path
-	}
-}
 
 // decoder implements a decoder for JSON.
 type decoder struct {
 	dec *jsontext.Decoder
 }
 
-// Unmarshal decodes a JSON object read from r, validating it according to the
-// provided input schema, which must be an Object. If a property is missing and
-// it is not optional for reading, it returns a *SchemaValidationError error.
+// UnmarshalBySchema decodes JSON read from r, validating it according to the
+// provided schema, which cannot be the invalid type. If a property is missing
+// and it is not optional for reading, it returns a *SchemaValidationError
+// error.
 //
 // It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
-// valid JSON Object and returns a *SchemaValidationError value if an error
-// occurs during schema validation.
+// valid JSON and returns a *SchemaValidationError value if an error occurs
+// during schema validation.
 //
 // The following are the expected JSON values for each schema type:
 //
@@ -142,20 +74,14 @@ type decoder struct {
 //   - Array: a JSON Array
 //   - Object: a JSON Object
 //   - Map: a JSON Object
-func Unmarshal(r io.Reader, schema types.Type) (map[string]any, error) {
+func UnmarshalBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
 	if r == nil {
 		return nil, errors.New("r is nil")
 	}
-	if k := schema.Kind(); k != types.ObjectKind {
-		if k == types.InvalidKind {
-			return nil, errors.New("apis/encoding: schema is the invalid schema")
-		}
-		return nil, errors.New("apis/encoding:schema is not an object")
+	if schema.Kind() == types.InvalidKind {
+		return nil, errors.New("json: schema is the invalid type")
 	}
 	d := decoder{dec: jsontext.NewDecoder(r)}
-	if d.peekKind() != '{' {
-		return nil, ErrSyntaxInvalid
-	}
 	value, err := d.unmarshal(schema)
 	if err != nil {
 		if _, ok := err.(*SchemaValidationError); ok {
@@ -171,53 +97,6 @@ func Unmarshal(r io.Reader, schema types.Type) (map[string]any, error) {
 		return nil, ErrSyntaxInvalid
 	}
 	return value.(map[string]any), nil
-}
-
-// UnmarshalSlice is like Unmarshal but expects a JSON array of objects.
-// The schema is the schema of the elements of the array.
-func UnmarshalSlice(r io.Reader, name string, schema types.Type) ([]map[string]any, error) {
-	if r == nil {
-		return nil, errors.New("r is nil")
-	}
-	if k := schema.Kind(); k != types.ObjectKind {
-		if k == types.InvalidKind {
-			return nil, errors.New("apis/encoding: schema is the invalid schema")
-		}
-		return nil, errors.New("apis/encoding:schema is not an object")
-	}
-	d := decoder{dec: jsontext.NewDecoder(r)}
-	tok, err := d.readToken()
-	if err != nil {
-		if err == io.EOF {
-			return nil, ErrSyntaxInvalid
-		}
-		return nil, err
-	}
-	if tok.Kind() != '[' {
-		return nil, ErrSyntaxInvalid
-	}
-	values := make([]map[string]any, 0)
-	for i := 0; d.peekKind() != ']'; i++ {
-		value, err := d.unmarshal(schema)
-		if err != nil {
-			if err, ok := err.(*SchemaValidationError); ok {
-				// Consume the remaining tokens to return a ErrSyntaxInvalid error
-				// in case of a syntax error, instead of the validation error.
-				if err := d.consumeTokens(); err != nil {
-					return nil, err
-				}
-				err.appendIndexToPath(i)
-				err.appendNameToPath(name)
-			}
-			return nil, err
-		}
-		values = append(values, value.(map[string]any))
-	}
-	_, _ = d.readToken() // skip ']'
-	if _, err := d.readToken(); err != io.EOF {
-		return nil, ErrSyntaxInvalid
-	}
-	return values, nil
 }
 
 // consumeTokens consume the remaining tokens returning the ErrSyntaxInvalid
@@ -266,7 +145,7 @@ func (d decoder) readValue() (jsontext.Value, error) {
 func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 	switch d.peekKind() {
 	case '[':
-		// Unmarshal an array.
+		// UnmarshalBySchema an array.
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
@@ -297,7 +176,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		}
 		return elements, nil
 	case '{':
-		// Unmarshal an object.
+		// UnmarshalBySchema an object.
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
@@ -394,7 +273,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 
 // unquoteString unquote a JSON string.
 func (d decoder) unquoteString(v []byte) string {
-	b, _ := json.Unquote(v)
+	b, _ := Unquote(v)
 	return string(b)
 }
 
@@ -489,7 +368,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.DateTimeKind:
 		if v.Kind() == '"' {
-			if v, err := json.Unquote(v); err == nil {
+			if v, err := Unquote(v); err == nil {
 				if t, err := iso8601.Parse(v); err == nil {
 					t = t.UTC()
 					if y := t.Year(); 1 <= y && y <= 9999 {
@@ -526,7 +405,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if v, err := json.Unquote(v); err == nil {
+			if v, err := Unquote(v); err == nil {
 				if u, err := uuid.ParseBytes(v); err == nil {
 					return u.String(), nil
 				}
@@ -534,11 +413,11 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.JSONKind:
 		if v.Kind() == '"' {
-			s, err := json.Unquote(v)
+			s, err := Unquote(v)
 			if err != nil {
 				return nil, newErrInvalidValue(fmt.Sprint("contains invalid JSON"), "")
 			}
-			return json.Value(s), nil
+			return Value(s), nil
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {
@@ -573,7 +452,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.ArrayKind, types.ObjectKind, types.MapKind:
 	default:
-		return nil, fmt.Errorf("apis/encoding: unexpected %s type", t)
+		return nil, fmt.Errorf("json: unexpected %s type", t)
 	}
 	// Return an invalid value error.
 	var value string
@@ -587,9 +466,77 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 	case '0':
 		value = v.String()
 	default:
-		return nil, fmt.Errorf("apis/encoding: unxpected kind '%s'", string(v.Kind()))
+		return nil, fmt.Errorf("json: unxpected kind '%s'", string(v.Kind()))
 	}
 	return nil, newErrInvalidValue("does not have a valid value: "+value, "")
+}
+
+// SchemaValidationError represents a validation error related to the output
+// schema. It can be returned by UnmarshalBySchema for each single result in the
+// Result.Error field.
+type SchemaValidationError struct {
+	kind schemaValidationKind
+	msg  string
+	path string
+}
+
+type schemaValidationKind int
+
+const (
+	propertyNotExist schemaValidationKind = iota
+	missingProperty
+	invalidValue
+)
+
+func (err *SchemaValidationError) Error() string {
+	switch err.kind {
+	case propertyNotExist:
+		return fmt.Sprintf("property %q does not exist", err.path)
+	case missingProperty:
+		return fmt.Sprintf("non-optional property %q is missing", err.path)
+	case invalidValue:
+		if err.path != "" && err.path[len(err.path)-1] == ']' {
+			return fmt.Sprintf("%q %s", err.path, err.msg)
+		}
+		return fmt.Sprintf("property %q %s", err.path, err.msg)
+	}
+	panic("invalid SchemaValidationError's kind")
+}
+
+// newErrPropertyNotExist returns a new SchemaValidationError with kind
+// propertyNotExist.
+func newErrPropertyNotExist(path string) error {
+	return &SchemaValidationError{kind: propertyNotExist, path: path}
+}
+
+// newErrMissingProperty returns a new SchemaValidationError with kind
+// missingProperty.
+func newErrMissingProperty(path string) error {
+	return &SchemaValidationError{kind: missingProperty, path: path}
+}
+
+// newErrInvalidValue returns a new SchemaValidationError with kind
+// invalidValue.
+func newErrInvalidValue(msg, path string) error {
+	return &SchemaValidationError{kind: invalidValue, msg: msg, path: path}
+}
+
+func (err *SchemaValidationError) appendIndexToPath(i int) {
+	path := err.path
+	err.path = "[" + strconv.Itoa(i) + "]"
+	if path != "" {
+		err.path += "." + path
+	}
+}
+
+func (err *SchemaValidationError) appendNameToPath(name string) {
+	if err.path == "" {
+		err.path = name
+	} else if err.path[0] == '[' {
+		err.path = name + err.path
+	} else {
+		err.path = name + "." + err.path
+	}
 }
 
 // formatValues formats values to be used in an error message.

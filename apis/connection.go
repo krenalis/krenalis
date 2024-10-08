@@ -13,7 +13,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
@@ -27,13 +27,13 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
-	"github.com/meergo/meergo/apis/encoding"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/events"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/apis/transformers/mappings"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
@@ -543,7 +543,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	// Marshal the mapping.
 	var mapping []byte
 	if action.Transformation.Mapping != nil {
-		mapping, err = json.Marshal(action.Transformation.Mapping)
+		mapping, err = stdjson.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return 0, err
 		}
@@ -611,11 +611,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		var matchPropInternal, matchPropExternal []byte
 		if n.MatchingProperties != nil {
 			var err error
-			matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
+			matchPropInternal, err = stdjson.Marshal(n.MatchingProperties.Internal)
 			if err != nil {
 				return err
 			}
-			matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
+			matchPropExternal, err = stdjson.Marshal(n.MatchingProperties.External)
 			if err != nil {
 				return err
 			}
@@ -684,7 +684,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	defer records.Close()
 
 	var last connectors.Record
-	users := make([]map[string]any, 0, 100)
+	users := make([]any, 0, 100)
 
 	for user := range records.All(ctx) {
 		if user.Err != nil {
@@ -708,7 +708,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 		return nil, "", err
 	}
 
-	marshaledUsers, err := encoding.MarshalSlice(schema, users)
+	marshaledUsers, err := json.MarshalBySchema(users, types.Array(schema))
 	if err != nil {
 		return nil, "", err
 	}
@@ -894,7 +894,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	defer rows.Close()
 
 	// Scan the rows.
-	var results []map[string]any
+	var results []any
 	for rows.Next() {
 		row, err := rows.Scan()
 		if err != nil {
@@ -915,7 +915,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	schema := types.Object(rows.Columns())
 
-	marshaledRows, err := encoding.MarshalSlice(schema, results)
+	marshaledRows, err := json.MarshalBySchema(results, types.Array(schema))
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -1236,8 +1236,13 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 		return nil, types.Type{}, err
 	}
 
+	recs := make([]any, len(records))
+	for i, r := range records {
+		recs[i] = r
+	}
+
 	schema := types.Object(columns)
-	marshaledRecords, err := encoding.MarshalSlice(schema, records)
+	marshaledRecords, err := json.MarshalBySchema(recs, types.Array(schema))
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -1415,7 +1420,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	data, err := encoding.Unmarshal(bytes.NewReader(event.Data), events.Schema)
+	data, err := json.UnmarshalBySchema(bytes.NewReader(event.Data), events.Schema)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
@@ -1638,7 +1643,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		ct := req.Header.Get("Content-Type")
 		switch ct {
 		case "application/json":
-			err = json.Indent(&b, req.Body, "", "\t")
+			err = stdjson.Indent(&b, req.Body, "", "\t")
 			if err != nil {
 				return nil, err
 			}
@@ -2112,7 +2117,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := json.Unmarshal(data, &v)
+	err := stdjson.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -2186,7 +2191,7 @@ func deserializeCursor(cursor string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	var c time.Time
-	err = json.Unmarshal(data, &c)
+	err = stdjson.Unmarshal(data, &c)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -2197,7 +2202,7 @@ func deserializeCursor(cursor string) (time.Time, error) {
 // serializeCursor serializes a cursor to be returned by the API.
 func serializeCursor(cursor time.Time) (string, error) {
 	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
+	enc := stdjson.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
 	err := enc.Encode(cursor)
 	if err != nil {
