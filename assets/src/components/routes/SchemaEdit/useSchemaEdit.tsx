@@ -311,6 +311,13 @@ const useSchemaEdit = (
 
 	const onApplyChanges = async () => {
 		setIsQueriesLoading(true);
+		try {
+			validateEditableSchema(editableSchema);
+		} catch (err) {
+			handleError(err);
+			setIsQueriesLoading(false);
+			return;
+		}
 		const s = normalizeSchema(editableSchema);
 		let res: ChangeUserSchemaQueriesResponse;
 		try {
@@ -544,6 +551,24 @@ const convertToRows = (mappedRows: object): SortableGridRow[] => {
 		}
 	}
 	return rows;
+};
+
+const validateEditableSchema = (editableSchema: EditableSchema) => {
+	const keys = Object.keys(editableSchema);
+	for (const key of keys) {
+		if (!editableSchema.hasOwnProperty(key)) {
+			continue;
+		}
+		const p = editableSchema[key];
+		const typ = p.type;
+		if (typ.name === 'Object') {
+			// Check that it has at least one sub-property.
+			const subProperties = keys.filter((k) => k.startsWith(key) && k !== key);
+			if (subProperties.length === 0) {
+				throw new Error(`Object property "${p.name}" must have at least one sub property`);
+			}
+		}
+	}
 };
 
 export { useSchemaEdit, PropertyToEdit, PropertyToRemove };
