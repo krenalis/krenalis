@@ -96,6 +96,12 @@ const IdentityResolutionSettings = () => {
 	};
 
 	const onSave = async () => {
+		try {
+			validateIdentifiers(identifiers);
+		} catch (err) {
+			handleError(err);
+			return;
+		}
 		setIsSaving(true);
 		try {
 			await api.workspaces.changeIdentityResolutionSettings(runOnBatchImport, identifiers);
@@ -230,6 +236,14 @@ const IdentityResolutionSettings = () => {
 			)}
 		</div>
 	);
+};
+
+const validateIdentifiers = (identifiers: Identifiers) => {
+	for (const identifier of identifiers) {
+		if (identifier === '') {
+			throw new Error('identifier cannot be empty');
+		}
+	}
 };
 
 export default IdentityResolutionSettings;
