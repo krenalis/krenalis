@@ -10,7 +10,7 @@ package postgresql
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,6 +24,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -65,7 +67,7 @@ type psSettings struct {
 // It returns a SettingsError error if the settings are not valid.
 func Open(settings []byte) (*PostgreSQL, error) {
 	var s psSettings
-	err := json.Unmarshal(settings, &s)
+	err := stdjson.Unmarshal(settings, &s)
 	if err != nil {
 		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
@@ -260,6 +262,15 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
+		// Encode the rows.
+		if enc, ok := newRowEncoder(table.Columns); ok {
+			for _, row := range rows {
+				err = enc.encode(row)
+				if err != nil {
+					return err
+				}
+			}
+		}
 		columnNames := make([]string, len(table.Columns))
 		for i, c := range table.Columns {
 			columnNames[i] = c.Name
@@ -477,7 +488,7 @@ func (warehouse *PostgreSQL) Repair(ctx context.Context) error {
 
 // Settings returns the data warehouse settings.
 func (warehouse *PostgreSQL) Settings() []byte {
-	s, _ := json.Marshal(warehouse.settings)
+	s, _ := stdjson.Marshal(warehouse.settings)
 	return s
 }
 
@@ -629,6 +640,7 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 // copyForIdentities implements the pgx.CopyFromSource interface.
 type copyForIdentities struct {
 	columns []warehouses.Column
+	encoder *rowEncoder
 	rows    []map[string]any
 	values  []any
 }
@@ -640,6 +652,9 @@ func newCopyForIdentities(columns []warehouses.Column, rows []map[string]any) pg
 		columns: columns,
 		rows:    rows,
 		values:  make([]any, len(columns)+1),
+	}
+	if enc, ok := newRowEncoder(columns); ok {
+		c.encoder = enc
 	}
 	return c
 }
@@ -657,6 +672,12 @@ func (c *copyForIdentities) Values() ([]any, error) {
 	for i, column := range c.columns {
 		c.values[i] = row[column.Name]
 	}
+	if c.encoder != nil {
+		err := c.encoder.encode(c.values)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if purge, ok := row["$purge"].(bool); ok {
 		c.values[len(c.values)-1] = purge
 	} else {
@@ -664,4 +685,90 @@ func (c *copyForIdentities) Values() ([]any, error) {
 	}
 	c.rows = c.rows[1:]
 	return c.values, nil
+}
+
+// rowEncoder implements a row encoder that encodes rows to be used in a merge
+// function.
+type rowEncoder struct {
+	ct map[int]types.Type
+}
+
+// newRowEncoder returns a new row encoder that encodes rows with the provided
+// columns. If there are no columns to encode, it returns nil and false;
+// otherwise, it returns the new encoder and true.
+func newRowEncoder(columns []warehouses.Column) (*rowEncoder, bool) {
+	var ct map[int]types.Type
+	for i, c := range columns {
+		switch c.Type.Kind() {
+		case types.ArrayKind:
+			if k := c.Type.Elem().Kind(); k != types.JSONKind && k != types.TextKind {
+				continue
+			}
+			fallthrough
+		case types.JSONKind, types.TextKind, types.MapKind:
+			if ct == nil {
+				ct = map[int]types.Type{i: c.Type}
+			} else {
+				ct[i] = c.Type
+			}
+		}
+	}
+	if ct == nil {
+		return nil, false
+	}
+	return &rowEncoder{ct: ct}, true
+}
+
+// encode encodes a row to be used with a merge method. It removes zero bytes
+// from Text, JSON, Array(Text), Array(JSON), and Map values, and encodes Map
+// values as JSON.
+func (enc rowEncoder) encode(row []any) error {
+	for i, t := range enc.ct {
+		if row[i] == nil {
+			continue
+		}
+		switch t.Kind() {
+		case types.JSONKind:
+			row[i] = json.Value(json.StripZeroBytes(row[i].(json.Value)))
+		case types.TextKind:
+			row[i] = stripZeroBytes(row[i].(string))
+		case types.ArrayKind:
+			arr := row[i].([]any)
+			if k := t.Elem().Kind(); k == types.JSONKind {
+				for j, s := range arr {
+					arr[j] = json.Value(json.StripZeroBytes(s.(json.Value)))
+				}
+			} else {
+				for j, s := range arr {
+					arr[j] = stripZeroBytes(s.(string))
+				}
+			}
+		case types.MapKind:
+			b, err := json.MarshalBySchema(row[i].(map[string]any), t)
+			if err != nil {
+				return err
+			}
+			row[i] = json.Value(json.StripZeroBytes(b))
+		}
+	}
+	return nil
+}
+
+// stripZeroBytes removes all zero bytes ('\x00') from s and returns the
+// modified slice.
+func stripZeroBytes(s string) string {
+	var b strings.Builder
+	for {
+		i := strings.IndexByte(s, '\x00')
+		if i == -1 {
+			break
+		}
+		b.WriteString(s[:i])
+		s = s[i+1:]
+	}
+	if b.Len() > 0 {
+		b.WriteString(s)
+		return b.String()
+	}
+	return s
 }
