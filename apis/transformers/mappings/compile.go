@@ -365,7 +365,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 				name := p.path[j]
 				switch t.Kind() {
 				case types.JSONKind:
-					p.path[j] = ":" + name
+					p.path[j] = name
 				case types.ObjectKind, types.InvalidKind:
 					if name[len(name)-1] == '?' {
 						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path[:j+1])
@@ -397,7 +397,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					if name[len(name)-1] == '?' {
 						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path[:j+1])
 					}
-					p.path[j] = ":" + name
+					p.path[j] = name
 					t = t.Elem()
 				default:
 					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", p.path[:j+1], p.path[:j], t)

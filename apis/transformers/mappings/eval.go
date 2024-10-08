@@ -546,11 +546,8 @@ func valueOf(path path, properties map[string]any) (any, error) {
 	var i int
 	for i = 0; i < len(path); i++ {
 		name := path[i]
-		if name[0] == ':' {
-			name = name[1:]
-			if n := len(name) - 1; name[n] == '?' {
-				name = name[:n]
-			}
+		if n := len(name) - 1; name[n] == '?' {
+			name = name[:n]
 		}
 		if name[0] == '[' {
 			name = name[1 : len(name)-1]
@@ -589,11 +586,8 @@ func valueOf(path path, properties map[string]any) (any, error) {
 			}
 			return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", path[:i+1], path[:i], t)}
 		}
-		if name[0] == ':' {
-			name = name[1:]
-			if n := len(name) - 1; name[n] == '?' {
-				name = name[:n]
-			}
+		if n := len(name) - 1; name[n] == '?' {
+			name = name[:n]
 		}
 		if name[0] == '[' {
 			name = name[1 : len(name)-1]

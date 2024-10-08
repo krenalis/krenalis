@@ -58,9 +58,6 @@ type path []string
 func (p path) String() string {
 	s := p[0]
 	for _, name := range p[1:] {
-		if name[0] == ':' {
-			name = name[1:]
-		}
 		question := name[len(name)-1] == '?'
 		if question {
 			name = name[:len(name)-1]
@@ -95,10 +92,9 @@ type part struct {
 	// Path or function name.
 	// If it represents a function name, it consists of only the function name.
 	// Otherwise, path elements follow these rules:
-	//   - If it represents a map or JSON key, it starts with ':'.
 	//   - If it was denoted with an indexing (e.g., a["b"]), it is enclosed in '[' and ']'.
 	//   - If it was denoted by '?', it ends with '?'.
-	// Examples of path elements: "x", "[x]" ":x", ":[$a]", ":x?", ":[x]?".
+	// Examples of path elements: "x", "[x]" "[$a]", "x?", "[x]?".
 	path path
 
 	// Function call arguments.
