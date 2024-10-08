@@ -546,6 +546,37 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
+// initRepair initializes (or repairs) the database objects (as tables, types,
+// etc...) on the data warehouse.
+func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error {
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
+	queries := []string{
+		createDestinationUsersTable,
+		createEventsTable,
+		createOperationsTable,
+		createUserIdentitiesTable,
+		createUsersTable,
+	}
+	if !repair {
+		// Since the "CREATE VIEW IF EXISTS" statement does not exist in
+		// PostgreSQL, the view is recreated only if initializing, not when
+		// repairing, otherwise a "cannot drop columns from view" error is
+		// returned by PostgreSQL in cases where the users table has different
+		// columns than the default one.
+		queries = append(queries, createUsersView)
+	}
+	for _, query := range queries {
+		_, err := pool.Exec(ctx, query)
+		if err != nil {
+			return warehouses.Error(err)
+		}
+	}
+	return nil
+}
+
 // usersVersion returns the version of the "users" table.
 func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 	pool, err := warehouse.connectionPool(ctx)
@@ -578,6 +609,10 @@ func newCopyForDeleteFrom(numColumns int, deleted []any) pgx.CopyFromSource {
 	return c
 }
 
+func (c *copyForDeleteFrom) Err() error {
+	return nil
+}
+
 func (c *copyForDeleteFrom) Next() bool {
 	return len(c.values) > 0
 }
@@ -589,10 +624,6 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 	}
 	c.values = c.values[numKeys:]
 	return c.row, nil
-}
-
-func (c *copyForDeleteFrom) Err() error {
-	return nil
 }
 
 // copyForIdentities implements the pgx.CopyFromSource interface.
@@ -613,6 +644,10 @@ func newCopyForIdentities(columns []warehouses.Column, rows []map[string]any) pg
 	return c
 }
 
+func (c *copyForIdentities) Err() error {
+	return nil
+}
+
 func (c *copyForIdentities) Next() bool {
 	return len(c.rows) > 0
 }
@@ -629,39 +664,4 @@ func (c *copyForIdentities) Values() ([]any, error) {
 	}
 	c.rows = c.rows[1:]
 	return c.values, nil
-}
-
-func (c *copyForIdentities) Err() error {
-	return nil
-}
-
-// initRepair initializes (or repairs) the database objects (as tables, types,
-// etc...) on the data warehouse.
-func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error {
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return err
-	}
-	queries := []string{
-		createDestinationUsersTable,
-		createEventsTable,
-		createOperationsTable,
-		createUserIdentitiesTable,
-		createUsersTable,
-	}
-	if !repair {
-		// Since the "CREATE VIEW IF EXISTS" statement does not exist in
-		// PostgreSQL, the view is recreated only if initializing, not when
-		// repairing, otherwise a "cannot drop columns from view" error is
-		// returned by PostgreSQL in cases where the users table has different
-		// columns than the default one.
-		queries = append(queries, createUsersView)
-	}
-	for _, query := range queries {
-		_, err := pool.Exec(ctx, query)
-		if err != nil {
-			return warehouses.Error(err)
-		}
-	}
-	return nil
 }
