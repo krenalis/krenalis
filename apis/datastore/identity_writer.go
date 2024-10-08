@@ -491,12 +491,12 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns 
 func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
 	columns := make([]warehouses.Column, 7+len(iwColumns))
 	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
-	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Text()}
+	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
 	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
 	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
 	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
 	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32)}
+	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	i := 7
 	for name := range iwColumns {
 		columns[i] = iwColumns[name]
