@@ -231,12 +231,11 @@ func (v Value) IsTrue() bool {
 // was expected but not found.
 func (v Value) Lookup(path []string) (Value, error) {
 	dec := jsontext.NewDecoder(bytes.NewReader(v))
-	tok, _ := dec.ReadToken()
-	if tok.Kind() != '{' {
-		return nil, NotExistError{Kind: Kind(tok.Kind())}
-	}
-	last := len(path) - 1
+	var tok jsontext.Token
 	for i, name := range path {
+		if tok, _ = dec.ReadToken(); tok.Kind() != '{' {
+			return nil, NotExistError{Index: i, Kind: Kind(tok.Kind())}
+		}
 		for {
 			tok, _ = dec.ReadToken()
 			if tok.Kind() == '}' {
@@ -247,15 +246,9 @@ func (v Value) Lookup(path []string) (Value, error) {
 			}
 			_ = dec.SkipValue()
 		}
-		if i == last {
-			value, _ := dec.ReadValue()
-			return Value(value), nil
-		}
-		if tok, _ = dec.ReadToken(); tok.Kind() != '{' {
-			return nil, NotExistError{Index: i + 1, Kind: Kind(tok.Kind())}
-		}
 	}
-	panic("unreachable code")
+	value, _ := dec.ReadValue()
+	return Value(value), nil
 }
 
 // MarshalJSON returns v as the JSON encoding of v.
