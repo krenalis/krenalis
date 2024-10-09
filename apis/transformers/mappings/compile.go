@@ -354,26 +354,25 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 	}
 
 	for i, p := range expr {
-		if p.path == nil {
+		if p.path.elements == nil {
 			continue
 		}
 		// Check the path.
 		if p.args == nil {
 			var b strings.Builder
 			t := schema
-			for j := 0; j < len(p.path); j++ {
-				name := p.path[j]
+			for j := 0; j < len(p.path.elements); j++ {
+				name := p.path.elements[j]
+				decorators := p.path.decorators[j]
 				switch t.Kind() {
 				case types.JSONKind:
-					p.path[j] = name
 				case types.ObjectKind, types.InvalidKind:
-					if name[len(name)-1] == '?' {
-						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path[:j+1])
+					if decorators.optional() {
+						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path.slice(0, j+1))
 					}
-					if name[0] == '[' {
-						name = name[1 : len(name)-1]
+					if decorators.indexing() {
 						if !types.IsValidPropertyName(name) {
-							return fmt.Errorf("invalid %s: %q is not a valid property name", p.path[:j+1], name)
+							return fmt.Errorf("invalid %s: %q is not a valid property name", p.path.slice(0, j+1), name)
 						}
 					}
 					var property types.Property
@@ -384,7 +383,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					if !ok {
 						msg := fmt.Sprintf("property %q does not exist", name)
 						if j > 0 {
-							msg = fmt.Sprintf("invalid %s: %s", p.path[:j+1], msg)
+							msg = fmt.Sprintf("invalid %s: %s", p.path.slice(0, j+1), msg)
 						}
 						return errors.New(msg)
 					}
@@ -394,13 +393,12 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					b.WriteString(name)
 					t = property.Type
 				case types.MapKind:
-					if name[len(name)-1] == '?' {
-						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path[:j+1])
+					if p.path.decorators[j].optional() {
+						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path.slice(0, j+1))
 					}
-					p.path[j] = name
 					t = t.Elem()
 				default:
-					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", p.path[:j+1], p.path[:j], t)
+					return fmt.Errorf("invalid %s: %s (type %s) cannot have properties or keys", p.path.slice(0, j+1), p.path.slice(0, j), t)
 				}
 			}
 			if concatenate && !convertibleTo(t, types.Text()) {
@@ -411,8 +409,9 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 			continue
 		}
 		// Check the function call
+		expr[i].path.decorators = nil
 		var err error
-		switch p.path[0] {
+		switch p.path.elements[0] {
 		case "and":
 			expr[i].typ, err = checkAnd(p.args, schema, typ, n, properties)
 		case "array":
@@ -446,7 +445,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 		case "upper":
 			expr[i].typ, err = checkUpper(p.args, schema, typ, n, properties)
 		default:
-			panic(fmt.Errorf("unknown function %q", p.path[0]))
+			panic(fmt.Errorf("unknown function %q", p.path.elements[0]))
 		}
 		if err != nil {
 			return err
@@ -468,7 +467,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 // only a value, it is converted to dt.
 func asType(expr []part, dt types.Type, nullable bool) error {
 	p := expr[0]
-	if len(expr) == 1 && p.path == nil {
+	if len(expr) == 1 && p.path.elements == nil {
 		v, err := convert(p.value, p.typ, dt, nullable, nil, None)
 		if err != nil {
 			if p.value == nil {
@@ -497,7 +496,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 // typeOf returns the type of the expression expr.
 func typesOf(expr []part) types.Type {
 	p := expr[0]
-	if len(expr) > 0 || p.value != nil && p.path != nil {
+	if len(expr) > 0 || p.value != nil && p.path.elements != nil {
 		return types.Text()
 	}
 	return p.typ

@@ -467,7 +467,7 @@ func Test_Applies(t *testing.T) {
 			filter := &state.Where{
 				Logical: state.OpAnd,
 				Conditions: []state.WhereCondition{
-					{Property: "v", Operator: test.op},
+					{Property: []string{"v"}, Operator: test.op},
 				},
 			}
 			if test.v0 != nil {
@@ -498,8 +498,8 @@ func Test_Applies(t *testing.T) {
 		filter := &state.Where{
 			Logical: state.OpAnd,
 			Conditions: []state.WhereCondition{
-				{Property: "a", Operator: state.OpIs, Values: []any{5}},
-				{Property: "b", Operator: state.OpContains, Values: []any{"boo"}},
+				{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
+				{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
 			},
 		}
 		if !Applies(filter, map[string]any{"a": 5, "b": "foo boo"}) {
@@ -514,8 +514,8 @@ func Test_Applies(t *testing.T) {
 		filter := &state.Where{
 			Logical: state.OpOr,
 			Conditions: []state.WhereCondition{
-				{Property: "a", Operator: state.OpIs, Values: []any{5}},
-				{Property: "b", Operator: state.OpContains, Values: []any{"boo"}},
+				{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
+				{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
 			},
 		}
 		if !Applies(filter, map[string]any{"a": 5, "b": "foo boo"}) {

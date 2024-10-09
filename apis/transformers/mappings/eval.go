@@ -151,13 +151,13 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
 		p := expression[0]
-		if p.path == nil {
+		if p.path.elements == nil {
 			return p.value, p.typ, nil
 		}
 		if p.value == nil {
-			if len(p.path) == 1 {
+			if len(p.path.elements) == 1 {
 				if p.args == nil {
-					v, ok := properties[p.path[0]]
+					v, ok := properties[p.path.elements[0]]
 					if !ok {
 						return nil, types.Type{}, nil
 					}
@@ -182,7 +182,7 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 		if s, _ := p.value.(string); s != "" {
 			buf = append(buf, s...)
 		}
-		if p.path == nil {
+		if p.path.elements == nil {
 			continue
 		}
 		if p.args == nil {
@@ -211,7 +211,7 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 // nil, the timeLayouts used to format DateTime, Date, and Time values as
 // strings. purpose specifies the reason for the evaluation.
 func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
-	switch name := p.path[0]; name {
+	switch name := p.path.elements[0]; name {
 	case "and":
 		var null bool
 		for _, arg := range p.args {
@@ -494,7 +494,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return strings.ToUpper(v.(string)), types.Text(), nil
 	}
-	panic(fmt.Errorf("unknown function %q", p.path[0]))
+	panic(fmt.Errorf("unknown function %q", p.path.elements[0]))
 }
 
 // substring returns a substring of s starting from the rune at position
@@ -538,67 +538,36 @@ func substring(s string, start, length int) string {
 // object.
 //
 // For non-object JSON values, accessing a key returns nil if the key is
-// followed by "?"; otherwise, it returns an error.
+// optional; otherwise, it returns an error.
 func valueOf(path path, properties map[string]any) (any, error) {
-	var v any
-	var ok bool
-	last := len(path) - 1
+	last := len(path.elements) - 1
 	var i int
-	for i = 0; i < len(path); i++ {
-		name := path[i]
-		if n := len(name) - 1; name[n] == '?' {
-			name = name[:n]
-		}
-		if name[0] == '[' {
-			name = name[1 : len(name)-1]
-		}
-		v, ok = properties[name]
+	for i = 0; i < len(path.elements); i++ {
+		name := path.elements[i]
+		v, ok := properties[name]
 		if !ok {
 			return nil, nil
 		}
 		if i == last {
 			return v, nil
 		}
-		properties, ok = v.(map[string]any)
-		if !ok {
-			break
+		switch v := v.(type) {
+		case map[string]any:
+			properties = v
+		case json.Value:
+			i += 1
+			v, err := v.Lookup(path.elements[i:])
+			if err != nil {
+				err := err.(json.NotExistError)
+				if err.Kind == json.Object || path.decorators[i+err.Index].optional() {
+					return nil, nil
+				}
+				msg := fmt.Sprintf("invalid %s: %s is not JSON object, it is %s",
+					path.slice(0, i+err.Index+1), path.slice(0, i+err.Index), err.Kind)
+				return nil, &invalidConversionError{msg: msg}
+			}
+			return v, nil
 		}
 	}
-	v2 := v.(json.Value)
-	for i++; i < len(path); i++ {
-		name := path[i]
-		if !v2.IsObject() {
-			if name[len(name)-1] == '?' {
-				return nil, nil
-			}
-			var t string
-			switch v2.Kind() {
-			case json.Null:
-				t = "JSON null"
-			case json.False, json.True:
-				t = "a JSON boolean"
-			case json.Number:
-				t = "a JSON number"
-			case json.String:
-				t = "a JSON string"
-			default:
-				t = "a JSON array"
-			}
-			return nil, &invalidConversionError{msg: fmt.Sprintf("invalid %s: %s is not a JSON object, it is %s", path[:i+1], path[:i], t)}
-		}
-		if n := len(name) - 1; name[n] == '?' {
-			name = name[:n]
-		}
-		if name[0] == '[' {
-			name = name[1 : len(name)-1]
-		}
-		v2, ok = v2.Lookup(name)
-		if !ok {
-			return nil, nil
-		}
-		if i == last {
-			return v2, nil
-		}
-	}
-	return v, nil
+	panic("unreachable code")
 }

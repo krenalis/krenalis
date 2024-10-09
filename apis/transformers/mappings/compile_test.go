@@ -117,7 +117,7 @@ func Test_Compile(t *testing.T) {
 
 		{expr: "properties", dt: types.JSON(), expected: json.Value(`{"a":1.0,"b":{"c":[1.0,2.0]},"[x":1.0,"x]":2.0,"[x]":3.0,"?":4.0,"x?":5.0,"[x]?":6.0,":":7.0,":x":8.0}`)},
 		{expr: "properties.a", dt: types.Int(32), expected: 1},
-		{expr: "properties.a.x", dt: types.Int(32), evalErr: errors.New(`invalid properties.a.x: properties.a is not a JSON object, it is a JSON number`)},
+		{expr: "properties.a.x", dt: types.Int(32), evalErr: errors.New(`invalid properties.a.x: properties.a is not JSON object, it is number`)},
 		{expr: "properties.a.x?", dt: types.Int(32), expected: nil},
 		{expr: "properties.b.c", dt: types.Array(types.Int(32)), expected: []any{1, 2}},
 		{expr: "properties.b['c']", dt: types.Array(types.Int(32)), expected: []any{1, 2}},

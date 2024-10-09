@@ -172,7 +172,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			values[i] = v
 		}
 		where.Conditions[i] = state.WhereCondition{
-			Property: cond.Property,
+			Property: strings.Split(cond.Property, "."),
 			Operator: convertOperatorToWhere(cond.Operator),
 			Values:   values,
 		}
@@ -198,7 +198,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case bool:
 				v = strconv.FormatBool(value)
 			case float64:
-				p, _ := types.PropertyByPath(schema, cond.Property)
+				p, _ := types.PropertyByPathSlice(schema, cond.Property)
 				v = strconv.FormatFloat(value, 'g', -1, p.Type.BitSize())
 			case int:
 				v = strconv.FormatInt(int64(value), 10)
@@ -207,7 +207,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case decimal.Decimal:
 				v = value.String()
 			case time.Time:
-				p, _ := types.PropertyByPath(schema, cond.Property)
+				p, _ := types.PropertyByPathSlice(schema, cond.Property)
 				switch p.Type.Kind() {
 				case types.DateTimeKind:
 					v = value.Format("2006-01-02T15:04:05.999999999")
@@ -224,7 +224,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			values[i] = v
 		}
 		filter.Conditions[i] = FilterCondition{
-			Property: cond.Property,
+			Property: strings.Join(cond.Property, "."),
 			Operator: convertOperatorFromWhere(cond.Operator),
 			Values:   values,
 		}

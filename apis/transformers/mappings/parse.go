@@ -51,27 +51,70 @@ var numArguments = map[string]int{
 }
 
 // path represents a property path or a function name.
-// See 'part.path' for documentation.
-type path []string
+type path struct {
+
+	// Elements of the property path or function name.
+	// If the path represents a function name, it consists only of the function name (no parameters).
+	elements []string
+
+	// If path represents a property path, decorators indicates, for each path element, its decorators:
+	//   - If element i was decorated with an indexing (e.g., a["b"]), decorators[i].indexing() returns true.
+	//   - If element i was decorated by '?', decorators[i].optional() returns true.
+	// If path represents a function (and not a property path), decorators is nil.
+	decorators []decorators
+}
+
+// slice returns a slice of p.
+func (p path) slice(i, j int) path {
+	if i == j {
+		return path{}
+	}
+	return path{
+		elements:   p.elements[i:j],
+		decorators: p.decorators[i:j],
+	}
+}
 
 // String returns p as a string.
 func (p path) String() string {
-	s := p[0]
-	for _, name := range p[1:] {
-		question := name[len(name)-1] == '?'
-		if question {
-			name = name[:len(name)-1]
+	if p.elements == nil {
+		return ""
+	}
+	s := p.elements[0]
+	for i, name := range p.elements {
+		if i == 0 {
+			continue
 		}
-		if name[0] == '[' {
-			s += "[" + strconv.Quote(name[1:len(name)-1]) + "]"
+		dec := p.decorators[i]
+		if dec.indexing() {
+			s += "[" + strconv.Quote(name) + "]"
 		} else {
 			s += "." + name
 		}
-		if question {
+		if dec.optional() {
 			s += "?"
 		}
 	}
 	return s
+}
+
+// decorators represents the bit flags for the indexing ("x?") and optional
+// ("[x]") decorators.
+type decorators uint8
+
+const (
+	indexing decorators = 1 << iota // indexing represents the "x?" decorator
+	optional                        // optional represents the "[x]" decorator
+)
+
+// indexing reports whether d has the indexing ("x?") decorator
+func (d decorators) indexing() bool {
+	return d&indexing != 0
+}
+
+// optional reports whether d has the optional ("[x]") decorator.
+func (d decorators) optional() bool {
+	return d&optional != 0
 }
 
 // part represents an expression part within an Expression. An expression part
@@ -89,12 +132,7 @@ type part struct {
 	// Value. If there is a path, value, if present, can only be of type Text.
 	value any
 
-	// Path or function name.
-	// If it represents a function name, it consists of only the function name.
-	// Otherwise, path elements follow these rules:
-	//   - If it was denoted with an indexing (e.g., a["b"]), it is enclosed in '[' and ']'.
-	//   - If it was denoted by '?', it ends with '?'.
-	// Examples of path elements: "x", "[x]" "[$a]", "x?", "[x]?".
+	// Property path or function name.
 	path path
 
 	// Function call arguments.
@@ -236,9 +274,9 @@ Expression:
 				}
 				// Parse function call.
 				src = src[1:]
-				name := p.path[0]
+				name := p.path.elements[0]
 				n, ok := numArguments[name]
-				if !ok || len(p.path) > 1 {
+				if !ok || len(p.path.elements) > 1 {
 					return nil, "", fmt.Errorf("function %q does not exist", p.path)
 				}
 				p.args = make([][]part, 0, n)
@@ -302,72 +340,81 @@ Number:
 	return n, src[i:], nil
 }
 
-// parsePath parses a path and returns the parsed path and the remaining
-// unparsed source. It expects that src starts with 'a'-'z', 'A'-'Z', or '_'.
+// parsePath parses a path and returns the parsed path, its decorators, and the
+// remaining unparsed source.
+// It expects that src starts with 'a'-'z', 'A'-'Z', or '_'.
 func parsePath(src string) (path, string, error) {
-	path := make(path, 0, 1)
-	s := 0
+	var err error
+	p := path{
+		elements:   make([]string, 0, 1),
+		decorators: make([]decorators, 0, 1),
+	}
 	i := 1
-	for ; i < len(src); i++ {
+	for i < len(src) {
 		c := src[i]
 		if 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' {
+			i++
 			continue
 		}
-		if s == i {
-			return nil, "", errUnexpectedPeriod
+		if i == 0 {
+			return path{}, "", errUnexpectedPeriod
 		}
+		p.elements = append(p.elements, src[:i])
 		if c == '?' {
+			p.decorators = append(p.decorators, optional)
 			i++
-			if i == len(src) {
-				break
-			}
-			c = src[i]
+		} else {
+			p.decorators = append(p.decorators, 0)
 		}
-		path = append(path, src[s:i])
-		for c == '[' {
-			src = skipSpaces(src[i+1:])
-			if len(src) == 0 {
-				return nil, "", errUnterminatedPath
-			}
-			if src[0] != '"' && src[0] != '\'' {
-				return nil, "", errNoStringMapKey
-			}
-			key, src2, err := parseString(src)
-			if err != nil {
-				return nil, "", err
-			}
-			key = "[" + key + "]"
-			path = append(path, key)
-			src = skipSpaces(src2)
-			if len(src) == 0 || src[0] != ']' {
-				return nil, "", errUnterminatedPath
-			}
-			i, s = 1, 1
-			if i == len(src) {
-				break
-			}
-			c = src[i]
-			if c == '?' {
-				path[len(path)-1] = key + "?"
-				i++
-				if i == len(src) {
-					break
-				}
-				c = src[i]
-			}
-		}
-		s = i + 1
-		if c != '.' {
+		src, i = src[i:], 0
+		if len(src) == 0 {
 			break
 		}
+		for src[0] == '[' {
+			src = skipSpaces(src[1:])
+			if src == "" {
+				return path{}, "", errUnterminatedPath
+			}
+			if src[0] != '"' && src[0] != '\'' {
+				return path{}, "", errNoStringMapKey
+			}
+			var key string
+			key, src, err = parseString(src)
+			if err != nil {
+				return path{}, "", err
+			}
+			p.elements = append(p.elements, key)
+			p.decorators = append(p.decorators, indexing)
+			src = skipSpaces(src)
+			if src == "" || src[0] != ']' {
+				return path{}, "", errUnterminatedPath
+			}
+			src, i = src[1:], 0
+			if src == "" {
+				break
+			}
+			if src[0] == '?' {
+				p.decorators[len(p.decorators)-1] = indexing | optional
+				src = src[1:]
+			}
+			if src == "" {
+				break
+			}
+		}
+		if len(src) == 0 || src[0] != '.' {
+			break
+		}
+		src = src[1:]
+		if src == "" {
+			return path{}, "", errUnterminatedPath
+		}
 	}
-	if i == len(src) && src[i-1] == '.' {
-		return nil, "", errUnterminatedPath
+	if i > 0 {
+		p.elements = append(p.elements, src[:i])
+		p.decorators = append(p.decorators, 0)
+		src = src[i:]
 	}
-	if s < i {
-		path = append(path, src[s:i])
-	}
-	return path, src[i:], nil
+	return p, src, nil
 }
 
 // parsePredeclaredIdentifier parses the predeclared identifiers true, false,

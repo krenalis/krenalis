@@ -8,7 +8,6 @@
 package mappings
 
 import (
-	"errors"
 	"reflect"
 	"testing"
 
@@ -86,21 +85,21 @@ func Test_eval(t *testing.T) {
 		{[]part{{value: ``, typ: types.Text()}}, "", types.Text(), nil},
 		{[]part{{value: `a`, typ: types.Text()}}, "a", types.Text(), nil},
 		{[]part{{value: n, typ: dt}}, n, dt, nil},
-		{[]part{{path: path{"a"}, typ: types.Int(32)}}, 165, types.Int(32), nil},
-		{[]part{{path: path{"b", "c"}, typ: types.Text()}}, "foo", types.Text(), nil},
-		{[]part{{path: path{"b", "e"}, typ: types.Int(32)}}, 1024, types.Int(32), nil},
-		{[]part{{value: `a`, path: path{"a"}, typ: types.Int(32)}}, "a165", types.Text(), nil},
-		{[]part{{path: path{"coalesce"}, args: [][]part{
-			{{path: path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
+		{[]part{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, 165, types.Int(32), nil},
+		{[]part{{path: path{elements: []string{"b", "c"}, decorators: []decorators{0, 0}}, typ: types.Text()}}, "foo", types.Text(), nil},
+		{[]part{{path: path{elements: []string{"b", "e"}, decorators: []decorators{0, 0}}, typ: types.Int(32)}}, 1024, types.Int(32), nil},
+		{[]part{{value: `a`, path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, "a165", types.Text(), nil},
+		{[]part{{path: path{elements: []string{"coalesce"}, decorators: []decorators{0}}, args: [][]part{
+			{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
 			{{value: "foo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]part{{path: path{"coalesce"}, args: [][]part{
-			{{path: path{"d"}, typ: types.Text()}},
-			{{path: path{"a"}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
+		{[]part{{path: path{elements: []string{"coalesce"}, decorators: []decorators{0}}, args: [][]part{
+			{{path: path{elements: []string{"d"}, decorators: []decorators{0}}, typ: types.Text()}},
+			{{path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}, {value: " boo", typ: types.Text()}},
 		}}}, "165 boo", types.Text(), nil},
-		{[]part{{value: ``, typ: types.Text()}, {path: path{"a"}, typ: types.Int(32)}}, "165", types.Text(), nil},
-		{[]part{{path: path{"x"}, typ: types.Boolean()}}, nil, types.Type{}, nil},
-		{[]part{{path: path{"b", "x"}, typ: types.Boolean()}}, nil, types.Boolean(), nil},
+		{[]part{{value: ``, typ: types.Text()}, {path: path{elements: []string{"a"}, decorators: []decorators{0}}, typ: types.Int(32)}}, "165", types.Text(), nil},
+		{[]part{{path: path{elements: []string{"x"}, decorators: []decorators{0}}, typ: types.Boolean()}}, nil, types.Type{}, nil},
+		{[]part{{path: path{elements: []string{"b", "x"}, decorators: []decorators{0, 0}}, typ: types.Boolean()}}, nil, types.Boolean(), nil},
 	}
 
 	for i, test := range tests {
@@ -197,50 +196,41 @@ func Test_valueOf(t *testing.T) {
 		expected any
 		err      error
 	}{
-		{path{"a"}, 5, nil},
-		{path{"[a]"}, 5, nil},
-		{path{"b", "c"}, "foo", nil},
-		{path{"b", "[c]"}, "foo", nil},
-		{path{"b", "x"}, nil, nil},
-		{path{"b", "d", "e"}, []any{1}, nil},
-		{path{"b", "d", "[.e]"}, []any{2}, nil},
-		{path{"b", "d", "[e]]"}, []any{3}, nil},
-		{path{"b", "d", "x"}, nil, nil},
-		{path{"f"}, nil, nil},
-		{path{"g"}, json.Value("12.53"), nil},
-		{path{"g", "x"}, nil, errors.New(`invalid g.x: g is not a JSON object, it is a JSON number`)},
-		{path{"g", "[x]"}, nil, errors.New(`invalid g["x"]: g is not a JSON object, it is a JSON number`)},
-		{path{"h", "i"}, json.Value("true"), nil},
-		{path{"h", "i?"}, json.Value("true"), nil},
-		{path{"h", "[i?]?"}, json.Value("5"), nil},
-		{path{"h", "[?i?]"}, json.Value(`"boo"`), nil},
-		{path{"h", "[?i?]?"}, json.Value(`"boo"`), nil},
-		{path{"h", "[[i]"}, json.Value(`"foo"`), nil},
-		{path{"h", "[[i]?"}, json.Value(`"foo"`), nil},
-		{path{"h", "[i]]"}, json.Value(`"zoo"`), nil},
-		{path{"h", "[i]]?"}, json.Value(`"zoo"`), nil},
-		{path{"h", "i", "x"}, nil, errors.New(`invalid h.i.x: h.i is not a JSON object, it is a JSON boolean`)},
-		{path{"h", "i", "x?"}, nil, nil},
-		{path{"h", "x"}, nil, nil},
-		{path{"h", "i", "[x]?"}, nil, nil},
-		{path{"x"}, nil, nil},
-		{path{"l", "email"}, json.Value(`"bob@axample.com"`), nil},
-		{path{"l", "name"}, json.Value(`"Bob"`), nil},
+		{path{elements: []string{"a"}, decorators: []decorators{0}}, 5, nil},
+		{path{elements: []string{"a"}, decorators: []decorators{indexing}}, 5, nil},
+		{path{elements: []string{"b", "c"}, decorators: []decorators{0, 0}}, "foo", nil},
+		{path{elements: []string{"b", "c"}, decorators: []decorators{0, indexing}}, "foo", nil},
+		{path{elements: []string{"b", "x"}, decorators: []decorators{0, 0}}, nil, nil},
+		{path{elements: []string{"b", "d", "e"}, decorators: []decorators{0, 0, 0}}, []any{1}, nil},
+		{path{elements: []string{"b", "d", ".e"}, decorators: []decorators{0, 0, indexing}}, []any{2}, nil},
+		{path{elements: []string{"b", "d", "e]"}, decorators: []decorators{0, 0, indexing}}, []any{3}, nil},
+		{path{elements: []string{"b", "d", "x"}, decorators: []decorators{0, 0, 0}}, nil, nil},
+		{path{elements: []string{"f"}, decorators: []decorators{0}}, nil, nil},
+		{path{elements: []string{"g"}, decorators: []decorators{0}}, json.Value("12.53"), nil},
+		{path{elements: []string{"g", "x"}, decorators: []decorators{0, 0}}, nil, &invalidConversionError{msg: `invalid g.x: g is not JSON object, it is number`}},
+		{path{elements: []string{"g", "x"}, decorators: []decorators{0, indexing}}, nil, &invalidConversionError{msg: `invalid g["x"]: g is not JSON object, it is number`}},
+		{path{elements: []string{"h", "i"}, decorators: []decorators{0, 0}}, json.Value("true"), nil},
+		{path{elements: []string{"h", "i"}, decorators: []decorators{0, optional}}, json.Value("true"), nil},
+		{path{elements: []string{"h", "i?"}, decorators: []decorators{0, indexing | optional}}, json.Value("5"), nil},
+		{path{elements: []string{"h", "?i?"}, decorators: []decorators{0, indexing}}, json.Value(`"boo"`), nil},
+		{path{elements: []string{"h", "?i?"}, decorators: []decorators{0, indexing | optional}}, json.Value(`"boo"`), nil},
+		{path{elements: []string{"h", "[i"}, decorators: []decorators{0, indexing}}, json.Value(`"foo"`), nil},
+		{path{elements: []string{"h", "[i"}, decorators: []decorators{0, indexing | optional}}, json.Value(`"foo"`), nil},
+		{path{elements: []string{"h", "i]"}, decorators: []decorators{0, indexing}}, json.Value(`"zoo"`), nil},
+		{path{elements: []string{"h", "i]"}, decorators: []decorators{0, indexing | optional}}, json.Value(`"zoo"`), nil},
+		{path{elements: []string{"h", "i", "x"}, decorators: []decorators{0, 0, 0}}, nil, &invalidConversionError{msg: `invalid h.i.x: h.i is not JSON object, it is true`}},
+		{path{elements: []string{"h", "i", "x"}, decorators: []decorators{0, 0, optional}}, nil, nil},
+		{path{elements: []string{"h", "x"}, decorators: []decorators{0, 0}}, nil, nil},
+		{path{elements: []string{"h", "i", "x"}, decorators: []decorators{0, 0, indexing | optional}}, nil, nil},
+		{path{elements: []string{"x"}, decorators: []decorators{0}}, nil, nil},
+		{path{elements: []string{"l", "email"}, decorators: []decorators{0, 0}}, json.Value(`"bob@axample.com"`), nil},
+		{path{elements: []string{"l", "name"}, decorators: []decorators{0, 0}}, json.Value(`"Bob"`), nil},
 	}
 
 	for _, test := range tests {
 		got, err := valueOf(test.path, properties)
-		if err != nil {
-			if test.err == nil {
-				t.Fatalf("%s. unexpected error: %s", test.path, err)
-			}
-			if err.Error() != test.err.Error() {
-				t.Fatalf("%s. expected error %q, got error %q", test.path, test.err.Error(), err.Error())
-			}
-			continue
-		}
-		if test.err != nil {
-			t.Fatalf("%s. expected error %q, got no error", test.path, test.err)
+		if !reflect.DeepEqual(test.err, err) {
+			t.Fatalf("%s. expected error %v (type %T), got error %v (%T)", test.path, test.err, test.err, err, err)
 		}
 		if !reflect.DeepEqual(got, test.expected) {
 			t.Fatalf("%s. unexpected value\nexpected %v (type %T)\ngot      %v (type %T)", test.path, test.expected, test.expected, got, got)

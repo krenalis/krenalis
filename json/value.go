@@ -13,12 +13,10 @@ import (
 	"errors"
 	"iter"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/shopspring/decimal"
-	"github.com/tidwall/gjson"
 )
 
 var _ json.Marshaler = (*Value)(nil)
@@ -27,6 +25,17 @@ var _ json.Unmarshaler = (*Value)(nil)
 // ErrInvalidJSON is returned when an argument is not valid JSON, or is not
 // UTF-8 encoded.
 var ErrInvalidJSON = errors.New("invalid JSON")
+
+// NotExistError is returned by the Lookup method when the specified path does
+// not exist.
+type NotExistError struct {
+	Index int
+	Kind  Kind
+}
+
+func (err NotExistError) Error() string {
+	return "path does not exist"
+}
 
 // Kind represents a specific kind of JSON value.
 type Kind byte
@@ -135,29 +144,11 @@ func (v Value) Float(bitSize int) (float64, error) {
 	return strconv.ParseFloat(string(TrimSpace(v)), bitSize)
 }
 
-// Properties returns an iterator over the key-value pairs of an object.
-// It panics if v is not an object.
-func (v Value) Properties() iter.Seq2[string, Value] {
-	if !v.IsObject() {
-		panic("expected object")
-	}
-	return func(yield func(string, Value) bool) {
-		var b []byte
-		dec := jsontext.NewDecoder(bytes.NewReader(v))
-		_, _ = dec.ReadToken()
-		for {
-			k, err := dec.ReadValue()
-			if err != nil {
-				break
-			}
-			b, _ = jsontext.AppendUnquote(b, k)
-			v, _ := dec.ReadValue()
-			if !yield(string(b), Value(v)) {
-				return
-			}
-			b = b[0:0]
-		}
-	}
+// Get returns the value at the specified path in v and true, or nil and false
+// if the path does not exist.
+func (v Value) Get(path []string) (Value, bool) {
+	v, err := v.Lookup(path)
+	return v, err == nil
 }
 
 // Kind returns the kind of v.
@@ -232,28 +223,39 @@ func (v Value) IsTrue() bool {
 	return v.Kind() == True
 }
 
-// Lookup retrieves the JSON value for the specified path. The path uses dot
-// syntax, such as "address.city". If the value exists in v, it returns the
-// value and a boolean indicating true; otherwise it returns nil and false.
-func (v Value) Lookup(path string) (Value, bool) {
-	if !v.IsObject() {
-		panic("expected object")
+// Lookup returns the value at the specified path in v.
+//
+// If any part of the path does not exist, it returns a NotFoundError. The error
+// contains the Index, which indicates the position in the path where the lookup
+// failed, and Kind, representing the kind of the JSON value where the property
+// was expected but not found.
+func (v Value) Lookup(path []string) (Value, error) {
+	dec := jsontext.NewDecoder(bytes.NewReader(v))
+	tok, _ := dec.ReadToken()
+	if tok.Kind() != '{' {
+		return nil, NotExistError{Kind: Kind(tok.Kind())}
 	}
-	var b strings.Builder
-	for _, c := range path {
-		if 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '.' {
-			b.WriteRune(c)
-		} else {
-			b.WriteByte('\\')
-			b.WriteRune(c)
+	last := len(path) - 1
+	for i, name := range path {
+		for {
+			tok, _ = dec.ReadToken()
+			if tok.Kind() == '}' {
+				return nil, NotExistError{Index: i, Kind: Object}
+			}
+			if tok.String() == name {
+				break
+			}
+			_ = dec.SkipValue()
+		}
+		if i == last {
+			value, _ := dec.ReadValue()
+			return Value(value), nil
+		}
+		if tok, _ = dec.ReadToken(); tok.Kind() != '{' {
+			return nil, NotExistError{Index: i + 1, Kind: Kind(tok.Kind())}
 		}
 	}
-	path = b.String()
-	r := gjson.GetBytes(v, path)
-	if !r.Exists() {
-		return nil, false
-	}
-	return []byte(r.Raw), true
+	panic("unreachable code")
 }
 
 // MarshalJSON returns v as the JSON encoding of v.
@@ -262,6 +264,31 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 	return v, nil
+}
+
+// Properties returns an iterator over the key-value pairs of an object.
+// It panics if v is not an object.
+func (v Value) Properties() iter.Seq2[string, Value] {
+	if !v.IsObject() {
+		panic("expected object")
+	}
+	return func(yield func(string, Value) bool) {
+		var b []byte
+		dec := jsontext.NewDecoder(bytes.NewReader(v))
+		_, _ = dec.ReadToken()
+		for {
+			k, err := dec.ReadValue()
+			if err != nil {
+				break
+			}
+			b, _ = jsontext.AppendUnquote(b, k)
+			v, _ := dec.ReadValue()
+			if !yield(string(b), Value(v)) {
+				return
+			}
+			b = b[0:0]
+		}
+	}
 }
 
 // String returns a string representation of v. If v is a string, it returns it

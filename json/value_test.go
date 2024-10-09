@@ -120,6 +120,36 @@ func Test_Value(t *testing.T) {
 		}
 	})
 
+	t.Run("Get", func(t *testing.T) {
+		tests := []struct {
+			data  string
+			path  []string
+			value Value
+			ok    bool
+		}{
+			{`null`, []string{"a"}, nil, false},
+			{`{"a": 1, "b": 2}`, []string{"a"}, Value("1"), true},
+			{`{"a": 1, "b": 2}`, []string{"b"}, Value("2"), true},
+			{`{"a": 1, "b": 2}`, []string{"b"}, Value("2"), true},
+			{`{"a": 1, "b": 2}`, []string{"c"}, nil, false},
+			{`{"a": 1, "b": {"c": true}}`, []string{"b", "c"}, Value(`true`), true},
+			{`{"a": 1, "b": {"c": true}}`, []string{"a", "c"}, nil, false},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c"}, Value(`{"d": null, "e": "foo", "f": [1, 2]}`), true},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "e"}, Value(`"foo"`), true},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "d"}, Value(`null`), true},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "f"}, Value(`[1, 2]`), true},
+		}
+		for _, test := range tests {
+			got, ok := Value(test.data).Get(test.path)
+			if test.ok != ok {
+				t.Fatalf("expected %t, got %t", test.ok, ok)
+			}
+			if !reflect.DeepEqual(test.value, got) {
+				t.Fatalf("expected `%s`, got `%s`", test.value, string(got))
+			}
+		}
+	})
+
 	t.Run("Int", func(t *testing.T) {
 		if n, err := Value(`-55`).Int(); err != nil {
 			t.Fatalf("expected -55, got error %q", err)
@@ -243,31 +273,32 @@ func Test_Value(t *testing.T) {
 	})
 
 	t.Run("Lookup", func(t *testing.T) {
-		var v Value
-		var rec any
-		func() {
-			defer func() {
-				rec = recover()
-			}()
-			v, _ = Value(`null`).Lookup("a")
-		}()
-		if rec == nil {
-			t.Fatalf("expected panic, got value %q", string(v))
+		tests := []struct {
+			data  string
+			path  []string
+			value Value
+			err   error
+		}{
+			{`null`, []string{"a"}, nil, NotExistError{Kind: Null}},
+			{`{"a": 1, "b": 2}`, []string{"a"}, Value("1"), nil},
+			{`{"a": 1, "b": 2}`, []string{"b"}, Value("2"), nil},
+			{`{"a": 1, "b": 2}`, []string{"b"}, Value("2"), nil},
+			{`{"a": 1, "b": 2}`, []string{"c"}, nil, NotExistError{Kind: Object}},
+			{`{"a": 1, "b": {"c": true}}`, []string{"b", "c"}, Value(`true`), nil},
+			{`{"a": 1, "b": {"c": true}}`, []string{"a", "c"}, nil, NotExistError{Index: 1, Kind: Number}},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c"}, Value(`{"d": null, "e": "foo", "f": [1, 2]}`), nil},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "e"}, Value(`"foo"`), nil},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "d"}, Value(`null`), nil},
+			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "f"}, Value(`[1, 2]`), nil},
 		}
-		if v, ok := Value(`{"b":7`).Lookup("a"); v != nil || ok {
-			t.Fatalf("expected (nil, false), got (%q, %t)", string(v), ok)
-		}
-		if v, ok := Value(`{"":7`).Lookup(""); !bytes.Equal(v, []byte(`7`)) || !ok {
-			t.Fatalf("expected (\"7\", true), got (%q, %t)", string(v), ok)
-		}
-		if v, ok := Value(`{"a":1,"a":2}`).Lookup("a"); !bytes.Equal(v, []byte(`1`)) || !ok {
-			t.Fatalf("expected (\"1\", true), got (%q, %t)", string(v), ok)
-		}
-		if v, ok := Value(`{"a":1,"b":{"c":false}}`).Lookup("c"); v != nil || ok {
-			t.Fatalf("expected (nil, false), got (%q, %t)", string(v), ok)
-		}
-		if v, ok := Value(`{"a":1,"b":{"c":true}}`).Lookup("b.c"); !bytes.Equal(v, []byte(`true`)) || !ok {
-			t.Fatalf("expected (\"true\", true), got (%q, %t)", string(v), ok)
+		for _, test := range tests {
+			got, err := Value(test.data).Lookup(test.path)
+			if !reflect.DeepEqual(test.err, err) {
+				t.Fatalf("expected error '%#v', got error '%#v'", test.err, err)
+			}
+			if !reflect.DeepEqual(test.value, got) {
+				t.Fatalf("expected `%s`, got `%s`", test.value, string(got))
+			}
 		}
 	})
 

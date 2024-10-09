@@ -86,7 +86,7 @@ func (op WhereLogical) String() string {
 
 // WhereCondition represents the condition of a where.
 type WhereCondition struct {
-	Property string        `json:"property"`         // property's path.
+	Property []string      `json:"property"`         // property's path.
 	Operator WhereOperator `json:"operator"`         // operator.
 	Values   []any         `json:"values,omitempty"` // values.
 }
@@ -232,7 +232,7 @@ func unmarshalWhere(b []byte, schema types.Type) (*Where, error) {
 	}
 	// Normalize values.
 	for _, c := range where.Conditions {
-		p, err := types.PropertyByPath(schema, c.Property)
+		p, err := types.PropertyByPathSlice(schema, c.Property)
 		if err != nil && p.Type.Kind() != types.JSONKind {
 			return nil, err
 		}

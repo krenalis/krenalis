@@ -9,6 +9,7 @@ package datastore
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/state"
@@ -53,9 +54,10 @@ type Query struct {
 func exprFromWhere(where *state.Where, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 	exp := warehouses.NewMultiExpr(warehouses.LogicalOperator(where.Logical), make([]warehouses.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
-		column, ok := columnFromProperty[cond.Property]
+		path := strings.Join(cond.Property, ".") // TODO(marco): How can I avoid this allocation?
+		column, ok := columnFromProperty[path]
 		if !ok {
-			return nil, fmt.Errorf("property path %s does not exist", cond.Property)
+			return nil, fmt.Errorf("property path %s does not exist", path)
 		}
 		exp.Operands[i] = warehouses.NewBaseExpr(column, warehouses.Operator(cond.Operator), cond.Values...)
 	}

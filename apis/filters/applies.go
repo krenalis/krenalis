@@ -582,27 +582,24 @@ func opIsNull(v any) bool {
 // readPropertyFrom reads the property with the given path from m, returning its
 // value (if found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.
-func readPropertyFrom(m map[string]any, path string) (any, bool) {
-	var name string
-	for {
-		name, path, _ = strings.Cut(path, ".")
+func readPropertyFrom(m map[string]any, path []string) (any, bool) {
+	last := len(path) - 1
+	for i, name := range path {
 		v, ok := m[name]
 		if !ok {
 			return nil, false
 		}
-		if path == "" {
+		if i == last {
 			return v, true
 		}
 		switch v := v.(type) {
 		case map[string]any:
 			m = v
 		case json.Value:
-			if v.IsObject() {
-				return v.Lookup(path)
-			}
-			return nil, false
+			return v.Get(path[i+1:])
 		default:
 			return nil, false
 		}
 	}
+	panic("unreachable code")
 }

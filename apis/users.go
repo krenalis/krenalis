@@ -66,7 +66,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 	evs, err := this.store.Events(ctx, datastore.Query{
 		Properties: eventProperties,
 		Where: &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-			Property: "user",
+			Property: []string{"user"},
 			Operator: state.OpIs,
 			Values:   []any{this.id.String()},
 		}}},
@@ -85,7 +85,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		_, count, err := this.store.Users(ctx, datastore.Query{
 			Properties: []string{"__id__"},
 			Where: &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-				Property: "__id__",
+				Property: []string{"__id__"},
 				Operator: state.OpIs,
 				Values:   []any{this.id.String()},
 			}}},
@@ -127,7 +127,7 @@ func (this *User) Identities(ctx context.Context, first, limit int) ([]UserIdent
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: "__gid__",
+		Property: []string{"__gid__"},
 		Operator: state.OpIs,
 		Values:   []any{this.id.String()},
 	}}}
@@ -161,7 +161,7 @@ func (this *User) Traits(ctx context.Context) ([]byte, error) {
 
 	properties := types.PropertyNames(this.workspace.UserSchema)
 	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: "__id__",
+		Property: []string{"__id__"},
 		Operator: state.OpIs,
 		Values:   []any{this.id.String()},
 	}}}

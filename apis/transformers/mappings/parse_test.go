@@ -35,33 +35,33 @@ func Test_parseExpression(t *testing.T) {
 		{`true`, []part{{value: true, typ: types.Boolean()}}, ``, nil},
 		{`false`, []part{{value: false, typ: types.Boolean()}}, ``, nil},
 		{`null`, []part{{value: nil, typ: types.JSON()}}, ``, nil},
-		{`name`, []part{{path: []string{`name`}}}, ``, nil},
-		{`.name`, []part{{path: path{`name`}}}, ``, nil},
-		{`context.os.version`, []part{{path: path{`context`, `os`, `version`}}}, ``, nil},
-		{`.context.os.version`, []part{{path: path{`context`, `os`, `version`}}}, ``, nil},
-		{`"Page " name`, []part{{value: `Page `, path: path{`name`}, typ: types.Text()}}, ``, nil},
+		{`name`, []part{{path: path{elements: []string{`name`}, decorators: []decorators{0}}}}, ``, nil},
+		{`.name`, []part{{path: path{elements: []string{`name`}, decorators: []decorators{0}}}}, ``, nil},
+		{`context.os.version`, []part{{path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}}}, ``, nil},
+		{`.context.os.version`, []part{{path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}}}, ``, nil},
+		{`"Page " name`, []part{{value: `Page `, path: path{elements: []string{`name`}, decorators: []decorators{0}}, typ: types.Text()}}, ``, nil},
 		{`"OS " context.os.name " (" context.os.version ")"`, []part{
-			{value: `OS `, path: path{`context`, `os`, `name`}, typ: types.Text()},
-			{value: ` (`, path: path{`context`, `os`, `version`}, typ: types.Text()},
+			{value: `OS `, path: path{elements: []string{`context`, `os`, `name`}, decorators: []decorators{0, 0, 0}}, typ: types.Text()},
+			{value: ` (`, path: path{elements: []string{`context`, `os`, `version`}, decorators: []decorators{0, 0, 0}}, typ: types.Text()},
 			{value: `)`, typ: types.Text()},
 		}, ``, nil},
 		{`coalesce(event, 'Page ' true)`, []part{
-			{path: path{`coalesce`}, args: [][]part{
-				{{path: path{`event`}}},
+			{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
+				{{path: path{elements: []string{`event`}, decorators: []decorators{0}}}},
 				{{value: `Page true`, typ: types.Text()}},
 			}},
 		}, ``, nil},
-		{`"" event`, []part{{value: ``, path: path{"event"}, typ: types.Text()}}, ``, nil},
-		{`coalesce(a)`, []part{{path: path{`coalesce`}, args: [][]part{{{path: path{`a`}}}}}}, ``, nil},
-		{`coalesce(a, 'b')`, []part{{path: path{`coalesce`}, args: [][]part{{{path: path{`a`}}}, {{value: `b`, typ: types.Text()}}}}}, ``, nil},
-		{`coalesce(5, 'a', coalesce(b))`, []part{{path: path{`coalesce`}, args: [][]part{
-			{{value: 5, typ: types.Int(32)}}, {{value: `a`, typ: types.Text()}}, {{path: path{`coalesce`}, args: [][]part{{{path: path{`b`}}}}}},
+		{`"" event`, []part{{value: ``, path: path{elements: []string{`event`}, decorators: []decorators{0}}, typ: types.Text()}}, ``, nil},
+		{`coalesce(a)`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}}}}}}, ``, nil},
+		{`coalesce(a, 'b')`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`a`}, decorators: []decorators{0}}}}, {{value: `b`, typ: types.Text()}}}}}, ``, nil},
+		{`coalesce(5, 'a', coalesce(b))`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
+			{{value: 5, typ: types.Int(32)}}, {{value: `a`, typ: types.Text()}}, {{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`b`}, decorators: []decorators{0}}}}}}},
 		}}}, ``, nil},
-		{`coalesce("a" coalesce(b, 5) c)`, []part{{path: path{`coalesce`}, args: [][]part{
-			{{value: `a`, path: path{`coalesce`}, args: [][]part{{{path: path{`b`}}}, {{value: 5, typ: types.Int(32)}}}, typ: types.Text()}, {path: path{`c`}}},
+		{`coalesce("a" coalesce(b, 5) c)`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
+			{{value: `a`, path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`b`}, decorators: []decorators{0}}}}, {{value: 5, typ: types.Int(32)}}}, typ: types.Text()}, {path: path{elements: []string{`c`}, decorators: []decorators{0}}}},
 		}}}, ``, nil},
-		{`coalesce( coalesce ( x , 5 ) )`, []part{{path: path{`coalesce`}, args: [][]part{
-			{{path: path{`coalesce`}, args: [][]part{{{path: path{`x`}}}, {{value: 5, typ: types.Int(32)}}}}},
+		{`coalesce( coalesce ( x , 5 ) )`, []part{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{
+			{{path: path{elements: []string{`coalesce`}, decorators: []decorators{0}}, args: [][]part{{{path: path{elements: []string{`x`}, decorators: []decorators{0}}}}, {{value: 5, typ: types.Int(32)}}}}},
 		}}}, ``, nil},
 		{`coalesce( , )`, nil, ``, errors.New("expected argument, got ','")},
 		{`coalesce(a, )`, nil, ``, errors.New("expected argument, got ')'")},
@@ -168,78 +168,84 @@ func Test_parsePath(t *testing.T) {
 		unparsed string
 		err      error
 	}{
-		{`_`, path{`_`}, ``, nil},
-		{`a`, path{`a`}, ``, nil},
-		{`foo`, path{`foo`}, ``, nil},
-		{`_foo`, path{`_foo`}, ``, nil},
-		{`foo53`, path{`foo53`}, ``, nil},
-		{`_8`, path{`_8`}, ``, nil},
-		{`foo.boo`, path{`foo`, `boo`}, ``, nil},
-		{`foo.boo foo`, path{`foo`, `boo`}, ` foo`, nil},
-		{`_._`, path{`_`, `_`}, ``, nil},
-		{`a$`, path{`a`}, `$`, nil},
-		{`a["k"]`, path{`a`, `[k]`}, ``, nil},
-		{`a["k"].b`, path{`a`, `[k]`, `b`}, ``, nil},
-		{`a["x.y"].b`, path{`a`, `[x.y]`, `b`}, ``, nil},
-		{`a["[x"]`, path{`a`, `[[x]`}, ``, nil},
-		{`a["x]"]`, path{`a`, `[x]]`}, ``, nil},
-		{`a["[x]"]`, path{`a`, `[[x]]`}, ``, nil},
-		{`a["x?"]`, path{`a`, `[x?]`}, ``, nil},
-		{`a["[x?"]`, path{`a`, `[[x?]`}, ``, nil},
-		{`a["x]?"]`, path{`a`, `[x]?]`}, ``, nil},
-		{`a[":x"]`, path{`a`, `[:x]`}, ``, nil},
-		{`a[":x?"]`, path{`a`, `[:x?]`}, ``, nil},
-		{`a[ "k"]['j' ]`, path{`a`, `[k]`, `[j]`}, ``, nil},
-		{`a['k']["j"].b`, path{`a`, `[k]`, `[j]`, `b`}, ``, nil},
-		{`a.b["k"]`, path{`a`, `b`, `[k]`}, ``, nil},
-		{`a.b?`, path{`a`, `b?`}, ``, nil},
-		{`a.b?.c`, path{`a`, `b?`, `c`}, ``, nil},
-		{`a['b']?`, path{`a`, `[b]?`}, ``, nil},
-		{`a['b']?.c`, path{`a`, `[b]?`, `c`}, ``, nil},
-		{`a['b']?`, path{`a`, `[b]?`}, ``, nil},
-		{`a['?']?`, path{`a`, `[?]?`}, ``, nil},
-		{`a['x?']?`, path{`a`, `[x?]?`}, ``, nil},
-		{`a.`, nil, ``, errUnterminatedPath},
-		{`a.b.`, nil, ``, errUnterminatedPath},
-		{`a..`, nil, ``, errUnexpectedPeriod},
-		{`a.b..`, nil, ``, errUnexpectedPeriod},
-		{`a.["k"]`, nil, ``, errUnexpectedPeriod},
-		{`a[k]`, nil, ``, errNoStringMapKey},
-		{`a["k]`, nil, ``, errNoTerminatedString},
-		{`a["k"`, nil, ``, errUnterminatedPath},
-		{`a['k')`, nil, ``, errUnterminatedPath},
-		{`a[]`, nil, ``, errNoStringMapKey},
-		{`a[  ]`, nil, ``, errNoStringMapKey},
-		{`a.?`, nil, ``, errUnexpectedPeriod},
-		{`a[?`, nil, ``, errNoStringMapKey},
+		{`_`, path{[]string{`_`}, []decorators{0}}, ``, nil},
+		{`a`, path{[]string{`a`}, []decorators{0}}, ``, nil},
+		{`foo`, path{[]string{`foo`}, []decorators{0}}, ``, nil},
+		{`_foo`, path{[]string{`_foo`}, []decorators{0}}, ``, nil},
+		{`foo53`, path{[]string{`foo53`}, []decorators{0}}, ``, nil},
+		{`_8`, path{[]string{`_8`}, []decorators{0}}, ``, nil},
+		{`foo.boo`, path{[]string{`foo`, `boo`}, []decorators{0, 0}}, ``, nil},
+		{`foo.boo foo`, path{[]string{`foo`, `boo`}, []decorators{0, 0}}, ` foo`, nil},
+		{`_._`, path{[]string{`_`, `_`}, []decorators{0, 0}}, ``, nil},
+		{`a$`, path{[]string{`a`}, []decorators{0}}, `$`, nil},
+		{`a["k"]`, path{[]string{`a`, `k`}, []decorators{0, indexing}}, ``, nil},
+		{`a["k"].b`, path{[]string{`a`, `k`, `b`}, []decorators{0, indexing, 0}}, ``, nil},
+		{`a["x.y"].b`, path{[]string{`a`, `x.y`, `b`}, []decorators{0, indexing, 0}}, ``, nil},
+		{`a["[x"]`, path{[]string{`a`, `[x`}, []decorators{0, indexing}}, ``, nil},
+		{`a["x]"]`, path{[]string{`a`, `x]`}, []decorators{0, indexing}}, ``, nil},
+		{`a["[x]"]`, path{[]string{`a`, `[x]`}, []decorators{0, indexing}}, ``, nil},
+		{`a["x?"]`, path{[]string{`a`, `x?`}, []decorators{0, indexing}}, ``, nil},
+		{`a["[x?"]`, path{[]string{`a`, `[x?`}, []decorators{0, indexing}}, ``, nil},
+		{`a["x]?"]`, path{[]string{`a`, `x]?`}, []decorators{0, indexing}}, ``, nil},
+		{`a[":x"]`, path{[]string{`a`, `:x`}, []decorators{0, indexing}}, ``, nil},
+		{`a[":x?"]`, path{[]string{`a`, `:x?`}, []decorators{0, indexing}}, ``, nil},
+		{`a[ "k"]['j' ]`, path{[]string{`a`, `k`, `j`}, []decorators{0, indexing, indexing}}, ``, nil},
+		{`a['k']["j"].b`, path{[]string{`a`, `k`, `j`, `b`}, []decorators{0, indexing, indexing, 0}}, ``, nil},
+		{`a.b["k"]`, path{[]string{`a`, `b`, `k`}, []decorators{0, 0, indexing}}, ``, nil},
+		{`a.b?`, path{[]string{`a`, `b`}, []decorators{0, optional}}, ``, nil},
+		{`a.b?.c`, path{[]string{`a`, `b`, `c`}, []decorators{0, optional, 0}}, ``, nil},
+		{`a['b']?`, path{[]string{`a`, `b`}, []decorators{0, indexing | optional}}, ``, nil},
+		{`a['b']?.c`, path{[]string{`a`, `b`, `c`}, []decorators{0, indexing | optional, 0}}, ``, nil},
+		{`a['?']?`, path{[]string{`a`, `?`}, []decorators{0, indexing | optional}}, ``, nil},
+		{`a['x?']?`, path{[]string{`a`, `x?`}, []decorators{0, indexing | optional}}, ``, nil},
+		{`a.`, path{}, ``, errUnterminatedPath},
+		{`a.b.`, path{}, ``, errUnterminatedPath},
+		{`a..`, path{}, ``, errUnexpectedPeriod},
+		{`a.b..`, path{}, ``, errUnexpectedPeriod},
+		{`a.["k"]`, path{}, ``, errUnexpectedPeriod},
+		{`a[k]`, path{}, ``, errNoStringMapKey},
+		{`a["k]`, path{}, ``, errNoTerminatedString},
+		{`a["k"`, path{}, ``, errUnterminatedPath},
+		{`a['k')`, path{}, ``, errUnterminatedPath},
+		{`a[]`, path{}, ``, errNoStringMapKey},
+		{`a[  ]`, path{}, ``, errNoStringMapKey},
+		{`a.?`, path{}, ``, errUnexpectedPeriod},
+		{`a[?`, path{}, ``, errNoStringMapKey},
 	}
 
 	for _, test := range tests {
 		got, src, err := parsePath(test.src)
 		if err != nil {
 			if test.err == nil {
-				t.Fatalf("%q. unexpected error: %s", test.src, err)
+				t.Fatalf("%q: unexpected error: %s", test.src, err)
 			}
 			if err.Error() != test.err.Error() {
-				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+				t.Fatalf("%q: expected error %q, got error %q", test.src, test.err.Error(), err.Error())
 			}
 			continue
 		}
 		if test.err != nil {
-			t.Fatalf("%s. expected error %q, got no error", test.src, test.err)
+			t.Fatalf("%q: expected error %q, got no error", test.src, test.err)
 		}
-		if len(got) != len(test.expected) {
-			t.Fatalf("%s. expected path length %d, got %d", test.src, len(test.expected), len(got))
+		if len(test.expected.elements) != len(got.elements) {
+			t.Fatalf("%q: expected elements length %d, got %d", test.src, len(test.expected.elements), len(got.elements))
 		}
-		for i, expected := range test.expected {
-			if got[i] != expected {
-				t.Fatalf("%s. expected path component %q, got %q", test.src, expected, got[i])
+		if len(test.expected.decorators) != len(got.decorators) {
+			t.Fatalf("%q: expected decorators length %d, got %d", test.src, len(test.expected.decorators), len(got.decorators))
+		}
+		for i, expected := range test.expected.elements {
+			if expected != got.elements[i] {
+				t.Fatalf("%q[%d]: expected element %q, got %q", test.src, i, expected, got.elements[i])
+			}
+		}
+		for i, expected := range test.expected.decorators {
+			if expected != got.decorators[i] {
+				t.Fatalf("%q[%d]: expected decorator %b, got %b", test.src, i, expected, got.decorators[i])
 			}
 		}
 		if src != test.unparsed {
-			t.Fatalf("%s. expected unparsed string %q, got %q", test.src, test.unparsed, src)
+			t.Fatalf("%q: expected unparsed string %q, got %q", test.src, test.unparsed, src)
 		}
-
 	}
 
 }
