@@ -281,10 +281,10 @@ func Test_Value(t *testing.T) {
 		}{
 			{`null`, []string{"a"}, nil, NotExistError{Kind: Null}},
 			{`{"a": 1, "b": 2}`, []string{"a"}, Value("1"), nil},
-			{`{"a": 1, "b": 2}`, []string{"b"}, Value("2"), nil},
-			{`{"a": 1, "b": 2}`, []string{"b"}, Value("2"), nil},
+			{`{"a": 1, "b":2}`, []string{"b"}, Value("2"), nil},
+			{`{"a": 1, "b"  :2}`, []string{"b"}, Value("2"), nil},
 			{`{"a": 1, "b": 2}`, []string{"c"}, nil, NotExistError{Kind: Object}},
-			{`{"a": 1, "b": {"c": true}}`, []string{"b", "c"}, Value(`true`), nil},
+			{"{\"a\": 1, \"b\": {\"c\"\t :\n\ttrue}}", []string{"b", "c"}, Value(`true`), nil},
 			{`{"a": 1, "b": {"c": true}}`, []string{"a", "c"}, nil, NotExistError{Index: 1, Kind: Number}},
 			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c"}, Value(`{"d": null, "e": "foo", "f": [1, 2]}`), nil},
 			{`{"a": 1, "b": {"c": {"d": null, "e": "foo", "f": [1, 2]}}}`, []string{"b", "c", "e"}, Value(`"foo"`), nil},

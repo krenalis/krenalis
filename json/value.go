@@ -223,7 +223,10 @@ func (v Value) IsTrue() bool {
 	return v.Kind() == True
 }
 
-// Lookup returns the value at the specified path in v.
+// lookupTable is used by both the Lookup method and the TrimSpace function.
+var lookupTable = [256]uint8{'\t': 1, '\n': 1, '\r': 1, ' ': 1, ':': 2}
+
+// Lookup returns the value at the specified path in v as a sub-slice of v.
 //
 // If any part of the path does not exist, it returns a NotFoundError. The error
 // contains the Index, which indicates the position in the path where the lookup
@@ -247,8 +250,13 @@ func (v Value) Lookup(path []string) (Value, error) {
 			_ = dec.SkipValue()
 		}
 	}
-	value, _ := dec.ReadValue()
-	return Value(value), nil
+	start := dec.InputOffset() + 1
+	for lookupTable[v[start]] != 0 {
+		start++
+	}
+	_ = dec.SkipValue()
+	end := dec.InputOffset()
+	return v[start:end], nil
 }
 
 // MarshalJSON returns v as the JSON encoding of v.
@@ -370,15 +378,13 @@ func StripZeroBytes(data []byte) []byte {
 	return data
 }
 
-var space = [256]uint8{'\t': 1, '\n': 1, '\r': 1, ' ': 1}
-
 // TrimSpace returns a subslice of data with all leading and trailing whitespace
 // removed. data must contain valid JSON.
 func TrimSpace(data []byte) []byte {
 	i, j := 0, len(data)-1
-	for ; space[data[i]] == 1; i++ {
+	for ; lookupTable[data[i]] == 1; i++ {
 	}
-	for ; space[data[j]] == 1; j-- {
+	for ; lookupTable[data[j]] == 1; j-- {
 	}
 	return data[i : j+1]
 }
