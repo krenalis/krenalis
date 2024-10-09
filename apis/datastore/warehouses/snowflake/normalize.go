@@ -77,7 +77,7 @@ func (warehouse *Snowflake) Normalize(name string, typ types.Type, v any, nullab
 		}
 		min := typ.MinElements()
 		max := typ.MaxElements()
-		arr := make([]any, 0, min)
+		arr := []any{}
 		for i, elem := range ev.Elements() {
 			if i == max {
 				return nil, fmt.Errorf("data warehouse returned an array with more than %d elements for column %s", max, name)

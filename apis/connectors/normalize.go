@@ -500,7 +500,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 				min := typ.MinElements()
 				max := typ.MaxElements()
-				arr := make([]any, 0, min)
+				arr := []any{}
 				for i, element := range v.Elements() {
 					if i == max {
 						return nil, newNormalizationErrorf(name, "is an array with more than %d elements; they must be in range [%d, %d]", min, min, max)

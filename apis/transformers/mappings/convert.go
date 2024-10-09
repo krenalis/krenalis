@@ -571,7 +571,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 				}
 				return []any{elem}, nil
 			}
-			arr := make([]any, 0, min)
+			arr := []any{}
 			for i, elem := range v.Elements() {
 				if i == max {
 					return nil, errInvalidConversion

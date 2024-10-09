@@ -389,11 +389,12 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if t.Kind() != types.ArrayKind {
 			return nil, newErrInvalidValue("cannot be an "+d.opts.terms["array"], "", d.opts.terms)
 		}
-		minElements, maxElements := t.MinElements(), t.MaxElements()
-		elements := make([]any, 0, minElements)
+		min := t.MinElements()
+		max := t.MaxElements()
+		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
-			if i == maxElements {
-				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", maxElements, d.opts.terms["elements"]), "", d.opts.terms)
+			if i == max {
+				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d %s", max, d.opts.terms["elements"]), "", d.opts.terms)
 			}
 			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 			if err != nil {
@@ -402,25 +403,25 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				}
 				return nil, err
 			}
-			elements = append(elements, elem)
+			arr = append(arr, elem)
 			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if len(elements) < minElements {
-			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d %s", minElements, d.opts.terms["elements"]), "", d.opts.terms)
+		if len(arr) < min {
+			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d %s", min, d.opts.terms["elements"]), "", d.opts.terms)
 		}
 		if t.Unique() {
-			for i, elem := range elements {
-				for _, item2 := range elements[i+1:] {
+			for i, elem := range arr {
+				for _, item2 := range arr[i+1:] {
 					if elem == item2 {
 						return nil, newErrInvalidValue(fmt.Sprintf("contains a duplicated value: %v", elem), "", d.opts.terms)
 					}
 				}
 			}
 		}
-		return elements, nil
+		return arr, nil
 	case '{':
 		// Unmarshal an object.
 		defer func() {
