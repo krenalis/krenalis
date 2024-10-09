@@ -9,6 +9,7 @@ package types
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -358,6 +359,7 @@ func Test_Properties_Func(t *testing.T) {
 	}
 }
 
+// Test_PropertyByPath tests PropertyByPath and PropertyByPathSlice methods.
 func Test_PropertyByPath(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -466,7 +468,28 @@ func Test_PropertyByPath(t *testing.T) {
 	}
 	for _, cas := range cases {
 		t.Run(cas.name, func(t *testing.T) {
+			// Test PropertyByPath.
 			got, err := PropertyByPath(cas.t, cas.path)
+			if err != nil {
+				if cas.err == nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if err := sameProperty(cas.expected, got); err != nil {
+					t.Fatal(err)
+				}
+				if err.Error() != cas.err.Error() {
+					t.Fatalf("expected error %q, got error %q", cas.err.Error(), err.Error())
+				}
+				return
+			}
+			if cas.err != nil {
+				t.Fatalf("expected error %q, got no error", cas.err)
+			}
+			if err := sameProperty(cas.expected, got); err != nil {
+				t.Fatal(err)
+			}
+			// Test PropertyByPathSlice.
+			got, err = PropertyByPathSlice(cas.t, strings.Split(cas.path, "."))
 			if err != nil {
 				if cas.err == nil {
 					t.Fatalf("unexpected error: %s", err)

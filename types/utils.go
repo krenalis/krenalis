@@ -230,6 +230,47 @@ Rest:
 	return *p, err
 }
 
+// PropertyByPathSlice is like PropertyByPath but takes a slice of property
+// names as the path.
+func PropertyByPathSlice(t Type, path []string) (Property, error) {
+	if t.kind != ObjectKind {
+		panic("cannot get the properties of a non-Object type")
+	}
+	var p *Property
+	last := len(path) - 1
+	i := 0
+	var name string
+Rest:
+	for i, name = range path {
+		if t.kind != ObjectKind {
+			break
+		}
+		properties := t.vl.([]Property)
+		for j := 0; j < len(properties); j++ {
+			if properties[j].Name != name {
+				continue
+			}
+			if i == last {
+				return properties[j], nil
+			}
+			p = &properties[j]
+			t = p.Type
+			continue Rest
+		}
+		break
+	}
+	for _, name := range path {
+		if !IsValidPropertyName(name) {
+			panic("invalid property path")
+		}
+	}
+	err := PathNotExistError{strings.Join(path[:i], ".")}
+	if p == nil {
+		return Property{}, err
+	}
+	return *p, err
+}
+
 // PropertyExists reports whether property with the given path exists in the
 // Object t.
 //
