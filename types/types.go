@@ -706,10 +706,13 @@ func (t Type) DecimalRange() (min, max decimal.Decimal) {
 }
 
 // WithDecimalRange returns t but with values in [min,max]. t must be a Decimal
-// type, otherwise it panics.
+// type, and min must be less than or equal to max; otherwise it panics.
 func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
 	if t.kind != DecimalKind {
 		panic("type is not a Decimal type")
+	}
+	if max.LessThan(min) {
+		panic("max cannot be less than min")
 	}
 	Max := MaxDecimal
 	if t.p != 0 || t.s != 0 {
@@ -722,11 +725,11 @@ func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
 	if min.Equal(Min) && max.Equal(Max) {
 		return t
 	}
-	if min.LessThan(Min) || min.GreaterThan(Max) {
+	if min.LessThan(Min) {
 		panic(fmt.Sprintf("min must be in range [%s,%s]", Min, Max))
 	}
-	if max.LessThan(min) || max.GreaterThan(Max) {
-		panic(fmt.Sprintf("max must be in range [%s,%s]", min, Max))
+	if max.GreaterThan(Max) {
+		panic(fmt.Sprintf("max must be in range [%s,%s]", Min, Max))
 	}
 	t.vl = decimalRange{min, max}
 	return t
