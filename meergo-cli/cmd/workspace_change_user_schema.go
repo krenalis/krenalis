@@ -22,7 +22,10 @@ import (
 )
 
 var workspaceChangeUserSchema = &cobra.Command{
-	Use:  "change-user-schema <file>",
+	Use:   "change-user-schema <file>",
+	Short: "Change the user schema",
+	Long: "Change the user schema.\n\n" +
+		"<file> is a JSON file containing the new user schema",
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		assumeYes, err := cmd.Flags().GetBool("yes")
