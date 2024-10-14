@@ -22,7 +22,7 @@ var createWorkspace = &cobra.Command{
 	Use:   "create-workspace <warehouse-type> <warehouse-settings-file>",
 	Short: "Create a workspace",
 	Long: "Create a workspace with an associated data warehouse.\n\n" +
-		"<warehouse-type>          is the data warehouse type and can be ClickHouse, PostgreSQL or Snowflake\n" +
+		"<warehouse-type>          is the data warehouse type and can be PostgreSQL or Snowflake\n" +
 		"<warehouse-settings-file> is a JSON file containing the data warehouse settings",
 	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
