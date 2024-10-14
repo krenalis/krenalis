@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const expectedDenoVersion = "1.46.3"
+const expectedDenoVersion = "2.0.0"
 
 func main() {
 
