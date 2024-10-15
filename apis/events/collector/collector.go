@@ -742,7 +742,7 @@ func validateEvent(method string, event *collectedEvent) error {
 		return errors.New("unexpected event category")
 	}
 
-	// EventI.
+	// Event.
 	if event.Event == "" && isTrack {
 		return errors.New("missing event name")
 	}

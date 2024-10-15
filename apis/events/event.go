@@ -130,7 +130,7 @@ type Context struct {
 // ToConnectorEvent returns event as a connector event to be passed as an
 // argument to the SendEvent and PreviewSendEvent methods of an app connector.
 func (event *Event) ToConnectorEvent() *meergo.Event {
-	// Keep in sync with the connector.EventI type.
+	// Keep in sync with the meergo.Event type.
 	groupId := event.GroupId
 	if event.GroupId == "" {
 		groupId = event.Context.GroupId
