@@ -315,9 +315,6 @@ func Float(size int) Type {
 // As a special case if both precision and scale are zero, the type has no
 // precision and scale.
 func Decimal(precision, scale int) Type {
-	if precision == 0 && scale == 0 {
-		return Type{kind: DecimalKind}
-	}
 	if precision < 1 || precision > MaxDecimalPrecision {
 		panic("invalid decimal precision")
 	}

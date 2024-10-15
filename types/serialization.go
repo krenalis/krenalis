@@ -155,10 +155,8 @@ func marshalType(b *bytes.Buffer, t Type) {
 				b.WriteString(d.max.String())
 			}
 		}
-		if t.p > 0 {
-			b.WriteString(`,"precision":`)
-			b.WriteString(strconv.Itoa(int(t.p)))
-		}
+		b.WriteString(`,"precision":`)
+		b.WriteString(strconv.Itoa(int(t.p)))
 		if t.s > 0 {
 			b.WriteString(`,"scale":`)
 			b.WriteString(strconv.Itoa(int(t.s)))
@@ -837,7 +835,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.s = int32(charLen)
 	}
-	if precision > 0 {
+	if precision == 0 {
+		if kind == DecimalKind {
+			return Type{}, errors.New("missing precision")
+		}
+	} else {
 		if kind != DecimalKind {
 			return Type{}, errors.New("unexpected precision for non-Decimal type")
 		}
