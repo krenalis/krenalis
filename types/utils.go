@@ -96,8 +96,11 @@ func Equal(t1, t2 Type) bool {
 	switch vl1 := t1.vl.(type) {
 	case Type:
 		return Equal(vl1, t2.vl.(Type))
-	case intRange, uintRange, floatRange, decimalRange, string:
+	case intRange, uintRange, floatRange, string:
 		return vl1 == t2.vl
+	case decimalRange:
+		vl2 := t2.vl.(decimalRange)
+		return vl1.min.Equal(vl2.min) && vl1.max.Equal(vl2.max)
 	case []Property:
 		vl2 := t2.vl.([]Property)
 		if len(vl1) != len(vl2) {
