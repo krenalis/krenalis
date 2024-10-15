@@ -137,6 +137,7 @@ func (c *Meergo) AddDestinationPostgreSQL() int {
 			"Username": testsSettings.Database.Username,
 			"Password": testsSettings.Database.Password,
 			"Database": testsSettings.Database.Database,
+			"Schema":   testsSettings.Database.Schema,
 		}),
 	})
 }
@@ -207,6 +208,7 @@ func (c *Meergo) AddSourcePostgreSQL() int {
 			"Username": testsSettings.Database.Username,
 			"Password": testsSettings.Database.Password,
 			"Database": testsSettings.Database.Database,
+			"Schema":   testsSettings.Database.Schema,
 		}),
 	})
 }
