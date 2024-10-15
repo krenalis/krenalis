@@ -104,6 +104,56 @@ func Open(settings []byte) (*PostgreSQL, error) {
 	return &PostgreSQL{settings: &s}, nil
 }
 
+// CanInitialize checks whether the data warehouse can be initialized.
+func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
+	const query = `SELECT
+		c.relname,
+		CASE
+			c.relkind
+			WHEN 'r' THEN 'table'
+			WHEN 'm' THEN 'materialized view'
+			WHEN 'i' THEN 'index'
+			WHEN 'S' THEN 'sequence'
+			WHEN 'v' THEN 'view'
+			WHEN 'c' THEN 'type'
+			ELSE c.relkind::text
+		END
+	FROM
+		pg_class c
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+	WHERE
+		n.nspname = $1
+		AND n.nspname NOT LIKE 'pg_toast%'
+	ORDER BY
+		c.relname`
+	rows, err := pool.Query(ctx, query, warehouse.settings.Schema)
+	if err != nil {
+		return warehouses.Error(err)
+	}
+	defer rows.Close()
+	var objects []string
+	for rows.Next() {
+		var name, typ string
+		err := rows.Scan(&name, &typ)
+		if err != nil {
+			return warehouses.Error(err)
+		}
+		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
+	}
+	if err := rows.Err(); err != nil {
+		return warehouses.Error(err)
+	}
+	if objects != nil {
+		reason := fmt.Sprintf("database contains these objects: %s", strings.Join(objects, ", "))
+		return warehouses.NewNotInitializableError(reason)
+	}
+	return nil
+}
+
 // Close closes the data warehouse.
 func (warehouse *PostgreSQL) Close() error {
 	if warehouse.pool == nil {
@@ -134,89 +184,6 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 	if err != nil {
 		return warehouses.Error(err)
 	}
-	return nil
-}
-
-// Check checks if the necessary database objects on the data warehouse are
-// correct to make Meergo work.
-func (warehouse *PostgreSQL) Check(ctx context.Context) error {
-
-	// Note that the checks here are partial, as full checks would require
-	// reading the tables, their types, constraints, default values, etc... And
-	// that would be very complex and broad. So, only basic checks are done
-	// here.
-	// Perhaps in the future, we will extend these checks.
-
-	schema := warehouse.settings.Schema
-	if schema == "" {
-		schema = "public"
-	}
-
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return err
-	}
-
-	tables := []string{
-		"_destinations_users",
-		"_operations",
-		"_user_identities",
-		"_users_0",
-		"events",
-	}
-
-	types := []string{
-		"_operation",
-		"event_browser_name",
-		"event_os_name",
-		"event_type",
-	}
-
-	missingDBObjects := map[string]struct{}{}
-
-	// Check the existence of the tables.
-	for _, table := range tables {
-		var exists bool
-		err := pool.QueryRow(ctx,
-			`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)`,
-			schema, table).Scan(&exists)
-		if err != nil {
-			return warehouses.Error(err)
-		}
-		if !exists {
-			missingDBObjects[table] = struct{}{}
-		}
-	}
-
-	// Check the existence of types.
-	for _, typ := range types {
-		var exists bool
-		err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT FROM pg_type WHERE typname = $1)`, typ).Scan(&exists)
-		if err != nil {
-			return warehouses.Error(err)
-		}
-		if !exists {
-			missingDBObjects[typ] = struct{}{}
-		}
-	}
-
-	// If there is any missing database object, return an
-	// ErrDataWarehouseNotInitialized error (in case every object is missing,
-	// meaning that the warehouse is not initialized yet) or a
-	// DataWarehouseNeedsRepairError error, indicating which objects are missing
-	// and thus needs to be repaired.
-	if len(missingDBObjects) > 0 {
-		if len(missingDBObjects) == len(tables)+len(types) {
-			return warehouses.ErrDataWarehouseNotInitialized
-		}
-		toRepair := make([]string, 0, len(missingDBObjects))
-		for decl := range missingDBObjects {
-			toRepair = append(toRepair, fmt.Sprintf("database object %q not found", decl))
-		}
-		slices.Sort(toRepair)
-		return warehouses.NewDataWarehouseNeedsRepairError(toRepair)
-	}
-
 	return nil
 }
 
@@ -465,19 +432,6 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 		return warehouses.Error(err)
 	}
 
-	return nil
-}
-
-// Ping checks the connection to the data warehouse.
-func (warehouse *PostgreSQL) Ping(ctx context.Context) error {
-	pool, err := warehouse.connectionPool(ctx)
-	if err != nil {
-		return err
-	}
-	err = pool.Ping(ctx)
-	if err != nil {
-		return warehouses.Error(err)
-	}
 	return nil
 }
 

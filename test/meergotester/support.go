@@ -221,6 +221,22 @@ func (c *Meergo) IdentityResolutionExecution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
+func (c *Meergo) CanChangeWarehouseSettings(settings []byte) {
+	body := map[string]any{
+		"Settings": json.RawMessage(settings),
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse/can-change-settings", c.ws)
+	c.MustCall("POST", method, body, nil)
+}
+
+func (c *Meergo) CanInitializeWarehouse(typ string, settings []byte) error {
+	body := map[string]any{
+		"Type":     typ,
+		"Settings": json.RawMessage(settings),
+	}
+	return c.Call("POST", "/api/can-initialize-warehouse", body, nil)
+}
+
 func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
 		"RunOnBatchImport": runOnBatchImport,
@@ -289,6 +305,15 @@ func (c *Meergo) ChangeUserSchemaQueriesErr(schema types.Type, rePaths map[strin
 		return nil, err
 	}
 	return response.Queries, nil
+}
+
+func (c *Meergo) ChangeWarehouseSettings(mode string, settings []byte) {
+	body := map[string]any{
+		"Mode":     mode,
+		"Settings": json.RawMessage(settings),
+	}
+	method := fmt.Sprintf("/api/workspaces/%d/warehouse/settings", c.ws)
+	c.MustCall("PUT", method, body, nil)
 }
 
 func (c *Meergo) CompletePath(storage int, path string) string {

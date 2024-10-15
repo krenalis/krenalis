@@ -9,6 +9,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -17,16 +18,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var workspacePingWarehouseCmd = &cobra.Command{
-	Use:   "ping-warehouse <type> <file>",
-	Short: "Ping a data warehouse",
-	Long: "Ping a database to validate the settings and establish a connection.\n\n" +
-		"<type> is the data warehouse type and can be PostgreSQL or Snowflake,\n" +
+var workspaceCanChangeWarehouseSettings = &cobra.Command{
+	Use:   "can-change-warehouse-settings <file>",
+	Short: "Check if can change warehouse settings of the workspace",
+	Long: "Check if can change warehouse settings\n\n" +
 		"<file> is a JSON file containing the data warehouse settings",
-	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),
+	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		typ := args[0]
-		filename := args[1]
+		filename := args[0]
 		settings, err := os.ReadFile(filename)
 		if err != nil {
 			log.Fatal(err)
@@ -34,10 +33,11 @@ var workspacePingWarehouseCmd = &cobra.Command{
 		if !json.Valid(settings) {
 			log.Fatalf("content of file %q is not JSON valid", filename)
 		}
-		meergoapis.WorkspacePingWarehouse(workspace(cmd), typ, settings)
+		meergoapis.CanChangeWarehouseSettings(workspace(cmd), settings)
+		fmt.Println("Yes, the settings can be changed with the ones specified.")
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(workspacePingWarehouseCmd)
+	rootCmd.AddCommand(workspaceCanChangeWarehouseSettings)
 }

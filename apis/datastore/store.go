@@ -26,6 +26,11 @@ import (
 
 const flushEventsQueueTimeout = 1 * time.Second // interval to flush queued Events the data warehouse
 
+// ErrDifferentWarehouse is an error indicating that the data warehouse being
+// attempted to connect to, during the change of the warehouse settings, is a
+// different data warehouse.
+var ErrDifferentWarehouse = errors.New("the data warehouse is a different data warehouse")
+
 // ErrNormalMode is returned by Store methods when they cannot execute due to
 // the data warehouse being in normal mode.
 var ErrNormalMode = errors.New("the data warehouse is in normal mode")
@@ -215,6 +220,51 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 		columns:    map[string]warehouses.Column{},
 	}
 	return &iw, nil
+}
+
+// CanChangeWarehouseSettings determines if it is possible to change the
+// warehouse settings of the store's workspace to the given settings.
+// If an attempt is made to connect a data warehouse which has already been
+// connected to another workspace, the method returns the error
+// ErrDifferentWarehouse.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) CanChangeWarehouseSettings(ctx context.Context, toSettings []byte) error {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	ws, ok := store.ds.state.Workspace(store.workspace)
+	if !ok {
+		return nil
+	}
+	// Count the users on the current warehouse.
+	query := warehouses.RowQuery{
+		Columns: []warehouses.Column{{Name: "__id__", Type: types.UUID()}},
+		Table:   "users",
+	}
+	_, count1, err := store.warehouse.Query(ctx, query, true)
+	if err != nil {
+		return err
+	}
+	// Count the users on the warehouse that will be connected.
+	dw, err := openWarehouse(ws.Warehouse.Type, toSettings)
+	if err != nil {
+		return err
+	}
+	_, count2, err := dw.Query(ctx, query, true)
+	if err != nil {
+		return err
+	}
+	// If the number of users is different, it means (except for the "unlucky"
+	// cases where Identity Resolution is in progress) that an attempt is being
+	// made to connect to another data warehouse.
+	if count1 != count2 {
+		return ErrDifferentWarehouse
+	}
+	return nil
 }
 
 // DeleteDestinationUsers deletes the destination users of the provided action.

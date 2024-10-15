@@ -19,6 +19,7 @@ const (
 	ConnectionNotExist           errors.Code = "ConnectionNotExist"
 	ConnectorNotExist            errors.Code = "ConnectorNotExist"
 	DataWarehouseFailed          errors.Code = "DataWarehouseFailed"
+	DifferentWarehouse           errors.Code = "DifferentWarehouse"
 	EmailSendFailed              errors.Code = "EmailSendFailed"
 	EventNotExist                errors.Code = "EventNotExist"
 	EventTypeNotExist            errors.Code = "EventTypeNotExist"
@@ -51,5 +52,6 @@ const (
 	UnsupportedColumnType        errors.Code = "UnsupportedColumnType"
 	UnsupportedLanguage          errors.Code = "UnsupportedLanguage"
 	WarehouseNotEmpty            errors.Code = "WarehouseNotEmpty"
+	WarehouseNotInitializable    errors.Code = "WarehouseNotInitializable"
 	WorkspaceNotExist            errors.Code = "WorkspaceNotExist"
 )

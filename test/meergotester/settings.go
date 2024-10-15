@@ -33,6 +33,19 @@ type DBSettings struct {
 	Schema   string
 }
 
+// PostgresWarehouseSettings returns the settings of the PostgreSQL warehouse.
+// Should be called only after that the test has been initialized.
+func PostgresWarehouseSettings() []byte {
+	return JSONEncodeUIValues(map[string]any{
+		"Host":     testsSettings.Warehouse.Host,
+		"Port":     testsSettings.Warehouse.Port,
+		"Username": testsSettings.Warehouse.Username,
+		"Password": testsSettings.Warehouse.Password,
+		"Database": testsSettings.Warehouse.Database,
+		"Schema":   testsSettings.Warehouse.Schema,
+	})
+}
+
 var testsSettings *TestsSettings
 
 // loadTestConfig loads the tests configuration from the file

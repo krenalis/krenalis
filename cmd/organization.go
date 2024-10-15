@@ -48,6 +48,25 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	return map[string]int{"id": id}, nil
 }
 
+// CanInitializeWarehouse indicates whether a data warehouse can be initialized.
+func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
+	_, o, err := organization.credentials(r)
+	if err != nil {
+		return nil, err
+	}
+	body := struct {
+		Type     apis.WarehouseType
+		Mode     apis.WarehouseMode
+		Settings rawJSON
+	}{}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = o.CanInitializeWarehouse(r.Context(), body.Type, body.Settings)
+	return nil, err
+}
+
 // DeleteMember deletes a member of an organization.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, o, err := organization.credentials(r)

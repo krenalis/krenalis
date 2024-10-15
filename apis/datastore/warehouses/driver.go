@@ -104,16 +104,11 @@ type Warehouse interface {
 	// *warehouses.DataWarehouseError error.
 	AlterSchemaQueries(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) ([]string, error)
 
-	// Check checks if the necessary database objects on the data warehouse are
-	// correct to make Meergo work.
-	//
-	// It returns:
-	//
-	// - nil, if everything is correct;
-	// - ErrDataWarehouseNotInitialized, if the data warehouse is not initialized;
-	// - *DataWarehouseNeedsRepairError, if the data warehouse needs to be repaired;
-	// - *DataWarehouseError, if an error occurs with the data warehouse
-	Check(ctx context.Context) error
+	// CanInitialize checks whether the data warehouse can be initialized.
+	// If it cannot, this method returns a *NotInitializableError.
+	// If an error occurs with the data warehouse, it returns a
+	// *warehouses.DataWarehouseError error.
+	CanInitialize(ctx context.Context) error
 
 	// Close closes the data warehouse. When Close is called, no other calls to
 	// data warehouse's methods are in progress and no more will be made.
@@ -126,8 +121,7 @@ type Warehouse interface {
 	// error.
 	Delete(ctx context.Context, table string, where Expr) error
 
-	// Initialize initializes the database objects on the data warehouse in order to
-	// make it work with Meergo.
+	// Initialize initializes the data warehouse.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
@@ -180,11 +174,6 @@ type Warehouse interface {
 	// In particular, Normalize handles the values obtained by the scan on the
 	// rows returned by the Query method.
 	Normalize(name string, typ types.Type, v any, nullable bool) (any, error)
-
-	// Ping checks the connection to the data warehouse.
-	// In particular, it checks whether the connection to the data warehouse is
-	// active and, if necessary, establishes a new connection.
-	Ping(ctx context.Context) error
 
 	// Query executes a query and returns the results as Rows. If withCount is true,
 	// it also returns an estimated total count of the records that would be

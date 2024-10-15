@@ -86,6 +86,50 @@ type emailToSend struct {
 	BodyHTML []byte
 }
 
+// CanInitializeWarehouse indicates whether the warehouse with type typ and the
+// given settings can be initialized.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - DataWarehouseFailed, if an operation on the data warehouse fails;
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid;
+//   - WarehouseNotInitializable, if the warehouse intended for connection is
+//     not initializable.
+func (this *Organization) CanInitializeWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
+	this.apis.mustBeOpen()
+
+	// Validate the parameters.
+	switch typ {
+	case PostgreSQL, Snowflake:
+	default:
+		return errors.BadRequest("warehouse type %d is not valid", typ)
+	}
+
+	// Normalize the warehouse settings.
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
+	if err != nil {
+		if err, ok := err.(*datastore.SettingsError); ok {
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+
+	// Check if the warehouse is initializable.
+	err = this.apis.datastore.CanInitialize(ctx, state.WarehouseType(typ), settings)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
+			return errors.Unprocessable(WarehouseNotInitializable, "%w", err)
+		}
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse error: %w", err)
+		}
+		return err
+	}
+
+	return nil
+
+}
+
 // InviteMember sends an invitation email to the given email address using the
 // given template. It then creates a new invited member.
 //
@@ -154,8 +198,6 @@ var defaultUserSchema = types.Object([]types.Property{
 //
 //   - DataWarehouseFailed, if an operation on the data warehouse fails;
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid;
-//   - WarehouseNotEmpty, if the warehouse to be connected is not empty and thus
-//     not ready to be initialized.
 func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whType WarehouseType, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.apis.mustBeOpen()
@@ -184,23 +226,16 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		return 0, err
 	}
 
-	// Check the data warehouse, ensuring that it is empty so that it can be
-	// initialized.
-	err = this.apis.datastore.Check(ctx, state.WarehouseType(whType), whSettings)
-	if err == nil {
-		return 0, errors.Unprocessable(WarehouseNotEmpty, "the data warehouse is not empty")
-	} else {
-		if err == datastore.ErrDataWarehouseNotInitialized {
-			// This is fine, as the data warehouse must be empty.
-		} else {
-			if _, ok := err.(*datastore.DataWarehouseNeedsRepairError); ok {
-				return 0, errors.Unprocessable(WarehouseNotEmpty, "the data warehouse is not empty")
-			}
-			if err, ok := err.(*datastore.DataWarehouseError); ok {
-				return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
-			}
-			return 0, err
+	// Check if the warehouse is initializable.
+	err = this.apis.datastore.CanInitialize(ctx, state.WarehouseType(whType), whSettings)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
+			return 0, errors.Unprocessable(WarehouseNotInitializable, "data warehouse cannot be initialized: %w", err)
 		}
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return 0, errors.Unprocessable(DataWarehouseFailed, "data warehouse error: %w", err)
+		}
+		return 0, err
 	}
 
 	// Initialize the data warehouse.

@@ -705,6 +705,37 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 	return id, nil
 }
 
+// CanChangeWarehouseSettings determines if it is possible to change the
+// warehouse settings of the store's workspace.
+// It returns an errors.UnprocessableError with code:
+//
+//   - InvalidWarehouseSettings, if the settings are not valid.
+//   - DifferentWarehouse, if the settings connect to a different
+//     data warehouse.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+func (this *Workspace) CanChangeWarehouseSettings(ctx context.Context, settings []byte) error {
+	this.apis.mustBeOpen()
+	ws := this.workspace
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	if err != nil {
+		if err, ok := err.(*datastore.SettingsError); ok {
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+	err = this.store.CanChangeWarehouseSettings(ctx, settings)
+	if err != nil {
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %w", err.Err)
+		}
+		if err == datastore.ErrDifferentWarehouse {
+			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
+		}
+		return err
+	}
+	return nil
+}
+
 // ChangeIdentityResolutionSettings changes the settings of the Identity
 // Resolution of the workspace.
 //
@@ -864,11 +895,11 @@ func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, e
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore, and it returns an errors.UnprocessableError error with code
 //
+//   - DifferentWarehouse, if the settings connect to a different
+//     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-//   - InvalidWarehouseType, if the workspace is connected to a data warehouse
-//     of a different type,
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
-func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ WarehouseType, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
+func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
 	this.apis.mustBeOpen()
 
 	switch mode {
@@ -878,9 +909,6 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 	}
 
 	ws := this.workspace
-	if ws.Warehouse.Type != state.WarehouseType(typ) {
-		return errors.Unprocessable(InvalidWarehouseType, "workspace %d is connected with a %s data warehouse, not %s", ws.ID, ws.Warehouse.Type, typ)
-	}
 
 	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
@@ -890,12 +918,15 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 		return err
 	}
 
-	err = this.apis.datastore.PingWarehouse(ctx, ws.Warehouse.Type, settings)
+	err = this.store.CanChangeWarehouseSettings(ctx, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
+			return errors.Unprocessable(DataWarehouseFailed, "data warehouse failed: %w", err.Err)
 		}
-		return err
+		if err == datastore.ErrDifferentWarehouse {
+			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
+		}
+		return nil
 	}
 
 	n := state.SetWarehouse{
@@ -909,8 +940,8 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 	}
 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3 AND warehouse_type = $4",
-			n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace, n.Warehouse.Type)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
+			n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -923,8 +954,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, typ Warehous
 				}
 				return err
 			}
-			return errors.Unprocessable(InvalidWarehouseType, "workspace %d is connected with a %s data warehouse, not %s",
-				ws.ID, *warehouseType, n.Warehouse.Type)
+			return err
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1394,24 +1424,6 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 		}
 		return tx.Notify(ctx, n)
 	})
-	return err
-}
-
-// PingWarehouse pings the data warehouse with the given settings, verifying
-// that the settings are valid and a connection can be established.
-//
-// It returns an errors.UnprocessableError error with code
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - InvalidWarehouseSettings, if the settings are not valid.
-func (this *Workspace) PingWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
-	this.apis.mustBeOpen()
-	err := this.apis.datastore.PingWarehouse(ctx, state.WarehouseType(typ), settings)
-	switch err := err.(type) {
-	case *datastore.SettingsError:
-		return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-	case *datastore.DataWarehouseError:
-		return errors.Unprocessable(DataWarehouseFailed, "cannot connect to the data warehouse: %w", err.Err)
-	}
 	return err
 }
 

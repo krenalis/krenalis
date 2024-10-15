@@ -98,9 +98,8 @@ func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, userColumns 
 	panic("TODO: not implemented")
 }
 
-// Check checks if the necessary database objects on the data warehouse are
-// correct to make Meergo work.
-func (warehouse *Snowflake) Check(ctx context.Context) error {
+// CanInitialize checks whether the data warehouse can be initialized.
+func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	panic("TODO: not implemented")
 }
 
@@ -382,19 +381,6 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 // MergeIdentities merge existing identities, deletes them and inserts new ones.
 func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 	panic("TODO: not implemented")
-}
-
-// Ping checks the connection to the data warehouse.
-func (warehouse *Snowflake) Ping(ctx context.Context) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	err = db.PingContext(ctx)
-	if err != nil {
-		return warehouses.Error(err)
-	}
-	return nil
 }
 
 // Query executes a query and returns the results as Rows.

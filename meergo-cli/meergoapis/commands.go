@@ -38,6 +38,44 @@ type MessageHeader struct {
 	Headers    http.Header
 }
 
+func CanChangeWarehouseSettings(workspace int, settings []byte) {
+	req := struct {
+		Settings json.RawMessage
+	}{settings}
+	b := &bytes.Buffer{}
+	_ = json.NewEncoder(b).Encode(req)
+	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/can-change-settings", b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func CanInitializeWarehouse(typ string, settings []byte) {
+	req := struct {
+		Type     string
+		Settings json.RawMessage
+	}{typ, settings}
+	b := &bytes.Buffer{}
+	_ = json.NewEncoder(b).Encode(req)
+	err := callAPI("POST", "api/can-initialize-warehouse", b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ChangeWarehouseSettings(workspace int, mode string, settings []byte) {
+	req := struct {
+		Mode     string
+		Settings json.RawMessage
+	}{mode, settings}
+	b := &bytes.Buffer{}
+	_ = json.NewEncoder(b).Encode(req)
+	err := callAPI("PUT", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/settings", b, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // Connection represents a connection.
 type Connection struct {
 	ID   int
@@ -177,19 +215,6 @@ func ResolveIdentities(workspace int) {
 
 func RepairWarehouse(workspace int) {
 	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/repair", nil, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func WorkspacePingWarehouse(workspace int, typ string, settings []byte) {
-	req := struct {
-		Type     string
-		Settings json.RawMessage
-	}{typ, settings}
-	b := &bytes.Buffer{}
-	_ = json.NewEncoder(b).Encode(req)
-	err := callAPI("POST", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/pings", b, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -381,6 +381,24 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	return map[string]string{"id": id}, nil
 }
 
+// CanChangeWarehouseSettings determines if it is possible to change the
+// warehouse settings of a workspace.
+func (workspace workspace) CanChangeWarehouseSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	body := struct {
+		Settings rawJSON
+	}{}
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.CanChangeWarehouseSettings(r.Context(), body.Settings)
+	return nil, err
+}
+
 // ChangeUserSchema changes the user schema of a workspace.
 func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
@@ -448,7 +466,6 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 		return nil, err
 	}
 	body := struct {
-		Type                         apis.WarehouseType
 		Settings                     rawJSON
 		Mode                         apis.WarehouseMode
 		CancelIncompatibleOperations bool
@@ -457,8 +474,8 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeWarehouseSettings(r.Context(), body.Type, body.Mode,
-		body.Settings, body.CancelIncompatibleOperations)
+	err = ws.ChangeWarehouseSettings(r.Context(), body.Mode, body.Settings,
+		body.CancelIncompatibleOperations)
 	return nil, err
 }
 
@@ -543,25 +560,6 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 		return nil, errors.BadRequest("%s", err)
 	}
 	return ws.OAuthToken(r.Context(), body.OAuthCode, body.RedirectURI, body.Connector)
-}
-
-// PingWarehouse pings a warehouse with given settings, verifying that the
-// settings are valid and a connection can be established.
-func (workspace workspace) PingWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	body := struct {
-		Type     apis.WarehouseType
-		Settings rawJSON
-	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.PingWarehouse(r.Context(), body.Type, body.Settings)
-	return nil, err
 }
 
 // RemoveEventListener removes an event listener from a workspace.
