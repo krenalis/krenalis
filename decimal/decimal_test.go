@@ -204,14 +204,15 @@ func Test_Decimal_Value(t *testing.T) {
 		{"0", int64(0)},
 		{"10558279", int64(10558279)},
 		{"-321", int64(-321)},
-		{"9223372036854775807", int64(math.MaxInt64)},         // MaxInt64
-		{"-9223372036854775808", int64(math.MinInt64)},        // MinInt64
-		{"9223372036854775808", "9.223372036854775808e+18"},   // MaxInt64+1
-		{"-9223372036854775809", "-9.223372036854775809e+18"}, // MinInt64-1
+		{"9223372036854775807", int64(math.MaxInt64)},    // MaxInt64
+		{"-9223372036854775808", int64(math.MinInt64)},   // MinInt64
+		{"9223372036854775808", "9223372036854775808"},   // MaxInt64+1
+		{"-9223372036854775809", "-9223372036854775809"}, // MinInt64-1
 		{"-1", int64(-1)},
-		{"1.1", "1.1e0"},
-		{"-0.1", "-1e-1"},
-		{"793.048106", "7.93048106e+2"},
+		{"1.1", "1.1"},
+		{"-0.1", "-0.1"},
+		{"793.048106", "793.048106"},
+		{"2e5", int64(200000)},
 	}
 
 	for _, test := range tests {
@@ -220,7 +221,7 @@ func Test_Decimal_Value(t *testing.T) {
 			t.Fatalf("%q.Value(): expected %#v, got error %v", test.x, test.expected, got)
 		}
 		if test.expected != got {
-			t.Fatalf("%q.Value(): expected %#v, got %#v", test.x, test.expected, got)
+			t.Fatalf("%q.Value(): expected %#v (type %T), got %#v (type %T)", test.x, test.expected, test.expected, got, got)
 		}
 	}
 

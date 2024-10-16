@@ -169,7 +169,7 @@ func Test_Merge(t *testing.T) {
 		}
 		for i, got := range row {
 			c := cols[i]
-			if !reflect.DeepEqual(c.MeergoValue, got) {
+			if !cmp.Equal(c.MeergoValue, got) {
 				t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.MeergoType, c.MeergoValue, c.MeergoValue, got, got)
 			}
 		}

@@ -195,14 +195,14 @@ func (x Decimal) Uint64() (uint64, error) {
 // Value implements the driver.Valuer interface.
 //
 // If x fits in an int64, it returns an int64; otherwise, it returns a string
-// formatted as -d.dddd±edd.
+// formatted as -dddd.dd.
 func (x Decimal) Value() (driver.Value, error) {
 	if x.b.IsInt() {
 		if i, ok := x.b.Int64(); ok {
 			return i, nil
 		}
 	}
-	return fmt.Sprintf("%e", &x.b), nil
+	return fmt.Sprintf("%f", &x.b), nil
 }
 
 var zero = []byte("0")
