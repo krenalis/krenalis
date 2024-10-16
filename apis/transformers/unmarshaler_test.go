@@ -20,10 +20,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_Unmarshal(t *testing.T) {
@@ -205,7 +204,7 @@ func Test_Unmarshal(t *testing.T) {
 				"Float64_NaN":         math.NaN(),
 				"Float64_Infinity":    math.Inf(1),
 				"Float64_NegInfinity": math.Inf(-1),
-				"Decimal":             decimal.RequireFromString("1752.064"),
+				"Decimal":             decimal.MustParse("1752.064"),
 				"DateTime":            time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 				"Date":                time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 				"Time":                time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),

@@ -15,8 +15,9 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/decimal"
+
 	"github.com/go-json-experiment/json/jsontext"
-	"github.com/shopspring/decimal"
 )
 
 var _ json.Marshaler = (*Value)(nil)
@@ -110,10 +111,15 @@ func (v Value) Bool() bool {
 	return v.Kind() == True
 }
 
-// Decimal returns v as a decimal.Decimal. It returns an error if v is not a
-// number or cannot be represented as a Decimal.
-func (v Value) Decimal() (decimal.Decimal, error) {
-	return decimal.NewFromString(string(TrimSpace(v)))
+// Decimal returns v as a decimal.Decimal. If v is not a number, it returns
+// decimal.ErrSyntax. If v does not fit in the provided precision and scale, it
+// returns decimal.ErrOutOfRange.
+//
+// As a special case, if precision is 0, it only checks that the decimal's
+// precision is in range [1, decimal.MaxPrecision], and the decimal's scale is
+// in range [decimal.MinScale, decimal.MaxScale].
+func (v Value) Decimal(precision, scale int) (decimal.Decimal, error) {
+	return decimal.Parse(TrimSpace(v), precision, scale)
 }
 
 // Elements returns an iterator over the elements of an array.

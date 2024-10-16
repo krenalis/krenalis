@@ -14,10 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 //go:embed test_data/expected_false_args.json
@@ -88,7 +87,7 @@ func TestEncoder(t *testing.T) {
 		"float_nan":     math.NaN(),
 		"float_inf":     math.Inf(1),
 		"float_neg_inf": math.Inf(-1),
-		"decimal":       decimal.RequireFromString("70418339.602755193"),
+		"decimal":       decimal.MustParse("70418339.602755193"),
 		"datetime":      time.Date(2023, 05, 20, 12, 37, 22, 792021695, time.UTC),
 		"date":          time.Date(2023, 05, 20, 0, 0, 0, 0, time.UTC),
 		"time":          time.Date(1970, 1, 1, 12, 37, 22, 792021695, time.UTC),

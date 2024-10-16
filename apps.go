@@ -14,9 +14,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // ErrEventTypeNotExist is returned by the Schema method if the event type does

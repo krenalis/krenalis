@@ -13,9 +13,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_renderExpr(t *testing.T) {
@@ -53,7 +52,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `"weight" > 6.5092373641509225`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIsGreaterThanOrEqualTo, decimal.NewFromInt(3289)),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIsGreaterThanOrEqualTo, decimal.MustInt(3289)),
 			query: `"count" >= 3289`,
 		},
 		{

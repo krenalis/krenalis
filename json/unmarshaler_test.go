@@ -18,9 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_UnmarshalBySchema(t *testing.T) {
@@ -182,7 +181,7 @@ func Test_UnmarshalBySchema(t *testing.T) {
 		"Uint64":      uint(927041163082605),
 		"Float32":     float64(float32(57.16038)),
 		"Float64":     18372.36240184391,
-		"Decimal":     decimal.RequireFromString("1752.064"),
+		"Decimal":     decimal.MustParse("1752.064"),
 		"DateTime":    time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 		"Date":        time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 		"Time":        time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),

@@ -20,12 +20,12 @@ import (
 
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
-	"github.com/shopspring/decimal"
 )
 
 const (
@@ -34,12 +34,6 @@ const (
 
 	minIntRepresentableAsFloat32 = -16777216
 	maxIntRepresentableAsFloat32 = 16777216
-)
-
-var (
-	minIntDecimal  = decimal.NewFromInt(math.MinInt64)
-	maxIntDecimal  = decimal.NewFromInt(math.MaxInt64)
-	maxUintDecimal = decimal.RequireFromString("18446744073709551615")
 )
 
 // normalizationError represents an error occurred normalizing a property. It
@@ -157,11 +151,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				valid = true
 			}
 		case decimal.Decimal:
-			if src.IsInteger() && !src.IsNegative() && src.LessThanOrEqual(maxUintDecimal) {
-				var err error
-				v, err = strconv.ParseUint(src.String(), 10, 64)
-				value = err != nil
-			}
+			var err error
+			v, err = src.Uint64()
+			valid = err == nil
 		case string:
 			var err error
 			v, err = strconv.ParseUint(src, 10, 64)
@@ -247,9 +239,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = src
 		case decimal.Decimal:
 			v, valid = src.Float64()
-			if valid && typ.BitSize() == 32 {
-				valid = float64(float32(v)) == v
-			}
 		case string:
 			var err error
 			v, err = strconv.ParseFloat(src, typ.BitSize())
@@ -274,61 +263,43 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.DecimalKind:
 		var v decimal.Decimal
+		p, s := typ.Precision(), typ.Scale()
+		var err error
 		switch src := src.(type) {
 		case int:
-			v = decimal.NewFromInt(int64(src))
-			valid = true
+			v, err = decimal.Int(src, p, s)
 		case int8:
-			v = decimal.NewFromInt(int64(src))
-			valid = true
+			v, err = decimal.Int(int(src), p, s)
 		case int16:
-			v = decimal.NewFromInt(int64(src))
-			valid = true
+			v, err = decimal.Int(int(src), p, s)
 		case int32:
-			v = decimal.NewFromInt(int64(src))
-			valid = true
+			v, err = decimal.Int(int(src), p, s)
 		case int64:
-			v = decimal.NewFromInt(src)
-			valid = true
+			v, err = decimal.Int(int(src), p, s)
 		case uint:
-			v = decimal.NewFromUint64(uint64(src))
-			valid = true
+			v, err = decimal.Uint(src, p, s)
 		case uint8:
-			v = decimal.NewFromUint64(uint64(src))
-			valid = true
+			v, err = decimal.Uint(uint(src), p, s)
 		case uint16:
-			v = decimal.NewFromUint64(uint64(src))
-			valid = true
+			v, err = decimal.Uint(uint(src), p, s)
 		case uint32:
-			v = decimal.NewFromUint64(uint64(src))
-			valid = true
+			v, err = decimal.Uint(uint(src), p, s)
 		case uint64:
-			v = decimal.NewFromUint64(src)
-			valid = true
-		case float32:
-			v = decimal.NewFromFloat32(src)
-			valid = true
-		case float64:
-			v = decimal.NewFromFloat(src)
-			valid = true
+			v, err = decimal.Uint(uint(src), p, s)
 		case decimal.Decimal:
-			v = src
-			valid = true
+			v, err = decimal.Parse(v.String(), p, s)
 		case string:
-			var err error
-			v, err = decimal.NewFromString(src)
-			valid = err == nil
+			v, err = decimal.Parse(src, p, s)
 		case []byte:
-			var err error
-			v, err = decimal.NewFromString(string(src))
-			valid = err == nil
+			v, err = decimal.Parse(string(src), p, s)
 		}
-		if valid {
+		if err == nil {
 			min, max := typ.DecimalRange()
-			if v.LessThan(min) || v.GreaterThan(max) {
+			if v.Less(min) || v.Greater(max) {
 				return nil, newNormalizationErrorf(name, "has a value %s that is not in range [%s, %s]", v, min, max)
 			}
 			value = v
+			valid = true
 		}
 	case types.DateTimeKind:
 		var t time.Time
@@ -642,7 +613,8 @@ func asInt64(v any) (int64, bool) {
 	case float64:
 		return int64(v), !math.IsInf(v, 0) && v == math.Trunc(v)
 	case decimal.Decimal:
-		return v.IntPart(), v.IsInteger() && v.GreaterThanOrEqual(minIntDecimal) && v.LessThanOrEqual(maxIntDecimal)
+		i, err := v.Int64()
+		return i, err == nil
 	case string:
 		value, err := strconv.ParseInt(v, 10, 64)
 		return value, err == nil

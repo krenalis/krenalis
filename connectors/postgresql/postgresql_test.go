@@ -18,10 +18,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 const settingsEnvKey = "MEERGO_TEST_PATH_POSTGRESQL"
@@ -44,7 +43,7 @@ func Test_Upsert_Query(t *testing.T) {
 		{"smallint", int64(1), types.Int(16), 1},
 		{"integer", int64(1), types.Int(32), 1},
 		{"bigint", int64(1), types.Int(64), 1},
-		{"numeric(10,3)", "1.123", types.Decimal(10, 3), decimal.RequireFromString("1.123")},
+		{"numeric(10,3)", "1.123", types.Decimal(10, 3), decimal.MustParse("1.123")},
 		{"real", float64(float32(1.123)), types.Float(32), float64(float32(1.123))},
 		{"double precision", 1.123, types.Float(64), 1.123},
 		{"char(3)", "foo", types.Text(), "foo"},

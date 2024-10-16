@@ -11,10 +11,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_digitCountInt(t *testing.T) {
@@ -73,7 +72,7 @@ func Test_eval(t *testing.T) {
 		},
 		"d": nil,
 	}
-	n := decimal.NewFromInt(5)
+	n := decimal.MustInt(5)
 	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 
 	tests := []struct {

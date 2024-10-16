@@ -19,11 +19,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
-	"github.com/shopspring/decimal"
 )
 
 // Filter represents a filter.
@@ -157,7 +157,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				v, _ = parseUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
-				if d, err := decimal.NewFromString(jv.String); err == nil {
+				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
 					jv.Number = &d
 				}
 				v = jv
@@ -235,13 +235,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 // parseDecimal parses a Decimal from s and returns the parsed Decimal value and
 // true. If s is not a valid Decimal, it returns 0 and false.
 func parseDecimal(s string) (decimal.Decimal, bool) {
-	if s == "0" {
-		return decimal.Zero, true
-	}
-	if !isFloatingPoint(s) {
-		return decimal.Decimal{}, false
-	}
-	d, err := decimal.NewFromString(s)
+	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
 		return decimal.Decimal{}, false
 	}

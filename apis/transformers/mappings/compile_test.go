@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/shopspring/decimal"
 )
 
 func Test_Compile(t *testing.T) {
@@ -47,7 +47,7 @@ func Test_Compile(t *testing.T) {
 		{Name: "jsonNil", Type: types.JSON(), Nullable: true},
 	})
 
-	cx := decimal.NewFromFloat(0.142)
+	cx := decimal.MustParse("0.142")
 
 	tests := []struct {
 		expr       string

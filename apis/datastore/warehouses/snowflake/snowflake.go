@@ -24,10 +24,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
-	"github.com/shopspring/decimal"
 	"github.com/snowflakedb/gosnowflake"
 )
 
@@ -569,7 +569,7 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 			case float64:
 				b.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
 			case decimal.Decimal:
-				b.WriteString(v.String())
+				v.WriteTo(&b)
 			case json.Value:
 				quoteCSVBytes(&b, v)
 			case string:

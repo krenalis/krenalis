@@ -14,10 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // quoteColumn quotes a column name.

@@ -21,11 +21,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
-	"github.com/shopspring/decimal"
 )
 
 // invalidConversionError is the error returned by the Eval and Transform
@@ -97,7 +97,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	case types.FloatKind:
 		return strconv.AppendFloat(b, v.(float64), 'g', -1, t.BitSize()), nil
 	case types.DecimalKind:
-		return append(b, v.(decimal.Decimal).String()...), nil
+		return v.(decimal.Decimal).Append(b), nil
 	case types.DateTimeKind:
 		return v.(time.Time).AppendFormat(b, time.RFC3339Nano), nil
 	case types.DateKind:

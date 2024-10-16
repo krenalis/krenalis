@@ -21,12 +21,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 var (
@@ -629,8 +629,8 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.DecimalKind:
 		if v.Kind() == '"' {
-			if n, err := decimal.NewFromString(d.unquoteString(v)); err == nil {
-				if min, max := t.DecimalRange(); n.LessThan(min) || n.GreaterThan(max) {
+			if n, err := decimal.Parse(d.unquoteString(v), t.Precision(), t.Scale()); err == nil {
+				if min, max := t.DecimalRange(); n.Less(min) || n.Greater(max) {
 					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n), "", d.opts.terms)
 				}
 				return n, nil

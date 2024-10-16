@@ -20,12 +20,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
-	"github.com/shopspring/decimal"
 )
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -43,9 +43,9 @@ const (
 )
 
 var (
-	minIntDecimal  = decimal.NewFromInt(math.MinInt64)
-	maxIntDecimal  = decimal.NewFromInt(math.MaxInt64)
-	maxUintDecimal = decimal.RequireFromString("18446744073709551615")
+	minIntDecimal  = decimal.MustInt(math.MinInt64)
+	maxIntDecimal  = decimal.MustInt(math.MaxInt64)
+	maxUintDecimal = decimal.MustUint(18446744073709551615)
 )
 
 // convert converts v from type st to type dt and returns the converted value.
@@ -240,27 +240,27 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
 		case types.IntKind:
-			n = decimal.New(int64(v.(int)), 0)
+			n, err = decimal.Int(v.(int), dt.Precision(), dt.Scale())
 		case types.UintKind:
-			n, _ = decimal.NewFromString(strconv.FormatUint(uint64(v.(uint)), 10))
+			n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
 		case types.FloatKind:
 			f := v.(float64)
 			if math.IsNaN(f) || math.IsInf(f, 0) {
 				return nil, errInvalidConversion
 			}
-			n = decimal.NewFromFloat(f)
+			n, err = decimal.Float64(f, dt.Precision(), dt.Scale())
 		case types.TextKind:
-			n, err = decimal.NewFromString(v.(string))
+			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.JSONKind:
 			v := v.(json.Value)
-			n, err = v.Decimal()
+			n, err = v.Decimal(dt.Precision(), dt.Scale())
 		default:
 			return nil, errInvalidConversion
 		}
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		if min, max := dt.DecimalRange(); n.LessThan(min) || n.GreaterThan(max) {
+		if min, max := dt.DecimalRange(); n.Less(min) || n.Greater(max) {
 			return nil, errInvalidConversion
 		}
 		return n, nil
@@ -775,30 +775,19 @@ func convertTextToDate(s string) (time.Time, error) {
 }
 
 func decimalToInt(n decimal.Decimal) (int, error) {
-	if !n.IsInteger() {
-		return 0, errInvalidConversion
-	}
-	if n.LessThan(minIntDecimal) {
-		return 0, errInvalidConversion
-	}
-	if n.GreaterThan(maxIntDecimal) {
-		return 0, errInvalidConversion
-	}
-	return int(n.IntPart()), nil
-}
-
-func decimalToUint(n decimal.Decimal) (uint, error) {
-	if !n.IsInteger() || n.IsNegative() || n.GreaterThan(maxUintDecimal) {
-		return 0, errInvalidConversion
-	}
-	if n.LessThanOrEqual(maxIntDecimal) {
-		return uint(n.IntPart()), nil
-	}
-	u, err := strconv.ParseUint(n.String(), 10, 64)
+	i, err := n.Int64()
 	if err != nil {
 		return 0, errInvalidConversion
 	}
-	return uint(u), nil
+	return int(i), nil
+}
+
+func decimalToUint(n decimal.Decimal) (uint, error) {
+	i, err := n.Uint64()
+	if err != nil {
+		return 0, errInvalidConversion
+	}
+	return uint(i), nil
 }
 
 func floatToInt(n float64) (int, error) {

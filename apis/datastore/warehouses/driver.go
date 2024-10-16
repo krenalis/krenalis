@@ -18,11 +18,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 )
 
 // AlterSchemaOperation represents an operation that alters the user schema.
@@ -356,7 +356,7 @@ func ValidateFloat(name string, t types.Type, n float64) (any, error) {
 // ValidateDecimal validates a Decimal value.
 func ValidateDecimal(name string, t types.Type, n decimal.Decimal) (any, error) {
 	min, max := t.DecimalRange()
-	if n.LessThan(min) || n.GreaterThan(max) {
+	if n.Less(min) || n.Greater(max) {
 		return nil, fmt.Errorf("data warehouse returned a value of %s for column %s which is not within the expected range of [%s, %s]", n, name, min, max)
 	}
 	return n, nil
@@ -364,15 +364,11 @@ func ValidateDecimal(name string, t types.Type, n decimal.Decimal) (any, error) 
 
 // ValidateDecimalString validates a Decimal value represented as a string.
 func ValidateDecimalString(name string, t types.Type, s string) (any, error) {
-	n, err := decimal.NewFromString(s)
+	n, err := decimal.Parse(s, t.Precision(), t.Scale())
 	if err != nil {
 		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Decimal value", s, name)
 	}
-	min, max := t.DecimalRange()
-	if n.LessThan(min) || n.GreaterThan(max) {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not within the expected range of [%s, %s]", s, name, min, max)
-	}
-	return n, nil
+	return ValidateDecimal(name, t, n)
 }
 
 // ValidateDateTime validates a DateTime value.

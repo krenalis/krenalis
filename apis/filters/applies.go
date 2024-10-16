@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
-
-	"github.com/shopspring/decimal"
 )
 
 // Applies determines whether where applies to the provided properties. Returns
@@ -103,7 +102,7 @@ func opIs(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
+				v, err := v.Decimal(0, 0)
 				return err == nil && v.Equal(*v0.Number)
 			}
 		case json.String:
@@ -119,7 +118,7 @@ func opIsLessThan(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
 	case decimal.Decimal:
-		return v.LessThan(v0.(decimal.Decimal))
+		return v.Less(v0.(decimal.Decimal))
 	case int:
 		return v < v0.(int)
 	case uint:
@@ -131,8 +130,8 @@ func opIsLessThan(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
-				return err == nil && v.LessThan(*v0.Number)
+				v, err := v.Decimal(0, 0)
+				return err == nil && v.Less(*v0.Number)
 			}
 		case json.String:
 			return v.String() < v0.String
@@ -147,7 +146,7 @@ func opIsLessThanOrEqualTo(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
 	case decimal.Decimal:
-		return v.LessThanOrEqual(v0.(decimal.Decimal))
+		return v.LessEqual(v0.(decimal.Decimal))
 	case int:
 		return v <= v0.(int)
 	case uint:
@@ -159,8 +158,8 @@ func opIsLessThanOrEqualTo(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
-				return err == nil && v.LessThanOrEqual(*v0.Number)
+				v, err := v.Decimal(0, 0)
+				return err == nil && v.LessEqual(*v0.Number)
 			}
 		case json.String:
 			return v.String() <= v0.String
@@ -175,7 +174,7 @@ func opIsGreaterThan(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
 	case decimal.Decimal:
-		return v.GreaterThan(v0.(decimal.Decimal))
+		return v.Greater(v0.(decimal.Decimal))
 	case int:
 		return v > v0.(int)
 	case uint:
@@ -187,8 +186,8 @@ func opIsGreaterThan(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
-				return err == nil && v.GreaterThan(*v0.Number)
+				v, err := v.Decimal(0, 0)
+				return err == nil && v.Greater(*v0.Number)
 			}
 		case json.String:
 			return v.String() > v0.String
@@ -203,7 +202,7 @@ func opIsGreaterThanOrEqualTo(v any, values []any) bool {
 	v0 := values[0]
 	switch v := v.(type) {
 	case decimal.Decimal:
-		return v.GreaterThanOrEqual(v0.(decimal.Decimal))
+		return v.GreaterEqual(v0.(decimal.Decimal))
 	case int:
 		return v >= v0.(int)
 	case uint:
@@ -215,8 +214,8 @@ func opIsGreaterThanOrEqualTo(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
-				return err == nil && v.GreaterThanOrEqual(*v0.Number)
+				v, err := v.Decimal(0, 0)
+				return err == nil && v.GreaterEqual(*v0.Number)
 			}
 		case json.String:
 			return v.String() >= v0.String
@@ -232,7 +231,7 @@ func opIsBetween(v any, values []any) bool {
 	v1 := values[1]
 	switch v := v.(type) {
 	case decimal.Decimal:
-		return v.GreaterThanOrEqual(v0.(decimal.Decimal)) && v.LessThanOrEqual(v1.(decimal.Decimal))
+		return v.GreaterEqual(v0.(decimal.Decimal)) && v.LessEqual(v1.(decimal.Decimal))
 	case time.Time:
 		v0 := v0.(time.Time)
 		v1 := v1.(time.Time)
@@ -249,8 +248,8 @@ func opIsBetween(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
-				return err == nil && v.GreaterThanOrEqual(*v0.Number) && v.LessThanOrEqual(*v1.Number)
+				v, err := v.Decimal(0, 0)
+				return err == nil && v.GreaterEqual(*v0.Number) && v.LessEqual(*v1.Number)
 			}
 		case json.String:
 			v := v.String()
@@ -267,7 +266,7 @@ func opIsNotBetween(v any, values []any) bool {
 	v1 := values[1]
 	switch v := v.(type) {
 	case decimal.Decimal:
-		return v.LessThan(v0.(decimal.Decimal)) || v.GreaterThan(v1.(decimal.Decimal))
+		return v.Less(v0.(decimal.Decimal)) || v.Greater(v1.(decimal.Decimal))
 	case time.Time:
 		v0 := v0.(time.Time)
 		v1 := v1.(time.Time)
@@ -284,8 +283,8 @@ func opIsNotBetween(v any, values []any) bool {
 		switch v.Kind() {
 		case json.Number:
 			if v0.Number != nil {
-				v, err := v.Decimal()
-				return err == nil && v.LessThan(*v0.Number) || v.GreaterThan(*v1.Number)
+				v, err := v.Decimal(0, 0)
+				return err == nil && v.Less(*v0.Number) || v.Greater(*v1.Number)
 			}
 		case json.String:
 			v := v.String()
@@ -392,7 +391,7 @@ func opIsIn(v any, values []any) bool {
 	case json.Value:
 		switch v.Kind() {
 		case json.Number:
-			v, err := v.Decimal()
+			v, err := v.Decimal(0, 0)
 			if err == nil {
 				for _, vi := range values {
 					vi := vi.(*state.JSONConditionValue)
@@ -455,7 +454,7 @@ func opIsNotIn(v any, values []any) bool {
 	case json.Value:
 		switch v.Kind() {
 		case json.Number:
-			v, err := v.Decimal()
+			v, err := v.Decimal(0, 0)
 			if err == nil {
 				for _, vi := range values {
 					vi := vi.(*state.JSONConditionValue)

@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
-
-	"github.com/shopspring/decimal"
 )
 
 // Header represents the Header of an event.
@@ -131,6 +130,7 @@ type Context struct {
 // argument to the SendEvent and PreviewSendEvent methods of an app connector.
 func (event *Event) ToConnectorEvent() *meergo.Event {
 	// Keep in sync with the meergo.Event type.
+	density, _ := decimal.Float64(float64(event.Context.Screen.Density), 3, 2)
 	groupId := event.GroupId
 	if event.GroupId == "" {
 		groupId = event.Context.GroupId
@@ -180,7 +180,7 @@ func (event *Event) ToConnectorEvent() *meergo.Event {
 	e.Context.Referrer.Type = event.Context.Referrer.Type
 	e.Context.Screen.Width = event.Context.Screen.Width
 	e.Context.Screen.Height = event.Context.Screen.Height
-	e.Context.Screen.Density = decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2)
+	e.Context.Screen.Density = density
 	e.Context.Session.Id = event.Context.SessionId
 	e.Context.Session.Start = event.Context.SessionStart
 	e.Context.Timezone = event.Context.Timezone
@@ -312,10 +312,11 @@ func (event *Event) AsProperties() map[string]any {
 		}
 	}
 	if event.Context.Screen.Width != 0 {
+		density, _ := decimal.Float64(float64(event.Context.Screen.Density), 3, 2)
 		context["screen"] = map[string]any{
 			"width":   event.Context.Screen.Width,
 			"height":  event.Context.Screen.Height,
-			"density": decimal.NewFromFloat(float64(event.Context.Screen.Density)).Round(2),
+			"density": density,
 		}
 	}
 	if event.Context.SessionId != 0 {

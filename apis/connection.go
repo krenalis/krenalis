@@ -33,13 +33,13 @@ import (
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/transformers"
 	"github.com/meergo/meergo/apis/transformers/mappings"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
-	"github.com/shopspring/decimal"
 )
 
 const (

@@ -14,10 +14,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 var schema = types.Object([]types.Property{
@@ -181,7 +180,7 @@ var records = []Record{{Properties: map[string]any{
 	"Uint64":    uint(927041163082605),
 	"Float32":   float64(float32(57.16038)),
 	"Float64":   18372.36240184391,
-	"Decimal":   decimal.RequireFromString("1752.064"),
+	"Decimal":   decimal.MustParse("1752.064"),
 	"DateTime":  time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
 	"Date":      time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 	"Time":      time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),

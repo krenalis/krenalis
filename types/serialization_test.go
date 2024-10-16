@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/shopspring/decimal"
+	"github.com/meergo/meergo/decimal"
 )
 
 func TestPropertySerialization(t *testing.T) {
@@ -241,8 +241,8 @@ func TestTypeSerialization(t *testing.T) {
 		}, {
 			Data: `{"name":"Decimal","minimum":-3.9936173,"maximum":8.00002312,"precision":9,"scale":8}`,
 			Type: Decimal(9, 8).WithDecimalRange(
-				decimal.RequireFromString("-3.9936173"),
-				decimal.RequireFromString("8.00002312"),
+				decimal.MustParse("-3.9936173"),
+				decimal.MustParse("8.00002312"),
 			),
 		}, {
 			Data: `{"name":"Decimal","precision":10}`,

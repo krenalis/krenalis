@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/shopspring/decimal"
 )
 
 func Test_convertFilterToWhere(t *testing.T) {
@@ -45,7 +45,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 		{Name: "q", Type: types.Map(types.Text()), Nullable: true},
 	})
 
-	d := decimal.RequireFromString("56.19")
+	d := decimal.MustParse("56.19")
 
 	tests := []struct {
 		filter   Filter
@@ -89,7 +89,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 					{Property: []string{"d"}, Operator: state.OpIsGreaterThan, Values: []any{float64(float32(3.802))}},
 					{Property: []string{"e"}, Operator: state.OpIsGreaterThan, Values: []any{60526.80201845521}},
 					{Property: []string{"e"}, Operator: state.OpIsLessThan, Values: []any{1.7976931348623157e+308}},
-					{Property: []string{"f"}, Operator: state.OpIsLessThanOrEqualTo, Values: []any{decimal.RequireFromString("12.956")}},
+					{Property: []string{"f"}, Operator: state.OpIsLessThanOrEqualTo, Values: []any{decimal.MustParse("12.956")}},
 					{Property: []string{"g"}, Operator: state.OpIsAfter, Values: []any{time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)}},
 					{Property: []string{"h"}, Operator: state.OpIsBetween, Values: []any{time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC), time.Date(2025, 9, 19, 0, 0, 0, 0, time.UTC)}},
 					{Property: []string{"i"}, Operator: state.OpIsBefore, Values: []any{time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)}},
@@ -161,7 +161,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 		{Name: "q", Type: types.Map(types.Text()), Nullable: true},
 	})
 
-	d := decimal.RequireFromString("56.19")
+	d := decimal.MustParse("56.19")
 
 	tests := []struct {
 		where    state.Where
@@ -177,7 +177,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 					{Property: []string{"d"}, Operator: state.OpIsGreaterThan, Values: []any{float64(float32(3.802))}},
 					{Property: []string{"e"}, Operator: state.OpIsGreaterThan, Values: []any{60526.80201845521}},
 					{Property: []string{"e"}, Operator: state.OpIsLessThan, Values: []any{1.7976931348623157e+308}},
-					{Property: []string{"f"}, Operator: state.OpIsLessThanOrEqualTo, Values: []any{decimal.RequireFromString("12.956")}},
+					{Property: []string{"f"}, Operator: state.OpIsLessThanOrEqualTo, Values: []any{decimal.MustParse("12.956")}},
 					{Property: []string{"g"}, Operator: state.OpIsAfter, Values: []any{time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)}},
 					{Property: []string{"h"}, Operator: state.OpIsBetween, Values: []any{time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC), time.Date(2025, 9, 19, 0, 0, 0, 0, time.UTC)}},
 					{Property: []string{"i"}, Operator: state.OpIsBefore, Values: []any{time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)}},
@@ -258,30 +258,27 @@ func Test_convertWhereToFilter(t *testing.T) {
 func Test_parseDecimal(t *testing.T) {
 	tests := []struct {
 		n        string
-		expected decimal.Decimal
+		expected string
 		valid    bool
 	}{
-		{"123.456", decimal.RequireFromString("123.456"), true},
-		{"-123.456", decimal.RequireFromString("-123.456"), true},
-		{"1e10", decimal.RequireFromString("1e10"), true},
-		{"-1.23e-4", decimal.RequireFromString("-1.23e-4"), true},
-		{"123", decimal.RequireFromString("123"), true},
-		{"1.23", decimal.RequireFromString("1.23"), true},
-		{"01.23", decimal.RequireFromString("1.23"), true},
-		{"-01.23", decimal.RequireFromString("-1.23"), true},
-		{"00", decimal.RequireFromString("0"), true},
-		{"invalid", decimal.Decimal{}, false},
-		{"123abc", decimal.Decimal{}, false},
-		{"123.45.67", decimal.Decimal{}, false},
-		{"", decimal.Decimal{}, false},
-		{"123e", decimal.Decimal{}, false},
-		{"1.23e10.5", decimal.Decimal{}, false},
-		{"NaN", decimal.Decimal{}, false},
-		{"+Inf", decimal.Decimal{}, false},
-		{"-Inf", decimal.Decimal{}, false},
-		{"0", decimal.Decimal{}, true},
-		{"0.", decimal.Decimal{}, false},
-		{".123", decimal.Decimal{}, false},
+		{"123.456", "123.456", true},
+		{"-123.456", "-123.456", true},
+		{"1e10", "10000000000", true},
+		{"-1.23e-4", "-0.000123", true},
+		{"123", "123", true},
+		{"1.23", "1.23", true},
+		{"-1.23", "-1.23", true},
+		{"invalid", "", false},
+		{"123abc", "", false},
+		{"123.45.67", "", false},
+		{"", "", false},
+		{"123e", "", false},
+		{"1.23e10.5", "", false},
+		{"NaN", "", false},
+		{"+Inf", "", false},
+		{"-Inf", "", false},
+		{"0", "0", true},
+		{".123", "0.123", true},
 	}
 
 	for _, test := range tests {
@@ -296,7 +293,7 @@ func Test_parseDecimal(t *testing.T) {
 			if !test.valid {
 				t.Fatalf("expected invalid, got valid")
 			}
-			if !test.expected.Equal(got) {
+			if !decimal.MustParse(test.expected).Equal(got) {
 				t.Fatalf("expected %s, got %s", test.expected, got)
 			}
 		})

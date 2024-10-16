@@ -16,9 +16,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // Where represents a where expression.
@@ -187,7 +186,7 @@ func unmarshalConditionValue(v any, t types.Type) (any, error) {
 	case types.FloatKind:
 		return strconv.ParseFloat(string(v.(json.Number)), t.BitSize())
 	case types.DecimalKind:
-		return decimal.NewFromString(v.(string))
+		return decimal.Parse(string(v.(json.Number)), 0, 0)
 	case types.DateTimeKind:
 		t, err := time.Parse(time.RFC3339Nano, v.(string))
 		if err != nil {
@@ -211,7 +210,7 @@ func unmarshalConditionValue(v any, t types.Type) (any, error) {
 		return v, nil
 	case types.JSONKind:
 		v := JSONConditionValue{String: v.(string)}
-		if d, err := decimal.NewFromString(v.String); err == nil {
+		if d, err := decimal.Parse(v.String, 0, 0); err == nil {
 			v.Number = &d
 		}
 		return v, nil

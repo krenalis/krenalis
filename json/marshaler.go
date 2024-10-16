@@ -16,10 +16,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
-	"github.com/shopspring/decimal"
 )
 
 // MarshalBySchema encodes the given value, based on the provided schema, into

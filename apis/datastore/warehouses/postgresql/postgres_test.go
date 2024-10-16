@@ -17,11 +17,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/shopspring/decimal"
 )
 
 const settingsEnvKey = "MEERGO_TEST_PATH_POSTGRESQL"
@@ -46,7 +46,7 @@ func Test_Merge(t *testing.T) {
 		{types.Uint(64), uint(1003883597101), "numeric(20,0)"},
 		{types.Float(32), float64(float32(1.123)), "real"},
 		{types.Float(64), 1.123, "double precision"},
-		{types.Decimal(10, 3), decimal.RequireFromString("1.123"), "numeric(10,3)"},
+		{types.Decimal(10, 3), decimal.MustParse("1.123"), "numeric(10,3)"},
 		{types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), "timestamp without time zone"},
 		{types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), "date"},
 		{types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC), "time without time zone"},

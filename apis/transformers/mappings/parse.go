@@ -14,9 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 var (
@@ -321,7 +320,7 @@ func parseNumber(src string) (decimal.Decimal, string, error) {
 Number:
 	for i < len(src) {
 		switch c := src[i]; c {
-		case '-':
+		case '-', '+':
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		case '.':
 		case 'e', 'E':
@@ -333,7 +332,7 @@ Number:
 		}
 		i++
 	}
-	n, err := decimal.NewFromString(src[:i])
+	n, err := decimal.Parse(src[:i], 0, 0)
 	if err != nil {
 		return decimal.Decimal{}, "", errInvalidNumber
 	}

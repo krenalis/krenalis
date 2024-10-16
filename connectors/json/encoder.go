@@ -18,10 +18,9 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // An encoder writes JSON values to a slice of bytes.

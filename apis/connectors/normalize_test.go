@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/shopspring/decimal"
 )
 
 type customJSONMarshaller []byte
@@ -60,9 +60,9 @@ func Test_normalize(t *testing.T) {
 		{types.Float(64), 12.7902743017496882, 12.7902743017496882, nil},
 		{types.Float(64), math.NaN(), math.NaN(), nil},
 		// Decimal.
-		{types.Decimal(10, 3), decimal.NewFromFloat(6.639), decimal.NewFromFloat(6.639), nil},
-		{types.Decimal(10, 3), "6.639", decimal.NewFromFloat(6.639), nil},
-		{types.Decimal(10, 3), 6.639, decimal.NewFromFloat(6.639), nil},
+		{types.Decimal(10, 3), "6.639e2", decimal.MustParse("663.9"), nil},
+		{types.Decimal(8, 0), 793012, decimal.MustInt(793012), nil},
+		{types.Decimal(5, 0), -14044, decimal.MustInt(-14044), nil},
 		// DateTime.
 		{types.DateTime(), aDateTime, aDateTime, nil},
 		{types.DateTime(), strconv.FormatInt(aDateTime.Unix(), 10), time.Date(2023, 5, 3, 15, 47, 22, 0, time.UTC), &state.TimeLayouts{DateTime: "unix"}},

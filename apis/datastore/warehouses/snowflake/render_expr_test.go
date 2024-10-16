@@ -13,10 +13,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_renderExpr(t *testing.T) {
@@ -54,7 +53,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `"weight" > 6.5`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIsGreaterThanOrEqualTo, decimal.NewFromInt(3289)),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIsGreaterThanOrEqualTo, decimal.MustInt(3289)),
 			query: `"count" >= 3289`,
 		},
 		{
@@ -153,9 +152,9 @@ func Test_renderExpr(t *testing.T) {
 						warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Text()}, warehouses.OpIs, "abc_60"),
 					}),
 					warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.NewFromInt(100)),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.NewFromInt(200)),
-						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.NewFromInt(300)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.MustInt(100)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.MustInt(200)),
+						warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIs, decimal.MustInt(300)),
 					}),
 				}),
 			query: `("id" = 'abc_42' OR "id" = 'abc_50' OR "id" = 'abc_60') AND ("count" = 100 OR "count" = 200 OR "count" = 300)`,

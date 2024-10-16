@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.55.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.56.1
 	github.com/aws/smithy-go v1.20.2
+	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/evanw/esbuild v0.24.0
 	github.com/fraugster/parquet-go v0.12.0
 	github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1
@@ -31,7 +32,6 @@ require (
 	github.com/pkg/sftp v1.13.6
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.4.0
-	github.com/shopspring/decimal v1.4.0
 	github.com/snowflakedb/gosnowflake v1.11.0
 	github.com/twmb/franz-go v1.17.1
 	github.com/xuri/excelize/v2 v2.8.1
@@ -104,6 +104,7 @@ require (
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/backo-go v1.1.0 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.8.0 // indirect

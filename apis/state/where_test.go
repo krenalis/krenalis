@@ -13,8 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shopspring/decimal"
-
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 )
 
@@ -38,8 +37,8 @@ func Test_unmarshalWhere(t *testing.T) {
 		{Name: "o", Type: types.Inet()},
 	})
 
-	vDecimalInt := decimal.RequireFromString("34")
-	vDecimalFloat := decimal.RequireFromString("85.027")
+	vDecimalInt := decimal.MustParse("34")
+	vDecimalFloat := decimal.MustParse("85.027")
 	vDateTime := time.Date(2024, 9, 12, 11, 3, 6, 801586201, time.UTC)
 	vDate := time.Date(2024, 9, 12, 0, 0, 0, 0, time.UTC)
 	vTime := time.Date(1970, 1, 1, 11, 3, 6, 801586201, time.UTC)
@@ -101,7 +100,7 @@ func Test_unmarshalWhere(t *testing.T) {
 			expected:  WhereCondition{Property: []string{"l"}, Operator: OpIsOnOrBefore, Values: []any{vTime}},
 		},
 		{
-			condition: `{"property":["m"],"operator":"Is","values":["85.027"]}`,
+			condition: `{"property":["m"],"operator":"Is","values":[85.027]}`,
 			expected:  WhereCondition{Property: []string{"m"}, Operator: OpIs, Values: []any{vDecimalFloat}},
 		},
 		{
@@ -183,7 +182,7 @@ func Test_unmarshalWhere(t *testing.T) {
 
 func Test_Where_MarshalJSON(t *testing.T) {
 
-	jn := decimal.RequireFromString("34")
+	jn := decimal.MustParse("34")
 	jt := time.Date(2024, 9, 12, 11, 3, 6, 820793551, time.UTC)
 
 	tests := []struct {
@@ -210,7 +209,7 @@ func Test_Where_MarshalJSON(t *testing.T) {
 				`{"property":["b"],"operator":"IsNot","values":["foo"]},` +
 				`{"property":["c"],"operator":"IsBetween","values":[10,20]},` +
 				`{"property":["d"],"operator":"IsLessThan","values":[34.98]},` +
-				`{"property":["e"],"operator":"IsGreaterThan","values":["34"]},` +
+				`{"property":["e"],"operator":"IsGreaterThan","values":[34]},` +
 				`{"property":["f"],"operator":"IsTrue"},` +
 				`{"property":["g"],"operator":"IsNotOneOf","values":[1,2,3]},` +
 				`{"property":["h"],"operator":"Is","values":["foo"]},` +
@@ -245,8 +244,8 @@ func Test_Where_MarshalJSON(t *testing.T) {
 
 func Test_JSONConditionValue_Marshal(t *testing.T) {
 
-	jn := decimal.RequireFromString("34")
-	jf := decimal.RequireFromString("893.051")
+	jn := decimal.MustInt(34)
+	jf := decimal.MustParse("893.051")
 
 	tests := []struct {
 		v        JSONConditionValue

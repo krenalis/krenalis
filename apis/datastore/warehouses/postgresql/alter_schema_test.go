@@ -13,9 +13,8 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_alterSchemaQueries(t *testing.T) {
@@ -319,7 +318,7 @@ func Test_typeToPostgresType(t *testing.T) {
 
 		// Decimal.
 		{types.Decimal(10, 3), "decimal(10, 3)"},
-		{types.Decimal(10, 3).WithDecimalRange(decimal.NewFromInt(0), decimal.NewFromInt(1000)), "decimal(10, 3)"},
+		{types.Decimal(10, 3).WithDecimalRange(decimal.MustInt(0), decimal.MustInt(1000)), "decimal(10, 3)"},
 
 		// DateTime.
 		{types.DateTime(), "timestamp without time zone"},

@@ -23,10 +23,9 @@ import (
 	"github.com/meergo/meergo/apis/connectors/httpclient"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 // appUpdateBatchSize is the number of app updates to process in each batch.

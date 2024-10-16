@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/shopspring/decimal"
 )
 
 func TestConvert(t *testing.T) {
@@ -71,8 +71,8 @@ func TestConvert(t *testing.T) {
 		{types.Float(32), types.Int(8), -0.5, -1, true, nil},
 		{types.Float(64), types.Int(64), minFloatConvertibleToInt64, -9223372036854775808, true, nil},
 		{types.Float(64), types.Int(64), maxFloatConvertibleToInt64, 9223372036854774784, true, nil},
-		{types.Decimal(5, 3), types.Int(32), decimal.RequireFromString("5"), 5, true, nil},
-		{types.Decimal(5, 3), types.Int(8), decimal.RequireFromString("-12.0"), -12, true, nil},
+		{types.Decimal(5, 3), types.Int(32), decimal.MustInt(5), 5, true, nil},
+		{types.Decimal(5, 3), types.Int(8), decimal.MustParse("-12.0"), -12, true, nil},
 		{types.Decimal(60, 0), types.Int(64), minIntDecimal, math.MinInt64, true, nil},
 		{types.Decimal(60, 0), types.Int(64), maxIntDecimal, math.MaxInt64, true, nil},
 		{types.Year(), types.Int(16), 2020, 2020, true, nil},
@@ -107,18 +107,18 @@ func TestConvert(t *testing.T) {
 		{types.Float(32), types.Float(64), float64(float32(-32.04262)), -32.04262161254883, true, nil},
 		{types.Int(32), types.Float(64), 5617072831, 5.617072831e+09, true, nil},
 		{types.Uint(8), types.Float(32), uint(256), float64(float32(256)), true, nil},
-		{types.Decimal(20, 10), types.Float(64), decimal.RequireFromString("767.5018382257"), 767.5018382257, true, nil},
+		{types.Decimal(20, 10), types.Float(64), decimal.MustParse("767.5018382257"), 767.5018382257, true, nil},
 		{types.Text(), types.Float(64), "767.5018382257", 767.5018382257, true, nil},
 		{types.JSON(), types.Float(64), json.Value("767.5018382257"), 767.5018382257, true, nil},
 
 		// Decimal.
-		{types.Int(32), types.Decimal(10, 3), math.MaxInt32, decimal.NewFromInt(math.MaxInt32), true, nil},
-		{types.Int(32), types.Decimal(10, 0), math.MinInt32, decimal.NewFromInt(math.MinInt32), true, nil},
-		{types.Uint(8), types.Decimal(3, 0), uint(math.MaxUint8), decimal.NewFromInt(math.MaxUint8), true, nil},
-		{types.Float(64), types.Decimal(3, 0), 3.918347105316932e+10, decimal.RequireFromString("39183471053.16932"), true, nil},
-		{types.Float(32), types.Decimal(3, 0), float64(float32(6316.0513)), decimal.RequireFromString("6316.05126953125"), true, nil},
-		{types.Text(), types.Decimal(20, 10), "1048294.202936601", decimal.RequireFromString("1048294.202936601"), true, nil},
-		{types.JSON(), types.Decimal(20, 10), json.Value("1048294.202936601"), decimal.RequireFromString("1048294.202936601"), true, nil},
+		{types.Int(32), types.Decimal(13, 3), math.MaxInt32, decimal.MustInt(math.MaxInt32), true, nil},
+		{types.Int(32), types.Decimal(10, 0), math.MinInt32, decimal.MustInt(math.MinInt32), true, nil},
+		{types.Uint(8), types.Decimal(3, 0), uint(math.MaxUint8), decimal.MustInt(math.MaxUint8), true, nil},
+		{types.Float(64), types.Decimal(16, 5), 3.918347105316932e+10, decimal.MustParse("39183471053.16932"), true, nil},
+		{types.Float(32), types.Decimal(15, 11), float64(float32(6316.0513)), decimal.MustParse("6316.05126953125"), true, nil},
+		{types.Text(), types.Decimal(20, 10), "1048294.202936601", decimal.MustParse("1048294.202936601"), true, nil},
+		{types.JSON(), types.Decimal(20, 10), json.Value("1048294.202936601"), decimal.MustParse("1048294.202936601"), true, nil},
 
 		// DateTime.
 		{types.DateTime(), types.DateTime(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
@@ -197,7 +197,7 @@ func TestConvert(t *testing.T) {
 		{types.Int(32), types.Text(), -603, "-603", true, nil},
 		{types.Float(64), types.Text(), 7928301735.704827, "7.928301735704827e+09", true, nil},
 		{types.Float(32), types.Text(), 3.14, "3.14", true, nil},
-		{types.Decimal(5, 2), types.Text(), decimal.RequireFromString("120.79"), "120.79", true, nil},
+		{types.Decimal(5, 2), types.Text(), decimal.MustParse("120.79"), "120.79", true, nil},
 		{types.DateTime(), types.Text(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), "2023-05-24T09:01:57.49361409Z", true, nil},
 		{types.DateTime(), types.Text(), time.Date(2023, 5, 24, 9, 1, 57, 0, time.UTC), "2023-05-24T09:01:57Z", true, nil},
 		{types.Date(), types.Text(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), "2023-05-24", true, nil},

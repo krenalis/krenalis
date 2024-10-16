@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/shopspring/decimal"
+	"github.com/meergo/meergo/decimal"
 )
 
 func Test_Value(t *testing.T) {
@@ -56,25 +56,22 @@ func Test_Value(t *testing.T) {
 	})
 
 	t.Run("Decimal", func(t *testing.T) {
-		if n, err := Value(`102`).Decimal(); err != nil {
+		if n, err := Value(`102`).Decimal(3, 0); err != nil {
 			t.Fatalf("expected 102, got error %q", err)
-		} else if !n.Equal(decimal.RequireFromString("102")) {
+		} else if !n.Equal(decimal.MustParse("102")) {
 			t.Fatalf("expected 102, got %q", n)
 		}
-		if n, err := Value("\t\r\n102  ").Decimal(); err != nil {
+		if n, err := Value("\t\r\n102  ").Decimal(3, 0); err != nil {
 			t.Fatalf("expected 102, got error %q", err)
-		} else if !n.Equal(decimal.RequireFromString("102")) {
+		} else if !n.Equal(decimal.MustParse("102")) {
 			t.Fatalf("expected 102, got %q", n)
 		}
-		if n, err := Value(`-37.0281e3`).Decimal(); err != nil {
+		if n, err := Value(`-37.0281e3`).Decimal(6, 1); err != nil {
 			t.Fatalf("expected -37028.1, got error %q", err)
-		} else if !n.Equal(decimal.RequireFromString("-37028.1")) {
+		} else if !n.Equal(decimal.MustParse("-37028.1")) {
 			t.Fatalf("expected -37028.1, got %q", n)
 		}
-		//if n, err := Value("1e2147483647").Decimal(); err == nil {
-		//	t.Fatalf("expected error, got Decimal %q", n)
-		//}
-		if n, err := Value(`true`).Decimal(); err == nil {
+		if n, err := Value(`true`).Decimal(1, 0); err == nil {
 			t.Fatalf("expected error, got %q and no error", n)
 		}
 	})

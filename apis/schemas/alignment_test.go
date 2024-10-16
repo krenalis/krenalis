@@ -12,9 +12,8 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_checkSchemaAlignment(t *testing.T) {
@@ -82,8 +81,8 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{t1: types.Decimal(10, 3), t2: types.Decimal(12, 3), err: `precision of the "foo" property's type has changed from 10 to 12`},
 		{t1: types.Decimal(10, 3), t2: types.Decimal(10, 2), err: `scale of the "foo" property's type has changed from 3 to 2`},
 		{
-			t1:  types.Decimal(10, 3).WithDecimalRange(decimal.NewFromInt(5), decimal.NewFromFloat(49.99)),
-			t2:  types.Decimal(10, 3).WithDecimalRange(decimal.NewFromFloat(5.5), decimal.NewFromFloat(39.0)),
+			t1:  types.Decimal(10, 3).WithDecimalRange(decimal.MustInt(5), decimal.MustParse("49.99")),
+			t2:  types.Decimal(10, 3).WithDecimalRange(decimal.MustParse("5.5"), decimal.MustInt(39)),
 			err: `range of "foo" property's type has changed from [5,49.99] to [5.5,39]`,
 		},
 		{t1: types.Text(), t2: types.Text().WithCharLen(100), err: `character length of the "foo" property's type has changed from unbounded to 100`},

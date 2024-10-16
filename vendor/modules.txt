@@ -253,6 +253,11 @@ github.com/dvsekhvalnov/jose2go/compact
 github.com/dvsekhvalnov/jose2go/kdf
 github.com/dvsekhvalnov/jose2go/keys/ecc
 github.com/dvsekhvalnov/jose2go/padding
+# github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
+## explicit; go 1.16
+github.com/ericlagergren/decimal
+github.com/ericlagergren/decimal/internal/arith
+github.com/ericlagergren/decimal/internal/c
 # github.com/evanw/esbuild v0.24.0
 ## explicit; go 1.13
 github.com/evanw/esbuild/internal/api_helpers

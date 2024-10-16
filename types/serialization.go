@@ -20,7 +20,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/shopspring/decimal"
+	"github.com/meergo/meergo/decimal"
+
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -145,15 +146,15 @@ func marshalType(b *bytes.Buffer, t Type) {
 			}
 		}
 	case DecimalKind:
-		if d, ok := t.vl.(decimalRange); ok {
-			if d.min.GreaterThan(MinDecimal) {
-				b.WriteString(`,"minimum":`)
-				b.WriteString(d.min.String())
-			}
-			if d.max.LessThan(MaxDecimal) {
-				b.WriteString(`,"maximum":`)
-				b.WriteString(d.max.String())
-			}
+		min, max := decimal.Range(t.Precision(), t.Scale())
+		dr := t.vl.(decimalRange)
+		if dr.min.Greater(min) {
+			b.WriteString(`,"minimum":`)
+			dr.min.WriteTo(b)
+		}
+		if dr.max.Less(max) {
+			b.WriteString(`,"maximum":`)
+			dr.max.WriteTo(b)
 		}
 		b.WriteString(`,"precision":`)
 		b.WriteString(strconv.Itoa(int(t.p)))
@@ -595,6 +596,32 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			t.size = 4
 		}
 	}
+	if precision == 0 {
+		if kind == DecimalKind {
+			return Type{}, errors.New("missing precision")
+		}
+	} else {
+		if kind != DecimalKind {
+			return Type{}, errors.New("unexpected precision for non-Decimal type")
+		}
+		t.p = int32(precision)
+	}
+	if hasScale {
+		if kind != DecimalKind {
+			return Type{}, errors.New("unexpected scale for non-Decimal type")
+		}
+		if precision == 0 {
+			return Type{}, errors.New("scale also requires precision")
+		}
+		if precision < scale {
+			return Type{}, errors.New("scale cannot be greater tha precision")
+		}
+		t.s = int32(scale)
+	}
+	if kind == DecimalKind {
+		min, max := decimal.Range(precision, scale)
+		t.vl = decimalRange{min, max}
+	}
 	if minimum == "" {
 		if t.kind == IntKind && t.size < 4 { // 8, 16, 24, and 32 bits
 			t.p = int32(minInt[t.size])
@@ -641,7 +668,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					return Type{}, errors.New("invalid value for minimum")
 				}
 				if !math.IsInf(min, -1) {
-					minS := decimal.NewFromFloat(min).String()
+					minS := strconv.FormatFloat(min, 'f', -1, 64)
 					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
 				}
 			} else {
@@ -654,20 +681,21 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					return Type{}, errors.New("invalid value for minimum")
 				}
 				if !math.IsInf(min, -1) {
-					minS := decimal.NewFromFloat32(float32(min)).String()
+					minS := strconv.FormatFloat(min, 'f', -1, 32)
 					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
 				}
 			}
 		case DecimalKind:
-			min, err := decimal.NewFromString(string(minimum))
+			min, err := decimal.Parse(string(minimum), precision, scale)
 			if err != nil {
-				return Type{}, errors.New("invalid value for minimum")
+				return Type{}, errors.New("minimum is out of range")
 			}
-			if min.LessThan(MinDecimal) || min.GreaterThan(MaxDecimal) {
-				return Type{}, errors.New("invalid value for minimum")
+			dr := t.vl.(decimalRange)
+			if min.Less(dr.min) || min.Greater(dr.max) {
+				return Type{}, errors.New("minimum is out of range")
 			}
-			if min.GreaterThan(MinDecimal) {
-				t.vl = decimalRange{min, MaxDecimal}
+			if !min.Equal(dr.min) {
+				t.vl = decimalRange{min, dr.max}
 			}
 		default:
 			return Type{}, errors.New("unexpected minimum for non-number type")
@@ -749,7 +777,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 					return Type{}, errors.New("invalid value for maximum")
 				}
 				if !math.IsInf(max, 1) {
-					maxS := decimal.NewFromFloat(max).String()
+					maxS := strconv.FormatFloat(max, 'f', -1, 64)
 					if f, ok := t.vl.(floatRange); ok {
 						if max < f.min {
 							return Type{}, errors.New("maximum cannot be less than minimum")
@@ -769,7 +797,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 				max = float64(float32(max))
 				if !math.IsInf(max, 1) {
-					maxS := decimal.NewFromFloat32(float32(max)).String()
+					maxS := strconv.FormatFloat(max, 'f', -1, 32)
 					if f, ok := t.vl.(floatRange); ok {
 						if max < f.min {
 							return Type{}, errors.New("maximum cannot be less than minimum")
@@ -783,23 +811,19 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case DecimalKind:
-			max, err := decimal.NewFromString(string(maximum))
+			max, err := decimal.Parse(string(maximum), precision, scale)
 			if err != nil {
-				return Type{}, errors.New("invalid value for maximum")
+				return Type{}, errors.New("maximum is out of range")
 			}
-			if max.LessThan(MinDecimal) || max.GreaterThan(MaxDecimal) {
-				return Type{}, errors.New("invalid value for maximum")
+			dr := t.vl.(decimalRange)
+			if max.Less(dr.min) {
+				return Type{}, errors.New("maximum cannot be less than minimum")
 			}
-			if max.LessThan(MaxDecimal) {
-				if d, ok := t.vl.(decimalRange); ok {
-					if max.LessThan(d.min) {
-						return Type{}, errors.New("maximum cannot be less than minimum")
-					}
-					d.max = max
-					t.vl = d
-				} else {
-					t.vl = decimalRange{min: MinDecimal, max: max}
-				}
+			if max.Greater(dr.max) {
+				return Type{}, errors.New("maximum is out of range")
+			}
+			if !max.Equal(dr.max) {
+				t.vl = decimalRange{dr.min, max}
 			}
 		default:
 			return Type{}, errors.New("unexpected maximum for non-number type")
@@ -834,28 +858,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected length in characters for non-Text types")
 		}
 		t.s = int32(charLen)
-	}
-	if precision == 0 {
-		if kind == DecimalKind {
-			return Type{}, errors.New("missing precision")
-		}
-	} else {
-		if kind != DecimalKind {
-			return Type{}, errors.New("unexpected precision for non-Decimal type")
-		}
-		t.p = int32(precision)
-	}
-	if hasScale {
-		if kind != DecimalKind {
-			return Type{}, errors.New("unexpected scale for non-Decimal type")
-		}
-		if precision == 0 {
-			return Type{}, errors.New("scale also requires precision")
-		}
-		if precision < scale {
-			return Type{}, errors.New("scale cannot be greater tha precision")
-		}
-		t.s = int32(scale)
 	}
 	if elementType.Valid() {
 		if kind != ArrayKind && kind != MapKind {

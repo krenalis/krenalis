@@ -13,17 +13,16 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_Applies(t *testing.T) {
 
-	var n670 = decimal.NewFromInt(670)
+	var n670 = decimal.MustInt(670)
 	var v670 = &state.JSONConditionValue{String: "670", Number: &n670}
 
-	var n812 = decimal.NewFromInt(812)
+	var n812 = decimal.MustInt(812)
 	var v812 = &state.JSONConditionValue{String: "812", Number: &n812}
 
 	var vFoo = &state.JSONConditionValue{String: "foo"}
@@ -45,8 +44,8 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIs, v: 12.3829401183652, v0: 12.3829401183652, expected: true},
 		{op: state.OpIs, v: float64(float32(-16.09275)), v0: float64(float32(-16.09275)), expected: true},
 		{op: state.OpIs, v: float64(float32(-16.09277)), v0: float64(float32(-16.09275)), expected: false},
-		{op: state.OpIs, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: true},
-		{op: state.OpIs, v: decimal.RequireFromString("947126405.18361204926705328"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: false},
+		{op: state.OpIs, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("947126405.18361204926705329"), expected: true},
+		{op: state.OpIs, v: decimal.MustParse("947126405.18361204926705328"), v0: decimal.MustParse("947126405.18361204926705329"), expected: false},
 		{op: state.OpIs, v: "foo", v0: "boo", expected: false},
 		{op: state.OpIs, v: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: true},
 		{op: state.OpIs, v: time.Date(2024, 9, 11, 9, 58, 15, 704152446, time.UTC), v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false},
@@ -69,8 +68,8 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsNot, v: 12.3829401183652, v0: 12.3829401183652, expected: false},
 		{op: state.OpIsNot, v: float64(float32(-16.09275)), v0: float64(float32(-16.09275)), expected: false},
 		{op: state.OpIsNot, v: float64(float32(-16.09277)), v0: float64(float32(-16.09275)), expected: true},
-		{op: state.OpIsNot, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: false},
-		{op: state.OpIsNot, v: decimal.RequireFromString("947126405.18361204926705328"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: true},
+		{op: state.OpIsNot, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("947126405.18361204926705329"), expected: false},
+		{op: state.OpIsNot, v: decimal.MustParse("947126405.18361204926705328"), v0: decimal.MustParse("947126405.18361204926705329"), expected: true},
 		{op: state.OpIsNot, v: "foo", v0: "boo", expected: true},
 		{op: state.OpIsNot, v: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false},
 		{op: state.OpIsNot, v: time.Date(2024, 9, 11, 9, 58, 15, 704152446, time.UTC), v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: true},
@@ -96,7 +95,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsLessThan, v: 1.5829371949264, v0: 1.5829371949264, expected: false},
 		{op: state.OpIsLessThan, v: float64(float32(7.983)), v0: float64(float32(7.984)), expected: true},
 		{op: state.OpIsLessThan, v: float64(float32(7.984)), v0: float64(float32(7.983)), expected: false},
-		{op: state.OpIsLessThan, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("1204471285.038153"), expected: true},
+		{op: state.OpIsLessThan, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("1204471285.038153"), expected: true},
 		{op: state.OpIsLessThan, v: nil, v0: 5, expected: false},
 		{op: state.OpIsLessThan, v: json.Value("315"), v0: v670, expected: true},
 		{op: state.OpIsLessThan, v: json.Value("315.0"), v0: v670, expected: true},
@@ -119,9 +118,9 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsLessThanOrEqualTo, v: float64(float32(7.983)), v0: float64(float32(7.984)), expected: true},
 		{op: state.OpIsLessThanOrEqualTo, v: float64(float32(7.983)), v0: float64(float32(7.983)), expected: true},
 		{op: state.OpIsLessThanOrEqualTo, v: float64(float32(7.984)), v0: float64(float32(7.983)), expected: false},
-		{op: state.OpIsLessThanOrEqualTo, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("1204471285.038153"), expected: true},
-		{op: state.OpIsLessThanOrEqualTo, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: true},
-		{op: state.OpIsLessThanOrEqualTo, v: decimal.RequireFromString("1204471285.038153"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: false},
+		{op: state.OpIsLessThanOrEqualTo, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("1204471285.038153"), expected: true},
+		{op: state.OpIsLessThanOrEqualTo, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("947126405.18361204926705329"), expected: true},
+		{op: state.OpIsLessThanOrEqualTo, v: decimal.MustParse("1204471285.038153"), v0: decimal.MustParse("947126405.18361204926705329"), expected: false},
 		{op: state.OpIsLessThanOrEqualTo, v: nil, v0: 5, expected: false},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value("315"), v0: v670, expected: true},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value("315.0"), v0: v670, expected: true},
@@ -145,9 +144,9 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsGreaterThan, v: float64(float32(7.984)), v0: float64(float32(7.983)), expected: true},
 		{op: state.OpIsGreaterThan, v: float64(float32(7.983)), v0: float64(float32(7.983)), expected: false},
 		{op: state.OpIsGreaterThan, v: float64(float32(7.982)), v0: float64(float32(7.983)), expected: false},
-		{op: state.OpIsGreaterThan, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("1204471285.038153"), expected: false},
-		{op: state.OpIsGreaterThan, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: false},
-		{op: state.OpIsGreaterThan, v: decimal.RequireFromString("1204471285.038153"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: true},
+		{op: state.OpIsGreaterThan, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("1204471285.038153"), expected: false},
+		{op: state.OpIsGreaterThan, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("947126405.18361204926705329"), expected: false},
+		{op: state.OpIsGreaterThan, v: decimal.MustParse("1204471285.038153"), v0: decimal.MustParse("947126405.18361204926705329"), expected: true},
 		{op: state.OpIsGreaterThan, v: nil, v0: 5, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value("315.0"), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value("810"), v0: v670, expected: true},
@@ -175,9 +174,9 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsGreaterThanOrEqualTo, v: float64(float32(7.984)), v0: float64(float32(7.983)), expected: true},
 		{op: state.OpIsGreaterThanOrEqualTo, v: float64(float32(7.983)), v0: float64(float32(7.983)), expected: true},
 		{op: state.OpIsGreaterThanOrEqualTo, v: float64(float32(7.982)), v0: float64(float32(7.983)), expected: false},
-		{op: state.OpIsGreaterThanOrEqualTo, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("1204471285.038153"), expected: false},
-		{op: state.OpIsGreaterThanOrEqualTo, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: true},
-		{op: state.OpIsGreaterThanOrEqualTo, v: decimal.RequireFromString("1204471285.038153"), v0: decimal.RequireFromString("947126405.18361204926705329"), expected: true},
+		{op: state.OpIsGreaterThanOrEqualTo, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("1204471285.038153"), expected: false},
+		{op: state.OpIsGreaterThanOrEqualTo, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("947126405.18361204926705329"), expected: true},
+		{op: state.OpIsGreaterThanOrEqualTo, v: decimal.MustParse("1204471285.038153"), v0: decimal.MustParse("947126405.18361204926705329"), expected: true},
 		{op: state.OpIsGreaterThanOrEqualTo, v: nil, v0: 5, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("315.0"), v0: v670, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("810"), v0: v670, expected: true},
@@ -212,11 +211,11 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsBetween, v: float64(float32(8.125)), v0: float64(float32(7.983)), v1: float64(float32(9.579)), expected: true},
 		{op: state.OpIsBetween, v: float64(float32(9.579)), v0: float64(float32(7.983)), v1: float64(float32(9.579)), expected: true},
 		{op: state.OpIsBetween, v: float64(float32(12.662)), v0: float64(float32(7.983)), v1: float64(float32(9.579)), expected: false},
-		{op: state.OpIsBetween, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: false},
-		{op: state.OpIsBetween, v: decimal.RequireFromString("1204471285.038153"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: true},
-		{op: state.OpIsBetween, v: decimal.RequireFromString("2726608135.048165"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: true},
-		{op: state.OpIsBetween, v: decimal.RequireFromString("3084136838.720635"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: true},
-		{op: state.OpIsBetween, v: decimal.RequireFromString("8539500341.8264811"), v0: decimal.RequireFromString("947126405.18361204926705329"), v1: decimal.RequireFromString("3084136838.720635"), expected: false},
+		{op: state.OpIsBetween, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: false},
+		{op: state.OpIsBetween, v: decimal.MustParse("1204471285.038153"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: true},
+		{op: state.OpIsBetween, v: decimal.MustParse("2726608135.048165"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: true},
+		{op: state.OpIsBetween, v: decimal.MustParse("3084136838.720635"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: true},
+		{op: state.OpIsBetween, v: decimal.MustParse("8539500341.8264811"), v0: decimal.MustParse("947126405.18361204926705329"), v1: decimal.MustParse("3084136838.720635"), expected: false},
 		{op: state.OpIsBetween, v: nil, v0: 5, v1: 8, expected: false},
 		{op: state.OpIsBetween, v: json.Value("511.0"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsBetween, v: json.Value("775.0"), v0: v670, v1: v812, expected: true},
@@ -253,11 +252,11 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsNotBetween, v: float64(float32(8.125)), v0: float64(float32(7.983)), v1: float64(float32(9.579)), expected: false},
 		{op: state.OpIsNotBetween, v: float64(float32(9.579)), v0: float64(float32(7.983)), v1: float64(float32(9.579)), expected: false},
 		{op: state.OpIsNotBetween, v: float64(float32(12.662)), v0: float64(float32(7.983)), v1: float64(float32(9.579)), expected: true},
-		{op: state.OpIsNotBetween, v: decimal.RequireFromString("947126405.18361204926705329"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: true},
-		{op: state.OpIsNotBetween, v: decimal.RequireFromString("1204471285.038153"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: false},
-		{op: state.OpIsNotBetween, v: decimal.RequireFromString("2726608135.048165"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: false},
-		{op: state.OpIsNotBetween, v: decimal.RequireFromString("3084136838.720635"), v0: decimal.RequireFromString("1204471285.038153"), v1: decimal.RequireFromString("3084136838.720635"), expected: false},
-		{op: state.OpIsNotBetween, v: decimal.RequireFromString("8539500341.8264811"), v0: decimal.RequireFromString("947126405.18361204926705329"), v1: decimal.RequireFromString("3084136838.720635"), expected: true},
+		{op: state.OpIsNotBetween, v: decimal.MustParse("947126405.18361204926705329"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: true},
+		{op: state.OpIsNotBetween, v: decimal.MustParse("1204471285.038153"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: false},
+		{op: state.OpIsNotBetween, v: decimal.MustParse("2726608135.048165"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: false},
+		{op: state.OpIsNotBetween, v: decimal.MustParse("3084136838.720635"), v0: decimal.MustParse("1204471285.038153"), v1: decimal.MustParse("3084136838.720635"), expected: false},
+		{op: state.OpIsNotBetween, v: decimal.MustParse("8539500341.8264811"), v0: decimal.MustParse("947126405.18361204926705329"), v1: decimal.MustParse("3084136838.720635"), expected: true},
 		{op: state.OpIsNotBetween, v: nil, v0: 5, v1: 8, expected: false},
 		{op: state.OpIsNotBetween, v: json.Value("511.0"), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("670.0"), v0: v670, v1: v812, expected: false},

@@ -20,12 +20,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
-	"github.com/shopspring/decimal"
 )
 
 var (
@@ -272,9 +272,9 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 }
 
 // unquoteString unquote a JSON string.
-func (d decoder) unquoteString(v []byte) string {
+func (d decoder) unquoteString(v []byte) []byte {
 	b, _ := Unquote(v)
-	return string(b)
+	return b
 }
 
 // formatString formats a JSON string into a formatted string.
@@ -301,7 +301,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 			}
 		case '"':
 			if t.BitSize() == 64 {
-				s = d.unquoteString(v)
+				s = string(d.unquoteString(v))
 			}
 		}
 		if s != "" {
@@ -321,7 +321,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 			}
 		case '"':
 			if t.BitSize() == 64 {
-				s = d.unquoteString(v)
+				s = string(d.unquoteString(v))
 			}
 		}
 		if s != "" {
@@ -359,8 +359,8 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.DecimalKind:
 		if v.Kind() == '"' {
-			if n, err := decimal.NewFromString(d.unquoteString(v)); err == nil {
-				if min, max := t.DecimalRange(); n.LessThan(min) || n.GreaterThan(max) {
+			if n, err := decimal.Parse(d.unquoteString(v), t.Precision(), t.Scale()); err == nil {
+				if min, max := t.DecimalRange(); n.Less(min) || n.Greater(max) {
 					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n), "")
 				}
 				return n, nil
@@ -379,7 +379,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.DateKind:
 		if v.Kind() == '"' {
-			if t, err := time.Parse("2006-01-02", d.unquoteString(v)); err == nil {
+			if t, err := time.Parse("2006-01-02", string(d.unquoteString(v))); err == nil {
 				t = t.UTC()
 				if y := t.Year(); 1 <= y && y <= 9999 {
 					return time.Date(y, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
@@ -388,7 +388,7 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.TimeKind:
 		if v.Kind() == '"' {
-			if t, err := time.Parse("15:04:05.999999999", d.unquoteString(v)); err == nil {
+			if t, err := time.Parse("15:04:05.999999999", string(d.unquoteString(v))); err == nil {
 				t = t.UTC()
 				return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
 			}
@@ -421,13 +421,13 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
+			if ip, err := netip.ParseAddr(string(d.unquoteString(v))); err == nil {
 				return ip.String(), nil
 			}
 		}
 	case types.TextKind:
 		if v.Kind() == '"' {
-			s := d.unquoteString(v)
+			s := string(d.unquoteString(v))
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",

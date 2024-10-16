@@ -18,7 +18,8 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/shopspring/decimal"
+	"github.com/meergo/meergo/decimal"
+
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -44,19 +45,11 @@ func (err RepeatedPropertyNameError) Error() string {
 	return fmt.Sprintf("property name %q is repeated", err.Name)
 }
 
-// one is the decimal.Decimal 1.
-var one = decimal.New(1, 0)
-
 var (
 	bitSize = [...]int{8, 16, 24, 32, 64}
 	minInt  = [...]int64{MinInt8, MinInt16, MinInt24, MinInt32, MinInt64}
 	maxInt  = [...]int64{MaxInt8, MaxInt16, MaxInt24, MaxInt32, MaxInt64}
 	maxUint = [...]uint64{MaxUint8, MaxUint16, MaxUint24, MaxUint32, MaxUint64}
-)
-
-var (
-	MaxDecimal = decimal.New(1, MaxDecimalPrecision).Sub(one)
-	MinDecimal = MaxDecimal.Neg()
 )
 
 const (
@@ -321,7 +314,9 @@ func Decimal(precision, scale int) Type {
 	if scale < 0 || scale > MaxDecimalScale || scale > precision {
 		panic("invalid decimal scale")
 	}
-	return Type{kind: DecimalKind, p: int32(precision), s: int32(scale)}
+	min, max := decimal.Range(precision, scale)
+	vl := decimalRange{min, max}
+	return Type{kind: DecimalKind, p: int32(precision), s: int32(scale), vl: vl}
 }
 
 // DateTime returns the DateTime type.
@@ -670,18 +665,18 @@ func (t Type) WithFloatRange(min, max float64) Type {
 		// 32 bits.
 		min, max = float64(float32(min)), float64(float32(max))
 		if !math.IsInf(min, -1) {
-			minS = decimal.NewFromFloat32(float32(min)).String()
+			minS = strconv.FormatFloat(min, 'f', -1, 32)
 		}
 		if !math.IsInf(max, 1) {
-			maxS = decimal.NewFromFloat32(float32(max)).String()
+			maxS = strconv.FormatFloat(max, 'f', -1, 32)
 		}
 	} else {
 		// 64 bits.
 		if !math.IsInf(min, -1) {
-			minS = decimal.NewFromFloat(min).String()
+			minS = strconv.FormatFloat(min, 'f', -1, 64)
 		}
 		if !math.IsInf(max, 1) {
-			maxS = decimal.NewFromFloat(max).String()
+			maxS = strconv.FormatFloat(max, 'f', -1, 64)
 		}
 	}
 	t.vl = floatRange{min: min, max: max, minS: minS, maxS: maxS}
@@ -696,37 +691,31 @@ func (t Type) DecimalRange() (min, max decimal.Decimal) {
 	if t.kind != DecimalKind {
 		panic("type is not a Decimal type")
 	}
-	if d, ok := t.vl.(decimalRange); ok {
-		return d.min, d.max
-	}
-	return MinDecimal, MaxDecimal
+	dr := t.vl.(decimalRange)
+	return dr.min, dr.max
 }
 
-// WithDecimalRange returns t but with values in [min,max]. t must be a Decimal
-// type, and min must be less than or equal to max; otherwise it panics.
+// WithDecimalRange returns t with values constrained to the range [min, max].
+// t must be of type Decimal, min must be less than or equal to max, and both
+// min and max must fit within the precision and scale of t; otherwise, it
+// panics.
 func (t Type) WithDecimalRange(min, max decimal.Decimal) Type {
 	if t.kind != DecimalKind {
 		panic("type is not a Decimal type")
 	}
-	if max.LessThan(min) {
+	if max.Less(min) {
 		panic("max cannot be less than min")
 	}
-	Max := MaxDecimal
-	if t.p != 0 || t.s != 0 {
-		Max = decimal.New(1, t.p).Sub(one)
-		if t.s != 0 {
-			Max = Max.Shift(-t.s)
+	dr := t.vl.(decimalRange)
+	minOverflow, maxOverflow := overflow(min, dr.min, dr.max), overflow(max, dr.min, dr.max)
+	if minOverflow || maxOverflow {
+		typeMin, typeMax := decimal.Range(t.Precision(), t.Scale())
+		if overflow(min, typeMin, typeMax) {
+			panic(fmt.Sprintf("min must be in range [%s,%s]", typeMin, typeMax))
 		}
-	}
-	Min := Max.Neg()
-	if min.Equal(Min) && max.Equal(Max) {
-		return t
-	}
-	if min.LessThan(Min) {
-		panic(fmt.Sprintf("min must be in range [%s,%s]", Min, Max))
-	}
-	if max.GreaterThan(Max) {
-		panic(fmt.Sprintf("max must be in range [%s,%s]", Min, Max))
+		if overflow(max, typeMin, typeMax) {
+			panic(fmt.Sprintf("max must be in range [%s,%s]", typeMin, typeMax))
+		}
 	}
 	t.vl = decimalRange{min, max}
 	return t
@@ -1008,4 +997,9 @@ func normalizedUTF8(s string) (string, error) {
 		return "", errors.New("invalid UTF-8 encoding")
 	}
 	return norm.NFC.String(s), nil
+}
+
+// overflow reports whether v < min or v > max.
+func overflow(v, min, max decimal.Decimal) bool {
+	return v.Less(min) || v.GreaterEqual(max)
 }

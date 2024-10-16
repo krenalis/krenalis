@@ -17,10 +17,9 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 const settingsEnvKey = "MEERGO_TEST_PATH_MYSQL"
@@ -51,7 +50,7 @@ func Test_Upsert_Query(t *testing.T) {
 		{"BIGINT UNSIGNED", uint64(18192650825384015325), types.Uint(64), uint(18192650825384015325)},
 		{"FLOAT", float32(1.123), types.Float(32), float64(float32(1.123))},
 		{"DOUBLE", 390.491835234, types.Float(64), 390.491835234},
-		{"DECIMAL(10,3)", []byte("1.123"), types.Decimal(10, 3), decimal.RequireFromString("1.123")},
+		{"DECIMAL(10,3)", []byte("1.123"), types.Decimal(10, 3), decimal.MustParse("1.123")},
 		{"DATETIME(6)", time.Date(2023, 1, 1, 1, 2, 3, 830511000, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 830511000, time.UTC)},
 		{"TIMESTAMP", time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{"DATE", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},

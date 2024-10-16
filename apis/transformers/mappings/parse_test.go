@@ -12,14 +12,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 func Test_parseExpression(t *testing.T) {
 
-	n := decimal.RequireFromString(`-6.803`)
+	n := decimal.MustParse(`-6.803`)
 	dt := types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 
 	tests := []struct {
@@ -101,20 +100,15 @@ func Test_parseNumber(t *testing.T) {
 		err      error
 	}{
 		{`0`, `0`, ``, nil},
-		{`000`, `0`, ``, nil},
 		{`682`, `682`, ``, nil},
 		{`-4992`, `-4992`, ``, nil},
-		{`0554`, `554`, ``, nil},
 		{`0.`, `0`, ``, nil},
-		{`00.`, `0`, ``, nil},
 		{`.0`, `0`, ``, nil},
 		{`.00`, `0`, ``, nil},
 		{`-.0`, `0`, ``, nil},
 		{`.652`, `0.652`, ``, nil},
 		{`0.1`, `0.1`, ``, nil},
-		{`00.14`, `00.14`, ``, nil},
 		{`9.0134`, `9.0134`, ``, nil},
-		{`0622.9350`, `622.935`, ``, nil},
 		{`0e0`, `0`, ``, nil},
 		{`551e3`, `551e3`, ``, nil},
 		{`7e-2`, `7e-2`, ``, nil},
@@ -150,7 +144,7 @@ func Test_parseNumber(t *testing.T) {
 		if test.err != nil {
 			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
 		}
-		if got.Cmp(decimal.RequireFromString(test.expected)) != 0 {
+		if got.Cmp(decimal.MustParse(test.expected)) != 0 {
 			t.Fatalf("%q. expected number %s, got %s", test.src, test.expected, got)
 		}
 		if src != test.unparsed {

@@ -112,12 +112,12 @@ types.Decimal(p, s)
 Decimals can also have a minimum and maximum value range, for example:
 
 ```go
-import "github.com/shopspring/decimal"
+import "github.com/meergo/meergo/decimal"
 
 ...
 
-min := decimal.NewFromInt(-10.5)
-max := decimal.NewFromInt(8.25)
+min := decimal.MustInt(-10.5)
+max := decimal.MustInt(8.25)
 
 // Decimal with precision 5 and scale 2, range [-10.5, 8.25].
 types.Decimal(5, 2).WithDecimalRange(min, max)

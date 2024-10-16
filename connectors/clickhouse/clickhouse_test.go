@@ -19,9 +19,8 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
-
-	"github.com/shopspring/decimal"
 )
 
 const settingsEnvKey = "MEERGO_TEST_PATH_CLICKHOUSE"
@@ -51,7 +50,7 @@ func Test_Upsert_Query(t *testing.T) {
 		{"UInt64", uint64(530103712643), types.Uint(64), 530103712643},
 		{"Float32", float32(1.3561), types.Float(32), float64(float32(1.3561))},
 		{"Float64", 390.491835234, types.Float(64), 390.491835234},
-		{"Decimal(10,3)", decimal.RequireFromString("1.123"), types.Decimal(10, 3), decimal.RequireFromString("1.123")},
+		{"Decimal(10,3)", decimal.MustParse("1.123"), types.Decimal(10, 3), decimal.MustParse("1.123")},
 		{"DateTime('UTC')", time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{"DateTime64(9, 'UTC')", time.Date(2023, 1, 1, 1, 2, 3, 239016638, time.UTC), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 239016638, time.UTC)},
 		{"Date", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
