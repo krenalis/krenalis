@@ -140,11 +140,45 @@ type Filter struct {
 
 type FilterLogical string
 
+const (
+	OpAnd FilterLogical = "and"
+	OpOr  FilterLogical = "or"
+)
+
 type FilterCondition struct {
 	Property string
-	Operator string
+	Operator FilterOperator
 	Values   []string
 }
+
+type FilterOperator string
+
+const (
+	OpIs                     FilterOperator = "is"
+	OpIsNot                  FilterOperator = "is not"
+	OpIsLessThan             FilterOperator = "is less than"
+	OpIsLessThanOrEqualTo    FilterOperator = "is less than or equal to"
+	OpIsGreaterThan          FilterOperator = "is greater than"
+	OpIsGreaterThanOrEqualTo FilterOperator = "is greater than or equal to"
+	OpIsBetween              FilterOperator = "is between"
+	OpIsNotBetween           FilterOperator = "is not between"
+	OpContains               FilterOperator = "contains"
+	OpDoesNotContain         FilterOperator = "does not contain"
+	OpIsOneOf                FilterOperator = "is one of"
+	OpIsNotOneOf             FilterOperator = "is not one of"
+	OpStartsWith             FilterOperator = "starts with"
+	OpEndsWith               FilterOperator = "ends with"
+	OpIsBefore               FilterOperator = "is before"
+	OpIsOnOrBefore           FilterOperator = "is on or before"
+	OpIsAfter                FilterOperator = "is after"
+	OpIsOnOrAfter            FilterOperator = "is on or after"
+	OpIsTrue                 FilterOperator = "is true"
+	OpIsFalse                FilterOperator = "is false"
+	OpIsNull                 FilterOperator = "is null"
+	OpIsNotNull              FilterOperator = "is not null"
+	OpExists                 FilterOperator = "exists"
+	OpDoesNotExist           FilterOperator = "does not exist"
+)
 
 type KV struct {
 	Key   string `json:"key"`

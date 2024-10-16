@@ -498,7 +498,30 @@ func (c *Meergo) Users(properties []string, order string, orderDesc bool, first,
 	return response.Users, response.Schema, response.Count
 }
 
+// WaitForExecutionsCompletion waits for the executions with the specified IDs,
+// belonging to the connection, to be completed. In the event that an execution
+// ends with an error, or there is at least one "Failed", this method will
+// result in an error.
+//
+// If you intend to proceed even in the case of one or more "Failed" (but not an
+// error for the entire execution), see the method
+// WaitForExecutionsCompletionAllowFailed.
 func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
+	c.waitForExecutionsCompletion(conn, false, executions...)
+}
+
+// WaitForExecutionsCompletionAllowFailed waits for the executions with the
+// specified IDs, belonging to the connection, to be completed. In the event
+// that an execution ends with an error, this method will result in an error. If
+// there is one or more Failed, they are ignored.
+//
+// If you want the method to result in an error even in the case of one or more
+// "Failed", see the method WaitForExecutionsCompletion.
+func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...int) {
+	c.waitForExecutionsCompletion(conn, true, executions...)
+}
+
+func (c *Meergo) waitForExecutionsCompletion(conn int, allowFailed bool, executions ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		completed := true
@@ -514,7 +537,7 @@ func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
 			if exec.Error != "" {
 				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exec.Action, exec.ID, exec.Error)
 			}
-			if exec.Failed > 0 {
+			if exec.Failed > 0 && !allowFailed {
 				c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exec.Action, exec.ID, exec.Failed)
 			}
 		}

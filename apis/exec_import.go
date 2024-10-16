@@ -17,6 +17,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/connectors"
 	"github.com/meergo/meergo/apis/datastore"
+	"github.com/meergo/meergo/apis/filters"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/apis/statistics"
@@ -128,6 +129,12 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 				goto Next
 			}
 			stats.FailedReceiving(1, user.Err.Error())
+			goto Next
+		}
+
+		// In case the action has a filter, check if it applies to the user.
+		if f := action.Filter; f != nil && !filters.Applies(f, user.Properties) {
+			stats.FailedFiltering(1, "filter does not apply")
 			goto Next
 		}
 

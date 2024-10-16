@@ -416,15 +416,15 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Check if the filters are allowed.
+	// TODO(Gianluca): rewrite this condition in a more clear and concise way
+	// when https://github.com/meergo/meergo/issues/1013 is resolved.
 	targetUsersOrGroups := target == state.Users || target == state.Groups
 	var filtersAllowed bool
 	switch v.connection.connector.typ {
-	case state.App:
-		filtersAllowed = v.connection.role == state.Destination
+	case state.App, state.FileStorage:
+		filtersAllowed = true
 	case state.Database:
 		filtersAllowed = v.connection.role == state.Destination
-	case state.FileStorage:
-		filtersAllowed = targetUsersOrGroups && v.connection.role == state.Destination
 	case state.Mobile, state.Server, state.Website:
 		filtersAllowed = targetUsersOrGroups && v.connection.role == state.Source
 	}

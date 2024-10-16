@@ -77,6 +77,36 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 		},
 		{
+			name: "GOOD: Source/App/Users - with mapping and filter",
+			action: ActionToSet{
+				Name: "Import users",
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "email_in",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+		},
+		{
 			name: "GOOD: Source/App/Users - with transformation function",
 			action: ActionToSet{
 				Name: "Import users",
@@ -133,6 +163,50 @@ func Test_validateAction(t *testing.T) {
 			name: "GOOD: Source/FileStorage/Users - with mapping",
 			action: ActionToSet{
 				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Connector:              "CSV",
+				Path:                   "my_file.csv",
+				IdentityProperty:       "id",
+				LastChangeTimeProperty: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorage,
+			connectorType:           state.File,
+			connectorHasUI:          false,
+			connectorHasSheets:      false,
+		},
+		{
+			name: "GOOD: Source/FileStorage/Users - with mapping and filter",
+			action: ActionToSet{
+				Name: "Import users",
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "email_in",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
+						},
+						{
+							Property: "id",
+							Operator: OpIsNot,
+							Values:   []string{"1234567890"},
+						},
+					},
+				},
 				InSchema: types.Object([]types.Property{
 					{Name: "id", Type: types.Int(32)},
 					{Name: "timestamp", Type: types.DateTime()},
@@ -999,37 +1073,6 @@ func Test_validateAction(t *testing.T) {
 			connectorHasUI:          false,
 			connectorHasSheets:      false,
 			err:                     "placeholders syntax is not supported by source actions",
-		},
-		{
-			name: "BAD: Source/App/Users - filters are not allowed",
-			action: ActionToSet{
-				Name: "Import users",
-				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
-							Property: "email_in",
-							Operator: OpIs,
-							Values:   []string{"a@b"},
-						},
-					},
-				},
-				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text()},
-				}),
-				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text(), ReadOptional: true},
-				}),
-				Transformation: Transformation{
-					Mapping: map[string]string{
-						"email_out": "email_in",
-					},
-				},
-			},
-			target:                  state.Users,
-			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
-			err:                     "filters are not allowed",
 		},
 		{
 			name: "BAD: Source/App/Users - cannot specify a path",
@@ -2145,6 +2188,47 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
 			err:                     "the external matching property must have the same kind of the property with the same name within out schema",
+		},
+		{
+			name: "BAD: Source/Database/Users - filters are not allowed",
+			action: ActionToSet{
+				Name: "Import users",
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "email_in",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
+						},
+						{
+							Property: "id",
+							Operator: OpIsNot,
+							Values:   []string{"1234567890"},
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Query:                  "SELECT id, timestamp, email_in FROM my_table",
+				IdentityProperty:       "id",
+				LastChangeTimeProperty: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Database,
+			err:                     "filters are not allowed",
 		},
 	}
 

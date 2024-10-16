@@ -1059,9 +1059,14 @@ const computeDefaultAction = (
 
 const computeActionTypeFields = (connection: TransformedConnection, actionType: ActionType) => {
 	const fields: ActionTypeField[] = [];
+	// TODO(Gianluca): rewrite this condition in a more clear and concise way
+	// when https://github.com/meergo/meergo/issues/1013 is resolved.
 	if (
 		(connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') ||
 		(connection.type === 'Database' && connection.role === 'Destination') ||
+		(connection.role === 'Source' &&
+			actionType.Target === 'Users' &&
+			(connection.type === 'App' || connection.type === 'FileStorage')) ||
 		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
 			connection.role === 'Source' &&
 			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
