@@ -72,135 +72,135 @@ func Connectors() map[string]ConnectorInfo {
 }
 
 // RegisterApp makes an app connector available by the provided name. If
-// RegisterApp is called twice with the same name or if fn is nil, it panics.
+// RegisterApp is called twice with the same name or if new is nil, it panics.
 func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	app.newFunc = reflect.ValueOf(new)
 	app.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.apps[app.Name]; dup {
-		panic("connector: RegisterApp called twice for connector " + app.Name)
+		panic("meergo: RegisterApp called twice for connector " + app.Name)
 	}
 	registry.apps[app.Name] = app
 }
 
 // RegisterDatabase makes a database connector available by the provided name.
-// If RegisterDatabase is called twice with the same name or if fn is nil, it
+// If RegisterDatabase is called twice with the same name or if new is nil, it
 // panics.
 func RegisterDatabase[T Database](database DatabaseInfo, new DatabaseNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.databases[database.Name]; dup {
-		panic("connector: RegisterDatabase called twice for connector " + database.Name)
+		panic("meergo: RegisterDatabase called twice for connector " + database.Name)
 	}
 	registry.databases[database.Name] = database
 }
 
 // RegisterFile makes a file connector available by the provided name. If
-// RegisterFile is called twice with the same name or if fn is nil, it panics.
+// RegisterFile is called twice with the same name or if new is nil, it panics.
 func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[file.Name]; dup {
-		panic("connector: RegisterFile called twice for connector " + file.Name)
+		panic("meergo: RegisterFile called twice for connector " + file.Name)
 	}
 	registry.files[file.Name] = file
 }
 
 // RegisterFileStorage makes a file storage connector available by the provided
-// name. If RegisterFileStorage is called twice with the same name or if fn is
+// name. If RegisterFileStorage is called twice with the same name or if new is
 // nil, it panics.
 func RegisterFileStorage[T FileStorage](storage FileStorageInfo, new FileStorageNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.storages[storage.Name]; dup {
-		panic("connector: RegisterFileStorage called twice for connector " + storage.Name)
+		panic("meergo: RegisterFileStorage called twice for connector " + storage.Name)
 	}
 	registry.storages[storage.Name] = storage
 }
 
 // RegisterMobile makes a mobile connector available by the provided name. If
-// RegisterDatabase is called twice with the same name or if fn is nil, it
+// RegisterDatabase is called twice with the same name or if new is nil, it
 // panics.
 func RegisterMobile[T Mobile](mobile MobileInfo, new MobileNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	mobile.newFunc = reflect.ValueOf(new)
 	mobile.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.mobiles[mobile.Name]; dup {
-		panic("connector: RegisterMobile called twice for connector " + mobile.Name)
+		panic("meergo: RegisterMobile called twice for connector " + mobile.Name)
 	}
 	registry.mobiles[mobile.Name] = mobile
 }
 
 // RegisterServer makes a server connector available by the provided name. If
-// RegisterServer is called twice with the same name or if fn is nil, it
+// RegisterServer is called twice with the same name or if new is nil, it
 // panics.
 func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	server.newFunc = reflect.ValueOf(new)
 	server.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.servers[server.Name]; dup {
-		panic("connector: RegisterServer called twice for connector " + server.Name)
+		panic("meergo: RegisterServer called twice for connector " + server.Name)
 	}
 	registry.servers[server.Name] = server
 }
 
 // RegisterStream makes a stream connector available by the provided name.
-// If RegisterStream is called twice with the same name or if fn is nil, it
+// If RegisterStream is called twice with the same name or if new is nil, it
 // panics.
 func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	stream.newFunc = reflect.ValueOf(new)
 	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[stream.Name]; dup {
-		panic("connector: RegisterStream called twice for connector " + stream.Name)
+		panic("meergo: RegisterStream called twice for connector " + stream.Name)
 	}
 	registry.streams[stream.Name] = stream
 }
 
 // RegisterWebsite makes a website connector available by the provided name. If
-// RegisterWebsite is called twice with the same name or if fn is nil, it
+// RegisterWebsite is called twice with the same name or if new is nil, it
 // panics.
 func RegisterWebsite[T Website](website WebsiteInfo, new WebsiteNewFunc[T]) {
 	if new == nil {
-		panic("connector: new function is nil")
+		panic("meergo: new function is nil")
 	}
 	website.newFunc = reflect.ValueOf(new)
 	website.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.websites[website.Name]; dup {
-		panic("connector: RegisterWebsite called twice for connector " + website.Name)
+		panic("meergo: RegisterWebsite called twice for connector " + website.Name)
 	}
 	registry.websites[website.Name] = website
 }
@@ -212,7 +212,7 @@ func RegisteredApp(name string) AppInfo {
 	app, ok := registry.apps[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown app connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown app connector %q (forgotten import?)", name))
 	}
 	return app
 }
@@ -224,7 +224,7 @@ func RegisteredDatabase(name string) DatabaseInfo {
 	database, ok := registry.databases[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown database connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown database connector %q (forgotten import?)", name))
 	}
 	return database
 }
@@ -236,7 +236,7 @@ func RegisteredStream(name string) StreamInfo {
 	stream, ok := registry.streams[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown stream connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown stream connector %q (forgotten import?)", name))
 	}
 	return stream
 }
@@ -248,7 +248,7 @@ func RegisteredFile(name string) FileInfo {
 	file, ok := registry.files[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown file connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown file connector %q (forgotten import?)", name))
 	}
 	return file
 }
@@ -260,7 +260,7 @@ func RegisteredFileStorage(name string) FileStorageInfo {
 	storage, ok := registry.storages[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown file storage connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown file storage connector %q (forgotten import?)", name))
 	}
 	return storage
 }
@@ -272,7 +272,7 @@ func RegisteredMobile(name string) MobileInfo {
 	mobile, ok := registry.mobiles[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown mobile connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown mobile connector %q (forgotten import?)", name))
 	}
 	return mobile
 }
@@ -284,7 +284,7 @@ func RegisteredServer(name string) ServerInfo {
 	server, ok := registry.servers[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown server connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown server connector %q (forgotten import?)", name))
 	}
 	return server
 }
@@ -296,7 +296,7 @@ func RegisteredWebsite(name string) WebsiteInfo {
 	website, ok := registry.websites[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("connector: unknown website connector %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown website connector %q (forgotten import?)", name))
 	}
 	return website
 }
