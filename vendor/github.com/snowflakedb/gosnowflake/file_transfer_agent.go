@@ -9,7 +9,6 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -24,7 +23,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/smithy-go"
 	"github.com/gabriel-vasile/mimetype"
 )
 
@@ -91,6 +89,9 @@ type SnowflakeFileTransferOptions struct {
 	/* streaming PUT */
 	compressSourceFromStream bool
 
+	/* streaming GET */
+	GetFileToStream bool
+
 	/* PUT */
 	putCallback             *snowflakeProgressPercentage
 	putAzureCallback        *snowflakeProgressPercentage
@@ -103,6 +104,7 @@ type SnowflakeFileTransferOptions struct {
 }
 
 type snowflakeFileTransferAgent struct {
+	ctx                         context.Context
 	sc                          *snowflakeConn
 	data                        *execResponseData
 	command                     string
@@ -124,6 +126,7 @@ type snowflakeFileTransferAgent struct {
 	useAccelerateEndpoint       bool
 	presignedURLs               []string
 	options                     *SnowflakeFileTransferOptions
+	streamBuffer                *bytes.Buffer
 }
 
 func (sfa *snowflakeFileTransferAgent) execute() error {
@@ -411,6 +414,7 @@ func (sfa *snowflakeFileTransferAgent) initFileMetadata() error {
 					name:              baseName(fileName),
 					srcFileName:       fileName,
 					dstFileName:       dstFileName,
+					dstStream:         new(bytes.Buffer),
 					stageLocationType: sfa.stageLocationType,
 					stageInfo:         sfa.stageInfo,
 					localLocation:     sfa.localLocation,
@@ -585,46 +589,47 @@ func (sfa *snowflakeFileTransferAgent) updateFileMetadataWithPresignedURL() erro
 	return nil
 }
 
+type s3BucketAccelerateConfigGetter interface {
+	GetBucketAccelerateConfiguration(ctx context.Context, params *s3.GetBucketAccelerateConfigurationInput, optFns ...func(*s3.Options)) (*s3.GetBucketAccelerateConfigurationOutput, error)
+}
+
+type s3ClientCreator interface {
+	extractBucketNameAndPath(location string) (*s3Location, error)
+	createClient(info *execResponseStageInfo, useAccelerateEndpoint bool) (cloudClient, error)
+}
+
+func (sfa *snowflakeFileTransferAgent) transferAccelerateConfigWithUtil(s3Util s3ClientCreator) error {
+	s3Loc, err := s3Util.extractBucketNameAndPath(sfa.stageInfo.Location)
+	if err != nil {
+		return err
+	}
+	s3Cli, err := s3Util.createClient(sfa.stageInfo, false)
+	if err != nil {
+		return err
+	}
+	client, ok := s3Cli.(s3BucketAccelerateConfigGetter)
+	if !ok {
+		return (&SnowflakeError{
+			Number:   ErrFailedToConvertToS3Client,
+			SQLState: sfa.data.SQLState,
+			QueryID:  sfa.data.QueryID,
+			Message:  errMsgFailedToConvertToS3Client,
+		}).exceptionTelemetry(sfa.sc)
+	}
+	ret, err := client.GetBucketAccelerateConfiguration(context.Background(), &s3.GetBucketAccelerateConfigurationInput{
+		Bucket: &s3Loc.bucketName,
+	})
+	sfa.useAccelerateEndpoint = ret != nil && ret.Status == "Enabled"
+	if err != nil {
+		logger.WithContext(sfa.sc.ctx).Warnln("An error occurred when getting accelerate config:", err)
+	}
+	return nil
+}
+
 func (sfa *snowflakeFileTransferAgent) transferAccelerateConfig() error {
 	if sfa.stageLocationType == s3Client {
 		s3Util := new(snowflakeS3Client)
-		s3Loc, err := s3Util.extractBucketNameAndPath(sfa.stageInfo.Location)
-		if err != nil {
-			return err
-		}
-		s3Cli, err := s3Util.createClient(sfa.stageInfo, false)
-		if err != nil {
-			return err
-		}
-		client, ok := s3Cli.(*s3.Client)
-		if !ok {
-			return (&SnowflakeError{
-				Number:   ErrFailedToConvertToS3Client,
-				SQLState: sfa.data.SQLState,
-				QueryID:  sfa.data.QueryID,
-				Message:  errMsgFailedToConvertToS3Client,
-			}).exceptionTelemetry(sfa.sc)
-		}
-		ret, err := client.GetBucketAccelerateConfiguration(context.Background(), &s3.GetBucketAccelerateConfigurationInput{
-			Bucket: &s3Loc.bucketName,
-		})
-		sfa.useAccelerateEndpoint = ret != nil && ret.Status == "Enabled"
-		if err != nil {
-			var ae smithy.APIError
-			if errors.As(err, &ae) {
-				if ae.ErrorCode() == "AccessDenied" {
-					return nil
-				} else if ae.ErrorCode() == "MethodNotAllowed" {
-					return nil
-				} else if strings.EqualFold(ae.ErrorCode(), "UnsupportedArgument") {
-					// In AWS China and US Gov partitions, Transfer Acceleration is not supported
-					// https://docs.amazonaws.cn/en_us/aws/latest/userguide/s3.html#feature-diff
-					// https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/govcloud-s3.html
-					return nil
-				}
-			}
-			return err
-		}
+		return sfa.transferAccelerateConfigWithUtil(s3Util)
 	}
 	return nil
 }

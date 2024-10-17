@@ -32,7 +32,7 @@ require (
 	github.com/pkg/sftp v1.13.6
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.5.0
-	github.com/snowflakedb/gosnowflake v1.11.0
+	github.com/snowflakedb/gosnowflake v1.11.2
 	github.com/twmb/franz-go v1.18.0
 	github.com/xuri/excelize/v2 v2.9.0
 	go.opentelemetry.io/otel v1.26.0
