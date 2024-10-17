@@ -86,6 +86,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 		"GET    /api/members/current":                                                                    api.Member,
 		"GET    /api/members/invitations/{token}":                                                        api.MemberInvitation,
 		"GET    /api/transformation-languages":                                                           api.TransformationLanguages,
+		"GET    /api/warehouses":                                                                         api.Warehouses,
 		"GET    /api/workspaces":                                                                         organization.Workspaces,
 		"GET    /api/workspaces/{workspace}":                                                             organization.Workspace,
 		"GET    /api/workspaces/{workspace}/action-errors":                                               workspace.ActionErrors,

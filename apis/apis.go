@@ -716,6 +716,29 @@ func (apis *APIs) ValidateExpression(expression string, properties []types.Prope
 	return "", nil
 }
 
+// Warehouse represents a data warehouse.
+type Warehouse struct {
+	Name string
+	Icon string
+}
+
+// Warehouses returns the data warehouses.
+func (apis *APIs) Warehouses(ctx context.Context) []*Warehouse {
+	apis.mustBeOpen()
+	_, s := telemetry.TraceSpan(ctx, "apis.Warehouses")
+	defer s.End()
+	whs := apis.state.Warehouses()
+	warehouses := make([]*Warehouse, len(whs))
+	for i, wh := range whs {
+		warehouse := Warehouse{
+			Name: wh.Name,
+			Icon: wh.Icon,
+		}
+		warehouses[i] = &warehouse
+	}
+	return warehouses
+}
+
 // mustBeOpen panics if apis has been closed.
 func (apis *APIs) mustBeOpen() {
 	if apis.closed.Load() {
