@@ -260,6 +260,25 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.Website,
 		},
 		{
+			name: "GOOD: Source/Website/Events - with filters",
+			action: ActionToSet{
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "anonymousId",
+							Operator: OpIsNot,
+							Values:   []string{"abc"},
+						},
+					},
+				},
+				Name: "Import events into the data warehouse",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Website,
+		},
+		{
 			name: "GOOD: Destination/App/Users - with mapping",
 			action: ActionToSet{
 				Name: "Export users",
@@ -2229,6 +2248,42 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Database,
 			err:                     "filters are not allowed",
+		},
+		{
+			name: "BAD: Source/Website/Events - cannot provide input schema",
+			action: ActionToSet{
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "anonymousId",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "anonymousId", Type: types.Text()},
+				}),
+				Name: "Import events into the data warehouse",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Website,
+			err:                     "input schema must be invalid for actions that import events into data warehouse",
+		},
+		{
+			name: "BAD: Source/Website/Events - cannot provide output schema",
+			action: ActionToSet{
+				OutSchema: types.Object([]types.Property{
+					{Name: "x", Type: types.Text()},
+				}),
+				Name: "Import events into the data warehouse",
+			},
+			target:                  state.Events,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Website,
+			err:                     "output schema must be invalid when importing events into data warehouse",
 		},
 	}
 

@@ -94,17 +94,27 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		return errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
 	}
 
+	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, target)
 	dispatchEventsToApps := isDispatchingEventsToApps(v.connection.connector.typ, v.connection.role, target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
 
-	// When dispatching events to apps or when importing user identities from
-	// events, the input schema must be the invalid schema.
-	if dispatchEventsToApps || importUserIdentitiesFromEvents {
+	// In cases where the input schema refers to events, that is when:
+	//
+	//  - user identities are imported from events
+	//  - events are imported into the data warehouse
+	//  - events are dispatched to apps
+	//
+	// the input schema must be nil, which means the schema of the events.
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
 		if inSchema.Valid() {
-			if importUserIdentitiesFromEvents {
+			switch {
+			case importUserIdentitiesFromEvents:
 				return errors.BadRequest("input schema must be invalid for actions that import user identities from events")
+			case importEventsIntoWarehouse:
+				return errors.BadRequest("input schema must be invalid for actions that import events into data warehouse")
+			case dispatchEventsToApps:
+				return errors.BadRequest("input schema must be invalid for actions that dispatch events to apps")
 			}
-			return errors.BadRequest("input schema must be invalid for actions that dispatch events to apps")
 		}
 		inSchema = events.Schema
 	}
@@ -366,6 +376,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Second, do validations based on the workspace and the connection.
 
+	if importEventsIntoWarehouse && outSchema.Valid() {
+		return errors.BadRequest("output schema must be invalid when importing events into data warehouse")
+	}
+
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() {
 		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ, action.TableKeyProperty); err != nil {
@@ -416,18 +430,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Check if the filters are allowed.
-	// TODO(Gianluca): rewrite this condition in a more clear and concise way
-	// when https://github.com/meergo/meergo/issues/1013 is resolved.
-	targetUsersOrGroups := target == state.Users || target == state.Groups
-	var filtersAllowed bool
-	switch v.connection.connector.typ {
-	case state.App, state.FileStorage:
-		filtersAllowed = true
-	case state.Database:
-		filtersAllowed = v.connection.role == state.Destination
-	case state.Mobile, state.Server, state.Website:
-		filtersAllowed = targetUsersOrGroups && v.connection.role == state.Source
-	}
+	// Note that filters are always allowed except for actions that import users
+	// from databases.
+	filtersAllowed := !(v.connection.role == state.Source &&
+		v.connection.connector.typ == state.Database && target == state.Users)
 	if action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
 	}
@@ -651,6 +657,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		v.connection.connector.typ == state.Website
 
 	// Check the connections for which the transformation is prohibited.
+	targetUsersOrGroups := target == state.Users || target == state.Groups
 	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && target == state.Events) ||
 		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
 	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
@@ -681,7 +688,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).
-	if importUserIdentitiesFromEvents || dispatchEventsToApps {
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
 		// In these cases the input schema is the full schema of the events,
 		// both in case of mappings and transformation, so we cannot return the
 		// error about unused properties in input schema because just a minor

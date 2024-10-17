@@ -381,9 +381,10 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	// Determine the input schema.
 	inSchema := action.InSchema
-	dispatchEventsToApps := isDispatchingEventsToApps(c.Connector().Type, c.Role, this.action.Target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(c.Connector().Type, c.Role, this.action.Target)
-	if dispatchEventsToApps || importUserIdentitiesFromEvents {
+	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(c.Connector().Type, c.Role, this.action.Target)
+	dispatchEventsToApps := isDispatchingEventsToApps(c.Connector().Type, c.Role, this.action.Target)
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
 		inSchema = events.Schema
 	}
 
@@ -884,6 +885,19 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 // is dispatching events to apps.
 func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	return role == state.Destination && target == state.Events && connectorType == state.App
+}
+
+// isImportingEventsIntoWarehouse reports whether a connector of the given type,
+// on a connection with the given role, and an action with the given target, is
+// importing events into the data warehouse.
+func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	if role == state.Source && target == state.Events {
+		switch connectorType {
+		case state.Mobile, state.Server, state.Website:
+			return true
+		}
+	}
+	return false
 }
 
 // isImportingUserIdentitiesFromEvents reports whether a connector of the

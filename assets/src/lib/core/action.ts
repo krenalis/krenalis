@@ -961,12 +961,17 @@ const transformInActionToSet = async (
 		}
 	}
 
-	// Actions that dispatch events to apps and actions that import user
-	// identities from events must have an invalid input schema, that
-	// implicitly represents the event schema.
+	// In cases where the input schema refers to events, that is when:
+	//
+	//  - user identities are imported from events
+	//  - events are imported into the data warehouse
+	//  - events are dispatched to apps
+	//
+	// the input schema must be nil, which means the schema of the events.
+	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.Target == 'Events';
 	let dispatchEventsToApps = connection.isDestination && connection.type == 'App' && actionType.Target == 'Events';
 	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.Target == 'Users';
-	if (dispatchEventsToApps || importIdentitiesFromEvents) {
+	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
 	}
 
@@ -1059,18 +1064,9 @@ const computeDefaultAction = (
 
 const computeActionTypeFields = (connection: TransformedConnection, actionType: ActionType) => {
 	const fields: ActionTypeField[] = [];
-	// TODO(Gianluca): rewrite this condition in a more clear and concise way
-	// when https://github.com/meergo/meergo/issues/1013 is resolved.
-	if (
-		(connection.type === 'App' && connection.role === 'Destination' && actionType.Target === 'Events') ||
-		(connection.type === 'Database' && connection.role === 'Destination') ||
-		(connection.role === 'Source' &&
-			actionType.Target === 'Users' &&
-			(connection.type === 'App' || connection.type === 'FileStorage')) ||
-		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
-			connection.role === 'Source' &&
-			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
-	) {
+	// Filters are always allowed except for actions that import users from
+	// databases.
+	if (!(connection.role === 'Source' && connection.type === 'Database' && actionType.Target === 'Users')) {
 		fields.push('Filter');
 	}
 	if (

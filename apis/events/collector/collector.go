@@ -203,7 +203,8 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // is enabled and has an enabled event destination with an enabled action on
 // events.
 func (c *Collector) canCollectEvents(source *state.Connection) bool {
-	return source.Enabled && (c.hasImportEventsAction(source) ||
+	_, importEventsAction := c.importEventsAction(source)
+	return source.Enabled && (importEventsAction ||
 		c.hasImportUsersAction(source) || c.hasEventDestinations(source))
 }
 
@@ -255,15 +256,16 @@ func (c *Collector) hasEventDestinations(source *state.Connection) bool {
 	return false
 }
 
-// hasImportEventsAction reports whether source has an enabled action that
-// import the events.
-func (c *Collector) hasImportEventsAction(source *state.Connection) bool {
+// importEventsAction returns the action of the source connection that imports
+// events into the data warehouse, if there is one and if it is enabled;
+// otherwise, it returns nil and false.
+func (c *Collector) importEventsAction(source *state.Connection) (*state.Action, bool) {
 	for _, a := range source.Actions() {
 		if a.Enabled && a.Target == state.Events {
-			return true
+			return a, true
 		}
 	}
-	return false
+	return nil, false
 }
 
 // hasImportUsersAction reports whether source has an enabled action that
@@ -669,9 +671,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		c.observer.addEnrichedEvent(header.Source, batch[i])
 	}
 
-	if c.hasImportEventsAction(source) {
+	if action, ok := c.importEventsAction(source); ok {
 		// Store the events into the data warehouse.
-		err = c.storeEvents(source.Workspace().ID, batch)
+		err = c.storeEvents(source.Workspace().ID, action, batch)
 		if err != nil {
 			if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 				err = errServiceUnavailable
@@ -1174,21 +1176,27 @@ func (c *Collector) setEventAsReceived(event *collectedEvent) error {
 
 var emptyJSONObject = json.Value("{}")
 
-// storeEvents store the events in the data warehouse.
+// storeEvents store the events in the data warehouse of the workspace. action
+// is the action that imports events on the data warehouse.
 //
 // If the data warehouse is in inspection mode, it returns the
 // datastore.ErrInspectionMode error. If it is in maintenance mode, it returns
 // the datastore.ErrMaintenanceMode error.
-func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
+func (c *Collector) storeEvents(workspace int, action *state.Action, events []*events.Event) error {
 
 	store := c.datastore.Store(workspace)
 	if store == nil {
 		return nil
 	}
 
-	rows := make([][]any, len(events))
+	rows := make([][]any, 0, len(events))
 
-	for i, e := range events {
+	for _, e := range events {
+
+		// If the action has a filter, check if it applies to the event.
+		if action.Filter != nil && !filters.Applies(action.Filter, e.AsProperties()) {
+			continue
+		}
 
 		// Set groupId.
 		groupId := e.GroupId
@@ -1214,7 +1222,7 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 			properties = emptyJSONObject
 		}
 
-		rows[i] = []any{
+		rows = append(rows, []any{
 			e.AnonymousId,                      // anonymous_id
 			e.Category,                         // category
 			e.Context.App.Name,                 // context_app_name
@@ -1278,7 +1286,7 @@ func (c *Collector) storeEvents(workspace int, events []*events.Event) error {
 			traits,                             // traits
 			*e.Type,                            // type
 			e.UserId,                           // user_id
-		}
+		})
 
 	}
 

@@ -242,6 +242,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 			return &ActionSchemas{In: events.Schema, Out: users}, nil
 		case Groups:
 			return &ActionSchemas{In: events.Schema, Out: groups}, nil
+		case Events:
+			return &ActionSchemas{In: events.Schema}, nil
 		}
 		return &ActionSchemas{}, nil
 
@@ -475,9 +477,10 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	// Determine the input schema.
 	inSchema := action.InSchema
-	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, this.connection.Role, state.Target(target))
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target))
-	if dispatchEventsToApps || importUserIdentitiesFromEvents {
+	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, this.connection.Role, state.Target(target))
+	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, this.connection.Role, state.Target(target))
+	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
 		inSchema = events.Schema
 	}
 
