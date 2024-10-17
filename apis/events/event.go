@@ -118,12 +118,12 @@ type Context struct {
 		Height  int     `json:"height,omitempty"`
 		Density float32 `json:"density,omitempty"`
 	} `json:"screen,omitempty"`
-	SessionId    int            `json:"sessionId,omitempty"`
-	SessionStart bool           `json:"sessionStart,omitempty"`
-	GroupId      string         `json:"groupId,omitempty"`
-	Timezone     string         `json:"timezone,omitempty"`
-	Traits       map[string]any `json:"traits,omitempty"`
-	UserAgent    string         `json:"userAgent,omitempty"`
+	SessionId    int        `json:"sessionId,omitempty"`
+	SessionStart bool       `json:"sessionStart,omitempty"`
+	GroupId      string     `json:"groupId,omitempty"`
+	Timezone     string     `json:"timezone,omitempty"`
+	Traits       json.Value `json:"traits,omitempty"`
+	UserAgent    string     `json:"userAgent,omitempty"`
 }
 
 // ToConnectorEvent returns event as a connector event to be passed as an
