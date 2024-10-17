@@ -48,7 +48,7 @@ const WorkspaceAdd = () => {
 	// 		showStatus({
 	// 			variant: 'success',
 	// 			icon: icons.OK,
-	// 			text: `${selectedWarehouse} responded succesfully`,
+	// 			text: `${selectedWarehouse} responded successfully`,
 	// 		});
 	// 	}, 300);
 	// };

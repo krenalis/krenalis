@@ -123,7 +123,7 @@ const GeneralSettings = () => {
 			handleError(err);
 			return;
 		}
-		showStatus({ variant: 'success', icon: icons.OK, text: 'Workspace updated succesfully' });
+		showStatus({ variant: 'success', icon: icons.OK, text: 'Workspace updated successfully' });
 		setIsLoadingWorkspaces(true);
 	};
 

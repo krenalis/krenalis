@@ -101,7 +101,7 @@ const UsersList = () => {
 			return;
 		}
 		setTimeout(() => {
-			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity resolution completed succesfully' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity resolution completed successfully' });
 			setIsLoadingIdentityResolution(false);
 			handleIdentityResolutionExecution();
 			fetchUsers();

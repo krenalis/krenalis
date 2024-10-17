@@ -55,7 +55,7 @@ const DataWarehouseSettings = ({
 		showStatus({
 			variant: 'success',
 			icon: icons.OK,
-			text: `${selectedWarehouse.label} responded succesfully`,
+			text: `${selectedWarehouse.label} responded successfully`,
 		});
 		clearTimeout(timeout);
 		setIsPingLoading(false);

@@ -124,7 +124,7 @@ const Member = () => {
 		setTimeout(() => {
 			setIsSaving(false);
 			setIsLoadingMember(true);
-			showStatus({ variant: 'success', icon: icons.OK, text: 'Member information saved succesfully' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'Member information saved successfully' });
 			redirect('members');
 		}, 300);
 	};
