@@ -19,10 +19,10 @@ import (
 )
 
 var canInitializeWarehouse = &cobra.Command{
-	Use:   "can-initialize-warehouse <type> <file>",
+	Use:   "can-initialize-warehouse <name> <file>",
 	Short: "Check if can initialize a warehouse",
 	Long: "Check if can initialize a warehouse.\n\n" +
-		"<type>  is the data warehouse type and can be PostgreSQL or Snowflake\n" +
+		"<name>  is the name of the data warehouse and can be PostgreSQL or Snowflake\n" +
 		"<file>  is a JSON file containing the data warehouse settings",
 	Args: cobra.MatchAll(cobra.ExactArgs(2), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {

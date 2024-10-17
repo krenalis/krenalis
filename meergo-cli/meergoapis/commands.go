@@ -89,12 +89,12 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
-func CreateWorkspace(name string, privacyRegion PrivacyRegion, warehouseType string, warehouseSettings []byte) int {
+func CreateWorkspace(name string, privacyRegion PrivacyRegion, warehouseName string, warehouseSettings []byte) int {
 	req, err := json.Marshal(map[string]any{
 		"Name":          name,
 		"PrivacyRegion": privacyRegion,
 		"Warehouse": map[string]any{
-			"Type":     warehouseType,
+			"Name":     warehouseName,
 			"Settings": json.RawMessage(warehouseSettings),
 		},
 	})
