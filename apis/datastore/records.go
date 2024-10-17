@@ -28,18 +28,6 @@ type Record struct {
 	Err error
 }
 
-// Records represents records read from the data warehouse.
-type Records struct {
-	columns   []meergo.Column
-	normalize meergo.NormalizeFunc
-	unflat    unflatRowFunc
-	rows      meergo.Rows
-	matching  *Matching
-	last      bool
-	err       error
-	closed    bool
-}
-
 // Matching specifies criteria for the UserRecords method when exporting users
 // to an app. It filters users based on whether they have or do not have a match
 // with the app users.
@@ -159,6 +147,18 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 	}
 
 	return records, err
+}
+
+// Records represents records read from the data warehouse.
+type Records struct {
+	columns   []meergo.Column
+	normalize meergo.NormalizeFunc
+	unflat    unflatRowFunc
+	rows      meergo.Rows
+	matching  *Matching
+	last      bool
+	err       error
+	closed    bool
 }
 
 // All returns an iterator to iterate over the records. After All completes, it
