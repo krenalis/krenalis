@@ -6,7 +6,7 @@ replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-g
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix
-	github.com/andybalholm/brotli v1.1.0
+	github.com/andybalholm/brotli v1.1.1
 	github.com/aws/aws-sdk-go-v2 v1.30.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.21
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.21
