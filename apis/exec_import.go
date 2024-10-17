@@ -134,7 +134,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 
 		// In case the action has a filter, check if it applies to the user.
 		if f := action.Filter; f != nil && !filters.Applies(f, user.Properties) {
-			stats.FailedFiltering(1, "filter does not apply")
+			stats.FailedFiltering(1)
 			goto Next
 		}
 

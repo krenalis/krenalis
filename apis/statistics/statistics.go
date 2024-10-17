@@ -480,8 +480,8 @@ func (c *Collector) FailedInputValidation(count int, message string) {
 
 // FailedFiltering increases the failed count for the Filtering step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedFiltering(count int, message string) {
-	c.failedStep(FilteringStep, count, message)
+func (c *Collector) FailedFiltering(count int) {
+	c.failedStep(FilteringStep, count, "")
 }
 
 // FailedTransformation increases the failed count for the Transformation step
@@ -547,7 +547,9 @@ func (c *Collector) failedStep(step Step, count int, message string) {
 	st := c.s.stats[c.action]
 	st.Lock()
 	st.failed[step] += count
-	st.errors = append(st.errors, actionError{step: step, count: count, message: message})
+	if message != "" {
+		st.errors = append(st.errors, actionError{step: step, count: count, message: message})
+	}
 	st.Unlock()
 	c.s.mu.RUnlock()
 }
