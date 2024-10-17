@@ -320,10 +320,13 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if t := *event.Type; t != "identify" && event.Context.Traits == nil {
 				continue
 			}
+			stats.PassedReceiving(1)
 			properties := event.AsProperties()
 			if !filters.Applies(action.Filter, properties) {
+				stats.FailedFiltering(1)
 				continue
 			}
+			stats.PassedFiltering(1)
 			// If the action has a transformation, apply it to the event and
 			// obtain the properties.
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
@@ -347,9 +350,10 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 					continue
 				}
 				properties = records[0].Properties
-				stats.PassedTransformation(1)
-				stats.PassedOutputValidation(1)
 			}
+			stats.PassedTransformation(1)
+			stats.PassedOutputValidation(1)
+
 			// Discard anonymous events with no properties.
 			if event.UserId == "" && len(properties) == 0 {
 				continue
@@ -364,6 +368,7 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if err != nil {
 				return iw.Close(ctx)
 			}
+			stats.PassedFinalizing(1)
 		}
 		err = iw.Close(ctx)
 		if err != nil {
@@ -1189,14 +1194,19 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 		return nil
 	}
 
+	stats := c.statistics.Collector(action.ID)
+	stats.PassedReceiving(len(events))
+
 	rows := make([][]any, 0, len(events))
 
 	for _, e := range events {
 
 		// If the action has a filter, check if it applies to the event.
 		if action.Filter != nil && !filters.Applies(action.Filter, e.AsProperties()) {
+			stats.FailedFiltering(1)
 			continue
 		}
+		stats.PassedFiltering(1)
 
 		// Set groupId.
 		groupId := e.GroupId
@@ -1290,7 +1300,13 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 
 	}
 
-	return store.AddEvents(rows)
+	err := store.AddEvents(rows)
+	if err != nil {
+		return err
+	}
+	stats.PassedFinalizing(len(rows))
+
+	return nil
 }
 
 // collectHeader returns selected headers of r.
