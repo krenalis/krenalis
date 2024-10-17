@@ -35,29 +35,9 @@ func TestIdentityResolution(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	// Create a storage where the JSON files (containing the incoming users)
-	// will be created.
-	storageDir, err := os.MkdirTemp("", "meergo-test-identity-resolution")
-	if err != nil {
-		t.Fatal(err)
-	}
-	removeTempDirectory := false
-	defer func() {
-		if removeTempDirectory {
-			err := os.RemoveAll(storageDir)
-			if err != nil {
-				t.Logf("cannot remove the temporary directory used by the storage: %s", err)
-			}
-		} else {
-			t.Logf("the temporary directory for the storage %q has been kept for troubleshooting the test", storageDir)
-		}
-	}()
-
-	jsonFilename := "users.json"
-	jsonAbsPath := filepath.Join(storageDir, jsonFilename)
-
 	// Create the Filesystem connection.
-	fsID := c.AddSourceFilesystem(storageDir)
+	storage := meergotester.NewTempStorage(t)
+	fsID := c.AddSourceFilesystem(storage.Root())
 
 	properties := map[string]bool{
 		"dummyId":      true,
@@ -76,7 +56,7 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.Text().WithCharLen(300)), ReadOptional: true},
 	}
 
-	c.ChangeIdentityResolutionSettings(true, []string{"dummy_id", "email"})
+	c.ChangeIdentityResolutionSettings(false, []string{"dummy_id", "email"})
 
 	// Generate and add an action to the JSON for importing the users.
 	mapping := map[string]string{
@@ -156,6 +136,8 @@ func TestIdentityResolution(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		jsonFilename := "users.json"
+		jsonAbsPath := filepath.Join(storage.Root(), jsonFilename)
 		err = os.WriteFile(jsonAbsPath, content, 0755)
 		if err != nil {
 			t.Fatalf("cannot write the incoming user to the JSON file: %s", err)
@@ -164,10 +146,9 @@ func TestIdentityResolution(t *testing.T) {
 		// Import the users in the JSON.
 		exec := c.ExecuteAction(fsID, action, false)
 		c.WaitForExecutionsCompletion(fsID, exec)
+		c.ResolveIdentities()
 
 	}
-
-	// -------------------------------------------------------------------------
 
 	// Add the tests on the identity resolution here.
 
@@ -200,10 +181,7 @@ func TestIdentityResolution(t *testing.T) {
 		{"dummy_id": "AAA", "email": "a@b", "phone_numbers": []any{"333", "444"}},
 	})
 
-	// -------------------------------------------------------------------------
-
-	// The test completed successfully, so the temporary directory for the
-	// storage can be removed.
-	removeTempDirectory = true
+	// The test completed successfully, so the storage can be removed.
+	storage.Remove()
 
 }
