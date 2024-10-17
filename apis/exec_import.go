@@ -132,14 +132,17 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 			goto Next
 		}
 
-		// In case the action has a filter, check if it applies to the user.
-		if f := action.Filter; f != nil && !filters.Applies(f, user.Properties) {
-			stats.FailedFiltering(1)
-			goto Next
-		}
-
 		stats.PassedReceiving(1)
 		stats.PassedInputValidation(1)
+
+		// In case the action has a filter, check if it applies to the user.
+		if connector.Type != state.Database {
+			if !filters.Applies(action.Filter, user.Properties) {
+				stats.FailedFiltering(1)
+				goto Next
+			}
+			stats.PassedFiltering(1)
+		}
 
 		if user.LastChangeTime.After(cursor) {
 			cursor = user.LastChangeTime
