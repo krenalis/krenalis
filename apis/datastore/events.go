@@ -8,7 +8,7 @@
 package datastore
 
 import (
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
 )
 
@@ -215,21 +215,21 @@ var eventColumnNameFromPropertyPath = map[string]string{
 }
 
 // eventColumnByProperty maps each event property to the corresponding column.
-var eventColumnByProperty map[string]warehouses.Column
+var eventColumnByProperty map[string]meergo.Column
 
 // eventsColumnsForMerge holds the events columns for the merge of events.
 // It does not contain the "user" column, which is not written during the merge.
-var eventsColumnsForMerge []warehouses.Column
+var eventsColumnsForMerge []meergo.Column
 
 // eventsMergeTable is the table used to merge the events.
-var eventsMergeTable warehouses.Table
+var eventsMergeTable meergo.WarehouseTable
 
 // init initializes eventColumnByProperty, eventsColumnsForMerge, and
 // eventsMergeTable.
 func init() {
 
-	eventColumnByProperty = make(map[string]warehouses.Column, len(eventColumnNameFromPropertyPath))
-	eventsColumnsForMerge = make([]warehouses.Column, len(eventColumnNameFromPropertyPath)-1)
+	eventColumnByProperty = make(map[string]meergo.Column, len(eventColumnNameFromPropertyPath))
+	eventsColumnsForMerge = make([]meergo.Column, len(eventColumnNameFromPropertyPath)-1)
 
 	i := 0
 	for path, p := range types.Walk(EventSchema) {
@@ -237,7 +237,7 @@ func init() {
 			continue
 		}
 		name := eventColumnNameFromPropertyPath[path]
-		c := warehouses.Column{Name: name, Type: p.Type, Nullable: p.Nullable}
+		c := meergo.Column{Name: name, Type: p.Type, Nullable: p.Nullable}
 		eventColumnByProperty[path] = c
 		if path != "user" {
 			eventsColumnsForMerge[i] = c
@@ -245,7 +245,7 @@ func init() {
 		}
 	}
 
-	eventsMergeTable = warehouses.Table{
+	eventsMergeTable = meergo.WarehouseTable{
 		Name:    "events",
 		Columns: eventsColumnsForMerge,
 		Keys:    []string{"source", "message_id"},

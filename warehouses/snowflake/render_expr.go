@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
@@ -22,15 +22,15 @@ import (
 
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
-func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
+func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 
 	// Handle MultiExpr expression.
-	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
+	if multiExpr, ok := exp.(*meergo.MultiExpr); ok {
 		var op string
 		switch multiExpr.Operator {
-		case warehouses.OpAnd:
+		case meergo.OpAnd:
 			op = " AND "
-		case warehouses.OpOr:
+		case meergo.OpOr:
 			op = " OR "
 		default:
 			return fmt.Errorf("invalid operator %q", multiExpr.Operator)
@@ -39,7 +39,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			if i > 0 {
 				b.WriteString(op)
 			}
-			_, isMultiExpr := operand.(*warehouses.MultiExpr)
+			_, isMultiExpr := operand.(*meergo.MultiExpr)
 			if isMultiExpr {
 				b.WriteByte('(')
 			}
@@ -55,49 +55,49 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	}
 
 	// Handle BaseExpr expressions.
-	baseExpr := exp.(*warehouses.BaseExpr)
+	baseExpr := exp.(*meergo.BaseExpr)
 	c := baseExpr.Column
 
 	// Validate the column name.
-	if !warehouses.IsValidIdentifier(c.Name) {
+	if !meergo.IsValidIdentifier(c.Name) {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
 	case
-		warehouses.OpIs,
-		warehouses.OpIsNot,
-		warehouses.OpIsLessThan,
-		warehouses.OpIsLessThanOrEqualTo,
-		warehouses.OpIsGreaterThan,
-		warehouses.OpIsGreaterThanOrEqualTo,
-		warehouses.OpIsBefore,
-		warehouses.OpIsOnOrBefore,
-		warehouses.OpIsAfter,
-		warehouses.OpIsOnOrAfter:
+		meergo.OpIs,
+		meergo.OpIsNot,
+		meergo.OpIsLessThan,
+		meergo.OpIsLessThanOrEqualTo,
+		meergo.OpIsGreaterThan,
+		meergo.OpIsGreaterThanOrEqualTo,
+		meergo.OpIsBefore,
+		meergo.OpIsOnOrBefore,
+		meergo.OpIsAfter,
+		meergo.OpIsOnOrAfter:
 
 		b.WriteString(postgres.QuoteIdent(c.Name))
 
 		switch op {
-		case warehouses.OpIs:
+		case meergo.OpIs:
 			b.WriteString(" = ")
-		case warehouses.OpIsNot:
+		case meergo.OpIsNot:
 			b.WriteString(" <> ")
-		case warehouses.OpIsLessThan, warehouses.OpIsBefore:
+		case meergo.OpIsLessThan, meergo.OpIsBefore:
 			b.WriteString(" < ")
-		case warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsOnOrBefore:
+		case meergo.OpIsLessThanOrEqualTo, meergo.OpIsOnOrBefore:
 			b.WriteString(" <= ")
-		case warehouses.OpIsGreaterThan, warehouses.OpIsAfter:
+		case meergo.OpIsGreaterThan, meergo.OpIsAfter:
 			b.WriteString(" > ")
-		case warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsOnOrAfter:
+		case meergo.OpIsGreaterThanOrEqualTo, meergo.OpIsOnOrAfter:
 			b.WriteString(" >= ")
 		}
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
-	case warehouses.OpIsBetween, warehouses.OpIsNotBetween:
+	case meergo.OpIsBetween, meergo.OpIsNotBetween:
 		b.WriteString(postgres.QuoteIdent(c.Name))
-		if op == warehouses.OpIsNotBetween {
+		if op == meergo.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
 		b.WriteString(" BETWEEN ")
@@ -105,8 +105,8 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(" AND ")
 		serializeValue(b, baseExpr.Values[1], c.Type)
 
-	case warehouses.OpContains, warehouses.OpDoesNotContain:
-		if op == warehouses.OpDoesNotContain {
+	case meergo.OpContains, meergo.OpDoesNotContain:
+		if op == meergo.OpDoesNotContain {
 			b.WriteString("NOT ")
 		}
 		b.WriteString("CONTAINS(")
@@ -115,9 +115,9 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
-	case warehouses.OpIsOneOf, warehouses.OpIsNotOneOf:
+	case meergo.OpIsOneOf, meergo.OpIsNotOneOf:
 		b.WriteString(postgres.QuoteIdent(c.Name))
-		if op == warehouses.OpIsOneOf {
+		if op == meergo.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
 			b.WriteString(" NOT IN (")
@@ -130,8 +130,8 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 		b.WriteString(")")
 
-	case warehouses.OpStartsWith, warehouses.OpEndsWith:
-		if op == warehouses.OpStartsWith {
+	case meergo.OpStartsWith, meergo.OpEndsWith:
+		if op == meergo.OpStartsWith {
 			b.WriteString("STARTSWITH(")
 		} else {
 			b.WriteString("ENDSWITH(")
@@ -141,18 +141,18 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
-	case warehouses.OpIsTrue:
+	case meergo.OpIsTrue:
 		b.WriteString(postgres.QuoteIdent(c.Name))
 
-	case warehouses.OpIsFalse:
+	case meergo.OpIsFalse:
 		b.WriteString("NOT ")
 		b.WriteString(postgres.QuoteIdent(c.Name))
 
-	case warehouses.OpIsNull:
+	case meergo.OpIsNull:
 		b.WriteString(postgres.QuoteIdent(c.Name))
 		b.WriteString(" IS NULL")
 
-	case warehouses.OpIsNotNull:
+	case meergo.OpIsNotNull:
 		b.WriteString(postgres.QuoteIdent(c.Name))
 		b.WriteString(" IS NOT NULL")
 
@@ -169,7 +169,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	switch v := v.(type) {
 	case nil:
 		b.WriteString("NULL")
-	case warehouses.Column:
+	case meergo.Column:
 		b.WriteByte('"')
 		b.WriteString(v.Name)
 		b.WriteByte('"')

@@ -13,13 +13,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 
 	"github.com/jackc/pgx/v5"
 )
 
 // Query executes a query and returns the results as Rows.
-func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
+func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, withCount bool) (meergo.Rows, int, error) {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -55,7 +55,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		}
 		err = pool.QueryRow(ctx, b.String()).Scan(&count)
 		if err != nil {
-			return nil, 0, warehouses.Error(err)
+			return nil, 0, meergo.Error(err)
 		}
 		b.Reset()
 	}
@@ -104,13 +104,13 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 	// Execute the query.
 	rows, err := pool.Query(ctx, b.String())
 	if err != nil {
-		return nil, 0, warehouses.Error(err)
+		return nil, 0, meergo.Error(err)
 	}
 
 	return whRows{rows}, count, nil
 }
 
-// whRows implements the warehouses.Rows interface using pgx.Rows.
+// whRows implements the meergo.Rows interface using pgx.Rows.
 type whRows struct {
 	pgx.Rows
 }
@@ -120,16 +120,16 @@ func (rows whRows) Close() error {
 }
 
 // appendJoins appends the string serialization of the provided joins to b.
-func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
+func appendJoins(b *strings.Builder, joins []meergo.Join) error {
 	for _, join := range joins {
 		switch join.Type {
-		case warehouses.Inner:
+		case meergo.Inner:
 			b.WriteString(` JOIN "`)
-		case warehouses.Left:
+		case meergo.Left:
 			b.WriteString(` LEFT JOIN "`)
-		case warehouses.Right:
+		case meergo.Right:
 			b.WriteString(` RIGHT JOIN "`)
-		case warehouses.Full:
+		case meergo.Full:
 			b.WriteString(` FULL JOIN "`)
 		}
 		b.WriteString(join.Table)

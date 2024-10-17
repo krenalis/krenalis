@@ -11,7 +11,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -44,28 +44,28 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, "LOCK TABLE _operations")
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		var runningOp *warehouseOperation
 		err = tx.QueryRow(ctx, "SELECT operation FROM _operations "+
 			"WHERE start_time IS NOT NULL AND end_time IS NULL ORDER BY id DESC LIMIT 1 ").Scan(&runningOp)
 		if err != nil && err != pgx.ErrNoRows {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		if runningOp != nil {
 			switch *runningOp {
 			case alterSchema:
-				return warehouses.ErrAlterSchemaInProgress
+				return meergo.ErrAlterSchemaInProgress
 			case identityResolution:
-				return warehouses.ErrIdentityResolutionInProgress
+				return meergo.ErrIdentityResolutionInProgress
 			default:
-				return warehouses.Errorf("unexpected operation %q", *runningOp)
+				return meergo.Errorf("unexpected operation %q", *runningOp)
 			}
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
 			`VALUES ($1, (clock_timestamp() at time zone 'utc')::timestamp, NULL) RETURNING id`, operation).Scan(&opID)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		return nil
 	})
@@ -87,7 +87,7 @@ func (warehouse *PostgreSQL) endOperation(ctx context.Context, opID int, endTime
 	}
 	_, err = pool.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE id = $2 AND end_time IS NULL`, endTime, opID)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
@@ -122,7 +122,7 @@ func (warehouse *PostgreSQL) fixOperationsTable(ctx context.Context) error {
 	// 		)`
 	// _, err = db.Query(ctx, query)
 	// if err != nil {
-	// 	return warehouses.Error(err)
+	// 	return meergo.Error(err)
 	// }
 	return nil
 }

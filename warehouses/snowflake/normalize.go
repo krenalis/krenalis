@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
@@ -31,29 +31,29 @@ func (warehouse *Snowflake) Normalize(name string, typ types.Type, v any, nullab
 		}
 	case types.FloatKind:
 		if v, ok := v.(float64); ok {
-			return warehouses.ValidateFloat(name, typ, v)
+			return meergo.ValidateFloat(name, typ, v)
 		}
 	case types.DecimalKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateDecimalString(name, typ, v)
+			return meergo.ValidateDecimalString(name, typ, v)
 		}
 	case types.DateTimeKind:
 		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateDateTime(name, v)
+			return meergo.ValidateDateTime(name, v)
 		}
 	case types.DateKind:
 		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateDate(name, v)
+			return meergo.ValidateDate(name, v)
 		}
 	case types.TimeKind:
 		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateTime(v)
+			return meergo.ValidateTime(v)
 		}
 	case types.JSONKind:
-		return warehouses.ValidateJSON(name, v)
+		return meergo.ValidateJSON(name, v)
 	case types.TextKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateText(name, typ, v)
+			return meergo.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
 		// The driver returns the value as a JSON array.

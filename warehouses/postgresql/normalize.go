@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -44,58 +44,58 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 	case types.IntKind:
 		switch v := v.(type) {
 		case int:
-			return warehouses.ValidateInt(name, typ, v)
+			return meergo.ValidateInt(name, typ, v)
 		case int64:
-			return warehouses.ValidateInt(name, typ, int(v))
+			return meergo.ValidateInt(name, typ, int(v))
 		}
 	case types.UintKind:
 		switch v := v.(type) {
 		case int:
 			if v >= 0 {
-				return warehouses.ValidateUint(name, typ, uint(v))
+				return meergo.ValidateUint(name, typ, uint(v))
 			}
 		case int64:
 			if v >= 0 {
-				return warehouses.ValidateUint(name, typ, uint(v))
+				return meergo.ValidateUint(name, typ, uint(v))
 			}
 		case string:
 			if v, err := strconv.ParseUint(v, 10, 64); err == nil {
-				return warehouses.ValidateUint(name, typ, uint(v))
+				return meergo.ValidateUint(name, typ, uint(v))
 			}
 		}
 	case types.FloatKind:
 		if v, ok := v.(float64); ok {
-			return warehouses.ValidateFloat(name, typ, v)
+			return meergo.ValidateFloat(name, typ, v)
 		}
 	case types.DecimalKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateDecimalString(name, typ, v)
+			return meergo.ValidateDecimalString(name, typ, v)
 		}
 	case types.DateTimeKind:
 		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateDateTime(name, v)
+			return meergo.ValidateDateTime(name, v)
 		}
 	case types.DateKind:
 		if v, ok := v.(time.Time); ok {
-			return warehouses.ValidateDate(name, v)
+			return meergo.ValidateDate(name, v)
 		}
 	case types.TimeKind:
 		switch v := v.(type) {
 		case time.Time:
-			return warehouses.ValidateTime(v)
+			return meergo.ValidateTime(v)
 		case string:
-			return warehouses.ValidateTimeString(name, "15:04:05.999999", v)
+			return meergo.ValidateTimeString(name, "15:04:05.999999", v)
 		}
 	case types.YearKind:
 		switch v := v.(type) {
 		case int:
-			return warehouses.ValidateYear(name, v)
+			return meergo.ValidateYear(name, v)
 		case int64:
-			return warehouses.ValidateYear(name, int(v))
+			return meergo.ValidateYear(name, int(v))
 		}
 	case types.UUIDKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateUUID(name, v)
+			return meergo.ValidateUUID(name, v)
 		}
 	case types.JSONKind:
 		var data []byte
@@ -128,7 +128,7 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 		}
 	case types.TextKind:
 		if v, ok := v.(string); ok {
-			return warehouses.ValidateText(name, typ, v)
+			return meergo.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
 		pool, err := warehouse.connectionPool(context.Background())

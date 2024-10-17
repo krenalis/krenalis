@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
@@ -45,20 +45,20 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
 // ErrAlterSchemaInProgress is a error indicating that the an alter schema
 // operation is currently in progress on the data warehouse.
-var ErrAlterSchemaInProgress = warehouses.ErrAlterSchemaInProgress
+var ErrAlterSchemaInProgress = meergo.ErrAlterSchemaInProgress
 
 // ErrIdentityResolutionInProgress is a error indicating that the Identity
 // Resolution is currently in progress on the data warehouse.
-var ErrIdentityResolutionInProgress = warehouses.ErrIdentityResolutionInProgress
+var ErrIdentityResolutionInProgress = meergo.ErrIdentityResolutionInProgress
 
 // IdentityWriterAckFunc is the function called when a batch of user identities
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
 
 // destinationsUsersTable represents the _destinations_users table.
-var destinationsUsersTable = warehouses.Table{
+var destinationsUsersTable = meergo.WarehouseTable{
 	Name: "_destinations_users",
-	Columns: []warehouses.Column{
+	Columns: []meergo.Column{
 		{Name: "__action__", Type: types.Int(32)},
 		{Name: "__user__", Type: types.Text()},
 		{Name: "__property__", Type: types.Text()},
@@ -69,11 +69,11 @@ var destinationsUsersTable = warehouses.Table{
 type Store struct {
 	ds               *Datastore
 	workspace        int
-	warehouse        warehouses.Warehouse
+	warehouse        meergo.Warehouse
 	columnByProperty struct {
 		mu       sync.Mutex
-		user     map[string]warehouses.Column // including meta properties.
-		identity map[string]warehouses.Column // including meta properties.
+		user     map[string]meergo.Column // including meta properties.
+		identity map[string]meergo.Column // including meta properties.
 	}
 	closed               atomic.Bool
 	mu                   sync.Mutex // for 'events' and 'eventIdentityWriters' fields
@@ -97,8 +97,8 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
 	store.columnByProperty.user = userColumnByProperty(ws.UserSchema)
-	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
-	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	if ws.Warehouse.Mode == state.Normal {
 		go func() {
@@ -133,7 +133,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If an error occurs with the data warehouse, it returns a
 // *DataWarehouseError error.
-func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) error {
+func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, operations []meergo.AlterSchemaOperation) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
 	if err != nil {
@@ -153,7 +153,7 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []meergo.AlterSchemaOperation) ([]string, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {
@@ -217,7 +217,7 @@ func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack Id
 		index:      map[identityKey]int{},
 		ack:        ack,
 		purge:      purge,
-		columns:    map[string]warehouses.Column{},
+		columns:    map[string]meergo.Column{},
 	}
 	return &iw, nil
 }
@@ -241,8 +241,8 @@ func (store *Store) CanChangeWarehouseSettings(ctx context.Context, toSettings [
 		return nil
 	}
 	// Count the users on the current warehouse.
-	query := warehouses.RowQuery{
-		Columns: []warehouses.Column{{Name: "__id__", Type: types.UUID()}},
+	query := meergo.RowQuery{
+		Columns: []meergo.Column{{Name: "__id__", Type: types.UUID()}},
 		Table:   "users",
 	}
 	_, count1, err := store.warehouse.Query(ctx, query, true)
@@ -280,8 +280,8 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 		return err
 	}
 	defer done()
-	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, action)
+	where := meergo.NewBaseExpr(
+		meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, action)
 	return store.warehouse.Delete(ctx, "_user_identities", where)
 }
 
@@ -305,7 +305,7 @@ func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc)
 		action:  actionID,
 		index:   map[identityKey]int{},
 		ack:     ack,
-		columns: map[string]warehouses.Column{},
+		columns: map[string]meergo.Column{},
 		actions: map[int]struct{}{},
 	}
 
@@ -404,7 +404,7 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 	for i, action := range actions {
 		values[i] = action
 	}
-	where := warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsOneOf, values...)
+	where := meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIsOneOf, values...)
 	err = store.warehouse.Delete(ctx, "_user_identities", where)
 	if err != nil {
 		return err
@@ -459,13 +459,13 @@ func (store *Store) ResolveIdentities(ctx context.Context) error {
 	}
 
 	// Determine the identifiers columns.
-	identifiers := make([]warehouses.Column, len(ws.Identifiers))
+	identifiers := make([]meergo.Column, len(ws.Identifiers))
 	for i, ident := range ws.Identifiers {
 		identifier, err := types.PropertyByPath(ws.UserSchema, ident)
 		if err != nil {
 			return errors.New("unexpected error: identifier does not exist in user schema")
 		}
-		identifiers[i] = warehouses.Column{
+		identifiers[i] = meergo.Column{
 			Name:     strings.ReplaceAll(ident, ".", "_"),
 			Type:     identifier.Type,
 			Nullable: identifier.Nullable,
@@ -637,7 +637,7 @@ func (store *Store) flushEvents(events [][]any) {
 
 // identityColumnByProperty returns the map from properties to columns for the
 // identity schema.
-func (store *Store) identityColumnByProperty() map[string]warehouses.Column {
+func (store *Store) identityColumnByProperty() map[string]meergo.Column {
 	store.columnByProperty.mu.Lock()
 	columns := store.columnByProperty.identity
 	store.columnByProperty.mu.Unlock()
@@ -717,8 +717,8 @@ func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 	// Update the user and the identity columns.
 	store.columnByProperty.mu.Lock()
 	store.columnByProperty.user = userColumnByProperty(n.UserSchema)
-	store.columnByProperty.user["__id__"] = warehouses.Column{Name: "__id__", Type: types.UUID()}
-	store.columnByProperty.user["__last_change_time__"] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
+	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
 	store.columnByProperty.mu.Unlock()
 
@@ -742,11 +742,11 @@ func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]warehouses.Column, omitNil bool) ([]map[string]any, int, error) {
+func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]meergo.Column, omitNil bool) ([]map[string]any, int, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
-	var where warehouses.Expr
+	var where meergo.Expr
 	if query.Where != nil {
 		var err error
 		where, err = exprFromWhere(query.Where, columnByProperty)
@@ -755,7 +755,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		}
 	}
 
-	var orderBy warehouses.Column
+	var orderBy meergo.Column
 	var orderDesc bool
 	if query.OrderBy != "" {
 		var ok bool
@@ -766,7 +766,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		orderDesc = query.OrderDesc
 	}
 
-	rows, count, err := store.warehouse.Query(ctx, warehouses.RowQuery{
+	rows, count, err := store.warehouse.Query(ctx, meergo.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Where:     where,
@@ -804,7 +804,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 
 // userColumnByProperty returns the map from properties to columns for the user
 // schema.
-func (store *Store) userColumnByProperty() map[string]warehouses.Column {
+func (store *Store) userColumnByProperty() map[string]meergo.Column {
 	store.columnByProperty.mu.Lock()
 	columns := store.columnByProperty.user
 	store.columnByProperty.mu.Unlock()

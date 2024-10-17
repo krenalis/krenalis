@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package warehouses
+package meergo
 
 // Expr represents a subset of SQL expressions.
 type Expr interface {

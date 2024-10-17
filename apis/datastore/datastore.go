@@ -14,17 +14,17 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
-	"github.com/meergo/meergo/apis/datastore/warehouses/postgresql"
-	"github.com/meergo/meergo/apis/datastore/warehouses/snowflake"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
+	"github.com/meergo/meergo/warehouses/postgresql"
+	"github.com/meergo/meergo/warehouses/snowflake"
 )
 
 type (
-	DataWarehouseError                 = warehouses.DataWarehouseError
-	DataWarehouseNotInitializableError = warehouses.NotInitializableError
-	SettingsError                      = warehouses.SettingsError
+	DataWarehouseError                 = meergo.DataWarehouseError
+	DataWarehouseNotInitializableError = meergo.NotInitializableError
+	SettingsError                      = meergo.SettingsError
 )
 
 // InvalidSettings is the error returned when the data warehouse settings are
@@ -313,7 +313,7 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 // openWarehouse opens a data warehouse with the given type and settings.
 // It returns a SettingsError error if the settings are not syntactically
 // valid.
-func openWarehouse(typ state.WarehouseType, settings []byte) (warehouses.Warehouse, error) {
+func openWarehouse(typ state.WarehouseType, settings []byte) (meergo.Warehouse, error) {
 	switch typ {
 	case state.PostgreSQL:
 		return postgresql.Open(settings)

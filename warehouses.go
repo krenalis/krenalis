@@ -5,7 +5,7 @@
 // Copyright (c) 2022 Open2b
 //
 
-package warehouses
+package meergo
 
 import (
 	"context"
@@ -148,7 +148,7 @@ type Warehouse interface {
 	// exist.
 	// rows or deleted can be empty but not both.
 	// Note that rows may be changed by this method.
-	Merge(ctx context.Context, table Table, rows [][]any, deleted []any) error
+	Merge(ctx context.Context, table WarehouseTable, rows [][]any, deleted []any) error
 
 	// MergeIdentities merges existing identities, deletes them, and inserts new
 	// ones. columns are the columns whose values are present in the rows and
@@ -285,17 +285,8 @@ type Join struct {
 // exposed by data warehouse drivers to normalize values returned by them.
 type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
 
-// Rows is the result of a database query. Its cursor starts before the first
-// row of the result set. Use Next to advance from row to row.
-type Rows interface {
-	Close() error
-	Err() error
-	Next() bool
-	Scan(dest ...any) error
-}
-
-// Table represents a table.
-type Table struct {
+// WarehouseTable represents a data warehouse table.
+type WarehouseTable struct {
 	Name    string
 	Columns []Column
 	Keys    []string

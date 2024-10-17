@@ -23,7 +23,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -31,7 +31,7 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
-var _ warehouses.Warehouse = &Snowflake{}
+var _ meergo.Warehouse = &Snowflake{}
 
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
@@ -55,46 +55,46 @@ func Open(settings []byte) (*Snowflake, error) {
 	var s sfSettings
 	err := stdjson.Unmarshal(settings, &s)
 	if err != nil {
-		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
+		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("account length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("account length must be in range [1,255]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("username length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("password length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("password length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("database length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("schema length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("schema length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("warehouse length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("warehouse length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, warehouses.SettingsErrorf("role length must be in range [1,255]")
+		return nil, meergo.SettingsErrorf("role length must be in range [1,255]")
 	}
 	return &Snowflake{settings: &s}, nil
 }
 
 // AlterSchema alters the user schema.
-func (warehouse *Snowflake) AlterSchema(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) error {
+func (warehouse *Snowflake) AlterSchema(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) error {
 	panic("TODO: not implemented")
 }
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
-func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, userColumns []warehouses.Column, operations []warehouses.AlterSchemaOperation) ([]string, error) {
+func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) ([]string, error) {
 	panic("TODO: not implemented")
 }
 
@@ -111,14 +111,14 @@ func (warehouse *Snowflake) Close() error {
 	err := warehouse.db.Close()
 	warehouse.db = nil
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
 
 // Delete deletes rows from the specified table that match the provided where
 // expression.
-func (warehouse *Snowflake) Delete(ctx context.Context, table string, where warehouses.Expr) error {
+func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meergo.Expr) error {
 	if where == nil {
 		return errors.New("where is nil")
 	}
@@ -134,7 +134,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where ware
 	}
 	_, err = db.ExecContext(ctx, s.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func (warehouse *Snowflake) Initialize(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
+func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTable, rows [][]any, deleted []any) error {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -177,7 +177,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 		for i := 0; i < len(deleted); i += n {
 			rows = append(rows, deleted[i:i+n])
 		}
-		keys := make([]warehouses.Column, len(table.Keys))
+		keys := make([]meergo.Column, len(table.Keys))
 		for i, key := range table.Keys {
 			for _, c := range table.Columns {
 				if c.Name == key {
@@ -254,13 +254,13 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	defer conn.Close()
 
 	_, err = conn.ExecContext(ctx, q.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	defer func() {
 		_, _ = conn.ExecContext(ctx, `DROP TABLE "`+tempTableName+`"`)
@@ -271,7 +271,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 		// Put the rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, rowsCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		// Copy the rows from the stage into the temporary table.
 		q.Reset()
@@ -285,7 +285,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, q.String())
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 	}
 
@@ -294,7 +294,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 		// Put the deleted rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, deletedCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		// Copy the deleted rows from the stage into the temporary table.
 		q.Reset()
@@ -309,7 +309,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, q.String())
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 	}
 
@@ -372,19 +372,19 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table warehouses.Table, r
 	}
 	_, err = conn.ExecContext(ctx, q.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	return nil
 }
 
 // MergeIdentities merge existing identities, deletes them and inserts new ones.
-func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
+func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
 	panic("TODO: not implemented")
 }
 
 // Query executes a query and returns the results as Rows.
-func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withCount bool) (warehouses.Rows, int, error) {
+func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, withCount bool) (meergo.Rows, int, error) {
 
 	db, err := warehouse.connection()
 	if err != nil {
@@ -420,7 +420,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 		}
 		err = db.QueryRowContext(ctx, b.String()).Scan(&count)
 		if err != nil {
-			return nil, 0, warehouses.Error(err)
+			return nil, 0, meergo.Error(err)
 		}
 		b.Reset()
 	}
@@ -469,14 +469,14 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 	// Execute the query.
 	rows, err := db.QueryContext(ctx, b.String())
 	if err != nil {
-		return nil, 0, warehouses.Error(err)
+		return nil, 0, meergo.Error(err)
 	}
 
 	return rows, count, nil
 }
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
 	panic("not implemented")
 }
 
@@ -499,7 +499,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	}
 	_, err = db.ExecContext(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
@@ -533,7 +533,7 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
 // returns it as an io.Reader. It also appends a boolean column called $purge
 // with the value of the 'deleted' argument as value for each row.
-func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool) (io.Reader, error) {
+func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io.Reader, error) {
 	var b bytes.Buffer
 	var bj bytes.Buffer
 	for i, c := range columns {
@@ -611,16 +611,16 @@ func serializeRowsToCSV(columns []warehouses.Column, rows [][]any, deleted bool)
 }
 
 // appendJoins appends the string serialization of the provided joins to b.
-func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
+func appendJoins(b *strings.Builder, joins []meergo.Join) error {
 	for _, join := range joins {
 		switch join.Type {
-		case warehouses.Inner:
+		case meergo.Inner:
 			b.WriteString(` JOIN "`)
-		case warehouses.Left:
+		case meergo.Left:
 			b.WriteString(` LEFT JOIN "`)
-		case warehouses.Right:
+		case meergo.Right:
 			b.WriteString(` RIGHT JOIN "`)
-		case warehouses.Full:
+		case meergo.Full:
 			b.WriteString(` FULL JOIN "`)
 		}
 		b.WriteString(join.Table)

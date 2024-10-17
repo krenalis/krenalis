@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/types"
 
@@ -27,7 +27,7 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers, userColumns []warehouses.Column, userPrimarySources map[string]int) error {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -69,11 +69,11 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
 		if err != nil {
-			return warehouses.Error(fmt.Errorf("cannot create users table (with name %s): %s", postgres.QuoteIdent(newUsersName), err))
+			return meergo.Error(fmt.Errorf("cannot create users table (with name %s): %s", postgres.QuoteIdent(newUsersName), err))
 		}
 		_, err = tx.Exec(ctx, `UPDATE _operations SET users_version = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, newUsersVersion)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		return nil
 	})
@@ -111,7 +111,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		);`
 	_, err = pool.Exec(ctx, aggregateFunction)
 	if err != nil {
-		return warehouses.Error(fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err))
+		return meergo.Error(fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err))
 	}
 
 	// Generate the SQL queries that merge the identities to obtain the users.
@@ -226,14 +226,14 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
 	_, err = pool.Exec(ctx, query)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
 	_, err = pool.Exec(ctx, "CALL resolve_identities()")
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	// End the IdentityResolution operation.
@@ -247,14 +247,14 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// has changed its name.
 	_, err = pool.Exec(ctx, createViewQuery(newUsersName, userColumns, true))
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
 	_, err = pool.Exec(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	return nil
@@ -275,7 +275,7 @@ func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startT
 		"operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
 	err = pool.QueryRow(ctx, query).Scan(&startTime, &endTime)
 	if err != nil && err != pgx.ErrNoRows {
-		return nil, nil, warehouses.Error(err)
+		return nil, nil, meergo.Error(err)
 	}
 	return startTime, endTime, nil
 }

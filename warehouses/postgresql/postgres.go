@@ -23,7 +23,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -46,7 +46,7 @@ var (
 	createUsersView string
 )
 
-var _ warehouses.Warehouse = &PostgreSQL{}
+var _ meergo.Warehouse = &PostgreSQL{}
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
@@ -69,37 +69,37 @@ func Open(settings []byte) (*PostgreSQL, error) {
 	var s psSettings
 	err := stdjson.Unmarshal(settings, &s)
 	if err != nil {
-		return nil, warehouses.SettingsErrorf("cannot unmarshal settings: %s", err)
+		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, warehouses.SettingsErrorf("host length in bytes must be in range [1,253]")
+		return nil, meergo.SettingsErrorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, warehouses.SettingsErrorf("port must be in range [1,65536]")
+		return nil, meergo.SettingsErrorf("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, warehouses.SettingsErrorf("username length in bytes must be in range [1,63]")
+		return nil, meergo.SettingsErrorf("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, warehouses.SettingsErrorf("password length must be in range [1,100]")
+		return nil, meergo.SettingsErrorf("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, warehouses.SettingsErrorf("database length in bytes must be in range [1,63]")
+		return nil, meergo.SettingsErrorf("database length in bytes must be in range [1,63]")
 	}
 	// Validate Schema.
 	if n := len(s.Schema); n < 1 || n > 63 {
-		return nil, warehouses.SettingsErrorf("schema length in bytes must be in range [1,63]")
+		return nil, meergo.SettingsErrorf("schema length in bytes must be in range [1,63]")
 	}
-	if !warehouses.IsValidSchemaName(s.Schema) {
-		return nil, warehouses.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+	if !meergo.IsValidSchemaName(s.Schema) {
+		return nil, meergo.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
 	}
 	if strings.HasPrefix(s.Schema, "pg_") {
-		return nil, warehouses.SettingsErrorf("schema cannot start with 'pg_'")
+		return nil, meergo.SettingsErrorf("schema cannot start with 'pg_'")
 	}
 	return &PostgreSQL{settings: &s}, nil
 }
@@ -132,7 +132,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		c.relname`
 	rows, err := pool.Query(ctx, query, warehouse.settings.Schema)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	defer rows.Close()
 	var objects []string
@@ -140,16 +140,16 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		var name, typ string
 		err := rows.Scan(&name, &typ)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
 	}
 	if err := rows.Err(); err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	if objects != nil {
 		reason := fmt.Sprintf("database contains these objects: %s", strings.Join(objects, ", "))
-		return warehouses.NewNotInitializableError(reason)
+		return meergo.NewNotInitializableError(reason)
 	}
 	return nil
 }
@@ -166,7 +166,7 @@ func (warehouse *PostgreSQL) Close() error {
 
 // Delete deletes rows from the specified table that match the provided where
 // expression.
-func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {
+func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where meergo.Expr) error {
 	if where == nil {
 		return errors.New("where is nil")
 	}
@@ -182,7 +182,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 	}
 	_, err = pool.Exec(ctx, s.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
@@ -194,7 +194,7 @@ func (warehouse *PostgreSQL) Initialize(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.WarehouseTable, rows [][]any, deleted []any) error {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -218,7 +218,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 	b.WriteString("\"\nWITH NO DATA")
 	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	defer func() {
 		_, err := pool.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
@@ -244,7 +244,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 		}
 		_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, pgx.CopyFromRows(rows))
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 	}
 
@@ -256,7 +256,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 		rowSrc := newCopyForDeleteFrom(len(table.Keys), deleted)
 		_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, rowSrc)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 	}
 
@@ -322,7 +322,7 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, 
 	}
 	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	return nil
@@ -339,7 +339,7 @@ var immutableMergeIdentitiesColumns = []string{
 
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
-func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
+func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -361,7 +361,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	b.WriteString("FALSE AS \"$purge\" FROM \"_user_identities\"\nWITH NO DATA")
 	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	defer func() {
 		_, err := pool.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
@@ -378,7 +378,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	columnNames[len(columns)] = `$purge`
 	_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	// Merge the temporary table's rows with the destination table's rows.
@@ -429,7 +429,7 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS TRUE THEN\n  DELETE")
 	_, err = pool.Exec(ctx, b.String())
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 
 	return nil
@@ -454,7 +454,7 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	}
 	_, err = pool.Exec(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
@@ -478,11 +478,11 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool,
 	}
 	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, meergo.Error(err)
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		return nil, warehouses.Error(err)
+		return nil, meergo.Error(err)
 	}
 	warehouse.pool = pool
 	return pool, nil
@@ -497,16 +497,16 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	}
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	defer tx.Rollback(ctx)
 	err = f(tx)
 	if err != nil {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	err = tx.Commit(ctx)
 	if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-		return warehouses.Error(err)
+		return meergo.Error(err)
 	}
 	return nil
 }
@@ -536,7 +536,7 @@ func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error 
 	for _, query := range queries {
 		_, err := pool.Exec(ctx, query)
 		if err != nil {
-			return warehouses.Error(err)
+			return meergo.Error(err)
 		}
 	}
 	return nil
@@ -551,7 +551,7 @@ func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 	var v int
 	err = pool.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
 	if err != nil {
-		return 0, warehouses.Error(err)
+		return 0, meergo.Error(err)
 	}
 	return v, nil
 }
@@ -593,7 +593,7 @@ func (c *copyForDeleteFrom) Values() ([]any, error) {
 
 // copyForIdentities implements the pgx.CopyFromSource interface.
 type copyForIdentities struct {
-	columns []warehouses.Column
+	columns []meergo.Column
 	encoder *rowEncoder
 	rows    []map[string]any
 	values  []any
@@ -601,7 +601,7 @@ type copyForIdentities struct {
 
 // newCopyForIdentities returns a pgx.CopyFromSource implementation used to copy
 // identities to add and delete to a temporary identity table.
-func newCopyForIdentities(columns []warehouses.Column, rows []map[string]any) pgx.CopyFromSource {
+func newCopyForIdentities(columns []meergo.Column, rows []map[string]any) pgx.CopyFromSource {
 	c := &copyForIdentities{
 		columns: columns,
 		rows:    rows,
@@ -650,7 +650,7 @@ type rowEncoder struct {
 // newRowEncoder returns a new row encoder that encodes rows with the provided
 // columns. If there are no columns to encode, it returns nil and false;
 // otherwise, it returns the new encoder and true.
-func newRowEncoder(columns []warehouses.Column) (*rowEncoder, bool) {
+func newRowEncoder(columns []meergo.Column) (*rowEncoder, bool) {
 	var ct map[int]types.Type
 	for i, c := range columns {
 		switch c.Type.Kind() {

@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/schemas"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
@@ -46,7 +46,7 @@ type BatchIdentityWriter struct {
 	execution  int
 	ack        IdentityWriterAckFunc
 	flatter    *flatter
-	columns    map[string]warehouses.Column
+	columns    map[string]meergo.Column
 	rows       []map[string]any
 	index      map[identityKey]int
 	ackIDs     []string
@@ -94,9 +94,9 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 		iw.ack(iw.ackIDs, nil)
 	}
 	if iw.purge {
-		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, iw.action),
-			warehouses.NewBaseExpr(warehouses.Column{Name: "__execution__", Type: types.Int(32)}, warehouses.OpIsNot, iw.execution),
+		where := meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
+			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
+			meergo.NewBaseExpr(meergo.Column{Name: "__execution__", Type: types.Int(32)}, meergo.OpIsNot, iw.execution),
 		})
 		err := iw.store.warehouse.Delete(ctx, "_user_identities", where)
 		if err != nil {
@@ -176,7 +176,7 @@ type EventIdentityWriter struct {
 	action     int
 	connection int
 	ack        IdentityWriterAckFunc
-	columns    map[string]warehouses.Column
+	columns    map[string]meergo.Column
 	rows       []map[string]any
 	index      map[identityKey]int
 	ackIDs     []string
@@ -431,13 +431,13 @@ func (iw *EventIdentityWriter) onSetWorkspaceUserSchema(_ state.SetWorkspaceUser
 // into a map[string]any representing user table columns.
 type flatter struct {
 	name       string
-	column     warehouses.Column
+	column     meergo.Column
 	properties []*flatter
 }
 
 // newFlattener returns a new flattener that flattens properties according to
 // the given schema and mapping from properties to the respective columns.
-func newFlatter(schema types.Type, columnByProperty map[string]warehouses.Column) *flatter {
+func newFlatter(schema types.Type, columnByProperty map[string]meergo.Column) *flatter {
 	flatters := map[string]*flatter{
 		"": {properties: []*flatter{}},
 	}
@@ -462,11 +462,11 @@ func newFlatter(schema types.Type, columnByProperty map[string]warehouses.Column
 
 // flat flats proprieties and updates the columns argument with the columns in
 // properties.
-func (f *flatter) flat(properties map[string]any, columns map[string]warehouses.Column) {
+func (f *flatter) flat(properties map[string]any, columns map[string]meergo.Column) {
 	f.flatRec(true, properties, properties, columns)
 }
 
-func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns map[string]warehouses.Column) {
+func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns map[string]meergo.Column) {
 	for _, ff := range f.properties {
 		v, ok := properties[ff.name]
 		if !ok {
@@ -488,21 +488,21 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns 
 
 // identitiesMergeColumns returns the columns to be used during the identities
 // merge operation, both when importing in batch and from events.
-func identitiesMergeColumns(iwColumns map[string]warehouses.Column) []warehouses.Column {
-	columns := make([]warehouses.Column, 7+len(iwColumns))
-	columns[0] = warehouses.Column{Name: "__action__", Type: types.Int(32)}
-	columns[1] = warehouses.Column{Name: "__is_anonymous__", Type: types.Boolean()}
-	columns[2] = warehouses.Column{Name: "__identity_id__", Type: types.Text()}
-	columns[3] = warehouses.Column{Name: "__connection__", Type: types.Int(32)}
-	columns[4] = warehouses.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
-	columns[5] = warehouses.Column{Name: "__last_change_time__", Type: types.DateTime()}
-	columns[6] = warehouses.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+func identitiesMergeColumns(iwColumns map[string]meergo.Column) []meergo.Column {
+	columns := make([]meergo.Column, 7+len(iwColumns))
+	columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
+	columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
+	columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
+	columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
+	columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
 	i := 7
 	for name := range iwColumns {
 		columns[i] = iwColumns[name]
 		i++
 	}
-	slices.SortFunc(columns[7:], func(a, b warehouses.Column) int {
+	slices.SortFunc(columns[7:], func(a, b meergo.Column) int {
 		return cmp.Compare(a.Name, b.Name)
 	})
 	return columns

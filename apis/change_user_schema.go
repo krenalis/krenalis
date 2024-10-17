@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/datastore"
 	"github.com/meergo/meergo/apis/datastore/diffschemas"
-	"github.com/meergo/meergo/apis/datastore/warehouses"
 	"github.com/meergo/meergo/apis/errors"
 	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/apis/state"
@@ -106,13 +106,13 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 Identifiers:
 	for _, identifier := range this.workspace.Identifiers {
 		for _, operation := range operations {
-			if operation.Operation == warehouses.OperationAddColumn {
+			if operation.Operation == meergo.OperationAddColumn {
 				continue
 			}
 			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
 				continue
 			}
-			if operation.Operation == warehouses.OperationRenameColumn {
+			if operation.Operation == meergo.OperationRenameColumn {
 				identifiers = append(identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
 			}
 			continue Identifiers

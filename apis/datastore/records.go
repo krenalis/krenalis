@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"iter"
 
-	"github.com/meergo/meergo/apis/datastore/warehouses"
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
 )
@@ -30,10 +30,10 @@ type Record struct {
 
 // Records represents records read from the data warehouse.
 type Records struct {
-	columns   []warehouses.Column
-	normalize warehouses.NormalizeFunc
+	columns   []meergo.Column
+	normalize meergo.NormalizeFunc
 	unflat    unflatRowFunc
-	rows      warehouses.Rows
+	rows      meergo.Rows
 	matching  *Matching
 	last      bool
 	err       error
@@ -66,11 +66,11 @@ func (err *SchemaError) Error() string {
 // with a nil value should be omitted from each record.
 //
 // It returns, in Record.MatchingID, the matching ID if matching is not nil.
-func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
+func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
-	var where warehouses.Expr
+	var where meergo.Expr
 	if query.Where != nil {
 		var err error
 		where, err = exprFromWhere(query.Where, columnByProperty)
@@ -79,43 +79,43 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		}
 	}
 
-	var joins []warehouses.Join
+	var joins []meergo.Join
 
 	if matching != nil {
 		c, ok := columnByProperty[matching.Property]
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.Property)
 		}
-		columns = append(columns, warehouses.Column{Name: "__user__", Type: types.Text(), Nullable: true})
-		joins = []warehouses.Join{
+		columns = append(columns, meergo.Column{Name: "__user__", Type: types.Text(), Nullable: true})
+		joins = []meergo.Join{
 			{
-				Type:  warehouses.Inner,
+				Type:  meergo.Inner,
 				Table: "_destinations_users",
-				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIs, matching.Action),
-					warehouses.NewBaseExpr(c, warehouses.OpIs, warehouses.Column{Name: "__property__", Type: types.Text()}),
+				Condition: meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
+					meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, matching.Action),
+					meergo.NewBaseExpr(c, meergo.OpIs, meergo.Column{Name: "__property__", Type: types.Text()}),
 				}),
 			},
 		}
 		if matching.ExportMode == state.CreateOnly || matching.ExportMode == state.CreateOrUpdate {
 			// Use a Left JOIN instead.
-			joins[0].Type = warehouses.Left
+			joins[0].Type = meergo.Left
 			// Add 'property IS NOT NULL' to the WHERE condition to exclude users with a NULL value for the matching property.
-			expr := warehouses.NewBaseExpr(c, warehouses.OpIsNotNull)
+			expr := meergo.NewBaseExpr(c, meergo.OpIsNotNull)
 			if where == nil {
 				where = expr
-			} else if w, ok := where.(*warehouses.MultiExpr); ok && w.Operator == warehouses.OpAnd {
+			} else if w, ok := where.(*meergo.MultiExpr); ok && w.Operator == meergo.OpAnd {
 				w.Operands = append(w.Operands, expr)
 			} else {
-				where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, where})
+				where = meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{expr, where})
 			}
 			if matching.ExportMode == state.CreateOnly {
 				// Add '__action__ IS NULL' to the WHERE condition to include only users without a corresponding match.
-				expr = warehouses.NewBaseExpr(warehouses.Column{Name: "__action__", Type: types.Int(32)}, warehouses.OpIsNull)
-				if w, ok := where.(*warehouses.MultiExpr); ok && w.Operator == warehouses.OpAnd {
+				expr = meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIsNull)
+				if w, ok := where.(*meergo.MultiExpr); ok && w.Operator == meergo.OpAnd {
 					w.Operands = append(w.Operands, expr)
 				} else {
-					where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, where})
+					where = meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{expr, where})
 				}
 			}
 		}
@@ -123,7 +123,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		query.OrderDesc = false
 	}
 
-	var orderBy warehouses.Column
+	var orderBy meergo.Column
 	var orderDesc bool
 	if query.OrderBy != "" {
 		var ok bool
@@ -136,7 +136,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 
 	columns = append(columns, columnByProperty[idProperty])
 
-	rows, _, err := store.warehouse.Query(ctx, warehouses.RowQuery{
+	rows, _, err := store.warehouse.Query(ctx, meergo.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Joins:     joins,
@@ -260,14 +260,14 @@ func (r *Records) Last() bool {
 
 // scanValue implements the sql.Scanner interface to read the database values.
 type scanValue struct {
-	columns   []warehouses.Column
+	columns   []meergo.Column
 	row       []any
-	normalize warehouses.NormalizeFunc
+	normalize meergo.NormalizeFunc
 	index     int
 }
 
 // newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []warehouses.Column, row []any, normalize warehouses.NormalizeFunc) []any {
+func newScanValues(columns []meergo.Column, row []any, normalize meergo.NormalizeFunc) []any {
 	values := make([]any, len(columns))
 	value := &scanValue{
 		columns:   columns,
