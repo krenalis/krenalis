@@ -176,13 +176,13 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
+		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_name, warehouse_mode,"+
 			" warehouse_settings, user_schema, resolve_identities_on_batch_import,"+
 			" identifiers, privacy_region, displayed_image, displayed_first_name,displayed_last_name,"+
 			" displayed_information, actions_to_purge FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
-				var warehouseType WarehouseType
+				var warehouseName string
 				var warehouseMode WarehouseMode
 				var displayedImage string
 				var displayedFirstName string
@@ -196,7 +196,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						connections: map[int]*Connection{},
 						accounts:    map[int]*Account{},
 					}
-					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
+					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
 						&warehouseMode, &warehouseSettings, &userSchema,
 						&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers,
 						&ws.PrivacyRegion, &displayedImage, &displayedFirstName,
@@ -204,8 +204,11 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
+					if !meergo.WarehouseExists(warehouseName) {
+						return fmt.Errorf("the %s data warehouse is required but not registered. (Possibly forgotten import?)", warehouseName)
+					}
 					ws.Warehouse = Warehouse{
-						Type:     warehouseType,
+						Name:     warehouseName,
 						Mode:     warehouseMode,
 						Settings: warehouseSettings,
 					}

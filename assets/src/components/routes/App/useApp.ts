@@ -185,7 +185,7 @@ const useApp = (
 				return;
 			}
 			setWarehouse({
-				type: warehouseResponse.type,
+				name: warehouseResponse.name,
 				settings: warehouseResponse.settings,
 			});
 

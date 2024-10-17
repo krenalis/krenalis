@@ -9,6 +9,7 @@ package datastore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -17,9 +18,11 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/apis/state"
 	"github.com/meergo/meergo/types"
-	"github.com/meergo/meergo/warehouses/postgresql"
-	"github.com/meergo/meergo/warehouses/snowflake"
 )
+
+// DataWarehouseNotExist is returned by the Datastore.NormalizeWarehouseSettings
+// method when the provided data warehouse does not exist.
+var DataWarehouseNotExist = errors.New("data warehouse does not exist")
 
 type (
 	DataWarehouseError                 = meergo.DataWarehouseError
@@ -108,10 +111,17 @@ func (ds *Datastore) Close() {
 // NormalizeWarehouseSettings returns data warehouse settings in a canonical
 // form.
 //
-// It returns a SettingsError error if the settings are not valid.
-func (ds *Datastore) NormalizeWarehouseSettings(typ state.WarehouseType, settings []byte) ([]byte, error) {
+// It returns the DataWarehouseNotExist error if a data warehouse with the
+// provided name does not exist, and it returns a SettingsError error if the
+// settings are not valid.
+func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
-	dw, err := openWarehouse(typ, settings)
+	if !meergo.WarehouseExists(name) {
+		return nil, DataWarehouseNotExist
+	}
+	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
+		Settings: settings,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +133,7 @@ func (ds *Datastore) NormalizeWarehouseSettings(typ state.WarehouseType, setting
 	return settings, nil
 }
 
-// CanInitialize indicates whether the warehouse with type typ and the given
+// CanInitialize indicates whether the warehouse with the provided name and
 // settings can be initialized.
 //
 // It returns:
@@ -132,9 +142,11 @@ func (ds *Datastore) NormalizeWarehouseSettings(typ state.WarehouseType, setting
 //     initializable;
 //   - a *SettingsError error if the settings are not valid;
 //   - a *DataWarehouseError if an error occurred with the data warehouse.
-func (ds *Datastore) CanInitialize(ctx context.Context, typ state.WarehouseType, settings []byte) error {
+func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
-	dw, err := openWarehouse(typ, settings)
+	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
+		Settings: settings,
+	})
 	if err != nil {
 		return err
 	}
@@ -151,9 +163,11 @@ func (ds *Datastore) CanInitialize(ctx context.Context, typ state.WarehouseType,
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *DataWarehouseError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, typ state.WarehouseType, settings []byte) error {
+func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
-	dw, err := openWarehouse(typ, settings)
+	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
+		Settings: settings,
+	})
 	if err != nil {
 		return err
 	}
@@ -308,17 +322,4 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 		names[c.Name] = struct{}{}
 	}
 	return nil
-}
-
-// openWarehouse opens a data warehouse with the given type and settings.
-// It returns a SettingsError error if the settings are not syntactically
-// valid.
-func openWarehouse(typ state.WarehouseType, settings []byte) (meergo.Warehouse, error) {
-	switch typ {
-	case state.PostgreSQL:
-		return postgresql.Open(settings)
-	case state.Snowflake:
-		return snowflake.Open(settings)
-	}
-	return nil, fmt.Errorf("warehouse type %d is not valid", typ)
 }

@@ -27,11 +27,15 @@ import (
 
 	"github.com/meergo/meergo/cmd"
 
-	// Add your custom connectors here:
+	// Add your custom connectors and data warehouses here:
 	// _ "github.com/example/connector"
+	// _ "github.com/example/warehouse"
 
 	// Imports the standard connectors:
 	_ "github.com/meergo/meergo/connectors"
+
+	// Imports the standard data warehouses:
+	_ "github.com/meergo/meergo/warehouses"
 )
 
 //go:embed meergo-assets

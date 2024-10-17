@@ -4,7 +4,7 @@ import appContext from '../../../context/AppContext';
 import { Warehouse, warehouses } from './DataWarehouse.helpers';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import PasswordToggle from '../../base/PasswordToggle/PasswordToggle';
-import { WarehouseMode, WarehouseSettings, WarehouseType } from '../../../lib/api/types/warehouse';
+import { WarehouseMode, WarehouseSettings } from '../../../lib/api/types/warehouse';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import DataWarehouseSettings from './DataWarehouseSettings';
@@ -15,7 +15,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 const DataWarehouse = () => {
-	const [connectedWarehouse, setConnectedWarehouse] = useState<WarehouseType>();
+	const [connectedWarehouse, setConnectedWarehouse] = useState<string>();
 	const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse>();
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -28,7 +28,7 @@ const DataWarehouse = () => {
 			setHasError(false);
 			try {
 				const response = await api.workspaces.warehouseSettings();
-				setConnectedWarehouse(response.type);
+				setConnectedWarehouse(response.name);
 				setWarehouseSettings(response.settings);
 			} catch (err) {
 				setTimeout(() => {
@@ -123,7 +123,7 @@ const WarehouseInfo = ({
 	}, [warehouseMode]);
 
 	const warehouse = useMemo(() => {
-		return warehouses.find((w) => w.label === warehouseName)!;
+		return warehouses.find((w) => w.name === warehouseName)!;
 	}, [warehouses, warehouseName]);
 
 	const onChange = () => {
@@ -166,7 +166,7 @@ const WarehouseInfo = ({
 					<div className='warehouse-info__icon'>
 						<LittleLogo icon={warehouse.icon} />
 					</div>
-					<div className='warehouse-info__name'>{warehouse.label}</div>
+					<div className='warehouse-info__name'>{warehouse.name}</div>
 				</div>
 				<div className='warehouse-info__mode-init'>
 					<SlSelect

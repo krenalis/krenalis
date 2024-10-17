@@ -104,13 +104,15 @@ func Test_Merge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	wh, err := Open(settings)
+	wh, err := meergo.RegisteredWarehouse("PostgreSQL").New(&meergo.WarehouseConfig{
+		Settings: settings,
+	})
 	if err != nil {
 		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
 	}
 	defer wh.Close()
 
-	pool, err := wh.connectionPool(context.Background())
+	pool, err := wh.(*PostgreSQL).connectionPool(context.Background())
 	if err != nil {
 		t.Fatalf("cannot open the warehouse: %s", err)
 	}

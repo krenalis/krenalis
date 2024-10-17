@@ -86,28 +86,31 @@ type emailToSend struct {
 	BodyHTML []byte
 }
 
-// CanInitializeWarehouse indicates whether the warehouse with type typ and the
-// given settings can be initialized.
+// CanInitializeWarehouse indicates whether the warehouse with the provided name
+// and settings can be initialized.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - DataWarehouseFailed, if an operation on the data warehouse fails;
+//   - DataWarehouseNotExist, if a data warehouse with the provided name does
+//     not exist;
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid;
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
-func (this *Organization) CanInitializeWarehouse(ctx context.Context, typ WarehouseType, settings []byte) error {
+func (this *Organization) CanInitializeWarehouse(ctx context.Context, name string, settings []byte) error {
 	this.apis.mustBeOpen()
 
 	// Validate the parameters.
-	switch typ {
-	case PostgreSQL, Snowflake:
-	default:
-		return errors.BadRequest("warehouse type %d is not valid", typ)
+	if name == "" {
+		return errors.BadRequest("warehouse name is empty")
 	}
 
 	// Normalize the warehouse settings.
-	settings, err := this.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(typ), settings)
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(name, settings)
 	if err != nil {
+		if err == datastore.DataWarehouseNotExist {
+			return errors.Unprocessable(DataWarehouseNotExist, "data warehouse %q does not exist", name)
+		}
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
@@ -115,7 +118,7 @@ func (this *Organization) CanInitializeWarehouse(ctx context.Context, typ Wareho
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.apis.datastore.CanInitialize(ctx, state.WarehouseType(typ), settings)
+	err = this.apis.datastore.CanInitialize(ctx, name, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
 			return errors.Unprocessable(WarehouseNotInitializable, "%w", err)
@@ -185,11 +188,11 @@ var defaultUserSchema = types.Object([]types.Property{
 })
 
 // AddWorkspace adds a workspace with the given name and privacy region, and
-// connects to a data warehouse of the given type and settings. Returns the
+// connects to a data warehouse of the provided name and settings. Returns the
 // identifier of the workspace that has been created. name must be between 1 and
 // 100 runes long.
 //
-// whMode specifies the initial mode of the workspace's data warehouse
+// whMode specifies the initial mode of the workspace's data warehouse.
 //
 // It returns an errors.NotFoundError error if the organization does not exist
 // anymore.
@@ -197,8 +200,10 @@ var defaultUserSchema = types.Object([]types.Property{
 // It returns an errors.UnprocessableError error with code:
 //
 //   - DataWarehouseFailed, if an operation on the data warehouse fails;
+//   - DataWarehouseNotExist, if a data warehouse with the provided name does
+//     not exist;
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid;
-func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whType WarehouseType, whSettings []byte, whMode WarehouseMode) (int, error) {
+func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.apis.mustBeOpen()
 
@@ -211,15 +216,16 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	default:
 		return 0, errors.BadRequest("privacy region is not valid")
 	}
-	switch whType {
-	case PostgreSQL, Snowflake:
-	default:
-		return 0, errors.BadRequest("warehouse type %d is not valid", whType)
+	if whName == "" {
+		return 0, errors.BadRequest("warehouse name is empty")
 	}
 
 	// Normalize the warehouse settings.
-	whSettings, err := this.apis.datastore.NormalizeWarehouseSettings(state.WarehouseType(whType), whSettings)
+	whSettings, err := this.apis.datastore.NormalizeWarehouseSettings(whName, whSettings)
 	if err != nil {
+		if err == datastore.DataWarehouseNotExist {
+			return 0, errors.Unprocessable(DataWarehouseNotExist, "data warehouse %q does not exist", name)
+		}
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return 0, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
@@ -227,7 +233,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.apis.datastore.CanInitialize(ctx, state.WarehouseType(whType), whSettings)
+	err = this.apis.datastore.CanInitialize(ctx, whName, whSettings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
 			return 0, errors.Unprocessable(WarehouseNotInitializable, "data warehouse cannot be initialized: %w", err)
@@ -239,7 +245,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 
 	// Initialize the data warehouse.
-	err = this.apis.datastore.Initialize(ctx, state.WarehouseType(whType), whSettings)
+	err = this.apis.datastore.Initialize(ctx, whName, whSettings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
@@ -254,7 +260,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		ResolveIdentitiesOnBatchImport: true,
 		PrivacyRegion:                  state.PrivacyRegion(region),
 		Warehouse: state.Warehouse{
-			Type:     state.WarehouseType(whType),
+			Name:     whName,
 			Mode:     state.WarehouseMode(whMode),
 			Settings: whSettings,
 		},
@@ -275,10 +281,10 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	err = this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 			" user_schema, resolve_identities_on_batch_import, privacy_region,"+
-			" warehouse_type, warehouse_mode, warehouse_settings)"+
+			" warehouse_name, warehouse_mode, warehouse_settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 			n.ID, n.Organization, n.Name, userSchema, n.ResolveIdentitiesOnBatchImport,
-			n.PrivacyRegion, n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
+			n.PrivacyRegion, n.Warehouse.Name, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {

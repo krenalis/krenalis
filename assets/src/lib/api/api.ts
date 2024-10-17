@@ -16,7 +16,7 @@ import {
 } from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
-import { WarehouseMode, WarehouseResponse, WarehouseSettings, WarehouseType } from './types/warehouse';
+import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
 	AddWorkspaceResponse,
 	PrivacyRegion,
@@ -536,7 +536,7 @@ class Workspaces {
 	add = async (
 		name: string,
 		privacyRegion: PrivacyRegion,
-		warehouseType: WarehouseType,
+		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<AddWorkspaceResponse> => {
@@ -544,7 +544,7 @@ class Workspaces {
 			name: name,
 			privacyRegion: privacyRegion,
 			warehouse: {
-				type: warehouseType,
+				name: warehouseName,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
@@ -614,22 +614,22 @@ class Workspaces {
 	};
 
 	changeWarehouseSettings = async (
-		type: WarehouseType,
+		name: string,
 		mode: WarehouseMode,
 		settings: any,
 		cancelIncompatibleOperations: boolean,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/settings`, http.PUT, {
-			Type: type,
+			Name: name,
 			Mode: mode,
 			Settings: settings,
 			CancelIncompatibleOperations: cancelIncompatibleOperations,
 		});
 	};
 
-	pingWarehouse = async (warehouseType: WarehouseType, settings: any): Promise<void> => {
+	pingWarehouse = async (warehouseName: string, settings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/pings`, http.POST, {
-			Type: warehouseType,
+			Name: warehouseName,
 			Settings: settings,
 		});
 	};

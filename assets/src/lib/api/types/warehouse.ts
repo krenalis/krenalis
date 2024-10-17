@@ -1,12 +1,10 @@
-type WarehouseType = 'PostgreSQL' | 'Snowflake';
-
 type WarehouseMode = 'Normal' | 'Inspection' | 'Maintenance';
 
 type WarehouseSettings = Record<string, any>;
 
 interface WarehouseResponse {
-	type: WarehouseType;
+	name: string;
 	settings: WarehouseSettings;
 }
 
-export type { WarehouseType, WarehouseMode, WarehouseSettings, WarehouseResponse };
+export type { WarehouseMode, WarehouseSettings, WarehouseResponse };

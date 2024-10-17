@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math"
 	"net/netip"
+	"reflect"
 	"slices"
 	"time"
 	"unicode/utf8"
@@ -24,6 +25,39 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// WarehouseInfo represents a data warehouse driver info.
+type WarehouseInfo struct {
+	Name string
+	Icon string // icon in SVG format
+
+	newFunc reflect.Value
+	ct      reflect.Type
+}
+
+// ReflectType returns the type of the value implementing the data warehouse
+// driver info.
+func (info WarehouseInfo) ReflectType() reflect.Type {
+	return info.ct
+}
+
+// New returns a new data warehouse driver instance.
+func (info WarehouseInfo) New(conf *WarehouseConfig) (Warehouse, error) {
+	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
+	d := out[0].Interface().(Warehouse)
+	err, _ := out[1].Interface().(error)
+	return d, err
+}
+
+// WarehouseConfig represents the configuration of a data warehouse driver.
+type WarehouseConfig struct {
+	Settings    []byte
+	SetSettings SetSettingsFunc
+}
+
+// WarehouseNewFunc represents functions that create new data warehouse driver
+// instances.
+type WarehouseNewFunc[T Warehouse] func(*WarehouseConfig) (T, error)
 
 // AlterSchemaOperation represents an operation that alters the user schema.
 //

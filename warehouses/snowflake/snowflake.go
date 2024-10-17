@@ -33,27 +33,17 @@ import (
 
 var _ meergo.Warehouse = &Snowflake{}
 
-type Snowflake struct {
-	mu       sync.Mutex // for the db field
-	db       *sql.DB
-	settings *sfSettings
+func init() {
+	meergo.RegisterWarehouse(meergo.WarehouseInfo{
+		Name: "Snowflake",
+	}, New)
 }
 
-type sfSettings struct {
-	Username  string
-	Password  string
-	Account   string
-	Warehouse string
-	Database  string
-	Schema    string
-	Role      string
-}
-
-// Open opens a Snowflake data warehouse with the given settings.
+// New returns a new Snowflake data warehouse driver instance.
 // It returns a SettingsError error if the settings are not valid.
-func Open(settings []byte) (*Snowflake, error) {
+func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	var s sfSettings
-	err := stdjson.Unmarshal(settings, &s)
+	err := stdjson.Unmarshal(conf.Settings, &s)
 	if err != nil {
 		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
@@ -85,7 +75,24 @@ func Open(settings []byte) (*Snowflake, error) {
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
 		return nil, meergo.SettingsErrorf("role length must be in range [1,255]")
 	}
-	return &Snowflake{settings: &s}, nil
+	return &Snowflake{conf: conf, settings: &s}, nil
+}
+
+type Snowflake struct {
+	mu       sync.Mutex // for the db field
+	db       *sql.DB
+	conf     *meergo.WarehouseConfig
+	settings *sfSettings
+}
+
+type sfSettings struct {
+	Username  string
+	Password  string
+	Account   string
+	Warehouse string
+	Database  string
+	Schema    string
+	Role      string
 }
 
 // AlterSchema alters the user schema.

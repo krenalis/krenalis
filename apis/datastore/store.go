@@ -92,7 +92,9 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
 	var err error
-	store.warehouse, err = openWarehouse(ws.Warehouse.Type, ws.Warehouse.Settings)
+	store.warehouse, err = meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
+		Settings: ws.Warehouse.Settings,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
@@ -250,7 +252,9 @@ func (store *Store) CanChangeWarehouseSettings(ctx context.Context, toSettings [
 		return err
 	}
 	// Count the users on the warehouse that will be connected.
-	dw, err := openWarehouse(ws.Warehouse.Type, toSettings)
+	dw, err := meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
+		Settings: toSettings,
+	})
 	if err != nil {
 		return err
 	}

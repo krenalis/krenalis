@@ -20,7 +20,7 @@ type TestsSettings struct {
 	MeergoHost       string
 	Database         *DBSettings
 	PythonExecutable string
-	WarehouseType    string
+	WarehouseName    string
 	Warehouse        *DBSettings
 }
 
@@ -74,10 +74,10 @@ func loadTestConfig() error {
 	if setts.PythonExecutable == "" {
 		return errors.New("missing value for 'PythonExecutable'")
 	}
-	if setts.WarehouseType == "" {
-		return errors.New("missing value for 'WarehouseType'")
+	if setts.WarehouseName == "" {
+		return errors.New("missing value for 'WarehouseName'")
 	}
-	if setts.WarehouseType != "PostgreSQL" {
+	if setts.WarehouseName != "PostgreSQL" {
 		return errors.New("currently only the PostgreSQL warehouse is supported by the tests")
 	}
 

@@ -734,8 +734,8 @@ func (workspace workspace) WarehouseSettings(_ http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	typ, settings := ws.WarehouseSettings()
-	return map[string]any{"type": typ, "settings": rawJSON(settings)}, nil
+	name, settings := ws.WarehouseSettings()
+	return map[string]any{"name": name, "settings": rawJSON(settings)}, nil
 }
 
 func (workspace workspace) workspace(r *http.Request) (*apis.Workspace, error) {

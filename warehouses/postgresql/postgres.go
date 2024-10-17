@@ -48,26 +48,17 @@ var (
 
 var _ meergo.Warehouse = &PostgreSQL{}
 
-type PostgreSQL struct {
-	mu       sync.Mutex // for the pool field
-	pool     *pgxpool.Pool
-	settings *psSettings
+func init() {
+	meergo.RegisterWarehouse(meergo.WarehouseInfo{
+		Name: "PostgreSQL",
+	}, New)
 }
 
-type psSettings struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	Schema   string
-}
-
-// Open opens a PostgreSQL data warehouse with the given settings.
+// New returns a new PostgreSQL data warehouse driver instance.
 // It returns a SettingsError error if the settings are not valid.
-func Open(settings []byte) (*PostgreSQL, error) {
+func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 	var s psSettings
-	err := stdjson.Unmarshal(settings, &s)
+	err := stdjson.Unmarshal(conf.Settings, &s)
 	if err != nil {
 		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
@@ -101,7 +92,23 @@ func Open(settings []byte) (*PostgreSQL, error) {
 	if strings.HasPrefix(s.Schema, "pg_") {
 		return nil, meergo.SettingsErrorf("schema cannot start with 'pg_'")
 	}
-	return &PostgreSQL{settings: &s}, nil
+	return &PostgreSQL{conf: conf, settings: &s}, nil
+}
+
+type PostgreSQL struct {
+	mu       sync.Mutex // for the pool field
+	pool     *pgxpool.Pool
+	conf     *meergo.WarehouseConfig
+	settings *psSettings
+}
+
+type psSettings struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+	Schema   string
 }
 
 // CanInitialize checks whether the data warehouse can be initialized.

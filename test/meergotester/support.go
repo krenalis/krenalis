@@ -231,9 +231,9 @@ func (c *Meergo) CanChangeWarehouseSettings(settings []byte) {
 	c.MustCall("POST", method, body, nil)
 }
 
-func (c *Meergo) CanInitializeWarehouse(typ string, settings []byte) error {
+func (c *Meergo) CanInitializeWarehouse(name string, settings []byte) error {
 	body := map[string]any{
-		"Type":     typ,
+		"Name":     name,
 		"Settings": json.RawMessage(settings),
 	}
 	return c.Call("POST", "/api/can-initialize-warehouse", body, nil)

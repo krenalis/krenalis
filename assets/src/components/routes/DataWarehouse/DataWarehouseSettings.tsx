@@ -33,7 +33,7 @@ const DataWarehouseSettings = ({
 	const { setTitle, api, handleError, showStatus, setIsLoadingWorkspaces } = useContext(appContext);
 
 	useLayoutEffect(() => {
-		setTitle(`${selectedWarehouse.label} settings`);
+		setTitle(`${selectedWarehouse.name} settings`);
 	}, []);
 
 	const onCancelClick = () => setSelectedWarehouse(null);
@@ -45,7 +45,7 @@ const DataWarehouseSettings = ({
 	const onPing = async () => {
 		const timeout = setTimeout(() => setIsPingLoading(true), 300);
 		try {
-			await api.workspaces.pingWarehouse(selectedWarehouse.label, settings);
+			await api.workspaces.pingWarehouse(selectedWarehouse.name, settings);
 		} catch (err) {
 			handleError(err);
 			clearTimeout(timeout);
@@ -55,7 +55,7 @@ const DataWarehouseSettings = ({
 		showStatus({
 			variant: 'success',
 			icon: icons.OK,
-			text: `${selectedWarehouse.label} responded successfully`,
+			text: `${selectedWarehouse.name} responded successfully`,
 		});
 		clearTimeout(timeout);
 		setIsPingLoading(false);
@@ -64,7 +64,7 @@ const DataWarehouseSettings = ({
 	const onSave = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.changeWarehouseSettings(selectedWarehouse.label, mode, settings, false);
+			await api.workspaces.changeWarehouseSettings(selectedWarehouse.name, mode, settings, false);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'InvalidWarehouseType') {
@@ -92,10 +92,10 @@ const DataWarehouseSettings = ({
 				<div className='warehouse-settings__icon'>
 					<LittleLogo icon={selectedWarehouse.icon} />
 				</div>
-				<p className='warehouse-settings__name'>{selectedWarehouse.label}</p>
+				<p className='warehouse-settings__name'>{selectedWarehouse.name}</p>
 			</div>
 			<div className='warehouse-settings__settings'>
-				{selectedWarehouse.name === 'postgresql' ? (
+				{selectedWarehouse.name === 'PostgreSQL' ? (
 					<PostgreSQLSettings setSettings={setSettings} settings={settings} />
 				) : (
 					<SnowflakeSettings setSettings={setSettings} settings={settings} />

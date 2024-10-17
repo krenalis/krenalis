@@ -1,7 +1,7 @@
-import { WarehouseSettings, WarehouseType } from '../../../lib/api/types/warehouse';
+import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 
 interface Warehouse {
-	type: WarehouseType;
+	name: string;
 	settings: WarehouseSettings;
 }
 

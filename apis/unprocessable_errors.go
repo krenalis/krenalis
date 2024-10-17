@@ -19,6 +19,7 @@ const (
 	ConnectionNotExist           errors.Code = "ConnectionNotExist"
 	ConnectorNotExist            errors.Code = "ConnectorNotExist"
 	DataWarehouseFailed          errors.Code = "DataWarehouseFailed"
+	DataWarehouseNotExist        errors.Code = "DataWarehouseNotExist"
 	DifferentWarehouse           errors.Code = "DifferentWarehouse"
 	EmailSendFailed              errors.Code = "EmailSendFailed"
 	EventNotExist                errors.Code = "EventNotExist"

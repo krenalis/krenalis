@@ -709,14 +709,14 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 // warehouse settings of the store's workspace.
 // It returns an errors.UnprocessableError with code:
 //
-//   - InvalidWarehouseSettings, if the settings are not valid.
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
 func (this *Workspace) CanChangeWarehouseSettings(ctx context.Context, settings []byte) error {
 	this.apis.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -837,7 +837,7 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_type IS NOT NULL",
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_name IS NOT NULL",
 			n.Mode, n.Workspace)
 		if err != nil {
 			return err
@@ -910,7 +910,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode Warehou
 
 	ws := this.workspace
 
-	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
+	settings, err := this.apis.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -932,7 +932,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode Warehou
 	n := state.SetWarehouse{
 		Workspace: ws.ID,
 		Warehouse: state.Warehouse{
-			Type:     ws.Warehouse.Type,
+			Name:     ws.Warehouse.Name,
 			Mode:     state.WarehouseMode(mode),
 			Settings: settings,
 		},
@@ -946,8 +946,8 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode Warehou
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			var warehouseType *state.WarehouseType
-			err = tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseType)
+			var warehouseName string
+			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -1048,13 +1048,13 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		ID: this.workspace.ID,
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND warehouse_type IS NULL", n.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND warehouse_name IS NULL", n.ID)
 		if err != nil {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			var warehouseType state.WarehouseType
-			err := tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.ID).Scan(&warehouseType)
+			var warehouseName string
+			err := tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.ID).Scan(&warehouseName)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					return errors.NotFound("workspace %d does not exist", n.ID)
@@ -1607,12 +1607,12 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	return marshaledUsers.Bytes(), schema, count, nil
 }
 
-// WarehouseSettings returns the type and settings of the data warehouse for the
+// WarehouseSettings returns name and settings of the data warehouse for the
 // workspace.
-func (this *Workspace) WarehouseSettings() (WarehouseType, []byte) {
+func (this *Workspace) WarehouseSettings() (string, []byte) {
 	this.apis.mustBeOpen()
 	ws := this.workspace
-	return WarehouseType(ws.Warehouse.Type), slices.Clone(ws.Warehouse.Settings)
+	return ws.Warehouse.Name, slices.Clone(ws.Warehouse.Settings)
 }
 
 // userIdentities returns the user identities matching the provided where

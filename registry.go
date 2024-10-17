@@ -9,6 +9,7 @@ package meergo
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"sync"
 )
@@ -16,23 +17,25 @@ import (
 var (
 	registryMu sync.RWMutex
 	registry   = struct {
-		apps      map[string]AppInfo
-		databases map[string]DatabaseInfo
-		files     map[string]FileInfo
-		storages  map[string]FileStorageInfo
-		mobiles   map[string]MobileInfo
-		servers   map[string]ServerInfo
-		streams   map[string]StreamInfo
-		websites  map[string]WebsiteInfo
+		apps       map[string]AppInfo
+		databases  map[string]DatabaseInfo
+		files      map[string]FileInfo
+		storages   map[string]FileStorageInfo
+		mobiles    map[string]MobileInfo
+		servers    map[string]ServerInfo
+		streams    map[string]StreamInfo
+		warehouses map[string]WarehouseInfo
+		websites   map[string]WebsiteInfo
 	}{
-		apps:      make(map[string]AppInfo),
-		databases: make(map[string]DatabaseInfo),
-		files:     make(map[string]FileInfo),
-		storages:  make(map[string]FileStorageInfo),
-		mobiles:   make(map[string]MobileInfo),
-		servers:   make(map[string]ServerInfo),
-		streams:   make(map[string]StreamInfo),
-		websites:  make(map[string]WebsiteInfo),
+		apps:       make(map[string]AppInfo),
+		databases:  make(map[string]DatabaseInfo),
+		files:      make(map[string]FileInfo),
+		storages:   make(map[string]FileStorageInfo),
+		mobiles:    make(map[string]MobileInfo),
+		servers:    make(map[string]ServerInfo),
+		streams:    make(map[string]StreamInfo),
+		warehouses: make(map[string]WarehouseInfo),
+		websites:   make(map[string]WebsiteInfo),
 	}
 )
 
@@ -188,6 +191,23 @@ func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
 	registry.streams[stream.Name] = stream
 }
 
+// RegisterWarehouse makes a data warehouse driver available by the provided
+// name. If RegisterWarehouse is called twice with the same name or if new is
+// nil, it panics.
+func RegisterWarehouse[T Warehouse](warehouse WarehouseInfo, new WarehouseNewFunc[T]) {
+	if new == nil {
+		panic("meergo: new function is nil")
+	}
+	warehouse.newFunc = reflect.ValueOf(new)
+	warehouse.ct = reflect.TypeOf((*T)(nil)).Elem()
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if _, dup := registry.warehouses[warehouse.Name]; dup {
+		panic("meergo: RegisterWarehouse called twice for driver " + warehouse.Name)
+	}
+	registry.warehouses[warehouse.Name] = warehouse
+}
+
 // RegisterWebsite makes a website connector available by the provided name. If
 // RegisterWebsite is called twice with the same name or if new is nil, it
 // panics.
@@ -289,6 +309,18 @@ func RegisteredServer(name string) ServerInfo {
 	return server
 }
 
+// RegisteredWarehouse returns the data warehouse registered with the given
+// name. If a data warehouse with this name is not registered, it panics.
+func RegisteredWarehouse(name string) WarehouseInfo {
+	registryMu.Lock()
+	warehouse, ok := registry.warehouses[name]
+	registryMu.Unlock()
+	if !ok {
+		panic(fmt.Errorf("meergo: unknown data warehouse driver %q (forgotten import?)", name))
+	}
+	return warehouse
+}
+
 // RegisteredWebsite returns the website registered with the given name.
 // If a website with this name is not registered, it panics.
 func RegisteredWebsite(name string) WebsiteInfo {
@@ -299,4 +331,22 @@ func RegisteredWebsite(name string) WebsiteInfo {
 		panic(fmt.Errorf("meergo: unknown website connector %q (forgotten import?)", name))
 	}
 	return website
+}
+
+// WarehouseExists reports whether a data warehouse with the provided name
+// exists. If the warehouse exists, a call to RegisteredWarehouse will not
+// panic.
+func WarehouseExists(name string) bool {
+	registryMu.Lock()
+	_, ok := registry.warehouses[name]
+	registryMu.Unlock()
+	return ok
+}
+
+// Warehouses returns the registered data warehouses as a map from the name to
+// its WarehouseInfo.
+func Warehouses() map[string]WarehouseInfo {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	return maps.Clone(registry.warehouses)
 }

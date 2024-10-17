@@ -8,12 +8,12 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
-import { WarehouseSettings, WarehouseType } from '../../../lib/api/types/warehouse';
+import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 
 const WorkspaceAdd = () => {
 	const [name, setName] = useState<string>('');
 	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
-	const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseType>('PostgreSQL');
+	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('PostgreSQL');
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	// const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
 

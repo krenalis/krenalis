@@ -12,7 +12,6 @@ CREATE TABLE organizations (
 
 INSERT INTO organizations (name) VALUES ('ACME inc');
 
-CREATE TYPE warehouse_type AS ENUM ('PostgreSQL', 'Snowflake');
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
 CREATE TYPE privacy_region AS ENUM ('', 'Europe');
 
@@ -20,7 +19,7 @@ CREATE TABLE workspaces (
     id integer NOT NULL,
     organization integer NOT NULL REFERENCES organizations ON DELETE CASCADE,
     name varchar(100) NOT NULL,
-    warehouse_type warehouse_type DEFAULT NULL,
+    warehouse_name varchar DEFAULT NULL,
     warehouse_mode warehouse_mode DEFAULT NULL,
     warehouse_settings varchar(65535) NOT NULL DEFAULT '',
     user_schema jsonb NOT NULL DEFAULT 'null'::jsonb,

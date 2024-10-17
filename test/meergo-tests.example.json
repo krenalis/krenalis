@@ -13,7 +13,7 @@
         "Schema": "public"
     },
     "PythonExecutable": "/usr/bin/python",
-    "WarehouseType": "PostgreSQL",
+    "WarehouseName": "PostgreSQL",
     "Warehouse": {
         "Host": "127.0.0.1",
         "Port": 5432,

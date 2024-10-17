@@ -22,7 +22,7 @@ Various installation methods may then require additional requirements depending 
 There are several ways you can install Meergo. Choose the method that you deem most suitable for your needs and skills:
 
 - [Download a pre-built release](#download-a-pre-built-release). Recommended if you want to start using Meergo immediately without needing to compile or customize the executable.
-- [Build with your custom connectors](#build-with-your-custom-connectors). Recommended if you wish to choose the connectors to include in the executable.
+- [Build with your custom connectors and data warehouses](#build-with-your-custom-connectors-and-data-warehouses). Recommended if you wish to choose the connectors and the data warehouses to include in the executable.
 - [Build from Git source](#build-from-git-source). Recommended if you want to work with Meergo's source code.
 
 ### Download a pre-built release
@@ -33,7 +33,7 @@ You can download a build of Meergo from the [releases page of the repository](ht
 
 Then you can proceed with the [configuration](#configuration).
 
-### Build with Your Custom Connectors
+### Build with Your Custom Connectors and Data Warehouses
 
 Besides the requirements listed at the beginning of this page, for this installation method you will also need:
 
@@ -64,14 +64,26 @@ Besides the requirements listed at the beginning of this page, for this installa
 
    Optionally, replace the default imports from [`github.com/meergo/meergo/connectors`](https://github.com/meergo/meergo/tree/main/connectors/connectors.go) with specific imports of the connectors you need.
 
-4. **Initialize a Go module**
+4. **Import your data warehouses (Optional)**
+
+   Modify the `main.go` file to include imports for each data warehouse you wish to integrate into Meergo:
+
+   ```go
+   import (
+      _ "github.com/example/warehouse"
+   )
+   ```
+
+   Optionally, replace the default imports from [`github.com/meergo/meergo/warehouses`](https://github.com/meergo/meergo/tree/main/warehouses/warehouses.go) with specific imports of the data warehouses you need.
+
+5. **Initialize a Go module**
 
    ```sh
    go mod init meergo
    go mod tidy
    ```
 
-5. **Generate the assets**
+6. **Generate the assets**
 
    Use the following command to bundle and compress the assets, which will be embedded into the executable:
 
@@ -81,7 +93,7 @@ Besides the requirements listed at the beginning of this page, for this installa
 
    Note: Re-execute `go generate` if you change Meergo module version.
 
-6. **Build the executable**
+7. **Build the executable**
 
    ```sh
    go build

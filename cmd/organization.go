@@ -32,7 +32,7 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 		Name          string
 		PrivacyRegion apis.PrivacyRegion
 		Warehouse     struct {
-			Type     apis.WarehouseType
+			Name     string
 			Mode     apis.WarehouseMode
 			Settings rawJSON
 		}
@@ -41,7 +41,7 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
+	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r
 		return nil, err
 	}
 	body := struct {
-		Type     apis.WarehouseType
+		Name     string
 		Mode     apis.WarehouseMode
 		Settings rawJSON
 	}{}
@@ -63,7 +63,7 @@ func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = o.CanInitializeWarehouse(r.Context(), body.Type, body.Settings)
+	err = o.CanInitializeWarehouse(r.Context(), body.Name, body.Settings)
 	return nil, err
 }
 

@@ -1075,7 +1075,7 @@ func (state *State) setWarehouseMode(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse = Warehouse{
-			Type:     w.Warehouse.Type,
+			Name:     w.Warehouse.Name,
 			Mode:     e.Mode,
 			Settings: w.Warehouse.Settings,
 		}
