@@ -453,7 +453,11 @@ type AddWorkspace struct {
 	ResolveIdentitiesOnBatchImport bool
 	PrivacyRegion                  PrivacyRegion
 	DisplayedProperties            DisplayedProperties
-	Warehouse                      Warehouse
+	Warehouse                      struct {
+		Name     string
+		Mode     WarehouseMode
+		Settings json.RawMessage
+	}
 }
 
 // addWorkspace adds a workspace.
@@ -1041,8 +1045,12 @@ func (state *State) setConnectionSettings(n notification) {
 // SetWarehouse is the event sent when the settings of a data warehouse are
 // changed.
 type SetWarehouse struct {
-	Workspace                    int
-	Warehouse                    Warehouse
+	Workspace int
+	Warehouse struct {
+		Name     string
+		Mode     WarehouseMode
+		Settings json.RawMessage
+	}
 	CancelIncompatibleOperations bool
 }
 
@@ -1074,11 +1082,7 @@ func (state *State) setWarehouseMode(n notification) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.Warehouse = Warehouse{
-			Name:     w.Warehouse.Name,
-			Mode:     e.Mode,
-			Settings: w.Warehouse.Settings,
-		}
+		w.Warehouse.Mode = e.Mode
 	})
 	dispatchNotification(state, e)
 }

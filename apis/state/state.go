@@ -368,16 +368,14 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid WarehouseMode: %d", mode)
 }
 
-type Warehouse struct {
-	Name     string
-	Mode     WarehouseMode
-	Settings json.RawMessage
-}
-
 // Workspace represents a workspace.
 type Workspace struct {
-	mu                             *sync.Mutex
-	Warehouse                      Warehouse
+	mu        *sync.Mutex
+	Warehouse struct {
+		Name     string
+		Mode     WarehouseMode
+		Settings json.RawMessage
+	}
 	connections                    map[int]*Connection
 	ID                             int
 	organization                   *Organization

@@ -259,12 +259,10 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		UserSchema:                     defaultUserSchema,
 		ResolveIdentitiesOnBatchImport: true,
 		PrivacyRegion:                  state.PrivacyRegion(region),
-		Warehouse: state.Warehouse{
-			Name:     whName,
-			Mode:     state.WarehouseMode(whMode),
-			Settings: whSettings,
-		},
 	}
+	n.Warehouse.Name = whName
+	n.Warehouse.Mode = state.WarehouseMode(whMode)
+	n.Warehouse.Settings = whSettings
 
 	// Generate the identifier.
 	n.ID, err = generateRandomID()

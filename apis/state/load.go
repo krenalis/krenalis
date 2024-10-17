@@ -207,11 +207,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					if !meergo.WarehouseExists(warehouseName) {
 						return fmt.Errorf("the %s data warehouse is required but not registered. (Possibly forgotten import?)", warehouseName)
 					}
-					ws.Warehouse = Warehouse{
-						Name:     warehouseName,
-						Mode:     warehouseMode,
-						Settings: warehouseSettings,
-					}
+					ws.Warehouse.Name = warehouseName
+					ws.Warehouse.Mode = warehouseMode
+					ws.Warehouse.Settings = warehouseSettings
 					err = json.Unmarshal(userSchema, &ws.UserSchema)
 					if err != nil {
 						return err
