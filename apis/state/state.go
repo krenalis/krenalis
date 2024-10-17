@@ -38,6 +38,7 @@ type State struct {
 	syncing    bool // reports whether the keeper has started synchronizing the state.
 	changing   *sync.RWMutex
 	connectors map[string]*Connector
+	warehouses map[string]*Warehouse
 
 	mu               *sync.Mutex            // for the 'actions', 'accounts', 'connections', 'connectionsByKey', 'election', 'organizations', and 'workspaces' fields
 	actions          map[int]*Action        // protected by mu
@@ -262,6 +263,31 @@ func (state *State) Unfreeze() {
 	state.changing.RUnlock()
 }
 
+// Warehouse returns the data warehouse with the provided name.
+// The boolean return value reports whether the data warehouse exists.
+func (state *State) Warehouse(name string) (*Warehouse, bool) {
+	state.mu.Lock()
+	wh, ok := state.warehouses[name]
+	state.mu.Unlock()
+	return wh, ok
+}
+
+// Warehouses returns all data warehouses.
+func (state *State) Warehouses() []*Warehouse {
+	state.mu.Lock()
+	warehouses := make([]*Warehouse, len(state.warehouses))
+	i := 0
+	for _, warehouse := range state.warehouses {
+		warehouses[i] = warehouse
+		i++
+	}
+	state.mu.Unlock()
+	sort.Slice(warehouses, func(i, j int) bool {
+		return warehouses[i].Name < warehouses[j].Name
+	})
+	return warehouses
+}
+
 // Workspace returns the workspace with identifier id.
 // The boolean return value reports whether the workspace exists.
 func (state *State) Workspace(id int) (*Workspace, bool) {
@@ -312,6 +338,12 @@ func (organization *Organization) Workspaces() []*Workspace {
 	}
 	organization.mu.Unlock()
 	return workspaces
+}
+
+// Warehouse represents a data warehouse.
+type Warehouse struct {
+	Name string
+	Icon string
 }
 
 // WarehouseMode represents a data warehouse mode.

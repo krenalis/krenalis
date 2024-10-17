@@ -116,7 +116,7 @@ func (ds *Datastore) Close() {
 // settings are not valid.
 func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
-	if !meergo.WarehouseExists(name) {
+	if _, ok := ds.state.Warehouse(name); !ok {
 		return nil, DataWarehouseNotExist
 	}
 	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{

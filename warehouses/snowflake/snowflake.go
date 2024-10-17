@@ -31,11 +31,15 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
+// Connector icon.
+var icon = "<svg></svg>"
+
 var _ meergo.Warehouse = &Snowflake{}
 
 func init() {
 	meergo.RegisterWarehouse(meergo.WarehouseInfo{
 		Name: "Snowflake",
+		Icon: icon,
 	}, New)
 }
 

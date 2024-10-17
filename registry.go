@@ -333,16 +333,6 @@ func RegisteredWebsite(name string) WebsiteInfo {
 	return website
 }
 
-// WarehouseExists reports whether a data warehouse with the provided name
-// exists. If the warehouse exists, a call to RegisteredWarehouse will not
-// panic.
-func WarehouseExists(name string) bool {
-	registryMu.Lock()
-	_, ok := registry.warehouses[name]
-	registryMu.Unlock()
-	return ok
-}
-
 // Warehouses returns the registered data warehouses as a map from the name to
 // its WarehouseInfo.
 func Warehouses() map[string]WarehouseInfo {

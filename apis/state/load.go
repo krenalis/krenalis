@@ -151,6 +151,16 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			state.connectors[name] = &c
 		}
 
+		// Read all data warehouses.
+		warehouses := meergo.Warehouses()
+		state.warehouses = make(map[string]*Warehouse, len(warehouses))
+		for name, warehouse := range warehouses {
+			state.warehouses[name] = &Warehouse{
+				Name: name,
+				Icon: warehouse.Icon,
+			}
+		}
+
 		// Read all organizations.
 		state.organizations = map[int]*Organization{}
 		err = state.db.QueryScan(ctx, "SELECT id, name FROM organizations", func(rows *postgres.Rows) error {
@@ -204,7 +214,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
-					if !meergo.WarehouseExists(warehouseName) {
+					if _, ok := state.warehouses[warehouseName]; !ok {
 						return fmt.Errorf("the %s data warehouse is required but not registered. (Possibly forgotten import?)", warehouseName)
 					}
 					ws.Warehouse.Name = warehouseName
