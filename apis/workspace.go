@@ -837,8 +837,7 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 	}
 
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2 AND warehouse_name IS NOT NULL",
-			n.Mode, n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2", n.Mode, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -1046,19 +1045,12 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		ID: this.workspace.ID,
 	}
 	err := this.apis.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND warehouse_name IS NULL", n.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
 		if err != nil {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			var warehouseName string
-			err := tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.ID).Scan(&warehouseName)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return errors.NotFound("workspace %d does not exist", n.ID)
-				}
-				return err
-			}
+			return errors.NotFound("workspace %d does not exist", n.ID)
 		}
 		return tx.Notify(ctx, n)
 	})
