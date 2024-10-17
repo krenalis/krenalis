@@ -29,10 +29,8 @@ const (
 	InvalidPath                  errors.Code = "InvalidPath"
 	InvalidPlaceholder           errors.Code = "InvalidPlaceholder"
 	InvalidSchemaChange          errors.Code = "InvalidSchemaChange"
-	InvalidTable                 errors.Code = "InvalidTable"
 	InvalidUIValues              errors.Code = "InvalidUIValues"
 	InvalidWarehouseSettings     errors.Code = "InvalidWarehouseSettings"
-	InvalidWarehouseType         errors.Code = "InvalidWarehouseType"
 	InvitationTokenExpired       errors.Code = "InvitationTokenExpired"
 	KeyNotExist                  errors.Code = "KeyNotExist"
 	LinkedConnectionNotExist     errors.Code = "LinkedConnectionNotExist"
@@ -51,7 +49,6 @@ const (
 	TypeNotAllowed               errors.Code = "TypeNotAllowed"
 	UnsupportedColumnType        errors.Code = "UnsupportedColumnType"
 	UnsupportedLanguage          errors.Code = "UnsupportedLanguage"
-	WarehouseNotEmpty            errors.Code = "WarehouseNotEmpty"
 	WarehouseNotInitializable    errors.Code = "WarehouseNotInitializable"
 	WorkspaceNotExist            errors.Code = "WorkspaceNotExist"
 )
