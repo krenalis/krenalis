@@ -5,13 +5,15 @@
 //  1. go generate
 //  2. go build
 //
-// To add your custom connectors or choose what connector to build into Meergo:
+// To add your custom connectors, data warehouses, or choose what connector
+// or data warehouse to build into Meergo:
 //
 //  1. Create a new directory: mkdir meergo
 //  2. Change into it: cd meergo
 //  3. Copy this file into the new directory
-//  4. Edit the copied file to add your connectors (optional):
+//  4. (optional) Edit the copied file to add your connectors, or data warehouses:
 //     import _ "github.com/example/connector"
+//     import _ "github.com/example/warehouse"
 //  5. Initialize a Go module: go mod init meergo
 //  6. Tidy the module: go mod tidy
 //  7. Generate the assets: go generate
