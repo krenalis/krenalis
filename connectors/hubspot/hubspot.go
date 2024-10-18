@@ -545,7 +545,8 @@ func propertyType(t string) types.Type {
 	case "enumeration":
 		return types.Text()
 	case "number":
-		return types.Decimal(types.MaxDecimalPrecision-1, 1)
+		// HubSpot has no limitations on precision and scale.
+		return types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
 	case "object_coordinates", "json":
 		// These types are for internal use and are not visible in HubSpot.
 		return types.Type{}
