@@ -85,18 +85,21 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// user.
 	var sameUser strings.Builder
 	if len(identifiers) > 0 {
-		sameUser.WriteString("same_user(")
-		for i, ident := range identifiers {
-			if i > 0 {
-				sameUser.WriteByte(',')
-			}
-			sameUser.WriteString(`i1."`)
-			sameUser.WriteString(ident.Name)
-			sameUser.WriteString(`"::text,i2."`)
-			sameUser.WriteString(ident.Name)
-			sameUser.WriteString(`"::text`)
+		sameUser.WriteString("( CASE\n")
+		for _, ident := range identifiers {
+			id := quoteIdent(ident.Name)
+			sameUser.WriteString(`                WHEN i1.`)
+			sameUser.WriteString(id)
+			sameUser.WriteString(` IS NOT NULL AND i2.`)
+			sameUser.WriteString(id)
+			sameUser.WriteString(` IS NOT NULL THEN i1.`)
+			sameUser.WriteString(id)
+			sameUser.WriteString(`::text = i2.`)
+			sameUser.WriteString(id)
+			sameUser.WriteString(`::text`)
+			sameUser.WriteByte('\n')
 		}
-		sameUser.WriteString(")")
+		sameUser.WriteString("                ELSE false END )")
 	} else {
 		sameUser.WriteString("false")
 	}

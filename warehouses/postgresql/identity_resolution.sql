@@ -1,18 +1,3 @@
-CREATE OR REPLACE FUNCTION same_user(VARIADIC identifiers text[])
-RETURNS boolean
-AS $$
-    DECLARE
-        i INT;
-    BEGIN
-        FOR i IN 1..array_length(identifiers, 1) BY 2 LOOP
-            IF identifiers[i] IS NOT NULL AND identifiers[i+1] IS NOT NULL THEN
-                RETURN identifiers[i] = identifiers[i+1];
-            END IF;
-        END loop;
-        RETURN false;
-    END;
-$$ LANGUAGE plpgsql;
-
 DROP TABLE IF EXISTS "edges";
 CREATE TABLE edges (
     i1 int,
