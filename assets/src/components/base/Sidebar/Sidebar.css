@@ -176,24 +176,6 @@
 	border-left: 4px solid transparent;
 }
 
-.sidebar__item--disabled {
-	cursor: default;
-}
-
-.sidebar__item--disabled .sidebar__item-icon,
-.sidebar__item--disabled .sidebar__item-text {
-	opacity: 0.5;
-}
-
-.sidebar__item--disabled .sidebar__item-disabled-icon {
-	color: var(--sl-color-danger-600);
-	font-size: 14px;
-}
-
-.sidebar__item--disabled:hover {
-	background-color: transparent;
-}
-
 .sidebar__item--selected {
 	background: var(--color-primary-50);
 	border-radius: 6px;

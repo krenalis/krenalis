@@ -3,7 +3,6 @@ import './Sidebar.css';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { useLocation } from 'react-router-dom';
 import getRouteFromPathname from './getRouteFromPathname';
 import Workspace from '../../../lib/api/types/workspace';
@@ -64,7 +63,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: SidebarProps) => {
-	const { redirect, connections, warehouse, setIsLoadingState, logout } = useContext(AppContext);
+	const { redirect, connections, setIsLoadingState, logout } = useContext(AppContext);
 
 	const onLogout = async () => {
 		logout();
@@ -86,27 +85,19 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 				}
 			}
 		}
-		const isDisabled = warehouse == null && (item.name === 'schema' || item.name === 'users');
 		items.push(
-			<Link path={isDisabled ? null : item.link} key={item.name}>
+			<Link path={item.link} key={item.name}>
 				<div
 					className={`sidebar__item${
-						isDisabled
-							? ' sidebar__item--disabled'
-							: isSelected
-								? ' sidebar__item--selected'
-								: isChildrenSelected
-									? ' sidebar__item--isChildrenSelected'
-									: ''
+						isSelected
+							? ' sidebar__item--selected'
+							: isChildrenSelected
+								? ' sidebar__item--isChildrenSelected'
+								: ''
 					}`}
 				>
 					<SlIcon className='sidebar__item-icon' name={item.icon} />
 					<div className='sidebar__item-text'>{item.label}</div>
-					{isDisabled && (
-						<SlTooltip content='You must first connect a data warehouse'>
-							<SlIcon className='sidebar__item-disabled-icon' name='database-exclamation' />
-						</SlTooltip>
-					)}
 				</div>
 			</Link>,
 		);
