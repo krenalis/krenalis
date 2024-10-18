@@ -393,5 +393,8 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 	case "UUID":
 		return types.UUID(), nil
 	}
-	return types.Type{}, meergo.NewUnsupportedColumnTypeError(t.Name(), t.DatabaseTypeName())
+	if strings.HasPrefix(name, "_") {
+		name = "array"
+	}
+	return types.Type{}, meergo.NewUnsupportedColumnTypeError(t.Name(), name)
 }
