@@ -384,10 +384,24 @@ sl-split-panel sl-icon[slot='divider'] {
 
 /* schema combobox items */
 
+.combobox-list sl-menu-item::part(checked-icon) {
+	display: none;
+}
+
 .schema-combobox-item {
 	display: flex;
 	align-items: start;
-	gap: 10px;
+	gap: 0;
+	height: 40px;
+}
+
+.schema-combobox-item__type {
+	width: 42px;
+	font-size: 18px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding-top: 2px;
 }
 
 .schema-combobox-item__text {
@@ -395,10 +409,12 @@ sl-split-panel sl-icon[slot='divider'] {
 }
 
 .schema-combobox-item__label {
-	font-weight: 600;
+	font-size: 14px;
 }
 
-.schema-combobox-item__type {
-	font-size: 18px;
+.schema-combobox-item__name {
 	opacity: 0.8;
+	font-family:
+		Source Code Pro,
+		monospace;
 }

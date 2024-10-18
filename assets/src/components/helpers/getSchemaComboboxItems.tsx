@@ -111,27 +111,24 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 
 const computeItems = (flatSchema: TransformedMapping) => {
 	const items: ComboboxItem[] = [];
-	for (const propertyName in flatSchema) {
-		let typ = flatSchema[propertyName].type;
+	for (const name in flatSchema) {
+		let typ = flatSchema[name].type;
+		let label = flatSchema[name].label;
 		items.push({
 			content: (
-				<div className='schema-combobox-item' key={propertyName}>
+				<div className='schema-combobox-item' key={name}>
 					<div className='schema-combobox-item__type'>
 						<SlIcon name={typeNameToIconName[typ]} />
 					</div>
 					<div className='schema-combobox-item__text'>
-						{flatSchema[propertyName].label != null && flatSchema[propertyName].label !== '' ? (
-							<>
-								<div className='schema-combobox-item__label'>{flatSchema[propertyName].label}</div>
-								<div className='schema-combobox-item__name'>{propertyName}</div>
-							</>
-						) : (
-							propertyName
-						)}
+						<div className='schema-combobox-item__label'>
+							{label == null || label === '' ? name : label}
+						</div>
+						<div className='schema-combobox-item__name'>{name}</div>
 					</div>
 				</div>
 			),
-			term: propertyName,
+			term: name,
 		});
 	}
 	return items;

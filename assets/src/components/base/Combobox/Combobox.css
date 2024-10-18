@@ -117,6 +117,10 @@
 	opacity: 0.8;
 }
 
+.combobox-list .function-item {
+	padding-left: 20px;
+}
+
 .combobox-list .function-item__head-name,
 .combobox-list .function-item__head-signature {
 	font-family: 'Source Code Pro', monospace !important;
