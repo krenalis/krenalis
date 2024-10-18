@@ -1,5 +1,5 @@
 :root {
-	--sidebar-with: 230px;
+	--sidebar-with: 250px;
 }
 
 .sidebar {
@@ -51,8 +51,7 @@
 	cursor: pointer;
 	margin-top: 15px;
 	padding: 15px;
-	margin-bottom: 15px;
-	border-bottom: 1px solid var(--border-primary);
+	margin-bottom: 5px;
 	border-top: 1px solid var(--border-primary);
 }
 
@@ -74,7 +73,7 @@
 }
 
 .workspace-selector__value {
-	font-size: 14px;
+	font-size: 16px;
 	font-weight: 600;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -167,6 +166,7 @@
 	align-items: center;
 	gap: 12px;
 	padding: 12px 10px;
+	margin-top: 2px;
 	transition:
 		border 0.3s,
 		background-color 0.3s;
@@ -205,8 +205,8 @@
 	cursor: pointer;
 	display: flex;
 	align-items: center;
-	gap: 15px;
-	padding: 10px 15px 10px 54px;
+	gap: 10px;
+	padding: 8px 15px 8px 46px;
 	color: var(--sl-color-neutral-700);
 	user-select: none;
 }
@@ -224,4 +224,5 @@
 .sidebar__sub-item-text {
 	font-size: 13px;
 	font-weight: 600;
+	line-height: 1.6;
 }

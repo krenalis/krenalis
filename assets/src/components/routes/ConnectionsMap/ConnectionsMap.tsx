@@ -89,7 +89,7 @@ const ConnectionsMap = () => {
 												<SlIcon name='database-gear' />
 											</SlTooltip>
 										)}
-										<div className='connections-map__database-name'>Users</div>
+										<div className='connections-map__database-name'>User Profiles</div>
 									</div>
 								</Link>
 								<div

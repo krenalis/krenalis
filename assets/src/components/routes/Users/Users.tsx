@@ -12,7 +12,7 @@ const Users = () => {
 	const { users, usersCount, usersProperties, isLoading, userIDList, fetchUsers } = useUsers();
 
 	useLayoutEffect(() => {
-		setTitle('Users');
+		setTitle('User Profiles');
 	}, []);
 
 	return (

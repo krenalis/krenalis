@@ -22,34 +22,42 @@ const sidebarItems: sidebarItem[] = [
 		name: 'connections',
 		label: 'Connections',
 		link: 'connections',
-		icon: 'plug',
+		icon: 'shuffle',
 		subItems: [
 			{
 				name: 'connections/sources',
 				label: 'Sources',
 				link: 'connections/sources',
+				icon: 'arrow-down-right-square',
 			},
 			{
 				name: 'connections/destinations',
 				label: 'Destinations',
 				link: 'connections/destinations',
+				icon: 'arrow-up-right-square',
 			},
 		],
 	},
-	{ name: 'schema', label: 'Schema', link: 'schema', icon: 'list-nested' },
-	{ name: 'users', label: 'Users', link: 'users', icon: 'people' },
+	{ name: 'users', label: 'User Profiles', link: 'users', icon: 'people' },
 	{
 		name: 'settings',
-		label: 'Settings',
+		label: 'Customization',
 		link: 'settings',
 		icon: 'gear',
 		subItems: [
-			{ name: 'settings/general', label: 'General', link: 'settings/general' },
-			{ name: 'settings/dataWarehouse', label: 'Data Warehouse', link: 'settings/data-warehouse' },
+			{ name: 'settings/general', label: 'General', link: 'settings/general', icon: 'sliders2' },
+			{ name: 'schema', label: 'Customer Model', link: 'schema', icon: 'bookmark-check' },
 			{
 				name: 'settings/identityResolution',
 				label: 'Identity Resolution',
 				link: 'settings/identity-resolution',
+				icon: 'person-arms-up',
+			},
+			{
+				name: 'settings/dataWarehouse',
+				label: 'Data Warehouse',
+				link: 'settings/data-warehouse',
+				icon: 'database',
 			},
 		],
 	},
@@ -101,7 +109,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 				</div>
 			</Link>,
 		);
-		if (hasSubItems && (isSelected || isChildrenSelected)) {
+		if (hasSubItems) {
 			for (const subItem of item.subItems!) {
 				const isSelected = subItem.name === currentRoute;
 				items.push(
