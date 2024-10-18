@@ -224,7 +224,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	whSettings, err := this.apis.datastore.NormalizeWarehouseSettings(whName, whSettings)
 	if err != nil {
 		if err == datastore.DataWarehouseNotExist {
-			return 0, errors.Unprocessable(DataWarehouseNotExist, "data warehouse %q does not exist", name)
+			return 0, errors.Unprocessable(DataWarehouseNotExist, "data warehouse %q does not exist", whName)
 		}
 		if err, ok := err.(*datastore.SettingsError); ok {
 			return 0, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
