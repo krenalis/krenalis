@@ -305,8 +305,6 @@ func Float(size int) Type {
 // Decimal returns the Decimal type with the given precision and scale.
 // Panics if precision is not in range [1,MaxDecimalPrecision] or if scale is
 // not in range [0,MaxDecimalScale] or if it is greater that precision.
-// As a special case if both precision and scale are zero, the type has no
-// precision and scale.
 func Decimal(precision, scale int) Type {
 	if precision < 1 || precision > MaxDecimalPrecision {
 		panic("invalid decimal precision")
