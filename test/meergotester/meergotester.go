@@ -33,6 +33,7 @@ import (
 	"github.com/meergo/meergo/types"
 
 	_ "github.com/meergo/meergo/connectors"
+	_ "github.com/meergo/meergo/warehouses"
 )
 
 // launchMeergoExternally determines if Meergo should be launched externally
