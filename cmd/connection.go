@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/types"
 )
 
@@ -63,9 +63,9 @@ func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	var body struct {
-		Target    apis.Target
+		Target    core.Target
 		EventType string
-		Action    apis.ActionToSet
+		Action    core.ActionToSet
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -212,8 +212,8 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	}
 	var body struct {
 		EventType      string
-		Event          *apis.ObservedEvent
-		Transformation apis.DataTransformation
+		Event          *core.ObservedEvent
+		Transformation core.DataTransformation
 		OutSchema      types.Type
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -238,7 +238,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		FileConnector string
 		Path          string
 		Sheet         string
-		Compression   apis.Compression
+		Compression   core.Compression
 		UIValues      rawJSON
 		Limit         int
 	}
@@ -297,7 +297,7 @@ func (connection connection) Set(_ http.ResponseWriter, r *http.Request) (any, e
 		return nil, err
 	}
 	var body struct {
-		Connection apis.ConnectionToSet
+		Connection core.ConnectionToSet
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -316,7 +316,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	var body struct {
 		FileConnector string
 		Path          string
-		Compression   apis.Compression
+		Compression   core.Compression
 		UIValues      rawJSON
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -365,7 +365,7 @@ func (connection connection) action(r *http.Request) (int, error) {
 	return id, nil
 }
 
-func (connection connection) connection(r *http.Request) (*apis.Connection, error) {
+func (connection connection) connection(r *http.Request) (*core.Connection, error) {
 	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err
@@ -393,17 +393,17 @@ func (connection connection) connection2(r *http.Request) (int, error) {
 	return id, nil
 }
 
-func (connection connection) target(r *http.Request) (apis.Target, string, error) {
+func (connection connection) target(r *http.Request) (core.Target, string, error) {
 	v := r.PathValue("target")
 	switch v {
 	case "Users":
-		return apis.Users, "", nil
+		return core.Users, "", nil
 	case "Groups":
-		return apis.Groups, "", nil
+		return core.Groups, "", nil
 	case "Events":
-		return apis.Events, "", nil
+		return core.Events, "", nil
 	case "":
-		return apis.Events, r.PathValue("eventType"), nil
+		return core.Events, r.PathValue("eventType"), nil
 	}
 	return 0, "", errors.NotFound("")
 }

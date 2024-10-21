@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/test/meergotester"
 )
 
@@ -51,7 +51,7 @@ func TestConnections(t *testing.T) {
 	}
 
 	// Retrieve the input and the output schema, which must me both valid.
-	schemas := c.ActionSchemas(dummyID, apis.Users, "")
+	schemas := c.ActionSchemas(dummyID, core.Users, "")
 	if err := isValidSchema(schemas["In"]); err != nil {
 		t.Fatal(err)
 	}

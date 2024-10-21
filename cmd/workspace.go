@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/types"
 
 	"github.com/relvacode/iso8601"
@@ -80,12 +80,12 @@ func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) 
 	}
 
 	// Parse step.
-	var step *apis.ActionStep
+	var step *core.ActionStep
 	if s, ok := q["step"]; ok {
 		if len(s) > 1 {
 			return nil, errors.BadRequest("only one 'step' parameter is allowed")
 		}
-		st, err := apis.ParseActionStep(s[0])
+		st, err := core.ParseActionStep(s[0])
 		if err != nil {
 			return nil, errors.BadRequest("'step' parameter is not valid")
 		}
@@ -118,7 +118,7 @@ func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 
-	return map[string][]apis.ActionError{"errors": errs}, nil
+	return map[string][]core.ActionError{"errors": errs}, nil
 }
 
 // ActionStatsPerDate returns statistics aggregated by day for a time interval
@@ -219,7 +219,7 @@ func (workspace workspace) ActionStatsPerDay(_ http.ResponseWriter, r *http.Requ
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), days, apis.Day, actions)
+	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), days, core.Day, actions)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func (workspace workspace) ActionStatsPerHour(_ http.ResponseWriter, r *http.Req
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), hours, apis.Hour, actions)
+	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), hours, core.Hour, actions)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func (workspace workspace) ActionStatsPerMinute(_ http.ResponseWriter, r *http.R
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), minutes, apis.Minute, actions)
+	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), minutes, core.Minute, actions)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 		return nil, err
 	}
 	body := struct {
-		Connection apis.ConnectionToAdd
+		Connection core.ConnectionToAdd
 		OAuthToken string
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -359,7 +359,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 		Sources       []int
 		OnlyValid     bool
 		HasUserTraits bool
-		Filter        *apis.Filter
+		Filter        *core.Filter
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -447,7 +447,7 @@ func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	body := struct {
-		Mode                         apis.WarehouseMode
+		Mode                         core.WarehouseMode
 		CancelIncompatibleOperations bool
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -467,7 +467,7 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	}
 	body := struct {
 		Settings                     rawJSON
-		Mode                         apis.WarehouseMode
+		Mode                         core.WarehouseMode
 		CancelIncompatibleOperations bool
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -614,12 +614,12 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 		body.Event = "load"
 		body.Values = nil
 	}
-	var role apis.Role
+	var role core.Role
 	switch body.Role {
 	case "Source":
-		role = apis.Source
+		role = core.Source
 	case "Destination":
-		role = apis.Destination
+		role = core.Destination
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
@@ -641,8 +641,8 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	}
 	var body struct {
 		Name                string
-		PrivacyRegion       apis.PrivacyRegion
-		DisplayedProperties apis.DisplayedProperties
+		PrivacyRegion       core.PrivacyRegion
+		DisplayedProperties core.DisplayedProperties
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -680,7 +680,7 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	}
 	var body struct {
 		Properties []string
-		Filter     *apis.Filter
+		Filter     *core.Filter
 		Order      string
 		OrderDesc  bool
 		First      int
@@ -738,7 +738,7 @@ func (workspace workspace) WarehouseSettings(_ http.ResponseWriter, r *http.Requ
 	return map[string]any{"name": name, "settings": rawJSON(settings)}, nil
 }
 
-func (workspace workspace) workspace(r *http.Request) (*apis.Workspace, error) {
+func (workspace workspace) workspace(r *http.Request) (*core.Workspace, error) {
 	v := r.PathValue("workspace")
 	if v[0] == '+' {
 		return nil, errors.NotFound("")

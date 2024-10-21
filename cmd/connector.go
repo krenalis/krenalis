@@ -10,8 +10,8 @@ package cmd
 import (
 	"net/http"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 )
 
 type connector struct {
@@ -28,12 +28,12 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, err
 	}
-	var role apis.Role
+	var role core.Role
 	switch r.URL.Query().Get("role") {
 	case "Source":
-		role = apis.Source
+		role = core.Source
 	case "Destination":
-		role = apis.Destination
+		role = core.Destination
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", role)
 	}
@@ -45,6 +45,6 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 	return map[string]any{"url": authCodeURL}, nil
 }
 
-func (connector connector) connector(r *http.Request) (*apis.Connector, error) {
-	return connector.apis.Connector(r.Context(), r.PathValue("connector"))
+func (connector connector) connector(r *http.Request) (*core.Connector, error) {
+	return connector.core.Connector(r.Context(), r.PathValue("connector"))
 }

@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 )
 
 type organization struct {
@@ -30,10 +30,10 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	}
 	body := struct {
 		Name          string
-		PrivacyRegion apis.PrivacyRegion
+		PrivacyRegion core.PrivacyRegion
 		Warehouse     struct {
 			Name     string
-			Mode     apis.WarehouseMode
+			Mode     core.WarehouseMode
 			Settings rawJSON
 		}
 	}{}
@@ -56,7 +56,7 @@ func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r
 	}
 	body := struct {
 		Name     string
-		Mode     apis.WarehouseMode
+		Mode     core.WarehouseMode
 		Settings rawJSON
 	}{}
 	err = json.NewDecoder(r.Body).Decode(&body)
@@ -127,14 +127,14 @@ func (organization organization) SetMember(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	memberToSet := apis.MemberToSet{
+	memberToSet := core.MemberToSet{
 		Name:     body.MemberToSet.Name,
 		Email:    body.MemberToSet.Email,
 		Password: body.MemberToSet.Password,
 	}
 	if body.MemberToSet.Image != nil {
 		fileType := http.DetectContentType(body.MemberToSet.Image)
-		avatar := &apis.Avatar{
+		avatar := &core.Avatar{
 			Image:    body.MemberToSet.Image,
 			MimeType: fileType,
 		}

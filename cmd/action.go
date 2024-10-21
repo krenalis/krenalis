@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 )
 
 type action struct {
@@ -60,7 +60,7 @@ func (action action) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var body apis.ActionToSet
+	var body core.ActionToSet
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
@@ -93,7 +93,7 @@ func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	var body struct {
-		SchedulePeriod apis.SchedulePeriod
+		SchedulePeriod core.SchedulePeriod
 	}
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -119,7 +119,7 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 	return a.Execute(r.Context(), body.Reload)
 }
 
-func (action action) action(r *http.Request) (*apis.Action, error) {
+func (action action) action(r *http.Request) (*core.Action, error) {
 	connection, err := connection{action.apisServer}.connection(r)
 	if err != nil {
 		return nil, err

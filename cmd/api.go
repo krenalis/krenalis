@@ -11,9 +11,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
-	"github.com/meergo/meergo/apis/events"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/types"
 )
 
@@ -33,7 +33,7 @@ func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = api.apis.AcceptInvitation(r.Context(), r.PathValue("token"), body.Name, body.Password)
+	err = api.core.AcceptInvitation(r.Context(), r.PathValue("token"), body.Name, body.Password)
 	return nil, err
 }
 
@@ -43,7 +43,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, err
 	}
 	connector := api.connector(r)
-	return api.apis.Connector(r.Context(), connector)
+	return api.core.Connector(r.Context(), connector)
 }
 
 // Connectors returns the connectors.
@@ -51,7 +51,7 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return api.apis.Connectors(r.Context()), nil
+	return api.core.Connectors(r.Context()), nil
 }
 
 // EventSchema returns the events schema.
@@ -69,14 +69,14 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	body := struct {
-		Expressions []apis.ExpressionToBeExtracted
+		Expressions []core.ExpressionToBeExtracted
 		Schema      types.Type
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return api.apis.ExpressionsProperties(body.Expressions, body.Schema)
+	return api.core.ExpressionsProperties(body.Expressions, body.Schema)
 }
 
 // Member returns the current member.
@@ -93,7 +93,7 @@ func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
 //
 // Login is not required to call MemberInvitation.
 func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	organization, email, err := api.apis.MemberInvitation(r.Context(), r.PathValue("token"))
+	organization, email, err := api.core.MemberInvitation(r.Context(), r.PathValue("token"))
 	if err != nil {
 		return nil, err
 	}
@@ -110,14 +110,14 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		Data           rawJSON
 		InSchema       types.Type
 		OutSchema      types.Type
-		Transformation apis.DataTransformation
-		Purpose        apis.Purpose
+		Transformation core.DataTransformation
+		Purpose        core.Purpose
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	data, err := api.apis.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
+	data, err := api.core.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	languages := api.apis.TransformationLanguages()
+	languages := api.core.TransformationLanguages()
 	return map[string][]string{"languages": languages}, nil
 }
 
@@ -147,7 +147,7 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return api.apis.ValidateExpression(body.Expression, body.Properties, body.Type)
+	return api.core.ValidateExpression(body.Expression, body.Properties, body.Type)
 }
 
 // Warehouses returns the data warehouses.
@@ -155,7 +155,7 @@ func (api api) Warehouses(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return api.apis.Warehouses(r.Context()), nil
+	return api.core.Warehouses(r.Context()), nil
 }
 
 func (api api) connector(r *http.Request) string {

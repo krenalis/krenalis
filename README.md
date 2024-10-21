@@ -20,7 +20,7 @@
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
 - [Interact with Meergo using `meergo-cli`](#interact-with-meergo-using-meergo-cli)
-- [APIs](#apis)
+- [Core](#core)
 
 ## Before commit
 
@@ -212,6 +212,6 @@ prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095
 
 Refer to the [documentation of the meergo-cli tool](meergo-cli/README.md).
 
-## APIs
+## Core
 
-See [apis](apis) for a documentation of the APIs.
+See [core](core) for a documentation of the APIs.

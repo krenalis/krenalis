@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 
 	"github.com/google/uuid"
 )
@@ -80,7 +80,7 @@ func (user user) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
 	return map[string]any{"traits": rawJSON(traits)}, nil
 }
 
-func (user user) user(r *http.Request) (*apis.User, error) {
+func (user user) user(r *http.Request) (*core.User, error) {
 	ws, err := workspace{user.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err

@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/state"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/telemetry"
 )
 
@@ -38,7 +38,7 @@ type Settings struct {
 	ESBuild struct {
 		PrintWarningsOnStderr bool `yaml:"printWarningsOnStderr"`
 	}
-	PostgreSQL apis.PostgreSQLConfig `yaml:"postgreSQL"`
+	PostgreSQL core.PostgreSQLConfig `yaml:"postgreSQL"`
 	SMTP       struct {
 		Host string
 		Port int
@@ -88,20 +88,20 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		}
 	}
 
-	config := apis.Config{
+	config := core.Config{
 		PostgreSQL: settings.PostgreSQL,
 		SMTP:       settings.SMTP,
 	}
 
 	// Choose the transformer setting.
 	if settings.Transformer.Lambda.Node.Runtime != "" || settings.Transformer.Lambda.Python.Runtime != "" {
-		config.Transformer = apis.LambdaConfig(settings.Transformer.Lambda)
+		config.Transformer = core.LambdaConfig(settings.Transformer.Lambda)
 	}
 	if settings.Transformer.Local.NodeExecutable != "" || settings.Transformer.Local.PythonExecutable != "" {
 		if config.Transformer != nil {
 			return errors.New("cannot specify both the Lambda and the local transformer in the configuration (hint: check your 'config.yaml' file)")
 		}
-		config.Transformer = apis.LocalConfig(settings.Transformer.Local)
+		config.Transformer = core.LocalConfig(settings.Transformer.Local)
 	}
 
 	// Validate the settings of the connectors.
@@ -133,13 +133,13 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		return fmt.Errorf("UI session key in the configuration file is not 64 bytes long, but %d", len(sessionKey))
 	}
 
-	apis, err := apis.New(&config)
+	core, err := core.New(&config)
 	if err != nil {
 		return err
 	}
-	defer apis.Close()
+	defer core.Close()
 
-	apisServer := newAPIsServer(apis, sessionKey)
+	apisServer := newAPIsServer(core, sessionKey)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {
@@ -180,12 +180,12 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
-			apis.ServeEvents(w, r)
+			core.ServeEvents(w, r)
 		case strings.HasPrefix(r.URL.Path, "/api/"):
 			apisServer.ServeHTTP(w, r)
 			return
 		case strings.HasPrefix(r.URL.Path, "/webhook/"):
-			apis.ServeWebhook(w, r)
+			core.ServeWebhook(w, r)
 			return
 		case strings.HasPrefix(r.URL.Path, "/ui/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
 			assets.ServeHTTP(w, r)

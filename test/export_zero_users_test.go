@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
 )
@@ -112,7 +112,7 @@ func TestExportZeroUsers(t *testing.T) {
 			"Connection": map[string]any{
 				"Name":        "Storage",
 				"Enabled":     true,
-				"Compression": apis.NoCompression,
+				"Compression": core.NoCompression,
 			},
 		}, nil)
 

@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/meergo/meergo/apis/postgres"
 	"github.com/meergo/meergo/cmd"
+	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/types"
 
 	_ "github.com/meergo/meergo/connectors"

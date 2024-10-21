@@ -17,8 +17,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/meergo/meergo/apis"
 	"github.com/meergo/meergo/backoff"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -45,7 +45,7 @@ func (c *Meergo) Action(connection, action int) Action {
 	return a
 }
 
-func (c *Meergo) ActionSchemas(conn int, target apis.Target, eventType string) map[string]any {
+func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) map[string]any {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/schemas/%s", c.ws, conn, target)
 	if eventType != "" {
 		method += "/" + eventType

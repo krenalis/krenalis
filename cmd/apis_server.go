@@ -16,8 +16,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/meergo/meergo/apis"
-	"github.com/meergo/meergo/apis/errors"
+	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/core/errors"
 
 	"github.com/gorilla/securecookie"
 )
@@ -42,21 +42,21 @@ const (
 )
 
 type apisServer struct {
-	apis         *apis.APIs
+	core         *core.Core
 	secureCookie *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
 	mux          *http.ServeMux
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
-// APIs. sessionKey is the key used to encrypt the session cookie.
+// Core. sessionKey is the key used to encrypt the session cookie.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
+func newAPIsServer(core *core.Core, sessionKey []byte) *apisServer {
 
 	if len(sessionKey) != 64 {
 		panic("sessionKey is not 64 bytes long")
 	}
 
-	s := &apisServer{apis: apis}
+	s := &apisServer{core: core}
 
 	hashKey, blockKey := sessionKey[:32], sessionKey[32:]
 	s.secureCookie = securecookie.New(hashKey, blockKey)
@@ -170,7 +170,7 @@ func newAPIsServer(apis *apis.APIs, sessionKey []byte) *apisServer {
 					_ = err.WriteTo(w)
 					return
 				}
-				slog.Error("error occurred serving APIs", "err", err)
+				slog.Error("error occurred serving Core", "err", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -193,7 +193,7 @@ var loginRequiredError = errors.Unprocessable(LoginRequired, "login is required"
 
 // credentials returns the logged member with its organization. If no member is
 // logged, it returns an errors.Unprocessable error with code LoginRequired.
-func (s *apisServer) credentials(r *http.Request) (*apis.Member, *apis.Organization, error) {
+func (s *apisServer) credentials(r *http.Request) (*core.Member, *core.Organization, error) {
 
 	// Get the session.
 	cookie, _ := r.Cookie(sessionCookieName)
@@ -207,7 +207,7 @@ func (s *apisServer) credentials(r *http.Request) (*apis.Member, *apis.Organizat
 	}
 
 	// Get the organization.
-	organization, err := s.apis.Organization(r.Context(), session.Organization)
+	organization, err := s.core.Organization(r.Context(), session.Organization)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
 			return nil, nil, loginRequiredError
@@ -241,13 +241,13 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 
 	// Retrieve the organization and the member.
-	organization, err := s.apis.Organization(r.Context(), 1)
+	organization, err := s.core.Organization(r.Context(), 1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read organization: %s", err)
 	}
 	memberID, err := organization.AuthenticateMember(r.Context(), body.Email, body.Password)
 	if err != nil {
-		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == apis.AuthenticationFailed {
+		if err, ok := err.(*errors.UnprocessableError); ok && err.Code == core.AuthenticationFailed {
 			return []any{0, "AuthenticationFailed"}, nil
 		}
 		return nil, err

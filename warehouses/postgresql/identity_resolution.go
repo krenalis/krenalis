@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/apis/postgres"
+	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"

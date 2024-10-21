@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/meergo/meergo/apis"
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
 
@@ -99,11 +99,11 @@ func TestExportUsersToFile(t *testing.T) {
 		FileOrderingPropertyPath: "email",
 	})
 
-	compressions := []apis.Compression{
-		apis.NoCompression,
-		apis.ZipCompression,
-		apis.GzipCompression,
-		apis.SnappyCompression,
+	compressions := []core.Compression{
+		core.NoCompression,
+		core.ZipCompression,
+		core.GzipCompression,
+		core.SnappyCompression,
 	}
 
 	for _, compression := range compressions {
@@ -112,11 +112,11 @@ func TestExportUsersToFile(t *testing.T) {
 
 		var ext string
 		switch compression {
-		case apis.ZipCompression:
+		case core.ZipCompression:
 			ext = ".zip"
-		case apis.GzipCompression:
+		case core.GzipCompression:
 			ext = ".gz"
-		case apis.SnappyCompression:
+		case core.SnappyCompression:
 			ext = ".sz"
 		}
 
@@ -157,7 +157,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 		var r io.Reader = fi
 		switch compression {
-		case apis.ZipCompression:
+		case core.ZipCompression:
 			st, err := fi.Stat()
 			if err != nil {
 				t.Fatal(err)
@@ -170,12 +170,12 @@ func TestExportUsersToFile(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-		case apis.GzipCompression:
+		case core.GzipCompression:
 			r, err = gzip.NewReader(fi)
 			if err != nil {
 				t.Fatal(err)
 			}
-		case apis.SnappyCompression:
+		case core.SnappyCompression:
 			r = snappy.NewReader(fi)
 		}
 		content, err := io.ReadAll(r)
