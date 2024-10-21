@@ -4,8 +4,8 @@ CREATE TABLE _edges (
     i2 int
 );
 
-DROP TABLE IF EXISTS clusters_to_merge;
-CREATE TABLE clusters_to_merge(c1 int, c2 int);
+DROP TABLE IF EXISTS _clusters_to_merge;
+CREATE TABLE _clusters_to_merge(c1 int, c2 int);
 
 CREATE OR REPLACE PROCEDURE resolve_identities()
 LANGUAGE sql
@@ -42,9 +42,9 @@ AS $$
         LOOP
         
             -- Determine the clusters to merge.
-            TRUNCATE clusters_to_merge;
+            TRUNCATE _clusters_to_merge;
             INSERT INTO
-                clusters_to_merge
+                _clusters_to_merge
             SELECT
                 i1.__cluster__ c1,
                 i2.__cluster__ c2
@@ -56,14 +56,14 @@ AS $$
                 i1.__cluster__ <> i2.__cluster__;
 
             -- Stop iterating when there are no more clusters to merge.
-            SELECT count(*) > 0 INTO has_clusters_to_merge FROM clusters_to_merge;
+            SELECT count(*) > 0 INTO has_clusters_to_merge FROM _clusters_to_merge;
             EXIT WHEN NOT has_clusters_to_merge;
 
-            -- Make the "clusters_to_merge" table symmetric.
+            -- Make the "_clusters_to_merge" table symmetric.
             -- TODO(Gianluca): is this necessary?
-            INSERT INTO clusters_to_merge
+            INSERT INTO _clusters_to_merge
                 SELECT c2, c1
-                FROM clusters_to_merge;
+                FROM _clusters_to_merge;
             
             -- Update the clusters of the user identities.
             UPDATE
@@ -77,7 +77,7 @@ AS $$
                         c1 source,
                         min(c2) target
                     FROM
-                        clusters_to_merge
+                        _clusters_to_merge
                     GROUP BY
                         source
                 ) new_clusters ON new_clusters.source = identities_b.__cluster__
