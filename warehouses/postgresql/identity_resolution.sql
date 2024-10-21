@@ -1,5 +1,5 @@
-DROP TABLE IF EXISTS "edges";
-CREATE TABLE edges (
+DROP TABLE IF EXISTS _edges;
+CREATE TABLE _edges (
     i1 int,
     i2 int
 );
@@ -12,9 +12,9 @@ LANGUAGE sql
 AS $$
 
     -- Determine the edges of the identities graph.
-    TRUNCATE edges;
+    TRUNCATE _edges;
     INSERT INTO
-        edges
+        _edges
     SELECT
         i1.__pk__,
         i2.__pk__
@@ -49,9 +49,9 @@ AS $$
                 i1.__cluster__ c1,
                 i2.__cluster__ c2
             FROM
-                edges
-                JOIN _user_identities i1 ON edges.i1 = i1.__pk__
-                JOIN _user_identities i2 ON edges.i2 = i2.__pk__
+                _edges
+                JOIN _user_identities i1 ON _edges.i1 = i1.__pk__
+                JOIN _user_identities i2 ON _edges.i2 = i2.__pk__
             WHERE
                 i1.__cluster__ <> i2.__cluster__;
 
