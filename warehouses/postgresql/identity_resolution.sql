@@ -1,8 +1,7 @@
 DROP TABLE IF EXISTS "edges";
 CREATE TABLE edges (
     i1 int,
-    i2 int,
-    same_user boolean not null -- TODO(Gianluca): maybe this can be removed.
+    i2 int
 );
 
 DROP TABLE IF EXISTS clusters_to_merge;
@@ -18,20 +17,19 @@ AS $$
         edges
     SELECT
         i1.__pk__,
-        i2.__pk__,
-        (
-            (i1.__connection__ = i2.__connection__
-                AND i1.__identity_id__ = i2.__identity_id__
-                AND i1.__is_anonymous__ = i2.__is_anonymous__
-            )
-            OR {{ same_user }} -- This placeholder will be replaced by Meergo.
-        ) as same_user
+        i2.__pk__
     FROM
         _user_identities i1
             CROSS JOIN
         _user_identities i2
     WHERE
-        i1.__pk__ < i2.__pk__;
+        i1.__pk__ < i2.__pk__ AND (
+            (i1.__connection__ = i2.__connection__
+                AND i1.__identity_id__ = i2.__identity_id__
+                AND i1.__is_anonymous__ = i2.__is_anonymous__
+            )
+            OR {{ same_user }} -- This placeholder will be replaced by Meergo.
+        );
     
     -- Do the clustering.
     DO $clustering$
@@ -55,8 +53,7 @@ AS $$
                 JOIN _user_identities i1 ON edges.i1 = i1.__pk__
                 JOIN _user_identities i2 ON edges.i2 = i2.__pk__
             WHERE
-                edges.same_user
-                AND i1.__cluster__ <> i2.__cluster__;
+                i1.__cluster__ <> i2.__cluster__;
 
             -- Stop iterating when there are no more clusters to merge.
             SELECT count(*) > 0 INTO has_clusters_to_merge FROM clusters_to_merge;
