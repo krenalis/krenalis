@@ -203,6 +203,7 @@ var defaultUserSchema = types.Object([]types.Property{
 //   - DataWarehouseNotExist, if a data warehouse with the provided name does
 //     not exist;
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid;
+//   - WarehouseNotInitializable, if the warehouse is not initializable.
 func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
