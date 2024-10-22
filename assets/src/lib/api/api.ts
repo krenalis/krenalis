@@ -157,6 +157,18 @@ class API {
 	deleteMember = async (member: number): Promise<void> => {
 		return await call(`${this.apiURL}/members/${member}`, http.DELETE);
 	};
+
+	canInitializeWarehouse = async (
+		warehouseName: string,
+		warehouseMode: WarehouseMode,
+		settings: any,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/can-initialize-warehouse`, http.POST, {
+			Name: warehouseName,
+			Mode: warehouseMode,
+			Settings: settings,
+		});
+	};
 }
 
 class Connections {
@@ -613,6 +625,12 @@ class Workspaces {
 		});
 	};
 
+	canChangeWarehouseSettings = async (settings: any): Promise<void> => {
+		return await call(`${this.apiURL}/warehouse/can-change-settings`, http.POST, {
+			Settings: settings,
+		});
+	};
+
 	changeWarehouseSettings = async (
 		name: string,
 		mode: WarehouseMode,
@@ -624,13 +642,6 @@ class Workspaces {
 			Mode: mode,
 			Settings: settings,
 			CancelIncompatibleOperations: cancelIncompatibleOperations,
-		});
-	};
-
-	pingWarehouse = async (warehouseName: string, settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/warehouse/pings`, http.POST, {
-			Name: warehouseName,
-			Settings: settings,
 		});
 	};
 

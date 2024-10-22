@@ -45,7 +45,7 @@ const DataWarehouseSettings = ({
 	const onPing = async () => {
 		const timeout = setTimeout(() => setIsPingLoading(true), 300);
 		try {
-			await api.workspaces.pingWarehouse(selectedWarehouse.name, settings);
+			await api.workspaces.canChangeWarehouseSettings(settings);
 		} catch (err) {
 			handleError(err);
 			clearTimeout(timeout);

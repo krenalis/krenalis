@@ -9,15 +9,16 @@ import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
+import * as icons from '../../../constants/icons';
 
 const WorkspaceAdd = () => {
 	const [name, setName] = useState<string>('');
 	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('PostgreSQL');
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
-	// const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
+	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
 
-	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect } = useContext(appContext);
+	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus } = useContext(appContext);
 
 	const onNameChange = (e) => setName(e.target.value);
 
@@ -31,27 +32,26 @@ const WorkspaceAdd = () => {
 		redirect('workspaces');
 	};
 
-	// TODO: currently disabled, see issue #1080
-	// const onCheckWarehouse = async () => {
-	// 	setIsCheckingWarehouse(true);
-	// 	try {
-	// 		await api.workspaces.pingWarehouse(selectedWarehouse, warehouseSettings);
-	// 	} catch (err) {
-	// 		setTimeout(() => {
-	// 			setIsCheckingWarehouse(false);
-	// 			handleError(err);
-	// 		}, 300);
-	// 		return;
-	// 	}
-	// 	setTimeout(() => {
-	// 		setIsCheckingWarehouse(false);
-	// 		showStatus({
-	// 			variant: 'success',
-	// 			icon: icons.OK,
-	// 			text: `${selectedWarehouse} responded successfully`,
-	// 		});
-	// 	}, 300);
-	// };
+	const onCheckWarehouse = async () => {
+		setIsCheckingWarehouse(true);
+		try {
+			await api.canInitializeWarehouse(selectedWarehouse, 'Normal', warehouseSettings);
+		} catch (err) {
+			setTimeout(() => {
+				setIsCheckingWarehouse(false);
+				handleError(err);
+			}, 300);
+			return;
+		}
+		setTimeout(() => {
+			setIsCheckingWarehouse(false);
+			showStatus({
+				variant: 'success',
+				icon: icons.OK,
+				text: `${selectedWarehouse} responded successfully`,
+			});
+		}, 300);
+	};
 
 	const onAddWorkspace = async () => {
 		const privacyRegion = useEuropeRegion ? 'Europe' : '';
@@ -108,9 +108,8 @@ const WorkspaceAdd = () => {
 				</SlButton>
 				<SlButton
 					className='workspace-add__check-button'
-					// onClick={onCheckWarehouse}
-					// loading={isCheckingWarehouse}
-					disabled
+					onClick={onCheckWarehouse}
+					loading={isCheckingWarehouse}
 				>
 					Check warehouse
 				</SlButton>
