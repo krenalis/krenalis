@@ -175,10 +175,13 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		let linkedActionType: ActionType | null = null;
 		for (const t of connection.actionTypes!) {
 			if (a.Target === 'Users' || a.Target === 'Groups') {
-				if (a.Target === t.Target) linkedActionType = t;
-				continue;
+				if (a.Target === t.Target) {
+					linkedActionType = t;
+				}
+			} else {
+				const eventActionTypes = connection.actionTypes.filter((actionType) => actionType.Target === 'Events');
+				linkedActionType = eventActionTypes.find((actionType) => actionType.EventType === a.EventType);
 			}
-			if (a.EventType === t.EventType) linkedActionType = t;
 		}
 		if (linkedActionType == null) {
 			throw new Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
