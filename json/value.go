@@ -13,6 +13,7 @@ import (
 	"errors"
 	"iter"
 	"strconv"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/decimal"
@@ -129,7 +130,8 @@ func (v Value) Elements() iter.Seq2[int, Value] {
 		panic("expected array")
 	}
 	return func(yield func(int, Value) bool) {
-		dec := jsontext.NewDecoder(bytes.NewReader(v))
+		dec := getDecoder(v)
+		defer putDecoder(dec)
 		_, _ = dec.ReadToken()
 		for i := 0; ; i++ {
 			v, err := dec.ReadValue()
@@ -239,7 +241,8 @@ var lookupTable = [256]uint8{'\t': 1, '\n': 1, '\r': 1, ' ': 1, ':': 2}
 // failed, and Kind, representing the kind of the JSON value where the property
 // was expected but not found.
 func (v Value) Lookup(path []string) (Value, error) {
-	dec := jsontext.NewDecoder(bytes.NewReader(v))
+	dec := getDecoder(v)
+	defer putDecoder(dec)
 	var tok jsontext.Token
 	for i, name := range path {
 		if tok, _ = dec.ReadToken(); tok.Kind() != '{' {
@@ -281,7 +284,8 @@ func (v Value) Properties() iter.Seq2[string, Value] {
 	}
 	return func(yield func(string, Value) bool) {
 		var b []byte
-		dec := jsontext.NewDecoder(bytes.NewReader(v))
+		dec := getDecoder(v)
+		defer putDecoder(dec)
 		_, _ = dec.ReadToken()
 		for {
 			k, err := dec.ReadValue()
@@ -410,4 +414,37 @@ func Unquote(data []byte) ([]byte, error) {
 // UTF-8.
 func Valid(data []byte) bool {
 	return jsontext.Value(data).IsValid()
+}
+
+// valueDecoder is used by the Elements, Properties, and Lookup methods.
+// It combines a byte buffer and a JSON decoder to facilitate decoding
+// of JSON-encoded data from a Value.
+type valueDecoder struct {
+	b bytes.Buffer
+	jsontext.Decoder
+}
+
+// decPool is a pool of *valueDecoder values.
+var decPool sync.Pool
+
+func init() {
+	decPool = sync.Pool{}
+	decPool.New = func() any {
+		return &valueDecoder{}
+	}
+}
+
+// getDecoder retrieves a valueDecoder from the pool and initializes it to
+// decode the provided Value.
+func getDecoder(v Value) *valueDecoder {
+	dec := decPool.Get().(*valueDecoder)
+	dec.b = *bytes.NewBuffer(v)
+	dec.Reset(&dec.b)
+	return dec
+}
+
+// putDecoder returns the provided decoder to the pool for future reuse.
+func putDecoder(dec *valueDecoder) {
+	dec.b = bytes.Buffer{}
+	decPool.Put(dec)
 }

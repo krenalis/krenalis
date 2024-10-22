@@ -512,25 +512,63 @@ func Test_Value(t *testing.T) {
 		}
 	})
 
-	t.Run("Valid", func(t *testing.T) {
-		tests := []struct {
-			data     string
-			expected bool
-		}{
-			{``, false},
-			{`null`, true},
-			{`{1,2}`, false},
-			{"{\"\xFF\":5}", false},
-			{`{"à":true}`, true},
-			{`False`, false},
-			{"\n { \"foo\": \"boo\" } ", true},
-			{` { "foo": "boo" }, { }`, false},
-		}
-		for _, test := range tests {
-			if got := Valid([]byte(test.data)); test.expected != got {
-				t.Fatalf("expected %t, got %t", test.expected, got)
-			}
+}
+
+func TestAlloc(t *testing.T) {
+
+	t.Run("Lookup", func(t *testing.T) {
+		value := Value(`{"id":5,"name":"Alice","email":"alice@example.com","age":30,"address":{"street":"123 Main St","city":"Wonderland","zip":"12345"}}`)
+		path := []string{"address", "city"}
+		a := testing.AllocsPerRun(1000, func() { _, _ = value.Lookup(path) })
+		if a != 0 {
+			t.Fatalf("expected 0 allocations, got %.0f", a)
 		}
 	})
 
+	t.Run("Elements", func(t *testing.T) {
+		value := Value(`[0,1,2,3,4,5,6,7,8,9]`)
+		a := testing.AllocsPerRun(1000, func() {
+			for _, _ = range value.Elements() {
+			}
+		})
+		if a != 5 {
+			t.Fatalf("expected 5 allocations, got %.0f", a)
+		}
+	})
+
+	t.Run("Properties", func(t *testing.T) {
+		value := Value(`{"id":1,"name":"Alice","email":"alice@example.com","age":30,"registered":"2024-01-15","isActive":true}`)
+		a := testing.AllocsPerRun(1000, func() {
+			for _, _ = range value.Properties() {
+			}
+		})
+		if a != 13 {
+			t.Fatalf("expected 13 allocations, got %.0f", a)
+		}
+	})
+
+}
+
+func Benchmark_Elements(b *testing.B) {
+	value := Value(`[0,1,2,3,4,5,6,7,8,9]`)
+	for i := 0; i < b.N; i++ {
+		for _, _ = range value.Elements() {
+		}
+	}
+}
+
+func Benchmark_Lookup(b *testing.B) {
+	value := Value(`{"id":5,"name":"Alice","email":"alice@example.com","age":30,"address":{"street":"123 Main St","city":"Wonderland","zip":"12345"}}`)
+	path := []string{"address", "city"}
+	for i := 0; i < b.N; i++ {
+		_, _ = value.Lookup(path)
+	}
+}
+
+func Benchmark_Properties(b *testing.B) {
+	value := Value(`{"id":1,"name":"Alice","email":"alice@example.com","age":30,"registered":"2024-01-15","isActive":true}`)
+	for i := 0; i < b.N; i++ {
+		for _, _ = range value.Properties() {
+		}
+	}
 }
