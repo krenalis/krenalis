@@ -368,7 +368,6 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if err != nil {
 				return iw.Close(ctx)
 			}
-			stats.PassedFinalizing(1)
 		}
 		err = iw.Close(ctx)
 		if err != nil {
