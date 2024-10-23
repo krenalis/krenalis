@@ -537,11 +537,13 @@ func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error 
 		createUsersTable,
 	}
 	if !repair {
-		// Since the "CREATE VIEW IF EXISTS" statement does not exist in
+		// Since the "CREATE VIEW IF NOT EXISTS" statement does not exist in
 		// PostgreSQL, the view is recreated only if initializing, not when
 		// repairing, otherwise a "cannot drop columns from view" error is
 		// returned by PostgreSQL in cases where the users table has different
 		// columns than the default one.
+		//
+		// TODO(Gianluca): clarify this.
 		queries = append(queries, createUsersView)
 	}
 	for _, query := range queries {
