@@ -12,6 +12,7 @@
 	--text-light: #616161;
 	--border-primary: #e6e6e6;
 	--radius: 5px;
+	--header-height: 56px;
 
 	/* set shoelace primary colors */
 	--sl-color-primary-50: var(--sl-color-indigo-50) !important;
@@ -120,7 +121,7 @@ body {
 }
 
 #root > .app {
-	padding-top: 56px;
+	padding-top: var(--header-height);
 	padding-left: var(--sidebar-with);
 }
 
@@ -297,7 +298,7 @@ sl-dialog::part(body) {
 	background-color: var(--bg-gray);
 	border-top-left-radius: 8px;
 	border: 1px solid #ececec;
-	min-height: calc(100vh - 46px);
+	min-height: calc(100vh - var(--header-height));
 }
 
 .app .route-content--connection {

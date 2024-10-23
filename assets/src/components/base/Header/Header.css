@@ -4,7 +4,7 @@
 	grid-template-areas: 'title account';
 	justify-content: space-between;
 	align-items: baseline;
-	height: 56px;
+	height: var(--header-height);
 	background: var(--bg-primary);
 	position: fixed;
 	top: 0;
