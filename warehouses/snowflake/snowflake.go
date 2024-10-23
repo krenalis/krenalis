@@ -34,6 +34,21 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
+var (
+	//go:embed tables/destinations_users.sql
+	createDestinationUsersTable string
+	//go:embed tables/events.sql
+	createEventsTable string
+	//go:embed tables/operations.sql
+	createOperationsTable string
+	//go:embed tables/user_identities.sql
+	createUserIdentitiesTable string
+	//go:embed tables/users.sql
+	createUsersTable string
+	//go:embed tables/users_view.sql
+	createUsersView string
+)
+
 var _ meergo.Warehouse = &Snowflake{}
 
 func init() {
@@ -157,8 +172,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
 func (warehouse *Snowflake) Initialize(ctx context.Context) error {
-	// TODO: not implemented.
-	return nil
+	return warehouse.initRepair(ctx, false)
 }
 
 // Merge performs a table merge operation.
@@ -487,7 +501,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
 func (warehouse *Snowflake) Repair(ctx context.Context) error {
-	panic("TODO: not implemented")
+	return warehouse.initRepair(ctx, true)
 }
 
 // Settings returns the data warehouse settings.
@@ -533,6 +547,37 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 		Role:      s.Role,
 		Params:    make(map[string]*string),
 	})
+}
+
+// initRepair initializes (or repairs) the database objects (as tables, types,
+// etc...) on the data warehouse.
+func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer conn.Close()
+	queries := []string{
+		createDestinationUsersTable,
+		createEventsTable,
+		createOperationsTable,
+		createUserIdentitiesTable,
+		createUsersTable,
+	}
+	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
+		queries = append(queries, createUsersView)
+	}
+	for _, query := range queries {
+		_, err := conn.ExecContext(ctx, query)
+		if err != nil {
+			return meergo.Error(err)
+		}
+	}
+	return nil
 }
 
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
