@@ -1,3 +1,8 @@
+:root {
+	--users-toolbar-height: 56px;
+	--users-footer-height: 80px;
+}
+
 .users-list .toolbar {
 	justify-content: space-between;
 	height: 90px;
@@ -8,8 +13,10 @@
 }
 
 .users-list__content {
-	min-height: calc(100vh - 163px);
+	height: calc(100vh - var(--header-height) - var(--users-toolbar-height) - 84px);
 	border: 1px solid var(--border-primary);
+	border-bottom-left-radius: 10px;
+	border-bottom-right-radius: 10px;
 }
 
 .users-list__content .grid__cell {
@@ -54,6 +61,7 @@
 	font-size: 12px;
 	text-align: center;
 	color: var(--color-primary-500);
+	width: max-content;
 }
 
 .users-list .grid {
@@ -97,18 +105,24 @@
 }
 
 .users-list__grid-container {
-	min-height: calc(100vh - 140px);
 	position: relative;
+	height: 100%;
 }
 
 .users-list__grid-container .grid {
-	max-height: calc(100vh - 220px);
 	overflow-y: auto;
+	max-height: calc(100% - var(--users-footer-height));
+	border-radius: 0;
+	border-bottom: 0px;
+	box-shadow: none;
+	background: var(--bg-gray);
 }
 
 .users-list__grid-container .grid__no-rows,
 .users-list__grid-container .grid__loading {
 	background-color: var(--bg-gray);
+	padding: 50px 0;
+	min-height: 150px;
 }
 
 .users-list__grid-container .grid__header-row {
@@ -118,7 +132,7 @@
 }
 
 .users-list__footer {
-	padding: 20px;
+	padding: 20px 30px;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -129,7 +143,9 @@
 	height: 80px;
 	background-color: var(--bg-primary);
 	border-top: 1px solid var(--sl-color-neutral-200);
-	z-index: 10;
+	z-index: 5;
+	border-bottom-left-radius: 10px;
+	border-bottom-right-radius: 10px;
 }
 
 .users-list__footer-total {
