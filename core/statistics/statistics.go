@@ -460,83 +460,83 @@ func (c *Collector) Close() {
 	c.s.mu.Unlock()
 }
 
-// FailedStep increases the failed count for the given step by the given count.
+// StepFailed increases the failed count for the given step by the given count.
 // It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedStep(step Step, count int, message string) {
+func (c *Collector) StepFailed(step Step, count int, message string) {
 	c.failedStep(step, count, message)
 }
 
-// FailedReceiving increases the failed count for the Receiving step by the
+// ReceivingFailed increases the failed count for the Receiving step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedReceiving(count int, message string) {
+func (c *Collector) ReceivingFailed(count int, message string) {
 	c.failedStep(ReceivingStep, count, message)
 }
 
-// FailedInputValidation increases the failed count for the InputValidation step
+// InputValidationFailed increases the failed count for the InputValidation step
 // by the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedInputValidation(count int, message string) {
+func (c *Collector) InputValidationFailed(count int, message string) {
 	c.failedStep(InputValidationStep, count, message)
 }
 
-// FailedFiltering increases the failed count for the Filtering step by the
+// FilteringFailed increases the failed count for the Filtering step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedFiltering(count int) {
+func (c *Collector) FilteringFailed(count int) {
 	c.failedStep(FilteringStep, count, "")
 }
 
-// FailedTransformation increases the failed count for the Transformation step
+// TransformationFailed increases the failed count for the Transformation step
 // by the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedTransformation(count int, message string) {
+func (c *Collector) TransformationFailed(count int, message string) {
 	c.failedStep(TransformationStep, count, message)
 }
 
-// FailedOutputValidation increases the failed count for the OutputValidation
+// OutputValidationFailed increases the failed count for the OutputValidation
 // step by the given count. It is safe to call concurrently from multiple
 // goroutines.
-func (c *Collector) FailedOutputValidation(count int, message string) {
+func (c *Collector) OutputValidationFailed(count int, message string) {
 	c.failedStep(OutputValidationStep, count, message)
 }
 
-// FailedFinalizing increases the failed count for the Finalizing step by the
+// FinalizingFailed increases the failed count for the Finalizing step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FailedFinalizing(count int, message string) {
+func (c *Collector) FinalizingFailed(count int, message string) {
 	c.failedStep(FinalizingStep, count, message)
 }
 
-// PassedReceiving increases the passed count for the Receiving step by the
+// ReceivingPassed increases the passed count for the Receiving step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) PassedReceiving(count int) {
+func (c *Collector) ReceivingPassed(count int) {
 	c.passedStep(ReceivingStep, count)
 }
 
-// PassedInputValidation increases the passed count for the InputValidation step
+// InputValidationPassed increases the passed count for the InputValidation step
 // by the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) PassedInputValidation(count int) {
+func (c *Collector) InputValidationPassed(count int) {
 	c.passedStep(InputValidationStep, count)
 }
 
-// PassedFiltering increases the passed count for the Filtering step by the
+// FilteringPassed increases the passed count for the Filtering step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) PassedFiltering(count int) {
+func (c *Collector) FilteringPassed(count int) {
 	c.passedStep(FilteringStep, count)
 }
 
-// PassedTransformation increases the passed count for the Transformation step
+// TransformationPassed increases the passed count for the Transformation step
 // by the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) PassedTransformation(count int) {
+func (c *Collector) TransformationPassed(count int) {
 	c.passedStep(TransformationStep, count)
 }
 
-// PassedOutputValidation increases the passed count for the OutputValidation
+// OutputValidationPassed increases the passed count for the OutputValidation
 // step by the given count. It is safe to call concurrently from multiple
 // goroutines.
-func (c *Collector) PassedOutputValidation(count int) {
+func (c *Collector) OutputValidationPassed(count int) {
 	c.passedStep(OutputValidationStep, count)
 }
 
-// PassedFinalizing increases the passed count for the Finalizing step by the
+// FinalizingPassed increases the passed count for the Finalizing step by the
 // given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) PassedFinalizing(count int) {
+func (c *Collector) FinalizingPassed(count int) {
 	c.passedStep(FinalizingStep, count)
 }
 

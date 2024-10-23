@@ -92,10 +92,10 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 	// Instantiate a batch identity writer.
 	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
-			stats.FailedFinalizing(len(ids), err.Error())
+			stats.FinalizingFailed(len(ids), err.Error())
 			return
 		}
-		stats.PassedFinalizing(len(ids))
+		stats.FinalizingPassed(len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
@@ -124,24 +124,24 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 		if user.Err != nil {
 			iw.Keep(user.ID)
 			if _, ok := user.Err.(ValidationError); ok {
-				stats.PassedReceiving(1)
-				stats.FailedInputValidation(1, user.Err.Error())
+				stats.ReceivingPassed(1)
+				stats.InputValidationFailed(1, user.Err.Error())
 				goto Next
 			}
-			stats.FailedReceiving(1, user.Err.Error())
+			stats.ReceivingFailed(1, user.Err.Error())
 			goto Next
 		}
 
-		stats.PassedReceiving(1)
-		stats.PassedInputValidation(1)
+		stats.ReceivingPassed(1)
+		stats.InputValidationPassed(1)
 
 		// In case the action has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
 			if !filters.Applies(action.Filter, user.Properties) {
-				stats.FailedFiltering(1)
+				stats.FilteringFailed(1)
 				goto Next
 			}
-			stats.PassedFiltering(1)
+			stats.FilteringPassed(1)
 		}
 
 		if user.LastChangeTime.After(cursor) {
@@ -173,16 +173,16 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						stats.PassedTransformation(1)
-						stats.FailedOutputValidation(1, record.Err.Error())
+						stats.TransformationPassed(1)
+						stats.OutputValidationFailed(1, record.Err.Error())
 						continue
 					}
-					stats.FailedTransformation(1, record.Err.Error())
+					stats.TransformationFailed(1, record.Err.Error())
 					continue
 				}
 				user.Properties = record.Properties
-				stats.PassedTransformation(1)
-				stats.PassedOutputValidation(1)
+				stats.TransformationPassed(1)
+				stats.OutputValidationPassed(1)
 				err = iw.Write(datastore.Identity{
 					ID:             user.ID,
 					Properties:     user.Properties,

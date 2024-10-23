@@ -104,13 +104,13 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	ack := func(ids []string, err error) {
 		for _, id := range ids {
 			if err != nil && err != connectors.ErrRecordNotExist {
-				stats.FailedFinalizing(1, err.Error())
+				stats.FinalizingFailed(1, err.Error())
 				continue
 			}
 			if err == connectors.ErrRecordNotExist {
 				nonExistentUsers = append(nonExistentUsers, id)
 			}
-			stats.PassedFinalizing(1)
+			stats.FinalizingPassed(1)
 		}
 	}
 
@@ -151,15 +151,15 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	for record := range records.All(ctx) {
 
 		if record.Err != nil {
-			stats.FailedReceiving(1, record.Err.Error())
+			stats.ReceivingFailed(1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return record.Err
 			}
 			goto Next
 		}
 
-		stats.PassedReceiving(1)
-		stats.PassedInputValidation(1)
+		stats.ReceivingPassed(1)
+		stats.InputValidationPassed(1)
 
 		if connector.Type == state.App {
 			if record.MatchingID == "" {
@@ -218,20 +218,20 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						stats.PassedTransformation(1)
-						stats.FailedOutputValidation(1, record.Err.Error())
+						stats.TransformationPassed(1)
+						stats.OutputValidationFailed(1, record.Err.Error())
 						continue
 					}
-					stats.FailedTransformation(1, record.Err.Error())
+					stats.TransformationFailed(1, record.Err.Error())
 					continue
 				}
-				stats.PassedTransformation(1)
-				stats.PassedOutputValidation(1)
+				stats.TransformationPassed(1)
+				stats.OutputValidationPassed(1)
 				if user.MatchingValue != nil {
 					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 				}
 				if connector.Type == state.App && len(record.Properties) == 0 {
-					stats.PassedFinalizing(1)
+					stats.FinalizingPassed(1)
 					continue
 				}
 				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
