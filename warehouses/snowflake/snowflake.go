@@ -101,7 +101,21 @@ type sfSettings struct {
 
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
-	panic("TODO: not implemented")
+	// TODO: implement a better version, see PostgreSQL.
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer conn.Close()
+	err = conn.PingContext(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	return nil
 }
 
 // Close closes the data warehouse.
@@ -143,7 +157,8 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
 func (warehouse *Snowflake) Initialize(ctx context.Context) error {
-	panic("TODO: not implemented")
+	// TODO: not implemented.
+	return nil
 }
 
 // Merge performs a table merge operation.
