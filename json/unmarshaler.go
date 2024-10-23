@@ -21,9 +21,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/json/jsontext"
 	"github.com/meergo/meergo/types"
 
-	"github.com/go-json-experiment/json/jsontext"
 	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 )

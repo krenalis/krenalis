@@ -403,7 +403,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			data = src
 		case string:
 			data = []byte(src)
-		case json.Marshaler:
+		case json.MarshalerV1:
 			var err error
 			data, err = src.MarshalJSON()
 			if err != nil {

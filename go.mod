@@ -16,7 +16,6 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
 	github.com/evanw/esbuild v0.24.0
 	github.com/fraugster/parquet-go v0.12.0
-	github.com/go-json-experiment/json v0.0.0-20240815175050-ebd3a8989ca1
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.6.0

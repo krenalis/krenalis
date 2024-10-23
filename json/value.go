@@ -9,7 +9,6 @@ package json
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"iter"
 	"strconv"
@@ -17,12 +16,15 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/decimal"
-
-	"github.com/go-json-experiment/json/jsontext"
+	"github.com/meergo/meergo/json/jsontext"
 )
 
-var _ json.Marshaler = (*Value)(nil)
-var _ json.Unmarshaler = (*Value)(nil)
+var (
+	_ MarshalerV1   = (*Value)(nil)
+	_ MarshalerV2   = (*Value)(nil)
+	_ UnmarshalerV1 = (*Value)(nil)
+	_ UnmarshalerV2 = (*Value)(nil)
+)
 
 // ErrInvalidJSON is returned when an argument is not valid JSON, or is not
 // UTF-8 encoded.
@@ -71,20 +73,6 @@ func (k Kind) String() string {
 		return "array"
 	}
 	panic("unexpected kind")
-}
-
-// Marshaler is an interface implemented by types that can marshal themselves
-// into a valid JSON representation. It is the same of the json.Marshaler of the
-// Go standard library.
-type Marshaler interface {
-	MarshalJSON() ([]byte, error)
-}
-
-// Unmarshaler is an interface implemented by types that can unmarshal a JSON
-// representation of themselves. It is the same of the json.UnmarshalJSON of the
-// Go standard library.
-type Unmarshaler interface {
-	UnmarshalJSON([]byte) error
 }
 
 // Value is a JSON-encoded value.
@@ -276,6 +264,14 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	return v, nil
 }
 
+// MarshalJSONV2 implements the MarshalerV2 interface to marshal v.
+func (v Value) MarshalJSONV2(enc *jsontext.Encoder, _ Options) error {
+	if v == nil {
+		return enc.WriteToken(jsontext.Null)
+	}
+	return enc.WriteValue(jsontext.Value(v))
+}
+
 // Properties returns an iterator over the key-value pairs of an object.
 // It panics if v is not an object.
 func (v Value) Properties() iter.Seq2[string, Value] {
@@ -342,6 +338,19 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 	b := make([]byte, len(data))
 	copy(b, data)
 	*v = b
+	return nil
+}
+
+// UnmarshalJSONV2 implements the UnmarshalerV2 interface to unmarshal into v.
+func (v *Value) UnmarshalJSONV2(dec *jsontext.Decoder, _ Options) error {
+	if v == nil {
+		return errors.New("UnmarshalJSONV2 on nil pointer")
+	}
+	value, err := dec.ReadValue()
+	if err != nil {
+		return err
+	}
+	*v = Value(value)
 	return nil
 }
 

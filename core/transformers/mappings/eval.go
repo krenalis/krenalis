@@ -23,9 +23,8 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/json/jsontext"
 	"github.com/meergo/meergo/types"
-
-	"github.com/go-json-experiment/json/jsontext"
 )
 
 // invalidConversionError is the error returned by the Eval and Transform
