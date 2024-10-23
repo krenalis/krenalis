@@ -222,7 +222,12 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				{(a.Target === 'Users' || a.Target === 'Groups') && isActionExecutionSupported && (
 					<>
 						<SlDropdown>
-							<SlButton slot='trigger' variant='default' size='small'>
+							<SlButton
+								slot='trigger'
+								variant='default'
+								size='small'
+								className='connection-actions__scheduler-button'
+							>
 								<SlIcon slot='prefix' name='clock' />
 								Schedule: {a.SchedulePeriod}
 							</SlButton>

@@ -58,6 +58,10 @@
 	justify-content: end;
 }
 
+.connection-actions__scheduler-button::part(base) {
+	min-width: 130px;
+}
+
 .connection-actions__scheduler-options {
 	padding-left: 20px;
 	padding-right: 20px;
