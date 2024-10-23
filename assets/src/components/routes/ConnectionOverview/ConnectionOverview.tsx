@@ -35,6 +35,14 @@ type FunnelData = FunnelPoint[];
 
 type statisticsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
 
+type StepIdentifier =
+	| 'RECEIVING'
+	| 'INPUT_VALIDATION'
+	| 'FILTERING'
+	| 'TRANSFORMATION'
+	| 'OUTPUT_VALIDATION'
+	| 'FINALIZING';
+
 const MINUTES_COUNT = 15;
 const HOURS_COUNT = 24;
 const DAYS_COUNT = 7;
@@ -55,6 +63,24 @@ const STEP_NAMES: string[] = [
 	'Output validation',
 	'Finalizing',
 ];
+
+const STEP_IDENTIFIERS: StepIdentifier[] = [
+	'RECEIVING',
+	'INPUT_VALIDATION',
+	'FILTERING',
+	'TRANSFORMATION',
+	'OUTPUT_VALIDATION',
+	'FINALIZING',
+];
+
+const STEP_NAME_BY_IDENTIFIER: Record<StepIdentifier, string> = {
+	RECEIVING: 'Receiving',
+	INPUT_VALIDATION: 'Input validation',
+	FILTERING: 'Filtering',
+	TRANSFORMATION: 'Transformation',
+	OUTPUT_VALIDATION: 'Output validation',
+	FINALIZING: 'Finalizing',
+};
 
 const ConnectionOverview = () => {
 	const [userActionsStatistics, setUserActionsStatistics] = useState<ActionStatistics>();
@@ -101,18 +127,36 @@ const ConnectionOverview = () => {
 		};
 	}, [userActionsStatistics, eventActionsStatistics]);
 
-	const hasFilters = useMemo(() => {
-		let hasFilters = false;
-		if (c.isSource && (c.isMobile || c.isServer || c.isWebsite) && selectedTarget === 'Users') {
-			hasFilters = true;
-		} else if (c.isDestination && c.isApp) {
-			hasFilters = true;
-		} else if (c.isDestination && c.isDatabase && selectedTarget === 'Users') {
-			hasFilters = true;
-		} else if (c.isDestination && c.isFileStorage && selectedTarget === 'Users') {
-			hasFilters = true;
+	const steps = useMemo(() => {
+		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
+		switch (c.type) {
+			case 'App':
+				if (c.role == 'Destination') {
+					if (selectedTarget == 'Users') {
+						steps = steps.filter((v) => v !== 'FILTERING'); // No Filtering.
+					} else {
+						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
+					}
+				}
+				break;
+			case 'Database':
+				steps = steps.filter((v) => v !== 'FILTERING'); // No Filtering.
+				break;
+			case 'FileStorage':
+				if (c.role == 'Destination') {
+					steps = ['RECEIVING', 'INPUT_VALIDATION', 'FINALIZING'];
+				}
+				break;
+			case 'Mobile':
+			case 'Server':
+			case 'Website':
+				if (selectedTarget == 'Users') {
+					steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
+				} else {
+					steps = ['RECEIVING', 'FILTERING', 'FINALIZING'];
+				}
 		}
-		return hasFilters;
+		return steps;
 	}, [c, selectedTarget]);
 
 	useEffect(() => {
@@ -129,31 +173,25 @@ const ConnectionOverview = () => {
 			data = userFunnelData;
 		}
 		const arrows: ReactNode[] = [];
-		for (let i = 0; i < 6; i++) {
-			const isBeforeFilterStep = i === 1;
-			const isFilterStep = i === 2;
-			if (!hasFilters && isFilterStep) {
-				continue;
-			}
-			let nextCircleIndex = i;
-			if (!hasFilters && isBeforeFilterStep) {
-				// connect the arrow to the circle that is next to the filter
-				// one.
-				nextCircleIndex += 1;
-			}
+		for (let [i, s] of steps.entries()) {
+			const isFilterStep = s === 'FILTERING';
+
+			const identifierIndex = STEP_IDENTIFIERS.findIndex((identifier) => identifier === s);
+			const passedData = data[identifierIndex].passed;
+			const failedData = data[identifierIndex].failed;
 
 			let forwardArrow = (
 				<Arrow
 					key={`forward-arrow-${i}`}
 					start={`funnel-circle-passed-${i}`}
-					end={`funnel-circle-passed-${nextCircleIndex + 1}`}
+					end={i === steps.length - 1 ? 'funnel-circle-final' : `funnel-circle-passed-${i + 1}`}
 					startAnchor='right'
 					endAnchor='left'
 					showHead={true}
 					label={
 						i === 5 ? null : (
 							<div className='connection-overview__funnel-label connection-overview__funnel-label--passed'>
-								{String(data[i].passed)}
+								{String(passedData)}
 							</div>
 						)
 					}
@@ -172,7 +210,7 @@ const ConnectionOverview = () => {
 						<div
 							className={`connection-overview__funnel-label connection-overview__funnel-label--failed${isFilterStep ? ' connection-overview__funnel-label--discarded' : ''}`}
 						>
-							{String(data[i].failed)}
+							{String(failedData)}
 						</div>
 					}
 				></Arrow>
@@ -493,15 +531,13 @@ const ConnectionOverview = () => {
 									? userFunnelData[0].passed + userFunnelData[0].failed
 									: eventFunnelData[0].passed + eventFunnelData[0].failed}
 							</div>
-							{Object.keys(isUsersSelected ? userFunnelData : eventFunnelData).map((_, i) => {
-								const isFilterStep = i === 2;
-								if (!hasFilters && isFilterStep) {
-									return null;
-								}
+							{Array.from(steps.entries()).map(([i, s]) => {
 								return (
 									<div key={`funnel-passed-${i}`}>
 										<div className='connection-overview__funnel-title'>
-											{c.isDestination && c.isApp && i === 5 ? 'Delivering' : STEP_NAMES[i]}
+											{c.isDestination && c.isApp && s === 'FINALIZING'
+												? 'Delivering'
+												: STEP_NAME_BY_IDENTIFIER[s]}
 										</div>
 										<div
 											className='connection-overview__funnel-circle'
@@ -510,17 +546,13 @@ const ConnectionOverview = () => {
 									</div>
 								);
 							})}
-							<div className='connection-overview__funnel-final' id={`funnel-circle-passed-6`}>
+							<div className='connection-overview__funnel-final' id={`funnel-circle-final`}>
 								{isUsersSelected ? userFunnelData[5].passed : eventFunnelData[5].passed}
 							</div>
 						</div>
 						<div className='connection-overview__funnel-failed'>
 							<div key='funnel-initial-empty'></div>
-							{Object.keys(isUsersSelected ? userFunnelData : eventFunnelData).map((_, i) => {
-								const isFilterStep = i === 2;
-								if (!hasFilters && isFilterStep) {
-									return null;
-								}
+							{Array.from(steps.entries()).map(([i, _]) => {
 								return (
 									<div
 										key={`funnel-failed-${i}`}
