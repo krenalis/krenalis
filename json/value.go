@@ -428,7 +428,6 @@ type valueDecoder struct {
 var decPool sync.Pool
 
 func init() {
-	decPool = sync.Pool{}
 	decPool.New = func() any {
 		return &valueDecoder{}
 	}
