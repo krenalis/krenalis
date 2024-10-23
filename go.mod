@@ -28,7 +28,7 @@ require (
 	github.com/mssola/useragent v1.0.0
 	github.com/open2b/analytics-go v0.0.4
 	github.com/oschwald/maxminddb-golang v1.13.1
-	github.com/pkg/sftp v1.13.6
+	github.com/pkg/sftp v1.13.7
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/relvacode/iso8601 v1.5.0
 	github.com/snowflakedb/gosnowflake v1.11.2
