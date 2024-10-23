@@ -99,16 +99,6 @@ type sfSettings struct {
 	Role      string
 }
 
-// AlterSchema alters the user schema.
-func (warehouse *Snowflake) AlterSchema(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) error {
-	panic("TODO: not implemented")
-}
-
-// AlterSchemaQueries returns the queries of a schema altering operation.
-func (warehouse *Snowflake) AlterSchemaQueries(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) ([]string, error) {
-	panic("TODO: not implemented")
-}
-
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	panic("TODO: not implemented")
@@ -148,12 +138,6 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 		return meergo.Error(err)
 	}
 	return nil
-}
-
-// LastIdentityResolution returns information about the last Identity
-// Resolution.
-func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	panic("not implemented")
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
@@ -484,11 +468,6 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	}
 
 	return rows, count, nil
-}
-
-// ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
-	panic("not implemented")
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
