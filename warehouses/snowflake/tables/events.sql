@@ -1,6 +1,6 @@
 -- Keep in sync with the events.eventsMergeTable variable.
 
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE IF NOT EXISTS "events" (
     "user" VARCHAR,
     "anonymous_id" VARCHAR NOT NULL,
     "category" VARCHAR NOT NULL,

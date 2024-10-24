@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS _user_identities (
+CREATE TABLE IF NOT EXISTS "_user_identities" (
     "__pk__" INT AUTOINCREMENT,
     "__action__" INT NOT NULL,
     "__is_anonymous__" BOOLEAN NOT NULL DEFAULT FALSE,
