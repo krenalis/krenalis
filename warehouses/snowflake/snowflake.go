@@ -116,7 +116,6 @@ type sfSettings struct {
 
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
-	// TODO: implement a better version, see PostgreSQL.
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
@@ -126,9 +125,28 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 		return meergo.Error(err)
 	}
 	defer conn.Close()
-	err = conn.PingContext(ctx)
+	rows, err := conn.QueryContext(ctx, "SHOW TERSE OBJECTS")
 	if err != nil {
 		return meergo.Error(err)
+	}
+	defer rows.Close()
+	var objects []string
+	for rows.Next() {
+		var createdOn, databaseName, schemaName any
+		var name, kind string
+		err := rows.Scan(&createdOn, &name, &kind, &databaseName, &schemaName)
+		if err != nil {
+			return meergo.Error(err)
+		}
+		typ := strings.ToLower(kind)
+		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
+	}
+	if err := rows.Err(); err != nil {
+		return meergo.Error(err)
+	}
+	if objects != nil {
+		reason := fmt.Sprintf("database contains these objects: %s", strings.Join(objects, ", "))
+		return meergo.NewNotInitializableError(reason)
 	}
 	return nil
 }
