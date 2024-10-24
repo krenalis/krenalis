@@ -69,6 +69,10 @@
 	font-weight: 500;
 }
 
+.connection-overview__funnel-heading {
+	margin-bottom: 50px;
+}
+
 .connection-overview__chart .recharts-wrapper {
 	margin: 0 auto;
 	position: relative;
@@ -116,6 +120,43 @@
 	column-gap: 50px;
 }
 
+@media (max-width: 1460px) {
+	.connection-overview__funnel-passed,
+	.connection-overview__funnel-failed {
+		display: grid;
+		grid-template-columns: repeat(8, 70px);
+	}
+
+	.connection-overview__tabs-date-range-picker {
+		left: unset;
+		right: 0;
+	}
+}
+
+@media (max-width: 1260px) {
+	.connection-overview__funnel-passed,
+	.connection-overview__funnel-failed {
+		display: grid;
+		grid-template-columns: repeat(8, 50px);
+	}
+
+	.connection-overview__funnel-title {
+		font-size: 12px !important;
+	}
+}
+
+@media (max-width: 1080px) {
+	.connection-overview__funnel-passed,
+	.connection-overview__funnel-failed {
+		gap: 35px;
+	}
+
+	.connection-overview__funnel-title {
+		left: 0;
+		transform: translate(-33%);
+	}
+}
+
 .connection-overview__funnel-failed {
 	margin-top: 60px;
 }
@@ -125,7 +166,9 @@
 	font-size: 14px;
 	margin-bottom: 8px;
 	font-weight: 500;
-	text-wrap: nowrap;
+	position: absolute;
+	bottom: 17px;
+	left: 5px;
 }
 
 .connection-overview__funnel-circle {
@@ -164,6 +207,10 @@
 	height: max-content;
 	color: var(--sl-color-neutral-600);
 	width: max-content;
+}
+
+.connection-overview__funnel-step {
+	position: relative;
 }
 
 .connection-overview__funnel-final {

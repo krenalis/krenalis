@@ -527,7 +527,7 @@ const ConnectionOverview = () => {
 							</div>
 							{Array.from(steps.entries()).map(([i, s]) => {
 								return (
-									<div key={`funnel-passed-${i}`}>
+									<div className='connection-overview__funnel-step' key={`funnel-passed-${i}`}>
 										<div className='connection-overview__funnel-title'>
 											{c.isDestination && c.isApp && s === 'FINALIZE'
 												? 'Delivering'

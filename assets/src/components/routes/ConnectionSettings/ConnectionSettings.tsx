@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useMemo } from 'react';
 import './ConnectionSettings.css';
 import ConnectionGeneralSettings from './ConnectionGeneralSettings';
 import ConnectionConnectorSettings from './ConnectionConnectorSettings';
@@ -13,10 +13,14 @@ import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import { isEventConnection } from '../../../lib/core/connection';
 import { LinkedConnections } from './LinkedConnections';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
+import { debounce } from '../../../utils/debounce';
+
+type TabName = 'general' | 'linked-connections' | 'snippet' | 'connection' | 'keys';
 
 const ConnectionSettings = () => {
 	const [isDeleted, setIsDeleted] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [isSmallViewport, setIsSmallViewport] = useState<boolean>(false);
 	const [isLinkedConnectionsPanelShown, setIsLinkedConnectionsPanelShown] = useState<boolean>(false); // used to recompute the event connections grid.
 	const [hasUIFields, setHasUIFields] = useState<boolean>(false);
 
@@ -65,6 +69,51 @@ const ConnectionSettings = () => {
 		}
 	}, [c]);
 
+	useEffect(() => {
+		const checkViewport = () => {
+			if (window.innerWidth < 1260) {
+				setIsSmallViewport(true);
+			} else {
+				setIsSmallViewport(false);
+			}
+		};
+
+		const onResize = () => {
+			checkViewport();
+		};
+
+		const debouncedOnResize = debounce(onResize, 200);
+		window.addEventListener('resize', debouncedOnResize);
+
+		checkViewport();
+
+		return () => {
+			window.removeEventListener('resize', debouncedOnResize);
+		};
+	}, []);
+
+	const tabs = useMemo(() => {
+		const tabs: TabName[] = ['general'];
+
+		if (isEventConnection(c.role, c.type, c.connector.targets)) {
+			tabs.push('linked-connections');
+		}
+
+		if ((c.type === 'Website' || c.type === 'Mobile') && c.role === 'Source') {
+			tabs.push('snippet');
+		}
+
+		if (hasUIFields) {
+			tabs.push('connection');
+		}
+
+		if ((c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website') && c.role === 'Source') {
+			tabs.push('keys');
+		}
+
+		return tabs;
+	}, [c, hasUIFields]);
+
 	if (isLoading) {
 		return (
 			<SlSpinner
@@ -80,66 +129,73 @@ const ConnectionSettings = () => {
 	}
 
 	return (
-		<div className='connection-settings'>
-			<SlTabGroup onSlTabShow={onTabShow} placement='start'>
-				<SlTab slot='nav' panel='general'>
-					General
-				</SlTab>
-				<SlTabPanel name='general'>
+		<div className={`connection-settings${isSmallViewport ? ' connection-settings--small-viewport' : ''}`}>
+			{tabs.length > 1 ? (
+				<SlTabGroup onSlTabShow={onTabShow} placement={isSmallViewport ? 'top' : 'start'}>
+					<SlTab slot='nav' panel='general'>
+						General
+					</SlTab>
+					<SlTabPanel name='general'>
+						<div className='connection-settings__panel-title'>General</div>
+						<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
+					</SlTabPanel>
+
+					{tabs.includes('linked-connections') && (
+						<>
+							<SlTab slot='nav' panel='linked-connections'>
+								{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
+							</SlTab>
+							<SlTabPanel name='linked-connections'>
+								<div className='connection-settings__panel-title'>
+									{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
+								</div>
+								<LinkedConnections connection={c} isShown={isLinkedConnectionsPanelShown} />
+							</SlTabPanel>
+						</>
+					)}
+
+					{tabs.includes('snippet') && (
+						<>
+							<SlTab slot='nav' panel='snippet'>
+								Snippet
+							</SlTab>
+							<SlTabPanel name='snippet'>
+								<div className='connection-settings__panel-title'>Snippet</div>
+								<ConnectionSnippet />
+							</SlTabPanel>
+						</>
+					)}
+
+					{tabs.includes('connection') && (
+						<>
+							<SlTab slot='nav' panel='connection'>
+								{c.type} Settings
+							</SlTab>
+							<SlTabPanel name='connection'>
+								<div className='connection-settings__panel-title'>{c.type} Settings</div>
+								<ConnectionConnectorSettings connection={c} />
+							</SlTabPanel>
+						</>
+					)}
+
+					{tabs.includes('keys') && (
+						<>
+							<SlTab slot='nav' panel='keys'>
+								Write Keys
+							</SlTab>
+							<SlTabPanel name='keys'>
+								<div className='connection-settings__panel-title'>Write Keys</div>
+								<ConnectionKeys connection={c} />
+							</SlTabPanel>
+						</>
+					)}
+				</SlTabGroup>
+			) : (
+				<>
 					<div className='connection-settings__panel-title'>General</div>
 					<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
-				</SlTabPanel>
-
-				{isEventConnection(c.role, c.type, c.connector.targets) && (
-					<>
-						<SlTab slot='nav' panel='linked-connections'>
-							{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
-						</SlTab>
-						<SlTabPanel name='linked-connections'>
-							<div className='connection-settings__panel-title'>
-								{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
-							</div>
-							<LinkedConnections connection={c} isShown={isLinkedConnectionsPanelShown} />
-						</SlTabPanel>
-					</>
-				)}
-
-				{(c.type === 'Website' || c.type === 'Mobile') && c.role === 'Source' && (
-					<>
-						<SlTab slot='nav' panel='snippet'>
-							Snippet
-						</SlTab>
-						<SlTabPanel name='snippet'>
-							<div className='connection-settings__panel-title'>Snippet</div>
-							<ConnectionSnippet />
-						</SlTabPanel>
-					</>
-				)}
-
-				{hasUIFields && (
-					<>
-						<SlTab slot='nav' panel='connection'>
-							{c.type} Settings
-						</SlTab>
-						<SlTabPanel name='connection'>
-							<div className='connection-settings__panel-title'>{c.type} Settings</div>
-							<ConnectionConnectorSettings connection={c} />
-						</SlTabPanel>
-					</>
-				)}
-
-				{(c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website') && c.role === 'Source' && (
-					<>
-						<SlTab slot='nav' panel='keys'>
-							Write Keys
-						</SlTab>
-						<SlTabPanel name='keys'>
-							<div className='connection-settings__panel-title'>Write Keys</div>
-							<ConnectionKeys connection={c} />
-						</SlTabPanel>
-					</>
-				)}
-			</SlTabGroup>
+				</>
+			)}
 		</div>
 	);
 };

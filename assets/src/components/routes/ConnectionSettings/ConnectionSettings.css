@@ -9,7 +9,7 @@
 }
 
 .connection-settings sl-tab-group::part(nav) {
-	flex-basis: 250px;
+	flex-basis: 200px;
 }
 
 .connection-settings sl-tab-group::part(body) {
@@ -17,7 +17,24 @@
 }
 
 .connection-settings sl-tab-group > sl-tab-panel::part(base) {
-	padding-left: 90px;
+	padding-left: 50px;
+}
+
+.connection-settings--small-viewport sl-tab-group::part(nav) {
+	flex-basis: 0;
+}
+
+.connection-settings--small-viewport sl-tab-group::part(base) {
+	flex-flow: column;
+}
+
+.connection-settings--small-viewport sl-tab-group > sl-tab-panel::part(base) {
+	padding-left: 0;
+	margin-top: 20px;
+}
+
+.connection-settings--small-viewport sl-tab-group::part(tabs) {
+	flex-flow: row;
 }
 
 .connection-settings__name-field,
