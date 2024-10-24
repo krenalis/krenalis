@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useMemo, useRef, useEffect } from 'react';
+import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import './Combobox.css';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
@@ -19,6 +19,7 @@ interface ComboboxProps {
 	onSelect: (name: string, value: string) => void;
 	name: string;
 	isExpression: boolean;
+	size?: 'small' | 'medium' | 'large';
 	className?: string;
 	error?: string;
 	caret?: boolean;
@@ -40,6 +41,7 @@ const Combobox = ({
 	onSelect: onSelectFunc,
 	name,
 	isExpression,
+	size = 'medium',
 	className,
 	error,
 	caret = false,
@@ -174,6 +176,21 @@ const Combobox = ({
 			}, 50);
 		}
 	}, []);
+
+	useLayoutEffect(() => {
+		if (listRef.current == null || !isOpen) {
+			return;
+		}
+		// Check if the combobox list vertically overflows the viewport
+		// and eventually position it on the border top of the combobox
+		// input.
+		listRef.current.classList.add('combobox-list--computing-position');
+		setTimeout(() => {
+			const rect = listRef.current.getBoundingClientRect();
+			listRef.current.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
+			listRef.current.classList.remove('combobox-list--computing-position');
+		}, 20);
+	}, [isOpen]);
 
 	useEffect(() => {
 		const onPageClick = (e) => {
@@ -344,6 +361,18 @@ const Combobox = ({
 		<div
 			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${className ? ` ${className}` : ''}`}
 			data-id={name}
+			style={
+				{
+					'--combobox-input-height':
+						size === 'small'
+							? '1.875rem'
+							: size === 'medium'
+								? '2.5rem'
+								: size === 'large'
+									? '3.125rem'
+									: '0px',
+				} as React.CSSProperties
+			}
 		>
 			<div className='combobox-input'>
 				<SlInput
@@ -353,6 +382,7 @@ const Combobox = ({
 					onSlBlur={onInputBlur}
 					disabled={disabled}
 					autocomplete='off'
+					size={size}
 					ref={inputRef}
 					{...rest}
 				>
