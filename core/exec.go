@@ -127,9 +127,9 @@ func (this *Action) exec(ctx context.Context) {
 			} else {
 				select {
 				case <-ctx.Done():
-					stats.ReceivingFailed(0, "execution has been cancelled")
+					stats.ReceiveFailed(0, "execution has been cancelled")
 				default:
-					stats.ReceivingFailed(0, "an internal error has occurred")
+					stats.ReceiveFailed(0, "an internal error has occurred")
 					slog.Error("cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
 				}
 			}
@@ -191,11 +191,11 @@ func (this *Action) exec(ctx context.Context) {
 	}()
 
 	if this.Target == Groups {
-		stats.ReceivingFailed(0, "groups import and export are not implemented")
+		stats.ReceiveFailed(0, "groups import and export are not implemented")
 		return
 	}
 	if !this.isLanguageSupported() {
-		stats.ReceivingFailed(0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
+		stats.ReceiveFailed(0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
 		return
 	}
 

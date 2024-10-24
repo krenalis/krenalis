@@ -301,10 +301,10 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 		ctx := context.Background()
 		iw, err := store.EventIdentityWriter(action.ID, func(ids []string, err error) {
 			if err != nil {
-				stats.FinalizingFailed(len(ids), err.Error())
+				stats.FinalizeFailed(len(ids), err.Error())
 				return
 			}
-			stats.FinalizingPassed(len(ids))
+			stats.FinalizePassed(len(ids))
 		})
 		if err != nil {
 			return err
@@ -320,13 +320,13 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if t := *event.Type; t != "identify" && event.Context.Traits == nil {
 				continue
 			}
-			stats.ReceivingPassed(1)
+			stats.ReceivePassed(1)
 			properties := event.AsProperties()
 			if !filters.Applies(action.Filter, properties) {
-				stats.FilteringFailed(1)
+				stats.FilterFailed(1)
 				continue
 			}
-			stats.FilteringPassed(1)
+			stats.FilterPassed(1)
 			// If the action has a transformation, apply it to the event and
 			// obtain the properties.
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
@@ -1194,7 +1194,7 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 	}
 
 	stats := c.statistics.Collector(action.ID)
-	stats.ReceivingPassed(len(events))
+	stats.ReceivePassed(len(events))
 
 	rows := make([][]any, 0, len(events))
 
@@ -1202,10 +1202,10 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 
 		// If the action has a filter, check if it applies to the event.
 		if action.Filter != nil && !filters.Applies(action.Filter, e.AsProperties()) {
-			stats.FilteringFailed(1)
+			stats.FilterFailed(1)
 			continue
 		}
-		stats.FilteringPassed(1)
+		stats.FilterPassed(1)
 
 		// Set groupId.
 		groupId := e.GroupId
@@ -1303,7 +1303,7 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 	if err != nil {
 		return err
 	}
-	stats.FinalizingPassed(len(rows))
+	stats.FinalizePassed(len(rows))
 
 	return nil
 }

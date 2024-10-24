@@ -92,14 +92,14 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 	// Instantiate a batch identity writer.
 	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
-			stats.FinalizingFailed(len(ids), err.Error())
+			stats.FinalizeFailed(len(ids), err.Error())
 			return
 		}
-		stats.FinalizingPassed(len(ids))
+		stats.FinalizePassed(len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
-			return newActionError(statistics.FinalizingStep, err)
+			return newActionError(statistics.FinalizeStep, err)
 		}
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
@@ -124,24 +124,24 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 		if user.Err != nil {
 			iw.Keep(user.ID)
 			if _, ok := user.Err.(ValidationError); ok {
-				stats.ReceivingPassed(1)
+				stats.ReceivePassed(1)
 				stats.InputValidationFailed(1, user.Err.Error())
 				goto Next
 			}
-			stats.ReceivingFailed(1, user.Err.Error())
+			stats.ReceiveFailed(1, user.Err.Error())
 			goto Next
 		}
 
-		stats.ReceivingPassed(1)
+		stats.ReceivePassed(1)
 		stats.InputValidationPassed(1)
 
 		// In case the action has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
 			if !filters.Applies(action.Filter, user.Properties) {
-				stats.FilteringFailed(1)
+				stats.FilterFailed(1)
 				goto Next
 			}
-			stats.FilteringPassed(1)
+			stats.FilterPassed(1)
 		}
 
 		if user.LastChangeTime.After(cursor) {
@@ -190,7 +190,7 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 				}, "")
 				if err != nil {
 					err := iw.Close(ctx)
-					return newActionError(statistics.FinalizingStep, err)
+					return newActionError(statistics.FinalizeStep, err)
 				}
 			}
 
@@ -214,12 +214,12 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 		if err == meergo.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}
-		return newActionError(statistics.ReceivingStep, err)
+		return newActionError(statistics.ReceiveStep, err)
 	}
 
 	err = iw.Close(ctx)
 	if err != nil {
-		return newActionError(statistics.FinalizingStep, err)
+		return newActionError(statistics.FinalizeStep, err)
 	}
 
 	return nil

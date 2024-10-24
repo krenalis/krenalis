@@ -81,28 +81,28 @@ type DisplayedProperties struct {
 type ActionStep int
 
 const (
-	ReceivingStep        = ActionStep(statistics.ReceivingStep)
+	ReceiveStep          = ActionStep(statistics.ReceiveStep)
 	InputValidationStep  = ActionStep(statistics.InputValidationStep)
-	FilteringStep        = ActionStep(statistics.FilteringStep)
+	FilterStep           = ActionStep(statistics.FilterStep)
 	TransformationStep   = ActionStep(statistics.TransformationStep)
 	OutputValidationStep = ActionStep(statistics.OutputValidationStep)
-	FinalizingStep       = ActionStep(statistics.FinalizingStep)
+	FinalizeStep         = ActionStep(statistics.FinalizeStep)
 )
 
 func (step ActionStep) String() string {
 	switch step {
-	case ReceivingStep:
-		return "Receiving"
+	case ReceiveStep:
+		return "Receive"
 	case InputValidationStep:
 		return "InputValidation"
-	case FilteringStep:
-		return "Filtering"
+	case FilterStep:
+		return "Filter"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
 		return "OutputValidation"
-	case FinalizingStep:
-		return "Finalizing"
+	case FinalizeStep:
+		return "Finalize"
 	}
 	panic("core: invalid ActionStep")
 }
@@ -111,18 +111,18 @@ func (step ActionStep) String() string {
 // returns 0 and an error.
 func ParseActionStep(step string) (ActionStep, error) {
 	switch step {
-	case "Receiving":
-		return ReceivingStep, nil
+	case "Receive":
+		return ReceiveStep, nil
 	case "InputValidation":
 		return InputValidationStep, nil
-	case "Filtering":
-		return FilteringStep, nil
+	case "Filter":
+		return FilterStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
 		return OutputValidationStep, nil
-	case "Finalizing":
-		return FinalizingStep, nil
+	case "Finalize":
+		return FinalizeStep, nil
 	}
 	return 0, fmt.Errorf("step is not valid")
 }
@@ -172,7 +172,7 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 	// Validate step.
 	var s *statistics.Step
 	if step != nil {
-		if *step < ReceivingStep || *step > FinalizingStep {
+		if *step < ReceiveStep || *step > FinalizeStep {
 			return nil, errors.BadRequest("step %d is not valid", *step)
 		}
 		s = (*statistics.Step)(step)

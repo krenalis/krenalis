@@ -35,13 +35,7 @@ type FunnelData = FunnelPoint[];
 
 type statisticsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
 
-type StepIdentifier =
-	| 'RECEIVING'
-	| 'INPUT_VALIDATION'
-	| 'FILTERING'
-	| 'TRANSFORMATION'
-	| 'OUTPUT_VALIDATION'
-	| 'FINALIZING';
+type StepIdentifier = 'RECEIVE' | 'INPUT_VALIDATION' | 'FILTER' | 'TRANSFORMATION' | 'OUTPUT_VALIDATION' | 'FINALIZE';
 
 const MINUTES_COUNT = 15;
 const HOURS_COUNT = 24;
@@ -56,30 +50,30 @@ const ERRORS_COLUMNS: GridColumn[] = [
 ];
 
 const STEP_NAMES: string[] = [
-	'Receiving',
+	'Receive',
 	'Input validation',
-	'Filtering',
+	'Filter',
 	'Transformation',
 	'Output validation',
-	'Finalizing',
+	'Finalize',
 ];
 
 const STEP_IDENTIFIERS: StepIdentifier[] = [
-	'RECEIVING',
+	'RECEIVE',
 	'INPUT_VALIDATION',
-	'FILTERING',
+	'FILTER',
 	'TRANSFORMATION',
 	'OUTPUT_VALIDATION',
-	'FINALIZING',
+	'FINALIZE',
 ];
 
 const STEP_NAME_BY_IDENTIFIER: Record<StepIdentifier, string> = {
-	RECEIVING: 'Receiving',
+	RECEIVE: 'Receive',
 	INPUT_VALIDATION: 'Input validation',
-	FILTERING: 'Filtering',
+	FILTER: 'Filter',
 	TRANSFORMATION: 'Transformation',
 	OUTPUT_VALIDATION: 'Output validation',
-	FINALIZING: 'Finalizing',
+	FINALIZE: 'Finalize',
 };
 
 const ConnectionOverview = () => {
@@ -133,18 +127,18 @@ const ConnectionOverview = () => {
 			case 'App':
 				if (c.role == 'Destination') {
 					if (selectedTarget == 'Users') {
-						steps = steps.filter((v) => v !== 'FILTERING'); // No Filtering.
+						steps = steps.filter((v) => v !== 'FILTER'); // No Filter.
 					} else {
 						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 					}
 				}
 				break;
 			case 'Database':
-				steps = steps.filter((v) => v !== 'FILTERING'); // No Filtering.
+				steps = steps.filter((v) => v !== 'FILTER'); // No Filter.
 				break;
 			case 'FileStorage':
 				if (c.role == 'Destination') {
-					steps = ['RECEIVING', 'INPUT_VALIDATION', 'FINALIZING'];
+					steps = ['RECEIVE', 'INPUT_VALIDATION', 'FINALIZE'];
 				}
 				break;
 			case 'Mobile':
@@ -153,7 +147,7 @@ const ConnectionOverview = () => {
 				if (selectedTarget == 'Users') {
 					steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 				} else {
-					steps = ['RECEIVING', 'FILTERING', 'FINALIZING'];
+					steps = ['RECEIVE', 'FILTER', 'FINALIZE'];
 				}
 		}
 		return steps;
@@ -174,7 +168,7 @@ const ConnectionOverview = () => {
 		}
 		const arrows: ReactNode[] = [];
 		for (let [i, s] of steps.entries()) {
-			const isFilterStep = s === 'FILTERING';
+			const isFilterStep = s === 'FILTER';
 
 			const identifierIndex = STEP_IDENTIFIERS.findIndex((identifier) => identifier === s);
 			const passedData = data[identifierIndex].passed;
@@ -535,7 +529,7 @@ const ConnectionOverview = () => {
 								return (
 									<div key={`funnel-passed-${i}`}>
 										<div className='connection-overview__funnel-title'>
-											{c.isDestination && c.isApp && s === 'FINALIZING'
+											{c.isDestination && c.isApp && s === 'FINALIZE'
 												? 'Delivering'
 												: STEP_NAME_BY_IDENTIFIER[s]}
 										</div>

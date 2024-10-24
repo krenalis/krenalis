@@ -80,7 +80,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	}, action.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return newActionError(statistics.ReceivingStep, err)
+			return newActionError(statistics.ReceiveStep, err)
 		}
 		switch err := err.(type) {
 		case *datastore.DataWarehouseError:
@@ -104,13 +104,13 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	ack := func(ids []string, err error) {
 		for _, id := range ids {
 			if err != nil && err != connectors.ErrRecordNotExist {
-				stats.FinalizingFailed(1, err.Error())
+				stats.FinalizeFailed(1, err.Error())
 				continue
 			}
 			if err == connectors.ErrRecordNotExist {
 				nonExistentUsers = append(nonExistentUsers, id)
 			}
-			stats.FinalizingPassed(1)
+			stats.FinalizePassed(1)
 		}
 	}
 
@@ -151,14 +151,14 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	for record := range records.All(ctx) {
 
 		if record.Err != nil {
-			stats.ReceivingFailed(1, record.Err.Error())
+			stats.ReceiveFailed(1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return record.Err
 			}
 			goto Next
 		}
 
-		stats.ReceivingPassed(1)
+		stats.ReceivePassed(1)
 		stats.InputValidationPassed(1)
 
 		if connector.Type == state.App {
@@ -231,7 +231,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 				}
 				if connector.Type == state.App && len(record.Properties) == 0 {
-					stats.FinalizingPassed(1)
+					stats.FinalizePassed(1)
 					continue
 				}
 				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
@@ -245,7 +245,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 
 	}
 	if err = records.Err(); err != nil {
-		return newActionError(statistics.ReceivingStep, err)
+		return newActionError(statistics.ReceiveStep, err)
 	}
 
 	users = nil
@@ -256,7 +256,7 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 		err = writer.Close(ctx)
 	}
 	if err != nil {
-		return newActionError(statistics.FinalizingStep, err)
+		return newActionError(statistics.FinalizeStep, err)
 	}
 
 	if nonExistentUsers != nil {
