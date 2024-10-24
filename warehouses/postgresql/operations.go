@@ -48,7 +48,7 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 		}
 		var runningOp *warehouseOperation
 		err = tx.QueryRow(ctx, "SELECT operation FROM _operations "+
-			"WHERE start_time IS NOT NULL AND end_time IS NULL ORDER BY id DESC LIMIT 1 ").Scan(&runningOp)
+			"WHERE start_time IS NOT NULL AND end_time IS NULL ORDER BY id DESC LIMIT 1").Scan(&runningOp)
 		if err != nil && err != pgx.ErrNoRows {
 			return meergo.Error(err)
 		}
