@@ -17,6 +17,12 @@ func quoteTable(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
+// quoteColumn quotes a column name.
+// TODO(Gianluca): review this method.
+func quoteColumn(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
 // quoteString quotes s as a string and writes it into b.
 func quoteString(b *strings.Builder, s string) {
 	if s == "" {

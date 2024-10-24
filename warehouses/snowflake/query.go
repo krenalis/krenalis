@@ -40,9 +40,8 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	// Count the total number of records.
 	var count int
 	if withCount {
-		b.WriteString(`SELECT COUNT(*) FROM "`)
-		b.WriteString(query.Table)
-		b.WriteByte('"')
+		b.WriteString(`SELECT COUNT(*) FROM `)
+		b.WriteString(quoteTable(query.Table))
 		err = appendJoins(&b, query.Joins)
 		if err != nil {
 			return nil, 0, err
@@ -64,13 +63,10 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteByte('"')
+		b.WriteString(quoteColumn(c.Name))
 	}
-	b.WriteString(` FROM "`)
-	b.WriteString(query.Table)
-	b.WriteByte('"')
+	b.WriteString(` FROM `)
+	b.WriteString(quoteTable(query.Table))
 
 	err = appendJoins(&b, query.Joins)
 	if err != nil {
@@ -83,9 +79,8 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	}
 
 	if query.OrderBy.Name != "" {
-		b.WriteString(" ORDER BY \"")
-		b.WriteString(query.OrderBy.Name)
-		b.WriteRune('"')
+		b.WriteString(" ORDER BY ")
+		b.WriteString(quoteColumn(query.OrderBy.Name))
 		if query.OrderDesc {
 			b.WriteString(" DESC")
 		}
@@ -113,16 +108,16 @@ func appendJoins(b *strings.Builder, joins []meergo.Join) error {
 	for _, join := range joins {
 		switch join.Type {
 		case meergo.Inner:
-			b.WriteString(` JOIN "`)
+			b.WriteString(` JOIN `)
 		case meergo.Left:
-			b.WriteString(` LEFT JOIN "`)
+			b.WriteString(` LEFT JOIN `)
 		case meergo.Right:
-			b.WriteString(` RIGHT JOIN "`)
+			b.WriteString(` RIGHT JOIN `)
 		case meergo.Full:
-			b.WriteString(` FULL JOIN "`)
+			b.WriteString(` FULL JOIN `)
 		}
-		b.WriteString(join.Table)
-		b.WriteString(`" ON `)
+		b.WriteString(quoteTable(join.Table))
+		b.WriteString(` ON `)
 		err := renderExpr(b, join.Condition)
 		if err != nil {
 			return fmt.Errorf("cannot build JOIN condition: %s", err)

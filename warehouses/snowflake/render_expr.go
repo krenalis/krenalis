@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -77,7 +76,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		meergo.OpIsAfter,
 		meergo.OpIsOnOrAfter:
 
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 
 		switch op {
 		case meergo.OpIs:
@@ -96,7 +95,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case meergo.OpIsBetween, meergo.OpIsNotBetween:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 		if op == meergo.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
@@ -110,13 +109,13 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			b.WriteString("NOT ")
 		}
 		b.WriteString("CONTAINS(")
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 		b.WriteString(", ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case meergo.OpIsOneOf, meergo.OpIsNotOneOf:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 		if op == meergo.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
@@ -136,24 +135,24 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		} else {
 			b.WriteString("ENDSWITH(")
 		}
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 		b.WriteString(", ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case meergo.OpIsTrue:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 
 	case meergo.OpIsFalse:
 		b.WriteString("NOT ")
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 
 	case meergo.OpIsNull:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 		b.WriteString(" IS NULL")
 
 	case meergo.OpIsNotNull:
-		b.WriteString(postgres.QuoteIdent(c.Name))
+		b.WriteString(quoteColumn(c.Name))
 		b.WriteString(" IS NOT NULL")
 
 	default:
