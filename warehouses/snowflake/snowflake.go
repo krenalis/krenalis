@@ -506,6 +506,25 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 	return nil
 }
 
+// usersVersion returns the version of the "users" table.
+func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
+	db, err := warehouse.connection()
+	if err != nil {
+		return 0, err
+	}
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return 0, meergo.Error(err)
+	}
+	defer conn.Close()
+	var v int
+	err = conn.QueryRowContext(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
+	if err != nil {
+		return 0, meergo.Error(err)
+	}
+	return v, nil
+}
+
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
 // returns it as an io.Reader. It also appends a boolean column called $purge
 // with the value of the 'deleted' argument as value for each row.
@@ -584,6 +603,35 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 		}
 	}
 	return &b, nil
+}
+
+// execTransaction executes the function f within a transaction. If f returns an
+// error or panics, the transaction will be rolled back.
+func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx) error) error {
+	// TODO(Gianluca): is the use of the context in this method correct?
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer conn.Close()
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer tx.Rollback()
+	err = f(tx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	err = tx.Commit()
+	if err != nil && !errors.Is(err, sql.ErrTxDone) {
+		return meergo.Error(err)
+	}
+	return nil
 }
 
 // quoteCSVString quotes the string s for use in a CSV file and writes it to b.
