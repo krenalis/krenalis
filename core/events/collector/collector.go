@@ -40,6 +40,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/statistics"
 	"github.com/meergo/meergo/core/transformers"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 
 	"github.com/google/uuid"
@@ -1207,6 +1208,8 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 		}
 		stats.FilterPassed(1)
 
+		density, _ := decimal.Float64(float64(e.Context.Screen.Density), 3, 2)
+
 		// Set groupId.
 		groupId := e.GroupId
 		if *e.Type != "group" {
@@ -1276,9 +1279,9 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 			e.Context.Page.URL,                 // context_page_url
 			e.Context.Referrer.Id,              // context_referrer_id
 			e.Context.Referrer.Type,            // context_referrer_type
-			int16(e.Context.Screen.Width),      // context_screen_width
-			int16(e.Context.Screen.Height),     // context_screen_height
-			e.Context.Screen.Density,           // context_screen_density
+			e.Context.Screen.Width,             // context_screen_width
+			e.Context.Screen.Height,            // context_screen_height
+			density,                            // context_screen_density
 			e.Context.SessionId,                // context_session_id
 			e.Context.SessionStart,             // context_session_start
 			e.Context.Timezone,                 // context_timezone
