@@ -178,6 +178,10 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		} else {
 			b.WriteString("FALSE")
 		}
+	case int:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 	case decimal.Decimal:
