@@ -13,7 +13,6 @@ import (
 	stdjson "encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/url"
 	"slices"
@@ -212,11 +211,12 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.WarehouseTa
 		return err
 	}
 
-	var b strings.Builder
-
-	// Create the temporary table.
+	// Generate a unique name for the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	b.WriteString(`CREATE UNLOGGED TABLE "`)
+
+	// Prepare the "create temporary table" statement.
+	var b strings.Builder
+	b.WriteString(`CREATE TEMPORARY TABLE "`)
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
 	for _, c := range table.Columns {
@@ -227,51 +227,9 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.WarehouseTa
 	b.WriteString(`FALSE AS "$purge" FROM "`)
 	b.WriteString(table.Name)
 	b.WriteString("\"\nWITH NO DATA")
-	_, err = pool.Exec(ctx, b.String())
-	if err != nil {
-		return meergo.Error(err)
-	}
-	defer func() {
-		_, err := pool.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
-		if err != nil {
-			slog.Error("cannot drop temporary table from data warehouse", "table", tempTableName, "err", err)
-		}
-	}()
+	create := b.String()
 
-	// Copy the rows into the temporary table.
-	if len(rows) > 0 {
-		// Encode the rows.
-		if enc, ok := newRowEncoder(table.Columns); ok {
-			for _, row := range rows {
-				err = enc.encode(row)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		columnNames := make([]string, len(table.Columns))
-		for i, c := range table.Columns {
-			columnNames[i] = c.Name
-		}
-		_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, pgx.CopyFromRows(rows))
-		if err != nil {
-			return meergo.Error(err)
-		}
-	}
-
-	// Copy the rows to delete into the temporary table.
-	if len(deleted) > 0 {
-		columnNames := make([]string, len(table.Keys)+1)
-		copy(columnNames, table.Keys)
-		columnNames[len(columnNames)-1] = "$purge"
-		rowSrc := newCopyForDeleteFrom(len(table.Keys), deleted)
-		_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, rowSrc)
-		if err != nil {
-			return meergo.Error(err)
-		}
-	}
-
-	// Merge the temporary table's rows with the destination table's rows.
+	// Create the 'merge' statement.
 	b.Reset()
 	b.WriteString(`MERGE INTO "`)
 	b.WriteString(table.Name)
@@ -331,7 +289,60 @@ func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.WarehouseTa
 	if len(deleted) > 0 {
 		b.WriteString("\nWHEN MATCHED THEN\n  DELETE")
 	}
-	_, err = pool.Exec(ctx, b.String())
+	merge := b.String()
+
+	// Encode the rows and prepare the columns names.
+	var columnNames []string
+	if len(rows) > 0 {
+		columnNames = make([]string, len(table.Columns))
+		for i, c := range table.Columns {
+			columnNames[i] = c.Name
+		}
+		if enc, ok := newRowEncoder(table.Columns); ok {
+			for _, row := range rows {
+				err = enc.encode(row)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Prepare the columns names for the rows to delete.
+	var columnsNamesDeleted []string
+	if len(deleted) > 0 {
+		columnsNamesDeleted = make([]string, len(table.Keys)+1)
+		copy(columnsNamesDeleted, table.Keys)
+		columnsNamesDeleted[len(columnsNamesDeleted)-1] = "$purge"
+	}
+
+	// Acquire a connection.
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	// Create the temporary table.
+	_, err = conn.Exec(ctx, create)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	// Copy the rows into the temporary table.
+	if len(rows) > 0 {
+		_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnNames, pgx.CopyFromRows(rows))
+		if err != nil {
+			return meergo.Error(err)
+		}
+	}
+	// Copy the rows to delete into the temporary table.
+	if len(deleted) > 0 {
+		_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnsNamesDeleted, newCopyForDeleteFrom(len(table.Keys), deleted))
+		if err != nil {
+			return meergo.Error(err)
+		}
+	}
+	// Merge the temporary table's rows with the destination table's rows.
+	_, err = conn.Exec(ctx, merge)
 	if err != nil {
 		return meergo.Error(err)
 	}
@@ -357,11 +368,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 		return err
 	}
 
-	var b strings.Builder
-
-	// Create the temporary table.
+	// Generate a unique name for the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	b.WriteString(`CREATE UNLOGGED TABLE "`)
+
+	// Prepare the "create temporary table" statement.
+	var b strings.Builder
+	b.WriteString(`CREATE TEMPORARY TABLE "`)
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
 	for _, c := range columns {
@@ -370,29 +382,9 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 		b.WriteString(`",`)
 	}
 	b.WriteString("FALSE AS \"$purge\" FROM \"_user_identities\"\nWITH NO DATA")
-	_, err = pool.Exec(ctx, b.String())
-	if err != nil {
-		return meergo.Error(err)
-	}
-	defer func() {
-		_, err := pool.Exec(ctx, `DROP TABLE "`+tempTableName+`"`)
-		if err != nil {
-			slog.Error("cannot drop temporary table from data warehouse", "table", tempTableName, "err", err)
-		}
-	}()
+	create := b.String()
 
-	// Copy the rows into the temporary table.
-	columnNames := make([]string, len(columns)+1)
-	for i, c := range columns {
-		columnNames[i] = c.Name
-	}
-	columnNames[len(columns)] = `$purge`
-	_, err = pool.CopyFrom(ctx, []string{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
-	if err != nil {
-		return meergo.Error(err)
-	}
-
-	// Merge the temporary table's rows with the destination table's rows.
+	// Prepare the "merge" statement.
 	b.Reset()
 	b.WriteString("MERGE INTO \"_user_identities\" AS d\nUSING \"")
 	b.WriteString(tempTableName)
@@ -441,7 +433,33 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 	}
 	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" IS FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
 	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS TRUE THEN\n  DELETE")
-	_, err = pool.Exec(ctx, b.String())
+	merge := b.String()
+
+	// Prepare the columns names.
+	columnNames := make([]string, len(columns)+1)
+	for i, c := range columns {
+		columnNames[i] = c.Name
+	}
+	columnNames[len(columns)] = `$purge`
+
+	// Acquire a connection.
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	// Create the temporary table.
+	_, err = conn.Exec(ctx, create)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	// Copy the rows into the temporary table.
+	_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
+	if err != nil {
+		return meergo.Error(err)
+	}
+	// Merge the temporary table's rows with the destination table's rows.
+	_, err = conn.Exec(ctx, merge)
 	if err != nil {
 		return meergo.Error(err)
 	}
@@ -574,8 +592,8 @@ func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 
 // copyForDeleteFrom implements the pgx.CopyFromSource interface.
 type copyForDeleteFrom struct {
-	values []any
-	row    []any
+	deleted []any
+	row     []any
 }
 
 // newCopyForDeleteFrom returns a pgx.CopyFromSource implementation used to
@@ -583,8 +601,8 @@ type copyForDeleteFrom struct {
 // numColumns consecutive elements from deleted and true at the end.
 func newCopyForDeleteFrom(numColumns int, deleted []any) pgx.CopyFromSource {
 	c := &copyForDeleteFrom{
-		values: deleted,
-		row:    make([]any, numColumns+1),
+		deleted: deleted,
+		row:     make([]any, numColumns+1),
 	}
 	c.row[numColumns] = true
 	return c
@@ -595,15 +613,15 @@ func (c *copyForDeleteFrom) Err() error {
 }
 
 func (c *copyForDeleteFrom) Next() bool {
-	return len(c.values) > 0
+	return len(c.deleted) > 0
 }
 
 func (c *copyForDeleteFrom) Values() ([]any, error) {
 	numKeys := len(c.row) - 1
 	for i := 0; i < numKeys; i++ {
-		c.row[i] = c.values[i]
+		c.row[i] = c.deleted[i]
 	}
-	c.values = c.values[numKeys:]
+	c.deleted = c.deleted[numKeys:]
 	return c.row, nil
 }
 
@@ -612,7 +630,7 @@ type copyForIdentities struct {
 	columns []meergo.Column
 	encoder *rowEncoder
 	rows    []map[string]any
-	values  []any
+	row     []any
 }
 
 // newCopyForIdentities returns a pgx.CopyFromSource implementation used to copy
@@ -621,7 +639,7 @@ func newCopyForIdentities(columns []meergo.Column, rows []map[string]any) pgx.Co
 	c := &copyForIdentities{
 		columns: columns,
 		rows:    rows,
-		values:  make([]any, len(columns)+1),
+		row:     make([]any, len(columns)+1),
 	}
 	if enc, ok := newRowEncoder(columns); ok {
 		c.encoder = enc
@@ -640,21 +658,21 @@ func (c *copyForIdentities) Next() bool {
 func (c *copyForIdentities) Values() ([]any, error) {
 	row := c.rows[0]
 	for i, column := range c.columns {
-		c.values[i] = row[column.Name]
+		c.row[i] = row[column.Name]
 	}
 	if c.encoder != nil {
-		err := c.encoder.encode(c.values)
+		err := c.encoder.encode(c.row)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if purge, ok := row["$purge"].(bool); ok {
-		c.values[len(c.values)-1] = purge
+		c.row[len(c.row)-1] = purge
 	} else {
-		c.values[len(c.values)-1] = nil
+		c.row[len(c.row)-1] = nil
 	}
 	c.rows = c.rows[1:]
-	return c.values, nil
+	return c.row, nil
 }
 
 // rowEncoder implements a row encoder that encodes rows to be used in a merge
