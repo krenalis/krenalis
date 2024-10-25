@@ -237,7 +237,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 		b.WriteByte('"')
 	}
 	if len(rows) > 0 {
-		b.WriteString("\nWHEN MATCHED AND NOT s.\"$purge\" THEN\n  UPDATE SET ")
+		b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
 		i := 0
 		for _, c := range table.Columns {
 			if slices.Contains(table.Keys, c.Name) {
@@ -253,7 +253,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 			b.WriteByte('"')
 			i++
 		}
-		b.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$purge\" THEN\n  INSERT (")
+		b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
@@ -560,7 +560,7 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 		if deleted {
 			b.WriteString(",true")
 		} else {
-			b.WriteString(",false")
+			b.WriteString(",")
 		}
 	}
 	return &b, nil
