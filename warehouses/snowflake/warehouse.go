@@ -201,6 +201,83 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 		return err
 	}
 
+	// Generate a unique name for the temporary table.
+	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+
+	// Prepare the "create temporary table" statement.
+	var b strings.Builder
+	b.WriteString(`CREATE TEMPORARY TABLE "`)
+	b.WriteString(tempTableName)
+	b.WriteString("\" AS\n  SELECT ")
+	for _, c := range table.Columns {
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteString(`",`)
+	}
+	b.WriteString(`FALSE AS "$purge" FROM "`)
+	b.WriteString(table.Name)
+	b.WriteString("\" LIMIT 0")
+	create := b.String()
+
+	// Create the 'merge' statement.
+	b.Reset()
+	b.WriteString(`MERGE INTO `)
+	b.WriteString(quoteTable(table.Name))
+	b.WriteString(" d\nUSING \"")
+	b.WriteString(tempTableName)
+	b.WriteString("\" s\nON ")
+	for i, key := range table.Keys {
+		if i > 0 {
+			b.WriteString(" AND ")
+		}
+		b.WriteString(`d."`)
+		b.WriteString(key)
+		b.WriteString(`" = s."`)
+		b.WriteString(key)
+		b.WriteByte('"')
+	}
+	if len(rows) > 0 {
+		b.WriteString("\nWHEN MATCHED AND NOT s.\"$purge\" THEN\n  UPDATE SET ")
+		i := 0
+		for _, c := range table.Columns {
+			if slices.Contains(table.Keys, c.Name) {
+				continue
+			}
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('"')
+			b.WriteString(c.Name)
+			b.WriteString(`" = s."`)
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+			i++
+		}
+		b.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$purge\" THEN\n  INSERT (")
+		for i, c := range table.Columns {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteByte('"')
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		}
+		b.WriteString(")\n  VALUES (")
+		for i, c := range table.Columns {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(`s."`)
+			b.WriteString(c.Name)
+			b.WriteByte('"')
+		}
+		b.WriteString(`)`)
+	}
+	if len(deleted) > 0 {
+		b.WriteString("\nWHEN MATCHED THEN\n  DELETE")
+	}
+	merge := b.String()
+
 	// Serialize the rows in CSV format.
 	var rowsCSV io.Reader
 	if len(rows) > 0 {
@@ -235,78 +312,18 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 		}
 	}
 
-	// Create the temporary table.
-	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	var q strings.Builder
-	q.WriteString(`CREATE TEMPORARY TABLE "`)
-	q.WriteString(tempTableName)
-	q.WriteString("\" (\n")
-	for _, c := range table.Columns {
-		q.WriteByte('"')
-		q.WriteString(c.Name)
-		q.WriteString(`" `)
-		switch c.Type.Kind() {
-		case types.BooleanKind:
-			q.WriteString("BOOLEAN")
-		case types.FloatKind:
-			q.WriteString("FLOAT")
-		case
-			types.IntKind,
-			types.UintKind,
-			types.YearKind:
-			q.WriteString("NUMBER(38,0)")
-		case types.DecimalKind:
-			q.WriteString("NUMBER(")
-			q.WriteString(strconv.Itoa(c.Type.Precision()))
-			q.WriteByte(',')
-			q.WriteString(strconv.Itoa(c.Type.Scale()))
-			q.WriteByte(')')
-		case types.DateTimeKind:
-			q.WriteString("TIMESTAMP_NTZ")
-		case types.DateKind:
-			q.WriteString("DATE")
-		case types.TimeKind:
-			q.WriteString("TIME")
-		case types.JSONKind:
-			q.WriteString("VARIANT")
-		case types.UUIDKind:
-			q.WriteString("VARCHAR(36)")
-		case types.InetKind:
-			q.WriteString("VARCHAR(45)")
-		case types.TextKind:
-			q.WriteString("VARCHAR")
-			if l, ok := c.Type.CharLen(); ok {
-				q.WriteByte('(')
-				q.WriteString(strconv.Itoa(l))
-				q.WriteByte(')')
-			}
-		case types.ArrayKind:
-			q.WriteString("ARRAY")
-		case types.MapKind:
-			q.WriteString("OBJECT")
-		default:
-			panic("unsupported type")
-		}
-		if !c.Nullable {
-			q.WriteString(" NOT NULL")
-		}
-		q.WriteString(",\n")
-	}
-	q.WriteString("\"$purge\" BOOLEAN NOT NULL\n)")
-
+	// Acquire a connection.
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return meergo.Error(err)
 	}
 	defer conn.Close()
 
-	_, err = conn.ExecContext(ctx, q.String())
+	// Create the temporary table.
+	_, err = conn.ExecContext(ctx, create)
 	if err != nil {
 		return meergo.Error(err)
 	}
-	defer func() {
-		_, _ = conn.ExecContext(ctx, `DROP TABLE "`+tempTableName+`"`)
-	}()
 
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
@@ -316,16 +333,16 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 			return meergo.Error(err)
 		}
 		// Copy the rows from the stage into the temporary table.
-		q.Reset()
-		q.WriteString("COPY INTO \"")
-		q.WriteString(tempTableName)
-		q.WriteString("\"\nFROM @%\"")
-		q.WriteString(tempTableName)
-		q.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
+		b.Reset()
+		b.WriteString("COPY INTO \"")
+		b.WriteString(tempTableName)
+		b.WriteString("\"\nFROM @%\"")
+		b.WriteString(tempTableName)
+		b.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
 			"FILES = ('rows.csv.gz')\n" +
 			"MATCH_BY_COLUMN_NAME = CASE_SENSITIVE\n" +
 			"ON_ERROR = ABORT_STATEMENT")
-		_, err = conn.ExecContext(ctx, q.String())
+		_, err = conn.ExecContext(ctx, b.String())
 		if err != nil {
 			return meergo.Error(err)
 		}
@@ -339,80 +356,24 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 			return meergo.Error(err)
 		}
 		// Copy the deleted rows from the stage into the temporary table.
-		q.Reset()
-		q.WriteString("COPY INTO \"")
-		q.WriteString(tempTableName)
-		q.WriteString("\"\nFROM @%\"")
-		q.WriteString(tempTableName)
-		q.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
+		b.Reset()
+		b.WriteString("COPY INTO \"")
+		b.WriteString(tempTableName)
+		b.WriteString("\"\nFROM @%\"")
+		b.WriteString(tempTableName)
+		b.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
 			"FILES = ('rows.csv.gz')\n" +
 			"MATCH_BY_COLUMN_NAME = CASE_SENSITIVE\n" +
 			"OVERWRITE = TRUE\n" +
 			"ON_ERROR = ABORT_STATEMENT")
-		_, err = conn.ExecContext(ctx, q.String())
+		_, err = conn.ExecContext(ctx, b.String())
 		if err != nil {
 			return meergo.Error(err)
 		}
 	}
 
 	// Merge the temporary table's rows with the destination table's rows.
-	q.Reset()
-	q.WriteString(`MERGE INTO `)
-	q.WriteString(quoteTable(table.Name))
-	q.WriteString(" d\nUSING \"")
-	q.WriteString(tempTableName)
-	q.WriteString("\" s\nON ")
-	for i, key := range table.Keys {
-		if i > 0 {
-			q.WriteString(" AND ")
-		}
-		q.WriteString(`d."`)
-		q.WriteString(key)
-		q.WriteString(`" = s."`)
-		q.WriteString(key)
-		q.WriteByte('"')
-	}
-	if len(rows) > 0 {
-		q.WriteString("\nWHEN MATCHED AND NOT s.\"$purge\" THEN\n  UPDATE SET ")
-		i := 0
-		for _, c := range table.Columns {
-			if slices.Contains(table.Keys, c.Name) {
-				continue
-			}
-			if i > 0 {
-				q.WriteByte(',')
-			}
-			q.WriteByte('"')
-			q.WriteString(c.Name)
-			q.WriteString(`" = s."`)
-			q.WriteString(c.Name)
-			q.WriteByte('"')
-			i++
-		}
-		q.WriteString("\nWHEN NOT MATCHED AND NOT s.\"$purge\" THEN\n  INSERT (")
-		for i, c := range table.Columns {
-			if i > 0 {
-				q.WriteByte(',')
-			}
-			q.WriteByte('"')
-			q.WriteString(c.Name)
-			q.WriteByte('"')
-		}
-		q.WriteString(")\n  VALUES (")
-		for i, c := range table.Columns {
-			if i > 0 {
-				q.WriteByte(',')
-			}
-			q.WriteString(`s."`)
-			q.WriteString(c.Name)
-			q.WriteByte('"')
-		}
-		q.WriteString(`)`)
-	}
-	if len(deleted) > 0 {
-		q.WriteString("\nWHEN MATCHED THEN\n  DELETE")
-	}
-	_, err = conn.ExecContext(ctx, q.String())
+	_, err = conn.ExecContext(ctx, merge)
 	if err != nil {
 		return meergo.Error(err)
 	}
