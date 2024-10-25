@@ -398,12 +398,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
 	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
-	j := 0
+	i := 0
 	for _, c := range columns {
 		if slices.Contains(immutableMergeIdentitiesColumns, c.Name) {
 			continue
 		}
-		if j > 0 {
+		if i > 0 {
 			b.WriteByte(',')
 		}
 		b.WriteString("\n\"")
@@ -416,7 +416,10 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 			b.WriteString(c.Name)
 			b.WriteString(`"`)
 		}
-		j++
+		i++
+	}
+	if i == 0 {
+		return errors.New("postgresql.MergeIdentities: there must be at least one column in 'columns' apart from the immutable identities columns")
 	}
 	b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
 	for i, c := range columns {
