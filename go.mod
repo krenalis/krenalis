@@ -7,6 +7,7 @@ replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-g
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix
 	github.com/andybalholm/brotli v1.1.1
+	github.com/avct/uasurfer v0.0.0-20240501094946-ca0c4d1e541b
 	github.com/aws/aws-sdk-go-v2 v1.30.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.21
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.21
@@ -25,7 +26,6 @@ require (
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/jxskiss/base62 v1.1.0
-	github.com/mssola/useragent v1.0.0
 	github.com/open2b/analytics-go v0.0.4
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.7

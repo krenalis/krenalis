@@ -43,8 +43,8 @@ import (
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 
+	"github.com/avct/uasurfer"
 	"github.com/google/uuid"
-	"github.com/mssola/useragent"
 	"github.com/oschwald/maxminddb-golang"
 	"github.com/relvacode/iso8601"
 )
@@ -979,52 +979,64 @@ func (c *Collector) enrichEvent(event *collectedEvent, sourceType state.Connecto
 		event.Context.Browser.Name = "None"
 		event.Context.OS.Name = "None"
 	} else {
-		ua := useragent.New(event.Context.UserAgent)
-		browserName, browserVersion := ua.Browser()
-		switch browserName {
+		ua := uasurfer.Parse(event.Context.UserAgent)
+		switch ua.Browser.Name {
 		default:
 			event.Context.Browser.Name = "Other"
-			if len(browserName) <= 25 {
-				event.Context.Browser.Other = browserName
+			name := ua.Browser.Name.StringTrimPrefix()
+			if utf8.RuneCountInString(name) <= 25 {
+				event.Context.Browser.Other = name
 			}
-		case "Chrome":
+		case uasurfer.BrowserChrome:
 			event.Context.Browser.Name = "Chrome"
-		case "Safari":
+		case uasurfer.BrowserSafari:
 			event.Context.Browser.Name = "Safari"
-		case "Edge":
+		case uasurfer.BrowserIE:
 			event.Context.Browser.Name = "Edge"
-		case "Firefox":
+		case uasurfer.BrowserFirefox:
 			event.Context.Browser.Name = "Firefox"
-		case "Samsung Internet":
+		case uasurfer.BrowserSamsung:
 			event.Context.Browser.Name = "Samsung Internet"
-		case "Opera":
+		case uasurfer.BrowserOpera:
 			event.Context.Browser.Name = "Opera"
 		}
 		if event.Context.Browser.Name != "Other" || event.Context.Browser.Other != "" {
-			if strings.Contains(browserVersion, ".") {
-				parts := strings.SplitN(browserVersion, ".", 3)
-				if len(parts) == 3 {
-					browserVersion = parts[0] + "." + parts[1]
-				}
-				if utf8.RuneCountInString(browserVersion) > 10 {
-					browserVersion = parts[0]
-				}
+			major, minor := strconv.Itoa(ua.Browser.Version.Major), ""
+			if len(major) < 9 {
+				minor = strconv.Itoa(ua.Browser.Version.Minor)
 			}
-			if utf8.RuneCountInString(browserVersion) <= 10 {
-				event.Context.Browser.Version = browserVersion
+			if minor == "" || len(major)+len(minor)+1 > 10 {
+				event.Context.Browser.Version = major
+			} else {
+				event.Context.Browser.Version = major + "." + minor
 			}
 		}
-		osInfo := ua.OSInfo()
-		switch osInfo.Name {
-		case "Mac OS X":
-			event.Context.OS.Name = "macOS"
-		case "Android", "Windows", "iOS", "Linux", "ChromeOS":
-			event.Context.OS.Name = osInfo.Name
+		var name string
+		switch ua.OS.Name {
+		case uasurfer.OSMacOSX:
+			name = "macOS"
+		case uasurfer.OSAndroid:
+			name = "Android"
+		case uasurfer.OSWindows:
+			name = "Windows"
+		case uasurfer.OSiOS:
+			name = "iOS"
+		case uasurfer.OSLinux:
+			name = "Linux"
+		case uasurfer.OSChromeOS:
+			name = "ChromeOS"
 		default:
-			event.Context.OS.Name = "Other"
+			name = "Other"
 		}
-		if utf8.RuneCountInString(osInfo.Version) <= 10 {
-			event.Context.OS.Version = osInfo.Version
+		event.Context.OS.Name = name
+		major, minor := strconv.Itoa(ua.OS.Version.Major), ""
+		if len(major) < 9 {
+			minor = strconv.Itoa(ua.OS.Version.Minor)
+		}
+		if minor == "" || len(major)+len(minor)+1 > 10 {
+			event.Context.OS.Version = major
+		} else {
+			event.Context.OS.Version = major + "." + minor
 		}
 	}
 

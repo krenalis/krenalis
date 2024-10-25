@@ -101,6 +101,9 @@ github.com/apache/arrow/go/v15/internal/utils
 # github.com/apache/thrift v0.17.0
 ## explicit; go 1.18
 github.com/apache/thrift/lib/go/thrift
+# github.com/avct/uasurfer v0.0.0-20240501094946-ca0c4d1e541b
+## explicit; go 1.19
+github.com/avct/uasurfer
 # github.com/aws/aws-sdk-go-v2 v1.30.0
 ## explicit; go 1.20
 github.com/aws/aws-sdk-go-v2/aws
@@ -436,9 +439,6 @@ github.com/mitchellh/mapstructure
 # github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 ## explicit
 github.com/mohae/deepcopy
-# github.com/mssola/useragent v1.0.0
-## explicit; go 1.13
-github.com/mssola/useragent
 # github.com/mtibben/percent v0.2.1
 ## explicit; go 1.14
 github.com/mtibben/percent
