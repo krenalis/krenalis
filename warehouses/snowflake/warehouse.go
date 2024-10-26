@@ -253,6 +253,9 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 			b.WriteByte('"')
 			i++
 		}
+		if i == 0 {
+			return errors.New("snowflake.Merge: there must be at least one column in 'columns' apart from the keys")
+		}
 		b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
@@ -381,9 +384,139 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 	return nil
 }
 
+// immutableMergeIdentitiesColumns are columns in the merge of identities that
+// are immutable.
+var immutableMergeIdentitiesColumns = []string{
+	"__action__",
+	"__identity_id__",
+	"__is_anonymous__",
+	"__connection__",
+}
+
 // MergeIdentities merge existing identities, deletes them and inserts new ones.
 func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
-	panic("TODO: not implemented")
+
+	db, err := warehouse.connection()
+	if err != nil {
+		return err
+	}
+
+	// Generate a unique name for the temporary table.
+	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+
+	// Prepare the "create temporary table" statement.
+	var b strings.Builder
+	b.WriteString(`CREATE TEMPORARY TABLE "`)
+	b.WriteString(tempTableName)
+	b.WriteString("\" AS\n  SELECT ")
+	for _, c := range columns {
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteString(`",`)
+	}
+	b.WriteString(`FALSE AS "$purge" FROM "_user_identities" LIMIT 0`)
+	create := b.String()
+
+	// Prepare the "merge" statement.
+	b.Reset()
+	b.WriteString("MERGE INTO \"_user_identities\" AS d\nUSING \"")
+	b.WriteString(tempTableName)
+	b.WriteString("\" AS s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
+	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
+	i := 0
+	for _, c := range columns {
+		if slices.Contains(immutableMergeIdentitiesColumns, c.Name) {
+			continue
+		}
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString("\n\"")
+		b.WriteString(c.Name)
+		b.WriteString(`" = `)
+		if c.Name == "__anonymous_ids__" {
+			b.WriteString(`CASE WHEN s."__anonymous_ids__" IS NULL OR ARRAY_CONTAINS(d."__anonymous_ids__", s."__anonymous_ids__"[0]) THEN d."__anonymous_ids__" ELSE ARRAY_CAT(d."__anonymous_ids__", ARRAY_CONSTRUCT(s."__anonymous_ids__"[0])) END`)
+		} else {
+			b.WriteString(`s."`)
+			b.WriteString(c.Name)
+			b.WriteString(`"`)
+		}
+		i++
+	}
+	if i == 0 {
+		return errors.New("snowflake.MergeIdentities: there must be at least one column in 'columns' apart from the immutable identities columns")
+	}
+	b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
+	for i, c := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(c.Name)
+		b.WriteByte('"')
+	}
+	b.WriteString(")\n  VALUES (")
+	for i, c := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`s."`)
+		b.WriteString(c.Name)
+		b.WriteByte('"')
+	}
+	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" = FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
+	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" = TRUE THEN\n  DELETE")
+	merge := b.String()
+
+	// Serialize the rows in CSV format.
+	csvReader, err := serializeIdentitiesToCSV(columns, rows)
+	if err != nil {
+		return err
+	}
+
+	// Acquire a connection.
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer conn.Close()
+
+	// Create the temporary table.
+	_, err = conn.ExecContext(ctx, create)
+	if err != nil {
+		return meergo.Error(err)
+	}
+
+	// Copy the rows into the temporary table.
+	if len(rows) > 0 {
+		// Put the rows into the temporary table's stage.
+		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, csvReader), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		if err != nil {
+			return meergo.Error(err)
+		}
+		// Copy the rows from the stage into the temporary table.
+		b.Reset()
+		b.WriteString("COPY INTO \"")
+		b.WriteString(tempTableName)
+		b.WriteString("\"\nFROM @%\"")
+		b.WriteString(tempTableName)
+		b.WriteString("\"\nFILE_FORMAT = (TYPE=CSV PARSE_HEADER=TRUE FIELD_OPTIONALLY_ENCLOSED_BY='0x27' ESCAPE_UNENCLOSED_FIELD=NONE EMPTY_FIELD_AS_NULL=TRUE NULL_IF=())\n" +
+			"FILES = ('rows.csv.gz')\n" +
+			"MATCH_BY_COLUMN_NAME = CASE_SENSITIVE\n" +
+			"ON_ERROR = ABORT_STATEMENT")
+		_, err = conn.ExecContext(ctx, b.String())
+		if err != nil {
+			return meergo.Error(err)
+		}
+	}
+
+	// Merge the temporary table's rows with the destination table's rows.
+	_, err = conn.ExecContext(ctx, merge)
+	if err != nil {
+		return meergo.Error(err)
+	}
+
+	return nil
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
@@ -490,6 +623,7 @@ func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 // returns it as an io.Reader. It also appends a boolean column called $purge
 // with the value of the 'deleted' argument as value for each row.
 func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io.Reader, error) {
+	var err error
 	var b bytes.Buffer
 	var bj bytes.Buffer
 	for i, c := range columns {
@@ -507,53 +641,9 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			switch v := v.(type) {
-			case bool:
-				if v {
-					b.WriteString("true")
-				} else {
-					b.WriteString("false")
-				}
-			case int:
-				b.WriteString(strconv.Itoa(v))
-			case int16:
-				b.WriteString(strconv.Itoa(int(v)))
-			case int32:
-				b.WriteString(strconv.Itoa(int(v)))
-			case int64:
-				b.WriteString(strconv.Itoa(int(v)))
-			case float64:
-				b.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
-			case decimal.Decimal:
-				v.WriteTo(&b)
-			case json.Value:
-				quoteCSVBytes(&b, v)
-			case string:
-				if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
-					quoteCSVString(&b, v)
-				} else {
-					b.WriteString(v)
-				}
-			default:
-				switch k := columns[j].Type.Kind(); k {
-				case types.ArrayKind, types.MapKind:
-					bj.Reset()
-					enc := stdjson.NewEncoder(&bj)
-					enc.SetEscapeHTML(false)
-					err := enc.Encode(v)
-					if err != nil {
-						return nil, err
-					}
-					quoteCSVBytes(&b, bj.Bytes())
-				case types.DateTimeKind:
-					b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.999999999"))
-				case types.DateKind:
-					b.WriteString(v.(time.Time).Format("2006-01-02"))
-				case types.TimeKind:
-					b.WriteString(v.(time.Time).Format("15:04:05.999999999"))
-				default:
-					return nil, fmt.Errorf("cannot serialize as Snowflake CSV: unsupported type %T for column type %s", v, k)
-				}
+			err = serializeValueToCSV(&b, &bj, columns[j].Type, v)
+			if err != nil {
+				return nil, err
 			}
 		}
 		// Add the value for the column $purge.
@@ -564,6 +654,97 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 		}
 	}
 	return &b, nil
+}
+
+// serializeIdentitiesToCSV serializes identities as CSV, using columns as
+// header, and returns it as an io.Reader. It also appends a boolean column
+// called $purge with the value of the 'deleted' argument as value for each row.
+func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (io.Reader, error) {
+	var err error
+	var b bytes.Buffer
+	var bj bytes.Buffer
+	for i, c := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(c.Name)
+	}
+	b.WriteString(",$purge\n")
+	for i, row := range rows {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		for j, column := range columns {
+			if j > 0 {
+				b.WriteByte(',')
+			}
+			v, ok := row[column.Name]
+			if !ok {
+				continue
+			}
+			err = serializeValueToCSV(&b, &bj, columns[j].Type, v)
+			if err != nil {
+				return nil, err
+			}
+		}
+		// Add the value for the column $purge.
+		if purge, ok := row["$purge"].(bool); ok {
+			if purge {
+				b.WriteString(",true")
+			} else {
+				b.WriteString(",false")
+			}
+		} else {
+			b.WriteString(",")
+		}
+	}
+	return &b, nil
+}
+
+func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
+	switch v := v.(type) {
+	case bool:
+		if v {
+			b.WriteString("true")
+		} else {
+			b.WriteString("false")
+		}
+	case int:
+		b.WriteString(strconv.Itoa(v))
+	case float64:
+		b.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
+	case decimal.Decimal:
+		v.WriteTo(b)
+	case json.Value:
+		quoteCSVBytes(b, v)
+	case string:
+		if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
+			quoteCSVString(b, v)
+		} else {
+			b.WriteString(v)
+		}
+	default:
+		switch k := t.Kind(); k {
+		case types.DateTimeKind:
+			b.WriteString(v.(time.Time).Format("2006-01-02 15:04:05.999999999"))
+		case types.DateKind:
+			b.WriteString(v.(time.Time).Format("2006-01-02"))
+		case types.TimeKind:
+			b.WriteString(v.(time.Time).Format("15:04:05.999999999"))
+		case types.ArrayKind, types.MapKind:
+			bj.Reset()
+			enc := stdjson.NewEncoder(bj)
+			enc.SetEscapeHTML(false)
+			err := enc.Encode(v)
+			if err != nil {
+				return err
+			}
+			quoteCSVBytes(b, bj.Bytes())
+		default:
+			return fmt.Errorf("cannot serialize as Snowflake CSV: unsupported type %T for column type %s", v, k)
+		}
+	}
+	return nil
 }
 
 // execTransaction executes the function f within a transaction. If f returns an
