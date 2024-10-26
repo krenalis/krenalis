@@ -431,8 +431,8 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 		b.WriteString(c.Name)
 		b.WriteByte('"')
 	}
-	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" IS FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
-	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS TRUE THEN\n  DELETE")
+	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" = FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
+	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 
 	// Prepare the columns names.
