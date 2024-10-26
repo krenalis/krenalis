@@ -10,20 +10,23 @@ package json
 import (
 	"bytes"
 	"errors"
+	"io"
 	"iter"
 	"strconv"
+	"strings"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/decimal"
-	"github.com/meergo/meergo/json/jsontext"
+	"github.com/meergo/meergo/types"
+
+	"github.com/meergo/meergo/json/internal/json"
+	"github.com/meergo/meergo/json/internal/json/jsontext"
 )
 
 var (
-	_ MarshalerV1   = (*Value)(nil)
-	_ MarshalerV2   = (*Value)(nil)
-	_ UnmarshalerV1 = (*Value)(nil)
-	_ UnmarshalerV2 = (*Value)(nil)
+	_ Marshaler   = Value{}
+	_ Unmarshaler = (*Value)(nil)
 )
 
 // ErrInvalidJSON is returned when an argument is not valid JSON, or is not
@@ -41,38 +44,28 @@ func (err NotExistError) Error() string {
 	return "path does not exist"
 }
 
-// Kind represents a specific kind of JSON value.
-type Kind byte
+// A SyntaxError is a description of a JSON syntax error that occurred during
+// the encoding or decoding of JSON, in accordance with the JSON grammar.
+type SyntaxError struct {
+	err    error
+	offset int64
+}
 
-const (
-	Null   Kind = 'n'
-	True   Kind = 't'
-	False  Kind = 'f'
-	String Kind = '"'
-	Number Kind = '0'
-	Object Kind = '{'
-	Array  Kind = '['
-)
-
-// String returns the name of k.
-func (k Kind) String() string {
-	switch k {
-	case Null:
-		return "null"
-	case True:
-		return "true"
-	case False:
-		return "false"
-	case String:
-		return "string"
-	case Number:
-		return "number"
-	case Object:
-		return "object"
-	case Array:
-		return "array"
+func (err *SyntaxError) ByteOffset() int64 {
+	if err, ok := err.err.(*jsontext.SyntacticError); ok {
+		return err.ByteOffset
 	}
-	panic("unexpected kind")
+	return err.offset
+}
+
+func (err *SyntaxError) Error() string {
+	str := err.err.Error()
+	if _, ok := err.err.(*jsontext.SyntacticError); ok {
+		if strings.HasPrefix(str, "jsontext: ") {
+			str = str[len("jsontext: "):]
+		}
+	}
+	return str
 }
 
 // Value is a JSON-encoded value.
@@ -147,23 +140,6 @@ func (v Value) Get(path []string) (Value, bool) {
 	return v, err == nil
 }
 
-// Kind returns the kind of v.
-func (v Value) Kind() Kind {
-	i := 0
-	for {
-		c := Kind(v[i])
-		switch c {
-		case Object, Array, Null, String, Number, True, False:
-			return c
-		default:
-			if '1' <= c && c <= '9' || c == '-' {
-				return Number
-			}
-		}
-		i++
-	}
-}
-
 var dotZero = []byte(".0")
 
 // Int returns the integer value for a JSON number. It returns an error if v is
@@ -222,6 +198,23 @@ func (v Value) IsTrue() bool {
 // lookupTable is used by both the Lookup method and the TrimSpace function.
 var lookupTable = [256]uint8{'\t': 1, '\n': 1, '\r': 1, ' ': 1, ':': 2}
 
+// Kind returns the kind of v.
+func (v Value) Kind() Kind {
+	i := 0
+	for {
+		c := Kind(v[i])
+		switch c {
+		case Object, Array, Null, String, Number, True, False:
+			return c
+		default:
+			if '1' <= c && c <= '9' || c == '-' {
+				return Number
+			}
+		}
+		i++
+	}
+}
+
 // Lookup returns the value at the specified path in v as a sub-slice of v.
 //
 // If any part of the path does not exist, it returns a NotFoundError. The error
@@ -262,14 +255,6 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 	return v, nil
-}
-
-// MarshalJSONV2 implements the MarshalerV2 interface to marshal v.
-func (v Value) MarshalJSONV2(enc *jsontext.Encoder, _ Options) error {
-	if v == nil {
-		return enc.WriteToken(jsontext.Null)
-	}
-	return enc.WriteValue(jsontext.Value(v))
 }
 
 // Properties returns an iterator over the key-value pairs of an object.
@@ -324,6 +309,16 @@ func (v Value) Uint() (uint, error) {
 	return uint(n), nil
 }
 
+// Unmarshal unmarshals v into the value pointed by out.
+// It returns an error if out is nil or is not a pointer.
+func (v Value) Unmarshal(out any) error {
+	err := json.Unmarshal(v, out)
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		return &SyntaxError{err: err}
+	}
+	return err
+}
+
 // UnmarshalJSON sets *v to a copy of the data, excluding leading and trailing
 // whitespace. If data does not contain valid JSON, it does nothing and returns
 // ErrInvalidJSON.
@@ -341,17 +336,11 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// UnmarshalJSONV2 implements the UnmarshalerV2 interface to unmarshal into v.
-func (v *Value) UnmarshalJSONV2(dec *jsontext.Decoder, _ Options) error {
-	if v == nil {
-		return errors.New("UnmarshalJSONV2 on nil pointer")
-	}
-	value, err := dec.ReadValue()
-	if err != nil {
-		return err
-	}
-	*v = Value(value)
-	return nil
+// AppendUnquote writes the unquoted value of v into dst, and returns the
+// extended buffer. v may contain leading and trailing JSON whitespace.
+// It returns an error if v is not of String kind.
+func (v Value) AppendUnquote(dst []byte) ([]byte, error) {
+	return jsontext.AppendUnquote(dst, TrimSpace(v))
 }
 
 // Compact returns a copy of data with all insignificant whitespace removed. If
@@ -367,6 +356,84 @@ func Compact(data []byte) ([]byte, error) {
 		return nil, ErrInvalidJSON
 	}
 	return v, nil
+}
+
+// Decode deserialize JSON read from r into the value pointed by out.
+// It returns an error if out is nil or is not a pointer.
+func Decode(r io.Reader, out any) error {
+	err := json.UnmarshalRead(r, out)
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		return &SyntaxError{err: err}
+	}
+	return err
+}
+
+// DecodeBySchema decodes JSON read from r, validating it according to the
+// provided schema, which cannot be the invalid type. If a property is missing
+// and it is not optional for reading, it returns a *SchemaValidationError
+// error.
+//
+// It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
+// valid JSON and returns a *SchemaValidationError value if an error occurs
+// during schema validation.
+//
+// The following are the expected JSON values for each schema type:
+//
+//   - Boolean: true or false
+//   - Int (8, 16, 24, and 32 bits): a JSON Number representing an integer
+//   - Int (64 bits): a JSON String representing an integer
+//   - Uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
+//   - Uint (64 bits): a JSON String representing an integer
+//   - Float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
+//   - Decimal: a JSON String representing a JSON Number
+//   - DateTime: a JSON String representing a time in the ISO8601 format
+//   - Date: a JSON String representing a date in the ISO8601 format, formatted
+//     as the Go time format "2006-01-02"
+//   - Time: a JSON String representing a time in the ISO8601 format, formatted
+//     as the Go time format "15:04:05.999999999"
+//   - Year: a JSON Number representing an integer
+//   - UUID: a JSON String representing a UUID
+//   - JSON: a JSON String representing a JSON value
+//   - Inet: a JSON String representing an IP number
+//   - Text: a JSON String
+//   - Array: a JSON Array
+//   - Object: a JSON Object
+//   - Map: a JSON Object
+func DecodeBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
+	return decodeBySchema(r, schema)
+}
+
+// Encode writes to out the JSON encoding of v.
+func Encode(out io.Writer, v any) error {
+	err := json.MarshalWrite(out, v)
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		return &SyntaxError{err: err}
+	}
+	return err
+}
+
+// Marshal encodes the given value.
+func Marshal(v any) (Value, error) {
+	val, err := json.Marshal(v)
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		return Value{}, &SyntaxError{err: err}
+	}
+	return val, nil
+}
+
+// Marshaler is the interface implemented by types that can marshal themselves
+// into valid JSON.
+type Marshaler interface {
+	MarshalJSON() ([]byte, error)
+}
+
+// MarshalBySchema encodes the given value, based on the provided schema, into
+// JSON, and returns it. schema cannot be the invalid type.
+//
+// Unlike DecodeBySchema, this function does not validate the value. Its
+// behavior is undefined if the value does not validate against the type.
+func MarshalBySchema(v any, schema types.Type) (Value, error) {
+	return marshalBySchema(nil, v, schema)
 }
 
 var zeroByte = []byte(`\u0000`)
@@ -406,6 +473,17 @@ func TrimSpace(data []byte) []byte {
 	for ; lookupTable[data[j]] == 1; j-- {
 	}
 	return data[i : j+1]
+}
+
+// Unmarshaler is the interface for types that can unmarshal a JSON
+// representation of themselves. The input is assumed to be a valid JSON value.
+// UnmarshalJSON must copy the JSON data if it needs to retain it after
+// returning.
+//
+// By convention, to mimic the behavior of [Unmarshal], Unmarshalers
+// should implement UnmarshalJSON([]byte("null")) as a no-op.
+type Unmarshaler interface {
+	UnmarshalJSON([]byte) error
 }
 
 // Unquote removes the quotes from a JSON-encoded string and returns the

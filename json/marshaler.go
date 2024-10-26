@@ -17,22 +17,12 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/json/internal/json/jsontext"
 	"github.com/meergo/meergo/types"
-
-	"github.com/meergo/meergo/json/jsontext"
 )
 
-// MarshalBySchema encodes the given value, based on the provided schema, into
-// JSON, and returns it. schema cannot be the invalid type.
-//
-// Unlike UnmarshalBySchema, this function does not validate the value. Its
-// behavior is undefined if the value does not validate against the type.
-func MarshalBySchema(value any, schema types.Type) ([]byte, error) {
-	return marshalBySchema(nil, schema, value)
-}
-
 // marshalBySchema marshals v as a JSON value and appends it to b.
-func marshalBySchema(b []byte, t types.Type, v any) ([]byte, error) {
+func marshalBySchema(b []byte, v any, t types.Type) (Value, error) {
 	if v == nil {
 		return append(b, "null"...), nil
 	}
@@ -107,7 +97,7 @@ func marshalBySchema(b []byte, t types.Type, v any) ([]byte, error) {
 				}
 				item := rv.Index(i).Interface()
 				var err error
-				b, err = marshalBySchema(b, t.Elem(), item)
+				b, err = marshalBySchema(b, item, t.Elem())
 				if err != nil {
 					return nil, err
 				}
@@ -128,7 +118,7 @@ func marshalBySchema(b []byte, t types.Type, v any) ([]byte, error) {
 				b = append(b, '"')
 				b = append(b, p.Name...)
 				b = append(b, '"', ':')
-				b, err = marshalBySchema(b, p.Type, rv.Interface())
+				b, err = marshalBySchema(b, rv.Interface(), p.Type)
 				if err != nil {
 					return nil, err
 				}
@@ -163,7 +153,7 @@ func marshalBySchema(b []byte, t types.Type, v any) ([]byte, error) {
 					return nil, err
 				}
 				b = append(b, ':')
-				b, err = marshalBySchema(b, vt, e.v)
+				b, err = marshalBySchema(b, e.v, vt)
 				if err != nil {
 					return nil, err
 				}

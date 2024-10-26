@@ -457,7 +457,7 @@ func ValidateJSON(name string, v any) (any, error) {
 		data = v
 	case string:
 		data = []byte(v)
-	case json.MarshalerV1:
+	case json.Marshaler:
 		var err error
 		data, err = v.MarshalJSON()
 		if err != nil {

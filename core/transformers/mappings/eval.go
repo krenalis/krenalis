@@ -23,7 +23,6 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/json/jsontext"
 	"github.com/meergo/meergo/types"
 )
 
@@ -108,7 +107,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 		switch v.Kind() {
 		case json.Array, json.Object:
 		case json.String:
-			return jsontext.AppendUnquote(b, v)
+			return v.AppendUnquote(b)
 		default:
 			return append(b, v...), nil
 		}

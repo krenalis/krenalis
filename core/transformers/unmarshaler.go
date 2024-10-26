@@ -23,7 +23,6 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/json/jsontext"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -99,7 +98,7 @@ func newErrInvalidValue(msg, path string, terms map[string]string) error {
 // decoder implements a decoder for the JSON code returned by JavaScript or
 // Python.
 type decoder struct {
-	dec  *jsontext.Decoder
+	dec  *json.Decoder
 	opts *decoderOptions
 }
 
@@ -200,7 +199,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return errors.New("core/transformers: schema is not an object")
 	}
-	d := decoder{dec: jsontext.NewDecoder(r)}
+	d := decoder{dec: json.NewDecoder(r)}
 	switch language {
 	case state.JavaScript:
 		d.opts = &javaScriptDecoderOptions
@@ -324,17 +323,17 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 }
 
 // peekKind peeks the next token kind.
-func (d decoder) peekKind() jsontext.Kind {
-	return d.dec.PeekKind()
+func (d decoder) peekKind() json.Kind {
+	return d.dec.Peek()
 }
 
 // readToken reads a token.
 // It returns the errSyntaxInvalid error if the JSON source is not valid.
-func (d decoder) readToken() (jsontext.Token, error) {
+func (d decoder) readToken() (json.Token, error) {
 	tok, err := d.dec.ReadToken()
 	if err == io.ErrUnexpectedEOF {
 		err = errSyntaxInvalid
-	} else if _, ok := err.(*jsontext.SyntacticError); ok {
+	} else if _, ok := err.(*json.SyntaxError); ok {
 		err = errSyntaxInvalid
 	}
 	return tok, err
@@ -342,11 +341,11 @@ func (d decoder) readToken() (jsontext.Token, error) {
 
 // readValue reads a value.
 // It returns the errSyntaxInvalid error if the JSON source is not valid.
-func (d decoder) readValue() (jsontext.Value, error) {
+func (d decoder) readValue() (json.Value, error) {
 	v, err := d.dec.ReadValue()
 	if err == io.ErrUnexpectedEOF {
 		err = errSyntaxInvalid
-	} else if _, ok := err.(*jsontext.SyntacticError); ok {
+	} else if _, ok := err.(*json.SyntaxError); ok {
 		err = errSyntaxInvalid
 	}
 	return v, err
@@ -556,7 +555,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 }
 
 // value returns the unmarshalled value of v according to t.
-func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
+func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	switch t.Kind() {
 	case types.BooleanKind:
 		if v.Kind() == 'f' {
@@ -746,7 +745,7 @@ func (d decoder) unquoteString(v []byte) string {
 
 // formatString formats a JSON string into a formatted string.
 func (d decoder) formatString(v []byte) string {
-	b, _ := jsontext.AppendUnquote(nil, v)
+	b, _ := json.Value(v).AppendUnquote(nil)
 	return `"` + strings.ReplaceAll(strings.ReplaceAll(string(b), `\`, `\\`), `"`, `\"`) + `"`
 }
 

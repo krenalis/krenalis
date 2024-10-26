@@ -159,7 +159,7 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 		}
 		return v, nil
 	case types.MapKind:
-		if v, err := json.UnmarshalBySchema(strings.NewReader(v.(string)), typ); err == nil {
+		if v, err := json.DecodeBySchema(strings.NewReader(v.(string)), typ); err == nil {
 			return v, nil
 		}
 	}

@@ -9,7 +9,9 @@ package json
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"reflect"
 	"regexp"
@@ -208,7 +210,7 @@ func Test_UnmarshalBySchema(t *testing.T) {
 	}{
 		{
 			data: ``,
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: io.EOF},
 		},
 		{
 			data:     data,
@@ -216,15 +218,15 @@ func Test_UnmarshalBySchema(t *testing.T) {
 		},
 		{
 			data: data + ",",
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: errors.New("invalid character ',' before next token")},
 		},
 		{
 			data: data + "," + data,
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: errors.New("invalid character ',' before next token")},
 		},
 		{
 			data: `{"Boolean":[],}`,
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: errors.New("invalid character ',' before next token")},
 		},
 		{
 			data: `5`,
@@ -232,15 +234,15 @@ func Test_UnmarshalBySchema(t *testing.T) {
 		},
 		{
 			data: `{"Boolean":}`,
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: errors.New("invalid character '}' at start of value")},
 		},
 		{
 			data: `{"Boolean":true`,
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: errors.New("invalid JSON")},
 		},
 		{
 			data: `{"Object":{"a.b":true}}`,
-			err:  ErrSyntaxInvalid,
+			err:  &SyntaxError{err: errors.New("property name is not valid")},
 		},
 		{
 			data: `[{"Boolean":true}]`,
@@ -299,24 +301,24 @@ func Test_UnmarshalBySchema(t *testing.T) {
 			if !test.schema.Valid() {
 				testSchema = schema
 			}
-			got, err := UnmarshalBySchema(b, testSchema)
+			got, err := DecodeBySchema(b, testSchema)
 			if err != nil {
 				if test.err == nil {
-					t.Fatalf("UnmarshalBySchema: expected no error, got error %s", err)
+					t.Fatalf("DecodeBySchema: expected no error, got error %s", err)
 				}
-				if !reflect.DeepEqual(test.err, err) {
-					t.Fatalf("UnmarshalBySchema: expected error '%v' (type %T), got error '%v' (type %T)", test.err, test.err, err, err)
+				if reflect.TypeOf(test.err) != reflect.TypeOf(err) || test.err != nil && test.err.Error() != err.Error() {
+					t.Fatalf("DecodeBySchema: expected error '%v' (type %T), got error '%v' (type %T)", test.err, test.err, err, err)
 				}
 				if got != nil {
-					t.Fatalf("UnmarshalBySchema: expected nil, got %#v", got)
+					t.Fatalf("DecodeBySchema: expected nil, got %#v", got)
 				}
 				return
 			}
 			if test.err != nil {
-				t.Fatalf("UnmarshalBySchema: expected error %q, got no error", test.err)
+				t.Fatalf("DecodeBySchema: expected error %q, got no error", test.err)
 			}
 			if err := equalValues(schema, test.expected, got); err != nil {
-				t.Fatalf("UnmarshalBySchema:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
+				t.Fatalf("DecodeBySchema:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
 			}
 		})
 	}

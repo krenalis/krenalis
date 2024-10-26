@@ -21,7 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/decimal"
-	"github.com/meergo/meergo/json/jsontext"
+	"github.com/meergo/meergo/json/internal/json/jsontext"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -34,54 +34,14 @@ var (
 	negInfinity = []byte("-Infinity")
 )
 
-// ErrSyntaxInvalid is the error returned by UnmarshalBySchema when the data being
-// unmarshaled is not valid JSON, or does not conform to the expected structure.
-var ErrSyntaxInvalid = errors.New("syntax is not valid")
-
-// decoder implements a decoder for JSON.
-type decoder struct {
-	dec *jsontext.Decoder
-}
-
-// UnmarshalBySchema decodes JSON read from r, validating it according to the
-// provided schema, which cannot be the invalid type. If a property is missing
-// and it is not optional for reading, it returns a *SchemaValidationError
-// error.
-//
-// It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
-// valid JSON and returns a *SchemaValidationError value if an error occurs
-// during schema validation.
-//
-// The following are the expected JSON values for each schema type:
-//
-//   - Boolean: true or false
-//   - Int (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - Int (64 bits): a JSON String representing an integer
-//   - Uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - Uint (64 bits): a JSON String representing an integer
-//   - Float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
-//   - Decimal: a JSON String representing a JSON Number
-//   - DateTime: a JSON String representing a time in the ISO8601 format
-//   - Date: a JSON String representing a date in the ISO8601 format, formatted
-//     as the Go time format "2006-01-02"
-//   - Time: a JSON String representing a time in the ISO8601 format, formatted
-//     as the Go time format "15:04:05.999999999"
-//   - Year: a JSON Number representing an integer
-//   - UUID: a JSON String representing a UUID
-//   - JSON: a JSON String representing a JSON value
-//   - Inet: a JSON String representing an IP number
-//   - Text: a JSON String
-//   - Array: a JSON Array
-//   - Object: a JSON Object
-//   - Map: a JSON Object
-func UnmarshalBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
+func decodeBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
 	if r == nil {
 		return nil, errors.New("r is nil")
 	}
 	if schema.Kind() == types.InvalidKind {
 		return nil, errors.New("json: schema is the invalid type")
 	}
-	d := decoder{dec: jsontext.NewDecoder(r)}
+	d := decoder{dec: NewDecoder(r)}
 	value, err := d.unmarshal(schema)
 	if err != nil {
 		if _, ok := err.(*SchemaValidationError); ok {
@@ -94,7 +54,7 @@ func UnmarshalBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
 		return nil, err
 	}
 	if _, err := d.readToken(); err != io.EOF {
-		return nil, ErrSyntaxInvalid
+		return nil, &SyntaxError{err: err}
 	}
 	return value.(map[string]any), nil
 }
@@ -112,40 +72,36 @@ func (d decoder) consumeTokens() error {
 	return err
 }
 
-// peekKind peeks the next token kind.
-func (d decoder) peekKind() jsontext.Kind {
-	return d.dec.PeekKind()
+// peek peeks the next token kind.
+func (d decoder) peek() Kind {
+	return d.dec.Peek()
 }
 
 // readToken reads a token.
 // It returns the ErrSyntaxInvalid error if the JSON source is not valid.
-func (d decoder) readToken() (jsontext.Token, error) {
+func (d decoder) readToken() (Token, error) {
 	tok, err := d.dec.ReadToken()
 	if err == io.ErrUnexpectedEOF {
-		err = ErrSyntaxInvalid
-	} else if _, ok := err.(*jsontext.SyntacticError); ok {
-		err = ErrSyntaxInvalid
+		err = &SyntaxError{err: errors.New("invalid JSON")}
 	}
 	return tok, err
 }
 
 // readValue reads a value.
 // It returns the ErrSyntaxInvalid error if the JSON source is not valid.
-func (d decoder) readValue() (jsontext.Value, error) {
+func (d decoder) readValue() (Value, error) {
 	v, err := d.dec.ReadValue()
 	if err == io.ErrUnexpectedEOF {
-		err = ErrSyntaxInvalid
-	} else if _, ok := err.(*jsontext.SyntacticError); ok {
-		err = ErrSyntaxInvalid
+		err = &SyntaxError{err: errors.New("invalid JSON")}
 	}
 	return v, err
 }
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t types.Type) (_ any, err error) {
-	switch d.peekKind() {
+	switch d.peek() {
 	case '[':
-		// UnmarshalBySchema an array.
+		// DecodeBySchema an array.
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
@@ -154,7 +110,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		}
 		minElements, maxElements := t.MinElements(), t.MaxElements()
 		elements := make([]any, 0, minElements)
-		for i := 0; d.peekKind() != ']'; i++ {
+		for i := 0; d.peek() != ']'; i++ {
 			if i == maxElements {
 				return nil, newErrInvalidValue(fmt.Sprintf("contains more than %d elements", maxElements), "")
 			}
@@ -176,7 +132,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		}
 		return elements, nil
 	case '{':
-		// UnmarshalBySchema an object.
+		// DecodeBySchema an object.
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
@@ -184,7 +140,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 		case types.ObjectKind:
 			o := map[string]any{}
 			for {
-				if d.peekKind() == '}' {
+				if d.peek() == '}' {
 					break
 				}
 				// Read the property's name.
@@ -194,7 +150,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				}
 				name := tok.String()
 				if !types.IsValidPropertyName(name) {
-					return nil, ErrSyntaxInvalid
+					return nil, &SyntaxError{err: errors.New("property name is not valid")}
 				}
 				p, ok := t.Property(name)
 				if !ok {
@@ -202,7 +158,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 				}
 				// Read the property's value.
 				var value any
-				if d.peekKind() == 'n' {
+				if d.peek() == 'n' {
 					if _, err := d.readToken(); err != nil {
 						return nil, err
 					}
@@ -265,7 +221,7 @@ func (d decoder) unmarshal(t types.Type) (_ any, err error) {
 	case 0:
 		_, err := d.readToken()
 		if err == io.EOF {
-			err = ErrSyntaxInvalid
+			err = &SyntaxError{err: err}
 		}
 		return nil, err
 	}
@@ -284,7 +240,7 @@ func (d decoder) formatString(v []byte) string {
 }
 
 // value returns the unmarshalled value of v according to t.
-func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
+func (d decoder) value(v Value, t types.Type) (any, error) {
 	switch t.Kind() {
 	case types.BooleanKind:
 		if v.Kind() == 'f' {
@@ -471,8 +427,13 @@ func (d decoder) value(v jsontext.Value, t types.Type) (any, error) {
 	return nil, newErrInvalidValue("does not have a valid value: "+value, "")
 }
 
+// decoder implements a decoder for JSON.
+type decoder struct {
+	dec *Decoder
+}
+
 // SchemaValidationError represents a validation error related to the output
-// schema. It can be returned by UnmarshalBySchema for each single result in the
+// schema. It can be returned by DecodeBySchema for each single result in the
 // Result.Error field.
 type SchemaValidationError struct {
 	kind schemaValidationKind
