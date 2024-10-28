@@ -88,13 +88,13 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		sameUser.WriteString("( CASE\n")
 		for _, ident := range identifiers {
 			id := quoteIdent(ident.Name)
-			sameUser.WriteString(`                WHEN i1.`)
+			sameUser.WriteString(`                WHEN "i1".`)
 			sameUser.WriteString(id)
-			sameUser.WriteString(` IS NOT NULL AND i2.`)
+			sameUser.WriteString(` IS NOT NULL AND "i2".`)
 			sameUser.WriteString(id)
-			sameUser.WriteString(` IS NOT NULL THEN i1.`)
+			sameUser.WriteString(` IS NOT NULL THEN "i1".`)
 			sameUser.WriteString(id)
-			sameUser.WriteString(`::text = i2.`)
+			sameUser.WriteString(`::text = "i2".`)
 			sameUser.WriteString(id)
 			sameUser.WriteString(`::text`)
 			sameUser.WriteByte('\n')
@@ -155,7 +155,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 						) FILTER (
 							WHERE
 								"` + c.Name + `" IS NOT NULL
-								AND __connection__ = ` + strconv.Itoa(s) + `
+								AND "__connection__" = ` + strconv.Itoa(s) + `
 						)
 					) || `)
 			}
@@ -200,14 +200,14 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	),`)
 	// Write the "__last_change_time__" column.
 	mergeUsers.WriteString(`MAX("__last_change_time__")`)
-	mergeUsers.WriteString(" FROM _user_identities GROUP BY __cluster__; ")
+	mergeUsers.WriteString(` FROM "_user_identities" GROUP BY "__cluster__"; `)
 
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,
 	// replaces the GID of both users with new random GIDs.
 	mergeUsers.WriteString(`UPDATE `)
 	mergeUsers.WriteString(quoteIdent(newUsersName))
-	mergeUsers.WriteString(` u
+	mergeUsers.WriteString(` "u"
 		SET
 			"__id__" = gen_random_uuid()
 		WHERE
@@ -274,8 +274,8 @@ func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startT
 	if err != nil {
 		return nil, nil, err
 	}
-	query := "SELECT start_time, end_time FROM _operations WHERE " +
-		"operation = 'IdentityResolution' ORDER BY id DESC LIMIT 1"
+	query := `SELECT "start_time", "end_time" FROM "_operations" WHERE ` +
+		`"operation" = 'IdentityResolution' ORDER BY "id" DESC LIMIT 1`
 	err = pool.QueryRow(ctx, query).Scan(&startTime, &endTime)
 	if err != nil && err != pgx.ErrNoRows {
 		return nil, nil, meergo.Error(err)
