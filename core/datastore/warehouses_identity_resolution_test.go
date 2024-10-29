@@ -65,10 +65,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		identifiers   []string
-		identities    []identity
-		expectedUsers []map[string]any
+		name           string
+		identifiers    []string
+		primarySources map[string]int
+		identities     []identity
+		expectedUsers  []map[string]any
 	}{
 		{
 			name:        "One identity, no identifiers",
@@ -280,6 +281,57 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				{"email": nil, "first_name": "Luke", "last_name": nil},
 			},
 		},
+		{
+			name:        "Primary source specified for one property, just one identity",
+			identifiers: []string{},
+			primarySources: map[string]int{
+				"email": 100,
+			},
+			identities: []identity{
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil},
+				},
+			},
+			expectedUsers: []map[string]any{
+				{"email": "a@b", "first_name": nil, "last_name": nil},
+			},
+		},
+		{
+			name: "Primary sources, three identities",
+			identifiers: []string{
+				"email",
+			},
+			primarySources: map[string]int{
+				"first_name": 200,
+				"last_name":  200,
+			},
+			identities: []identity{
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": "FIRST_100", "last_name": "LAST_100"},
+				},
+				{
+					connection: 200,
+					action:     2,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": "FIRST_200", "last_name": "LAST_200"},
+				},
+				{
+					connection: 300,
+					action:     3,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": "FIRST_300", "last_name": "LAST_300"},
+				},
+			},
+			expectedUsers: []map[string]any{
+				{"email": "a@b", "first_name": "FIRST_200", "last_name": "LAST_200"},
+			},
+		},
 	}
 
 	// Read the JSON file with the warehouse settings.
@@ -341,6 +393,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 			// Merge the test's user identities on the warehouse.
 			var rows []map[string]any
+			validatePrimarySources(t, test.primarySources)
 			for _, user := range test.identities {
 				validateIdentity(t, user)
 				row := map[string]any{
@@ -367,7 +420,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			for _, id := range test.identifiers {
 				identifiers = append(identifiers, columnByName[id])
 			}
-			err = wh.ResolveIdentities(ctx, identifiers, columns, nil)
+			err = wh.ResolveIdentities(ctx, identifiers, columns, test.primarySources)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -457,5 +510,13 @@ func validateIdentity(t *testing.T, id identity) {
 	slices.Sort(propNames)
 	if !reflect.DeepEqual(propNames, columnsNames) {
 		fatal("expected values for properties %v, got values for %v instead", columnsNames, propNames)
+	}
+}
+
+func validatePrimarySources(t *testing.T, primarySources map[string]int) {
+	for c := range primarySources {
+		if _, ok := columnByName[c]; !ok {
+			t.Fatalf("the test is invalid because the primary sources refer to a column %q which does not exist in the tests", c)
+		}
 	}
 }
