@@ -119,6 +119,24 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	return store, nil
 }
 
+// AddEvents adds events to the store.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+func (store *Store) AddEvents(events [][]any) error {
+	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/989.
+	store.mustBeOpen()
+	_, done, err := store.mc.StartOperation(context.Background(), normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	store.mu.Lock()
+	store.events = append(store.events, events...)
+	store.mu.Unlock()
+	return nil
+}
+
 // AlterSchema alters the user schema.
 //
 // userSchema is the user schema without meta properties (this parameter is
@@ -164,24 +182,6 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Typ
 	defer done()
 	userColumns := propertiesToColumns(userSchema)
 	return store.warehouse.AlterSchemaQueries(ctx, userColumns, operations)
-}
-
-// AddEvents adds events to the store.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-func (store *Store) AddEvents(events [][]any) error {
-	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/989.
-	store.mustBeOpen()
-	_, done, err := store.mc.StartOperation(context.Background(), normalMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	store.mu.Lock()
-	store.events = append(store.events, events...)
-	store.mu.Unlock()
-	return nil
 }
 
 // BatchIdentityWriter returns an identity writer for writing user identities in
@@ -385,6 +385,51 @@ func (store *Store) LastIdentityResolution(ctx context.Context) (startTime, endT
 	return store.warehouse.LastIdentityResolution(ctx)
 }
 
+// DestinationUser represents a destination user to merge.
+type DestinationUser struct {
+	User     string
+	Property string
+}
+
+// MergeDestinationUsers merges the destination users for an action. users
+// contains the users to update or create. idsToDelete contains the identifiers
+// of the users to delete.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users []DestinationUser, idsToDelete []string) error {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	var rows [][]any
+	if users != nil {
+		rows = make([][]any, len(users))
+		values := make([]any, 3*len(users))
+		for i, user := range users {
+			j := i * 3
+			values[j+0] = action
+			values[j+1] = user.User
+			values[j+2] = user.Property
+			rows[i] = values[j : j+3]
+		}
+	}
+	var deleted []any
+	if idsToDelete != nil {
+		deleted = make([]any, len(idsToDelete)*2)
+		for i, id := range idsToDelete {
+			j := i * 2
+			deleted[j] = action
+			deleted[j+1] = id
+		}
+	}
+	return store.warehouse.Merge(ctx, destinationsUsersTable, rows, deleted)
+}
+
 // Mode returns the data warehouse mode.
 func (store *Store) Mode() state.WarehouseMode {
 	return store.mc.Mode()
@@ -489,68 +534,6 @@ func (store *Store) ResolveIdentities(ctx context.Context) error {
 	return store.warehouse.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
 }
 
-// DestinationUser represents a destination user to merge.
-type DestinationUser struct {
-	User     string
-	Property string
-}
-
-// MergeDestinationUsers merges the destination users for an action. users
-// contains the users to update or create. idsToDelete contains the identifiers
-// of the users to delete.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users []DestinationUser, idsToDelete []string) error {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	var rows [][]any
-	if users != nil {
-		rows = make([][]any, len(users))
-		values := make([]any, 3*len(users))
-		for i, user := range users {
-			j := i * 3
-			values[j+0] = action
-			values[j+1] = user.User
-			values[j+2] = user.Property
-			rows[i] = values[j : j+3]
-		}
-	}
-	var deleted []any
-	if idsToDelete != nil {
-		deleted = make([]any, len(idsToDelete)*2)
-		for i, id := range idsToDelete {
-			j := i * 2
-			deleted[j] = action
-			deleted[j+1] = id
-		}
-	}
-	return store.warehouse.Merge(ctx, destinationsUsersTable, rows, deleted)
-}
-
-// Users returns the users according to the provided query.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns a *DataWarehouseError error.
-func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer done()
-	query.table = "users"
-	query.count = true
-	return store.query(ctx, query, store.userColumnByProperty(), true)
-}
-
 // UserIdentities returns the user identities according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
@@ -603,6 +586,23 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	query.table = "users"
 	query.Properties = types.PropertyNames(schema)
 	return store.records(ctx, query, "__id__", store.userColumnByProperty(), true, matching)
+}
+
+// Users returns the users according to the provided query.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns a *DataWarehouseError error.
+func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, int, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer done()
+	query.table = "users"
+	query.count = true
+	return store.query(ctx, query, store.userColumnByProperty(), true)
 }
 
 // close closes the store.

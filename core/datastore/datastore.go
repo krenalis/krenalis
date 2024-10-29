@@ -87,52 +87,6 @@ func New(st *state.State) *Datastore {
 	return ds
 }
 
-// Close closes the datastore. When Close is called, no other calls to
-// datastore's methods should be in progress and no other shall be made.
-// It panics if it has already been called.
-func (ds *Datastore) Close() {
-	if ds.closed.Swap(true) {
-		panic("core/datastore already closed")
-	}
-	ds.state.Freeze()
-	ds.state.RemoveListeners(ds.listeners)
-	ds.state.Unfreeze()
-	var err error
-	ds.mu.Lock()
-	for _, store := range ds.store {
-		err = store.close()
-		if err != nil {
-			slog.Warn("cannot close store", "err", err)
-		}
-	}
-	ds.mu.Unlock()
-}
-
-// NormalizeWarehouseSettings returns data warehouse settings in a canonical
-// form.
-//
-// It returns the DataWarehouseNotExist error if a data warehouse with the
-// provided name does not exist, and it returns a SettingsError error if the
-// settings are not valid.
-func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
-	ds.mustBeOpen()
-	if _, ok := ds.state.Warehouse(name); !ok {
-		return nil, DataWarehouseNotExist
-	}
-	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
-		Settings: settings,
-	})
-	if err != nil {
-		return nil, err
-	}
-	settings = dw.Settings()
-	err = dw.Close()
-	if err != nil {
-		return nil, err
-	}
-	return settings, nil
-}
-
 // CanInitialize indicates whether the warehouse with the provided name and
 // settings can be initialized.
 //
@@ -158,6 +112,27 @@ func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []
 	return dw.Close()
 }
 
+// Close closes the datastore. When Close is called, no other calls to
+// datastore's methods should be in progress and no other shall be made.
+// It panics if it has already been called.
+func (ds *Datastore) Close() {
+	if ds.closed.Swap(true) {
+		panic("core/datastore already closed")
+	}
+	ds.state.Freeze()
+	ds.state.RemoveListeners(ds.listeners)
+	ds.state.Unfreeze()
+	var err error
+	ds.mu.Lock()
+	for _, store := range ds.store {
+		err = store.close()
+		if err != nil {
+			slog.Warn("cannot close store", "err", err)
+		}
+	}
+	ds.mu.Unlock()
+}
+
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
 //
@@ -177,6 +152,31 @@ func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byt
 		return err
 	}
 	return dw.Close()
+}
+
+// NormalizeWarehouseSettings returns data warehouse settings in a canonical
+// form.
+//
+// It returns the DataWarehouseNotExist error if a data warehouse with the
+// provided name does not exist, and it returns a SettingsError error if the
+// settings are not valid.
+func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
+	ds.mustBeOpen()
+	if _, ok := ds.state.Warehouse(name); !ok {
+		return nil, DataWarehouseNotExist
+	}
+	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
+		Settings: settings,
+	})
+	if err != nil {
+		return nil, err
+	}
+	settings = dw.Settings()
+	err = dw.Close()
+	if err != nil {
+		return nil, err
+	}
+	return settings, nil
 }
 
 func (ds *Datastore) Store(workspace int) *Store {

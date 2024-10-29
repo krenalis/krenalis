@@ -336,29 +336,15 @@ func intersection(set1, set2 []string) []string {
 	return inters
 }
 
+// pathToColumn returns the column name relative to the given path.
+func pathToColumn(path string) string {
+	return strings.ReplaceAll(path, ".", "_")
+}
+
 // propPathToName returns the name of the given property path.
 func propPathToName(path string) string {
 	parts := strings.Split(path, ".")
 	return parts[len(parts)-1]
-}
-
-func propertyPaths(obj types.Type) []string {
-	paths := []string{}
-	for _, p := range obj.Properties() {
-		if p.Type.Kind() == types.ObjectKind {
-			for _, sub := range propertyPaths(p.Type) {
-				paths = append(paths, appendPath(p.Name, sub))
-			}
-		} else {
-			paths = append(paths, p.Name)
-		}
-	}
-	return paths
-}
-
-// pathToColumn returns the column name relative to the given path.
-func pathToColumn(path string) string {
-	return strings.ReplaceAll(path, ".", "_")
 }
 
 // propertiesToColumns returns the columns of properties of t.
@@ -383,4 +369,18 @@ func propertiesToColumns(t types.Type) []meergo.Column {
 		})
 	}
 	return columns
+}
+
+func propertyPaths(obj types.Type) []string {
+	paths := []string{}
+	for _, p := range obj.Properties() {
+		if p.Type.Kind() == types.ObjectKind {
+			for _, sub := range propertyPaths(p.Type) {
+				paths = append(paths, appendPath(p.Name, sub))
+			}
+		} else {
+			paths = append(paths, p.Name)
+		}
+	}
+	return paths
 }
