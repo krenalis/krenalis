@@ -132,54 +132,21 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
-			mergeUsers.WriteString(`array_cat_agg(
-				DISTINCT "` + c.Name + `"
-				ORDER BY
-					"` + c.Name + `"
-			) FILTER (
-				WHERE
-					"` + c.Name + `" IS NOT NULL
-			)`)
+			mergeUsers.WriteString(`(array_cat_agg(DISTINCT ` + quoteIdent(c.Name) + ` ORDER BY ` + quoteIdent(c.Name) + `) FILTER ( WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL))`)
 		} else {
 			mergeUsers.WriteByte('(')
 			if s, ok := userPrimarySources[c.Name]; ok {
-				// If there is a user primary source S defined for this column,
-				// then add to the concatenation the expression that returns the
-				// values ​​for the column c.Name read from the identities
-				// coming from S, excluding the NULL values.
-				mergeUsers.WriteString(`(
-						ARRAY_AGG(
-							"` + c.Name + `"
-							ORDER BY
-								"__last_change_time__" DESC
-						) FILTER (
-							WHERE
-								"` + c.Name + `" IS NOT NULL
-								AND "__connection__" = ` + strconv.Itoa(s) + `
-						)
-					) || `)
+				// In the case of primary sources, list these values first,
+				// sorted by last change time, excluding those that are NULL.
+				mergeUsers.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "__connection__" = ` + strconv.Itoa(s) + `) || `)
 			}
-			// Concatenates the values ​​of all identities for which the value
-			// is not NULL, sorted by last change time. At the end is appended
-			// "NULL", which handles the case where none of the identities have
-			// a non-NULL value for the column, so that the indexing operation
-			// that takes the first value does not fail and explicitly returns
-			// "NULL" instead.
-			mergeUsers.WriteString(`(
-					ARRAY_AGG(
-						"` + c.Name + `"
-						ORDER BY
-							"__last_change_time__" DESC
-					) FILTER (
-						WHERE
-							"` + c.Name + `" IS NOT NULL
-					)
-				) || '{NULL}'
-			)[1]`)
+			// Concatenate the values ​​of all identities for which the value is
+			// not NULL, sorted by last change time.
+			mergeUsers.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
+			mergeUsers.WriteString(`)[1]`)
 		}
-		mergeUsers.WriteString(` AS "`)
-		mergeUsers.WriteString(c.Name)
-		mergeUsers.WriteByte('"')
+		mergeUsers.WriteString(" AS ")
+		mergeUsers.WriteString(quoteIdent(c.Name))
 		mergeUsers.WriteByte(',')
 	}
 	// Write the "__identities__" column.
