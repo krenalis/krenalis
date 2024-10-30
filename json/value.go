@@ -11,16 +11,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"iter"
 	"strconv"
-	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/meergo/meergo/decimal"
-	"github.com/meergo/meergo/types"
-
 	"github.com/meergo/meergo/json/internal/json"
 	"github.com/meergo/meergo/json/internal/json/jsontext"
 )
@@ -43,30 +38,6 @@ type NotExistError struct {
 
 func (err NotExistError) Error() string {
 	return "path does not exist"
-}
-
-// A SyntaxError is a description of a JSON syntax error that occurred during
-// the encoding or decoding of JSON, in accordance with the JSON grammar.
-type SyntaxError struct {
-	err    error
-	offset int64
-}
-
-func (err *SyntaxError) ByteOffset() int64 {
-	if err, ok := err.err.(*jsontext.SyntacticError); ok {
-		return err.ByteOffset
-	}
-	return err.offset
-}
-
-func (err *SyntaxError) Error() string {
-	str := err.err.Error()
-	if _, ok := err.err.(*jsontext.SyntacticError); ok {
-		if strings.HasPrefix(str, "jsontext: ") {
-			str = str[len("jsontext: "):]
-		}
-	}
-	return str
 }
 
 // Value is a JSON-encoded value.
@@ -354,173 +325,6 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 	copy(b, data)
 	*v = b
 	return nil
-}
-
-// AppendUnquote writes the unquoted value of v into dst, and returns the
-// extended buffer. v may contain leading and trailing JSON whitespace.
-// It returns an error if v is not of String kind.
-func (v Value) AppendUnquote(dst []byte) ([]byte, error) {
-	return jsontext.AppendUnquote(dst, TrimSpace(v))
-}
-
-// Compact returns a copy of data with all insignificant whitespace removed. If
-// data is already compact, it returns the original data unchanged. If data does
-// not contain valid JSON, it returns nil and ErrInvalidJSON.
-func Compact(data []byte) ([]byte, error) {
-	v := jsontext.Value(data)
-	if !utf8.Valid(data) {
-		return nil, ErrInvalidJSON
-	}
-	err := v.Compact()
-	if err != nil {
-		return nil, ErrInvalidJSON
-	}
-	return v, nil
-}
-
-// Decode deserialize JSON read from r into the value pointed by out.
-// It returns an error if out is nil or is not a pointer.
-func Decode(r io.Reader, out any) error {
-	err := json.UnmarshalRead(r, out)
-	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return &SyntaxError{err: err}
-	}
-	return err
-}
-
-// DecodeBySchema decodes JSON read from r, validating it according to the
-// provided schema, which cannot be the invalid type. If a property is missing
-// and it is not optional for reading, it returns a *SchemaValidationError
-// error.
-//
-// It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
-// valid JSON and returns a *SchemaValidationError value if an error occurs
-// during schema validation.
-//
-// The following are the expected JSON values for each schema type:
-//
-//   - Boolean: true or false
-//   - Int (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - Int (64 bits): a JSON String representing an integer
-//   - Uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - Uint (64 bits): a JSON String representing an integer
-//   - Float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
-//   - Decimal: a JSON String representing a JSON Number
-//   - DateTime: a JSON String representing a time in the ISO8601 format
-//   - Date: a JSON String representing a date in the ISO8601 format, formatted
-//     as the Go time format "2006-01-02"
-//   - Time: a JSON String representing a time in the ISO8601 format, formatted
-//     as the Go time format "15:04:05.999999999"
-//   - Year: a JSON Number representing an integer
-//   - UUID: a JSON String representing a UUID
-//   - JSON: a JSON String representing a JSON value
-//   - Inet: a JSON String representing an IP number
-//   - Text: a JSON String
-//   - Array: a JSON Array
-//   - Object: a JSON Object
-//   - Map: a JSON Object
-func DecodeBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
-	return decodeBySchema(r, schema)
-}
-
-// Encode writes to out the JSON encoding of v.
-func Encode(out io.Writer, v any) error {
-	err := json.MarshalWrite(out, v)
-	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return &SyntaxError{err: err}
-	}
-	return err
-}
-
-// Marshal encodes the given value.
-func Marshal(v any) (Value, error) {
-	val, err := json.Marshal(v)
-	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return Value{}, &SyntaxError{err: err}
-	}
-	return val, nil
-}
-
-// Marshaler is the interface implemented by types that can marshal themselves
-// into valid JSON.
-type Marshaler interface {
-	MarshalJSON() ([]byte, error)
-}
-
-// MarshalBySchema encodes the given value, based on the provided schema, into
-// JSON, and returns it. schema cannot be the invalid type.
-//
-// Unlike DecodeBySchema, this function does not validate the value. Its
-// behavior is undefined if the value does not validate against the type.
-func MarshalBySchema(v any, schema types.Type) (Value, error) {
-	return marshalBySchema(nil, v, schema)
-}
-
-var zeroByte = []byte(`\u0000`)
-
-// StripZeroBytes removes all zero bytes ('\u0000') from the provided data,
-// which may contain valid JSON code, and modifies the original slice in place.
-// It returns the modified slice.
-func StripZeroBytes(data []byte) []byte {
-	p := data
-	for {
-		i := bytes.Index(p, zeroByte)
-		if i == -1 {
-			break
-		}
-		// Check if it is preceded by an even number or zero of backslashes.
-		even := true
-		for j := i - 1; j >= 0 && p[j] == '\\'; j-- {
-			even = !even
-		}
-		if even {
-			copy(p[i:], p[i+6:])
-			p = p[:len(p)-6]
-			data = data[:len(data)-6]
-		} else {
-			p = p[i+6:]
-		}
-	}
-	return data
-}
-
-// TrimSpace returns a subslice of data with all leading and trailing whitespace
-// removed. data must contain valid JSON.
-func TrimSpace(data []byte) []byte {
-	i, j := 0, len(data)-1
-	for ; lookupTable[data[i]] == 1; i++ {
-	}
-	for ; lookupTable[data[j]] == 1; j-- {
-	}
-	return data[i : j+1]
-}
-
-// Unmarshaler is the interface for types that can unmarshal a JSON
-// representation of themselves. The input is assumed to be a valid JSON value.
-// UnmarshalJSON must copy the JSON data if it needs to retain it after
-// returning.
-//
-// By convention, to mimic the behavior of [Unmarshal], Unmarshalers
-// should implement UnmarshalJSON([]byte("null")) as a no-op.
-type Unmarshaler interface {
-	UnmarshalJSON([]byte) error
-}
-
-// Unquote removes the quotes from a JSON-encoded string and returns the
-// unquoted data. If data is not valid JSON string it returns nil and
-// ErrInvalidJSON.
-func Unquote(data []byte) ([]byte, error) {
-	d, err := jsontext.AppendUnquote(nil, TrimSpace(data))
-	if err != nil {
-		return nil, ErrInvalidJSON
-	}
-	return d, err
-}
-
-// Valid reports whether data is a valid JSON encoding and properly encoded in
-// UTF-8.
-func Valid(data []byte) bool {
-	return jsontext.Value(data).IsValid()
 }
 
 // valueDecoder is used by the Elements, Properties, and Lookup methods.
