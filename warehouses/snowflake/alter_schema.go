@@ -142,11 +142,15 @@ func alterSchemaQueries(usersTableName string, userColumns []meergo.Column, oper
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteTable(table) + "\n\t")
 				for i, op := range toAdd {
-					if i > 0 {
-						b.WriteString(",\n\t")
+					if i == 0 {
+						b.WriteString("ADD COLUMN ")
+					} else {
+						b.WriteString(",\n\t           ")
 					}
 					typ := typeToSnowflakeType(op.Type)
-					b.WriteString(`ADD COLUMN "` + op.Column + `" ` + typ)
+					b.WriteString(quoteColumn(op.Column))
+					b.WriteByte(' ')
+					b.WriteString(typ)
 				}
 				queries = append(queries, b.String())
 			}
