@@ -9,6 +9,7 @@ package json
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"reflect"
 	"strconv"
@@ -114,6 +115,57 @@ func Test_Value(t *testing.T) {
 		}
 		if n, err := Value(`{}`).Float(64); err == nil {
 			t.Fatalf("expected error, got %f and no error", n)
+		}
+	})
+
+	t.Run("Format", func(t *testing.T) {
+		tests := []struct {
+			format   string
+			data     string
+			expected string
+		}{
+			// null.
+			{`%s`, `null`, `null`},
+			{`%q`, `null`, `"null"`},
+			{`%v`, `null`, `[110 117 108 108]`},
+			{`%#v`, `null`, `json.Value{0x6e, 0x75, 0x6c, 0x6c}`},
+			{`%T`, `null`, `json.Value`},
+			// bool.
+			{`%s`, `true`, `true`},
+			{`%q`, `true`, `"true"`},
+			{`%v`, `true`, `[116 114 117 101]`},
+			{`%#v`, `true`, `json.Value{0x74, 0x72, 0x75, 0x65}`},
+			{`%T`, `true`, `json.Value`},
+			// integer.
+			{`%s`, `5`, `5`},
+			{`%q`, `5`, `"5"`},
+			{`%v`, `5`, `[53]`},
+			{`%#v`, `5`, `json.Value{0x35}`},
+			{`%T`, `5`, `json.Value`},
+			// string.
+			{`%s`, `"foo"`, `"foo"`},
+			{`%q`, `"foo"`, `"\"foo\""`},
+			{`%v`, `"foo"`, `[34 102 111 111 34]`},
+			{`%#v`, `"foo"`, `json.Value{0x22, 0x66, 0x6f, 0x6f, 0x22}`},
+			{`%T`, `"foo"`, `json.Value`},
+			// object.
+			{`%s`, `{"boo":5}`, `{"boo":5}`},
+			{`%q`, `{"boo":5}`, `"{\"boo\":5}"`},
+			{`%v`, `{"boo":5}`, `[123 34 98 111 111 34 58 53 125]`},
+			{`%#v`, `{"boo":5}`, `json.Value{0x7b, 0x22, 0x62, 0x6f, 0x6f, 0x22, 0x3a, 0x35, 0x7d}`},
+			{`%T`, `{"boo":5}`, `json.Value`},
+			// array.
+			{`%s`, `[1,2,3]`, `[1,2,3]`},
+			{`%q`, `[1,2,3]`, `"[1,2,3]"`},
+			{`%v`, `[1,2,3]`, `[91 49 44 50 44 51 93]`},
+			{`%#v`, `[1,2,3]`, `json.Value{0x5b, 0x31, 0x2c, 0x32, 0x2c, 0x33, 0x5d}`},
+			{`%T`, `[1,2,3]`, `json.Value`},
+		}
+		for _, test := range tests {
+			got := fmt.Sprintf(test.format, Value(test.data))
+			if test.expected != got {
+				t.Fatalf("expected `%s`, got `%s`", test.expected, got)
+			}
 		}
 	})
 

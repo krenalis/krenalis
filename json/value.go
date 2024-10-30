@@ -10,6 +10,7 @@ package json
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"iter"
 	"strconv"
@@ -131,6 +132,31 @@ func (v Value) Elements() iter.Seq2[int, Value] {
 // bitSize is neither 32 nor 64.
 func (v Value) Float(bitSize int) (float64, error) {
 	return strconv.ParseFloat(string(TrimSpace(v)), bitSize)
+}
+
+// Format implements the fmt.Formatter interface.
+// It ensures that fmt's functions do not call v.String when formatting v.
+func (v Value) Format(f fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if f.Flag('#') {
+			var buf = []byte("json.Value{")
+			for i, b := range v {
+				if i > 0 {
+					buf = append(buf, ',', ' ')
+				}
+				buf = fmt.Appendf(buf, "0x%02x", b)
+			}
+			buf = append(buf, '}')
+			_, _ = f.Write(buf)
+			return
+		}
+	case 'T':
+		_, _ = f.Write([]byte("json.Value"))
+		return
+	}
+	s := fmt.FormatString(f, verb)
+	_, _ = fmt.Fprintf(f, s, []byte(v))
 }
 
 // Get returns the value at the specified path in v and true, or nil and false
