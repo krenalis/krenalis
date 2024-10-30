@@ -14,12 +14,14 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
-	"github.com/meergo/meergo/warehouses/postgresql"
+
+	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
 )
 
 // The variable MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL must point to a JSON file
@@ -27,8 +29,6 @@ import (
 // test.
 //
 // WARNING: the warehouse must be empty, as the test will initialize it.
-
-const settingsEnvKey = "MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL"
 
 var columns = []meergo.Column{
 	{Name: "email", Type: types.Text(), Nullable: true},
@@ -58,11 +58,6 @@ type identity struct {
 // variable MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL is not set, the test is
 // skipped.
 func TestWarehousesIdentityResolution(t *testing.T) {
-
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
-	}
 
 	tests := []struct {
 		name           string
@@ -334,142 +329,160 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Read the JSON file with the warehouse settings.
-	settings, err := os.ReadFile(settingsFile)
-	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+	// Run the tests on every registered warehouse.
+	warehouses := meergo.Warehouses()
+	if len(warehouses) == 0 {
+		t.Fatal("there are no warehouses registered. Missing warehouses import in test file?")
 	}
+	for warehouseName, warehouseInfo := range warehouses {
+		t.Run(warehouseName, func(t *testing.T) {
 
-	// Open the PostgreSQL warehouse.
-	wh, err := postgresql.New(&meergo.WarehouseConfig{
-		Settings: settings,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+			// Read the warehouse settings, if the env variable is set,
+			// otherwise skip this warehouse.
+			settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseName))
+			settingsFile, ok := os.LookupEnv(settingsEnvKey)
+			if !ok {
+				t.Skipf("the %s environment variable is not present", settingsEnvKey)
+			}
 
-	ctx := context.Background()
+			// Read the JSON file with the warehouse settings.
+			settings, err := os.ReadFile(settingsFile)
+			if err != nil {
+				t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+			}
 
-	// Determine if the warehouse can be initialized (returning an error
-	// otherwise), then initialize it.
-	err = wh.CanInitialize(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = wh.Initialize(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create the necessary columns on the warehouse.
-	var ops []meergo.AlterSchemaOperation
-	for _, c := range columns {
-		if c.Name == "email" {
-			// TODO(Gianluca): the "email" column is omitted as it is already
-			// part of the default schema. This can be reviewed in relation to
-			// issue https://github.com/meergo/meergo/issues/1075.
-			continue
-		}
-		ops = append(ops, meergo.AlterSchemaOperation{Operation: meergo.OperationAddColumn, Column: c.Name, Type: c.Type})
-	}
-	err = wh.AlterSchema(ctx, columns, ops)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mergeColumns := identitiesMergeColumns(columnByName)
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			// Truncate the existing user identities.
-			//
-			// TODO(Gianluca): how should the drivers expose the table names? We
-			// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
-			err = wh.Truncate(ctx, "_user_identities")
+			// Open the warehouse.
+			wh, err := warehouseInfo.New(&meergo.WarehouseConfig{
+				Settings: settings,
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			// Merge the test's user identities on the warehouse.
-			var rows []map[string]any
-			validatePrimarySources(t, test.primarySources)
-			for _, user := range test.identities {
-				validateIdentity(t, user)
-				row := map[string]any{
-					"__action__":           user.action,
-					"__is_anonymous__":     user.isAnonymous,
-					"__identity_id__":      user.id,
-					"__connection__":       user.connection,
-					"__anonymous_ids__":    toSliceAny(user.anonymousIDs),
-					"__last_change_time__": time.Now().UTC(),
-					"__execution__":        1,
-				}
-				for k, v := range user.properties {
-					row[k] = v
-				}
-				rows = append(rows, row)
+			ctx := context.Background()
+
+			// Determine if the warehouse can be initialized (returning an error
+			// otherwise), then initialize it.
+			err = wh.CanInitialize(ctx)
+			if err != nil {
+				t.Fatal(err)
 			}
-			err = wh.MergeIdentities(ctx, mergeColumns, rows)
+			err = wh.Initialize(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			// Resolve the identities.
-			var identifiers []meergo.Column
-			for _, id := range test.identifiers {
-				identifiers = append(identifiers, columnByName[id])
+			// Create the necessary columns on the warehouse.
+			var ops []meergo.AlterSchemaOperation
+			for _, c := range columns {
+				if c.Name == "email" {
+					// TODO(Gianluca): the "email" column is omitted as it is already
+					// part of the default schema. This can be reviewed in relation to
+					// issue https://github.com/meergo/meergo/issues/1075.
+					continue
+				}
+				ops = append(ops, meergo.AlterSchemaOperation{Operation: meergo.OperationAddColumn, Column: c.Name, Type: c.Type})
 			}
-			err = wh.ResolveIdentities(ctx, identifiers, columns, test.primarySources)
+			err = wh.AlterSchema(ctx, columns, ops)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			// Read the users from the warehouse and check that they match with
-			// the expected ones.
-			var gotUsers []map[string]any
-			{
-				query := meergo.RowQuery{
-					Columns: columns,
-					Table:   "users",
-					OrderBy: columnByName["email"],
-				}
-				r, _, err := wh.Query(ctx, query, true)
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer r.Close()
-				for r.Next() {
-					var email, firstName, lastName any
-					err := r.Scan(&email, &firstName, &lastName)
+			mergeColumns := identitiesMergeColumns(columnByName)
+
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+
+					// Truncate the existing user identities.
+					//
+					// TODO(Gianluca): how should the drivers expose the table names? We
+					// have an issue where we discuss this (https://github.com/meergo/meergo/issues/928).
+					err = wh.Truncate(ctx, "_user_identities")
 					if err != nil {
 						t.Fatal(err)
 					}
-					user := make(map[string]any, 3)
-					user["email"], err = wh.Normalize("email", columnByName["email"].Type, email, true)
+
+					// Merge the test's user identities on the warehouse.
+					var rows []map[string]any
+					validatePrimarySources(t, test.primarySources)
+					for _, user := range test.identities {
+						validateIdentity(t, user)
+						row := map[string]any{
+							"__action__":           user.action,
+							"__is_anonymous__":     user.isAnonymous,
+							"__identity_id__":      user.id,
+							"__connection__":       user.connection,
+							"__anonymous_ids__":    toSliceAny(user.anonymousIDs),
+							"__last_change_time__": time.Now().UTC(),
+							"__execution__":        1,
+						}
+						for k, v := range user.properties {
+							row[k] = v
+						}
+						rows = append(rows, row)
+					}
+					err = wh.MergeIdentities(ctx, mergeColumns, rows)
 					if err != nil {
 						t.Fatal(err)
 					}
-					user["first_name"], err = wh.Normalize("first_name", columnByName["first_name"].Type, firstName, true)
+
+					// Resolve the identities.
+					var identifiers []meergo.Column
+					for _, id := range test.identifiers {
+						identifiers = append(identifiers, columnByName[id])
+					}
+					err = wh.ResolveIdentities(ctx, identifiers, columns, test.primarySources)
 					if err != nil {
 						t.Fatal(err)
 					}
-					user["last_name"], err = wh.Normalize("last_name", columnByName["last_name"].Type, lastName, true)
-					if err != nil {
-						t.Fatal(err)
+
+					// Read the users from the warehouse and check that they match with
+					// the expected ones.
+					var gotUsers []map[string]any
+					{
+						query := meergo.RowQuery{
+							Columns: columns,
+							Table:   "users",
+							OrderBy: columnByName["email"],
+						}
+						r, _, err := wh.Query(ctx, query, true)
+						if err != nil {
+							t.Fatal(err)
+						}
+						defer r.Close()
+						for r.Next() {
+							var email, firstName, lastName any
+							err := r.Scan(&email, &firstName, &lastName)
+							if err != nil {
+								t.Fatal(err)
+							}
+							user := make(map[string]any, 3)
+							user["email"], err = wh.Normalize("email", columnByName["email"].Type, email, true)
+							if err != nil {
+								t.Fatal(err)
+							}
+							user["first_name"], err = wh.Normalize("first_name", columnByName["first_name"].Type, firstName, true)
+							if err != nil {
+								t.Fatal(err)
+							}
+							user["last_name"], err = wh.Normalize("last_name", columnByName["last_name"].Type, lastName, true)
+							if err != nil {
+								t.Fatal(err)
+							}
+							gotUsers = append(gotUsers, user)
+						}
+						if err := r.Err(); err != nil {
+							t.Fatal(err)
+						}
+						err = r.Close()
+						if err != nil {
+							t.Fatal(err)
+						}
 					}
-					gotUsers = append(gotUsers, user)
-				}
-				if err := r.Err(); err != nil {
-					t.Fatal(err)
-				}
-				err = r.Close()
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			if !reflect.DeepEqual(test.expectedUsers, gotUsers) {
-				t.Fatalf("\nexpected users:\n\t%v\ngot:\n\t%v", test.expectedUsers, gotUsers)
+					if !reflect.DeepEqual(test.expectedUsers, gotUsers) {
+						t.Fatalf("\nexpected users:\n\t%v\ngot:\n\t%v", test.expectedUsers, gotUsers)
+					}
+				})
 			}
 		})
 	}
