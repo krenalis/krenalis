@@ -568,6 +568,16 @@ func Test_Value(t *testing.T) {
 
 func TestAlloc(t *testing.T) {
 
+	t.Run("Format", func(t *testing.T) {
+		value := Value(`{"id":1,"name":"Alice","email":"alice@example.com","age":30,"registered":"2024-01-15","isActive":true}`)
+		a := testing.AllocsPerRun(10, func() {
+			_ = fmt.Sprintf("%#v", value)
+		})
+		if a != 2 {
+			t.Fatalf("expected 2 allocations, got %.0f", a)
+		}
+	})
+
 	t.Run("Lookup", func(t *testing.T) {
 		value := Value(`{"id":5,"name":"Alice","email":"alice@example.com","age":30,"address":{"street":"123 Main St","city":"Wonderland","zip":"12345"}}`)
 		path := []string{"address", "city"}

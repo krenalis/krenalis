@@ -134,25 +134,19 @@ func (v Value) Float(bitSize int) (float64, error) {
 	return strconv.ParseFloat(string(TrimSpace(v)), bitSize)
 }
 
+var formatText = []byte("json.Value{, }")
+
 // Format implements the fmt.Formatter interface.
-// It ensures that fmt's functions do not call v.String when formatting v.
 func (v Value) Format(f fmt.State, verb rune) {
-	switch verb {
-	case 'v':
-		if f.Flag('#') {
-			var buf = []byte("json.Value{")
-			for i, b := range v {
-				if i > 0 {
-					buf = append(buf, ',', ' ')
-				}
-				buf = fmt.Appendf(buf, "0x%02x", b)
+	if verb == 'v' && f.Flag('#') {
+		_, _ = f.Write(formatText[0:11])
+		for i, b := range v {
+			if i > 0 {
+				_, _ = f.Write(formatText[11:13])
 			}
-			buf = append(buf, '}')
-			_, _ = f.Write(buf)
-			return
+			_, _ = fmt.Fprintf(f, "%#02x", b)
 		}
-	case 'T':
-		_, _ = f.Write([]byte("json.Value"))
+		_, _ = f.Write(formatText[13:14])
 		return
 	}
 	s := fmt.FormatString(f, verb)
