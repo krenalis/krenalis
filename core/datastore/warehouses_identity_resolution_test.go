@@ -451,23 +451,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						}
 						defer r.Close()
 						for r.Next() {
-							var email, firstName, lastName any
-							err := r.Scan(&email, &firstName, &lastName)
+							row := make([]any, len(columns))
+							values := newScanValues(columns, row, wh.Normalize)
+							err := r.Scan(values...)
 							if err != nil {
 								t.Fatal(err)
 							}
-							user := make(map[string]any, 3)
-							user["email"], err = wh.Normalize("email", columnByName["email"].Type, email, true)
-							if err != nil {
-								t.Fatal(err)
-							}
-							user["first_name"], err = wh.Normalize("first_name", columnByName["first_name"].Type, firstName, true)
-							if err != nil {
-								t.Fatal(err)
-							}
-							user["last_name"], err = wh.Normalize("last_name", columnByName["last_name"].Type, lastName, true)
-							if err != nil {
-								t.Fatal(err)
+							user := make(map[string]any, len(columns))
+							for i, c := range columns {
+								user[c.Name] = row[i]
 							}
 							gotUsers = append(gotUsers, user)
 						}
