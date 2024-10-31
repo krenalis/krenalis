@@ -115,10 +115,10 @@ func (v Value) AppendUnquote(dst []byte) ([]byte, error) {
 // data is already compact, it returns the original data unchanged. If data does
 // not contain valid JSON, it returns nil and ErrInvalidJSON.
 func Compact(data []byte) ([]byte, error) {
-	v := jsontext.Value(data)
 	if !utf8.Valid(data) {
 		return nil, ErrInvalidJSON
 	}
+	v := jsontext.Value(slices.Clone(data))
 	err := v.Compact()
 	if err != nil {
 		return nil, ErrInvalidJSON

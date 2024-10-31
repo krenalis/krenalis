@@ -35,7 +35,8 @@ func Test_Compaq(t *testing.T) {
 		{"\n\t    { \"foo\": true, \"boo\" : [ 1,2, 3 ]}\n ", `{"foo":true,"boo":[1,2,3]}`, nil},
 		{`["a","b","c"]`, `["a","b","c"]`, nil},
 		{` ["a","b","c"`, ``, ErrInvalidJSON},
-		{" [\"\xFF\"] ", ``, ErrInvalidJSON},
+		{"\"\xFF\"", ``, ErrInvalidJSON},
+		{"\"\\xFF\"", ``, ErrInvalidJSON},
 	}
 	for _, test := range tests {
 		got, err := Compact([]byte(test.data))
