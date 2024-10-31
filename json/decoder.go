@@ -35,9 +35,9 @@ func (d *Decoder) ByteOffset() int64 {
 	return d.dec.InputOffset()
 }
 
-// Peek returns the type of the next token without advancing the read offset.
-// It returns Invalid if there are no more tokens.
-func (d *Decoder) Peek() Kind {
+// PeekKind returns the type of the next token without advancing the read
+// offset. It returns Invalid if there are no more tokens.
+func (d *Decoder) PeekKind() Kind {
 	return Kind(d.dec.PeekKind())
 }
 
@@ -78,6 +78,15 @@ func (d *Decoder) ReadValue() (Value, error) {
 // as a fresh input source.
 func (d *Decoder) Reset(r io.Reader) {
 	d.dec.Reset(r)
+}
+
+// SkipToken discards the next token and advances the read offset.
+func (d *Decoder) SkipToken() error {
+	_, err := d.dec.ReadToken()
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		err = &SyntaxError{err: err}
+	}
+	return err
 }
 
 // SkipValue discards the next value and advances the read offset. It is more

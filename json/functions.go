@@ -362,7 +362,7 @@ func (d decoderBySchema) consumeTokens() error {
 
 // peek peeks the next token kind.
 func (d decoderBySchema) peek() Kind {
-	return d.dec.Peek()
+	return d.dec.PeekKind()
 }
 
 // readToken reads a token.

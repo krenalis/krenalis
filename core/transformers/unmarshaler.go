@@ -324,7 +324,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 
 // peekKind peeks the next token kind.
 func (d decoder) peekKind() json.Kind {
-	return d.dec.Peek()
+	return d.dec.PeekKind()
 }
 
 // readToken reads a token.
