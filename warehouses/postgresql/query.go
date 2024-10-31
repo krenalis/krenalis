@@ -14,8 +14,6 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // Query executes a query and returns the results as Rows.
@@ -107,16 +105,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 		return nil, 0, meergo.Error(err)
 	}
 
-	return whRows{rows}, count, nil
-}
-
-// whRows implements the meergo.Rows interface using pgx.Rows.
-type whRows struct {
-	pgx.Rows
-}
-
-func (rows whRows) Close() error {
-	return nil
+	return newScanner(query.Columns, rows), count, nil
 }
 
 // appendJoins appends the string serialization of the provided joins to b.

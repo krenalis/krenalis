@@ -527,10 +527,9 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 						defer r.Close()
+						row := make([]any, len(columns))
 						for r.Next() {
-							row := make([]any, len(columns))
-							values := newScanValues(columns, row, wh.Normalize)
-							err := r.Scan(values...)
+							err := r.Scan(row...)
 							if err != nil {
 								t.Fatal(err)
 							}

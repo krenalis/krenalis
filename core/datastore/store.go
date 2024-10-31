@@ -787,9 +787,8 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 
 	defer rows.Close()
 	row := make([]any, len(columns))
-	values := newScanValues(columns, row, store.warehouse.Normalize)
 	for rows.Next() {
-		if err := rows.Scan(values...); err != nil {
+		if err := rows.Scan(row...); err != nil {
 			return nil, 0, err
 		}
 		records = append(records, unflat(row))

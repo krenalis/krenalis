@@ -139,11 +139,10 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 	}
 
 	records := &Records{
-		columns:   columns,
-		unflat:    unflat,
-		rows:      rows,
-		normalize: store.warehouse.Normalize,
-		matching:  matching,
+		columns:  columns,
+		unflat:   unflat,
+		rows:     rows,
+		matching: matching,
 	}
 
 	return records, err
@@ -173,7 +172,6 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 		var record Record
 		last := len(r.columns) - 1
 		row := make([]any, len(r.columns))
-		values := newScanValues(r.columns, row, r.normalize)
 		i := 0
 		for r.rows.Next() {
 			select {
@@ -182,7 +180,7 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				return
 			default:
 			}
-			if err := r.rows.Scan(values...); err != nil {
+			if err := r.rows.Scan(row...); err != nil {
 				r.err = err
 				return
 			}
@@ -256,37 +254,4 @@ func (r *Records) Err() error {
 // Last reports whether the last record has been read.
 func (r *Records) Last() bool {
 	return r.last
-}
-
-// scanValue implements the sql.Scanner interface to read the database values.
-type scanValue struct {
-	columns   []meergo.Column
-	row       []any
-	normalize meergo.NormalizeFunc
-	index     int
-}
-
-// newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []meergo.Column, row []any, normalize meergo.NormalizeFunc) []any {
-	values := make([]any, len(columns))
-	value := &scanValue{
-		columns:   columns,
-		row:       row,
-		normalize: normalize,
-	}
-	for i := range columns {
-		values[i] = value
-	}
-	return values
-}
-
-func (sv *scanValue) Scan(src any) error {
-	c := sv.columns[sv.index]
-	value, err := sv.normalize(c.Name, c.Type, src, c.Nullable)
-	if err != nil {
-		return err
-	}
-	sv.row[sv.index] = value
-	sv.index = (sv.index + 1) % len(sv.columns)
-	return nil
 }

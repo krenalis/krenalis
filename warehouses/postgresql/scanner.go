@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 //
 //
-// Copyright (c) 2023 Open2b
+// Copyright (c) 2024 Open2b
 //
 
 package postgresql
 
 import (
-	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -23,19 +22,60 @@ import (
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-var errPostgreSQLInvalidData = errors.New("PostgreSQL has returned invalid data")
+var errInvalidData = errors.New("PostgreSQL has returned invalid data")
 
-// Normalize normalizes a value v returned by the Query method.
-func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nullable bool) (any, error) {
-	if v == nil {
-		if !nullable {
-			return nil, fmt.Errorf("column %s is non-nullable, but PostgreSQL returned a NULL value", name)
-		}
-		return nil, nil
+// scanner implements the meergo.Rows interface to read and normalize the rows
+// read from PostgreSQL.
+type scanner struct {
+	columns []meergo.Column
+	rows    pgx.Rows
+	values  []any
+	dest    []any
+	index   int
+}
+
+// newScanner returns a new scanner.
+func newScanner(columns []meergo.Column, rows pgx.Rows) *scanner {
+	s := &scanner{
+		columns: columns,
+		rows:    rows,
 	}
+	s.values = make([]any, len(columns))
+	for i := range len(s.columns) {
+		s.values[i] = scanValue{s}
+	}
+	return s
+}
+
+func (s *scanner) Close() error {
+	s.rows.Close()
+	return nil
+}
+
+func (s *scanner) Err() error {
+	return s.rows.Err()
+}
+
+func (s *scanner) Next() bool {
+	return s.rows.Next()
+}
+
+// Scan copies the columns from the current row into dest. This differs from the
+// Rows.Scan method in the sql package, which copies values into the locations
+// pointed to by dest.
+func (s *scanner) Scan(dest ...any) error {
+	s.dest = dest
+	err := s.rows.Scan(s.values...)
+	s.dest = nil
+	return err
+}
+
+// normalize normalizes the value v read from PostgreSQL.
+func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	switch typ.Kind() {
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
@@ -131,17 +171,7 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 			return meergo.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
-		pool, err := warehouse.connectionPool(context.Background())
-		if err != nil {
-			return nil, err
-		}
-		conn, err := pool.Acquire(context.Background())
-		if err != nil {
-			return nil, err
-		}
-		defer conn.Release()
-		tm := conn.Conn().TypeMap()
-		v, err := scanArray(tm, v)
+		v, err := s.scanArray(v)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +182,7 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 		}
 		t := typ.Elem()
 		for i := 0; i < n; i++ {
-			v[i], err = warehouse.Normalize(name, t, v[i], false)
+			v[i], err = s.normalize(name, t, v[i])
 			if err != nil {
 				return nil, err
 			}
@@ -167,14 +197,14 @@ func (warehouse *PostgreSQL) Normalize(name string, typ types.Type, v any, nulla
 }
 
 // scanArray scans an array and returns the values.
-func scanArray(tm *pgtype.Map, src any) ([]any, error) {
+func (s *scanner) scanArray(src any) ([]any, error) {
 	data, ok := src.([]byte)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
 	}
 	p := 12
 	if len(data) < p {
-		return nil, errPostgreSQLInvalidData
+		return nil, errInvalidData
 	}
 	dimensions := int(int32(binary.BigEndian.Uint32(data[:4])))
 	if dimensions > 1 {
@@ -184,7 +214,7 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 	size := 0
 	if dimensions > 0 {
 		if len(data) < 12+8 {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		size = int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
 		p += 8
@@ -193,7 +223,7 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 	switch oid {
 	case 16: // bool
 		if len(data) < p+5*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			p += 4 // skip the length
@@ -205,17 +235,17 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		21, // in2
 		23: // int4
 		if len(data) < p+2*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		var v int
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			switch l {
 			case 2:
@@ -225,7 +255,7 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 			case 8:
 				v = int(int64(binary.BigEndian.Uint64(data[p : p+8])))
 			default:
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			values[i] = v
 			p += l
@@ -234,17 +264,17 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		700, // float4
 		701: // float8
 		if len(data) < p+4*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		var v float64
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			switch l {
 			case 4:
@@ -252,30 +282,30 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 			case 8:
 				v = math.Float64frombits(binary.BigEndian.Uint64(data[p : p+8]))
 			default:
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			values[i] = v
 			p += l
 		}
 	case 869: // inet
 		if len(data) < p+12*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			if l != 8 && l != 20 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			addr, ok := netip.AddrFromSlice(data[p+4 : p+l])
 			if !ok {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			values[i] = addr.String()
 			p += l
@@ -285,26 +315,26 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		1042, // bpchar
 		1043: // varchar
 		if len(data) < p+5*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			if l <= 0 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			values[i] = string(data[p : p+l])
 			p += l
 		}
 	case 1082: // date
 		if len(data) < p+8*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			p += 4 // skip length
@@ -314,7 +344,7 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		}
 	case 1083: // time
 		if len(data) < p+12*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			p += 4 // skip length
@@ -324,7 +354,7 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		}
 	case 1114: // timestamp
 		if len(data) < p+12*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		epoch := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC) // PostgreSQL epoch
 		for i := range values {
@@ -334,30 +364,31 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 			p += 8
 		}
 	case 1700: // numeric
-		var s string
-		ps := tm.PlanScan(oid, pgtype.BinaryFormatCode, &s)
+		var v string
+		tm := s.rows.Conn().TypeMap()
+		ps := tm.PlanScan(oid, pgtype.BinaryFormatCode, &v)
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			if l <= 0 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
-			err := ps.Scan(data[p:p+l], &s)
+			err := ps.Scan(data[p:p+l], &v)
 			if err != nil {
 				return nil, err
 			}
-			values[i] = s
+			values[i] = v
 			p += l
 		}
 	case 2950: // uuid
 		if len(data) < p+20*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			p += 4 // skip length
@@ -366,19 +397,19 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		}
 	case 114: // json
 		if len(data) < p+4*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			if l <= 0 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			v := make([]byte, l)
 			copy(v, data[p:p+l])
@@ -387,22 +418,22 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		}
 	case 3802: // jsonb
 		if len(data) < p+5*size {
-			return nil, errPostgreSQLInvalidData
+			return nil, errInvalidData
 		}
 		for i := range values {
 			if len(data) < p+4 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
 			if l <= 0 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			p += 4
 			if len(data) < p+l {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			if data[p] != 1 {
-				return nil, errPostgreSQLInvalidData
+				return nil, errInvalidData
 			}
 			v := make([]byte, l-1)
 			copy(v, data[p+1:p+l])
@@ -413,4 +444,26 @@ func scanArray(tm *pgtype.Map, src any) ([]any, error) {
 		return nil, errors.New("unsupported type")
 	}
 	return values, nil
+}
+
+// scanValue implements the sql.Scanner interface to read the values.
+type scanValue struct {
+	s *scanner
+}
+
+func (sv scanValue) Scan(v any) error {
+	c := sv.s.columns[sv.s.index]
+	var err error
+	if v != nil {
+		v, err = sv.s.normalize(c.Name, c.Type, v)
+	} else if !c.Nullable {
+		return fmt.Errorf("column %s is non-nullable, but PostgreSQL returned a NULL value", c.Name)
+	}
+	if err != nil {
+		sv.s.index = 0
+		return err
+	}
+	sv.s.dest[sv.s.index] = v
+	sv.s.index = (sv.s.index + 1) % len(sv.s.columns)
+	return nil
 }

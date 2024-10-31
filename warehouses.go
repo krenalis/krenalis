@@ -204,14 +204,13 @@ type Warehouse interface {
 	// that the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
-	// Normalize normalizes a value v returned by the Query method.
-	// In particular, Normalize handles the values obtained by the scan on the
-	// rows returned by the Query method.
-	Normalize(name string, typ types.Type, v any, nullable bool) (any, error)
-
 	// Query executes a query and returns the results as Rows. If withCount is true,
 	// it also returns an estimated total count of the records that would be
 	// returned if the query did not include First and Limit clauses.
+	//
+	// Scan is called on the returned Rows with interface{} arguments. It copies
+	// data directly into these arguments, rather than into the values they point
+	// to.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.

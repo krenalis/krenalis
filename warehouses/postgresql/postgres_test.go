@@ -163,9 +163,8 @@ func Test_Merge(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("expected count 1, got %d", count)
 	}
-	values := newScanValues(table.Columns, row, wh.Normalize)
 	for rows.Next() {
-		if err := rows.Scan(values...); err != nil {
+		if err := rows.Scan(row...); err != nil {
 			t.Fatalf("cannot scan row: %s", err)
 			return
 		}
@@ -273,37 +272,4 @@ func Test_stripZeroBytes(t *testing.T) {
 			}
 		})
 	}
-}
-
-// scanValue implements the sql.Scanner interface to read the database values.
-type scanValue struct {
-	columns   []meergo.Column
-	row       []any
-	normalize meergo.NormalizeFunc
-	index     int
-}
-
-// newScanValues returns a slice containing scan values to be used to scan rows.
-func newScanValues(columns []meergo.Column, row []any, normalize meergo.NormalizeFunc) []any {
-	values := make([]any, len(columns))
-	value := &scanValue{
-		columns:   columns,
-		row:       row,
-		normalize: normalize,
-	}
-	for i := range columns {
-		values[i] = value
-	}
-	return values
-}
-
-func (sv *scanValue) Scan(src any) error {
-	c := sv.columns[sv.index]
-	value, err := sv.normalize(c.Name, c.Type, src, c.Nullable)
-	if err != nil {
-		return err
-	}
-	sv.row[sv.index] = value
-	sv.index = (sv.index + 1) % len(sv.columns)
-	return nil
 }

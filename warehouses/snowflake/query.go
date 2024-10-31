@@ -100,7 +100,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 		return nil, 0, meergo.Error(err)
 	}
 
-	return rows, count, nil
+	return newScanner(query.Columns, rows), count, nil
 }
 
 // appendJoins appends the string serialization of the provided joins to b.
