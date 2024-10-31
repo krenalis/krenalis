@@ -49,6 +49,31 @@ func Test_Compaq(t *testing.T) {
 	}
 }
 
+func Test_Indent(t *testing.T) {
+	tests := []struct {
+		data     string
+		expected string
+		err      error
+	}{
+		{`null`, `null`, nil},
+		{" 56.23\t", `56.23`, nil},
+		{"\n\t    { \"foo\": true, \"boo\" : [ 1,2, 3 ]}\n ", "{\n \t\"foo\": true,\n \t\"boo\": [\n \t\t1,\n \t\t2,\n \t\t3\n \t]\n }", nil},
+		{" [ \"a\", \"b\" ]", "[\n \t\"a\",\n \t\"b\"\n ]", nil},
+		{"", "", ErrInvalidJSON},
+		{"\"\xFF\"", "", ErrInvalidJSON},
+		{"\"\\xFF\"", "", ErrInvalidJSON},
+	}
+	for _, test := range tests {
+		got, err := Indent([]byte(test.data), " ", "\t")
+		if !reflect.DeepEqual(test.err, err) {
+			t.Fatalf("expected error %v (type %T), got %v (type %T)", test.err, test.err, err, err)
+		}
+		if test.expected != string(got) {
+			t.Fatalf("unexpected value.\nexpected: %q\ngot:      %q\n", test.expected, got)
+		}
+	}
+}
+
 func Test_MarshalBySchema(t *testing.T) {
 	tests := []struct {
 		name   string

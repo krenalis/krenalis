@@ -180,6 +180,27 @@ func Encode(out io.Writer, v any) error {
 	return err
 }
 
+// Indent returns a copy of data with the JSON code indented. Each element in a
+// JSON object or array begins on a new line with the specified prefix followed
+// by copies of the indent string, added according to nesting depth. The
+// returned does not start or end with the prefix or any indentation.
+//
+// Example usage:
+//
+//	data, err = json.Indent(data, "", "\t")
+//
+// If data does not contain valid JSON, it returns nil and ErrInvalidJSON.
+// It panics if prefix or indent strings do not contain only spaces or tabs
+// (' ' or '\t').
+func Indent(data []byte, prefix, indent string) ([]byte, error) {
+	if !Valid(data) {
+		return nil, ErrInvalidJSON
+	}
+	v := jsontext.Value(slices.Clone(data))
+	_ = v.Indent(prefix, indent)
+	return v, nil
+}
+
 // Marshal encodes the given value.
 func Marshal(v any) (Value, error) {
 	val, err := json.Marshal(v)
