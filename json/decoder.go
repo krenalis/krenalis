@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 //
 //
-// Copyright (c) 2023 Open2b
+// Copyright (c) 2024 Open2b
 //
 
 package json
@@ -78,6 +78,24 @@ func (d *Decoder) ReadValue() (Value, error) {
 // as a fresh input source.
 func (d *Decoder) Reset(r io.Reader) {
 	d.dec.Reset(r)
+}
+
+// SkipOut skips out of the current object or array and advances the read offset
+// to the byte immediately after. If not in an object or array, it advances to
+// the end of the input and returns io.EOF.
+func (d *Decoder) SkipOut() error {
+	var err error
+	for err == nil {
+		err = d.dec.SkipValue()
+	}
+	tok, _ := d.dec.ReadToken()
+	if tok.Kind() == 0 {
+		if _, ok := err.(*jsontext.SyntacticError); ok {
+			err = &SyntaxError{err: err}
+		}
+		return err
+	}
+	return nil
 }
 
 // SkipToken discards the next token and advances the read offset.
