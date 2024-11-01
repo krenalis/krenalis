@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -85,7 +86,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteByte('\'')
 	case types.JSONKind:
 		b.WriteString("TO_VARIANT(")
-		quoteString(b, v.(string))
+		quoteString(b, string(v.(json.Value)))
 		b.WriteString(")")
 	case types.TextKind:
 		quoteString(b, v.(string))
