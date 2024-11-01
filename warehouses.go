@@ -9,7 +9,6 @@ package meergo
 
 import (
 	"context"
-	stdjson "encoding/json"
 	"fmt"
 	"math"
 	"net/netip"
@@ -505,37 +504,4 @@ func ValidateText(name string, t types.Type, s string) (any, error) {
 		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d characters", errors.Abbreviate(s, 20), name, max)
 	}
 	return s, nil
-}
-
-// isValidJSON reports whether src is a valid JSON value.
-func isValidJSON(src any) bool {
-	switch src := src.(type) {
-	case string:
-		return utf8.ValidString(src)
-	case bool:
-		return true
-	case float64:
-		return !math.IsNaN(src) && !math.IsInf(src, 0)
-	case []any:
-		for _, v := range src {
-			if v != nil {
-				if ok := isValidJSON(v); !ok {
-					return false
-				}
-			}
-		}
-		return true
-	case map[string]any:
-		for _, v := range src {
-			if v != nil {
-				if ok := isValidJSON(v); !ok {
-					return false
-				}
-			}
-		}
-		return true
-	case stdjson.Number:
-		return src != "" && (src[0] == '-' || src[0] >= '0' && src[0] <= '9') && stdjson.Valid([]byte(src))
-	}
-	return false
 }
