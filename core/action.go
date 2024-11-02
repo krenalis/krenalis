@@ -10,7 +10,7 @@ package core
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -26,6 +26,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 )
@@ -214,7 +215,7 @@ func (at Target) String() string {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (at *Target) UnmarshalJSON(data []byte) error {
 	var v any
-	err := json.Unmarshal(data, &v)
+	err := jsonstd.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (this *Action) Delete(ctx context.Context) error {
 //
 //   - EventNotExist, if the event does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Action) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
+func (this *Action) ServeUI(ctx context.Context, event string, values json.Value) ([]byte, error) {
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
@@ -449,7 +450,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	// Marshal the mapping.
 	var mapping []byte
 	if action.Transformation.Mapping != nil {
-		mapping, err = json.Marshal(action.Transformation.Mapping)
+		mapping, err = jsonstd.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return err
 		}
@@ -459,11 +460,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	var matchPropInternal, matchPropExternal []byte
 	if n.MatchingProperties != nil {
 		var err error
-		matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
+		matchPropInternal, err = jsonstd.Marshal(n.MatchingProperties.Internal)
 		if err != nil {
 			return err
 		}
-		matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
+		matchPropExternal, err = jsonstd.Marshal(n.MatchingProperties.External)
 		if err != nil {
 			return err
 		}
@@ -727,7 +728,7 @@ type ActionToSet struct {
 	// UIValues represents the user-entered values of the connector user interface
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
-	UIValues json.RawMessage
+	UIValues json.Value
 
 	// TableName is the name of the table for the export and it is defined for
 	// destination database-actions; in any other case, it is the empty string.
@@ -843,7 +844,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := json.Unmarshal(data, &v)
+	err := jsonstd.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,7 @@ package postgresql
 import (
 	"context"
 	_ "embed"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -61,7 +61,7 @@ func init() {
 // It returns a SettingsError error if the settings are not valid.
 func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 	var s psSettings
-	err := stdjson.Unmarshal(conf.Settings, &s)
+	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
 		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
@@ -474,7 +474,7 @@ func (warehouse *PostgreSQL) Repair(ctx context.Context) error {
 
 // Settings returns the data warehouse settings.
 func (warehouse *PostgreSQL) Settings() []byte {
-	s, _ := stdjson.Marshal(warehouse.settings)
+	s, _ := jsonstd.Marshal(warehouse.settings)
 	return s
 }
 

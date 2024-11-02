@@ -17,6 +17,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -89,7 +90,7 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // meergo.ErrSheetNotExist error. If a column type is not supported, it returns
 // a *meergo.UnsupportedColumnTypeError error. If the connector returns an
 // error, it returns a *UnavailableError error.
-func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues []byte, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
+func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if storage.err != nil {
 		return nil, nil, storage.err
 	}
@@ -156,7 +157,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // If the UI values are not valid, it returns a *meergo.InvalidUIValuesError
 // error. If the connector returns an error, it returns a *UnavailableError
 // error. It panics if the file connector does not support sheets.
-func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, uiValues []byte, compression state.Compression) ([]string, error) {
+func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, uiValues json.Value, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
 		return nil, storage.err
 	}

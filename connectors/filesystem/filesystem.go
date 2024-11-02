@@ -11,7 +11,6 @@ package filesystem
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
@@ -21,6 +20,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 )
 
 // Connector icon.
@@ -43,7 +43,7 @@ func init() {
 func New(conf *meergo.FileStorageConfig) (*Filesystem, error) {
 	c := Filesystem{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Filesystem connector")
 		}
@@ -94,7 +94,7 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -148,9 +148,9 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 }
 
 // saveValues saves the user-entered values as settings.
-func (filesystem *Filesystem) saveValues(ctx context.Context, values []byte) error {
+func (filesystem *Filesystem) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

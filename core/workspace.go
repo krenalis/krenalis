@@ -11,7 +11,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -482,7 +482,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
 		var account authorizedOAuthAccount
-		err = stdjson.Unmarshal(data, &account)
+		err = jsonstd.Unmarshal(data, &account)
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
@@ -506,7 +506,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	if c.HasUI {
 		values := connection.UIValues
 		if values == nil {
-			values = stdjson.RawMessage("{}")
+			values = json.Value("{}")
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -787,7 +787,7 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 				return err
 			}
 			var schema types.Type
-			err = stdjson.Unmarshal(s, &schema)
+			err = jsonstd.Unmarshal(s, &schema)
 			if err != nil {
 				return err
 			}
@@ -1180,7 +1180,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 		return "", err
 	}
 
-	account, err := stdjson.Marshal(authorizedOAuthAccount{
+	account, err := jsonstd.Marshal(authorizedOAuthAccount{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
 		Code:         auth.AccountCode,
@@ -1297,7 +1297,7 @@ func (this *Workspace) ResolveIdentities(ctx context.Context) error {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventNotExist, if the event does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte, connector string, role Role, oAuth string) ([]byte, error) {
+func (this *Workspace) ServeUI(ctx context.Context, event string, values json.Value, connector string, role Role, oAuth string) ([]byte, error) {
 
 	this.core.mustBeOpen()
 
@@ -1330,7 +1330,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values []byte,
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
-		err = stdjson.Unmarshal(data, &a)
+		err = jsonstd.Unmarshal(data, &a)
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
@@ -1584,7 +1584,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		marshaledUsers.WriteString(`{"id":"`)
 		marshaledUsers.WriteString(id)
 		marshaledUsers.WriteString(`","lastChangeTime":`)
-		err = stdjson.NewEncoder(&marshaledUsers).Encode(lastChangeTime)
+		err = jsonstd.NewEncoder(&marshaledUsers).Encode(lastChangeTime)
 		if err != nil {
 			return nil, types.Type{}, 0, err
 		}
@@ -1777,7 +1777,7 @@ type ConnectionToAdd struct {
 	// UIValues represents the user-entered values of the connector user interface
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
-	UIValues stdjson.RawMessage
+	UIValues json.Value
 }
 
 // WarehouseType represents a data warehouse type.
@@ -1812,7 +1812,7 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := stdjson.Unmarshal(data, &v)
+	err := jsonstd.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -1868,7 +1868,7 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := stdjson.Unmarshal(data, &v)
+	err := jsonstd.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}

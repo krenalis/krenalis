@@ -16,7 +16,7 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -80,7 +81,7 @@ func init() {
 func New(conf *meergo.AppConfig) (*Stripe, error) {
 	c := Stripe{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Stripe connector")
 		}
@@ -160,7 +161,7 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meerg
 		Created int64
 	}
 
-	err = json.Unmarshal(body, &message)
+	err = jsonstd.Unmarshal(body, &message)
 	if err != nil {
 		return nil, errors.New("webhook message is malformed")
 	}
@@ -248,7 +249,7 @@ func (stripe *Stripe) Schema(ctx context.Context, target meergo.Targets, role me
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -312,23 +313,23 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Rea
 	}()
 	if res.StatusCode != expectedStatus {
 		var errorResponse stripeErrorResponse
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		_ = dec.Decode(&errorResponse)
 		err := errorResponse.Error
 		err.statusCode = res.StatusCode
 		return &err
 	}
 	if response != nil {
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		return dec.Decode(response)
 	}
 	return nil
 }
 
 // saveValues saves the user-entered values as settings.
-func (stripe *Stripe) saveValues(ctx context.Context, values []byte) error {
+func (stripe *Stripe) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

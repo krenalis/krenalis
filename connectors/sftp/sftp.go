@@ -12,7 +12,6 @@ package sftp
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"io"
 	"math/rand/v2"
@@ -26,6 +25,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -51,7 +51,7 @@ func init() {
 func New(conf *meergo.FileStorageConfig) (*SFTP, error) {
 	c := SFTP{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of SFTP connector")
 		}
@@ -112,7 +112,7 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *SFTP) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (sf *SFTP) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -205,9 +205,9 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (sf *SFTP) saveValues(ctx context.Context, values []byte, role meergo.Role, test bool) error {
+func (sf *SFTP) saveValues(ctx context.Context, values json.Value, role meergo.Role, test bool) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

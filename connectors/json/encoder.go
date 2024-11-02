@@ -9,7 +9,7 @@ package json
 
 import (
 	"bytes"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"fmt"
 	"math"
 	"slices"
@@ -99,7 +99,7 @@ func (enc *encoder) Append(b []byte, t types.Type, v any) []byte {
 		b = append(b, v.(string)...)
 		return append(b, '"')
 	case types.JSONKind:
-		dec := stdjson.NewDecoder(bytes.NewReader(v.(json.Value)))
+		dec := jsonstd.NewDecoder(bytes.NewReader(v.(json.Value)))
 		dec.UseNumber()
 		var jv any
 		err := dec.Decode(&jv)
@@ -237,7 +237,7 @@ func (enc *encoder) appendJSONValue(b []byte, v any) []byte {
 	switch v := v.(type) {
 	case string:
 		return enc.appendString(b, v)
-	case stdjson.Number:
+	case jsonstd.Number:
 		return append(b, v...)
 	case bool:
 		return strconv.AppendBool(b, v)
@@ -287,7 +287,7 @@ func (enc *encoder) appendJSONValue(b []byte, v any) []byte {
 		}
 		return append(b, '}')
 	}
-	panic("unexpected JSON value")
+	panic(fmt.Sprintf("unexpected JSON value %#v", v))
 }
 
 // appendIndentation appends a new line and one or more tabs according to

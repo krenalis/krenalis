@@ -11,7 +11,7 @@ package dummy
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -55,7 +56,7 @@ func init() {
 func New(conf *meergo.AppConfig) (*Dummy, error) {
 	c := Dummy{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Dummy connector")
 		}
@@ -171,7 +172,7 @@ func init() {
 		ID         string
 		Properties map[string]any
 	}
-	err := json.Unmarshal(jsonUsers, &rawUsers)
+	err := jsonstd.Unmarshal(jsonUsers, &rawUsers)
 	if err != nil {
 		panic(err)
 	}
@@ -240,7 +241,7 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -304,9 +305,9 @@ func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, records []meer
 }
 
 // saveValues validates the user-entered values and returns the settings.
-func (dummy *Dummy) saveValues(ctx context.Context, values []byte) error {
+func (dummy *Dummy) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

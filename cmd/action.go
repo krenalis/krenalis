@@ -8,12 +8,13 @@
 package cmd
 
 import (
-	"encoding/json"
+	jsonstd "encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/json"
 )
 
 type action struct {
@@ -40,18 +41,17 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 		Event  string
 		Values rawJSON
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	ui, err := a.ServeUI(r.Context(), body.Event, body.Values)
+	ui, err := a.ServeUI(r.Context(), body.Event, json.Value(body.Values))
 	if err != nil {
 		return nil, err
 	}
 	w.Header().Add("Content-Type", "application/json")
 	_, _ = w.Write(ui)
 	return nil, nil
-
 }
 
 // Set sets an action.
@@ -61,7 +61,7 @@ func (action action) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, err
 	}
 	var body core.ActionToSet
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -78,7 +78,7 @@ func (action action) SetStatus(_ http.ResponseWriter, r *http.Request) (any, err
 	var body struct {
 		Enabled bool
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -95,7 +95,7 @@ func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (
 	var body struct {
 		SchedulePeriod core.SchedulePeriod
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -112,7 +112,7 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 	var body struct {
 		Reload bool
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}

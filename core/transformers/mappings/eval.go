@@ -9,7 +9,7 @@ package mappings
 
 import (
 	"bytes"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -231,7 +231,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		return true, types.Boolean(), nil
 	case "array":
 		var b bytes.Buffer
-		enc := stdjson.NewEncoder(&b)
+		enc := jsonstd.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
 		arr := make([]any, len(p.args))
 		for i, arg := range p.args {
@@ -314,7 +314,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return nil, types.Type{}, err
 		}
 		if v2, ok := v.(json.Value); ok {
-			dec := stdjson.NewDecoder(bytes.NewReader(v2))
+			dec := jsonstd.NewDecoder(bytes.NewReader(v2))
 			dec.UseNumber()
 			v = nil
 			_ = dec.Decode(&v)
@@ -355,7 +355,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			length = len(v)
 		case map[string]any:
 			length = len(v)
-		case stdjson.Number:
+		case jsonstd.Number:
 			length = len(v)
 		}
 		return length, types.Int(32), nil

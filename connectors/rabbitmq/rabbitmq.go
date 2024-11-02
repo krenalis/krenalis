@@ -12,13 +12,13 @@ package rabbitmq
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -43,7 +43,7 @@ func init() {
 func New(conf *meergo.StreamConfig) (*RabbitMQ, error) {
 	c := RabbitMQ{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of RabbitMQ connector")
 		}
@@ -116,7 +116,7 @@ func (rmq *RabbitMQ) Send(ctx context.Context, event []byte, options meergo.Send
 }
 
 // ServeUI serves the connector's user interface.
-func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (rmq *RabbitMQ) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -213,9 +213,9 @@ func (rmq *RabbitMQ) connect(ctx context.Context, deliveries bool) (err error) {
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (rmq *RabbitMQ) saveValues(ctx context.Context, values []byte, test bool) error {
+func (rmq *RabbitMQ) saveValues(ctx context.Context, values json.Value, test bool) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

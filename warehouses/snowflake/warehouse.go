@@ -12,7 +12,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -62,7 +62,7 @@ func init() {
 // It returns a SettingsError error if the settings are not valid.
 func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	var s sfSettings
-	err := stdjson.Unmarshal(conf.Settings, &s)
+	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
 		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
@@ -526,7 +526,7 @@ func (warehouse *Snowflake) Repair(ctx context.Context) error {
 
 // Settings returns the data warehouse settings.
 func (warehouse *Snowflake) Settings() []byte {
-	s, _ := stdjson.Marshal(warehouse.settings)
+	s, _ := jsonstd.Marshal(warehouse.settings)
 	return s
 }
 
@@ -733,7 +733,7 @@ func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
 			b.WriteString(v.(time.Time).Format("15:04:05.999999999"))
 		case types.ArrayKind, types.MapKind:
 			bj.Reset()
-			enc := stdjson.NewEncoder(bj)
+			enc := jsonstd.NewEncoder(bj)
 			enc.SetEscapeHTML(false)
 			err := enc.Encode(v)
 			if err != nil {

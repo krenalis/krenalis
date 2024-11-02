@@ -9,7 +9,7 @@ package transformers
 
 import (
 	"bytes"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -77,7 +77,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 			b = append(b, '\'')
 			return b, nil
 		}
-		dec := stdjson.NewDecoder(bytes.NewReader(raw))
+		dec := jsonstd.NewDecoder(bytes.NewReader(raw))
 		dec.UseNumber()
 		v = nil
 		err := dec.Decode(&v)
@@ -207,7 +207,7 @@ func marshalJavaScriptFromJSON(b []byte, v any) []byte {
 		b = append(b, '\'')
 		b = jsStringEscape(b, v)
 		b = append(b, '\'')
-	case stdjson.Number:
+	case jsonstd.Number:
 		b = append(b, v...)
 	case []any:
 		b = append(b, '[')
@@ -250,7 +250,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 			b = append(b, '\'')
 			return b, nil
 		}
-		dec := stdjson.NewDecoder(bytes.NewReader(raw))
+		dec := jsonstd.NewDecoder(bytes.NewReader(raw))
 		dec.UseNumber()
 		v = nil
 		err := dec.Decode(&v)
@@ -387,7 +387,7 @@ func marshalPythonFromJSON(b []byte, v any) []byte {
 		b = append(b, '\'')
 		b = pyStringEscape(b, v)
 		b = append(b, '\'')
-	case stdjson.Number:
+	case jsonstd.Number:
 		b = append(b, v...)
 	case []any:
 		b = append(b, '[')

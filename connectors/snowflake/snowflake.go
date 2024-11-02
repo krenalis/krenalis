@@ -13,13 +13,13 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/snowflakedb/gosnowflake"
@@ -46,7 +46,7 @@ func init() {
 func New(conf *meergo.DatabaseConfig) (*Snowflake, error) {
 	c := Snowflake{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Snowflake connector")
 		}
@@ -101,7 +101,7 @@ func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []ty
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -210,9 +210,9 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []ty
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (sf *Snowflake) saveValues(ctx context.Context, values []byte, test bool) error {
+func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test bool) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -61,7 +62,7 @@ const apiRevision = "2024-07-15"
 func New(conf *meergo.AppConfig) (*Klavyio, error) {
 	c := Klavyio{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Klaviyo connector")
 		}
@@ -406,7 +407,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -442,7 +443,7 @@ func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records []
 		delete(properties, "properties")
 	}
 	body := bytes.NewBufferString(`{"data":{"type":"profile","attributes":`)
-	enc := json.NewEncoder(body)
+	enc := jsonstd.NewEncoder(body)
 	enc.SetEscapeHTML(false)
 	_ = enc.Encode(properties)
 	body.Truncate(body.Len() - 1) // remove the trailing new line.
@@ -469,9 +470,9 @@ func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records []
 }
 
 // saveValues saves the user-entered values as settings.
-func (ky *Klavyio) saveValues(ctx context.Context, values []byte) error {
+func (ky *Klavyio) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
@@ -543,13 +544,13 @@ func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader,
 
 	if res.StatusCode != expectedStatus {
 		kErr := &klaviyoError{statusCode: res.StatusCode}
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		_ = dec.Decode(kErr)
 		return kErr
 	}
 
 	if response != nil {
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		return dec.Decode(response)
 	}
 

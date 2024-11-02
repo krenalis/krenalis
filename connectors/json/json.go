@@ -12,7 +12,7 @@ package json
 import (
 	"context"
 	_ "embed"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -43,7 +43,7 @@ func init() {
 func New(conf *meergo.FileConfig) (*JSON, error) {
 	c := JSON{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := stdjson.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of JSON connector")
 		}
@@ -90,8 +90,8 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		return err
 	}
 
-	var tok stdjson.Token
-	dec := stdjson.NewDecoder(r)
+	var tok jsonstd.Token
+	dec := jsonstd.NewDecoder(r)
 	dec.UseNumber()
 
 	isObject := false
@@ -100,10 +100,10 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err == io.EOF {
 			return errInvalidJSON
 		}
-		if _, ok := err.(*stdjson.SyntaxError); ok {
+		if _, ok := err.(*jsonstd.SyntaxError); ok {
 			return errInvalidJSON
 		}
-		if _, ok := err.(*stdjson.UnmarshalTypeError); ok {
+		if _, ok := err.(*jsonstd.UnmarshalTypeError); ok {
 			return errInvalidFormat
 		}
 		return err
@@ -111,14 +111,14 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 
 	// Read '[' or '{'.
 	tok, err = dec.Token()
-	if err != nil && tok == stdjson.Delim('{') {
+	if err != nil && tok == jsonstd.Delim('{') {
 		isObject = true
 		// Read a property name.
 		tok, err = dec.Token()
 		if err != nil {
 			return jsonError(err)
 		}
-		if tok == stdjson.Delim('}') {
+		if tok == jsonstd.Delim('}') {
 			return errInvalidFormat
 		}
 		// Read '['.
@@ -127,7 +127,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 	if err != nil {
 		return jsonError(err)
 	}
-	if tok != stdjson.Delim('[') {
+	if tok != jsonstd.Delim('[') {
 		return errInvalidFormat
 	}
 
@@ -139,7 +139,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err != nil {
 			return jsonError(err)
 		}
-		if tok != stdjson.Delim('{') {
+		if tok != jsonstd.Delim('{') {
 			return errInvalidFormat
 		}
 		for dec.More() {
@@ -176,7 +176,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err != nil {
 			return jsonError(err)
 		}
-		if tok != stdjson.Delim('}') {
+		if tok != jsonstd.Delim('}') {
 			return errInvalidFormat
 		}
 	}
@@ -187,7 +187,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 		if err == nil {
 			return errInvalidFormat
 		}
-		if _, ok := err.(*stdjson.SyntaxError); ok {
+		if _, ok := err.(*jsonstd.SyntaxError); ok {
 			return errInvalidFormat
 		}
 		return err
@@ -197,7 +197,7 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -205,7 +205,7 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values []byte, role me
 		if j.settings != nil {
 			s = *j.settings
 		}
-		values, _ = stdjson.Marshal(s)
+		values, _ = jsonstd.Marshal(s)
 	case "save":
 		return nil, j.saveValues(ctx, values, role)
 	default:
@@ -285,9 +285,9 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 }
 
 // saveValues saves the user-entered values as settings.
-func (j *JSON) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
+func (j *JSON) saveValues(ctx context.Context, values json.Value, role meergo.Role) error {
 	var s Settings
-	err := stdjson.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func (j *JSON) saveValues(ctx context.Context, values []byte, role meergo.Role) 
 	} else {
 		s.Properties = nil
 	}
-	b, err := stdjson.Marshal(s)
+	b, err := jsonstd.Marshal(s)
 	if err != nil {
 		return err
 	}

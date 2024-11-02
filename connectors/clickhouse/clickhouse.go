@@ -12,7 +12,6 @@ package clickhouse
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"net"
 	"strconv"
@@ -20,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -47,7 +47,7 @@ func init() {
 func New(conf *meergo.DatabaseConfig) (*ClickHouse, error) {
 	c := ClickHouse{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of ClickHouse connector")
 		}
@@ -112,7 +112,7 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -236,9 +236,9 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []t
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (ch *ClickHouse) saveValues(ctx context.Context, values []byte, test bool) error {
+func (ch *ClickHouse) saveValues(ctx context.Context, values json.Value, test bool) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

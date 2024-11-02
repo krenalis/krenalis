@@ -13,7 +13,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
@@ -546,7 +546,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	// Marshal the mapping.
 	var mapping []byte
 	if action.Transformation.Mapping != nil {
-		mapping, err = stdjson.Marshal(action.Transformation.Mapping)
+		mapping, err = jsonstd.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return 0, err
 		}
@@ -614,11 +614,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		var matchPropInternal, matchPropExternal []byte
 		if n.MatchingProperties != nil {
 			var err error
-			matchPropInternal, err = stdjson.Marshal(n.MatchingProperties.Internal)
+			matchPropInternal, err = jsonstd.Marshal(n.MatchingProperties.Internal)
 			if err != nil {
 				return err
 			}
-			matchPropExternal, err = stdjson.Marshal(n.MatchingProperties.External)
+			matchPropExternal, err = jsonstd.Marshal(n.MatchingProperties.External)
 			if err != nil {
 				return err
 			}
@@ -1155,7 +1155,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues []byte, limit int) ([]byte, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues json.Value, limit int) ([]byte, types.Type, error) {
 
 	this.core.mustBeOpen()
 
@@ -1207,7 +1207,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 		if uiValues == nil {
 			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
 		}
-		if !isJSONObject(uiValues) {
+		if !json.Valid(uiValues) || !uiValues.IsObject() {
 			return nil, types.Type{}, errors.BadRequest("UI values are not a valid JSON Object")
 		}
 	} else if uiValues != nil {
@@ -1646,7 +1646,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		ct := req.Header.Get("Content-Type")
 		switch ct {
 		case "application/json":
-			err = stdjson.Indent(&b, req.Body, "", "\t")
+			err = jsonstd.Indent(&b, req.Body, "", "\t")
 			if err != nil {
 				return nil, err
 			}
@@ -1755,7 +1755,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 //
 //   - EventNotExist, if the event does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Connection) ServeUI(ctx context.Context, event string, values []byte) ([]byte, error) {
+func (this *Connection) ServeUI(ctx context.Context, event string, values json.Value) (json.Value, error) {
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
@@ -1791,7 +1791,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values []byte
 // It returns an errors.UnprocessableError error with code
 //   - ConnectorNotExist, if the file connector does not exist.
 //   - InvalidUIValues, if the UI values are not valid.
-func (this *Connection) Sheets(ctx context.Context, fileConnector string, path string, uiValues []byte, compression Compression) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, fileConnector string, path string, uiValues json.Value, compression Compression) ([]string, error) {
 
 	this.core.mustBeOpen()
 
@@ -1824,7 +1824,7 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 		if uiValues == nil {
 			return nil, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
 		}
-		if !isJSONObject(uiValues) {
+		if !json.Valid(uiValues) || !uiValues.IsObject() {
 			return nil, errors.BadRequest("UI values are not a valid JSON Object")
 		}
 	} else if uiValues != nil {
@@ -2120,7 +2120,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := stdjson.Unmarshal(data, &v)
+	err := jsonstd.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -2194,7 +2194,7 @@ func deserializeCursor(cursor string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	var c time.Time
-	err = stdjson.Unmarshal(data, &c)
+	err = jsonstd.Unmarshal(data, &c)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -2205,7 +2205,7 @@ func deserializeCursor(cursor string) (time.Time, error) {
 // serializeCursor serializes a cursor to be returned by the API.
 func serializeCursor(cursor time.Time) (string, error) {
 	var b bytes.Buffer
-	enc := stdjson.NewEncoder(&b)
+	enc := jsonstd.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
 	err := enc.Encode(cursor)
 	if err != nil {
@@ -2255,20 +2255,4 @@ func (tp *tempTransformerProvider) SupportLanguage(_ state.Language) bool {
 }
 func (tp *tempTransformerProvider) Update(_ context.Context, _, _ string) (string, error) {
 	panic("not supported")
-}
-
-// isValidJSONObject reports whether data represents a JSON Object. data can
-// start and end with whitespaces.
-func isJSONObject(data []byte) bool {
-	if json.Valid(data) {
-		for _, c := range data {
-			if c == '{' {
-				return true
-			}
-			if c != ' ' && c != '\t' && c != '\r' && c != '\n' {
-				break
-			}
-		}
-	}
-	return false
 }

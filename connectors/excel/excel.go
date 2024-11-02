@@ -12,13 +12,13 @@ package excel
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/xuri/excelize/v2"
@@ -46,7 +46,7 @@ func init() {
 func New(conf *meergo.FileConfig) (*Excel, error) {
 	c := Excel{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
@@ -152,7 +152,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -249,9 +249,9 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 }
 
 // saveValues saves the user-entered values as settings.
-func (exel *Excel) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
+func (exel *Excel) saveValues(ctx context.Context, values json.Value, role meergo.Role) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

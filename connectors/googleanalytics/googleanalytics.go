@@ -12,13 +12,13 @@ package googleanalytics
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"net/http"
 	_url "net/url"
 	"strings"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -53,7 +53,7 @@ func init() {
 func New(conf *meergo.AppConfig) (*Analytics, error) {
 	c := Analytics{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Google Analytics connector")
 		}
@@ -156,7 +156,7 @@ func (ga *Analytics) Schema(ctx context.Context, target meergo.Targets, role mee
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -184,9 +184,9 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, r
 }
 
 // saveValues saves the user-entered values as settings.
-func (ga *Analytics) saveValues(ctx context.Context, values []byte) error {
+func (ga *Analytics) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

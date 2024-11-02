@@ -82,20 +82,18 @@ For example, for the previous two settings of Google Analytics, the interface co
 
 Two `Input` components are present, "MeasurementID" and "APISecret," and a `Button` component with an event named "save." A `Button` component with the "save" event must always be present, as it ensures to Meergo that the values of the interface fields have been saved in the connector's settings.
 
-The `Values` field, of type `[]byte`, contains the values of the interface components in JSON format. For example, `Values` could have the following value:
+The `Values` field, of type `json.Value`, contains the values of the interface components in JSON format. For example, `Values` could have the following value:
 
 ```go
-[]byte(`{"MeasurementID":"G-2XYZBEB6AB","APISecret":"ZuHCHFZbRBi8V7u8crWFUz"}`)
+json.Value(`{"MeasurementID":"G-2XYZBEB6AB","APISecret":"ZuHCHFZbRBi8V7u8crWFUz"}`)
 ```
-
-Sure, here's the updated part of the documentation translated into English:
 
 ### Serving the UI
 
 To provide the interface to the user and respond to events triggered by user interaction, the connector must implement the `ServeUI` method:
 
 ```go
-ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error)
+ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error)
 ```
 
 - `ctx`: Context, it's never `nil`.
@@ -117,7 +115,7 @@ If the event is not among those expected, the method should return the `ErrUIEve
 The following is the `ServeUI` method of the Google Analytics connector:
 
 ```go
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":

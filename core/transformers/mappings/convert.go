@@ -9,7 +9,7 @@ package mappings
 
 import (
 	"bytes"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -440,7 +440,7 @@ func convert(v any, st, dt types.Type, nullable bool, layouts *state.TimeLayouts
 			return v, nil
 		}
 		var b bytes.Buffer
-		enc := stdjson.NewEncoder(&b)
+		enc := jsonstd.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
 		err := enc.Encode(v)
 		if err != nil {

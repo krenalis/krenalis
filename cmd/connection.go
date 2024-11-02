@@ -8,12 +8,13 @@
 package cmd
 
 import (
-	"encoding/json"
+	jsonstd "encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -67,7 +68,7 @@ func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (
 		EventType string
 		Action    core.ActionToSet
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -84,7 +85,7 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 		Schema types.Type
 		Cursor string
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -128,7 +129,7 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 		Query string
 		Limit int
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -158,7 +159,7 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 		First int
 		Limit int
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -216,7 +217,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 		Transformation core.DataTransformation
 		OutSchema      types.Type
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -242,11 +243,11 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		UIValues      rawJSON
 		Limit         int
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	records, schema, err := c.Records(r.Context(), body.FileConnector, body.Path, body.Sheet, body.Compression, body.UIValues, body.Limit)
+	records, schema, err := c.Records(r.Context(), body.FileConnector, body.Path, body.Sheet, body.Compression, json.Value(body.UIValues), body.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -276,12 +277,12 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 	if r.Method == "GET" {
 		body.Event = "load"
 	} else {
-		err = json.NewDecoder(r.Body).Decode(&body)
+		err = jsonstd.NewDecoder(r.Body).Decode(&body)
 		if err != nil {
 			return nil, errors.BadRequest("%s", err)
 		}
 	}
-	ui, err := c.ServeUI(r.Context(), body.Event, body.Values)
+	ui, err := c.ServeUI(r.Context(), body.Event, json.Value(body.Values))
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +300,7 @@ func (connection connection) Set(_ http.ResponseWriter, r *http.Request) (any, e
 	var body struct {
 		Connection core.ConnectionToSet
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -319,11 +320,11 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		Compression   core.Compression
 		UIValues      rawJSON
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, body.UIValues, body.Compression)
+	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, json.Value(body.UIValues), body.Compression)
 	if err != nil {
 		return nil, err
 	}

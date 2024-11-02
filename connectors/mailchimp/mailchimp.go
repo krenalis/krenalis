@@ -14,7 +14,7 @@ import (
 	"context"
 	"crypto/rand"
 	_ "embed"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -68,7 +69,7 @@ func init() {
 func New(conf *meergo.AppConfig) (*MailChimp, error) {
 	c := MailChimp{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Mailchimp connector")
 		}
@@ -435,7 +436,7 @@ func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role mee
 }
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -532,11 +533,11 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 }
 
 // saveValues saves the user-entered values as settings.
-func (mc *MailChimp) saveValues(ctx context.Context, values []byte) error {
+func (mc *MailChimp) saveValues(ctx context.Context, values json.Value) error {
 	var list struct {
 		List string
 	}
-	err := json.Unmarshal(values, &list)
+	err := values.Unmarshal(&list)
 	if err != nil {
 		return err
 	}
@@ -733,13 +734,13 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 
 	if res.StatusCode != expectedStatus {
 		mcErr := &mailchimpError{Status: res.StatusCode}
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		_ = dec.Decode(mcErr)
 		return mcErr
 	}
 
 	if response != nil {
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		return dec.Decode(response)
 	}
 
@@ -1036,7 +1037,7 @@ func (mc *MailChimp) metadata() (string, string, error) {
 		DC     string
 		UserID int `json:"user_id"`
 	}{}
-	err = json.NewDecoder(res.Body).Decode(&r)
+	err = jsonstd.NewDecoder(res.Body).Decode(&r)
 	if err != nil {
 		return "", "", err
 	}

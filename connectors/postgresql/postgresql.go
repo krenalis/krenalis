@@ -13,7 +13,6 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -23,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -50,7 +50,7 @@ func init() {
 func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
 	c := PostgreSQL{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of PostgreSQL connector")
 		}
@@ -154,7 +154,7 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []t
 }
 
 // ServeUI serves the connector's user interface.
-func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -290,9 +290,9 @@ func (ps *PostgreSQL) openDB() error {
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (ps *PostgreSQL) saveValues(ctx context.Context, values []byte, test bool) error {
+func (ps *PostgreSQL) saveValues(ctx context.Context, values json.Value, test bool) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

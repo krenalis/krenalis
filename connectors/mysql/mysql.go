@@ -13,13 +13,13 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/go-sql-driver/mysql"
@@ -46,7 +46,7 @@ func init() {
 func New(conf *meergo.DatabaseConfig) (*MySQL, error) {
 	c := MySQL{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of MySQL connector")
 		}
@@ -111,7 +111,7 @@ func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []types.
 }
 
 // ServeUI serves the connector's user interface.
-func (my *MySQL) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -262,9 +262,9 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []types.
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
-func (my *MySQL) saveValues(ctx context.Context, values []byte, test bool) error {
+func (my *MySQL) saveValues(ctx context.Context, values json.Value, test bool) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/meergo/meergo/json"
 )
 
 // ErrUIEventNotExist values are returned by the ServeUI method when the event
@@ -45,14 +47,14 @@ type UIHandler interface {
 	//
 	// If event does not exist, it returns an ErrUIEventNotExist.
 	// If the values are invalid, it returns an InvalidUIValuesError error.
-	ServeUI(ctx context.Context, event string, values []byte, role Role) (*UI, error)
+	ServeUI(ctx context.Context, event string, values json.Value, role Role) (*UI, error)
 }
 
 // UI represents the user interface of a connector that is shown to users.
 type UI struct {
 	Alert   *Alert      // Alert, if not empty, appears as a notification.
 	Fields  []Component // Fields, if not empty, are the form inputs for settings.
-	Values  []byte      // Values hold the values of the fields.
+	Values  json.Value  // Values hold the values of the fields.
 	Buttons []Button    // Buttons are the button elements that can trigger actions.
 }
 

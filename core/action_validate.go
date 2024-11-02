@@ -23,6 +23,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -402,7 +403,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			if !v.connector.hasUI {
 				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", action.Connector)
 			}
-			if !isJSONObject(action.UIValues) {
+			if !json.Valid(action.UIValues) || !action.UIValues.IsObject() {
 				return errors.BadRequest("UI values are not a valid JSON Object")
 			}
 		}

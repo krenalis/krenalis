@@ -13,7 +13,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/csv"
-	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -48,7 +47,7 @@ func init() {
 func New(conf *meergo.FileConfig) (*CSV, error) {
 	c := CSV{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := stdjson.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of CSV connector")
 		}
@@ -153,7 +152,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -163,7 +162,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values []byte, role mee
 		} else {
 			s = *c.settings
 		}
-		values, _ = stdjson.Marshal(s)
+		values, _ = json.Marshal(s)
 	case "save":
 		return nil, c.saveValues(ctx, values, role)
 	default:
@@ -233,9 +232,9 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 }
 
 // saveValues saves the user-entered values as settings.
-func (c *CSV) saveValues(ctx context.Context, values []byte, role meergo.Role) error {
+func (c *CSV) saveValues(ctx context.Context, values json.Value, role meergo.Role) error {
 	var s Settings
-	err := stdjson.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
@@ -269,7 +268,7 @@ func (c *CSV) saveValues(ctx context.Context, values []byte, role meergo.Role) e
 		s.TrimLeadingSpace = false
 		s.HasColumnNames = false
 	}
-	b, err := stdjson.Marshal(s)
+	b, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}

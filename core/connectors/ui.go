@@ -10,7 +10,7 @@ package connectors
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -18,6 +18,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 )
 
 // ServeActionUI serves the user interface of the provided file action and
@@ -29,7 +30,7 @@ import (
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
-func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values []byte) ([]byte, error) {
+func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values json.Value) (json.Value, error) {
 	role := meergo.Role(action.Connection().Role)
 	c := action.Connector()
 	inner, err := meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{
@@ -55,7 +56,7 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
-func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values []byte) ([]byte, error) {
+func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values json.Value) (json.Value, error) {
 	var accountID int
 	var accountCode string
 	if r, ok := connection.Account(); ok {
@@ -136,7 +137,7 @@ type ConnectorConfig struct {
 // *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
-func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values []byte) ([]byte, error) {
+func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values json.Value) ([]byte, error) {
 	var inner any
 	var err error
 	switch c := connector; c.Type {
@@ -181,7 +182,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 // and an *UnavailableError error if the connector returns an error.
 //
 // It panics if the connector has no UI.
-func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues []byte) ([]byte, error) {
+func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues json.Value) ([]byte, error) {
 	var inner any
 	var err error
 	var newSettings []byte
@@ -232,14 +233,14 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 
 // marshalUI marshals the provided UI, in the given role, into JSON format.
 // If ui is nil, it is serialized as "null".
-func marshalUI(ui *meergo.UI, role meergo.Role) ([]byte, error) {
+func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 	if ui == nil {
 		return []byte("null"), nil
 	}
 
 	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
+	enc := jsonstd.NewEncoder(&b)
 
 	b.WriteString("{")
 
@@ -265,7 +266,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) ([]byte, error) {
 
 		values := map[string]any{}
 		if len(ui.Values) > 0 {
-			err := json.Unmarshal(ui.Values, &values)
+			err := jsonstd.Unmarshal(ui.Values, &values)
 			if err != nil {
 				return nil, err
 			}
@@ -289,7 +290,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) ([]byte, error) {
 		}
 		if len(ui.Values) > 0 {
 			b.WriteString(`,"Values":`)
-			err = json.NewEncoder(&b).Encode(values)
+			err = jsonstd.NewEncoder(&b).Encode(values)
 			if err != nil {
 				return nil, err
 			}
@@ -341,7 +342,7 @@ func marshalUIComponent(b *bytes.Buffer, component meergo.Component, role meergo
 			}
 			b.WriteByte(']')
 		default:
-			err = json.NewEncoder(b).Encode(field)
+			err = jsonstd.NewEncoder(b).Encode(field)
 		}
 		if err != nil {
 			return false, err
@@ -361,9 +362,9 @@ func marshalUIFieldSet(b *bytes.Buffer, fieldSet meergo.FieldSet, role meergo.Ro
 		b.WriteByte(',')
 	}
 	b.WriteString(`{"Name":`)
-	_ = json.NewEncoder(b).Encode(fieldSet.Name)
+	_ = jsonstd.NewEncoder(b).Encode(fieldSet.Name)
 	b.WriteString(`,"Label":`)
-	_ = json.NewEncoder(b).Encode(fieldSet.Label)
+	_ = jsonstd.NewEncoder(b).Encode(fieldSet.Label)
 	b.WriteString(`,"Fields":[`)
 	comma = false
 	for _, c := range fieldSet.Fields {

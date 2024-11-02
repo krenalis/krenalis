@@ -16,7 +16,7 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/base64"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -231,7 +232,7 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.W
 		PropertyValue    string
 		SubscriptionType string
 	}
-	err = json.NewDecoder(r.Body).Decode(&requests)
+	err = jsonstd.NewDecoder(r.Body).Decode(&requests)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +380,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records []
 	// Create the user.
 	if id == "" {
 		body.WriteString(`{"properties":`)
-		err := json.NewEncoder(&body).Encode(properties)
+		err := jsonstd.NewEncoder(&body).Encode(properties)
 		if err != nil {
 			return nil, err
 		}
@@ -393,7 +394,7 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records []
 	body.WriteString(`{"id":`)
 	body.Write(idJSON)
 	body.WriteString(`,"properties":`)
-	err := json.NewEncoder(&body).Encode(properties)
+	err := jsonstd.NewEncoder(&body).Encode(properties)
 	if err != nil {
 		return nil, err
 	}
@@ -454,12 +455,12 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader
 	}()
 	if res.StatusCode != expectedStatus {
 		hsErr := &hubspotError{statusCode: res.StatusCode}
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		_ = dec.Decode(hsErr)
 		return hsErr
 	}
 	if response != nil {
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		return dec.Decode(response)
 	}
 	return nil

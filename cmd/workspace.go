@@ -8,7 +8,7 @@
 package cmd
 
 import (
-	"encoding/json"
+	jsonstd "encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,6 +16,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/relvacode/iso8601"
@@ -339,7 +340,7 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 		Connection core.ConnectionToAdd
 		OAuthToken string
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -361,7 +362,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 		HasUserTraits bool
 		Filter        *core.Filter
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -391,7 +392,7 @@ func (workspace workspace) CanChangeWarehouseSettings(_ http.ResponseWriter, r *
 	body := struct {
 		Settings rawJSON
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -410,7 +411,7 @@ func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Reque
 		PrimarySources map[string]int
 		RePaths        map[string]any
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -429,7 +430,7 @@ func (workspace workspace) ChangeUserSchemaQueries(_ http.ResponseWriter, r *htt
 		Schema  types.Type
 		RePaths map[string]any
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -450,7 +451,7 @@ func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Re
 		Mode                         core.WarehouseMode
 		CancelIncompatibleOperations bool
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -470,7 +471,7 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 		Mode                         core.WarehouseMode
 		CancelIncompatibleOperations bool
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -555,7 +556,7 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 		RedirectURI string
 		Connector   string
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -606,7 +607,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 		Role       string
 		OAuthToken string
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -623,7 +624,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
-	ui, err := ws.ServeUI(r.Context(), body.Event, body.Values, body.Connector, role, body.OAuthToken)
+	ui, err := ws.ServeUI(r.Context(), body.Event, json.Value(body.Values), body.Connector, role, body.OAuthToken)
 	if err != nil {
 		return nil, err
 	}
@@ -644,7 +645,7 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 		PrivacyRegion       core.PrivacyRegion
 		DisplayedProperties core.DisplayedProperties
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -663,7 +664,7 @@ func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWrite
 		RunOnBatchImport bool
 		Identifiers      []string
 	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -686,7 +687,7 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 		First      int
 		Limit      int
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}

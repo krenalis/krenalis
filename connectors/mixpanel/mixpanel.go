@@ -13,7 +13,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/base64"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -66,7 +67,7 @@ type Settings struct {
 func New(conf *meergo.AppConfig) (*Mixpanel, error) {
 	c := Mixpanel{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of Mixpanel connector")
 		}
@@ -218,7 +219,7 @@ func (mp *Mixpanel) Schema(ctx context.Context, target meergo.Targets, role meer
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -268,13 +269,13 @@ func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reade
 
 	if res.StatusCode != expectedStatus {
 		mpErr := &mixpanelError{}
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		_ = dec.Decode(mpErr)
 		return mpErr
 	}
 
 	if response != nil {
-		dec := json.NewDecoder(res.Body)
+		dec := jsonstd.NewDecoder(res.Body)
 		return dec.Decode(response)
 	}
 
@@ -282,9 +283,9 @@ func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reade
 }
 
 // saveValues saves the user-entered values as settings.
-func (mp *Mixpanel) saveValues(ctx context.Context, values []byte) error {
+func (mp *Mixpanel) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

@@ -10,10 +10,10 @@ package uisample
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -35,7 +35,7 @@ func init() {
 func New(conf *meergo.AppConfig) (*UISample, error) {
 	c := UISample{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of UISample connector")
 		}
@@ -54,7 +54,7 @@ func (uiSample *UISample) Schema(ctx context.Context, target meergo.Targets, rol
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -129,9 +129,9 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values []by
 }
 
 // saveValues saves the user-entered values as settings.
-func (uiSample *UISample) saveValues(ctx context.Context, values []byte) error {
+func (uiSample *UISample) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

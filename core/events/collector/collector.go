@@ -12,7 +12,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha1"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -383,7 +383,7 @@ func (c *Collector) persistEvents(events []*collectedEvent) <-chan error {
 	ack := make(chan error, 1)
 	go func() {
 		var b bytes.Buffer
-		enc := stdjson.NewEncoder(&b)
+		enc := jsonstd.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
 		for _, event := range events {
 			header := event.header
@@ -441,7 +441,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
 	w.Header().Set("Access-Control-Allow-Origin", origin)
-	enc := stdjson.NewEncoder(w)
+	enc := jsonstd.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	_ = enc.Encode(map[string]any{
 		"strategy": strategy,

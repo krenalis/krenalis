@@ -10,7 +10,7 @@ package collector
 import (
 	"bytes"
 	"context"
-	stdjson "encoding/json"
+	jsonstd "encoding/json"
 	"log/slog"
 	"math/rand/v2"
 	"slices"
@@ -276,7 +276,7 @@ func (observer *Observer) addCollectedEvent(source int, event *collectedEvent, e
 		}
 		if oe.Data == nil {
 			var b bytes.Buffer
-			enc := stdjson.NewEncoder(&b)
+			enc := jsonstd.NewEncoder(&b)
 			enc.SetEscapeHTML(false)
 			_ = enc.Encode(event)
 			data := b.Bytes()

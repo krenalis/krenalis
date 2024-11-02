@@ -12,7 +12,6 @@ package s3
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"io"
 	"regexp"
@@ -20,6 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -47,7 +47,7 @@ func init() {
 func New(conf *meergo.FileStorageConfig) (*S3, error) {
 	c := S3{conf: conf}
 	if len(conf.Settings) > 0 {
-		err := json.Unmarshal(conf.Settings, &c.settings)
+		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
 			return nil, errors.New("cannot unmarshal settings of S3 connector")
 		}
@@ -103,7 +103,7 @@ func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (ss3 *S3) ServeUI(ctx context.Context, event string, values []byte, role meergo.Role) (*meergo.UI, error) {
+func (ss3 *S3) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -187,9 +187,9 @@ func (ss3 *S3) client() *s3.Client {
 }
 
 // saveValues saves the user-entered values as settings.
-func (ss3 *S3) saveValues(ctx context.Context, values []byte) error {
+func (ss3 *S3) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
-	err := json.Unmarshal(values, &s)
+	err := values.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
