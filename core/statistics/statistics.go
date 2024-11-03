@@ -70,7 +70,6 @@ func (s Step) String() string {
 type Statistics struct {
 	db         *postgres.DB
 	state      *state.State
-	listener   uint8
 	mu         sync.RWMutex
 	diff       map[int]bool
 	collectors map[int]*Collector
