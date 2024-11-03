@@ -110,7 +110,6 @@ func (this *Action) exec(ctx context.Context) {
 
 	execution, _ := this.action.Execution()
 	timeSlot := statistics.TimeSlotFromTime(execution.StartTime)
-	stats := this.core.statistics.Collector(this.action.ID)
 
 	var err error
 	var errorStep statistics.Step
@@ -123,19 +122,19 @@ func (this *Action) exec(ctx context.Context) {
 			if actionErr, ok := err.(*actionError); ok {
 				errorStep = actionErr.step
 				errorMessage = err.Error()
-				stats.StepFailed(errorStep, 0, errorMessage)
+				this.core.statistics.Failed(errorStep, this.action.ID, 0, errorMessage)
 			} else {
 				select {
 				case <-ctx.Done():
-					stats.ReceiveFailed(0, "execution has been cancelled")
+					this.core.statistics.ReceiveFailed(this.action.ID, 0, "execution has been cancelled")
 				default:
-					stats.ReceiveFailed(0, "an internal error has occurred")
+					this.core.statistics.ReceiveFailed(this.action.ID, 0, "an internal error has occurred")
 					slog.Error("cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
 				}
 			}
 		}
 
-		stats.Close()
+		this.core.statistics.WaitStore()
 		endTime := time.Now().UTC()
 
 		n := state.EndActionExecution{
@@ -191,11 +190,11 @@ func (this *Action) exec(ctx context.Context) {
 	}()
 
 	if this.Target == Groups {
-		stats.ReceiveFailed(0, "groups import and export are not implemented")
+		this.core.statistics.ReceiveFailed(this.action.ID, 0, "groups import and export are not implemented")
 		return
 	}
 	if !this.isLanguageSupported() {
-		stats.ReceiveFailed(0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
+		this.core.statistics.ReceiveFailed(this.action.ID, 0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
 		return
 	}
 
@@ -214,10 +213,10 @@ func (this *Action) exec(ctx context.Context) {
 	}
 
 	if this.action.Connection().Role == state.Source {
-		err = this.importUsers(ctx, stats)
+		err = this.importUsers(ctx)
 		actionImportedUsers = true
 	} else {
-		err = this.exportUsers(ctx, stats)
+		err = this.exportUsers(ctx)
 	}
 
 }

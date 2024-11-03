@@ -25,7 +25,7 @@ import (
 )
 
 // importUsers imports the users of the action.
-func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector) error {
+func (this *Action) importUsers(ctx context.Context) error {
 
 	action := this.action
 	connection := action.Connection()
@@ -92,10 +92,10 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 	// Instantiate a batch identity writer.
 	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
-			stats.FinalizeFailed(len(ids), err.Error())
+			this.core.statistics.FinalizeFailed(action.ID, len(ids), err.Error())
 			return
 		}
-		stats.FinalizePassed(len(ids))
+		this.core.statistics.FinalizePassed(action.ID, len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
@@ -124,24 +124,24 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 		if user.Err != nil {
 			iw.Keep(user.ID)
 			if _, ok := user.Err.(ValidationError); ok {
-				stats.ReceivePassed(1)
-				stats.InputValidationFailed(1, user.Err.Error())
+				this.core.statistics.ReceivePassed(action.ID, 1)
+				this.core.statistics.InputValidationFailed(action.ID, 1, user.Err.Error())
 				goto Next
 			}
-			stats.ReceiveFailed(1, user.Err.Error())
+			this.core.statistics.ReceiveFailed(action.ID, 1, user.Err.Error())
 			goto Next
 		}
 
-		stats.ReceivePassed(1)
-		stats.InputValidationPassed(1)
+		this.core.statistics.ReceivePassed(action.ID, 1)
+		this.core.statistics.InputValidationPassed(action.ID, 1)
 
 		// In case the action has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
 			if !filters.Applies(action.Filter, user.Properties) {
-				stats.FilterFailed(1)
+				this.core.statistics.FilterFailed(action.ID, 1)
 				goto Next
 			}
-			stats.FilterPassed(1)
+			this.core.statistics.FilterPassed(action.ID, 1)
 		}
 
 		if user.LastChangeTime.After(cursor) {
@@ -173,16 +173,16 @@ func (this *Action) importUsers(ctx context.Context, stats *statistics.Collector
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						stats.TransformationPassed(1)
-						stats.OutputValidationFailed(1, record.Err.Error())
+						this.core.statistics.TransformationPassed(action.ID, 1)
+						this.core.statistics.OutputValidationFailed(action.ID, 1, record.Err.Error())
 						continue
 					}
-					stats.TransformationFailed(1, record.Err.Error())
+					this.core.statistics.TransformationFailed(action.ID, 1, record.Err.Error())
 					continue
 				}
 				user.Properties = record.Properties
-				stats.TransformationPassed(1)
-				stats.OutputValidationPassed(1)
+				this.core.statistics.TransformationPassed(action.ID, 1)
+				this.core.statistics.OutputValidationPassed(action.ID, 1)
 				err = iw.Write(datastore.Identity{
 					ID:             user.ID,
 					Properties:     user.Properties,

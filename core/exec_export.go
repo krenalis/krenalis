@@ -27,7 +27,7 @@ import (
 
 // exportUsers exports the users for the action.
 // The action must have a store.
-func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector) error {
+func (this *Action) exportUsers(ctx context.Context) error {
 
 	action := this.action
 	store := this.connection.store
@@ -104,13 +104,13 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	ack := func(ids []string, err error) {
 		for _, id := range ids {
 			if err != nil && err != connectors.ErrRecordNotExist {
-				stats.FinalizeFailed(1, err.Error())
+				this.core.statistics.FinalizeFailed(action.ID, 1, err.Error())
 				continue
 			}
 			if err == connectors.ErrRecordNotExist {
 				nonExistentUsers = append(nonExistentUsers, id)
 			}
-			stats.FinalizePassed(1)
+			this.core.statistics.FinalizePassed(action.ID, 1)
 		}
 	}
 
@@ -151,15 +151,15 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 	for record := range records.All(ctx) {
 
 		if record.Err != nil {
-			stats.ReceiveFailed(1, record.Err.Error())
+			this.core.statistics.ReceiveFailed(action.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return record.Err
 			}
 			goto Next
 		}
 
-		stats.ReceivePassed(1)
-		stats.InputValidationPassed(1)
+		this.core.statistics.ReceivePassed(action.ID, 1)
+		this.core.statistics.InputValidationPassed(action.ID, 1)
 
 		if connector.Type == state.App {
 			if record.MatchingID == "" {
@@ -218,20 +218,20 @@ func (this *Action) exportUsers(ctx context.Context, stats *statistics.Collector
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						stats.TransformationPassed(1)
-						stats.OutputValidationFailed(1, record.Err.Error())
+						this.core.statistics.TransformationPassed(action.ID, 1)
+						this.core.statistics.OutputValidationFailed(action.ID, 1, record.Err.Error())
 						continue
 					}
-					stats.TransformationFailed(1, record.Err.Error())
+					this.core.statistics.TransformationFailed(action.ID, 1, record.Err.Error())
 					continue
 				}
-				stats.TransformationPassed(1)
-				stats.OutputValidationPassed(1)
+				this.core.statistics.TransformationPassed(action.ID, 1)
+				this.core.statistics.OutputValidationPassed(action.ID, 1)
 				if user.MatchingValue != nil {
 					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 				}
 				if connector.Type == state.App && len(record.Properties) == 0 {
-					stats.FinalizePassed(1)
+					this.core.statistics.FinalizePassed(action.ID, 1)
 					continue
 				}
 				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
