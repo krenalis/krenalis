@@ -111,72 +111,146 @@ func (c *Collector) Close(ctx context.Context) {
 	defer stop()
 }
 
-// start starts the metrics collector. It collects metrics every minute and
-// aggregates them into 10-minute time slots for storage.
-func (c *Collector) start() {
-
-	var isShuttingDown bool
-
-	metrics := map[int]*metrics{}
-
-	// Wait the time to the next timeslot.
-	now := time.Now().UTC()
-	t := now.Add(time.Second).Truncate(time.Minute)
-	time.Sleep(t.Sub(now))
-
-	// Starts the ticker.
-	ticker := time.NewTicker(flushInterval)
-	timeslot := TimeSlotFromTime(t)
-
-	for {
-
-		c.mu.Lock()
-		metrics, c.metrics = c.metrics, metrics
-		c.tick++
-		c.mu.Unlock()
-
-		c.store(timeslot, metrics)
-
-		c.mu.Lock()
-		c.stored.tick = c.tick - 1
-		c.stored.Broadcast()
-		c.mu.Unlock()
-
-		if isShuttingDown {
-			return
+// Failed increases the failed count for the specified step and action by the
+// given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) Failed(step Step, action, count int, message string) {
+	c.mu.RLock()
+	if m, ok := c.metrics[action]; ok {
+		m.Lock()
+		m.failed[step] += count
+		if message != "" {
+			m.errors = append(m.errors, actionError{step: step, count: count, message: message})
 		}
-
-		for _, m := range metrics {
-			m.passed = [numSteps]int{}
-			m.failed = [numSteps]int{}
-			m.errors = m.errors[0:0]
-		}
-
-		timeslot = TimeSlotFromTime(t)
-
-		var unit time.Duration
-		switch t.Second() {
-		case 0:
-			unit = Hour
-		case 1:
-			unit = Day
-		case 2:
-			unit = Month
-		}
-		if unit > 0 && c.state.IsLeader() {
-			c.aggregate(timeslot, unit)
-		}
-
-		select {
-		case t = <-ticker.C:
-		case <-c.close.shutdown:
-			isShuttingDown = true
-		case <-c.close.ctx.Done():
-			return
-		}
-
+		m.Unlock()
+		c.mu.RUnlock()
+		return
 	}
+	c.mu.RUnlock()
+	c.mu.Lock()
+	m, ok := c.metrics[action]
+	if !ok {
+		m = &metrics{}
+		c.metrics[action] = m
+	}
+	m.failed[step] += count
+	if message != "" {
+		m.errors = append(m.errors, actionError{step: step, count: count, message: message})
+	}
+	c.mu.Unlock()
+}
 
+// FilterFailed increases the failed count for the Filter step and action by the
+// given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) FilterFailed(action, count int) {
+	c.Failed(FilterStep, action, count, "")
+}
+
+// FilterPassed increases the passed count for the Filter step and action by the
+// given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) FilterPassed(action, count int) {
+	c.Passed(FilterStep, action, count)
+}
+
+// FinalizeFailed increases the failed count for the Finalize step and action by
+// the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) FinalizeFailed(action, count int, message string) {
+	c.Failed(FinalizeStep, action, count, message)
+}
+
+// FinalizePassed increases the passed count for the Finalize step and action by
+// the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) FinalizePassed(action, count int) {
+	c.Passed(FinalizeStep, action, count)
+}
+
+// InputValidationFailed increases the failed count for the InputValidation step
+// and action by the given count. It is safe to call concurrently from multiple
+// goroutines.
+func (c *Collector) InputValidationFailed(action, count int, message string) {
+	c.Failed(InputValidationStep, action, count, message)
+}
+
+// InputValidationPassed increases the passed count for the InputValidation step
+// and action by the given count. It is safe to call concurrently from multiple
+// goroutines.
+func (c *Collector) InputValidationPassed(action, count int) {
+	c.Passed(InputValidationStep, action, count)
+}
+
+// OutputValidationFailed increases the failed count for the OutputValidation
+// step and action by the given count. It is safe to call concurrently from
+// multiple goroutines.
+func (c *Collector) OutputValidationFailed(action, count int, message string) {
+	c.Failed(OutputValidationStep, action, count, message)
+}
+
+// OutputValidationPassed increases the passed count for the OutputValidation
+// step and action by the given count. It is safe to call concurrently from
+// multiple goroutines.
+func (c *Collector) OutputValidationPassed(action, count int) {
+	c.Passed(OutputValidationStep, action, count)
+}
+
+// Passed increases the passed count for the specified step and action by the
+// given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) Passed(step Step, action, count int) {
+	c.mu.RLock()
+	if m, ok := c.metrics[action]; ok {
+		m.Lock()
+		m.passed[step] += count
+		m.Unlock()
+		c.mu.RUnlock()
+		return
+	}
+	c.mu.RUnlock()
+	c.mu.Lock()
+	m, ok := c.metrics[action]
+	if !ok {
+		m = &metrics{}
+		c.metrics[action] = m
+	}
+	m.passed[step] += count
+	c.mu.Unlock()
+}
+
+// ReceiveFailed increases the failed count for the Receive step and action by
+// the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) ReceiveFailed(action, count int, message string) {
+	c.Failed(ReceiveStep, action, count, message)
+}
+
+// ReceivePassed increases the passed count for the Receive step and action by
+// the given count. It is safe to call concurrently from multiple goroutines.
+func (c *Collector) ReceivePassed(action, count int) {
+	c.Passed(ReceiveStep, action, count)
+}
+
+// TransformationFailed increases the failed count for the Transformation step
+// and action by the given count. It is safe to call concurrently from multiple
+// goroutines.
+func (c *Collector) TransformationFailed(action, count int, message string) {
+	c.Failed(TransformationStep, action, count, message)
+}
+
+// TransformationPassed increases the passed count for the Transformation step
+// and action by the given count. It is safe to call concurrently from multiple
+// goroutines.
+func (c *Collector) TransformationPassed(action, count int) {
+	c.Passed(TransformationStep, action, count)
+}
+
+// WaitStore waits for any collected metrics to be stored to the database before
+// returning.
+func (c *Collector) WaitStore() {
+	c.mu.Lock()
+	tick := c.tick
+	for {
+		c.stored.Wait()
+		if c.stored.tick == tick {
+			break
+		}
+	}
+	c.mu.Unlock()
 }
 
 // aggregate aggregates metrics based on the provided time unit, which can be
@@ -256,6 +330,74 @@ WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
 		if msg := err.Error(); msg != loggedMsg {
 			slog.Error("failed to aggregate the metrics on action", "err", msg)
 		}
+	}
+
+}
+
+// start starts the metrics collector. It collects metrics every minute and
+// aggregates them into 10-minute time slots for storage.
+func (c *Collector) start() {
+
+	var isShuttingDown bool
+
+	metrics := map[int]*metrics{}
+
+	// Wait the time to the next timeslot.
+	now := time.Now().UTC()
+	t := now.Add(time.Second).Truncate(time.Minute)
+	time.Sleep(t.Sub(now))
+
+	// Starts the ticker.
+	ticker := time.NewTicker(flushInterval)
+	timeslot := TimeSlotFromTime(t)
+
+	for {
+
+		c.mu.Lock()
+		metrics, c.metrics = c.metrics, metrics
+		c.tick++
+		c.mu.Unlock()
+
+		c.store(timeslot, metrics)
+
+		c.mu.Lock()
+		c.stored.tick = c.tick - 1
+		c.stored.Broadcast()
+		c.mu.Unlock()
+
+		if isShuttingDown {
+			return
+		}
+
+		for _, m := range metrics {
+			m.passed = [numSteps]int{}
+			m.failed = [numSteps]int{}
+			m.errors = m.errors[0:0]
+		}
+
+		timeslot = TimeSlotFromTime(t)
+
+		var unit time.Duration
+		switch t.Second() {
+		case 0:
+			unit = Hour
+		case 1:
+			unit = Day
+		case 2:
+			unit = Month
+		}
+		if unit > 0 && c.state.IsLeader() {
+			c.aggregate(timeslot, unit)
+		}
+
+		select {
+		case t = <-ticker.C:
+		case <-c.close.shutdown:
+			isShuttingDown = true
+		case <-c.close.ctx.Done():
+			return
+		}
+
 	}
 
 }
@@ -405,146 +547,4 @@ type metrics struct {
 	passed [numSteps]int
 	failed [numSteps]int
 	errors []actionError
-}
-
-// WaitStore waits for any collected metrics to be stored to the database before
-// returning.
-func (c *Collector) WaitStore() {
-	c.mu.Lock()
-	tick := c.tick
-	for {
-		c.stored.Wait()
-		if c.stored.tick == tick {
-			break
-		}
-	}
-	c.mu.Unlock()
-}
-
-// ReceiveFailed increases the failed count for the Receive step and action by
-// the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) ReceiveFailed(action, count int, message string) {
-	c.Failed(ReceiveStep, action, count, message)
-}
-
-// InputValidationFailed increases the failed count for the InputValidation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) InputValidationFailed(action, count int, message string) {
-	c.Failed(InputValidationStep, action, count, message)
-}
-
-// FilterFailed increases the failed count for the Filter step and action by the
-// given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FilterFailed(action, count int) {
-	c.Failed(FilterStep, action, count, "")
-}
-
-// TransformationFailed increases the failed count for the Transformation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) TransformationFailed(action, count int, message string) {
-	c.Failed(TransformationStep, action, count, message)
-}
-
-// OutputValidationFailed increases the failed count for the OutputValidation
-// step and action by the given count. It is safe to call concurrently from
-// multiple goroutines.
-func (c *Collector) OutputValidationFailed(action, count int, message string) {
-	c.Failed(OutputValidationStep, action, count, message)
-}
-
-// FinalizeFailed increases the failed count for the Finalize step and action by
-// the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FinalizeFailed(action, count int, message string) {
-	c.Failed(FinalizeStep, action, count, message)
-}
-
-// ReceivePassed increases the passed count for the Receive step and action by
-// the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) ReceivePassed(action, count int) {
-	c.Passed(ReceiveStep, action, count)
-}
-
-// InputValidationPassed increases the passed count for the InputValidation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) InputValidationPassed(action, count int) {
-	c.Passed(InputValidationStep, action, count)
-}
-
-// FilterPassed increases the passed count for the Filter step and action by the
-// given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FilterPassed(action, count int) {
-	c.Passed(FilterStep, action, count)
-}
-
-// TransformationPassed increases the passed count for the Transformation step
-// and action by the given count. It is safe to call concurrently from multiple
-// goroutines.
-func (c *Collector) TransformationPassed(action, count int) {
-	c.Passed(TransformationStep, action, count)
-}
-
-// OutputValidationPassed increases the passed count for the OutputValidation
-// step and action by the given count. It is safe to call concurrently from
-// multiple goroutines.
-func (c *Collector) OutputValidationPassed(action, count int) {
-	c.Passed(OutputValidationStep, action, count)
-}
-
-// FinalizePassed increases the passed count for the Finalize step and action by
-// the given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) FinalizePassed(action, count int) {
-	c.Passed(FinalizeStep, action, count)
-}
-
-// Failed increases the failed count for the specified step and action by the
-// given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) Failed(step Step, action, count int, message string) {
-	c.mu.RLock()
-	if m, ok := c.metrics[action]; ok {
-		m.Lock()
-		m.failed[step] += count
-		if message != "" {
-			m.errors = append(m.errors, actionError{step: step, count: count, message: message})
-		}
-		m.Unlock()
-		c.mu.RUnlock()
-		return
-	}
-	c.mu.RUnlock()
-	c.mu.Lock()
-	m, ok := c.metrics[action]
-	if !ok {
-		m = &metrics{}
-		c.metrics[action] = m
-	}
-	m.failed[step] += count
-	if message != "" {
-		m.errors = append(m.errors, actionError{step: step, count: count, message: message})
-	}
-	c.mu.Unlock()
-}
-
-// Passed increases the passed count for the specified step and action by the
-// given count. It is safe to call concurrently from multiple goroutines.
-func (c *Collector) Passed(step Step, action, count int) {
-	c.mu.RLock()
-	if m, ok := c.metrics[action]; ok {
-		m.Lock()
-		m.passed[step] += count
-		m.Unlock()
-		c.mu.RUnlock()
-		return
-	}
-	c.mu.RUnlock()
-	c.mu.Lock()
-	m, ok := c.metrics[action]
-	if !ok {
-		m = &metrics{}
-		c.metrics[action] = m
-	}
-	m.passed[step] += count
-	c.mu.Unlock()
 }
