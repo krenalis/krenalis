@@ -36,9 +36,9 @@ import (
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/filters"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/statistics"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
@@ -111,7 +111,7 @@ type Collector struct {
 	db                  *postgres.DB
 	state               *state.State
 	datastore           *datastore.Datastore
-	statistics          *statistics.Statistics
+	metrics             *metrics.Collector
 	observer            *Observer
 	messageIds          sync.Map
 	transformerProvider transformers.Provider
@@ -121,12 +121,12 @@ type Collector struct {
 
 // New returns a new event collector. It receives HTTP requests from mobile,
 // server and website sources and sends them to the dispatcher.
-func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, stats *statistics.Statistics) (*Collector, error) {
+func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, provider transformers.Provider, dispatcher *dispatcher.Dispatcher, metrics *metrics.Collector) (*Collector, error) {
 	var collector = Collector{
 		db:                  db,
 		state:               st,
 		datastore:           ds,
-		statistics:          stats,
+		metrics:             metrics,
 		observer:            newObserver(db),
 		messageIds:          sync.Map{},
 		transformerProvider: provider,
@@ -301,10 +301,10 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 		ctx := context.Background()
 		iw, err := store.EventIdentityWriter(action.ID, func(ids []string, err error) {
 			if err != nil {
-				c.statistics.FinalizeFailed(action.ID, len(ids), err.Error())
+				c.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
 				return
 			}
-			c.statistics.FinalizePassed(action.ID, len(ids))
+			c.metrics.FinalizePassed(action.ID, len(ids))
 		})
 		if err != nil {
 			return err
@@ -320,13 +320,13 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 			if t := *event.Type; t != "identify" && event.Context.Traits == nil {
 				continue
 			}
-			c.statistics.ReceivePassed(action.ID, 1)
+			c.metrics.ReceivePassed(action.ID, 1)
 			properties := event.AsProperties()
 			if !filters.Applies(action.Filter, properties) {
-				c.statistics.FilterFailed(action.ID, 1)
+				c.metrics.FilterFailed(action.ID, 1)
 				continue
 			}
-			c.statistics.FilterPassed(action.ID, 1)
+			c.metrics.FilterPassed(action.ID, 1)
 			// If the action has a transformation, apply it to the event and
 			// obtain the properties.
 			if t := action.Transformation; t.Mapping != nil || t.Function != nil {
@@ -342,17 +342,17 @@ func (c *Collector) importUserIdentities(source *state.Connection, events []*eve
 				}
 				if err = records[0].Err; err != nil {
 					if _, ok := err.(ValidationError); ok {
-						c.statistics.TransformationPassed(action.ID, 1)
-						c.statistics.OutputValidationFailed(action.ID, 1, err.Error())
+						c.metrics.TransformationPassed(action.ID, 1)
+						c.metrics.OutputValidationFailed(action.ID, 1, err.Error())
 						continue
 					}
-					c.statistics.TransformationFailed(action.ID, 1, err.Error())
+					c.metrics.TransformationFailed(action.ID, 1, err.Error())
 					continue
 				}
 				properties = records[0].Properties
 			}
-			c.statistics.TransformationPassed(action.ID, 1)
-			c.statistics.OutputValidationPassed(action.ID, 1)
+			c.metrics.TransformationPassed(action.ID, 1)
+			c.metrics.OutputValidationPassed(action.ID, 1)
 
 			// Discard anonymous events with no properties.
 			if event.UserId == "" && len(properties) == 0 {
@@ -1205,7 +1205,7 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 		return nil
 	}
 
-	c.statistics.ReceivePassed(action.ID, len(events))
+	c.metrics.ReceivePassed(action.ID, len(events))
 
 	rows := make([][]any, 0, len(events))
 
@@ -1213,10 +1213,10 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 
 		// If the action has a filter, check if it applies to the event.
 		if action.Filter != nil && !filters.Applies(action.Filter, e.AsProperties()) {
-			c.statistics.FilterFailed(action.ID, 1)
+			c.metrics.FilterFailed(action.ID, 1)
 			continue
 		}
-		c.statistics.FilterPassed(action.ID, 1)
+		c.metrics.FilterPassed(action.ID, 1)
 
 		density, _ := decimal.Float64(float64(e.Context.Screen.Density), 3, 2)
 
@@ -1316,7 +1316,7 @@ func (c *Collector) storeEvents(workspace int, action *state.Action, events []*e
 	if err != nil {
 		return err
 	}
-	c.statistics.FinalizePassed(action.ID, len(rows))
+	c.metrics.FinalizePassed(action.ID, len(rows))
 
 	return nil
 }

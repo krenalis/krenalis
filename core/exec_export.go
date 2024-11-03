@@ -17,9 +17,9 @@ import (
 
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/statistics"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/types"
@@ -42,7 +42,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			if err, ok := err.(*schemas.Error); ok {
 				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
-			return newActionError(statistics.OutputValidationStep, err)
+			return newActionError(metrics.OutputValidationStep, err)
 		}
 		internalMatchingProperty, _ = action.InSchema.Property(action.MatchingProperties.Internal)
 		p := action.MatchingProperties.External
@@ -80,7 +80,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}, action.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return newActionError(statistics.ReceiveStep, err)
+			return newActionError(metrics.ReceiveStep, err)
 		}
 		switch err := err.(type) {
 		case *datastore.DataWarehouseError:
@@ -90,7 +90,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			return err
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the action before attempting to export the users.", err.Msg)
-			return newActionError(statistics.InputValidationStep, err)
+			return newActionError(metrics.InputValidationStep, err)
 		}
 		return err
 	}
@@ -104,13 +104,13 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	ack := func(ids []string, err error) {
 		for _, id := range ids {
 			if err != nil && err != connectors.ErrRecordNotExist {
-				this.core.statistics.FinalizeFailed(action.ID, 1, err.Error())
+				this.core.metrics.FinalizeFailed(action.ID, 1, err.Error())
 				continue
 			}
 			if err == connectors.ErrRecordNotExist {
 				nonExistentUsers = append(nonExistentUsers, id)
 			}
-			this.core.statistics.FinalizePassed(action.ID, 1)
+			this.core.metrics.FinalizePassed(action.ID, 1)
 		}
 	}
 
@@ -134,7 +134,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to export the users."
 		}
-		return newActionError(statistics.OutputValidationStep, err)
+		return newActionError(metrics.OutputValidationStep, err)
 	}
 	defer writer.Close(ctx)
 
@@ -151,15 +151,15 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	for record := range records.All(ctx) {
 
 		if record.Err != nil {
-			this.core.statistics.ReceiveFailed(action.ID, 1, record.Err.Error())
+			this.core.metrics.ReceiveFailed(action.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return record.Err
 			}
 			goto Next
 		}
 
-		this.core.statistics.ReceivePassed(action.ID, 1)
-		this.core.statistics.InputValidationPassed(action.ID, 1)
+		this.core.metrics.ReceivePassed(action.ID, 1)
+		this.core.metrics.InputValidationPassed(action.ID, 1)
 
 		if connector.Type == state.App {
 			if record.MatchingID == "" {
@@ -210,7 +210,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
-					return newActionError(statistics.TransformationStep, err)
+					return newActionError(metrics.TransformationStep, err)
 				}
 				return err
 			}
@@ -218,20 +218,20 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						this.core.statistics.TransformationPassed(action.ID, 1)
-						this.core.statistics.OutputValidationFailed(action.ID, 1, record.Err.Error())
+						this.core.metrics.TransformationPassed(action.ID, 1)
+						this.core.metrics.OutputValidationFailed(action.ID, 1, record.Err.Error())
 						continue
 					}
-					this.core.statistics.TransformationFailed(action.ID, 1, record.Err.Error())
+					this.core.metrics.TransformationFailed(action.ID, 1, record.Err.Error())
 					continue
 				}
-				this.core.statistics.TransformationPassed(action.ID, 1)
-				this.core.statistics.OutputValidationPassed(action.ID, 1)
+				this.core.metrics.TransformationPassed(action.ID, 1)
+				this.core.metrics.OutputValidationPassed(action.ID, 1)
 				if user.MatchingValue != nil {
 					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
 				}
 				if connector.Type == state.App && len(record.Properties) == 0 {
-					this.core.statistics.FinalizePassed(action.ID, 1)
+					this.core.metrics.FinalizePassed(action.ID, 1)
 					continue
 				}
 				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
@@ -245,7 +245,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	}
 	if err = records.Err(); err != nil {
-		return newActionError(statistics.ReceiveStep, err)
+		return newActionError(metrics.ReceiveStep, err)
 	}
 
 	users = nil
@@ -256,7 +256,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		err = writer.Close(ctx)
 	}
 	if err != nil {
-		return newActionError(statistics.FinalizeStep, err)
+		return newActionError(metrics.FinalizeStep, err)
 	}
 
 	if nonExistentUsers != nil {

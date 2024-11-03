@@ -122,9 +122,9 @@ func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) 
 	return map[string][]core.ActionError{"errors": errs}, nil
 }
 
-// ActionStatsPerDate returns statistics aggregated by day for a time interval
+// ActionMetricsPerDate returns metrics aggregated by day for a time interval
 // between specified start and end dates.
-func (workspace workspace) ActionStatsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) ActionMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -171,21 +171,21 @@ func (workspace workspace) ActionStatsPerDate(_ http.ResponseWriter, r *http.Req
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerDate(r.Context(), start, end, actions)
+	metrics, err := ws.ActionMetricsPerDate(r.Context(), start, end, actions)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]any{
-		"start":  stats.Start,
-		"end":    stats.End,
-		"passed": stats.Passed,
-		"failed": stats.Failed}, nil
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
 }
 
-// ActionStatsPerDay returns the action statistics for a specified number of
+// ActionMetricsPerDay returns the action metrics for a specified number of
 // days.
-func (workspace workspace) ActionStatsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -220,21 +220,21 @@ func (workspace workspace) ActionStatsPerDay(_ http.ResponseWriter, r *http.Requ
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), days, core.Day, actions)
+	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), days, core.Day, actions)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]any{
-		"start":  stats.Start,
-		"end":    stats.End,
-		"passed": stats.Passed,
-		"failed": stats.Failed}, nil
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
 }
 
-// ActionStatsPerHour returns the action statistics for a specified number of
+// ActionMetricsPerHour returns the action metrics for a specified number of
 // hours.
-func (workspace workspace) ActionStatsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) ActionMetricsPerHour(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -269,21 +269,21 @@ func (workspace workspace) ActionStatsPerHour(_ http.ResponseWriter, r *http.Req
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), hours, core.Hour, actions)
+	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), hours, core.Hour, actions)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]any{
-		"start":  stats.Start,
-		"end":    stats.End,
-		"passed": stats.Passed,
-		"failed": stats.Failed}, nil
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
 }
 
-// ActionStatsPerMinute returns the action statistics for a specified number of
+// ActionMetricsPerMinute returns the action metrics for a specified number of
 // minutes.
-func (workspace workspace) ActionStatsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -318,16 +318,16 @@ func (workspace workspace) ActionStatsPerMinute(_ http.ResponseWriter, r *http.R
 		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
 	}
 
-	stats, err := ws.ActionStatsPerTimeUnit(r.Context(), minutes, core.Minute, actions)
+	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), minutes, core.Minute, actions)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]any{
-		"start":  stats.Start,
-		"end":    stats.End,
-		"passed": stats.Passed,
-		"failed": stats.Failed}, nil
+		"start":  metrics.Start,
+		"end":    metrics.End,
+		"passed": metrics.Passed,
+		"failed": metrics.Failed}, nil
 }
 
 // AddConnection adds a new connection.

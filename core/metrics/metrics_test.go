@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package statistics
+package metrics
 
 import (
 	"testing"

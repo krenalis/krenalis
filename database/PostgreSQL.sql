@@ -134,7 +134,7 @@ CREATE INDEX ON actions_errors (action);
 CREATE INDEX ON actions_errors (timeslot);
 CREATE INDEX ON actions_errors (step);
 
-CREATE TABLE actions_stats (
+CREATE TABLE actions_metrics (
     action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
     timeslot integer NOT NULL,
     passed_0 integer NOT NULL,
@@ -152,8 +152,8 @@ CREATE TABLE actions_stats (
     PRIMARY KEY (action, timeslot)
 );
 
-CREATE INDEX ON actions_stats (action);
-CREATE INDEX ON actions_stats (timeslot);
+CREATE INDEX ON actions_metrics (action);
+CREATE INDEX ON actions_metrics (timeslot);
 
 CREATE TABLE connections_keys (
     connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,

@@ -145,7 +145,7 @@ interface ActionError {
 	LastOccurred: Date;
 }
 
-interface ActionStatistics {
+interface ActionMetrics {
 	start: Date;
 	end: Date;
 	passed: [number, number, number, number, number, number][];
@@ -171,5 +171,5 @@ export type {
 	TransformationPurpose,
 	ActionStep,
 	ActionError,
-	ActionStatistics,
+	ActionMetrics,
 };

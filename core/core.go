@@ -28,9 +28,9 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events/collector"
 	"github.com/meergo/meergo/core/events/dispatcher"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/statistics"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/lambda"
 	"github.com/meergo/meergo/core/transformers/local"
@@ -54,7 +54,7 @@ type Core struct {
 	state      *state.State
 	datastore  *datastore.Datastore
 	connectors *connectors.Connectors
-	statistics *statistics.Statistics
+	metrics    *metrics.Collector
 	events     struct {
 		collector  *collector.Collector
 		observer   *collector.Observer
@@ -183,8 +183,8 @@ func New(conf *Config) (*Core, error) {
 	// Init the connectors.
 	core.connectors = connectors.New(db, core.state)
 
-	// Init the statistics.
-	core.statistics = statistics.New(db, core.state)
+	// Init the metrics.
+	core.metrics = metrics.New(db, core.state)
 
 	// Init the events.
 	core.events.dispatcher, err = dispatcher.New(db, core.state, core.transformerProvider, core.connectors)
@@ -193,7 +193,7 @@ func New(conf *Config) (*Core, error) {
 		core.state.Close()
 		return nil, err
 	}
-	core.events.collector, err = collector.New(db, core.state, core.datastore, core.transformerProvider, core.events.dispatcher, core.statistics)
+	core.events.collector, err = collector.New(db, core.state, core.datastore, core.transformerProvider, core.events.dispatcher, core.metrics)
 	if err != nil {
 		core.events.dispatcher.Close()
 		core.datastore.Close()
@@ -301,9 +301,9 @@ func (core *Core) Close() {
 	core.close.Wait()
 	// Close the action purger.
 	core.actionPurger.Close(context.Background())
-	// Close event dispatcher, statistics, datastore and state.
+	// Close event dispatcher, metrics, datastore and state.
 	core.events.dispatcher.Close()
-	core.statistics.Close(context.Background())
+	core.metrics.Close(context.Background())
 	core.datastore.Close()
 	core.state.Close()
 }

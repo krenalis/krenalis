@@ -28,7 +28,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 					className={`connection-wrapper__link${tab === 'overview' ? ' connection-wrapper__link--selected' : ''}`}
 				>
 					<SlIcon name='bar-chart'></SlIcon>
-					Analytics
+					Metrics
 				</div>
 			</Link>
 			{(connection.isMobile || connection.isWebsite || connection.isServer || connection.isStream) && (

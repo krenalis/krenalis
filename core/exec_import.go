@@ -18,9 +18,9 @@ import (
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/filters"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/statistics"
 	"github.com/meergo/meergo/core/transformers"
 )
 
@@ -85,25 +85,25 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
 		}
-		return newActionError(statistics.InputValidationStep, err)
+		return newActionError(metrics.InputValidationStep, err)
 	}
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
 	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
-			this.core.statistics.FinalizeFailed(action.ID, len(ids), err.Error())
+			this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
 			return
 		}
-		this.core.statistics.FinalizePassed(action.ID, len(ids))
+		this.core.metrics.FinalizePassed(action.ID, len(ids))
 	})
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
-			return newActionError(statistics.FinalizeStep, err)
+			return newActionError(metrics.FinalizeStep, err)
 		}
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the output schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
-			return newActionError(statistics.OutputValidationStep, err)
+			return newActionError(metrics.OutputValidationStep, err)
 		}
 		return err
 	}
@@ -124,24 +124,24 @@ func (this *Action) importUsers(ctx context.Context) error {
 		if user.Err != nil {
 			iw.Keep(user.ID)
 			if _, ok := user.Err.(ValidationError); ok {
-				this.core.statistics.ReceivePassed(action.ID, 1)
-				this.core.statistics.InputValidationFailed(action.ID, 1, user.Err.Error())
+				this.core.metrics.ReceivePassed(action.ID, 1)
+				this.core.metrics.InputValidationFailed(action.ID, 1, user.Err.Error())
 				goto Next
 			}
-			this.core.statistics.ReceiveFailed(action.ID, 1, user.Err.Error())
+			this.core.metrics.ReceiveFailed(action.ID, 1, user.Err.Error())
 			goto Next
 		}
 
-		this.core.statistics.ReceivePassed(action.ID, 1)
-		this.core.statistics.InputValidationPassed(action.ID, 1)
+		this.core.metrics.ReceivePassed(action.ID, 1)
+		this.core.metrics.InputValidationPassed(action.ID, 1)
 
 		// In case the action has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
 			if !filters.Applies(action.Filter, user.Properties) {
-				this.core.statistics.FilterFailed(action.ID, 1)
+				this.core.metrics.FilterFailed(action.ID, 1)
 				goto Next
 			}
-			this.core.statistics.FilterPassed(action.ID, 1)
+			this.core.metrics.FilterPassed(action.ID, 1)
 		}
 
 		if user.LastChangeTime.After(cursor) {
@@ -163,7 +163,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			err := transformer.Transform(ctx, transformationRecords)
 			if err != nil {
 				if err, ok := err.(transformers.FunctionExecutionError); ok {
-					return newActionError(statistics.TransformationStep, err)
+					return newActionError(metrics.TransformationStep, err)
 				}
 				return err
 			}
@@ -173,16 +173,16 @@ func (this *Action) importUsers(ctx context.Context) error {
 				user := users[i]
 				if record.Err != nil {
 					if _, ok := record.Err.(ValidationError); ok {
-						this.core.statistics.TransformationPassed(action.ID, 1)
-						this.core.statistics.OutputValidationFailed(action.ID, 1, record.Err.Error())
+						this.core.metrics.TransformationPassed(action.ID, 1)
+						this.core.metrics.OutputValidationFailed(action.ID, 1, record.Err.Error())
 						continue
 					}
-					this.core.statistics.TransformationFailed(action.ID, 1, record.Err.Error())
+					this.core.metrics.TransformationFailed(action.ID, 1, record.Err.Error())
 					continue
 				}
 				user.Properties = record.Properties
-				this.core.statistics.TransformationPassed(action.ID, 1)
-				this.core.statistics.OutputValidationPassed(action.ID, 1)
+				this.core.metrics.TransformationPassed(action.ID, 1)
+				this.core.metrics.OutputValidationPassed(action.ID, 1)
 				err = iw.Write(datastore.Identity{
 					ID:             user.ID,
 					Properties:     user.Properties,
@@ -190,7 +190,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 				}, "")
 				if err != nil {
 					err := iw.Close(ctx)
-					return newActionError(statistics.FinalizeStep, err)
+					return newActionError(metrics.FinalizeStep, err)
 				}
 			}
 
@@ -209,17 +209,17 @@ func (this *Action) importUsers(ctx context.Context) error {
 	if err = records.Err(); err != nil {
 		if err, ok := err.(*schemas.Error); ok {
 			err.Msg = "in the input schema, " + err.Msg + ". Please review and update the action before attempting to import the users."
-			return newActionError(statistics.InputValidationStep, err)
+			return newActionError(metrics.InputValidationStep, err)
 		}
 		if err == meergo.ErrSheetNotExist {
 			err = fmt.Errorf("file does not contain any sheet named %q", action.Sheet)
 		}
-		return newActionError(statistics.ReceiveStep, err)
+		return newActionError(metrics.ReceiveStep, err)
 	}
 
 	err = iw.Close(ctx)
 	if err != nil {
-		return newActionError(statistics.FinalizeStep, err)
+		return newActionError(metrics.FinalizeStep, err)
 	}
 
 	return nil

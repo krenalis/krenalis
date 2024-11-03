@@ -16,18 +16,18 @@ import (
 
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/statistics"
 )
 
 // actionError represents an action error.
 type actionError struct {
-	step statistics.Step
+	step metrics.Step
 	err  error
 }
 
-func newActionError(step statistics.Step, err error) *actionError {
+func newActionError(step metrics.Step, err error) *actionError {
 	return &actionError{step, err}
 }
 
@@ -109,10 +109,10 @@ func (this *Action) addExecution(ctx context.Context, reload bool) (int, error) 
 func (this *Action) exec(ctx context.Context) {
 
 	execution, _ := this.action.Execution()
-	timeSlot := statistics.TimeSlotFromTime(execution.StartTime)
+	timeSlot := metrics.TimeSlotFromTime(execution.StartTime)
 
 	var err error
-	var errorStep statistics.Step
+	var errorStep metrics.Step
 	var errorMessage string
 	var actionImportedUsers bool
 
@@ -122,19 +122,19 @@ func (this *Action) exec(ctx context.Context) {
 			if actionErr, ok := err.(*actionError); ok {
 				errorStep = actionErr.step
 				errorMessage = err.Error()
-				this.core.statistics.Failed(errorStep, this.action.ID, 0, errorMessage)
+				this.core.metrics.Failed(errorStep, this.action.ID, 0, errorMessage)
 			} else {
 				select {
 				case <-ctx.Done():
-					this.core.statistics.ReceiveFailed(this.action.ID, 0, "execution has been cancelled")
+					this.core.metrics.ReceiveFailed(this.action.ID, 0, "execution has been cancelled")
 				default:
-					this.core.statistics.ReceiveFailed(this.action.ID, 0, "an internal error has occurred")
+					this.core.metrics.ReceiveFailed(this.action.ID, 0, "an internal error has occurred")
 					slog.Error("cannot execute action", "action", this.action.ID, "execution", execution.ID, "err", err)
 				}
 			}
 		}
 
-		this.core.statistics.WaitStore()
+		this.core.metrics.WaitStore()
 		endTime := time.Now().UTC()
 
 		n := state.EndActionExecution{
@@ -147,7 +147,7 @@ func (this *Action) exec(ctx context.Context) {
 			_, err := tx.Exec(ctx,
 				"WITH stats AS (\n"+
 					"	SELECT COALESCE(SUM(passed_5), 0) as passed, COALESCE(SUM(failed_0 + failed_1 + failed_2 + failed_3 + failed_4 + failed_5), 0) as failed\n"+
-					"	FROM actions_stats\n"+
+					"	FROM actions_metrics\n"+
 					"	WHERE action = $2 AND timeslot >= $3\n"+
 					")\n"+
 					"UPDATE actions_executions AS e\n"+
@@ -190,18 +190,18 @@ func (this *Action) exec(ctx context.Context) {
 	}()
 
 	if this.Target == Groups {
-		this.core.statistics.ReceiveFailed(this.action.ID, 0, "groups import and export are not implemented")
+		this.core.metrics.ReceiveFailed(this.action.ID, 0, "groups import and export are not implemented")
 		return
 	}
 	if !this.isLanguageSupported() {
-		this.core.statistics.ReceiveFailed(this.action.ID, 0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
+		this.core.metrics.ReceiveFailed(this.action.ID, 0, fmt.Sprintf("%s transformation language is not supported", this.Transformation.Function.Language))
 		return
 	}
 
 	_, err = this.core.db.Exec(ctx,
 		"WITH stats AS (\n"+
 			"	SELECT -passed_5 as passed, -(failed_0 + failed_1 + failed_2 + failed_3 + failed_4 + failed_5) as failed\n"+
-			"	FROM actions_stats\n"+
+			"	FROM actions_metrics\n"+
 			"	WHERE action = $2 AND timeslot = $3\n"+
 			")\n"+
 			"UPDATE actions_executions\n"+

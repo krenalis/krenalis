@@ -11,7 +11,7 @@ import {
 	Transformation,
 	TransformationPurpose,
 	ActionStep,
-	ActionStatistics,
+	ActionMetrics,
 	Filter,
 } from './types/action';
 import { UI_BASE_PATH } from '../../constants/paths';
@@ -696,7 +696,7 @@ class Workspaces {
 		return r;
 	};
 
-	actionStatsPerDate = async (start: Date, end: Date, actions: number[]): Promise<ActionStatistics> => {
+	actionMetricsPerDate = async (start: Date, end: Date, actions: number[]): Promise<ActionMetrics> => {
 		let actionQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
@@ -707,7 +707,7 @@ class Workspaces {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
-			`${this.apiURL}/action-stats/dates?start=${encodeURIComponent(sd)}&end=${encodeURIComponent(ed)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/dates?start=${encodeURIComponent(sd)}&end=${encodeURIComponent(ed)}&${actionQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);
@@ -715,7 +715,7 @@ class Workspaces {
 		return r;
 	};
 
-	actionStatsPerDay = async (days: number, actions: number[]): Promise<ActionStatistics> => {
+	actionMetricsPerDay = async (days: number, actions: number[]): Promise<ActionMetrics> => {
 		let actionQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
@@ -724,7 +724,7 @@ class Workspaces {
 			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-stats/days?days=${encodeURIComponent(days)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/days?days=${encodeURIComponent(days)}&${actionQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);
@@ -732,7 +732,7 @@ class Workspaces {
 		return r;
 	};
 
-	actionStatsPerHour = async (hours: number, actions: number[]): Promise<ActionStatistics> => {
+	actionMetricsPerHour = async (hours: number, actions: number[]): Promise<ActionMetrics> => {
 		let actionQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
@@ -741,7 +741,7 @@ class Workspaces {
 			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-stats/hours?hours=${encodeURIComponent(hours)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/hours?hours=${encodeURIComponent(hours)}&${actionQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);
@@ -749,7 +749,7 @@ class Workspaces {
 		return r;
 	};
 
-	actionStatsPerMinute = async (minutes: number, actions: number[]): Promise<ActionStatistics> => {
+	actionMetricsPerMinute = async (minutes: number, actions: number[]): Promise<ActionMetrics> => {
 		let actionQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
@@ -758,7 +758,7 @@ class Workspaces {
 			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-stats/minutes?minutes=${encodeURIComponent(minutes)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/minutes?minutes=${encodeURIComponent(minutes)}&${actionQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);

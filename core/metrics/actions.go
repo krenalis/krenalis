@@ -5,7 +5,7 @@
 // Copyright (c) 2024 Open2b
 //
 
-package statistics
+package metrics
 
 import (
 	"bytes"
@@ -31,8 +31,8 @@ type Error struct {
 	LastOccurred time.Time
 }
 
-// Stats represents the statistics for a time period.
-type Stats struct {
+// Metrics represents the metrics for a time period.
+type Metrics struct {
 	Start, End time.Time
 	Passed     [][6]int
 	Failed     [][6]int
@@ -42,7 +42,7 @@ type Stats struct {
 // [start,end). The end time must not precede the start time, and both must be
 // within [MinTime,MaxTime]. actions must not be empty. Returned errors are
 // limited to [first, first+limit), where first >= 0 and 0 < limit <= 100.
-func (s *Statistics) Errors(ctx context.Context, start, end time.Time, actions []int, step *Step, first, limit int) ([]Error, error) {
+func (c *Collector) Errors(ctx context.Context, start, end time.Time, actions []int, step *Step, first, limit int) ([]Error, error) {
 
 	tsStart := TimeSlotFromTime(start)
 	tsEnd := TimeSlotFromTime(end) - 1
@@ -71,7 +71,7 @@ func (s *Statistics) Errors(ctx context.Context, start, end time.Time, actions [
 
 	query.WriteString("\nGROUP BY action, step, message\nORDER BY timeslot DESC, action, message\nLIMIT $1\nOFFSET $2")
 
-	rows, err := s.db.Query(ctx, query.String(), limit, first)
+	rows, err := c.db.Query(ctx, query.String(), limit, first)
 	if err != nil {
 		return nil, err
 	}
@@ -97,16 +97,16 @@ func (s *Statistics) Errors(ctx context.Context, start, end time.Time, actions [
 	return errs[:i], nil
 }
 
-// StatsPerDate returns statistics aggregated by day for the time interval
+// MetricsPerDate returns metrics aggregated by day for the time interval
 // between the specified start and end dates. Both dates must be within the
 // range [MinTime,MaxTime], and the day of the start date must be at least one
 // day before the day of the end date. actions specifies the actions for which
-// statistics are returned and cannot be empty.
-func (s *Statistics) StatsPerDate(ctx context.Context, start, end time.Time, actions []int) (Stats, error) {
+// metrics are returned and cannot be empty.
+func (c *Collector) MetricsPerDate(ctx context.Context, start, end time.Time, actions []int) (Metrics, error) {
 
 	number := int(end.Sub(start).Hours() / 24)
 
-	stats := Stats{
+	metrics := Metrics{
 		Start:  start,
 		End:    end,
 		Passed: make([][6]int, number),
@@ -118,7 +118,7 @@ func (s *Statistics) StatsPerDate(ctx context.Context, start, end time.Time, act
 
 	query := bytes.NewBufferString("SELECT timeslot/(24*60) AS day, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
 		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
-		"FROM actions_stats\nWHERE timeslot BETWEEN $1 AND $2 AND action IN (")
+		"FROM actions_metrics\nWHERE timeslot BETWEEN $1 AND $2 AND action IN (")
 	for i, action := range actions {
 		if i > 0 {
 			query.WriteByte(',')
@@ -127,12 +127,12 @@ func (s *Statistics) StatsPerDate(ctx context.Context, start, end time.Time, act
 	}
 	query.WriteString(")\nGROUP BY day\nORDER BY day")
 
-	rows, err := s.db.Query(ctx, query.String(), tsStart, tsEnd)
+	rows, err := c.db.Query(ctx, query.String(), tsStart, tsEnd)
 	if err != nil {
 		var a any
 		a = err
 		print(a)
-		return Stats{}, err
+		return Metrics{}, err
 	}
 	defer rows.Close()
 
@@ -141,33 +141,33 @@ func (s *Statistics) StatsPerDate(ctx context.Context, start, end time.Time, act
 	for rows.Next() {
 		if err = rows.Scan(&slot, &passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
 			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5]); err != nil {
-			return Stats{}, err
+			return Metrics{}, err
 		}
 		i := int(slot - tsStart/(24*60))
 		if i < 0 || i >= number {
-			return Stats{}, fmt.Errorf("actions_errors table contains a timeslot that is out of range")
+			return Metrics{}, fmt.Errorf("actions_metrics table contains a timeslot that is out of range")
 		}
-		stats.Passed[i] = passed
-		stats.Failed[i] = failed
+		metrics.Passed[i] = passed
+		metrics.Failed[i] = failed
 	}
 	if err := rows.Err(); err != nil {
-		return Stats{}, err
+		return Metrics{}, err
 	}
 
-	return stats, nil
+	return metrics, nil
 }
 
-// StatsPerTimeUnit returns statistics for the specified number of minutes,
+// MetricsPerTimeUnit returns metrics for the specified number of minutes,
 // hours, or days based on the unit, which can be Minute, Hour, or Day, up to
 // the current time. number must be in the following ranges: [1,60] for minutes,
 // [1,48] for hours, and [1,30] for days. actions represents the actions for
-// which statistics are returned and cannot be empty.
-func (s *Statistics) StatsPerTimeUnit(ctx context.Context, number int, unit time.Duration, actions []int) (Stats, error) {
+// which metrics are returned and cannot be empty.
+func (c *Collector) MetricsPerTimeUnit(ctx context.Context, number int, unit time.Duration, actions []int) (Metrics, error) {
 
 	now := time.Now().UTC()
 	end := now.Truncate(unit).Add(unit)
 
-	stats := Stats{
+	metrics := Metrics{
 		Start:  end.Add(-time.Duration(number) * unit),
 		End:    end,
 		Passed: make([][6]int, number),
@@ -175,12 +175,12 @@ func (s *Statistics) StatsPerTimeUnit(ctx context.Context, number int, unit time
 	}
 
 	divisor := int32(unit / time.Minute)
-	tsStart := TimeSlotFromTime(stats.Start)
-	tsEnd := TimeSlotFromTime(stats.End) - 1
+	tsStart := TimeSlotFromTime(metrics.Start)
+	tsEnd := TimeSlotFromTime(metrics.End) - 1
 
 	query := bytes.NewBufferString("SELECT timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5)," +
 		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5)\n" +
-		"FROM actions_stats\nWHERE timeslot BETWEEN $2 AND $3 AND action IN (")
+		"FROM actions_metrics\nWHERE timeslot BETWEEN $2 AND $3 AND action IN (")
 	for i, action := range actions {
 		if i > 0 {
 			query.WriteByte(',')
@@ -189,9 +189,9 @@ func (s *Statistics) StatsPerTimeUnit(ctx context.Context, number int, unit time
 	}
 	query.WriteString(")\nGROUP BY slot\nORDER BY slot")
 
-	rows, err := s.db.Query(ctx, query.String(), divisor, tsStart, tsEnd)
+	rows, err := c.db.Query(ctx, query.String(), divisor, tsStart, tsEnd)
 	if err != nil {
-		return Stats{}, err
+		return Metrics{}, err
 	}
 	defer rows.Close()
 
@@ -200,18 +200,18 @@ func (s *Statistics) StatsPerTimeUnit(ctx context.Context, number int, unit time
 	for rows.Next() {
 		if err = rows.Scan(&slot, &passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5],
 			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5]); err != nil {
-			return Stats{}, err
+			return Metrics{}, err
 		}
 		i := int(slot - tsStart/divisor)
 		if i < 0 || i >= number {
-			return Stats{}, fmt.Errorf("actions_errors table contains a timeslot that is out of range")
+			return Metrics{}, fmt.Errorf("actions_metrics table contains a timeslot that is out of range")
 		}
-		stats.Passed[i] = passed
-		stats.Failed[i] = failed
+		metrics.Passed[i] = passed
+		metrics.Failed[i] = failed
 	}
 	if err := rows.Err(); err != nil {
-		return Stats{}, err
+		return Metrics{}, err
 	}
 
-	return stats, nil
+	return metrics, nil
 }

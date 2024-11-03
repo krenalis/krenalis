@@ -30,9 +30,9 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/collector"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
-	"github.com/meergo/meergo/core/statistics"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -81,12 +81,12 @@ type DisplayedProperties struct {
 type ActionStep int
 
 const (
-	ReceiveStep          = ActionStep(statistics.ReceiveStep)
-	InputValidationStep  = ActionStep(statistics.InputValidationStep)
-	FilterStep           = ActionStep(statistics.FilterStep)
-	TransformationStep   = ActionStep(statistics.TransformationStep)
-	OutputValidationStep = ActionStep(statistics.OutputValidationStep)
-	FinalizeStep         = ActionStep(statistics.FinalizeStep)
+	ReceiveStep          = ActionStep(metrics.ReceiveStep)
+	InputValidationStep  = ActionStep(metrics.InputValidationStep)
+	FilterStep           = ActionStep(metrics.FilterStep)
+	TransformationStep   = ActionStep(metrics.TransformationStep)
+	OutputValidationStep = ActionStep(metrics.OutputValidationStep)
+	FinalizeStep         = ActionStep(metrics.FinalizeStep)
 )
 
 func (step ActionStep) String() string {
@@ -138,9 +138,9 @@ type ActionError struct {
 
 // ActionErrors returns the errors for the provided actions within the time
 // range [start,end). The end time must not precede the start time, and both
-// must be within [statistics.MinTime,statistics.MaxTime]. actions must not be
-// empty. Returned errors are limited to [first, first+limit), where first >= 0
-// and 0 < limit <= 100.
+// must be within [metrics.MinTime,metrics.MaxTime]. actions must not be empty.
+// Returned errors are limited to [first, first+limit), where first >= 0 and
+// 0 < limit <= 100.
 func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, actions []int, step *ActionStep, first, limit int) ([]ActionError, error) {
 
 	this.core.mustBeOpen()
@@ -149,10 +149,10 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 	end = end.UTC()
 
 	// Validate start and end.
-	if start.Before(statistics.MinTime) {
+	if start.Before(metrics.MinTime) {
 		return nil, errors.New("start date is too far in the past")
 	}
-	if end.After(statistics.MaxTime) {
+	if end.After(metrics.MaxTime) {
 		return nil, errors.New("end date date is too far in the future")
 	}
 	if end.Before(start) {
@@ -170,12 +170,12 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 	}
 
 	// Validate step.
-	var s *statistics.Step
+	var s *metrics.Step
 	if step != nil {
 		if *step < ReceiveStep || *step > FinalizeStep {
 			return nil, errors.BadRequest("step %d is not valid", *step)
 		}
-		s = (*statistics.Step)(step)
+		s = (*metrics.Step)(step)
 	}
 
 	// validate first and limit.
@@ -191,13 +191,13 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 		return []ActionError{}, nil
 	}
 
-	statisticsErrors, err := this.core.statistics.Errors(ctx, start, end, actions, s, first, limit)
+	metricsErrors, err := this.core.metrics.Errors(ctx, start, end, actions, s, first, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	errs := make([]ActionError, len(statisticsErrors))
-	for i, e := range statisticsErrors {
+	errs := make([]ActionError, len(metricsErrors))
+	for i, e := range metricsErrors {
 		errs[i] = ActionError{
 			Action:       e.Action,
 			Step:         ActionStep(e.Step),
@@ -210,33 +210,32 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 	return errs, nil
 }
 
-// ActionStats represents action statistics for a time period.
-type ActionStats struct {
+// ActionMetrics represents action metrics for a time period.
+type ActionMetrics struct {
 	Start, End time.Time
 	Passed     [][6]int
 	Failed     [][6]int
 }
 
-// StatsUnit represents the unit of time used for aggregating statistics.
+// MetricUnit represents the unit of time used for aggregating metrics.
 // It can be:
-// - Minute: aggregates statistics by minute
-// - Hour: aggregates statistics by hour
-// - Day: aggregates statistics by day
-type StatsUnit int
+// - Minute: aggregates metrics by minute
+// - Hour: aggregates metrics by hour
+// - Day: aggregates metrics by day
+type MetricUnit int
 
 const (
-	Minute = StatsUnit(statistics.Minute)
-	Hour   = StatsUnit(statistics.Hour)
-	Day    = StatsUnit(statistics.Day)
+	Minute = MetricUnit(metrics.Minute)
+	Hour   = MetricUnit(metrics.Hour)
+	Day    = MetricUnit(metrics.Day)
 )
 
-// ActionStatsPerDate returns statistics aggregated by day for the time interval
+// ActionMetricsPerDate returns metrics aggregated by day for the time interval
 // between the specified start and end dates. The years in the dates must be
 // no earlier than 1970 and no later than the next year. The day of the start
 // date must be at least one day before the day of the end date. actions
-// specifies the actions for which statistics are returned and must not be
-// empty.
-func (this *Workspace) ActionStatsPerDate(ctx context.Context, start, end time.Time, actions []int) (ActionStats, error) {
+// specifies the actions for which metrics are returned and must not be empty.
+func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time.Time, actions []int) (ActionMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -244,30 +243,30 @@ func (this *Workspace) ActionStatsPerDate(ctx context.Context, start, end time.T
 	end = end.UTC().Truncate(24 * time.Hour)
 
 	// Validate start and end.
-	if start.Before(statistics.MinTime) {
-		return ActionStats{}, errors.BadRequest("start date is too far in the past")
+	if start.Before(metrics.MinTime) {
+		return ActionMetrics{}, errors.BadRequest("start date is too far in the past")
 	}
-	if end.After(statistics.MaxTime) {
-		return ActionStats{}, errors.BadRequest("end date date is too far in the future")
+	if end.After(metrics.MaxTime) {
+		return ActionMetrics{}, errors.BadRequest("end date date is too far in the future")
 	}
 	if !end.After(start) {
-		return ActionStats{}, errors.BadRequest("day of the end date must be after the day of the start date")
+		return ActionMetrics{}, errors.BadRequest("day of the end date must be after the day of the start date")
 	}
 
 	// Validate actions.
 	if len(actions) == 0 {
-		return ActionStats{}, errors.BadRequest("actions if non-nil, cannot be empty")
+		return ActionMetrics{}, errors.BadRequest("actions if non-nil, cannot be empty")
 	}
 	for _, action := range actions {
 		if action < 1 || action > maxInt32 {
-			return ActionStats{}, errors.BadRequest("action %d is not valid", action)
+			return ActionMetrics{}, errors.BadRequest("action %d is not valid", action)
 		}
 	}
 
 	actions = filterWorkspaceActions(this.workspace, actions)
 	if len(actions) == 0 {
 		number := int(end.Sub(start).Hours() / 24)
-		return ActionStats{
+		return ActionMetrics{
 			Start:  start,
 			End:    end,
 			Passed: make([][6]int, number),
@@ -275,25 +274,25 @@ func (this *Workspace) ActionStatsPerDate(ctx context.Context, start, end time.T
 		}, nil
 	}
 
-	stats, err := this.core.statistics.StatsPerDate(ctx, start, end, actions)
+	metrics, err := this.core.metrics.MetricsPerDate(ctx, start, end, actions)
 	if err != nil {
-		return ActionStats{}, err
+		return ActionMetrics{}, err
 	}
 
-	return ActionStats{
-		Start:  stats.Start,
-		End:    stats.End,
-		Passed: stats.Passed,
-		Failed: stats.Failed,
+	return ActionMetrics{
+		Start:  metrics.Start,
+		End:    metrics.End,
+		Passed: metrics.Passed,
+		Failed: metrics.Failed,
 	}, nil
 }
 
-// ActionStatsPerTimeUnit returns statistics for the specified number of
-// minutes, hours, or days based on the unit, which can be Minute, Hour, or Day,
-// up to the current time. number must be in the following ranges: [1,60] for
-// minutes, [1,48] for hours, and [1,30] for days. actions specifies the actions
-// for which statistics are returned and must not be empty.
-func (this *Workspace) ActionStatsPerTimeUnit(ctx context.Context, number int, unit StatsUnit, actions []int) (ActionStats, error) {
+// ActionMetricsPerTimeUnit returns metrics for the specified number of minutes,
+// hours, or days based on the unit, which can be Minute, Hour, or Day, up to
+// the current time. number must be in the following ranges: [1,60] for minutes,
+// [1,48] for hours, and [1,30] for days. actions specifies the actions for
+// which metrics are returned and must not be empty.
+func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, actions []int) (ActionMetrics, error) {
 
 	this.core.mustBeOpen()
 
@@ -301,46 +300,46 @@ func (this *Workspace) ActionStatsPerTimeUnit(ctx context.Context, number int, u
 	switch unit {
 	case Minute:
 		if number < 1 || number > 60 {
-			return ActionStats{}, errors.BadRequest("minutes must be in range [1,60]")
+			return ActionMetrics{}, errors.BadRequest("minutes must be in range [1,60]")
 		}
 	case Hour:
 		if number < 1 || number > 48 {
-			return ActionStats{}, errors.BadRequest("hours must be in range [1,48]")
+			return ActionMetrics{}, errors.BadRequest("hours must be in range [1,48]")
 		}
 	case Day:
 		if number < 1 || number > 30 {
-			return ActionStats{}, errors.BadRequest("days must be in range [1,30]")
+			return ActionMetrics{}, errors.BadRequest("days must be in range [1,30]")
 		}
 	}
 
 	// Validate actions.
 	if len(actions) == 0 {
-		return ActionStats{}, errors.BadRequest("actions if non-nil, cannot be empty")
+		return ActionMetrics{}, errors.BadRequest("actions if non-nil, cannot be empty")
 	}
 	for _, action := range actions {
 		if action < 1 || action > maxInt32 {
-			return ActionStats{}, errors.BadRequest("action %d is not valid", action)
+			return ActionMetrics{}, errors.BadRequest("action %d is not valid", action)
 		}
 	}
 
 	actions = filterWorkspaceActions(this.workspace, actions)
 	if len(actions) == 0 {
-		return ActionStats{
+		return ActionMetrics{
 			Passed: make([][6]int, number),
 			Failed: make([][6]int, number),
 		}, nil
 	}
 
-	stats, err := this.core.statistics.StatsPerTimeUnit(ctx, number, time.Duration(unit), actions)
+	metrics, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, time.Duration(unit), actions)
 	if err != nil {
-		return ActionStats{}, err
+		return ActionMetrics{}, err
 	}
 
-	return ActionStats{
-		Start:  stats.Start,
-		End:    stats.End,
-		Passed: stats.Passed,
-		Failed: stats.Failed,
+	return ActionMetrics{
+		Start:  metrics.Start,
+		End:    metrics.End,
+		Passed: metrics.Passed,
+		Failed: metrics.Failed,
 	}, nil
 }
 

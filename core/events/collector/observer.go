@@ -226,7 +226,7 @@ func (observer *Observer) addCollectedEvent(source int, event *collectedEvent, e
 	observer.RLock()
 	defer observer.RUnlock()
 
-	// Update statistics.
+	// Update metrics.
 	var found bool
 	observer.statsMu.Lock()
 	for i, s := range observer.stats {

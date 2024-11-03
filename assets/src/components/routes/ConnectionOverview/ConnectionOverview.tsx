@@ -13,13 +13,13 @@ import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/in
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { DateRange } from 'react-date-range';
 import { ActionError, ActionErrorsResponse } from '../../../lib/api/types/responses';
-import { ActionStatistics } from '../../../lib/api/types/action';
+import { ActionMetrics } from '../../../lib/api/types/action';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 import considerAsUTC from '../../../utils/considerUTC';
 
-interface ActionStatisticsPoint {
+interface ActionMetricsPoint {
 	time: string;
 	passed: number;
 	failed: number;
@@ -33,7 +33,7 @@ interface FunnelPoint {
 
 type FunnelData = FunnelPoint[];
 
-type statisticsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
+type metricsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
 
 type StepIdentifier = 'RECEIVE' | 'INPUT_VALIDATION' | 'FILTER' | 'TRANSFORMATION' | 'OUTPUT_VALIDATION' | 'FINALIZE';
 
@@ -77,16 +77,16 @@ const STEP_NAME_BY_IDENTIFIER: Record<StepIdentifier, string> = {
 };
 
 const ConnectionOverview = () => {
-	const [userActionsStatistics, setUserActionsStatistics] = useState<ActionStatistics>();
-	const [eventActionsStatistics, setEventActionsStatistics] = useState<ActionStatistics>();
+	const [userActionsMetrics, setUserActionsMetrics] = useState<ActionMetrics>();
+	const [eventActionsMetrics, setEventActionsMetrics] = useState<ActionMetrics>();
 	const [userActionsErrors, setUserActionsErrors] = useState<ActionError[]>([]);
 	const [eventActionsErrors, setEventActionsErrors] = useState<ActionError[]>([]);
 	const [funnelArrows, setFunnelArrows] = useState<ReactNode[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [selectedTarget, setSelectedTarget] = useState<'Users' | 'Events'>('Users');
-	const [selectedStatisticsRange, setSelectedStatisticsRange] = useState<statisticsRange>('last15Minutes');
-	const [isCustomStatisticsRangePickerOpen, setIsCustomStatisticsRangePickerOpen] = useState<boolean>(false);
-	const [customStatisticsRange, setCustomStatisticsRange] = useState([
+	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
+	const [isCustomMetricsRangePickerOpen, setIsCustomMetricsRangePickerOpen] = useState<boolean>(false);
+	const [customMetricsRange, setCustomMetricsRange] = useState([
 		{
 			startDate: new Date(),
 			endDate: new Date(),
@@ -98,7 +98,7 @@ const ConnectionOverview = () => {
 	const { connection: c } = useContext(ConnectionContext);
 
 	const supportedTargets = useRef([]);
-	const currentStatisticsIntervalID = useRef<number>();
+	const currentMetricsIntervalID = useRef<number>();
 
 	const { userActionErrorRows, eventActionErrorRows } = useMemo(() => {
 		return {
@@ -107,19 +107,19 @@ const ConnectionOverview = () => {
 		};
 	}, [userActionsErrors, eventActionsErrors]);
 
-	const { userActionStatisticsData, eventActionStatisticsData } = useMemo(() => {
+	const { userActionMetricsData, eventActionMetricsData } = useMemo(() => {
 		return {
-			userActionStatisticsData: computeActionStatisticsData(userActionsStatistics, selectedStatisticsRange),
-			eventActionStatisticsData: computeActionStatisticsData(eventActionsStatistics, selectedStatisticsRange),
+			userActionMetricsData: computeActionMetricsData(userActionsMetrics, selectedMetricsRange),
+			eventActionMetricsData: computeActionMetricsData(eventActionsMetrics, selectedMetricsRange),
 		};
-	}, [userActionsStatistics, eventActionsStatistics]);
+	}, [userActionsMetrics, eventActionsMetrics]);
 
 	const { userFunnelData, eventFunnelData } = useMemo(() => {
 		return {
-			userFunnelData: computeFunnelData(userActionsStatistics),
-			eventFunnelData: computeFunnelData(eventActionsStatistics),
+			userFunnelData: computeFunnelData(userActionsMetrics),
+			eventFunnelData: computeFunnelData(eventActionsMetrics),
 		};
-	}, [userActionsStatistics, eventActionsStatistics]);
+	}, [userActionsMetrics, eventActionsMetrics]);
 
 	const steps = useMemo(() => {
 		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
@@ -258,29 +258,29 @@ const ConnectionOverview = () => {
 				supportedTargets.current.push('Events');
 			}
 
-			let fetchStatistics: (...args) => Promise<ActionStatistics> = null;
-			if (selectedStatisticsRange === 'last15Minutes') {
-				fetchStatistics = async (actionIds) =>
-					await api.workspaces.actionStatsPerMinute(MINUTES_COUNT, actionIds);
-			} else if (selectedStatisticsRange === 'last24Hours') {
-				fetchStatistics = async (actionIds) => await api.workspaces.actionStatsPerHour(HOURS_COUNT, actionIds);
-			} else if (selectedStatisticsRange === 'last7Days') {
-				fetchStatistics = async (actionIds) => await api.workspaces.actionStatsPerDay(DAYS_COUNT, actionIds);
+			let fetchMetrics: (...args) => Promise<ActionMetrics> = null;
+			if (selectedMetricsRange === 'last15Minutes') {
+				fetchMetrics = async (actionIds) =>
+					await api.workspaces.actionMetricsPerMinute(MINUTES_COUNT, actionIds);
+			} else if (selectedMetricsRange === 'last24Hours') {
+				fetchMetrics = async (actionIds) => await api.workspaces.actionMetricsPerHour(HOURS_COUNT, actionIds);
+			} else if (selectedMetricsRange === 'last7Days') {
+				fetchMetrics = async (actionIds) => await api.workspaces.actionMetricsPerDay(DAYS_COUNT, actionIds);
 			} else {
 				// end date must be shifted by one day to retrieve the
-				// statistics including the last selected day.
-				const endDate = new Date(customStatisticsRange[0].endDate);
+				// metrics including the last selected day.
+				const endDate = new Date(customMetricsRange[0].endDate);
 				endDate.setDate(endDate.getDate() + 1);
 				try {
-					validateStatisticsRangeDates(customStatisticsRange[0].startDate, endDate);
+					validateMetricsRangeDates(customMetricsRange[0].startDate, endDate);
 				} catch (err) {
-					// fallback to the default statistics range.
-					setSelectedStatisticsRange('last15Minutes');
+					// fallback to the default metrics range.
+					setSelectedMetricsRange('last15Minutes');
 					handleError(err);
 					return;
 				}
-				fetchStatistics = async (actionIds) =>
-					await api.workspaces.actionStatsPerDate(customStatisticsRange[0].startDate, endDate, actionIds);
+				fetchMetrics = async (actionIds) =>
+					await api.workspaces.actionMetricsPerDate(customMetricsRange[0].startDate, endDate, actionIds);
 			}
 
 			let target = selectedTarget;
@@ -296,23 +296,23 @@ const ConnectionOverview = () => {
 				ids = eventActionsIds;
 			}
 
-			let statistics: ActionStatistics;
+			let metrics: ActionMetrics;
 			try {
-				statistics = await fetchStatistics(ids);
+				metrics = await fetchMetrics(ids);
 			} catch (err) {
 				handleError(err);
 				stopLoading();
 				return;
 			}
 			if (target === 'Users') {
-				setUserActionsStatistics(statistics);
+				setUserActionsMetrics(metrics);
 			} else {
-				setEventActionsStatistics(statistics);
+				setEventActionsMetrics(metrics);
 			}
 
 			let errorRes: ActionErrorsResponse;
 			try {
-				errorRes = await api.workspaces.actionErrors(statistics.start, statistics.end, ids, 0, 50, null);
+				errorRes = await api.workspaces.actionErrors(metrics.start, metrics.end, ids, 0, 50, null);
 			} catch (err) {
 				handleError(err);
 				stopLoading();
@@ -329,19 +329,19 @@ const ConnectionOverview = () => {
 			}
 		};
 
-		if (currentStatisticsIntervalID.current != null) {
-			clearInterval(currentStatisticsIntervalID.current);
+		if (currentMetricsIntervalID.current != null) {
+			clearInterval(currentMetricsIntervalID.current);
 		}
 
-		currentStatisticsIntervalID.current = setInterval(() => {
+		currentMetricsIntervalID.current = setInterval(() => {
 			fetchData();
 		}, 5000);
 		fetchData();
 
 		return () => {
-			clearInterval(currentStatisticsIntervalID.current);
+			clearInterval(currentMetricsIntervalID.current);
 		};
-	}, [c, selectedTarget, selectedStatisticsRange, customStatisticsRange]);
+	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange]);
 
 	useEffect(() => {
 		const handleCustomRangePickerClick = (e) => {
@@ -349,7 +349,7 @@ const ConnectionOverview = () => {
 			if (!isInRangePicker) {
 				const isInRangePickerSelector = e.target.closest('.connection-overview__tabs-date-range') != null;
 				if (!isInRangePickerSelector) {
-					setIsCustomStatisticsRangePickerOpen(false);
+					setIsCustomMetricsRangePickerOpen(false);
 				}
 			}
 		};
@@ -368,27 +368,27 @@ const ConnectionOverview = () => {
 	};
 
 	const onSelectLast15Minutes = () => {
-		setSelectedStatisticsRange('last15Minutes');
+		setSelectedMetricsRange('last15Minutes');
 	};
 
 	const onSelectLast24Hours = () => {
-		setSelectedStatisticsRange('last24Hours');
+		setSelectedMetricsRange('last24Hours');
 	};
 
 	const onSelectLast7Days = () => {
-		setSelectedStatisticsRange('last7Days');
+		setSelectedMetricsRange('last7Days');
 	};
 
 	const onSelectCustom = () => {
-		setIsCustomStatisticsRangePickerOpen(!isCustomStatisticsRangePickerOpen);
+		setIsCustomMetricsRangePickerOpen(!isCustomMetricsRangePickerOpen);
 	};
 
-	const onChangeCustomStatisticsRange = (selection) => {
+	const onChangeCustomMetricsRange = (selection) => {
 		// the dates must be considered UTC.
 		selection[0].startDate = considerAsUTC(selection[0].startDate);
 		selection[0].endDate = considerAsUTC(selection[0].endDate);
-		setCustomStatisticsRange(selection);
-		setSelectedStatisticsRange('Custom');
+		setCustomMetricsRange(selection);
+		setSelectedMetricsRange('Custom');
 	};
 
 	if (isLoading) {
@@ -409,39 +409,39 @@ const ConnectionOverview = () => {
 	const hasBothTargets = supportedTargets.current.includes('Users') && supportedTargets.current.includes('Events');
 	const isUsersSelected = selectedTarget === 'Users';
 	let titleRange = '';
-	if (selectedStatisticsRange === 'last15Minutes') {
+	if (selectedMetricsRange === 'last15Minutes') {
 		titleRange = 'in the last 15 minutes';
-	} else if (selectedStatisticsRange === 'last24Hours') {
+	} else if (selectedMetricsRange === 'last24Hours') {
 		titleRange = 'in the last 24 hours';
-	} else if (selectedStatisticsRange === 'last7Days') {
+	} else if (selectedMetricsRange === 'last7Days') {
 		titleRange = 'in the last 7 days';
 	} else {
-		titleRange = `between ${customStatisticsRange[0].startDate.toLocaleDateString()} and ${customStatisticsRange[0].endDate.toLocaleDateString()}`;
+		titleRange = `between ${customMetricsRange[0].startDate.toLocaleDateString()} and ${customMetricsRange[0].endDate.toLocaleDateString()}`;
 	}
 
 	return (
 		<div className='connection-overview'>
-			<div className='connection-overview__title'>Analytics & Log</div>
+			<div className='connection-overview__title'>Metrics & Log</div>
 			{supportedTargets.current.length > 0 ? (
 				<>
 					<div className='connection-overview__tabs'>
 						<SlButtonGroup>
 							<SlButton
-								variant={selectedStatisticsRange === 'last15Minutes' ? 'primary' : 'default'}
+								variant={selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default'}
 								onClick={onSelectLast15Minutes}
 								size='small'
 							>
 								Last 15 minutes
 							</SlButton>
 							<SlButton
-								variant={selectedStatisticsRange === 'last24Hours' ? 'primary' : 'default'}
+								variant={selectedMetricsRange === 'last24Hours' ? 'primary' : 'default'}
 								onClick={onSelectLast24Hours}
 								size='small'
 							>
 								Last 24 hours
 							</SlButton>
 							<SlButton
-								variant={selectedStatisticsRange === 'last7Days' ? 'primary' : 'default'}
+								variant={selectedMetricsRange === 'last7Days' ? 'primary' : 'default'}
 								onClick={onSelectLast7Days}
 								size='small'
 							>
@@ -449,24 +449,24 @@ const ConnectionOverview = () => {
 							</SlButton>
 							<div className='connection-overview__tabs-date-range'>
 								<SlButton
-									variant={selectedStatisticsRange === 'Custom' ? 'primary' : 'default'}
+									variant={selectedMetricsRange === 'Custom' ? 'primary' : 'default'}
 									onClick={onSelectCustom}
 									size='small'
 								>
-									{selectedStatisticsRange === 'Custom'
-										? `${customStatisticsRange[0].startDate.toLocaleDateString()} - ${customStatisticsRange[0].endDate.toLocaleDateString()}`
+									{selectedMetricsRange === 'Custom'
+										? `${customMetricsRange[0].startDate.toLocaleDateString()} - ${customMetricsRange[0].endDate.toLocaleDateString()}`
 										: 'Custom range'}
 								</SlButton>
 								<div
-									className={`connection-overview__tabs-date-range-picker${isCustomStatisticsRangePickerOpen ? ' connection-overview__tabs-date-range-picker--open' : ''}`}
+									className={`connection-overview__tabs-date-range-picker${isCustomMetricsRangePickerOpen ? ' connection-overview__tabs-date-range-picker--open' : ''}`}
 								>
 									<DateRange
 										editableDateInputs={true}
-										onChange={(item) => onChangeCustomStatisticsRange([item.selection])}
+										onChange={(item) => onChangeCustomMetricsRange([item.selection])}
 										showSelectionPreview={true}
 										moveRangeOnFirstSelection={false}
 										months={2}
-										ranges={customStatisticsRange}
+										ranges={customMetricsRange}
 										direction='horizontal'
 									/>
 								</div>
@@ -497,7 +497,7 @@ const ConnectionOverview = () => {
 						</div>
 						<ResponsiveContainer width='100%' height='100%'>
 							<ComposedChart
-								data={isUsersSelected ? userActionStatisticsData : eventActionStatisticsData}
+								data={isUsersSelected ? userActionMetricsData : eventActionMetricsData}
 								margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
 							>
 								<CartesianGrid strokeDasharray='3 3' />
@@ -598,15 +598,12 @@ const computeActionErrorRows = (connection: TransformedConnection, actionErrors:
 	return actionErrorRows;
 };
 
-const computeActionStatisticsData = (
-	actionStatistics: ActionStatistics,
-	range: statisticsRange,
-): ActionStatisticsPoint[] => {
-	if (actionStatistics == null) {
+const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRange): ActionMetricsPoint[] => {
+	if (actionMetrics == null) {
 		return null;
 	}
-	let points: ActionStatisticsPoint[] = [];
-	const timeLength = actionStatistics.passed.length;
+	let points: ActionMetricsPoint[] = [];
+	const timeLength = actionMetrics.passed.length;
 	let counter = timeLength;
 	for (let timeUnit = 0; timeUnit < timeLength; timeUnit++) {
 		let failedTotal = 0;
@@ -615,12 +612,12 @@ const computeActionStatisticsData = (
 				// filtered must not be considered as failed.
 				continue;
 			}
-			failedTotal += actionStatistics.failed[timeUnit][i];
+			failedTotal += actionMetrics.failed[timeUnit][i];
 		}
-		let filteredTotal = actionStatistics.failed[timeUnit][2];
-		let passedTotal = actionStatistics.passed[timeUnit][5];
+		let filteredTotal = actionMetrics.failed[timeUnit][2];
+		let passedTotal = actionMetrics.passed[timeUnit][5];
 		let total = failedTotal + filteredTotal + passedTotal;
-		const d = new Date(actionStatistics.end.getTime());
+		const d = new Date(actionMetrics.end.getTime());
 		let time = '';
 		if (range === 'last15Minutes') {
 			d.setMinutes(d.getMinutes() - counter);
@@ -647,18 +644,18 @@ const computeActionStatisticsData = (
 	return points;
 };
 
-const computeFunnelData = (actionStatistics: ActionStatistics): FunnelData => {
-	if (actionStatistics == null) {
+const computeFunnelData = (actionMetrics: ActionMetrics): FunnelData => {
+	if (actionMetrics == null) {
 		return null;
 	}
 	const data = [];
 	for (let i = 0; i < 6; i++) {
 		let totalPassed = 0;
 		let totalFailed = 0;
-		for (const p of actionStatistics.passed) {
+		for (const p of actionMetrics.passed) {
 			totalPassed += p[i];
 		}
-		for (const f of actionStatistics.failed) {
+		for (const f of actionMetrics.failed) {
 			totalFailed += f[i];
 		}
 		data.push({
@@ -672,7 +669,7 @@ const computeFunnelData = (actionStatistics: ActionStatistics): FunnelData => {
 const LOWER_DATE = new Date('1970-01-01');
 const UPPER_DATE = new Date('2262-04-11');
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const validateStatisticsRangeDates = (start: Date, end: Date): void => {
+const validateMetricsRangeDates = (start: Date, end: Date): void => {
 	if (start < LOWER_DATE || start > UPPER_DATE || end < LOWER_DATE || end > UPPER_DATE) {
 		throw new Error(
 			`Dates must be in the range between ${LOWER_DATE.toLocaleDateString()} and ${UPPER_DATE.toLocaleDateString()}`,
