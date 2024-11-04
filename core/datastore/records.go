@@ -124,7 +124,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 
 	columns = append(columns, columnByProperty[idProperty])
 
-	rows, _, err := store.warehouse.Query(ctx, meergo.RowQuery{
+	rows, _, err := store.warehouse().Query(ctx, meergo.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Joins:     joins,

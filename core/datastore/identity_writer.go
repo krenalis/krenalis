@@ -87,7 +87,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	iw.closed = true
 	if iw.rows != nil {
 		columns := identitiesMergeColumns(iw.columns)
-		err := iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
+		err := iw.store.warehouse().MergeIdentities(ctx, columns, iw.rows)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 			meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, iw.action),
 			meergo.NewBaseExpr(meergo.Column{Name: "__execution__", Type: types.Int(32)}, meergo.OpIsNot, iw.execution),
 		})
-		err := iw.store.warehouse.Delete(ctx, "_user_identities", where)
+		err := iw.store.warehouse().Delete(ctx, "_user_identities", where)
 		if err != nil {
 			return err
 		}
@@ -220,7 +220,7 @@ func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 		return nil
 	}
 	columns := identitiesMergeColumns(iw.columns)
-	err = iw.store.warehouse.MergeIdentities(ctx, columns, iw.rows)
+	err = iw.store.warehouse().MergeIdentities(ctx, columns, iw.rows)
 	if err != nil {
 		return err
 	}

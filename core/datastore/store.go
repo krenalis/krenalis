@@ -68,8 +68,8 @@ var destinationsUsersTable = meergo.WarehouseTable{
 
 type Store struct {
 	ds               *Datastore
+	wh               atomic.Value // warehouse
 	workspace        int
-	warehouse        meergo.Warehouse
 	columnByProperty struct {
 		mu       sync.Mutex
 		user     map[string]meergo.Column // including meta properties.
@@ -91,13 +91,13 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		eventIdentityWriters: map[int]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	var err error
-	store.warehouse, err = meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
+	wh, err := meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
 		Settings: ws.Warehouse.Settings,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
+	store.wh.Store(wh)
 	store.columnByProperty.user = userColumnByProperty(ws.UserSchema)
 	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
@@ -161,7 +161,7 @@ func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, oper
 	}
 	defer done()
 	userColumns := propertiesToColumns(userSchema)
-	return store.warehouse.AlterSchema(ctx, userColumns, operations)
+	return store.warehouse().AlterSchema(ctx, userColumns, operations)
 }
 
 // AlterSchemaQueries returns the queries of a schema altering operation.
@@ -181,7 +181,7 @@ func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Typ
 	}
 	defer done()
 	userColumns := propertiesToColumns(userSchema)
-	return store.warehouse.AlterSchemaQueries(ctx, userColumns, operations)
+	return store.warehouse().AlterSchemaQueries(ctx, userColumns, operations)
 }
 
 // BatchIdentityWriter returns an identity writer for writing user identities in
@@ -247,7 +247,7 @@ func (store *Store) CanChangeWarehouseSettings(ctx context.Context, toSettings [
 		Columns: []meergo.Column{{Name: "__id__", Type: types.UUID()}},
 		Table:   "users",
 	}
-	_, count1, err := store.warehouse.Query(ctx, query, true)
+	_, count1, err := store.warehouse().Query(ctx, query, true)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 	defer done()
 	where := meergo.NewBaseExpr(
 		meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, action)
-	return store.warehouse.Delete(ctx, "_user_identities", where)
+	return store.warehouse().Delete(ctx, "_user_identities", where)
 }
 
 // EventIdentityWriter returns an identity writer for writing user identities,
@@ -382,7 +382,7 @@ func (store *Store) LastIdentityResolution(ctx context.Context) (startTime, endT
 		return nil, nil, err
 	}
 	defer done()
-	return store.warehouse.LastIdentityResolution(ctx)
+	return store.warehouse().LastIdentityResolution(ctx)
 }
 
 // DestinationUser represents a destination user to merge.
@@ -427,7 +427,7 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users
 			deleted[j+1] = id
 		}
 	}
-	return store.warehouse.Merge(ctx, destinationsUsersTable, rows, deleted)
+	return store.warehouse().Merge(ctx, destinationsUsersTable, rows, deleted)
 }
 
 // Mode returns the data warehouse mode.
@@ -454,11 +454,11 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 		values[i] = action
 	}
 	where := meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIsOneOf, values...)
-	err = store.warehouse.Delete(ctx, "_user_identities", where)
+	err = store.warehouse().Delete(ctx, "_user_identities", where)
 	if err != nil {
 		return err
 	}
-	return store.warehouse.Delete(ctx, "_destinations_users", where)
+	return store.warehouse().Delete(ctx, "_destinations_users", where)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
@@ -476,7 +476,7 @@ func (store *Store) Repair(ctx context.Context) error {
 		return err
 	}
 	defer done()
-	return store.warehouse.Repair(ctx)
+	return store.warehouse().Repair(ctx)
 }
 
 // ResolveIdentities resolves the identities of the store's workspace.
@@ -531,7 +531,7 @@ func (store *Store) ResolveIdentities(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	return store.warehouse.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
+	return store.warehouse().ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
 }
 
 // UserIdentities returns the user identities according to the provided query.
@@ -618,7 +618,7 @@ func (store *Store) close() error {
 		store.events = nil
 	}
 	store.mu.Unlock()
-	err := store.warehouse.Close()
+	err := store.warehouse().Close()
 	if err != nil {
 		return fmt.Errorf("error occurred closing data warehouse: %s", err)
 	}
@@ -629,7 +629,7 @@ func (store *Store) close() error {
 func (store *Store) flushEvents(events [][]any) {
 	slog.Info("flush events", "count", len(events))
 	for {
-		err := store.warehouse.Merge(context.Background(), eventsMergeTable, events, nil)
+		err := store.warehouse().Merge(context.Background(), eventsMergeTable, events, nil)
 		if err != nil {
 			slog.Error("cannot flush the event queue", "workspace", store.workspace, "err", err)
 			time.Sleep(time.Duration(rand.IntN(2000)) * time.Millisecond)
@@ -770,7 +770,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		orderDesc = query.OrderDesc
 	}
 
-	rows, count, err := store.warehouse.Query(ctx, meergo.RowQuery{
+	rows, count, err := store.warehouse().Query(ctx, meergo.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Where:     where,
@@ -812,4 +812,9 @@ func (store *Store) userColumnByProperty() map[string]meergo.Column {
 	columns := store.columnByProperty.user
 	store.columnByProperty.mu.Unlock()
 	return columns
+}
+
+// warehouse returns the store's warehouse.
+func (store *Store) warehouse() meergo.Warehouse {
+	return store.wh.Load().(meergo.Warehouse)
 }

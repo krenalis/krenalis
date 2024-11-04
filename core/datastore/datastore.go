@@ -8,6 +8,7 @@
 package datastore
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -264,25 +265,27 @@ func (ds *Datastore) onSetAction(n state.SetAction) func() {
 // onSetWarehouse is called when the data warehouse is changed.
 func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 	return func() {
-		// Change the data warehouse mode of the current store.
 		ds.mu.Lock()
 		store := ds.store[n.Workspace]
 		ds.mu.Unlock()
+		// Change the data warehouse mode of the store.
 		store.mc.ChangeMode(n.Mode, n.CancelIncompatibleOperations)
-		// Replace the current store with a new store.
+		// Update the warehouse if the settings have changed.
+		prevWarehouse := store.warehouse()
 		ws, _ := ds.state.Workspace(n.Workspace)
-		nextStore, _ := newStore(ds, ws)
-		ds.mu.Lock()
-		prevStore := ds.store[ws.ID]
-		ds.store[ws.ID] = nextStore
-		ds.mu.Unlock()
-		// Close the previous store.
-		go func(workspace int) {
-			err := prevStore.close()
-			if err != nil {
-				slog.Error("cannot close store", "workspace", workspace, "err", err)
-			}
-		}(ws.ID)
+		nextWarehouse, _ := meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
+			Settings: n.Settings,
+		})
+		if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
+			store.wh.Store(nextWarehouse)
+			// Close the previous warehouse.
+			go func(workspace int) {
+				err := prevWarehouse.Close()
+				if err != nil {
+					slog.Error("error closing a warehouse", "workspace", workspace, "err", err)
+				}
+			}(ws.ID)
+		}
 	}
 }
 
