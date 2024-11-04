@@ -113,6 +113,14 @@ const useSchemaEdit = (
 
 		// Update the RePaths.
 		if (deletedAppliedKeys.current.includes(key)) {
+			// If the property now added takes the name of a previously
+			// deleted property, add the “null” repath.
+			rePaths.current[key] = null;
+		}
+
+		// If the property now added takes the name of a previously
+		// renamed property, add the "null" repath.
+		if (Object.values(rePaths.current).includes(key)) {
 			rePaths.current[key] = null;
 		}
 
@@ -203,10 +211,16 @@ const useSchemaEdit = (
 					continue;
 				}
 				if (rePaths.current[k] === key) {
+					// If it was already renamed previously, delete the
+					// old repath.
 					delete rePaths.current[k];
 				}
 			}
 			if (key in rePaths.current && rePaths.current[key] == null) {
+				// If the property was created with a name identical to
+				// that of another previously deleted or renamed
+				// property, since we are now renaming it, delete the
+				// corresponding “null” repath.
 				delete rePaths.current[key];
 			}
 
@@ -216,9 +230,12 @@ const useSchemaEdit = (
 			}
 
 			if (deletedAppliedKeys.current.includes(newKey)) {
+				// If the property now renamed takes the name of a
+				// previously deleted property, add the “null” repath.
 				rePaths.current[newKey] = null;
-			}
-			if (!current.isEditable) {
+			} else if (!current.isEditable) {
+				// If the property was already applied to the schema,
+				// add the repath.
 				rePaths.current[newKey] = key;
 			}
 		}
