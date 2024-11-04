@@ -10,6 +10,7 @@ package snowflake
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -64,10 +65,42 @@ func (s *scanner) Scan(dest ...any) error {
 
 // normalize normalizes the value v read from Snowflake.
 func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
+
+	// TODO(Gianluca): the implementation of this 'normalize' method is obsolete
+	// and must be rewritten.
+	//
+	// See the issue https://github.com/meergo/meergo/issues/1121.
+
 	switch typ.Kind() {
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
 			return v, nil
+		}
+	case types.IntKind:
+		switch v := v.(type) {
+		case int:
+			return meergo.ValidateInt(name, typ, v)
+		case int64:
+			return meergo.ValidateInt(name, typ, int(v))
+		case string:
+			if v, err := strconv.ParseInt(v, 10, 64); err == nil {
+				return meergo.ValidateInt(name, typ, int(v))
+			}
+		}
+	case types.UintKind:
+		switch v := v.(type) {
+		case int:
+			if v >= 0 {
+				return meergo.ValidateUint(name, typ, uint(v))
+			}
+		case int64:
+			if v >= 0 {
+				return meergo.ValidateUint(name, typ, uint(v))
+			}
+		case string:
+			if v, err := strconv.ParseUint(v, 10, 64); err == nil {
+				return meergo.ValidateUint(name, typ, uint(v))
+			}
 		}
 	case types.FloatKind:
 		if v, ok := v.(float64); ok {
@@ -89,6 +122,10 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		if v, ok := v.(time.Time); ok {
 			return meergo.ValidateTime(v)
 		}
+	case types.UUIDKind:
+		if v, ok := v.(string); ok {
+			return meergo.ValidateUUID(name, v)
+		}
 	case types.JSONKind:
 		return meergo.ValidateJSON(name, v)
 	case types.TextKind:
@@ -96,17 +133,17 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return meergo.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
-		// The driver returns the value as a JSON array.
+		// TODO(Gianluca): the code that handles the arrays has been modified
+		// just to allow for the development and testing of identity resolution,
+		// and therefore it needs to be reviewed and rewritten.
+		//
+		// See https://github.com/meergo/meergo/issues/1121.
 		v, ok := v.(string)
 		if !ok {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
 		}
 		if v == "" {
 			return nil, fmt.Errorf("data warehouse returned an empty string for column %s which is an Array type", name)
-		}
-		// Snowflake only supports JSON as the item type.
-		if typ.Elem().Kind() != types.JSONKind {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
 		}
 		ev := json.Value(v)
 		if !json.Valid(ev) {
@@ -122,10 +159,18 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			if i == max {
 				return nil, fmt.Errorf("data warehouse returned an array with more than %d elements for column %s", max, name)
 			}
-			arr = append(arr, elem)
+			var elemAny any
+			err := elem.Unmarshal(&elemAny)
+			if err != nil {
+				return nil, fmt.Errorf("cannot unmarshal array element: %s", err)
+			}
+			arr = append(arr, elemAny)
 		}
 		if len(arr) < min {
 			return nil, fmt.Errorf("data warehouse returned an array with less than %d elements for column %s", min, name)
+		}
+		if len(arr) == 0 {
+			return nil, nil // return the untyped nil.
 		}
 		return arr, nil
 	case types.MapKind:

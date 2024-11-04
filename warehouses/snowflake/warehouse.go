@@ -723,6 +723,9 @@ func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
 		} else {
 			b.WriteString(v)
 		}
+	case nil:
+		// TODO(Gianluca): correctly handle nil values. See the issue
+		// https://github.com/meergo/meergo/issues/1122.
 	default:
 		switch k := t.Kind(); k {
 		case types.DateTimeKind:

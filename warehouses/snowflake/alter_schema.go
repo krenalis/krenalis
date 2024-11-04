@@ -265,8 +265,7 @@ func typeToSnowflakeType(t types.Type) string {
 		}
 		return "VARCHAR"
 	case types.ArrayKind:
-		typ := typeToSnowflakeType(t.Elem())
-		return typ + "[]"
+		return "ARRAY"
 	case types.MapKind:
 		return "jsonb"
 	}
