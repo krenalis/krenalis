@@ -139,7 +139,7 @@ func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) func() {
 
 // onSetWarehouse is called when the settings of a data warehouse are changed.
 func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) func() {
-	if n.Warehouse.Mode != state.Normal {
+	if n.Mode != state.Normal {
 		return nil
 	}
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {

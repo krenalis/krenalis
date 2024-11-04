@@ -1045,12 +1045,9 @@ func (state *State) setConnectionSettings(n notification) {
 // SetWarehouse is the event sent when the settings of a data warehouse are
 // changed.
 type SetWarehouse struct {
-	Workspace int
-	Warehouse struct {
-		Name     string
-		Mode     WarehouseMode
-		Settings json.RawMessage
-	}
+	Workspace                    int
+	Mode                         WarehouseMode
+	Settings                     json.RawMessage
 	CancelIncompatibleOperations bool
 }
 
@@ -1061,7 +1058,8 @@ func (state *State) setWarehouse(n notification) {
 		return
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.Warehouse = e.Warehouse
+		w.Warehouse.Mode = e.Mode
+		w.Warehouse.Settings = e.Settings
 		w.actionsToPurge = []int{}
 	})
 	dispatchNotification(state, e)

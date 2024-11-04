@@ -929,15 +929,14 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode Warehou
 
 	n := state.SetWarehouse{
 		Workspace:                    ws.ID,
+		Mode:                         state.WarehouseMode(mode),
+		Settings:                     settings,
 		CancelIncompatibleOperations: cancelIncompatibleOperations,
 	}
-	n.Warehouse.Name = ws.Warehouse.Name
-	n.Warehouse.Mode = state.WarehouseMode(mode)
-	n.Warehouse.Settings = settings
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
-			n.Warehouse.Mode, string(n.Warehouse.Settings), n.Workspace)
+			n.Mode, string(n.Settings), n.Workspace)
 		if err != nil {
 			return err
 		}

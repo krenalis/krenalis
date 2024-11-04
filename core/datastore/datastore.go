@@ -268,7 +268,7 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) func() {
 		ds.mu.Lock()
 		store := ds.store[n.Workspace]
 		ds.mu.Unlock()
-		store.mc.ChangeMode(n.Warehouse.Mode, n.CancelIncompatibleOperations)
+		store.mc.ChangeMode(n.Mode, n.CancelIncompatibleOperations)
 		// Replace the current store with a new store.
 		ws, _ := ds.state.Workspace(n.Workspace)
 		nextStore, _ := newStore(ds, ws)
