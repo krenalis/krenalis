@@ -24,11 +24,15 @@ import (
 	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
 )
 
-// The variable MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL must point to a JSON file
-// containing the settings of the PostgreSQL warehouse that will be used in this
-// test.
+// This file contains tests on Identity Resolution. These tests are executed on
+// the registered data warehouses, provided that the environment variables:
 //
-// WARNING: the warehouse must be empty, as the test will initialize it.
+//      MEERGO_TEST_PATH_WAREHOUSE_<warehouse-name>
+//
+// are set for the corresponding data warehouse and point to JSON files
+// containing the warehouse settings.
+//
+// WARNING: the warehouses must be empty, as the tests will initialize them.
 
 var columns = []meergo.Column{
 	{Name: "email", Type: types.Text(), Nullable: true},
@@ -55,9 +59,7 @@ type identity struct {
 	properties   map[string]any
 }
 
-// TestWarehousesIdentityResolution tests the Identity Resolution. If the
-// variable MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL is not set, the test is
-// skipped.
+// TestWarehousesIdentityResolution tests the Identity Resolution.
 func TestWarehousesIdentityResolution(t *testing.T) {
 
 	tests := []struct {
