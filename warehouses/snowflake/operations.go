@@ -73,7 +73,7 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 			}
 		}
 		_, err = tx.Exec(`INSERT INTO "_operations" ("operation", "start_time", "end_time") `+
-			`VALUES (?, CURRENT_TIMESTAMP, NULL)`, operation)
+			`VALUES (?, SYSDATE(), NULL)`, operation)
 		if err != nil {
 			return meergo.Error(err)
 		}
