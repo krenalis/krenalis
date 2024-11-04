@@ -167,7 +167,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	),`)
 	// Write the "__last_change_time__" column.
 	mergeUsers.WriteString(`MAX("__last_change_time__")`)
-	mergeUsers.WriteString(` FROM "_user_identities" GROUP BY "__cluster__"; `)
+	mergeUsers.WriteString(` FROM "_user_identities" GROUP BY "__cluster__";` + "\n")
 
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,
