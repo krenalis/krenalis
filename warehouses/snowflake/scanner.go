@@ -109,7 +109,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
 		}
 		ev := json.Value(v)
-		if json.Valid(ev) {
+		if !json.Valid(ev) {
 			return nil, fmt.Errorf("data warehouse returned a string with invalid JSON for column %s", name)
 		}
 		if !ev.IsArray() {
@@ -142,7 +142,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
 		}
 		ev := json.Value(v)
-		if json.Valid(ev) {
+		if !json.Valid(ev) {
 			return nil, fmt.Errorf("data warehouse returned a string with invalid JSON for column %s", name)
 		}
 		if !ev.IsObject() {
