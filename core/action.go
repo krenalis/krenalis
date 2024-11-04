@@ -888,6 +888,12 @@ func isDispatchingEventsToApps(connectorType state.ConnectorType, role state.Rol
 	return role == state.Destination && target == state.Events && connectorType == state.App
 }
 
+// isExportUsersToFile reports whether a connector of the given type, on a
+// connection with the given role is exporting users into a file.
+func isExportUsersToFile(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return connectorType == state.FileStorage && role == state.Destination && target == state.Users
+}
+
 // isImportingEventsIntoWarehouse reports whether a connector of the given type,
 // on a connection with the given role, and an action with the given target, is
 // importing events into the data warehouse.

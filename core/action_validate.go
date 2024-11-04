@@ -98,6 +98,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, target)
 	dispatchEventsToApps := isDispatchingEventsToApps(v.connection.connector.typ, v.connection.role, target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
+	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, target)
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -169,7 +170,9 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
-		usedInPaths = properties
+		if !exportUsersToFile {
+			usedInPaths = properties
+		}
 	}
 	// An action cannot have both mappings and transformations.
 	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
@@ -522,7 +525,6 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Do some checks related to exporting users to files.
-	exportUsersToFile := v.connection.connector.typ == state.FileStorage && v.connection.role == state.Destination && target == state.Users
 	if exportUsersToFile {
 		// When exporting users to file, ensure that the input schema is valid,
 		// as it contains the properties that will be exported to the file.

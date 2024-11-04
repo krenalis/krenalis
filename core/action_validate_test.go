@@ -522,6 +522,33 @@ func Test_validateAction(t *testing.T) {
 			connectorHasSheets:      false,
 		},
 		{
+			name: "GOOD: Destination/FileStorage/Users - with filter",
+			action: ActionToSet{
+				Name: "Export users",
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
+					{Name: "last_name", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema:                types.Type{},
+				Connector:                "CSV",
+				Path:                     "my_output_users.csv",
+				FileOrderingPropertyPath: "email",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			connectorType:           state.File,
+			connectorHasUI:          false,
+			connectorHasSheets:      false,
+		},
+		{
 			name: "GOOD: Source/App/Users - input schema can contain meta properties",
 			action: ActionToSet{
 				Name: "Import users",
