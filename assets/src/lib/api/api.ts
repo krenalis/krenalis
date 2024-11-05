@@ -451,7 +451,7 @@ class Eventlisteners {
 	}
 
 	addCollected = async (size: number, sources: number[], onlyValid: boolean): Promise<AddEventListenerResponse> => {
-		return await call(`${this.apiURL}/events-listeners`, http.POST, {
+		return await call(`${this.apiURL}/event-listeners`, http.POST, {
 			size: size,
 			sources: sources,
 			onlyValid: onlyValid,
@@ -464,7 +464,7 @@ class Eventlisteners {
 		hasUserTraits: boolean,
 		filter: Filter,
 	): Promise<AddEventListenerResponse> => {
-		return await call(`${this.apiURL}/events-listeners`, http.POST, {
+		return await call(`${this.apiURL}/event-listeners`, http.POST, {
 			enriched: true,
 			size: size,
 			sources: sources,
