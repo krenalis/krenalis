@@ -237,7 +237,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	err = this.core.datastore.CanInitialize(ctx, whName, whSettings)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
-			return 0, errors.Unprocessable(WarehouseNotInitializable, "data warehouse cannot be initialized: %w", err)
+			return 0, errors.Unprocessable(WarehouseNotInitializable, "%w", err)
 		}
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return 0, errors.Unprocessable(DataWarehouseFailed, "data warehouse error: %w", err)

@@ -145,7 +145,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 		return meergo.Error(err)
 	}
 	if objects != nil {
-		reason := fmt.Sprintf("database contains these objects: %s", strings.Join(objects, ", "))
+		reason := fmt.Sprintf("expected an empty database, got: %s", strings.Join(objects, ", "))
 		return meergo.NewNotInitializableError(reason)
 	}
 	return nil
