@@ -1423,7 +1423,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	data, err := json.DecodeBySchema(bytes.NewReader(event.Data), events.Schema)
+	data, err := json.DecodeByType[map[string]any](bytes.NewReader(event.Data), events.Schema)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}

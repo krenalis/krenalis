@@ -171,9 +171,9 @@ func Test_TrimSpace(t *testing.T) {
 	}
 }
 
-func Test_UnmarshalBySchema(t *testing.T) {
+func Test_UnmarshalByType(t *testing.T) {
 
-	schema := types.Object([]types.Property{
+	object := types.Object([]types.Property{
 		{
 			Name: "Boolean",
 			Type: types.Boolean(),
@@ -350,7 +350,7 @@ func Test_UnmarshalBySchema(t *testing.T) {
 	}
 
 	tests := []struct {
-		schema   types.Type
+		typ      types.Type
 		data     string
 		expected map[string]any
 		err      error
@@ -444,28 +444,28 @@ func Test_UnmarshalBySchema(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			b := strings.NewReader(test.data)
-			testSchema := test.schema
-			if !test.schema.Valid() {
-				testSchema = schema
+			testType := test.typ
+			if !test.typ.Valid() {
+				testType = object
 			}
-			got, err := DecodeBySchema(b, testSchema)
+			got, err := DecodeByType[map[string]any](b, testType)
 			if err != nil {
 				if test.err == nil {
-					t.Fatalf("DecodeBySchema: expected no error, got error %s", err)
+					t.Fatalf("DecodeByType: expected no error, got error %s", err)
 				}
 				if reflect.TypeOf(test.err) != reflect.TypeOf(err) || test.err != nil && test.err.Error() != err.Error() {
-					t.Fatalf("DecodeBySchema: expected error '%v' (type %T), got error '%v' (type %T)", test.err, test.err, err, err)
+					t.Fatalf("DecodeByType: expected error '%v' (type %T), got error '%v' (type %T)", test.err, test.err, err, err)
 				}
 				if got != nil {
-					t.Fatalf("DecodeBySchema: expected nil, got %#v", got)
+					t.Fatalf("DecodeByType: expected nil, got %#v", got)
 				}
 				return
 			}
 			if test.err != nil {
-				t.Fatalf("DecodeBySchema: expected error %q, got no error", test.err)
+				t.Fatalf("DecodeByType: expected error %q, got no error", test.err)
 			}
-			if err := equalValues(schema, test.expected, got); err != nil {
-				t.Fatalf("DecodeBySchema:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
+			if err := equalValues(object, test.expected, got); err != nil {
+				t.Fatalf("DecodeByType:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
 			}
 		})
 	}

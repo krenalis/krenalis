@@ -136,16 +136,15 @@ func Decode(r io.Reader, out any) error {
 	return err
 }
 
-// DecodeBySchema decodes JSON read from r, validating it according to the
-// provided schema, which cannot be the invalid type. If a property is missing
-// and it is not optional for reading, it returns a *SchemaValidationError
-// error.
+// DecodeByType reads JSON from r and decodes it, validating it against t.
+// t must be a valid type, and T must be the Go type that corresponds to t.
 //
 // It returns the error ErrSyntaxInvalid if the data being unmarshaled is not
-// valid JSON and returns a *SchemaValidationError value if an error occurs
-// during schema validation.
+// valid JSON, and it returns a *SchemaValidationError if an error occurs
+// during schema validation. Specifically, if a required property is missing,
+// it results in a schema validation error.
 //
-// The following are the expected JSON values for each schema type:
+// The following are the expected JSON values for each type:
 //
 //   - Boolean: true or false
 //   - Int (8, 16, 24, and 32 bits): a JSON Number representing an integer
@@ -167,8 +166,13 @@ func Decode(r io.Reader, out any) error {
 //   - Array: a JSON Array
 //   - Object: a JSON Object
 //   - Map: a JSON Object
-func DecodeBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
-	return decodeBySchema(r, schema)
+func DecodeByType[T any](r io.Reader, t types.Type) (T, error) {
+	v, err := decodeByType(r, t)
+	vt, ok := v.(T)
+	if err == nil && !ok {
+		err = fmt.Errorf("json: DecodeByType[%T] called with type kind %s", vt, t.Kind())
+	}
+	return vt, err
 }
 
 // Encode writes to out the JSON encoding of v.
@@ -317,15 +321,15 @@ var (
 	negInfinity = []byte("-Infinity")
 )
 
-func decodeBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
+func decodeByType(r io.Reader, t types.Type) (any, error) {
 	if r == nil {
 		return nil, errors.New("r is nil")
 	}
-	if schema.Kind() == types.InvalidKind {
-		return nil, errors.New("json: schema is the invalid type")
+	if t.Kind() == types.InvalidKind {
+		return nil, errors.New("json: type is the invalid type")
 	}
-	d := decoderBySchema{dec: NewDecoder(r)}
-	value, err := d.unmarshal(schema)
+	d := decoderByType{dec: NewDecoder(r)}
+	value, err := d.unmarshal(t)
 	if err != nil {
 		if _, ok := err.(*SchemaValidationError); ok {
 			// Consume the remaining tokens to return a ErrSyntaxInvalid error
@@ -339,17 +343,17 @@ func decodeBySchema(r io.Reader, schema types.Type) (map[string]any, error) {
 	if _, err := d.readToken(); err != io.EOF {
 		return nil, &SyntaxError{err: err}
 	}
-	return value.(map[string]any), nil
+	return value, nil
 }
 
-// decoderBySchema implements a decoder for JSON.
-type decoderBySchema struct {
+// decoderByType implements a decoder for JSON.
+type decoderByType struct {
 	dec *Decoder
 }
 
 // consumeTokens consume the remaining tokens returning the ErrSyntaxInvalid
 // error if the JSON source is not valid.
-func (d decoderBySchema) consumeTokens() error {
+func (d decoderByType) consumeTokens() error {
 	var err error
 	for err == nil {
 		_, err = d.readToken()
@@ -361,13 +365,13 @@ func (d decoderBySchema) consumeTokens() error {
 }
 
 // peek peeks the next token kind.
-func (d decoderBySchema) peek() Kind {
+func (d decoderByType) peek() Kind {
 	return d.dec.PeekKind()
 }
 
 // readToken reads a token.
 // It returns the ErrSyntaxInvalid error if the JSON source is not valid.
-func (d decoderBySchema) readToken() (Token, error) {
+func (d decoderByType) readToken() (Token, error) {
 	tok, err := d.dec.ReadToken()
 	if err == io.ErrUnexpectedEOF {
 		err = &SyntaxError{err: errors.New("invalid JSON")}
@@ -377,7 +381,7 @@ func (d decoderBySchema) readToken() (Token, error) {
 
 // readValue reads a value.
 // It returns the ErrSyntaxInvalid error if the JSON source is not valid.
-func (d decoderBySchema) readValue() (Value, error) {
+func (d decoderByType) readValue() (Value, error) {
 	v, err := d.dec.ReadValue()
 	if err == io.ErrUnexpectedEOF {
 		err = &SyntaxError{err: errors.New("invalid JSON")}
@@ -386,7 +390,7 @@ func (d decoderBySchema) readValue() (Value, error) {
 }
 
 // unmarshal unmarshals a JSON value.
-func (d decoderBySchema) unmarshal(t types.Type) (_ any, err error) {
+func (d decoderByType) unmarshal(t types.Type) (_ any, err error) {
 	switch d.peek() {
 	case '[':
 		// DecodeBySchema an array.
@@ -516,19 +520,19 @@ func (d decoderBySchema) unmarshal(t types.Type) (_ any, err error) {
 }
 
 // unquoteString unquote a JSON string.
-func (d decoderBySchema) unquoteString(v []byte) []byte {
+func (d decoderByType) unquoteString(v []byte) []byte {
 	b, _ := Unquote(v)
 	return b
 }
 
 // formatString formats a JSON string into a formatted string.
-func (d decoderBySchema) formatString(v []byte) string {
+func (d decoderByType) formatString(v []byte) string {
 	b, _ := jsontext.AppendUnquote(nil, v)
 	return `"` + strings.ReplaceAll(strings.ReplaceAll(string(b), `\`, `\\`), `"`, `\"`) + `"`
 }
 
 // value returns the unmarshalled value of v according to t.
-func (d decoderBySchema) value(v Value, t types.Type) (any, error) {
+func (d decoderByType) value(v Value, t types.Type) (any, error) {
 	switch t.Kind() {
 	case types.BooleanKind:
 		if v.Kind() == 'f' {

@@ -189,7 +189,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		}
 		return v, nil
 	case types.MapKind:
-		if v, err := json.DecodeBySchema(strings.NewReader(v.(string)), typ); err == nil {
+		if v, err := json.DecodeByType[map[string]any](strings.NewReader(v.(string)), typ); err == nil {
 			return v, nil
 		}
 	}

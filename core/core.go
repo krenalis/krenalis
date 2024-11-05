@@ -652,7 +652,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
 
-	properties, err := json.DecodeBySchema(bytes.NewReader(data), inSchema)
+	properties, err := json.DecodeByType[map[string]any](bytes.NewReader(data), inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
