@@ -27,7 +27,7 @@ const DataWarehouseSettings = ({
 }: DataWarehouseSettingsProps) => {
 	const [mode, setMode] = useState<WarehouseMode>(currentMode || 'Normal');
 	const [settings, setSettings] = useState<Record<string, any> | undefined>(objectKeysToLower(currentSettings));
-	const [isPingLoading, setIsPingLoading] = useState<boolean>(false);
+	const [isCheckLoading, setIsCheckLoading] = useState<boolean>(false);
 	const [isActionButtonLoading, setIsActionButtonLoading] = useState<boolean>(false);
 
 	const { setTitle, api, handleError, showStatus, setIsLoadingWorkspaces } = useContext(appContext);
@@ -42,23 +42,23 @@ const DataWarehouseSettings = ({
 		setMode(e.target.value);
 	};
 
-	const onPing = async () => {
-		const timeout = setTimeout(() => setIsPingLoading(true), 300);
+	const onCheck = async () => {
+		const timeout = setTimeout(() => setIsCheckLoading(true), 300);
 		try {
 			await api.workspaces.canChangeWarehouseSettings(settings);
 		} catch (err) {
 			handleError(err);
 			clearTimeout(timeout);
-			setIsPingLoading(false);
+			setIsCheckLoading(false);
 			return;
 		}
 		showStatus({
 			variant: 'success',
 			icon: icons.OK,
-			text: `${selectedWarehouse.name} responded successfully`,
+			text: `The ${selectedWarehouse.name} warehouse with the specified settings is valid`,
 		});
 		clearTimeout(timeout);
-		setIsPingLoading(false);
+		setIsCheckLoading(false);
 	};
 
 	const onSave = async () => {
@@ -127,19 +127,19 @@ const DataWarehouseSettings = ({
 			</div>
 
 			<div className='warehouse-settings__buttons'>
-				<SlButton disabled={isPingLoading || isActionButtonLoading} variant='default' onClick={onCancelClick}>
+				<SlButton disabled={isCheckLoading || isActionButtonLoading} variant='default' onClick={onCancelClick}>
 					Cancel
 				</SlButton>
 				<SlButton
-					disabled={isPingLoading || isActionButtonLoading}
-					loading={isPingLoading}
+					disabled={isCheckLoading || isActionButtonLoading}
+					loading={isCheckLoading}
 					variant='default'
-					onClick={onPing}
+					onClick={onCheck}
 				>
-					Ping
+					Check
 				</SlButton>
 				<SlButton
-					disabled={isPingLoading || isActionButtonLoading}
+					disabled={isCheckLoading || isActionButtonLoading}
 					loading={isActionButtonLoading}
 					variant='primary'
 					onClick={onSave}
