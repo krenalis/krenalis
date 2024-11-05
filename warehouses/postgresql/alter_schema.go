@@ -219,7 +219,7 @@ func typeToPostgresType(t types.Type) string {
 		case 32:
 			return "bigint"
 		case 64:
-			return "decimal(20, 0)"
+			return "numeric(20, 0)"
 		}
 	case types.FloatKind:
 		switch t.BitSize() {
@@ -229,7 +229,7 @@ func typeToPostgresType(t types.Type) string {
 			return "double precision"
 		}
 	case types.DecimalKind:
-		return fmt.Sprintf("decimal(%d, %d)", t.Precision(), t.Scale())
+		return fmt.Sprintf("numeric(%d, %d)", t.Precision(), t.Scale())
 	case types.DateTimeKind:
 		return "timestamp without time zone"
 	case types.DateKind:
@@ -257,9 +257,9 @@ func typeToPostgresType(t types.Type) string {
 			}
 		}
 		if charLen > 0 {
-			return "varchar(" + strconv.Itoa(charLen) + ")"
+			return "character varying(" + strconv.Itoa(charLen) + ")"
 		}
-		return "varchar"
+		return "character varying"
 	case types.ArrayKind:
 		typ := typeToPostgresType(t.Elem())
 		return typ + "[]"

@@ -35,8 +35,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" varchar",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar",
+				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying",
 			},
 		},
 		{
@@ -78,8 +78,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Text()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" varchar",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" varchar",
+				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" character varying",
 			},
 		},
 		{
@@ -92,8 +92,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" varchar[]",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar[]",
+				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying[]",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying[]",
 			},
 		},
 		{
@@ -106,8 +106,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" varchar",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar",
+				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying",
 			},
 		},
 		{
@@ -122,8 +122,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" integer",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" varchar,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"x_a\" character varying,\n\tADD COLUMN \"x_b\" integer",
 			},
 		},
 		{
@@ -138,8 +138,8 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
 			expectedQueries: []string{
-				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" varchar,\n\tADD COLUMN \"b\" integer",
-				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" varchar,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
+				"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"a\" character varying,\n\tADD COLUMN \"b\" integer",
 			},
 		},
 		{
@@ -226,14 +226,14 @@ func Test_alterSchemaQueries(t *testing.T) {
 					"\n\tADD COLUMN \"i64\" bigint," +
 					"\n\tADD COLUMN \"f32\" real," +
 					"\n\tADD COLUMN \"f64\" double precision," +
-					"\n\tADD COLUMN \"dec\" decimal(3, 1)," +
+					"\n\tADD COLUMN \"dec\" numeric(3, 1)," +
 					"\n\tADD COLUMN \"dt\" timestamp without time zone," +
 					"\n\tADD COLUMN \"d\" date," +
 					"\n\tADD COLUMN \"t\" time without time zone," +
 					"\n\tADD COLUMN \"u\" uuid," +
 					"\n\tADD COLUMN \"j\" jsonb," +
-					"\n\tADD COLUMN \"t\" varchar," +
-					"\n\tADD COLUMN \"at\" varchar[]," +
+					"\n\tADD COLUMN \"t\" character varying," +
+					"\n\tADD COLUMN \"at\" character varying[]," +
 					"\n\tADD COLUMN \"ai32\" integer[]",
 				"ALTER TABLE \"_user_identities\"" +
 					"\n\tADD COLUMN \"b\" boolean," +
@@ -242,14 +242,14 @@ func Test_alterSchemaQueries(t *testing.T) {
 					"\n\tADD COLUMN \"i64\" bigint," +
 					"\n\tADD COLUMN \"f32\" real," +
 					"\n\tADD COLUMN \"f64\" double precision," +
-					"\n\tADD COLUMN \"dec\" decimal(3, 1)," +
+					"\n\tADD COLUMN \"dec\" numeric(3, 1)," +
 					"\n\tADD COLUMN \"dt\" timestamp without time zone," +
 					"\n\tADD COLUMN \"d\" date," +
 					"\n\tADD COLUMN \"t\" time without time zone," +
 					"\n\tADD COLUMN \"u\" uuid," +
 					"\n\tADD COLUMN \"j\" jsonb," +
-					"\n\tADD COLUMN \"t\" varchar," +
-					"\n\tADD COLUMN \"at\" varchar[]," +
+					"\n\tADD COLUMN \"t\" character varying," +
+					"\n\tADD COLUMN \"at\" character varying[]," +
 					"\n\tADD COLUMN \"ai32\" integer[]",
 			},
 		},
@@ -305,8 +305,8 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Uint(16).WithUintRange(0, 10), "integer"},
 		{types.Uint(24), "integer"},
 		{types.Uint(32), "bigint"},
-		{types.Uint(64), "decimal(20, 0)"},
-		{types.Uint(64).WithUintRange(1, 200), "decimal(20, 0)"},
+		{types.Uint(64), "numeric(20, 0)"},
+		{types.Uint(64).WithUintRange(1, 200), "numeric(20, 0)"},
 
 		// Float.
 		{types.Float(32), "real"},
@@ -317,8 +317,8 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Float(64).WithFloatRange(0, 100), "double precision"},
 
 		// Decimal.
-		{types.Decimal(10, 3), "decimal(10, 3)"},
-		{types.Decimal(10, 3).WithDecimalRange(decimal.MustInt(0), decimal.MustInt(1000)), "decimal(10, 3)"},
+		{types.Decimal(10, 3), "numeric(10, 3)"},
+		{types.Decimal(10, 3).WithDecimalRange(decimal.MustInt(0), decimal.MustInt(1000)), "numeric(10, 3)"},
 
 		// DateTime.
 		{types.DateTime(), "timestamp without time zone"},
@@ -342,15 +342,15 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Inet(), "inet"},
 
 		// Text.
-		{types.Text(), "varchar"},
-		{types.Text().WithByteLen(256), "varchar(256)"},
-		{types.Text().WithCharLen(300), "varchar(300)"},
-		{types.Text().WithByteLen(10).WithCharLen(10), "varchar(10)"},
-		{types.Text().WithByteLen(5).WithCharLen(10), "varchar(5)"},
-		{types.Text().WithByteLen(500).WithCharLen(10), "varchar(10)"},
+		{types.Text(), "character varying"},
+		{types.Text().WithByteLen(256), "character varying(256)"},
+		{types.Text().WithCharLen(300), "character varying(300)"},
+		{types.Text().WithByteLen(10).WithCharLen(10), "character varying(10)"},
+		{types.Text().WithByteLen(5).WithCharLen(10), "character varying(5)"},
+		{types.Text().WithByteLen(500).WithCharLen(10), "character varying(10)"},
 
 		// Array.
-		{types.Array(types.Text()), "varchar[]"},
+		{types.Array(types.Text()), "character varying[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
 		{types.Array(types.Uint(32)), "bigint[]"},
 

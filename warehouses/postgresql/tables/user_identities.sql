@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS _user_identities (
     "__execution__" integer,
     "__gid__" uuid,
     "__cluster__" serial,
-    "email" varchar(300),
+    "email" character varying(300),
     PRIMARY KEY ("__pk__")
 );

@@ -82,8 +82,8 @@ func TestChangeUserSchema(t *testing.T) {
 	queries = c.ChangeUserSchemaQueries(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"users\";",
-		"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"new_prop\" varchar;",
-		"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"new_prop\" varchar;",
+		"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"new_prop\" character varying;",
+		"ALTER TABLE \"_user_identities\"\n\tADD COLUMN \"new_prop\" character varying;",
 		"CREATE VIEW \"users\" AS SELECT\n\t\"__id__\",\n\t\"__last_change_time__\",\n\t\"email\",\n\t\"dummy_id\",\n\t\"android_id\",\n\t\"android_idfa\",\n\t\"android_push_token\",\n\t\"ios_id\",\n\t\"ios_idfa\",\n\t\"ios_push_token\",\n\t\"first_name\",\n\t\"last_name\",\n\t\"gender\",\n\t\"food_preferences_drink\",\n\t\"food_preferences_fruit\",\n\t\"phone_numbers\",\n\t\"favorite_movie_title\",\n\t\"favorite_movie_length\",\n\t\"favorite_movie_soundtrack_title\",\n\t\"favorite_movie_soundtrack_author\",\n\t\"favorite_movie_soundtrack_length\",\n\t\"favorite_movie_soundtrack_genre\",\n\t\"new_prop\"\nFROM \"_users_0\";",
 		"COMMIT;",
 	}
