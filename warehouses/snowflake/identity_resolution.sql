@@ -95,8 +95,6 @@ BEGIN
 
     -- Update associations between identities and users by updating the GID of
     -- the identities.
-    -- TODO(Gianluca): check if this query is correct in Snowflake, then
-    -- eventually simplify the implementation in PostgreSQL.
     UPDATE "_user_identities" AS "ui"
     SET "__gid__" = "u"."__id__"
     FROM {{ new_users_name }} AS "u"

@@ -93,16 +93,10 @@ AS $$
 
     -- Update associations between identities and users by updating the GID of
     -- the identities.
-    UPDATE "_user_identities" SET "__gid__" = (
-        SELECT "__id__"
-        FROM {{ new_users_name }}
-        WHERE
-            "_user_identities"."__pk__" = ANY ({{ new_users_name }}."__identities__")
-        LIMIT 1
-    )
-    FROM {{ new_users_name }}
-    WHERE
-        "_user_identities"."__pk__" = ANY ({{ new_users_name }}."__identities__");
+    UPDATE "_user_identities" AS "ui"
+    SET "__gid__" = "u"."__id__"
+    FROM {{ new_users_name }} AS "u"
+    WHERE "ui"."__pk__" = ANY ("u"."__identities__");
 
     -- Update associations between events and users by updating the user ID of
     -- the events.
