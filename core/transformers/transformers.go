@@ -54,20 +54,23 @@ type Transformer struct {
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
 // action.
+//
+// It returns a types.PathNotExistError error if a path in the mapping does not
+// exist in the source schema.
 func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if m := action.Transformation.Mapping; m != nil {
+		mapping, err := mappings.New(m, action.InSchema, action.OutSchema, layouts)
+		if err != nil {
+			return nil, err
+		}
 		t := Transformer{
 			action:        action.ID,
 			inSchema:      action.InSchema,
 			outSchema:     action.OutSchema,
+			mapping:       mapping,
 			inProperties:  action.Transformation.InProperties,
 			outProperties: action.Transformation.OutProperties,
-		}
-		var err error
-		t.mapping, err = mappings.New(m, t.inSchema, t.outSchema, layouts)
-		if err != nil {
-			return nil, err
 		}
 		return &t, nil
 	}
