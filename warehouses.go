@@ -119,9 +119,6 @@ type Warehouse interface {
 	// If an Identity Resolution is in progress, returns an
 	// ErrIdentityResolutionInProgress error.
 	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
-	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
 	AlterSchema(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) error
