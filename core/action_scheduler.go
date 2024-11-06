@@ -38,12 +38,11 @@ func periodIndex(period int16) int8 {
 
 // actionScheduler is the action scheduler.
 type actionScheduler struct {
-	core      *Core
-	listeners []uint8
-	executor  *actionSchedulerExecutor
-	ctx       context.Context    // context passes to the action executions.
-	cancel    context.CancelFunc // function to cancel the action executions.
-	wg        sync.WaitGroup     // waiting group that includes the schedulers and action executions.
+	core     *Core
+	executor *actionSchedulerExecutor
+	ctx      context.Context    // context passes to the action executions.
+	cancel   context.CancelFunc // function to cancel the action executions.
+	wg       sync.WaitGroup     // waiting group that includes the schedulers and action executions.
 }
 
 // newActionScheduler returns a new action scheduler.
@@ -53,14 +52,12 @@ func newActionScheduler(core *Core) *actionScheduler {
 	}
 	as.ctx, as.cancel = context.WithCancel(context.Background())
 	core.state.Freeze()
-	as.listeners = []uint8{
-		core.state.AddListener(as.onAddAction),
-		core.state.AddListener(as.onDeleteAction),
-		core.state.AddListener(as.onDeleteConnection),
-		core.state.AddListener(as.onDeleteWorkspace),
-		core.state.AddListener(as.onElectLeader),
-		core.state.AddListener(as.onSetActionSchedulePeriod),
-	}
+	core.state.AddListener(as.onAddAction)
+	core.state.AddListener(as.onDeleteAction)
+	core.state.AddListener(as.onDeleteConnection)
+	core.state.AddListener(as.onDeleteWorkspace)
+	core.state.AddListener(as.onElectLeader)
+	core.state.AddListener(as.onSetActionSchedulePeriod)
 	core.state.Unfreeze()
 	return as
 }
@@ -69,7 +66,6 @@ func newActionScheduler(core *Core) *actionScheduler {
 // action executions.
 func (as *actionScheduler) Close() {
 	as.core.state.Freeze()
-	as.core.state.RemoveListeners(as.listeners)
 	as.core.state.Unfreeze()
 	if as.executor != nil {
 		as.executor.Close()
@@ -79,34 +75,31 @@ func (as *actionScheduler) Close() {
 }
 
 // onAddAction is called when an action is added to the state.
-func (as *actionScheduler) onAddAction(n state.AddAction) func() {
+func (as *actionScheduler) onAddAction(n state.AddAction) {
 	if as.executor == nil {
-		return nil
+		return
 	}
 	action, _ := as.core.state.Action(n.ID)
 	if !toSchedule(action) {
-		return nil
+		return
 	}
-	return func() {
-		as.executor.AddAction(action)
-	}
+	as.executor.AddAction(action)
 }
 
 // onDeleteAction is called when an action is deleted from the state.
-func (as *actionScheduler) onDeleteAction(n state.DeleteAction) func() {
+func (as *actionScheduler) onDeleteAction(n state.DeleteAction) {
 	if as.executor == nil {
-		return nil
+		return
 	}
 	go func() {
 		as.executor.RemoveAction(n.ID)
 	}()
-	return nil
 }
 
 // onDeleteConnection is called when a connection is deleted from the state.
-func (as *actionScheduler) onDeleteConnection(n state.DeleteConnection) func() {
+func (as *actionScheduler) onDeleteConnection(n state.DeleteConnection) {
 	if as.executor == nil {
-		return nil
+		return
 	}
 	var actions []int
 	for _, action := range n.Connection().Actions() {
@@ -115,20 +108,19 @@ func (as *actionScheduler) onDeleteConnection(n state.DeleteConnection) func() {
 		}
 	}
 	if actions == nil {
-		return nil
+		return
 	}
 	go func() {
 		for _, action := range actions {
 			as.executor.RemoveAction(action)
 		}
 	}()
-	return nil
 }
 
 // onDeleteWorkspace is called when a workspace is deleted from the state.
-func (as *actionScheduler) onDeleteWorkspace(n state.DeleteWorkspace) func() {
+func (as *actionScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	if as.executor == nil {
-		return nil
+		return
 	}
 	var actions []int
 	for _, connection := range n.Workspace().Connections() {
@@ -139,45 +131,40 @@ func (as *actionScheduler) onDeleteWorkspace(n state.DeleteWorkspace) func() {
 		}
 	}
 	if actions == nil {
-		return nil
+		return
 	}
 	go func() {
 		for _, action := range actions {
 			as.executor.RemoveAction(action)
 		}
 	}()
-	return nil
 }
 
 // ElectLeader is called when a leader is elected.
-func (as *actionScheduler) onElectLeader(n state.ElectLeader) func() {
+func (as *actionScheduler) onElectLeader(n state.ElectLeader) {
 	if as.executor != nil {
 		if !as.core.state.IsLeader() {
 			go as.executor.Close()
 		}
-		return nil
+		return
 	}
 	if !as.core.state.IsLeader() {
-		return nil
+		return
 	}
-	return func() {
-		as.executor = newActionSchedulerExecutor(as.core, &as.wg, as.ctx)
-	}
+	as.executor = newActionSchedulerExecutor(as.core, &as.wg, as.ctx)
 }
 
 // onSetActionSchedulePeriod is called when the schedule period of an action is
 // set.
-func (as *actionScheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) func() {
+func (as *actionScheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) {
 	if as.executor != nil {
-		return nil
+		return
 	}
 	action, _ := as.core.state.Action(n.ID)
 	if !toSchedule(action) {
-		return nil
+		return
 	}
-	return func() {
-		as.executor.SetPeriod(action)
-	}
+	as.executor.SetPeriod(action)
 }
 
 // actionSchedulerExecutor represents an executor for an action scheduler. When

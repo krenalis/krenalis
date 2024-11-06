@@ -29,7 +29,6 @@ const backoffBase = 1000
 type actionPurger struct {
 	state     *state.State
 	datastore *datastore.Datastore
-	listeners []uint8
 	close     struct {
 		ctx    context.Context
 		cancel context.CancelFunc
@@ -54,12 +53,10 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 	p.close.ctx, p.close.cancel = context.WithCancel(context.Background())
 
 	state.Freeze()
-	p.listeners = []uint8{
-		state.AddListener(p.onDeleteAction),
-		state.AddListener(p.onDeleteConnection),
-		state.AddListener(p.onSetWarehouse),
-		state.AddListener(p.onSetWarehouseMode),
-	}
+	state.AddListener(p.onDeleteAction)
+	state.AddListener(p.onDeleteConnection)
+	state.AddListener(p.onSetWarehouse)
+	state.AddListener(p.onSetWarehouseMode)
 	var workspaces []int
 	for _, ws := range p.state.Workspaces() {
 		if ws.NumActionsToPurge() > 0 {
@@ -85,9 +82,6 @@ func (p *actionPurger) Close(ctx context.Context) {
 	if p.close.closed.Load() {
 		return
 	}
-	p.state.Freeze()
-	p.state.RemoveListeners(p.listeners)
-	p.state.Unfreeze()
 	// Signals the closure.
 	p.close.closed.Store(true)
 	// Stop the backoff.
@@ -104,61 +98,57 @@ func (p *actionPurger) Close(ctx context.Context) {
 }
 
 // onDeleteAction is called when an action is deleted.
-func (p *actionPurger) onDeleteAction(n state.DeleteAction) func() {
+func (p *actionPurger) onDeleteAction(n state.DeleteAction) {
 	a := n.Action()
 	c := a.Connection()
 	if a.Target != state.Users || c.Role != state.Source {
-		return nil
+		return
 	}
 	ws := c.Workspace()
 	if ws.Warehouse.Mode != state.Normal {
-		return nil
+		return
 	}
 	go p.purgeWorkspace(ws.ID, nil)
-	return nil
 }
 
 // onDeleteConnection is called when a connection is deleted.
-func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) func() {
+func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) {
 	c := n.Connection()
 	if c.Role != state.Source {
-		return nil
+		return
 	}
 	ws := c.Workspace()
 	if ws.Warehouse.Mode != state.Normal {
-		return nil
+		return
 	}
 	for _, action := range c.Actions() {
 		if action.Target == state.Users {
 			go p.purgeWorkspace(ws.ID, nil)
-			return nil
+			return
 		}
 	}
-	return nil
 }
 
 // onSetWarehouse is called when the settings of a data warehouse are changed.
-func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) func() {
+func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) {
 	if n.Mode != state.Normal {
-		return nil
+		return
 	}
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
-		return nil
+		return
 	}
 	go p.purgeWorkspace(n.Workspace, nil)
-	return nil
 }
 
 // onSetWarehouseMode is called when the mode of a data warehouse is changed.
-func (p *actionPurger) onSetWarehouseMode(n state.SetWarehouseMode) func() {
+func (p *actionPurger) onSetWarehouseMode(n state.SetWarehouseMode) {
 	if n.Mode != state.Normal {
-		return nil
+		return
 	}
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
-		return nil
+		return
 	}
 	go p.purgeWorkspace(n.Workspace, nil)
-	return nil
 }
 
 // purgeWorkspace purges the identities associated with the delete actions of

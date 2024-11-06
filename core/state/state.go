@@ -54,11 +54,8 @@ type State struct {
 		acks    *acks
 		stop    func()
 	}
-	listeners struct {
-		id  uint8 // last listener identifier
-		all map[uint8]any
-	}
-	close struct {
+	listeners []any
+	close     struct {
 		ctx       context.Context
 		CancelCtx context.CancelFunc
 		sync.WaitGroup
@@ -93,7 +90,6 @@ func New(db *postgres.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, e
 		actions:          map[int]*Action{},
 		accounts:         map[int]*Account{},
 	}
-	state.listeners.all = map[uint8]any{}
 
 	// Listen to notifications.
 	state.notifications.acks = newAcks()

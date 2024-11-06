@@ -710,16 +710,14 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 // onSetAction is called when an action of the store's workspace is set.
 //
 // The notification is propagated by the Store.onSetAction method.
-func (store *Store) onSetAction(n state.SetAction) func() {
+func (store *Store) onSetAction(n state.SetAction) {
 	store.mu.Lock()
 	iw, ok := store.eventIdentityWriters[n.ID]
 	store.mu.Unlock()
 	if !ok {
-		return nil
+		return
 	}
-	return func() {
-		iw.onSetAction(n)
-	}
+	iw.onSetAction(n)
 }
 
 // onSetWorkspaceUserSchema is called when the user schema of the store's

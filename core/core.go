@@ -747,7 +747,7 @@ func (core *Core) mustBeOpen() {
 }
 
 // onDeleteAction is called when an action is deleted.
-func (core *Core) onDeleteAction(n state.DeleteAction) func() {
+func (core *Core) onDeleteAction(n state.DeleteAction) {
 	if core.state.IsLeader() && core.transformerProvider != nil {
 		go func() {
 			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
@@ -761,26 +761,23 @@ func (core *Core) onDeleteAction(n state.DeleteAction) func() {
 			}
 		}()
 	}
-	return nil
 }
 
 // onExecuteAction is called when an action is executed.
-func (core *Core) onExecuteAction(n state.ExecuteAction) func() {
+func (core *Core) onExecuteAction(n state.ExecuteAction) {
 	if !core.state.IsLeader() {
-		return nil
+		return
 	}
-	return func() {
-		action, _ := core.state.Action(n.Action)
-		c := action.Connection()
-		store := core.datastore.Store(c.Workspace().ID)
-		connection := &Connection{core: core, store: store, connection: c}
-		a := &Action{core: core, action: action, connection: connection}
-		core.close.Add(1)
-		go func() {
-			defer core.close.Done()
-			a.exec(core.close.ctx)
-		}()
-	}
+	action, _ := core.state.Action(n.Action)
+	c := action.Connection()
+	store := core.datastore.Store(c.Workspace().ID)
+	connection := &Connection{core: core, store: store, connection: c}
+	a := &Action{core: core, action: action, connection: connection}
+	core.close.Add(1)
+	go func() {
+		defer core.close.Done()
+		a.exec(core.close.ctx)
+	}()
 }
 
 func containsNUL(s string) bool {
