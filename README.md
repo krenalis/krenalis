@@ -24,10 +24,32 @@
 
 ## Before commit
 
-From the root of this repository, run:
+1. From the root of this repository, run:
 
 ```
 go run ./commit
+```
+
+2. Set these environment variables, where each of them must point to a JSON file with the credentials of an **empty, i.e. initializable, data warehouse**.
+
+* `MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL`
+* `MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE`
+
+3. From the root of this repository, run:
+
+```
+go test -run ^TestWarehousesIdentityResolution$ github.com/meergo/meergo/core/datastore -count 1 -v
+```
+
+4. Set these environment variables, where each of them must point to a JSON file with the credentials of a data warehouse: 
+
+* `MEERGO_TEST_PATH_POSTGRESQL`
+* `MEERGO_TEST_PATH_SNOWFLAKE`
+
+5. From the root of this repository, run:
+
+```
+go test -run ^Test_Merge$ github.com/meergo/meergo/warehouses/... -count 1 -v
 ```
 
 ### Troubleshoot tests
