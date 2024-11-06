@@ -43,9 +43,9 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 
-// ErrAlterSchemaInProgress is a error indicating that the an alter schema
-// operation is currently in progress on the data warehouse.
-var ErrAlterSchemaInProgress = meergo.ErrAlterSchemaInProgress
+// ErrAlterInProgress is a error indicating that an operation that alter the
+// columns of the user tables is currently in progress on the data warehouse.
+var ErrAlterInProgress = meergo.ErrAlterInProgress
 
 // ErrIdentityResolutionInProgress is a error indicating that the Identity
 // Resolution is currently in progress on the data warehouse.
@@ -137,15 +137,15 @@ func (store *Store) AddEvents(events [][]any) error {
 	return nil
 }
 
-// AlterSchema alters the user schema.
+// AlterUserSchema alters the user schema.
 //
-// userSchema is the user schema without meta properties (this parameter is
-// useful for obtaining type information and for creating views), while
-// operations is the set of operations to apply in order to migrate the current
-// schema to userSchema.
+// schema is the user schema without meta properties (this parameter is useful
+// for obtaining type information and for creating views), while operations is
+// the set of operations to apply in order to migrate the current schema to the
+// given schema.
 //
 // If another alter schema operation is in progress on the data warehouse,
-// returns a ErrAlterSchemaInProgress error.
+// returns a ErrAlterInProgress error.
 //
 // If an Identity Resolution is in progress, returns an
 // ErrIdentityResolutionInProgress error.
@@ -153,35 +153,35 @@ func (store *Store) AddEvents(events [][]any) error {
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If an error occurs with the data warehouse, it returns a
 // *DataWarehouseError error.
-func (store *Store) AlterSchema(ctx context.Context, userSchema types.Type, operations []meergo.AlterSchemaOperation) error {
+func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
 	if err != nil {
 		return err
 	}
 	defer done()
-	userColumns := propertiesToColumns(userSchema)
-	return store.warehouse().AlterSchema(ctx, userColumns, operations)
+	columns := propertiesToColumns(schema)
+	return store.warehouse().AlterUserColumns(ctx, columns, operations)
 }
 
-// AlterSchemaQueries returns the queries of a schema altering operation.
+// AlterUserSchemaQueries returns the queries of a schema altering operation.
 //
-// userSchema is the user schema without meta properties (this parameter is
-// useful for obtaining type information and for creating views), while
-// operations is the set of operations to apply in order to migrate the current
-// schema to userSchema.
+// schema is the user schema without meta properties (this parameter is useful
+// for obtaining type information and for creating views), while operations is
+// the set of operations to apply in order to migrate the current schema to the
+// given schema.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) AlterSchemaQueries(ctx context.Context, userSchema types.Type, operations []meergo.AlterSchemaOperation) ([]string, error) {
+func (store *Store) AlterUserSchemaQueries(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {
 		return nil, err
 	}
 	defer done()
-	userColumns := propertiesToColumns(userSchema)
-	return store.warehouse().AlterSchemaQueries(ctx, userColumns, operations)
+	userColumns := propertiesToColumns(schema)
+	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
 }
 
 // BatchIdentityWriter returns an identity writer for writing user identities in

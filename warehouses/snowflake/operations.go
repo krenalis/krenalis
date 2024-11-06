@@ -19,7 +19,7 @@ import (
 type warehouseOperation string
 
 const (
-	alterSchema        warehouseOperation = "AlterSchema"
+	alterUserColumns   warehouseOperation = "AlterUserColumns"
 	identityResolution warehouseOperation = "IdentityResolution"
 )
 
@@ -30,7 +30,7 @@ const (
 // mark the operation as completed.
 //
 // In the case that an AlterSchema operation is already in progress, the error
-// ErrAlterSchemaInProgress is returned; if an IdentityResolution operation is
+// ErrAlterInProgress is returned; if an IdentityResolution operation is
 // already in progress, the error ErrIdentityResolutionInProgress is returned.
 //
 // If a database error occurs, a *DataWarehouseError is returned.
@@ -64,8 +64,8 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 		}
 		if runningOp != nil {
 			switch *runningOp {
-			case alterSchema:
-				return meergo.ErrAlterSchemaInProgress
+			case alterUserColumns:
+				return meergo.ErrAlterInProgress
 			case identityResolution:
 				return meergo.ErrIdentityResolutionInProgress
 			default:

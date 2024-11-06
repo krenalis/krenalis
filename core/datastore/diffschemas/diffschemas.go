@@ -33,7 +33,7 @@ import (
 //
 // In case the difference between old schema and new schema cannot be computed,
 // an error is returned.
-func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]meergo.AlterSchemaOperation, error) {
+func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]meergo.AlterOperation, error) {
 
 	if oldSchema.Kind() != types.ObjectKind {
 		panic("not an Object")
@@ -52,7 +52,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		newPropsByName[p.Name] = p
 	}
 
-	operations := []meergo.AlterSchemaOperation{}
+	operations := []meergo.AlterOperation{}
 
 	// Given two schemas, OldSchema and NewSchema, we define OldNames and
 	// NewNames as the sets of property names in the two schemas.
@@ -123,14 +123,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range propertiesToColumns(newProp.Type) {
-					operations = append(operations, meergo.AlterSchemaOperation{
+					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
 						NewColumn: pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
 					})
 				}
 			} else {
-				operations = append(operations, meergo.AlterSchemaOperation{
+				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationRenameColumn,
 					Column:    pathToColumn(oldPath),
 					NewColumn: pathToColumn(appendPath(path, addedName)),
@@ -144,14 +144,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		p := newPropsByName[addedName]
 		if p.Type.Kind() == types.ObjectKind {
 			for _, c := range propertiesToColumns(p.Type) {
-				operations = append(operations, meergo.AlterSchemaOperation{
+				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationAddColumn,
 					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
 					Type:      c.Type,
 				})
 			}
 		} else {
-			operations = append(operations, meergo.AlterSchemaOperation{
+			operations = append(operations, meergo.AlterOperation{
 				Operation: meergo.OperationAddColumn,
 				Column:    pathToColumn(appendPath(path, addedName)),
 				Type:      p.Type,
@@ -183,13 +183,13 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		droppedProp := oldPropsByName[droppedName]
 		if droppedProp.Type.Kind() == types.ObjectKind {
 			for _, p := range propertyPaths(droppedProp.Type) {
-				operations = append(operations, meergo.AlterSchemaOperation{
+				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationDropColumn,
 					Column:    pathToColumn(appendPath(path, appendPath(droppedName, p))),
 				})
 			}
 		} else {
-			operations = append(operations, meergo.AlterSchemaOperation{
+			operations = append(operations, meergo.AlterOperation{
 				Operation: meergo.OperationDropColumn,
 				Column:    pathToColumn(appendPath(path, droppedName)),
 			})
@@ -227,14 +227,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				// appear in "rePaths" (the key is the name of the created
 				// property, the value is nil).
 				operations = append(operations,
-					meergo.AlterSchemaOperation{
+					meergo.AlterOperation{
 						Operation: meergo.OperationDropColumn,
 						Column:    pathToColumn(keptPath),
 					})
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range propertiesToColumns(newProp.Type) {
-					operations = append(operations, meergo.AlterSchemaOperation{
+					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationAddColumn,
 						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
 						Type:      c.Type,
@@ -242,7 +242,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				}
 			} else {
 				operations = append(operations,
-					meergo.AlterSchemaOperation{
+					meergo.AlterOperation{
 						Operation: meergo.OperationAddColumn,
 						Column:    pathToColumn(keptPath),
 						Type:      newProp.Type,
@@ -255,7 +255,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They appear in "rePaths" (the key is the name of the property that
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
-			operations = append(operations, meergo.AlterSchemaOperation{
+			operations = append(operations, meergo.AlterOperation{
 				Operation: meergo.OperationDropColumn,
 				Column:    pathToColumn(keptPath),
 			})
@@ -265,14 +265,14 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range propertiesToColumns(newProp.Type) {
-					operations = append(operations, meergo.AlterSchemaOperation{
+					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
 						NewColumn: pathToColumn(keptPath) + "_" + c.Name,
 					})
 				}
 			} else {
-				operations = append(operations, meergo.AlterSchemaOperation{
+				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationRenameColumn,
 					Column:    pathToColumn(oldPath),
 					NewColumn: pathToColumn(keptPath),

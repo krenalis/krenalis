@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// AlterSchema alters the user schema.
-func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) error {
+// AlterUserColumns alters the columns of the user tables.
+func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) error {
 
 	// Start an AlterSchema operation on the data warehouse, then defer its
 	// ending.
@@ -46,7 +46,7 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []meer
 	}
 
 	// Determine the alter schema queries.
-	queries := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserColumnsQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
@@ -62,13 +62,14 @@ func (warehouse *PostgreSQL) AlterSchema(ctx context.Context, userColumns []meer
 	return err
 }
 
-// AlterSchemaQueries returns the queries of a schema altering operation.
-func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) ([]string, error) {
+// AlterUserColumnsQueries returns the queries that alter the columns of the
+// user tables.
+func (warehouse *PostgreSQL) AlterUserColumnsQueries(ctx context.Context, userColumns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
 	usersVersion, err := warehouse.usersVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
-	queries := alterSchemaQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserColumnsQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
@@ -77,10 +78,10 @@ func (warehouse *PostgreSQL) AlterSchemaQueries(ctx context.Context, userColumns
 	return queries, nil
 }
 
-// alterSchemaQueries returns the queries that perform the given operations.
-// usersTableName is the current name of the users table, for example
-// "_users_42". operations must contain at least one operation.
-func alterSchemaQueries(usersTableName string, userColumns []meergo.Column, operations []meergo.AlterSchemaOperation) []string {
+// alterUserColumnsQueries returns the queries that perform the given
+// operations. usersTableName is the current name of the users table, for
+// example "_users_42". operations must contain at least one operation.
+func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column, operations []meergo.AlterOperation) []string {
 
 	// The operations are performed in this order:
 	//
@@ -132,7 +133,7 @@ func alterSchemaQueries(usersTableName string, userColumns []meergo.Column, oper
 
 	// ALTER TABLE ... ADD COLUMN.
 	{
-		var toAdd []meergo.AlterSchemaOperation
+		var toAdd []meergo.AlterOperation
 		for _, op := range operations {
 			if op.Operation == meergo.OperationAddColumn {
 				toAdd = append(toAdd, op)

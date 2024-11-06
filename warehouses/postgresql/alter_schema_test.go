@@ -22,7 +22,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 	tests := []struct {
 		name            string
 		userColumns     []meergo.Column // without "__id__" and "__last_change_time__", which are added by the test
-		ops             []meergo.AlterSchemaOperation
+		ops             []meergo.AlterOperation
 		expectedQueries []string // except the "DROP" and "CREATE VIEW" queries.
 		expectedErr     error
 	}{
@@ -31,7 +31,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			userColumns: []meergo.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
@@ -44,7 +44,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			userColumns: []meergo.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
@@ -57,7 +57,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			userColumns: []meergo.Column{
 				{Name: "f", Type: types.Float(64), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "f", Type: types.Float(64)},
 			},
 			expectedQueries: []string{
@@ -73,7 +73,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Text()},
 				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Text()},
 			},
@@ -88,7 +88,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Array(types.Text()), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Array(types.Text())},
 			},
 			expectedQueries: []string{
@@ -102,7 +102,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
 			},
 			expectedQueries: []string{
@@ -117,7 +117,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "x_a", Type: types.Text(), Nullable: true},
 				{Name: "x_b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "x_a", Type: types.Text()},
 				{Operation: meergo.OperationAddColumn, Column: "x_b", Type: types.Int(32)},
 			},
@@ -133,7 +133,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "a", Type: types.Text()},
 				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Int(32)},
 			},
@@ -147,7 +147,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			userColumns: []meergo.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationDropColumn, Column: "a"},
 			},
 			expectedQueries: []string{
@@ -160,7 +160,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			userColumns: []meergo.Column{
 				{Name: "z", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationDropColumn, Column: "a"},
 				{Operation: meergo.OperationDropColumn, Column: "b"},
 			},
@@ -174,7 +174,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			userColumns: []meergo.Column{
 				{Name: "b", Type: types.Int(32), Nullable: true},
 			},
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationRenameColumn, Column: "a", NewColumn: "b"},
 			},
 			expectedQueries: []string{
@@ -201,7 +201,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "ai32", Type: types.Array(types.Int(32)), Nullable: true},
 			},
 			name: "Test many types",
-			ops: []meergo.AlterSchemaOperation{
+			ops: []meergo.AlterOperation{
 				{Operation: meergo.OperationAddColumn, Column: "b", Type: types.Boolean()},
 				{Operation: meergo.OperationAddColumn, Column: "i16", Type: types.Int(16)},
 				{Operation: meergo.OperationAddColumn, Column: "i32", Type: types.Int(32)},
@@ -267,7 +267,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 				{Name: "__id__", Type: types.Int(32)},
 				{Name: "__last_change_time__", Type: types.DateTime()},
 			}, userColumns...)
-			got := alterSchemaQueries("_users_0", userColumns, test.ops)
+			got := alterUserColumnsQueries("_users_0", userColumns, test.ops)
 			// Exclude from the test the queries that drop or create views.
 			got = slices.DeleteFunc(got, func(query string) bool {
 				return strings.HasPrefix(query, "DROP VIEW") ||

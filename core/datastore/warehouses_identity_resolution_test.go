@@ -452,7 +452,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Create the necessary columns on the warehouse.
-			var ops []meergo.AlterSchemaOperation
+			var ops []meergo.AlterOperation
 			for _, c := range columns {
 				if c.Name == "email" {
 					// TODO(Gianluca): the "email" column is omitted as it is already
@@ -460,9 +460,9 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// issue https://github.com/meergo/meergo/issues/1075.
 					continue
 				}
-				ops = append(ops, meergo.AlterSchemaOperation{Operation: meergo.OperationAddColumn, Column: c.Name, Type: c.Type})
+				ops = append(ops, meergo.AlterOperation{Operation: meergo.OperationAddColumn, Column: c.Name, Type: c.Type})
 			}
-			err = wh.AlterSchema(ctx, columns, ops)
+			err = wh.AlterUserColumns(ctx, columns, ops)
 			if err != nil {
 				t.Fatal(err)
 			}

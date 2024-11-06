@@ -1,7 +1,7 @@
 DO $$
     BEGIN
     IF NOT EXISTS (SELECT FROM pg_type WHERE typname = '_operation') THEN
-        CREATE TYPE _operation AS ENUM ('IdentityResolution', 'AlterSchema');
+        CREATE TYPE _operation AS ENUM ('IdentityResolution', 'AlterUserColumns');
     END IF;
 END$$;
 

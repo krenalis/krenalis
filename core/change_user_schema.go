@@ -155,17 +155,19 @@ Identifiers:
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 
-		// TODO(Gianluca): the alter schema of the warehouse is done within the
-		// transaction to avoid updating the state when in reality the alter
-		// schema ends with an error, thus preventing the creation of an
-		// inconsistent state that would require resetting the databases.
+		// TODO(Gianluca): the altering of the columns of the users table is
+		// done within the transaction to avoid updating the state when in
+		// reality the alter schema ends with an error, thus preventing the
+		// creation of an inconsistent state that would require resetting the
+		// databases.
 		//
 		// This is just a temporary workaround.
 		//
-		// The topic is discussed in the issue https://github.com/meergo/meergo/issues/692.
-		err = this.store.AlterSchema(ctx, schema, operations)
+		// The topic is discussed in the issue
+		// https://github.com/meergo/meergo/issues/692.
+		err = this.store.AlterUserSchema(ctx, schema, operations)
 		if err != nil {
-			if err == datastore.ErrAlterSchemaInProgress {
+			if err == datastore.ErrAlterInProgress {
 				return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is already in progress on the warehouse")
 			}
 			if err == datastore.ErrIdentityResolutionInProgress {
@@ -239,7 +241,7 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
 	}
-	queries, err := this.store.AlterSchemaQueries(ctx, schema, operations)
+	queries, err := this.store.AlterUserSchemaQueries(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {
 			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)

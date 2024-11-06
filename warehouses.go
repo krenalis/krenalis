@@ -58,27 +58,28 @@ type WarehouseConfig struct {
 // instances.
 type WarehouseNewFunc[T Warehouse] func(*WarehouseConfig) (T, error)
 
-// AlterSchemaOperation represents an operation that alters the user schema.
+// AlterOperation represents an operation that alters the columns of the user
+// tables.
 //
 // Every column is always nullable.
-type AlterSchemaOperation struct {
-	Operation OperationType
+type AlterOperation struct {
+	Operation AlterOperationType
 	Column    string     // For "Add", "Drop" and "Rename" operations.
 	Type      types.Type // For "Add" operations. Object properties are expanded into single "Add" operations, so Type can never have kind Object.
 	NewColumn string     // For "Rename" operations.
 }
 
-// OperationType represents an operation to perform on the data warehouse to
-// alter the "users" (and "_user_identities") schema.
-type OperationType int
+// AlterOperationType represents the type of an operation on the data warehouse
+// that alters the columns of the user tables.
+type AlterOperationType int
 
 const (
-	OperationAddColumn OperationType = iota + 1
+	OperationAddColumn AlterOperationType = iota + 1
 	OperationDropColumn
 	OperationRenameColumn
 )
 
-func (op OperationType) String() string {
+func (op AlterOperationType) String() string {
 	switch op {
 	case OperationAddColumn:
 		return "AddColumn"
@@ -91,12 +92,12 @@ func (op OperationType) String() string {
 	}
 }
 
-func (op OperationType) MarshalJSON() ([]byte, error) {
+func (op AlterOperationType) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + op.String() + `"`), nil
 }
 
 var (
-	ErrAlterSchemaInProgress        = errors.New("alter schema currently in progress on the data warehouse")
+	ErrAlterInProgress              = errors.New("alter schema currently in progress on the data warehouse")
 	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
 )
 
@@ -106,33 +107,34 @@ var (
 // warehouse.
 type Warehouse interface {
 
-	// AlterSchema alters the user schema.
+	// AlterUserColumns alters the columns of the user tables.
 	//
-	// userColumns contains the columns of the "users" table to obtain (this
-	// parameters is useful for obtaining type information and for creating views),
-	// while operations is the set of operations to apply in order to migrate the
-	// current columns to userColumns.
+	// columns contains the columns of the "users" table to obtain (this parameters
+	// is useful for obtaining type information and for creating views), while
+	// operations is the set of operations to apply in order to migrate the current
+	// columns to the given columns.
 	//
-	// If another alter schema operation is in progress on the data warehouse,
-	// returns an ErrAlterSchemaInProgress error.
+	// If another alter operation is in progress on the data warehouse, returns an
+	// ErrAlterInProgress error.
 	//
 	// If an Identity Resolution is in progress, returns an
 	// ErrIdentityResolutionInProgress error.
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
-	AlterSchema(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) error
+	AlterUserColumns(ctx context.Context, columns []Column, operations []AlterOperation) error
 
-	// AlterSchemaQueries returns the queries of a schema altering operation.
+	// AlterUserColumnsQueries returns the queries that alter the columns of the
+	// user tables.
 	//
-	// userColumns contains the columns of the "users" table to obtain (this
-	// parameters is useful for obtaining type information and for creating views),
-	// while operations is the set of operations to apply in order to migrate the
-	// current columns to userColumns.
+	// columns contains the columns of the users tables to obtain (this parameters
+	// is useful for obtaining type information and for creating views), while
+	// operations is the set of operations to apply in order to migrate the current
+	// columns to the given columns.
 	//
 	// If an error occurs with the data warehouse, it returns a
 	// *warehouses.DataWarehouseError error.
-	AlterSchemaQueries(ctx context.Context, userColumns []Column, operations []AlterSchemaOperation) ([]string, error)
+	AlterUserColumnsQueries(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
 
 	// CanInitialize checks whether the data warehouse can be initialized.
 	// If it cannot, this method returns a *NotInitializableError.
@@ -228,7 +230,7 @@ type Warehouse interface {
 	// ErrIdentityResolutionInProgress error.
 	//
 	// If an alter schema operation is in progress on the data warehouse, returns a
-	// ErrAlterSchemaInProgress error.
+	// ErrAlterInProgress error.
 	//
 	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
 	// error.
