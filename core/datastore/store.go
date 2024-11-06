@@ -144,6 +144,11 @@ func (store *Store) AddEvents(events [][]any) error {
 // the set of operations to apply in order to migrate the current schema to the
 // given schema.
 //
+// TODO(Gianluca): in this method, there is an inconsistency related to the
+// parameters, that is: the schema is passed as properties, while the operations
+// are columns, so there is a mix of different levels of abstraction. This is
+// discussed in the issue https://github.com/meergo/meergo/issues/862.
+//
 // If another alter schema operation is in progress on the data warehouse,
 // returns a ErrAlterInProgress error.
 //
@@ -170,6 +175,11 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 // for obtaining type information and for creating views), while operations is
 // the set of operations to apply in order to migrate the current schema to the
 // given schema.
+//
+// TODO(Gianluca): in this method, there is an inconsistency related to the
+// parameters, that is: the schema is passed as properties, while the operations
+// are columns, so there is a mix of different levels of abstraction. This is
+// discussed in the issue https://github.com/meergo/meergo/issues/862.
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
