@@ -195,6 +195,9 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 	return b.String()
 }
 
+// typeToSnowflakeType returns the Snowflake type corresponding to the given
+// type.Type, which is a type supported in the user schema. These types are
+// specified in the file 'core/datastore/README.md',
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
 	case types.BooleanKind:

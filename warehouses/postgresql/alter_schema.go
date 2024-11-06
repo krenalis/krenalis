@@ -192,6 +192,9 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 	return b.String()
 }
 
+// typeToPostgresType returns the PostgreSQL type corresponding to the given
+// type.Type, which is a type supported in the user schema. These types are
+// specified in the file 'core/datastore/README.md',
 func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.BooleanKind:
