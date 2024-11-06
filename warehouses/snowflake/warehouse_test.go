@@ -124,9 +124,6 @@ func Test_Merge(t *testing.T) {
 		create.WriteString(c.Name)
 		create.WriteString(`" `)
 		create.WriteString(typeToSnowflakeType(cols[i].MeergoType))
-		if i == 0 {
-			create.WriteString(" PRIMARY KEY")
-		}
 	}
 	create.WriteString("\n)")
 	_, err = db.ExecContext(context.Background(), create.String())
@@ -147,10 +144,6 @@ func Test_Merge(t *testing.T) {
 	}
 	row2 := make([]any, len(table.Columns))
 	for i := range table.Columns {
-		if i == 0 {
-			row2[i] = cols[0].MeergoValue
-			continue
-		}
 		row2[i] = nil
 	}
 	err = wh.Merge(context.Background(), table, [][]any{row1, row2}, nil)
@@ -182,12 +175,35 @@ func Test_Merge(t *testing.T) {
 	}
 	for i, got := range row {
 		c := cols[i]
-		if value, ok := got.(json.Value); ok {
-			value, err = json.Compact(value)
+		switch c.MeergoType.Kind() {
+		case types.JSONKind:
+			v, ok := got.(json.Value)
+			if !ok {
+				t.Fatalf("type %s: expected a json.Value value, got %#v (type %T)", c.MeergoType, got, got)
+			}
+			v, err = json.Compact(v)
 			if err != nil {
 				t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
 			}
-			got = value
+			got = v
+		case types.ArrayKind:
+			if c.MeergoType.Elem().Kind() == types.JSONKind {
+				elements, ok := got.([]any)
+				if !ok {
+					t.Fatalf("type %s: expected a []any value, got %#v (type %T)", c.MeergoType, got, got)
+				}
+				for i, element := range elements {
+					v, ok := element.(json.Value)
+					if !ok {
+						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.MeergoType, element, element)
+					}
+					v, err = json.Compact(v)
+					if err != nil {
+						t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+					}
+					elements[i] = v
+				}
+			}
 		}
 		if !cmp.Equal(c.MeergoValue, got) {
 			t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.MeergoType, c.MeergoValue, c.MeergoValue, got, got)

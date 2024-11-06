@@ -140,11 +140,21 @@ func Test_Merge(t *testing.T) {
 			t.Logf("cannot drop %s table: %s", table.Name, err)
 		}
 	}()
-	row := make([]any, len(table.Columns))
+
+	// Merge the values.
+	row1 := make([]any, len(table.Columns))
 	for i := range table.Columns {
-		row[i] = cols[i].MeergoValue
+		row1[i] = cols[i].MeergoValue
 	}
-	err = wh.Merge(context.Background(), table, [][]any{row}, nil)
+	row2 := make([]any, len(table.Columns))
+	for i := range table.Columns {
+		if i == 0 {
+			row2[i] = !cols[0].MeergoValue.(bool)
+			continue
+		}
+		row2[i] = nil
+	}
+	err = wh.Merge(context.Background(), table, [][]any{row1, row2}, nil)
 	if err != nil {
 		t.Fatalf("cannot merge: %s", err)
 	}
@@ -159,23 +169,75 @@ func Test_Merge(t *testing.T) {
 		t.Fatalf("cannot query: %s", err)
 	}
 	defer rows.Close()
-	if count != 1 {
-		t.Fatalf("expected count 1, got %d", count)
+	if count != 2 {
+		t.Fatalf("expected count 2, got %d", count)
 	}
-	for rows.Next() {
-		if err := rows.Scan(row...); err != nil {
-			t.Fatalf("cannot scan row: %s", err)
-			return
-		}
-		for i, got := range row {
-			c := cols[i]
-			if !cmp.Equal(c.MeergoValue, got) {
-				t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.MeergoType, c.MeergoValue, c.MeergoValue, got, got)
+
+	// Scan the rows.
+	var row = make([]any, len(table.Columns))
+	if !rows.Next() {
+		t.Fatal("expected the first row, got no rows")
+	}
+	if err := rows.Scan(row...); err != nil {
+		t.Fatalf("unexpected error scanning the first row: %s", err)
+	}
+	for i, got := range row {
+		c := cols[i]
+		switch c.MeergoType.Kind() {
+		case types.JSONKind:
+			v, ok := got.(json.Value)
+			if !ok {
+				t.Fatalf("type %s: expected a json.Value value, got %#v (type %T)", c.MeergoType, got, got)
+			}
+			v, err = json.Compact(v)
+			if err != nil {
+				t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+			}
+			got = v
+		case types.ArrayKind:
+			if c.MeergoType.Elem().Kind() == types.JSONKind {
+				elements, ok := got.([]any)
+				if !ok {
+					t.Fatalf("type %s: expected a []any value, got %#v (type %T)", c.MeergoType, got, got)
+				}
+				for i, element := range elements {
+					v, ok := element.(json.Value)
+					if !ok {
+						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.MeergoType, element, element)
+					}
+					v, err = json.Compact(v)
+					if err != nil {
+						t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+					}
+					elements[i] = v
+				}
 			}
 		}
+		if !cmp.Equal(c.MeergoValue, got) {
+			t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.MeergoType, c.MeergoValue, c.MeergoValue, got, got)
+		}
+	}
+	if !rows.Next() {
+		t.Fatal("expected the second row, got no rows")
+	}
+	clear(row)
+	if err := rows.Scan(row...); err != nil {
+		t.Fatalf("unexpected error scanning the second row: %s", err)
+	}
+	for i, got := range row {
+		if i == 0 {
+			continue
+		}
+		c := cols[i]
+		if got != nil {
+			t.Fatalf("type %s: expected nil, got %#v (type %T)", c.MeergoType, got, got)
+		}
+	}
+	if rows.Next() {
+		t.Fatal("expected 2 row, got 3")
 	}
 	if err = rows.Err(); err != nil {
-		t.Fatalf("cannot scan rows: %s", err)
+		t.Fatalf("unexpected error scanning rows: %s", err)
 	}
 }
 
