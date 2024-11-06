@@ -214,7 +214,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.WarehouseTab
 		b.WriteString(c.Name)
 		b.WriteString(`",`)
 	}
-	b.WriteString(`FALSE AS "$purge" FROM "`)
+	b.WriteString(` FALSE AS "$purge" FROM "`)
 	b.WriteString(table.Name)
 	b.WriteString("\" LIMIT 0")
 	create := b.String()
@@ -625,7 +625,6 @@ func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io.Reader, error) {
 	var err error
 	var b bytes.Buffer
-	var bj bytes.Buffer
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
@@ -641,7 +640,7 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			err = serializeValueToCSV(&b, &bj, columns[j].Type, v)
+			err = serializeValueToCSV(&b, columns[j].Type, v)
 			if err != nil {
 				return nil, err
 			}
@@ -662,7 +661,6 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (io.Reader, error) {
 	var err error
 	var b bytes.Buffer
-	var bj bytes.Buffer
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
@@ -682,7 +680,7 @@ func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (i
 			if !ok {
 				continue
 			}
-			err = serializeValueToCSV(&b, &bj, columns[j].Type, v)
+			err = serializeValueToCSV(&b, columns[j].Type, v)
 			if err != nil {
 				return nil, err
 			}
@@ -701,8 +699,9 @@ func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (i
 	return &b, nil
 }
 
-func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
+func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 	switch v := v.(type) {
+	case nil:
 	case bool:
 		if v {
 			b.WriteString("true")
@@ -710,11 +709,13 @@ func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
 			b.WriteString("false")
 		}
 	case int:
-		b.WriteString(strconv.Itoa(v))
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'f', -1, 64))
 	case decimal.Decimal:
-		v.WriteTo(b)
+		_, _ = v.WriteTo(b)
 	case json.Value:
 		quoteCSVBytes(b, v)
 	case string:
@@ -723,9 +724,6 @@ func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
 		} else {
 			b.WriteString(v)
 		}
-	case nil:
-		// TODO(Gianluca): correctly handle nil values. See the issue
-		// https://github.com/meergo/meergo/issues/1122.
 	default:
 		switch k := t.Kind(); k {
 		case types.DateTimeKind:
@@ -734,15 +732,18 @@ func serializeValueToCSV(b, bj *bytes.Buffer, t types.Type, v any) error {
 			b.WriteString(v.(time.Time).Format("2006-01-02"))
 		case types.TimeKind:
 			b.WriteString(v.(time.Time).Format("15:04:05.999999999"))
-		case types.ArrayKind, types.MapKind:
-			bj.Reset()
-			enc := jsonstd.NewEncoder(bj)
-			enc.SetEscapeHTML(false)
-			err := enc.Encode(v)
+		case types.ArrayKind:
+			value, err := json.MarshalBySchema(v.([]any), t)
 			if err != nil {
 				return err
 			}
-			quoteCSVBytes(b, bj.Bytes())
+			quoteCSVBytes(b, value)
+		case types.MapKind:
+			value, err := json.MarshalBySchema(v.(map[string]any), t)
+			if err != nil {
+				return err
+			}
+			quoteCSVBytes(b, value)
 		default:
 			return fmt.Errorf("cannot serialize as Snowflake CSV: unsupported type %T for column type %s", v, k)
 		}
@@ -777,38 +778,4 @@ func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx)
 		return meergo.Error(err)
 	}
 	return nil
-}
-
-// quoteCSVString quotes the string s for use in a CSV file and writes it to b.
-// A string must be quoted if is empty, or starts with the character "'", or
-// contains characters "," or "\n".
-func quoteCSVString(b *bytes.Buffer, s string) {
-	b.WriteByte('\'')
-	for len(s) > 0 {
-		i := strings.IndexByte(s, '\'')
-		if i == -1 {
-			b.WriteString(s)
-			break
-		}
-		b.WriteString(s[:i+1])
-		b.WriteByte('\'')
-		s = s[i+1:]
-	}
-	b.WriteByte('\'')
-}
-
-// quoteCSVBytes is like quoteCSVString but gets a []byte value as argument.
-func quoteCSVBytes(b *bytes.Buffer, s []byte) {
-	b.WriteByte('\'')
-	for len(s) > 0 {
-		i := bytes.IndexByte(s, '\'')
-		if i == -1 {
-			b.Write(s)
-			break
-		}
-		b.Write(s[:i+1])
-		b.WriteByte('\'')
-		s = s[i+1:]
-	}
-	b.WriteByte('\'')
 }

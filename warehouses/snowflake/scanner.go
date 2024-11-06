@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -65,12 +66,6 @@ func (s *scanner) Scan(dest ...any) error {
 
 // normalize normalizes the value v read from Snowflake.
 func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
-
-	// TODO(Gianluca): the implementation of this 'normalize' method is obsolete
-	// and must be rewritten.
-	//
-	// See the issue https://github.com/meergo/meergo/issues/1121.
-
 	switch typ.Kind() {
 	case types.BooleanKind:
 		if _, ok := v.(bool); ok {
@@ -122,82 +117,43 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		if v, ok := v.(time.Time); ok {
 			return meergo.ValidateTime(v)
 		}
+	case types.YearKind:
+		if v, ok := v.(string); ok {
+			return meergo.ValidateYearString(name, v)
+		}
 	case types.UUIDKind:
 		if v, ok := v.(string); ok {
 			return meergo.ValidateUUID(name, v)
 		}
 	case types.JSONKind:
 		return meergo.ValidateJSON(name, v)
+	case types.InetKind:
+		if v, ok := v.(string); ok {
+			return meergo.ValidateInet(name, v)
+		}
 	case types.TextKind:
 		if v, ok := v.(string); ok {
 			return meergo.ValidateText(name, typ, v)
 		}
 	case types.ArrayKind:
-		// TODO(Gianluca): the code that handles the arrays has been modified
-		// just to allow for the development and testing of identity resolution,
-		// and therefore it needs to be reviewed and rewritten.
-		//
-		// See https://github.com/meergo/meergo/issues/1121.
-		v, ok := v.(string)
-		if !ok {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Array type", v, name)
-		}
-		if v == "" {
-			return nil, fmt.Errorf("data warehouse returned an empty string for column %s which is an Array type", name)
-		}
-		ev := json.Value(v)
-		if !json.Valid(ev) {
-			return nil, fmt.Errorf("data warehouse returned a string with invalid JSON for column %s", name)
-		}
-		if !ev.IsArray() {
-			return nil, fmt.Errorf("data warehouse returned a JSON %s for column %s which is an Array type", ev.Kind(), name)
-		}
-		min := typ.MinElements()
-		max := typ.MaxElements()
-		arr := []any{}
-		for i, elem := range ev.Elements() {
-			if i == max {
-				return nil, fmt.Errorf("data warehouse returned an array with more than %d elements for column %s", max, name)
+		if v, ok := v.(string); ok {
+			r := strings.NewReader(v)
+			if v, err := json.DecodeByType[[]any](r, typ); err == nil {
+				// TODO(gianluca): Remove the following check once the issue with identity resolution is resolved.
+				if len(v) == 0 {
+					return nil, nil // return the untyped nil for a
+				}
+				return v, nil
+
 			}
-			var elemAny any
-			err := elem.Unmarshal(&elemAny)
-			if err != nil {
-				return nil, fmt.Errorf("cannot unmarshal array element: %s", err)
-			}
-			arr = append(arr, elemAny)
 		}
-		if len(arr) < min {
-			return nil, fmt.Errorf("data warehouse returned an array with less than %d elements for column %s", min, name)
-		}
-		if len(arr) == 0 {
-			return nil, nil // return the untyped nil.
-		}
-		return arr, nil
 	case types.MapKind:
-		// The driver returns the value as a JSON object.
-		v, ok := v.(string)
-		if !ok {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
+		if v, ok := v.(string); ok {
+			r := strings.NewReader(v)
+			if v, err := json.DecodeByType[map[string]any](r, typ); err == nil {
+				return v, nil
+			}
 		}
-		if v == "" {
-			return nil, fmt.Errorf("data warehouse returned an empty string for column %s which is an Array type", name)
-		}
-		// Snowflake only supports JSON as the item type.
-		if typ.Elem().Kind() != types.JSONKind {
-			return nil, fmt.Errorf("data warehouse returned a value of type %T for column %s which is an Map type", v, name)
-		}
-		ev := json.Value(v)
-		if !json.Valid(ev) {
-			return nil, fmt.Errorf("data warehouse returned a string with invalid JSON for column %s", name)
-		}
-		if !ev.IsObject() {
-			return nil, fmt.Errorf("data warehouse returned a JSON %s for column %s which is a Map type", ev.Kind(), name)
-		}
-		m := map[string]any{}
-		for k, v := range ev.Properties() {
-			m[k] = v
-		}
-		return m, nil
 	}
 	return nil, fmt.Errorf("Snowflake has returned an unsupported type %T for column %s", v, name)
 }

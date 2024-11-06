@@ -206,7 +206,7 @@ func typeToSnowflakeType(t types.Type) string {
 		case 16:
 			return "SMALLINT" // Alias for "NUMBER(38, 0)".
 		case 24:
-			return "INT" // Alias for "NUMBER(38, 0)".
+			return "NUMBER(7,0)"
 		case 32:
 			return "INT" // Alias for "NUMBER(38, 0)".
 		case 64:
@@ -219,11 +219,11 @@ func typeToSnowflakeType(t types.Type) string {
 		case 16:
 			return "INT" // Alias for "NUMBER(38, 0)".
 		case 24:
-			return "INT" // Alias for "NUMBER(38, 0)".
+			return "NUMBER(8,0)"
 		case 32:
 			return "BIGINT" // Alias for "NUMBER(38, 0)".
 		case 64:
-			return "NUMBER(20, 0)"
+			return "NUMBER(20,0)"
 		}
 	case types.FloatKind:
 		switch t.BitSize() {
@@ -233,7 +233,7 @@ func typeToSnowflakeType(t types.Type) string {
 			return "FLOAT"
 		}
 	case types.DecimalKind:
-		return fmt.Sprintf("NUMBER(%d, %d)", t.Precision(), t.Scale())
+		return fmt.Sprintf("NUMBER(%d,%d)", t.Precision(), t.Scale())
 	case types.DateTimeKind:
 		return "TIMESTAMP_NTZ"
 	case types.DateKind:
@@ -241,15 +241,14 @@ func typeToSnowflakeType(t types.Type) string {
 	case types.TimeKind:
 		return "TIME"
 	case types.YearKind:
-		return "NUMBER(4, 0)"
+		return "NUMBER(4,0)"
 	case types.UUIDKind:
 		return "VARCHAR"
 	case types.JSONKind:
-		return "JSON" // TODO(Gianluca): just a placeholder.
+		return "VARIANT"
 	case types.InetKind:
 		return "VARCHAR"
 	case types.TextKind:
-		// TODO(Gianluca): review this.
 		var charLen int
 		if l, ok := t.ByteLen(); ok {
 			charLen = l
@@ -268,7 +267,7 @@ func typeToSnowflakeType(t types.Type) string {
 	case types.ArrayKind:
 		return "ARRAY"
 	case types.MapKind:
-		return "jsonb"
+		return "VARIANT"
 	}
 	panic(fmt.Sprintf("unexpected type %s", t))
 }

@@ -185,7 +185,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 	case decimal.Decimal:
-		v.WriteTo(b)
+		_, _ = v.WriteTo(b)
 	case time.Time:
 		b.WriteByte('\'')
 		switch t.Kind() {

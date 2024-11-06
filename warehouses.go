@@ -14,6 +14,7 @@ import (
 	"net/netip"
 	"reflect"
 	"slices"
+	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -433,6 +434,15 @@ func ValidateYear(name string, year int) (any, error) {
 		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not a Year type", year, name)
 	}
 	return year, nil
+}
+
+// ValidateYearString validates a year value represented as a string.
+func ValidateYearString(name string, year string) (any, error) {
+	y, err := strconv.Atoi(year)
+	if err != nil || y < types.MinYear || y > types.MaxYear {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Year type", year, name)
+	}
+	return y, nil
 }
 
 // ValidateUUID validates an UUID value.

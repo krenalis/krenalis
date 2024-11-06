@@ -12,13 +12,86 @@ import (
 	"strings"
 )
 
-// quoteTable quotes a table name.
-func quoteTable(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+// quoteBytes quotes s as a string and writes it into b.
+func quoteBytes(b *strings.Builder, s []byte) {
+	if len(s) == 0 {
+		b.WriteString(`''`)
+		return
+	}
+	b.WriteByte('\'')
+	for {
+		p := bytes.IndexAny(s, "\x00'\b\f\n\r\t\\")
+		if p == -1 {
+			p = len(s)
+		}
+		b.Write(s[:p])
+		if p == len(s) {
+			break
+		}
+		b.WriteByte('\\')
+		var c byte
+		switch s[p] {
+		case 0:
+			c = '0'
+		case '\'':
+			c = '\''
+		case '\b':
+			c = 'b'
+		case '\f':
+			c = 'f'
+		case '\n':
+			c = 'n'
+		case '\r':
+			c = 'r'
+		case '\t':
+			c = 't'
+		case '\\':
+			c = '\\'
+		}
+		b.WriteByte(c)
+		s = s[p+1:]
+		if len(s) == 0 {
+			break
+		}
+	}
+	b.WriteByte('\'')
+}
+
+// quoteCSVBytes is like quoteCSVString but gets a []byte value as argument.
+func quoteCSVBytes(b *bytes.Buffer, s []byte) {
+	b.WriteByte('\'')
+	for len(s) > 0 {
+		i := bytes.IndexByte(s, '\'')
+		if i == -1 {
+			b.Write(s)
+			break
+		}
+		b.Write(s[:i+1])
+		b.WriteByte('\'')
+		s = s[i+1:]
+	}
+	b.WriteByte('\'')
+}
+
+// quoteCSVString quotes the string s for use in a CSV file and writes it to b.
+// A string must be quoted if is empty, or starts with the character "'", or
+// contains characters "," or "\n".
+func quoteCSVString(b *bytes.Buffer, s string) {
+	b.WriteByte('\'')
+	for len(s) > 0 {
+		i := strings.IndexByte(s, '\'')
+		if i == -1 {
+			b.WriteString(s)
+			break
+		}
+		b.WriteString(s[:i+1])
+		b.WriteByte('\'')
+		s = s[i+1:]
+	}
+	b.WriteByte('\'')
 }
 
 // quoteColumn quotes a column name.
-// TODO(Gianluca): review this method.
 func quoteColumn(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
@@ -68,47 +141,7 @@ func quoteString(b *strings.Builder, s string) {
 	b.WriteByte('\'')
 }
 
-// quoteBytes quotes s as a string and writes it into b.
-func quoteBytes(b *strings.Builder, s []byte) {
-	if len(s) == 0 {
-		b.WriteString(`''`)
-		return
-	}
-	b.WriteByte('\'')
-	for {
-		p := bytes.IndexAny(s, "\x00'\b\f\n\r\t\\")
-		if p == -1 {
-			p = len(s)
-		}
-		b.Write(s[:p])
-		if p == len(s) {
-			break
-		}
-		b.WriteByte('\\')
-		var c byte
-		switch s[p] {
-		case 0:
-			c = '0'
-		case '\'':
-			c = '\''
-		case '\b':
-			c = 'b'
-		case '\f':
-			c = 'f'
-		case '\n':
-			c = 'n'
-		case '\r':
-			c = 'r'
-		case '\t':
-			c = 't'
-		case '\\':
-			c = '\\'
-		}
-		b.WriteByte(c)
-		s = s[p+1:]
-		if len(s) == 0 {
-			break
-		}
-	}
-	b.WriteByte('\'')
+// quoteTable quotes a table name.
+func quoteTable(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
