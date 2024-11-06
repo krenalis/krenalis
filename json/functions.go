@@ -797,7 +797,9 @@ func marshalBySchema(b []byte, v any, t types.Type) (Value, error) {
 		}
 		b = append(b, '"')
 	case Value:
-		b, _ = jsontext.AppendQuote(b, v)
+		value := jsontext.Value(slices.Clone(v))
+		_ = value.Compact()
+		b, _ = jsontext.AppendQuote(b, value)
 	case string:
 		var err error
 		b, err = jsontext.AppendQuote(b, v)

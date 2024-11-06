@@ -138,21 +138,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return meergo.ValidateUUID(name, v)
 		}
 	case types.JSONKind:
-		var data []byte
-		switch v := v.(type) {
-		case []byte:
-			data = v
-		case string:
-			data = []byte(v)
-		}
-		if data != nil {
-			// PostgreSQL returns JSON with insignificant whitespace characters.
-			data, err := json.Compact(data)
-			if err != nil {
-				return nil, fmt.Errorf("data warehouse returned an invalid JSON value for column %s", name)
-			}
-			return json.Value(data), nil
-		}
+		return meergo.ValidateJSON(name, v)
 	case types.InetKind:
 		if v, ok := v.(string); ok {
 			// IP addresses are parsed directly here, without calling the
