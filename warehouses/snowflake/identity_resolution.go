@@ -120,7 +120,8 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
-			mergeUsers.WriteString(`ARRAY_SORT(ARRAY_DISTINCT(ARRAY_FLATTEN(ARRAY_AGG(` + quoteColumn(c.Name) + `))))`)
+			mergeUsers.WriteString(`CASE WHEN ARRAY_AGG(` + quoteColumn(c.Name) +
+				`) = [] THEN NULL ELSE ARRAY_SORT(ARRAY_DISTINCT(ARRAY_FLATTEN(ARRAY_AGG(` + quoteColumn(c.Name) + `)))) END`)
 		} else {
 			mergeUsers.WriteString(`(ARRAY_CAT(`)
 			if s, ok := userPrimarySources[c.Name]; ok {

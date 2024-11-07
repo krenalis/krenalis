@@ -406,6 +406,60 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				{"email": "c@d", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
 			},
 		},
+		{
+			name:        "Array - handling of null values (1)",
+			identifiers: []string{"email"},
+			identities: []identity{
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA"}},
+				},
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+				},
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"ZZZ"}},
+				},
+			},
+			expectedUsers: []map[string]any{
+				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"AAA", "ZZZ"}},
+			},
+		},
+		{
+			name:        "Array - handling of null values (2)",
+			identifiers: []string{"email"},
+			identities: []identity{
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+				},
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
+				},
+				{
+					connection: 100,
+					action:     1,
+					id:         "a@b",
+					properties: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+				},
+			},
+			expectedUsers: []map[string]any{
+				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": []any{"BBB"}},
+			},
+		},
 	}
 
 	// Run the tests on every registered warehouse.

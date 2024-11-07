@@ -139,12 +139,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		if v, ok := v.(string); ok {
 			r := strings.NewReader(v)
 			if v, err := json.DecodeByType[[]any](r, typ); err == nil {
-				// TODO(gianluca): Remove the following check once the issue with identity resolution is resolved.
-				if len(v) == 0 {
-					return nil, nil // return the untyped nil for a
-				}
 				return v, nil
-
 			}
 		}
 	case types.MapKind:
