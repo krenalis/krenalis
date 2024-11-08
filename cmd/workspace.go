@@ -391,6 +391,25 @@ func (workspace workspace) CanChangeWarehouseSettings(_ http.ResponseWriter, r *
 	return nil, err
 }
 
+// ChangeIdentityResolutionSettings changes the settings of the Identity
+// Resolution of the workspace.
+func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	body := struct {
+		RunOnBatchImport bool
+		Identifiers      []string
+	}{}
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.ChangeIdentityResolutionSettings(r.Context(), body.RunOnBatchImport, body.Identifiers)
+	return nil, err
+}
+
 // ChangeUserSchema changes the user schema of a workspace.
 func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
@@ -515,6 +534,23 @@ func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 	return ws.IdentifiersSchema(), nil
+}
+
+// LastIdentityResolution returns information about the last Identity
+// Resolution of a workspace.
+func (workspace workspace) LastIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	startTime, endTime, err := ws.LastIdentityResolution(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"startTime": startTime,
+		"endTime":   endTime,
+	}, nil
 }
 
 // ListenedEvents returns the events listen to by a specified listener and the
@@ -648,25 +684,6 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	return nil, err
 }
 
-// ChangeIdentityResolutionSettings changes the settings of the Identity
-// Resolution of the workspace.
-func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	body := struct {
-		RunOnBatchImport bool
-		Identifiers      []string
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.ChangeIdentityResolutionSettings(r.Context(), body.RunOnBatchImport, body.Identifiers)
-	return nil, err
-}
-
 // Users returns the users, the user schema of a workspace, and an estimate of
 // their count without applying first and limit.
 func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -694,23 +711,6 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 		"users":  rawJSON(users),
 		"schema": schema,
 		"count":  count,
-	}, nil
-}
-
-// LastIdentityResolution returns information about the last Identity
-// Resolution of a workspace.
-func (workspace workspace) LastIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	startTime, endTime, err := ws.LastIdentityResolution(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{
-		"startTime": startTime,
-		"endTime":   endTime,
 	}, nil
 }
 
