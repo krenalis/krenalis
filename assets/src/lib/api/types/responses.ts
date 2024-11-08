@@ -24,8 +24,10 @@ interface Execution {
 	Error: string;
 }
 
+type Event = Record<string, any>;
+
 interface EventListenerEventsResponse {
-	events: ObservedEvent[];
+	events: Event[];
 	discarded: number;
 }
 
@@ -109,22 +111,6 @@ interface EventPreviewResponse {
 	preview: string;
 }
 
-interface ObservedEventHeader {
-	receivedAt: string;
-	remoteAddr: string;
-	method: string;
-	proto: string;
-	url: string;
-	headers: Record<string, string>;
-}
-
-interface ObservedEvent {
-	Source: number;
-	Header: ObservedEventHeader;
-	Data: string;
-	Err: string;
-}
-
 interface MemberAvatar {
 	Image: string;
 	MimeType: string;
@@ -182,7 +168,7 @@ export type {
 	UserIdentitiesResponse,
 	ConnectionIdentitiesResponse,
 	EventPreviewResponse,
-	ObservedEvent,
+	Event,
 	Member,
 	MemberToSet,
 	MemberAvatar,

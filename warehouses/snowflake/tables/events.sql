@@ -1,7 +1,9 @@
 -- Keep in sync with the events.eventsMergeTable variable.
 
 CREATE TABLE IF NOT EXISTS "events" (
+    "id" VARCHAR NOT NULL,
     "user" VARCHAR,
+    "connection" INT NOT NULL,
     "anonymous_id" VARCHAR NOT NULL,
     "category" VARCHAR NOT NULL,
     "context_app_name" VARCHAR NOT NULL,
@@ -60,10 +62,9 @@ CREATE TABLE IF NOT EXISTS "events" (
     "properties" VARCHAR NOT NULL,
     "received_at" TIMESTAMP NOT NULL,
     "sent_at" TIMESTAMP NOT NULL,
-    "source" integer NOT NULL,
     "timestamp" TIMESTAMP NOT NULL,
     "traits" VARCHAR NOT NULL,
     "type" VARCHAR NOT NULL,
     "user_id" VARCHAR NOT NULL,
-    PRIMARY KEY ("source", "message_id")
+    PRIMARY KEY ("id")
 )

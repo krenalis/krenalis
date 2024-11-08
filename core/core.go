@@ -26,6 +26,7 @@ import (
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/collector"
 	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/metrics"
@@ -56,9 +57,10 @@ type Core struct {
 	connectors *connectors.Connectors
 	metrics    *metrics.Collector
 	events     struct {
-		collector  *collector.Collector
-		observer   *collector.Observer
-		dispatcher *dispatcher.Dispatcher
+		collector      *collector.Collector
+		observer       *collector.Observer
+		dispatcher     *dispatcher.Dispatcher
+		operationStore events.OperationStore
 	}
 	transformerProvider transformers.Provider
 	actionPurger        *actionPurger
@@ -177,23 +179,27 @@ func New(conf *Config) (*Core, error) {
 		return nil, err
 	}
 
+	// Init the event operation store.
+	core.events.operationStore = events.NewPostgreStore(db)
+
+	// Init the metrics.
+	core.metrics = metrics.New(db, core.state)
+
 	// Init the datastore.
 	core.datastore = datastore.New(core.state)
 
 	// Init the connectors.
 	core.connectors = connectors.New(db, core.state)
 
-	// Init the metrics.
-	core.metrics = metrics.New(db, core.state)
-
 	// Init the events.
-	core.events.dispatcher, err = dispatcher.New(db, core.state, core.transformerProvider, core.connectors)
+	core.events.dispatcher, err = dispatcher.New(db, core.state, core.events.operationStore, core.transformerProvider, core.connectors, core.metrics)
 	if err != nil {
 		core.datastore.Close()
 		core.state.Close()
 		return nil, err
 	}
-	core.events.collector, err = collector.New(db, core.state, core.datastore, core.transformerProvider, core.events.dispatcher, core.metrics)
+	core.events.collector, err = collector.New(db, core.state, core.datastore, core.events.operationStore,
+		core.transformerProvider, core.events.dispatcher, core.metrics)
 	if err != nil {
 		core.events.dispatcher.Close()
 		core.datastore.Close()
@@ -301,7 +307,8 @@ func (core *Core) Close() {
 	core.close.Wait()
 	// Close the action purger.
 	core.actionPurger.Close(context.Background())
-	// Close event dispatcher, metrics, datastore and state.
+	// Close event collector, event dispatcher, metrics, datastore, and state.
+	core.events.collector.Close()
 	core.events.dispatcher.Close()
 	core.metrics.Close(context.Background())
 	core.datastore.Close()

@@ -14,7 +14,9 @@ BEGIN
 END$$;
 
 CREATE TABLE IF NOT EXISTS events (
+    "id" UUID NOT NULL,
     "user" UUID,
+    "connection" integer NOT NULL,
     "anonymous_id" character varying NOT NULL,
     "category" character varying NOT NULL,
     "context_app_name" character varying NOT NULL,
@@ -73,10 +75,9 @@ CREATE TABLE IF NOT EXISTS events (
     "properties" jsonb NOT NULL,
     "received_at" timestamp(3) NOT NULL,
     "sent_at" timestamp(3) NOT NULL,
-    "source" integer NOT NULL,
     "timestamp" timestamp(3) NOT NULL,
     "traits" jsonb NOT NULL,
     "type" event_type NOT NULL,
     "user_id" character varying NOT NULL,
-    PRIMARY KEY ("source", "message_id")
+    PRIMARY KEY ("id")
 )

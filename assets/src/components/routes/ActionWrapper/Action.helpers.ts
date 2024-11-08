@@ -101,9 +101,6 @@ const idIdentifiers = ['id', 'ID', 'Id', '__id__'];
 const getSampleIdentifiers = (sample: Record<string, any>): SampleIdentifiers | null => {
 	let firstNameIdentifier: string, lastNameIdentifier: string, emailIdentifier: string, idIdentifier: string;
 	for (const key in sample) {
-		if (!sample.hasOwnProperty(key)) {
-			continue;
-		}
 		if (firstNameIdentifiers.includes(key)) {
 			firstNameIdentifier = key;
 			continue;

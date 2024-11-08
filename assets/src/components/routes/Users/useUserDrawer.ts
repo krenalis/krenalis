@@ -38,9 +38,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 			}
 			const m = new Map();
 			for (const key in traitsResponse.traits) {
-				if (traitsResponse.traits.hasOwnProperty(key)) {
-					m.set(key, traitsResponse.traits[key]);
-				}
+				m.set(key, traitsResponse.traits[key]);
 			}
 			setTraits(m);
 			setTimeout(() => setIsLoading(false), 200);

@@ -139,24 +139,6 @@
 	text-align: right;
 }
 
-.connection-events__event-error {
-	min-width: 17px;
-	display: flex;
-	align-items: center;
-}
-
-.connection-events__event-error sl-icon {
-	font-size: 17px;
-}
-
-.connection-events__event-error .connection-events__error-icon {
-	color: var(--sl-color-danger-600);
-}
-
-.connection-events__event-error .connection-events__success-icon {
-	color: var(--sl-color-success-600);
-}
-
 .connection-events__panel {
 	border: 1px solid var(--border-primary);
 	border-radius: var(--radius);

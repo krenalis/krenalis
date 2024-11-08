@@ -8,352 +8,553 @@
 package events
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/decimal"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/types"
 )
 
-// Header represents the Header of an event.
-type Header struct {
-	ReceivedAt time.Time   `json:"receivedAt"`
-	RemoteAddr string      `json:"remoteAddr"`
-	Method     string      `json:"method"`
-	Proto      string      `json:"proto"`
-	URL        string      `json:"url"`
-	Headers    http.Header `json:"headers"`
-	Source     int
-}
-
 // Event represents an event.
-type Event struct {
-	Header       *Header
-	Id           [20]byte
-	AnonymousId  string
-	Category     string
-	Context      Context
-	Event        string
-	GroupId      string
-	Integrations json.Value
-	MessageId    string
-	Name         string
-	ReceivedAt   time.Time
-	SentAt       time.Time
-	Timestamp    time.Time
-	Traits       json.Value
-	Type         *string
-	UserId       string
-	PreviousId   string
-	Properties   json.Value
+type Event map[string]any
+
+// Schema is the event schema.
+var Schema = types.Object([]types.Property{
+	{Name: "id", Type: types.UUID()},
+	{Name: "user", Type: types.UUID(), ReadOptional: true},
+	{Name: "connection", Type: types.Int(32)},
+	{Name: "anonymousId", Type: types.Text()},
+	{Name: "category", Type: types.Text(), ReadOptional: true},
+	{
+		Name: "context",
+		Type: types.Object([]types.Property{
+			{
+				Name: "app",
+				Type: types.Object([]types.Property{
+					{Name: "name", Type: types.Text()},
+					{Name: "version", Type: types.Text()},
+					{Name: "build", Type: types.Text()},
+					{Name: "namespace", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "browser",
+				Type: types.Object([]types.Property{
+					{Name: "name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+					{Name: "other", Type: types.Text()},
+					{Name: "version", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "campaign",
+				Type: types.Object([]types.Property{
+					{Name: "name", Type: types.Text()},
+					{Name: "source", Type: types.Text()},
+					{Name: "medium", Type: types.Text()},
+					{Name: "term", Type: types.Text()},
+					{Name: "content", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "device",
+				Type: types.Object([]types.Property{
+					{Name: "id", Type: types.Text()},
+					{Name: "advertisingId", Type: types.Text()},
+					{Name: "adTrackingEnabled", Type: types.Boolean()},
+					{Name: "manufacturer", Type: types.Text()},
+					{Name: "model", Type: types.Text()},
+					{Name: "name", Type: types.Text()},
+					{Name: "type", Type: types.Text()},
+					{Name: "token", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{Name: "ip", Type: types.Inet(), ReadOptional: true},
+			{
+				Name: "library",
+				Type: types.Object([]types.Property{
+					{Name: "name", Type: types.Text()},
+					{Name: "version", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{Name: "locale", Type: types.Text(), ReadOptional: true},
+			{
+				Name: "location",
+				Type: types.Object([]types.Property{
+					{Name: "city", Type: types.Text()},
+					{Name: "country", Type: types.Text()},
+					{Name: "latitude", Type: types.Float(64)},
+					{Name: "longitude", Type: types.Float(64)},
+					{Name: "speed", Type: types.Float(64)},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "network",
+				Type: types.Object([]types.Property{
+					{Name: "bluetooth", Type: types.Boolean()},
+					{Name: "carrier", Type: types.Text()},
+					{Name: "cellular", Type: types.Boolean()},
+					{Name: "wifi", Type: types.Boolean()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "os",
+				Type: types.Object([]types.Property{
+					{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+					{Name: "version", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "page",
+				Type: types.Object([]types.Property{
+					{Name: "path", Type: types.Text()},
+					{Name: "referrer", Type: types.Text()},
+					{Name: "search", Type: types.Text()},
+					{Name: "title", Type: types.Text()},
+					{Name: "url", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "referrer",
+				Type: types.Object([]types.Property{
+					{Name: "id", Type: types.Text()},
+					{Name: "type", Type: types.Text()},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "screen",
+				Type: types.Object([]types.Property{
+					{Name: "width", Type: types.Int(16)},
+					{Name: "height", Type: types.Int(16)},
+					{Name: "density", Type: types.Decimal(3, 2)},
+				}),
+				ReadOptional: true,
+			},
+			{
+				Name: "session",
+				Type: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(64)},
+					{Name: "start", Type: types.Boolean(), ReadOptional: true},
+				}),
+				ReadOptional: true,
+			},
+			{Name: "timezone", Type: types.Text(), ReadOptional: true},
+			{Name: "userAgent", Type: types.Text(), ReadOptional: true},
+		}),
+	},
+	{Name: "event", Type: types.Text(), ReadOptional: true},
+	{Name: "groupId", Type: types.Text(), ReadOptional: true},
+	{Name: "messageId", Type: types.Text()},
+	{Name: "name", Type: types.Text(), ReadOptional: true},
+	{Name: "properties", Type: types.JSON(), ReadOptional: true},
+	{Name: "receivedAt", Type: types.DateTime()},
+	{Name: "sentAt", Type: types.DateTime()},
+	{Name: "originalTimestamp", Type: types.DateTime()},
+	{Name: "timestamp", Type: types.DateTime()},
+	{Name: "traits", Type: types.JSON(), ReadOptional: true},
+	{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+	{Name: "userId", Type: types.Text(), Nullable: true},
+})
+
+// ConnectorEvent implements the meergo.Event interface. A ConnectorEvent is
+// passed as an argument to the SendEvent and PreviewSendEvent methods of an app
+// connector.
+type ConnectorEvent struct {
+	event Event
 }
 
-type Context struct {
-	App struct {
-		Name      string `json:"name,omitempty"`
-		Version   string `json:"version,omitempty"`
-		Build     string `json:"build,omitempty"`
-		Namespace string `json:"namespace,omitempty"`
-	} `json:"app,omitempty"`
-	Browser struct { // TODO: this should be unexported
-		Name    string `json:"name,omitempty"`
-		Other   string `json:"other,omitempty"`
-		Version string `json:"version,omitempty"`
-	}
-	Campaign struct {
-		Name    string `json:"name,omitempty"`
-		Source  string `json:"source,omitempty"`
-		Medium  string `json:"medium,omitempty"`
-		Term    string `json:"term,omitempty"`
-		Content string `json:"content,omitempty"`
-	} `json:"campaign,omitempty"`
-	Device struct {
-		Id                string `json:"id,omitempty"`
-		AdvertisingId     string `json:"advertisingId,omitempty"`
-		AdTrackingEnabled bool   `json:"adTrackingEnabled,omitempty"`
-		Manufacturer      string `json:"manufacturer,omitempty"`
-		Model             string `json:"model,omitempty"`
-		Name              string `json:"name,omitempty"`
-		Type              string `json:"type,omitempty"`
-		Token             string `json:"token,omitempty"`
-	} `json:"device,omitempty"`
-	Direct  bool   `json:"direct,omitempty"`
-	IP      string `json:"ip,omitempty"`
-	Library struct {
-		Name    string `json:"name,omitempty"`
-		Version string `json:"version,omitempty"`
-	} `json:"library,omitempty"`
-	Locale   string `json:"locale,omitempty"`
-	Location struct {
-		City      string  `json:"city,omitempty"`
-		Country   string  `json:"country,omitempty"`
-		Latitude  float64 `json:"latitude,omitempty"`
-		Longitude float64 `json:"longitude,omitempty"`
-		Speed     float64 `json:"speed,omitempty"`
-	} `json:"location,omitempty"`
-	Network struct {
-		Bluetooth bool   `json:"bluetooth,omitempty"`
-		Carrier   string `json:"carrier,omitempty"`
-		Cellular  bool   `json:"cellular,omitempty"`
-		WiFi      bool   `json:"wifi,omitempty"`
-	} `json:"network,omitempty"`
-	OS struct {
-		Name    string `json:"name,omitempty"`
-		Version string `json:"version,omitempty"`
-	} `json:"os,omitempty"`
-	Page struct {
-		Path     string `json:"path,omitempty"`
-		Referrer string `json:"referrer,omitempty"`
-		Search   string `json:"search,omitempty"`
-		Title    string `json:"title,omitempty"`
-		URL      string `json:"url,omitempty"`
-	} `json:"page,omitempty"`
-	Referrer struct {
-		Id   string `json:"id,omitempty"`
-		Type string `json:"type,omitempty"`
-	} `json:"referrer,omitempty"`
-	Screen struct {
-		Width   int     `json:"width,omitempty"`
-		Height  int     `json:"height,omitempty"`
-		Density float32 `json:"density,omitempty"`
-	} `json:"screen,omitempty"`
-	SessionId    int        `json:"sessionId,omitempty"`
-	SessionStart bool       `json:"sessionStart,omitempty"`
-	GroupId      string     `json:"groupId,omitempty"`
-	Timezone     string     `json:"timezone,omitempty"`
-	Traits       json.Value `json:"traits,omitempty"`
-	UserAgent    string     `json:"userAgent,omitempty"`
+func NewConnectorEvent(event Event) ConnectorEvent {
+	return ConnectorEvent{event}
 }
 
-// ToConnectorEvent returns event as a connector event to be passed as an
-// argument to the SendEvent and PreviewSendEvent methods of an app connector.
-func (event *Event) ToConnectorEvent() *meergo.Event {
-	// Keep in sync with the meergo.Event type.
-	density, _ := decimal.Float64(float64(event.Context.Screen.Density), 3, 2)
-	groupId := event.GroupId
-	if event.GroupId == "" {
-		groupId = event.Context.GroupId
-	}
-	e := meergo.Event{}
-	e.AnonymousId = event.AnonymousId
-	e.Category = event.Category
-	e.Context.App.Name = event.Context.App.Name
-	e.Context.App.Version = event.Context.App.Version
-	e.Context.App.Build = event.Context.App.Build
-	e.Context.App.Namespace = event.Context.App.Namespace
-	e.Context.Campaign.Name = event.Context.Campaign.Name
-	e.Context.Campaign.Source = event.Context.Campaign.Source
-	e.Context.Campaign.Medium = event.Context.Campaign.Medium
-	e.Context.Campaign.Term = event.Context.Campaign.Term
-	e.Context.Campaign.Content = event.Context.Campaign.Content
-	e.Context.Device.Id = event.Context.Device.Id
-	e.Context.Device.AdvertisingId = event.Context.Device.AdvertisingId
-	e.Context.Device.AdTrackingEnabled = event.Context.Device.AdTrackingEnabled
-	e.Context.Device.Manufacturer = event.Context.Device.Manufacturer
-	e.Context.Device.Model = event.Context.Device.Model
-	e.Context.Device.Name = event.Context.Device.Name
-	e.Context.Device.Type = event.Context.Device.Type
-	e.Context.Device.Token = event.Context.Device.Token
-	e.Context.Device.Token = event.Context.Device.Token
-	e.Context.IP = event.Context.IP
-	e.Context.Library.Name = event.Context.Library.Name
-	e.Context.Library.Version = event.Context.Library.Version
-	e.Context.Locale = event.Context.Locale
-	e.Context.Location.City = event.Context.Location.City
-	e.Context.Location.Country = event.Context.Location.Country
-	e.Context.Location.Latitude = event.Context.Location.Latitude
-	e.Context.Location.Longitude = event.Context.Location.Longitude
-	e.Context.Location.Speed = event.Context.Location.Speed
-	e.Context.Network.Bluetooth = event.Context.Network.Bluetooth
-	e.Context.Network.Carrier = event.Context.Network.Carrier
-	e.Context.Network.Cellular = event.Context.Network.Cellular
-	e.Context.Network.WiFi = event.Context.Network.WiFi
-	e.Context.OS.Name = event.Context.OS.Name
-	e.Context.OS.Version = event.Context.OS.Version
-	e.Context.Page.Path = event.Context.Page.Path
-	e.Context.Page.Referrer = event.Context.Page.Referrer
-	e.Context.Page.Search = event.Context.Page.Search
-	e.Context.Page.Title = event.Context.Page.Path
-	e.Context.Page.URL = event.Context.Page.URL
-	e.Context.Referrer.Id = event.Context.Referrer.Id
-	e.Context.Referrer.Type = event.Context.Referrer.Type
-	e.Context.Screen.Width = event.Context.Screen.Width
-	e.Context.Screen.Height = event.Context.Screen.Height
-	e.Context.Screen.Density = density
-	e.Context.Session.Id = event.Context.SessionId
-	e.Context.Session.Start = event.Context.SessionStart
-	e.Context.Timezone = event.Context.Timezone
-	e.Context.UserAgent = event.Context.UserAgent
-	e.Event = event.Event
-	e.GroupId = groupId
-	e.MessageId = event.MessageId
-	e.Name = event.Name
-	e.ReceivedAt = event.ReceivedAt
-	e.SentAt = event.SentAt
-	e.Timestamp = event.Timestamp
-	e.Type = *event.Type
-	e.UserId = event.UserId
-	return &e
+func (c ConnectorEvent) AnonymousId() string {
+	return c.event["anonymousId"].(string)
 }
 
-// AsProperties converts the event into properties that conform to Schema.
-func (event *Event) AsProperties() map[string]any {
+func (c ConnectorEvent) Category() string {
+	return c.event["category"].(string)
+}
 
-	// Keep in sync with the schema in "schema.go".
+func (c ConnectorEvent) Context() meergo.EventContext {
+	return connectorEventContext{c.event["context"].(map[string]any)}
+}
 
-	context := map[string]any{}
+func (c ConnectorEvent) Event() string {
+	return c.event["event"].(string)
+}
 
-	// TODO(Gianluca): define datetime layout and parse/convert the values.
-	mapEvent := map[string]any{
-		"anonymousId": event.AnonymousId,
-		"context":     context,
-		"messageId":   event.MessageId,
-		"receivedAt":  event.ReceivedAt,
-		"sentAt":      event.SentAt,
-		"source":      event.Header.Source,
-		"timestamp":   event.Timestamp,
-		"type":        *event.Type,
-	}
+func (c ConnectorEvent) GroupId() string {
+	groupId, _ := c.event["groupId"].(string)
+	return groupId
+}
 
-	if event.UserId == "" {
-		mapEvent["userId"] = nil
-	} else {
-		mapEvent["userId"] = event.UserId
-	}
+func (c ConnectorEvent) MessageId() string {
+	return c.event["messageId"].(string)
+}
 
-	if event.Category != "" {
-		mapEvent["category"] = event.Category
-	}
-	if event.Context.App.Name != "" {
-		context["app"] = map[string]any{
-			"name":      event.Context.App.Name,
-			"version":   event.Context.App.Version,
-			"build":     event.Context.App.Build,
-			"namespace": event.Context.App.Namespace,
-		}
-	}
-	if event.Context.Browser.Name != "None" {
-		context["browser"] = map[string]any{
-			"name":    event.Context.Browser.Name,
-			"other":   event.Context.Browser.Other,
-			"version": event.Context.Browser.Version,
-		}
-	}
-	if event.Context.Campaign.Name != "" {
-		context["campaign"] = map[string]any{
-			"name":    event.Context.Campaign.Name,
-			"source":  event.Context.Campaign.Source,
-			"medium":  event.Context.Campaign.Medium,
-			"term":    event.Context.Campaign.Term,
-			"content": event.Context.Campaign.Content,
-		}
-	}
-	if event.Context.Device.Id != "" {
-		context["device"] = map[string]any{
-			"id":                event.Context.Device.Id,
-			"advertisingId":     event.Context.Device.AdvertisingId,
-			"adTrackingEnabled": event.Context.Device.AdTrackingEnabled,
-			"manufacturer":      event.Context.Device.Manufacturer,
-			"model":             event.Context.Device.Model,
-			"name":              event.Context.Device.Name,
-			"type":              event.Context.Device.Type,
-			"token":             event.Context.Device.Token,
-		}
-	}
-	if event.Context.IP != "" {
-		context["ip"] = event.Context.IP
-	}
-	if event.Context.Library.Name != "" {
-		context["library"] = map[string]any{
-			"name":    event.Context.Library.Name,
-			"version": event.Context.Library.Version,
-		}
-	}
-	if event.Context.Locale != "" {
-		context["locale"] = event.Context.Locale
-	}
-	if event.Context.Locale != "" {
-		context["location"] = map[string]any{
-			"city":      event.Context.Location.City,
-			"country":   event.Context.Location.Country,
-			"latitude":  event.Context.Location.Latitude,
-			"longitude": event.Context.Location.Longitude,
-			"speed":     event.Context.Location.Speed,
-		}
-	}
-	if event.Context.Network.Carrier != "" {
-		context["network"] = map[string]any{
-			"bluetooth": event.Context.Network.Bluetooth,
-			"carrier":   event.Context.Network.Carrier,
-			"cellular":  event.Context.Network.Cellular,
-			"wifi":      event.Context.Network.WiFi,
-		}
-	}
-	if event.Context.OS.Name != "None" {
-		context["os"] = map[string]any{
-			"name":    event.Context.OS.Name,
-			"version": event.Context.OS.Version,
-		}
-	}
-	if event.Context.Page.Path != "" {
-		context["page"] = map[string]any{
-			"path":     event.Context.Page.Path,
-			"referrer": event.Context.Page.Referrer,
-			"search":   event.Context.Page.Search,
-			"title":    event.Context.Page.Title,
-			"url":      event.Context.Page.URL,
-		}
-	}
-	if event.Context.Referrer.Id != "" {
-		context["referrer"] = map[string]any{
-			"id":   event.Context.Referrer.Id,
-			"type": event.Context.Referrer.Type,
-		}
-	}
-	if event.Context.Screen.Width != 0 {
-		density, _ := decimal.Float64(float64(event.Context.Screen.Density), 3, 2)
-		context["screen"] = map[string]any{
-			"width":   event.Context.Screen.Width,
-			"height":  event.Context.Screen.Height,
-			"density": density,
-		}
-	}
-	if event.Context.SessionId != 0 {
-		session := map[string]any{
-			"id": event.Context.SessionId,
-		}
-		if event.Context.SessionStart {
-			session["start"] = event.Context.SessionStart
-		}
-		context["session"] = session
-	}
-	if event.Context.Timezone != "" {
-		context["timezone"] = event.Context.Timezone
-	}
-	if event.Context.UserAgent != "" {
-		context["userAgent"] = event.Context.UserAgent
-	}
-	if event.Context.Traits != nil {
-		context["traits"] = event.Context.Traits
-	}
-	if event.Event != "" {
-		mapEvent["event"] = event.Event
-	}
-	if event.GroupId != "" {
-		mapEvent["groupId"] = event.GroupId
-	} else if event.Context.GroupId != "" {
-		mapEvent["groupId"] = event.Context.GroupId
-	}
-	if event.Name != "" {
-		mapEvent["name"] = event.Name
-	}
-	if event.Properties != nil {
-		mapEvent["properties"] = event.Properties
-	}
-	if event.Traits != nil {
-		mapEvent["traits"] = event.Traits
-	}
+func (c ConnectorEvent) Name() string {
+	return c.event["name"].(string)
+}
 
-	return mapEvent
+func (c ConnectorEvent) ReceivedAt() time.Time {
+	return c.event["receivedAt"].(time.Time)
+}
+
+func (c ConnectorEvent) SentAt() time.Time {
+	return c.event["sentAt"].(time.Time)
+}
+
+func (c ConnectorEvent) Timestamp() time.Time {
+	return c.event["timestamp"].(time.Time)
+}
+
+func (c ConnectorEvent) Type() string {
+	return c.event["type"].(string)
+}
+
+func (c ConnectorEvent) UserId() string {
+	userId, _ := c.event["userId"].(string)
+	return userId
+}
+
+type connectorEventContext struct {
+	context map[string]any
+}
+
+func (c connectorEventContext) App() (meergo.EventContextApp, bool) {
+	if app, ok := c.context["app"].(map[string]any); ok {
+		return connectorEventContextApp{app}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Browser() (meergo.EventContextBrowser, bool) {
+	if browser, ok := c.context["browser"].(map[string]any); ok {
+		return connectorEventContextBrowser{browser}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Campaign() (meergo.EventContextCampaign, bool) {
+	if campaign, ok := c.context["campaign"].(map[string]any); ok {
+		return connectorEventContextCampaign{campaign}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Device() (meergo.EventContextDevice, bool) {
+	if campaign, ok := c.context["device"].(map[string]any); ok {
+		return connectorEventContextDevice{campaign}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) IP() string {
+	return c.context["ip"].(string)
+}
+
+func (c connectorEventContext) Library() (meergo.EventContextLibrary, bool) {
+	if library, ok := c.context["library"].(map[string]any); ok {
+		return connectorEventContextLibrary{library}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Locale() string {
+	return c.context["locale"].(string)
+}
+
+func (c connectorEventContext) Location() (meergo.EventContextLocation, bool) {
+	if location, ok := c.context["location"].(map[string]any); ok {
+		return connectorEventContextLocation{location}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Network() (meergo.EventContextNetwork, bool) {
+	if network, ok := c.context["network"].(map[string]any); ok {
+		return connectorEventContextNetwork{network}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) OS() (meergo.EventContextOS, bool) {
+	if os, ok := c.context["os"].(map[string]any); ok {
+		return connectorEventContextOS{os}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Page() (meergo.EventContextPage, bool) {
+	if page, ok := c.context["page"].(map[string]any); ok {
+		return connectorEventContextPage{page}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Referrer() (meergo.EventContextReferrer, bool) {
+	if referrer, ok := c.context["referrer"].(map[string]any); ok {
+		return connectorEventContextReferrer{referrer}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Screen() (meergo.EventContextScreen, bool) {
+	if screen, ok := c.context["screen"].(map[string]any); ok {
+		return connectorEventContextScreen{screen}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Session() (meergo.EventContextSession, bool) {
+	if session, ok := c.context["Session"].(map[string]any); ok {
+		return connectorEventContextSession{session}, true
+	}
+	return nil, false
+}
+
+func (c connectorEventContext) Timezone() string {
+	return c.context["timezone"].(string)
+}
+
+func (c connectorEventContext) UserAgent() string {
+	return c.context["userAgent"].(string)
+}
+
+type connectorEventContextApp struct {
+	app map[string]any
+}
+
+func (c connectorEventContextApp) Name() string {
+	return c.app["name"].(string)
+}
+
+func (c connectorEventContextApp) Version() string {
+	return c.app["version"].(string)
+}
+
+func (c connectorEventContextApp) Build() string {
+	return c.app["build"].(string)
+}
+
+func (c connectorEventContextApp) Namespace() string {
+	return c.app["namespace"].(string)
+}
+
+type connectorEventContextBrowser struct {
+	browser map[string]any
+}
+
+func (c connectorEventContextBrowser) Name() string {
+	return c.browser["name"].(string)
+}
+
+func (c connectorEventContextBrowser) Other() string {
+	return c.browser["other"].(string)
+}
+
+func (c connectorEventContextBrowser) Version() string {
+	return c.browser["version"].(string)
+}
+
+type connectorEventContextCampaign struct {
+	campaign map[string]any
+}
+
+func (c connectorEventContextCampaign) Name() string {
+	return c.campaign["name"].(string)
+}
+
+func (c connectorEventContextCampaign) Source() string {
+	return c.campaign["source"].(string)
+}
+
+func (c connectorEventContextCampaign) Medium() string {
+	return c.campaign["medium"].(string)
+}
+
+func (c connectorEventContextCampaign) Term() string {
+	return c.campaign["term"].(string)
+}
+
+func (c connectorEventContextCampaign) Content() string {
+	return c.campaign["content"].(string)
+}
+
+type connectorEventContextDevice struct {
+	device map[string]any
+}
+
+func (c connectorEventContextDevice) Id() string {
+	return c.device["id"].(string)
+}
+
+func (c connectorEventContextDevice) AdvertisingId() string {
+	return c.device["advertisingId"].(string)
+}
+
+func (c connectorEventContextDevice) AdTrackingEnabled() bool {
+	return c.device["adTrackingEnabled"].(bool)
+}
+
+func (c connectorEventContextDevice) Manufacturer() string {
+	return c.device["manufacturer"].(string)
+}
+
+func (c connectorEventContextDevice) Model() string {
+	return c.device["model"].(string)
+}
+
+func (c connectorEventContextDevice) Name() string {
+	return c.device["name"].(string)
+}
+
+func (c connectorEventContextDevice) Type() string {
+	return c.device["type"].(string)
+}
+
+func (c connectorEventContextDevice) Token() string {
+	return c.device["token"].(string)
+}
+
+type connectorEventContextLibrary struct {
+	library map[string]any
+}
+
+func (c connectorEventContextLibrary) Name() string {
+	return c.library["id"].(string)
+}
+
+func (c connectorEventContextLibrary) Version() string {
+	return c.library["version"].(string)
+}
+
+type connectorEventContextLocation struct {
+	location map[string]any
+}
+
+func (c connectorEventContextLocation) City() string {
+	return c.location["city"].(string)
+}
+
+func (c connectorEventContextLocation) Country() string {
+	return c.location["country"].(string)
+}
+
+func (c connectorEventContextLocation) Latitude() float64 {
+	return c.location["latitude"].(float64)
+}
+
+func (c connectorEventContextLocation) Longitude() float64 {
+	return c.location["longitude"].(float64)
+}
+
+func (c connectorEventContextLocation) Speed() float64 {
+	return c.location["speed"].(float64)
+}
+
+type connectorEventContextNetwork struct {
+	network map[string]any
+}
+
+func (c connectorEventContextNetwork) Bluetooth() bool {
+	return c.network["bluetooth"].(bool)
+}
+
+func (c connectorEventContextNetwork) Carrier() string {
+	return c.network["carrier"].(string)
+}
+
+func (c connectorEventContextNetwork) Cellular() bool {
+	return c.network["cellular"].(bool)
+}
+
+func (c connectorEventContextNetwork) WiFi() bool {
+	return c.network["wifi"].(bool)
+}
+
+type connectorEventContextOS struct {
+	os map[string]any
+}
+
+func (c connectorEventContextOS) Name() string {
+	return c.os["name"].(string)
+}
+
+func (c connectorEventContextOS) Version() string {
+	return c.os["version"].(string)
+}
+
+type connectorEventContextPage struct {
+	page map[string]any
+}
+
+func (c connectorEventContextPage) Path() string {
+	return c.page["path"].(string)
+}
+
+func (c connectorEventContextPage) Referrer() string {
+	return c.page["referrer"].(string)
+}
+
+func (c connectorEventContextPage) Search() string {
+	return c.page["search"].(string)
+}
+
+func (c connectorEventContextPage) Title() string {
+	return c.page["title"].(string)
+}
+
+func (c connectorEventContextPage) URL() string {
+	return c.page["url"].(string)
+}
+
+type connectorEventContextReferrer struct {
+	referrer map[string]any
+}
+
+func (c connectorEventContextReferrer) Id() string {
+	return c.referrer["id"].(string)
+}
+
+func (c connectorEventContextReferrer) Type() string {
+	return c.referrer["type"].(string)
+}
+
+type connectorEventContextScreen struct {
+	screen map[string]any
+}
+
+func (c connectorEventContextScreen) Width() int {
+	return c.screen["id"].(int)
+}
+
+func (c connectorEventContextScreen) Height() int {
+	return c.screen["height"].(int)
+}
+
+func (c connectorEventContextScreen) Density() decimal.Decimal {
+	return c.screen["density"].(decimal.Decimal)
+}
+
+type connectorEventContextSession struct {
+	session map[string]any
+}
+
+func (c connectorEventContextSession) Id() int {
+	return c.session["id"].(int)
+}
+
+func (c connectorEventContextSession) Start() bool {
+	start, _ := c.session["start"].(bool)
+	return start
 }

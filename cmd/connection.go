@@ -213,7 +213,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	}
 	var body struct {
 		EventType      string
-		Event          *core.ObservedEvent
+		Event          json.Value
 		Transformation core.DataTransformation
 		OutSchema      types.Type
 	}

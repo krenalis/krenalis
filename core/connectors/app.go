@@ -88,7 +88,7 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 //
 // It panics if the app does not support the Events target, or if schema is
 // valid but not an Object.
-func (app *App) EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (app *App) EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	if app.err != nil {
 		return nil, app.err
 	}

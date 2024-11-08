@@ -33,7 +33,6 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
-	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
@@ -1395,7 +1394,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event *ObservedEvent, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event json.Value, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
 
 	this.core.mustBeOpen()
 
@@ -1416,19 +1415,16 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if event == nil {
 		return nil, errors.BadRequest("event is missing")
 	}
-	if event.Header == nil {
-		return nil, errors.BadRequest("event header is missing")
-	}
 	if transformation.Mapping != nil && transformation.Function != nil {
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	data, err := json.DecodeByType[map[string]any](bytes.NewReader(event.Data), events.Schema)
+	properties, err := json.DecodeByType[map[string]any](bytes.NewReader(event), events.Schema)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}
 
-	var properties map[string]any
+	var transformedProperties map[string]any
 
 	if transformation.Mapping != nil || transformation.Function != nil {
 
@@ -1504,7 +1500,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			return nil, err
 		}
 		records := []transformers.Record{
-			{Purpose: transformers.Create, Properties: data},
+			{Purpose: transformers.Create, Properties: properties},
 		}
 		err = transformer.Transform(ctx, records)
 		if err != nil {
@@ -1519,7 +1515,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			}
 			return nil, err
 		}
-		properties = records[0].Properties
+		transformedProperties = records[0].Properties
 
 	} else {
 
@@ -1530,93 +1526,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	}
 
 	// Convert data into a meergo.Event value.
-	ev := meergo.Event{}
-	ev.AnonymousId = data["anonymousId"].(string)
-	ev.Category = data["category"].(string)
+	ev := events.NewConnectorEvent(properties)
 
-	eventContext := data["context"].(map[string]any)
-	contextApp := eventContext["app"].(map[string]any)
-	ev.Context.App.Name = contextApp["name"].(string)
-	ev.Context.App.Version = contextApp["version"].(string)
-	ev.Context.App.Build = contextApp["build"].(string)
-	ev.Context.App.Namespace = contextApp["namespace"].(string)
-
-	contextCampaign := eventContext["campaign"].(map[string]any)
-	ev.Context.Campaign.Name = contextCampaign["name"].(string)
-	ev.Context.Campaign.Source = contextCampaign["source"].(string)
-	ev.Context.Campaign.Medium = contextCampaign["medium"].(string)
-	ev.Context.Campaign.Term = contextCampaign["term"].(string)
-	ev.Context.Campaign.Content = contextCampaign["content"].(string)
-
-	contextDevice := eventContext["device"].(map[string]any)
-	ev.Context.Device.Id = contextDevice["id"].(string)
-	ev.Context.Device.AdvertisingId = contextDevice["advertisingId"].(string)
-	ev.Context.Device.AdTrackingEnabled = contextDevice["adTrackingEnabled"].(bool)
-	ev.Context.Device.Manufacturer = contextDevice["manufacturer"].(string)
-	ev.Context.Device.Model = contextDevice["model"].(string)
-	ev.Context.Device.Name = contextDevice["name"].(string)
-	ev.Context.Device.Type = contextDevice["type"].(string)
-	ev.Context.Device.Token = contextDevice["token"].(string)
-
-	ev.Context.IP = eventContext["ip"].(string)
-
-	contextLibrary := eventContext["library"].(map[string]any)
-	ev.Context.Library.Name = contextLibrary["name"].(string)
-	ev.Context.Library.Version = contextLibrary["version"].(string)
-
-	ev.Context.Locale = eventContext["locale"].(string)
-
-	contextLocation := eventContext["location"].(map[string]any)
-	ev.Context.Location.City = contextLocation["city"].(string)
-	ev.Context.Location.Country = contextLocation["country"].(string)
-	ev.Context.Location.Latitude = contextLocation["latitude"].(float64)
-	ev.Context.Location.Longitude = contextLocation["longitude"].(float64)
-	ev.Context.Location.Speed = contextLocation["speed"].(float64)
-
-	contextNetwork := eventContext["network"].(map[string]any)
-	ev.Context.Network.Bluetooth = contextNetwork["bluetooth"].(bool)
-	ev.Context.Network.Carrier = contextNetwork["carrier"].(string)
-	ev.Context.Network.Cellular = contextNetwork["cellular"].(bool)
-	ev.Context.Network.WiFi = contextNetwork["wifi"].(bool)
-
-	contextOS := eventContext["os"].(map[string]any)
-	ev.Context.OS.Name = contextOS["name"].(string)
-	ev.Context.OS.Version = contextOS["version"].(string)
-
-	contextPage := eventContext["page"].(map[string]any)
-	ev.Context.Page.Path = contextPage["path"].(string)
-	ev.Context.Page.Referrer = contextPage["referrer"].(string)
-	ev.Context.Page.Search = contextPage["search"].(string)
-	ev.Context.Page.Title = contextPage["title"].(string)
-	ev.Context.Page.URL = contextPage["url"].(string)
-
-	contextReferrer := eventContext["referrer"].(map[string]any)
-	ev.Context.Referrer.Id = contextReferrer["id"].(string)
-	ev.Context.Referrer.Type = contextReferrer["type"].(string)
-
-	contextScreen := eventContext["screen"].(map[string]any)
-	ev.Context.Screen.Width = contextScreen["width"].(int)
-	ev.Context.Screen.Height = contextScreen["height"].(int)
-	ev.Context.Screen.Density = contextScreen["density"].(decimal.Decimal)
-
-	contextSession := eventContext["session"].(map[string]any)
-	ev.Context.Session.Id = contextSession["id"].(int)
-	ev.Context.Session.Start = contextSession["start"].(bool)
-
-	ev.Context.Timezone = eventContext["timezone"].(string)
-	ev.Context.UserAgent = eventContext["userAgent"].(string)
-
-	ev.Event = data["event"].(string)
-	ev.GroupId = data["groupId"].(string)
-	ev.MessageId = data["messageId"].(string)
-	ev.Name = data["name"].(string)
-	ev.ReceivedAt = data["receivedAt"].(time.Time)
-	ev.SentAt = data["sentAt"].(time.Time)
-	ev.Timestamp = data["timestamp"].(time.Time)
-	ev.Type = data["type"].(string)
-	ev.UserId = data["userId"].(string)
-
-	req, err := this.app().EventRequest(ctx, &ev, eventType, outSchema, properties, true)
+	req, err := this.app().EventRequest(ctx, ev, eventType, outSchema, transformedProperties, true)
 	if err != nil {
 		if err == meergo.ErrEventTypeNotExist {
 			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)

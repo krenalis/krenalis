@@ -178,7 +178,7 @@ type AppEvents interface {
 	// This method is safe for concurrent use by multiple goroutines. If the
 	// specified event type does not exist, it returns the ErrEventTypeNotExist
 	// error.
-	EventRequest(ctx context.Context, event *Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
+	EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
 
 	// EventTypes returns the event types of the connector's instance.
 	EventTypes(ctx context.Context) ([]*EventType, error)
@@ -270,95 +270,113 @@ type Webhooks interface {
 }
 
 // Event represents an event.
-type Event struct {
+type Event interface {
+	AnonymousId() string
+	Category() string
+	Context() EventContext
+	Event() string
+	GroupId() string
+	MessageId() string
+	Name() string
+	ReceivedAt() time.Time
+	SentAt() time.Time
+	Timestamp() time.Time
+	Type() string
+	UserId() string
+}
 
-	// Keep these fields in sync with the event schema, except for Properties,
-	// Source, and Traits fields.
+type EventContext interface {
+	App() (EventContextApp, bool)
+	Browser() (EventContextBrowser, bool)
+	Campaign() (EventContextCampaign, bool)
+	Device() (EventContextDevice, bool)
+	IP() string
+	Library() (EventContextLibrary, bool)
+	Locale() string
+	Location() (EventContextLocation, bool)
+	Network() (EventContextNetwork, bool)
+	OS() (EventContextOS, bool)
+	Page() (EventContextPage, bool)
+	Referrer() (EventContextReferrer, bool)
+	Screen() (EventContextScreen, bool)
+	Session() (EventContextSession, bool)
+	Timezone() string
+	UserAgent() string
+}
 
-	AnonymousId string
-	Category    string
-	Context     struct {
-		App struct {
-			Name      string
-			Version   string
-			Build     string
-			Namespace string
-		}
-		Browser struct {
-			Name    string
-			Other   string
-			Version string
-		}
-		Campaign struct {
-			Name    string
-			Source  string
-			Medium  string
-			Term    string
-			Content string
-		}
-		Device struct {
-			Id                string
-			AdvertisingId     string
-			AdTrackingEnabled bool
-			Manufacturer      string
-			Model             string
-			Name              string
-			Type              string
-			Token             string
-		}
-		IP      string
-		Library struct {
-			Name    string
-			Version string
-		}
-		Locale   string
-		Location struct {
-			City      string
-			Country   string
-			Latitude  float64
-			Longitude float64
-			Speed     float64
-		}
-		Network struct {
-			Bluetooth bool
-			Carrier   string
-			Cellular  bool
-			WiFi      bool
-		}
-		OS struct {
-			Name    string
-			Version string
-		}
-		Page struct {
-			Path     string
-			Referrer string
-			Search   string
-			Title    string
-			URL      string
-		}
-		Referrer struct {
-			Id   string
-			Type string
-		}
-		Screen struct {
-			Width   int
-			Height  int
-			Density decimal.Decimal
-		}
-		Session struct {
-			Id    int
-			Start bool
-		}
-		Timezone  string
-		UserAgent string
-	}
-	Event      string
-	GroupId    string
-	MessageId  string
-	Name       string
-	ReceivedAt time.Time
-	SentAt     time.Time
-	Timestamp  time.Time
-	Type       string
-	UserId     string
+type EventContextApp interface {
+	Name() string
+	Version() string
+	Build() string
+	Namespace() string
+}
+
+type EventContextBrowser interface {
+	Name() string
+	Other() string
+	Version() string
+}
+
+type EventContextCampaign interface {
+	Name() string
+	Source() string
+	Medium() string
+	Term() string
+	Content() string
+}
+
+type EventContextDevice interface {
+	Id() string
+	AdvertisingId() string
+	AdTrackingEnabled() bool
+	Manufacturer() string
+	Model() string
+	Name() string
+	Type() string
+	Token() string
+}
+
+type EventContextLibrary interface {
+	Name() string
+	Version() string
+}
+type EventContextLocation interface {
+	City() string
+	Country() string
+	Latitude() float64
+	Longitude() float64
+	Speed() float64
+}
+type EventContextNetwork interface {
+	Bluetooth() bool
+	Carrier() string
+	Cellular() bool
+	WiFi() bool
+}
+type EventContextOS interface {
+	Name() string
+	Version() string
+}
+
+type EventContextPage interface {
+	Path() string
+	Referrer() string
+	Search() string
+	Title() string
+	URL() string
+}
+
+type EventContextReferrer interface {
+	Id() string
+	Type() string
+}
+
+type EventContextScreen interface {
+	Width() int
+	Height() int
+	Density() decimal.Decimal
+}
+type EventContextSession interface {
+	Id() int
+	Start() bool
 }

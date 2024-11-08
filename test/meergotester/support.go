@@ -550,7 +550,7 @@ func (c *Meergo) waitForExecutionsCompletion(conn int, allowFailed bool, executi
 }
 
 func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {
-	bo := backoff.New(20)
+	bo := backoff.New(200)
 	bo.SetAttempts(10)
 	bo.SetCap(2 * time.Second)
 	bo.SetNextWaitTime(200 * time.Millisecond)

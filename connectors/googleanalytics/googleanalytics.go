@@ -72,7 +72,7 @@ type Settings struct {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ga *Analytics) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (ga *Analytics) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    "https://www.google-analytics.com/",
@@ -90,10 +90,14 @@ func (ga *Analytics) EventRequest(ctx context.Context, event *meergo.Event, even
 	var ev map[string]any
 	switch eventType {
 	case "page_view":
+		page, ok := event.Context().Page()
+		if !ok {
+			return nil, errors.New("event does not have a page in the context")
+		}
 		ev = map[string]any{
-			"page_location": event.Context.Page.URL,
-			"page_referrer": event.Context.Page.Referrer,
-			"page_title":    event.Context.Page.Title,
+			"page_location": page.URL(),
+			"page_referrer": page.Referrer(),
+			"page_title":    page.Title(),
 		}
 	case "share":
 		ev = map[string]any{}
@@ -110,8 +114,8 @@ func (ga *Analytics) EventRequest(ctx context.Context, event *meergo.Event, even
 	body := map[string]any{
 		// TODO(Gianluca): consider sending the user ID as the client_id, if
 		// defined, otherwise the anonymousID.
-		"client_id": event.AnonymousId,
-		"user_id":   event.UserId,
+		"client_id": event.AnonymousId(),
+		"user_id":   event.UserId(),
 		"events":    []map[string]any{ev},
 	}
 	var err error

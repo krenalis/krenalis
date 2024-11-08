@@ -90,7 +90,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.BatchIdentityWriter(action, purge, func(ids []string, err error) {
+	iw, err := this.connection.store.NewBatchIdentityWriter(action, purge, func(ids []string, err error) {
 		if err != nil {
 			this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
 			return

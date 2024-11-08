@@ -348,19 +348,15 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 }
 
 // AddEventListener adds an event listener to a workspace that listens to
-// collected or enriched events.
+// events.
 func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
 	var body struct {
-		Enriched      bool
-		Size          *int
-		Sources       []int
-		OnlyValid     bool
-		HasUserTraits bool
-		Filter        *core.Filter
+		Size   *int
+		Filter *core.Filter
 	}
 	err = jsonstd.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -370,12 +366,7 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	if body.Size != nil {
 		size = *body.Size
 	}
-	var id string
-	if body.Enriched {
-		id, err = ws.AddEnrichedEventListener(size, body.Sources, body.HasUserTraits, body.Filter)
-	} else {
-		id, err = ws.AddCollectedEventListener(size, body.Sources, body.OnlyValid)
-	}
+	id, err := ws.AddEventListener(size, body.Filter)
 	if err != nil {
 		return nil, err
 	}
@@ -533,9 +524,13 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	events, discarded, err := ws.ListenedEvents(r.PathValue("listener"))
+	listenedEvents, discarded, err := ws.ListenedEvents(r.PathValue("listener"))
 	if err != nil {
 		return nil, err
+	}
+	events := make([]json.Value, len(listenedEvents))
+	for i, event := range listenedEvents {
+		events[i] = event
 	}
 	return map[string]any{
 		"events":    events,

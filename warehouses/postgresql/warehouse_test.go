@@ -281,7 +281,7 @@ func Test_rowEncoder(t *testing.T) {
 		{
 			columns:  []meergo.Column{{Name: "c", Type: types.Map(types.JSON())}},
 			rows:     [][]any{{map[string]any{"boo": json.Value(`{"a":5}`)}}, {map[string]any{"'boo\x00'": json.Value(`{"b":"\u0000foo\\u0000"}`)}}},
-			expected: [][]any{{json.Value(`{"boo":"{\"a\":5}"}`)}, {json.Value(`{"'boo'":"{\"b\":\"\\u0000foo\\\\u0000\"}"}`)}},
+			expected: [][]any{{json.Value(`{"boo":{"a":5}}`)}, {json.Value(`{"'boo'":{"b":"foo\\u0000"}}`)}},
 			ok:       true,
 		},
 		{

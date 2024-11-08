@@ -59,6 +59,7 @@ import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
+import JSONbig from 'json-bigint';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -932,14 +933,33 @@ const FullscreenTransformation = ({
 		};
 	}, [connection, actionType]);
 
-	const { startListening } = useEventListener(
-		isEventBasedUserImport ? [connection.id] : connection.linkedConnections,
-		true,
-		true,
-		collectEvents,
-		null,
-		action.Filter,
-	);
+	let eventListenerFilter = null;
+	if (isEventBasedUserImport || isAppEventsExport) {
+		let filter = {
+			Logical: action.Filter != null ? action.Filter.Logical : 'and',
+			Conditions: action.Filter != null ? [...action.Filter.Conditions] : [],
+		};
+		if (isAppEventsExport && connection.linkedConnections == null) {
+			filter = null;
+		} else {
+			filter.Conditions.push({
+				Property: 'connection',
+				Operator: 'is one of',
+				Values: isEventBasedUserImport
+					? [String(connection.id)]
+					: connection.linkedConnections.map((id) => String(id)),
+			});
+			if (isEventBasedUserImport) {
+				filter.Conditions.push({
+					Property: 'traits',
+					Operator: 'is not',
+					Values: ['null'],
+				});
+			}
+		}
+	}
+
+	const { startListening } = useEventListener(collectEvents, null, eventListenerFilter);
 
 	useEffect(() => {
 		if (isEventBasedUserImport || isAppEventsExport) {
@@ -1191,7 +1211,7 @@ const FullscreenTransformation = ({
 			}
 			return;
 		}
-		setOutput(JSON.stringify(res.data, null, 4));
+		setOutput(JSONbig.stringify(res.data, null, 4));
 		setTimeout(() => setIsExecuting(false), 300);
 	};
 
@@ -1217,7 +1237,7 @@ const FullscreenTransformation = ({
 					// Since having no transformation is allowed in the actions
 					// that import users from events, simply display an empty
 					// JSON object.
-					setOutput(JSON.stringify({}, null, 4));
+					setOutput(JSONbig.stringify({}, null, 4));
 					setIsExecuting(false);
 				}, 300);
 				return;
@@ -1255,7 +1275,7 @@ const FullscreenTransformation = ({
 			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
 		let res: TransformDataResponse;
 		try {
-			const data = JSON.parse(atob(event.full.Data));
+			const data = event.full;
 			res = await api.transformData(data, inSchema, actionToSet.outSchema, actionToSet.transformation, purpose);
 		} catch (err) {
 			setOutput('');
@@ -1272,7 +1292,7 @@ const FullscreenTransformation = ({
 			}
 			return;
 		}
-		setOutput(JSON.stringify(res.data, null, 4));
+		setOutput(JSONbig.stringify(res.data, null, 4));
 		setTimeout(() => setIsExecuting(false), 300);
 	};
 
@@ -1465,7 +1485,7 @@ const FullscreenTransformation = ({
 							}
 							details={
 								<div className='fullscreen-transformation__sample-source'>
-									<SyntaxHighlight>{JSON.stringify(s, null, 4)}</SyntaxHighlight>
+									<SyntaxHighlight>{JSONbig.stringify(s, null, 4)}</SyntaxHighlight>
 								</div>
 							}
 						/>
@@ -1555,7 +1575,7 @@ const FullscreenTransformation = ({
 										}
 										details={
 											<div className='fullscreen-transformation__event-source'>
-												<SyntaxHighlight>{e.source}</SyntaxHighlight>
+												<SyntaxHighlight>{JSONbig.stringify(e.full, null, 4)}</SyntaxHighlight>
 											</div>
 										}
 									/>

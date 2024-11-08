@@ -1,22 +1,17 @@
 import { useEffect, useContext, useState } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
-import { ObservedEvent, AddEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
+import { Event, AddEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
 import { Filter } from '../lib/api/types/action';
 
 interface EventListenerEvent {
 	id: number;
-	err: string;
 	type: string;
 	time: string;
-	source: string;
-	full: ObservedEvent;
+	full: Event;
 }
 
 const useEventListener = (
-	sources: number[],
-	onlyValid: boolean,
-	enriched: boolean,
 	setEvents: (events: EventListenerEvent[]) => void,
 	setDiscarded?: React.Dispatch<React.SetStateAction<number>>,
 	filter?: Filter,
@@ -41,11 +36,7 @@ const useEventListener = (
 		const startListener = async () => {
 			let listener: AddEventListenerResponse;
 			try {
-				if (enriched) {
-					listener = await api.workspaces.eventlisteners.addEnriched(3, sources, true, filter);
-				} else {
-					listener = await api.workspaces.eventlisteners.addCollected(3, sources, onlyValid);
-				}
+				listener = await api.workspaces.eventlisteners.add(3, filter);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExists') {
@@ -76,13 +67,10 @@ const useEventListener = (
 				}
 				const newly: EventListenerEvent[] = [];
 				for (const e of res.events) {
-					const dec = JSON.parse(atob(e.Data));
 					newly.push({
 						id: id,
-						err: e.Err,
-						type: dec.type,
-						time: e.Header.receivedAt,
-						source: JSON.stringify(dec, null, 4),
+						type: e.type,
+						time: e.receivedAt,
 						full: e,
 					});
 					const newID = id + 1;

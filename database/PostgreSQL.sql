@@ -162,14 +162,6 @@ CREATE TABLE connections_keys (
     PRIMARY KEY (connection, value)
 );
 
-CREATE TABLE connections_stats_events (
-    hour integer NOT NULL,
-    source integer DEFAULT NULL REFERENCES connections ON DELETE CASCADE,
-    good_events integer NOT NULL,
-    bad_events integer NOT NULL,
-    UNIQUE (hour, source)
-);
-
 CREATE TABLE election (
     number integer NOT NULL,
     leader uuid NOT NULL,
@@ -187,12 +179,11 @@ CREATE TABLE event_dispatching (
 );
 
 CREATE TABLE event_payloads (
-    id bytea NOT NULL,
-    source integer NOT NULL REFERENCES connections ON DELETE CASCADE,
+    id uuid NOT NULL,
+    connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
     received_at timestamp NOT NULL,
-    remote_addr inet NOT NULL,
-    user_agent TEXT NOT NULL,
-    payload bytea NOT NULL,
+    actions integer[],
+    properties bytea NOT NULL,
     PRIMARY KEY (id)
 );
 

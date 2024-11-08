@@ -9,7 +9,7 @@ package dispatcher
 
 import (
 	"context"
-	"encoding/hex"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -17,19 +17,24 @@ import (
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
+
+	"github.com/google/uuid"
 )
 
 const debug = false
 
 type dispatchingEvent struct {
-	*events.Event
-	connection int
-	action     *state.Action
-	request    *meergo.EventRequest
-	err        error
+	id          uuid.UUID
+	connection  int
+	anonymousId string
+	properties  map[string]any
+	action      *state.Action
+	request     *meergo.EventRequest
+	err         error
 }
 
 type Dispatcher struct {
@@ -37,34 +42,30 @@ type Dispatcher struct {
 		in  chan *dispatchingEvent
 		out chan *dispatchingEvent
 	}
-	sent        chan *dispatchingEvent
-	results     chan Result
-	db          *postgres.DB
-	state       *state.State
-	processor   *processor
-	stopSenders chan<- struct{}
-}
-
-type Result struct {
-	Event  *events.Event
-	Action int
-	Sent   bool
+	sent           chan *dispatchingEvent
+	db             *postgres.DB
+	state          *state.State
+	processor      *processor
+	operationStore events.OperationStore
+	metrics        *metrics.Collector
+	stopSenders    chan<- struct{}
 }
 
 // New returns new dispatcher.
-func New(db *postgres.DB, st *state.State, provider transformers.Provider, connectors *connectors.Connectors) (*Dispatcher, error) {
+func New(db *postgres.DB, st *state.State, opStore events.OperationStore, provider transformers.Provider, connectors *connectors.Connectors, metrics *metrics.Collector) (*Dispatcher, error) {
 
-	processor, err := newProcessor(db, st, connectors, provider)
+	processor, err := newProcessor(db, st, opStore, connectors, provider, metrics)
 	if err != nil {
 		return nil, err
 	}
 
 	dispatcher := &Dispatcher{
-		db:        db,
-		state:     st,
-		sent:      make(chan *dispatchingEvent, cap(processor.events.out)),
-		results:   make(chan Result, cap(processor.events.out)),
-		processor: processor,
+		db:             db,
+		state:          st,
+		sent:           make(chan *dispatchingEvent, cap(processor.events.out)),
+		processor:      processor,
+		operationStore: opStore,
+		metrics:        metrics,
 	}
 	dispatcher.events.in = processor.events.out
 	dispatcher.events.out = make(chan *dispatchingEvent, cap(processor.events.out))
@@ -82,15 +83,25 @@ func (d *Dispatcher) Close() {
 	close(d.stopSenders)
 }
 
-// Dispatch dispatches an event to a destination action.
-func (d *Dispatcher) Dispatch(event *events.Event, action *state.Action) {
-	ev := &dispatchingEvent{Event: event, action: action}
-	d.processor.events.in <- ev
-}
+var errTooManyEvents = errors.New("too many events")
 
-// Results returns a channel from which to read the result of event dispatch.
-func (d *Dispatcher) Results() <-chan Result {
-	return d.results
+// Dispatch dispatches an event to a destination action.
+// Returns errTooManyEvents if there are already too many events queued for
+// dispatch.
+func (d *Dispatcher) Dispatch(event events.Event, action *state.Action) error {
+	ev := &dispatchingEvent{
+		id:          uuid.MustParse(event["id"].(string)),
+		connection:  event["connection"].(int),
+		anonymousId: event["anonymousId"].(string),
+		properties:  event,
+		action:      action,
+	}
+	select {
+	case d.processor.events.in <- ev:
+	default:
+		return errTooManyEvents
+	}
+	return nil
 }
 
 // queueKey represents a key in queues map.
@@ -144,7 +155,7 @@ dispatch:
 				continue
 			}
 			if debug {
-				slog.Debug("dispatcher: receive event", "id", hex.EncodeToString(event.Event.Id[:]))
+				slog.Debug("dispatcher: receive event", "id", event.id)
 			}
 			// push.
 			key := queueKey{
@@ -175,7 +186,7 @@ dispatch:
 				if event == nil {
 					slog.Debug("dispatcher: no event to pop")
 				} else {
-					slog.Debug("dispatcher: pop event", "id", hex.EncodeToString(event.Event.Id[:]))
+					slog.Debug("dispatcher: pop event", "id", event.id)
 				}
 			}
 			if event != nil {
@@ -187,7 +198,7 @@ dispatch:
 		// send is nil if there is no sending event.
 		case send <- sendingEvent:
 			if debug {
-				slog.Debug("dispatcher: sent event", "id", hex.EncodeToString(sendingEvent.Event.Id[:]))
+				slog.Debug("dispatcher: sent event", "id", sendingEvent.id)
 			}
 			send = nil // there are no more requests to send
 			sendingEvent = nil
@@ -196,7 +207,7 @@ dispatch:
 		// Receive an event from the senders pool.
 		case event := <-d.sent:
 			if debug {
-				slog.Debug("dispatcher: receive response for event", "event", hex.EncodeToString(event.Event.Id[:]))
+				slog.Debug("dispatcher: receive response for event", "event", event.id)
 			}
 			// ack.
 			key := queueKey{
@@ -206,13 +217,7 @@ dispatch:
 			q := queues[key]
 			q.Ack(event, event.err == nil)
 			if event.err == nil {
-				if false {
-					d.results <- Result{
-						Event:  event.Event,
-						Action: event.action.ID,
-						Sent:   true,
-					}
-				}
+				d.operationStore.Done(event.action.ID, event.id.String())
 				q.backoff = nil
 				readyQueues[key] = q
 				numEvents--
@@ -254,7 +259,7 @@ dispatch:
 				if e == nil {
 					s += "nil"
 				} else {
-					s += hex.EncodeToString(e.Event.Id[:])
+					s += e.id.String()
 				}
 				s += " "
 			}

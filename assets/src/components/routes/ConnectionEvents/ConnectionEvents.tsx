@@ -5,8 +5,7 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import JSONbig from 'json-bigint';
 
 const ConnectionEvents = () => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
@@ -16,10 +15,19 @@ const ConnectionEvents = () => {
 	const { connection: c } = useContext(ConnectionContext);
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
+		for (const e of newly) {
+			// Remove the id and connection of the event, since they
+			// should not be displayed in the UI.
+			delete e.full['id'];
+			delete e.full['connection'];
+		}
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener([c.id], true, false, collectEvents, setDiscarded);
+	const { startListening } = useEventListener(collectEvents, setDiscarded, {
+		Logical: 'and',
+		Conditions: [{ Property: 'connection', Operator: 'is one of', Values: [String(c.id)] }],
+	});
 
 	useEffect(() => {
 		startListening();
@@ -34,7 +42,7 @@ const ConnectionEvents = () => {
 
 	let rightPanel: ReactNode;
 	if (selectedEvent !== null) {
-		const fullEventMessage = selectedEvent.source!;
+		const fullEventMessage = JSONbig.stringify(selectedEvent.full, null, 4);
 		rightPanel = (
 			<div className='connection-events__full-event'>
 				<SyntaxHighlight>{fullEventMessage}</SyntaxHighlight>
@@ -93,23 +101,6 @@ const ConnectionEvents = () => {
 										}`}
 										onClick={() => onEventClick(e)}
 									>
-										<div className='connection-events__event-error'>
-											{e.err !== '' ? (
-												<SlTooltip content={e.err} placement='top' hoist>
-													<SlIcon
-														className='connection-events__error-icon'
-														name='exclamation-circle-fill'
-													></SlIcon>
-												</SlTooltip>
-											) : (
-												<SlTooltip content='No error' placement='top' hoist>
-													<SlIcon
-														className='connection-events__success-icon'
-														name='check-circle-fill'
-													></SlIcon>
-												</SlTooltip>
-											)}
-										</div>
 										<div className='connection-events__event-name'>{e.type}</div>
 										<div className='connection-events__event-time'>
 											{new Date(e.time).toLocaleString()}

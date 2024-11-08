@@ -14,9 +14,7 @@ import (
 	jsonstd "encoding/json"
 	"fmt"
 	"log/slog"
-	"maps"
 	"math"
-	"net/http"
 	"slices"
 	"sort"
 	"strconv"
@@ -621,8 +619,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	return n.ID, nil
 }
 
-// AddCollectedEventListener adds an event listener to the workspace that
-// listens to collected events and returns its identifier.
+// AddEventListener adds an event listener to the workspace that listens to
+// events and returns its identifier.
 //
 // size specifies the maximum number of observed events to be returned by a
 // subsequent call to the ListenedEvents method and must be in the range
@@ -631,45 +629,6 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 // sources contains the identifiers of the sources, whether they are mobile,
 // server, or website connections. If sources is non-nil, only events
 // originating from these sources will be observed.
-//
-// onlyValid determines whether only valid events should be observed.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - ConnectionNotExist, if a source connection does not exist.
-//   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) AddCollectedEventListener(size int, sources []int, onlyValid bool) (string, error) {
-	this.core.mustBeOpen()
-	if size < 1 || size > maxEventsListenedTo {
-		return "", errors.BadRequest("size %d is not valid", size)
-	}
-	err := this.validateEventListenerSources(sources)
-	if err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
-	id, err := this.core.events.observer.AddCollectedListener(size, sources, onlyValid)
-	if err != nil {
-		if err == collector.ErrTooManyListeners {
-			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
-		}
-		return "", err
-	}
-	return id, nil
-}
-
-// AddEnrichedEventListener adds an event listener to the workspace that listens
-// to enriched events and returns its identifier.
-//
-// size specifies the maximum number of observed events to be returned by a
-// subsequent call to the ListenedEvents method and must be in the range
-// [1, 1000].
-//
-// sources contains the identifiers of the sources, whether they are mobile,
-// server, or website connections. If sources is non-nil, only events
-// originating from these sources will be observed.
-//
-// If hasUserTraits is true, only events with user traits will be observed,
-// such as "identify" events and events with a non-nil traits in context.
 //
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
@@ -677,14 +636,10 @@ func (this *Workspace) AddCollectedEventListener(size int, sources []int, onlyVa
 //
 //   - ConnectionNotExist, if a source connection does not exist.
 //   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUserTraits bool, filter *Filter) (string, error) {
+func (this *Workspace) AddEventListener(size int, filter *Filter) (string, error) {
 	this.core.mustBeOpen()
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
-	}
-	err := this.validateEventListenerSources(sources)
-	if err != nil {
-		return "", errors.BadRequest("%s", err)
 	}
 	var where *state.Where
 	if filter != nil {
@@ -694,7 +649,7 @@ func (this *Workspace) AddEnrichedEventListener(size int, sources []int, hasUser
 		}
 		where = convertFilterToWhere(filter, events.Schema)
 	}
-	id, err := this.core.events.observer.AddEnrichedListener(size, sources, hasUserTraits, where)
+	id, err := this.core.events.observer.AddListener(size, where)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
@@ -1066,43 +1021,10 @@ func (this *Workspace) IdentifiersSchema() types.Type {
 	})
 }
 
-// ObservedEvent represents an observed event.
-type ObservedEvent struct {
-
-	// Source, if not zero, it is the source mobile, server or website
-	// connection for which the event was sent.
-	Source int
-
-	// Header is the message header. It is nil if a validation error occurred
-	// processing the entire message.
-	Header *ObservedEventHeader
-
-	// Data contains the data, encoded in JSON, of a single event in the message,
-	// if Header is not nil, or the data of the entire message, if Header is nil.
-	Data []byte
-
-	// Err, if not empty, is a validation error occurred processing the message.
-	// It refers to a single event, if Header is not nil, or to the entire message
-	// if Header is nil.
-	Err string
-}
-
-type ObservedEventHeader struct {
-	ReceivedAt time.Time   `json:"receivedAt"`
-	RemoteAddr string      `json:"remoteAddr"`
-	Method     string      `json:"method"`
-	Proto      string      `json:"proto"`
-	URL        string      `json:"url"`
-	Headers    http.Header `json:"headers"`
-}
-
 // ListenedEvents returns the events listened to the specified listener and the
-// number of discarded events. It returns collected events if the listener
-// listens to collected events, and returns enriched events if the listener
-// listens to enriched events.
-//
-// If the listener does not exist, the function returns an errors.NotFoundError.
-func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, error) {
+// number of discarded events. If the listener does not exist, it returns an
+// errors.NotFoundError.
+func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error) {
 	this.core.mustBeOpen()
 	observedEvents, discarded, err := this.core.events.observer.Events(listener)
 	if err != nil {
@@ -1111,28 +1033,10 @@ func (this *Workspace) ListenedEvents(listener string) ([]ObservedEvent, int, er
 		}
 		return nil, 0, err
 	}
-	evs := make([]ObservedEvent, len(observedEvents))
-	for i := range len(evs) {
-		ov := observedEvents[i]
-		var header *ObservedEventHeader
-		if ov.Header != nil {
-			header = &ObservedEventHeader{
-				ReceivedAt: ov.Header.ReceivedAt,
-				RemoteAddr: ov.Header.RemoteAddr,
-				Method:     ov.Header.Method,
-				Proto:      ov.Header.Proto,
-				URL:        ov.Header.URL,
-				Headers:    maps.Clone(ov.Header.Headers),
-			}
-		}
-		evs[i] = ObservedEvent{
-			Source: ov.Source,
-			Header: header,
-			Data:   slices.Clone(ov.Data),
-			Err:    ov.Err,
-		}
+	for i, event := range observedEvents {
+		observedEvents[i] = slices.Clone(event)
 	}
-	return evs, discarded, nil
+	return observedEvents, discarded, nil
 }
 
 // authorizedOAuthAccount represents an authorized OAuth account that can be

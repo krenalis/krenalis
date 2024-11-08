@@ -80,7 +80,7 @@ type Settings struct {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ky *Klavyio) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (ky *Klavyio) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    "https://a.klaviyo.com/api/events/",
@@ -114,7 +114,7 @@ func (ky *Klavyio) EventRequest(ctx context.Context, event *meergo.Event, eventT
 	body.Data.Attributes.Profile.Email = properties["email"].(string)
 	body.Data.Attributes.Metric.Name = properties["metric_name"].(string)
 	body.Data.Attributes.Properties = properties
-	body.Data.Attributes.Time = event.Timestamp.Format(time.RFC3339)
+	body.Data.Attributes.Time = event.Timestamp().Format(time.RFC3339)
 	var err error
 	req.Body, err = json.Marshal(body)
 	if err != nil {

@@ -160,7 +160,7 @@ func Decode(r io.Reader, out any) error {
 //     as the Go time format "15:04:05.999999999"
 //   - Year: a JSON Number representing an integer
 //   - UUID: a JSON String representing a UUID
-//   - JSON: a JSON String representing a JSON value
+//   - JSON: a JSON value; JSON null is always interpreted as Value("null")
 //   - Inet: a JSON String representing an IP number
 //   - Text: a JSON String
 //   - Array: a JSON Array
@@ -241,6 +241,8 @@ type Marshaler interface {
 
 // MarshalBySchema encodes the given value, based on the provided schema, into
 // JSON, and returns it. schema cannot be the invalid type.
+//
+// For JSON properties, both nil and Value("null") are marshaled as JSON null.
 //
 // Unlike DecodeBySchema, this function does not validate the value. Its
 // behavior is undefined if the value does not validate against the type.
@@ -391,6 +393,13 @@ func (d decoderByType) readValue() (Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoderByType) unmarshal(t types.Type) (_ any, err error) {
+	if t.Kind() == types.JSONKind {
+		v, err := d.readValue()
+		if err != nil {
+			return nil, err
+		}
+		return slices.Clone(v), nil
+	}
 	switch d.peek() {
 	case '[':
 		// DecodeBySchema an array.
@@ -454,8 +463,12 @@ func (d decoderByType) unmarshal(t types.Type) (_ any, err error) {
 					if _, err := d.readToken(); err != nil {
 						return nil, err
 					}
-					if !p.Nullable {
-						return nil, newErrInvalidValue("cannot be null", p.Name)
+					if p.Type.Kind() == types.JSONKind {
+						value = Value("null")
+					} else {
+						if !p.Nullable {
+							return nil, newErrInvalidValue("cannot be null", p.Name)
+						}
 					}
 				} else {
 					value, err = d.unmarshal(p.Type)
@@ -606,8 +619,8 @@ func (d decoderByType) value(v Value, t types.Type) (any, error) {
 			}
 		}
 	case types.DecimalKind:
-		if v.Kind() == '"' {
-			if n, err := decimal.Parse(d.unquoteString(v), t.Precision(), t.Scale()); err == nil {
+		if v.Kind() == '0' {
+			if n, err := decimal.Parse(v, t.Precision(), t.Scale()); err == nil {
 				if min, max := t.DecimalRange(); n.Less(min) || n.Greater(max) {
 					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%s, %s]: %s", min, max, n), "")
 				}
@@ -782,9 +795,7 @@ func marshalBySchema(b []byte, v any, t types.Type) (Value, error) {
 			b = strconv.AppendFloat(b, v, 'g', -1, t.BitSize())
 		}
 	case decimal.Decimal:
-		b = append(b, '"')
 		b = append(b, v.String()...)
-		b = append(b, '"')
 	case time.Time:
 		b = append(b, '"')
 		switch t.Kind() {
@@ -799,7 +810,7 @@ func marshalBySchema(b []byte, v any, t types.Type) (Value, error) {
 	case Value:
 		value := jsontext.Value(slices.Clone(v))
 		_ = value.Compact()
-		b, _ = jsontext.AppendQuote(b, value)
+		b = append(b, value...)
 	case string:
 		var err error
 		b, err = jsontext.AppendQuote(b, v)

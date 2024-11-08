@@ -40,7 +40,7 @@ import {
 	FindUsersResponse,
 	AppUsersResponse,
 	EventPreviewResponse,
-	ObservedEvent,
+	Event,
 	UserEventsResponse,
 	userTraitsResponse,
 	Execution,
@@ -408,7 +408,7 @@ class Connections {
 	eventPreview = async (
 		connection: number,
 		eventType: string,
-		event: ObservedEvent,
+		event: Event,
 		outSchema: ObjectType,
 		transformation?: Transformation,
 	): Promise<EventPreviewResponse> => {
@@ -450,25 +450,9 @@ class Eventlisteners {
 		this.apiURL = url;
 	}
 
-	addCollected = async (size: number, sources: number[], onlyValid: boolean): Promise<AddEventListenerResponse> => {
+	add = async (size: number, filter: Filter): Promise<AddEventListenerResponse> => {
 		return await call(`${this.apiURL}/event-listeners`, http.POST, {
 			size: size,
-			sources: sources,
-			onlyValid: onlyValid,
-		});
-	};
-
-	addEnriched = async (
-		size: number,
-		sources: number[],
-		hasUserTraits: boolean,
-		filter: Filter,
-	): Promise<AddEventListenerResponse> => {
-		return await call(`${this.apiURL}/event-listeners`, http.POST, {
-			enriched: true,
-			size: size,
-			sources: sources,
-			hasUserTraits: hasUserTraits,
 			filter: filter,
 		});
 	};

@@ -10,6 +10,7 @@ package test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
@@ -60,8 +61,9 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 			},
 		},
 	})
-	c.ResolveIdentities()
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
+	time.Sleep(time.Second)
+	c.ResolveIdentities()
 
 	// Retrieve the user imported from the event.
 	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
@@ -103,8 +105,9 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 			"email": eventUserEmail,
 		},
 	})
-	c.ResolveIdentities()
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
+	time.Sleep(time.Second)
+	c.ResolveIdentities()
 
 	// Check that the user has been created.
 	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
@@ -143,8 +146,9 @@ def transform(event: dict) -> dict:
 			"email": eventUserEmail,
 		},
 	})
-	c.ResolveIdentities()
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
+	time.Sleep(time.Second)
+	c.ResolveIdentities()
 
 	// Check that the user has been created.
 	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)

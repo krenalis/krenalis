@@ -11,8 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"math/rand/v2"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -21,6 +20,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 )
 
@@ -51,6 +51,14 @@ var ErrAlterInProgress = meergo.ErrAlterInProgress
 // Resolution is currently in progress on the data warehouse.
 var ErrIdentityResolutionInProgress = meergo.ErrIdentityResolutionInProgress
 
+// EventWriterAckFunc is the function called when an event have been written to
+// the data warehouse.
+type EventWriterAckFunc func(action int, id string, err error)
+
+// EventIdentityWriterAckFunc is the function called when a batch of user
+// identities from events have been written to the data warehouse.
+type EventIdentityWriterAckFunc func(action int, ids []string, err error)
+
 // IdentityWriterAckFunc is the function called when a batch of user identities
 // have been written to the data warehouse.
 type IdentityWriterAckFunc func(ids []string, err error)
@@ -76,8 +84,7 @@ type Store struct {
 		identity map[string]meergo.Column // including meta properties.
 	}
 	closed               atomic.Bool
-	mu                   sync.Mutex // for 'events' and 'eventIdentityWriters' fields
-	events               [][]any
+	mu                   sync.Mutex                   // for the 'eventIdentityWriters' field
 	eventIdentityWriters map[int]*EventIdentityWriter // action -> *EventIdentityWriter
 	mc                   *modeCoordinator
 }
@@ -102,39 +109,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 	store.columnByProperty.user["__id__"] = meergo.Column{Name: "__id__", Type: types.UUID()}
 	store.columnByProperty.user["__last_change_time__"] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
 	store.columnByProperty.identity = identityColumnByProperty(store.columnByProperty.user)
-	if ws.Warehouse.Mode == state.Normal {
-		go func() {
-			ticker := time.NewTicker(flushEventsQueueTimeout)
-			for range ticker.C {
-				store.mu.Lock()
-				events := store.events
-				store.events = nil
-				store.mu.Unlock()
-				if events != nil {
-					go store.flushEvents(events)
-				}
-			}
-		}()
-	}
 	return store, nil
-}
-
-// AddEvents adds events to the store.
-//
-// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
-// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-func (store *Store) AddEvents(events [][]any) error {
-	// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/989.
-	store.mustBeOpen()
-	_, done, err := store.mc.StartOperation(context.Background(), normalMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	store.mu.Lock()
-	store.events = append(store.events, events...)
-	store.mu.Unlock()
-	return nil
 }
 
 // AlterUserSchema alters the user schema.
@@ -192,46 +167,6 @@ func (store *Store) AlterUserSchemaQueries(ctx context.Context, schema types.Typ
 	defer done()
 	userColumns := propertiesToColumns(schema)
 	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
-}
-
-// BatchIdentityWriter returns an identity writer for writing user identities in
-// batch, relative to the given action (which must be in execution) on the data
-// warehouse. purge reports whether identities should be purged from the data
-// warehouse after all identities have been written. The ack parameter is the
-// acknowledgment function.
-//
-// If the action's output schema does not align with the user schema, it returns
-// a *schemas.Error error.
-//
-// It panics if the ack function is nil.
-func (store *Store) BatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
-	store.mustBeOpen()
-	if ack == nil {
-		panic("nil ack function")
-	}
-	connection := action.Connection()
-	execution, ok := action.Execution()
-	if !ok {
-		return nil, fmt.Errorf("action is not in execution")
-	}
-	// Check that action's output schema is aligned with the user schema.
-	workspace := connection.Workspace()
-	err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
-	if err != nil {
-		return nil, err
-	}
-	iw := BatchIdentityWriter{
-		store:      store,
-		action:     action.ID,
-		connection: connection.ID,
-		execution:  execution.ID,
-		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
-		index:      map[identityKey]int{},
-		ack:        ack,
-		purge:      purge,
-		columns:    map[string]meergo.Column{},
-	}
-	return &iw, nil
 }
 
 // CanChangeWarehouseSettings determines if it is possible to change the
@@ -299,63 +234,9 @@ func (store *Store) DeleteDestinationUsers(ctx context.Context, action int) erro
 	return store.warehouse().Delete(ctx, "_user_identities", where)
 }
 
-// EventIdentityWriter returns an identity writer for writing user identities,
-// relative to the action, on the data warehouse, in case of importing
-// identities from events. ack is the ack function (see the documentation of
-// IdentityWriter for more details about it).
-//
-// Creating more than one EventIdentityWriter per action at the same time is not
-// supported.
-func (store *Store) EventIdentityWriter(actionID int, ack IdentityWriterAckFunc) (*EventIdentityWriter, error) {
-	store.mustBeOpen()
-
-	if ack == nil {
-		panic("nil ack function")
-	}
-
-	// Initialize the EventIdentityWriter.
-	iw := &EventIdentityWriter{
-		store:   store,
-		action:  actionID,
-		index:   map[identityKey]int{},
-		ack:     ack,
-		columns: map[string]meergo.Column{},
-		actions: map[int]struct{}{},
-	}
-
-	// Finalize the initialization of the EventIdentityWriter in a frozen state.
-	store.ds.state.Freeze()
-	action, ok := store.ds.state.Action(actionID)
-	if !ok {
-		store.ds.state.Unfreeze()
-		return nil, errors.New("action does not exist")
-	}
-	connection := action.Connection()
-	iw.connection = connection.ID
-	if action.OutSchema.Valid() {
-		workspace := connection.Workspace()
-		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
-		if err == nil {
-			iw.aligned = true
-			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
-		}
-	} else {
-		// The action's out schema is invalid when importing identities from
-		// events without any transformation in the action.
-		iw.aligned = true
-	}
-	for _, a := range connection.Actions() {
-		iw.actions[a.ID] = struct{}{}
-	}
-	store.mu.Lock()
-	store.eventIdentityWriters[action.ID] = iw
-	store.mu.Unlock()
-	store.ds.state.Unfreeze()
-
-	return iw, nil
-}
-
-// Events returns the events according to the provided query.
+// Events returns the events according to the provided query. The returned
+// events conform to the event schema. query.Properties must contain at least
+// one property from the event schema, excluding the originalTimestamp property.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
@@ -368,8 +249,92 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	}
 	defer done()
 	query.table = "events"
+	var addedType bool
+	if !slices.Contains(query.Properties, "type") {
+		addedType = slices.ContainsFunc(query.Properties, func(name string) bool {
+			switch name {
+			case "category", "event", "groupId", "name", "properties":
+				return true
+			}
+			return false
+		})
+		if addedType {
+			properties := make([]string, len(query.Properties)+1)
+			copy(properties, query.Properties)
+			properties[len(properties)-1] = "type"
+			query.Properties = properties
+		}
+	}
 	records, _, err := store.query(ctx, query, eventColumnByProperty, false)
-	return records, err
+	if err != nil {
+		return nil, err
+	}
+	for _, record := range records {
+		if user, ok := record["user"]; ok && user == nil {
+			delete(record, "user")
+		}
+		if userId, ok := record["userId"]; ok && userId == "" {
+			record["userId"] = nil
+		}
+		if ctx, ok := record["context"].(map[string]any); ok {
+			for name, value := range ctx {
+				if value, ok := value.(map[string]any); ok {
+					zero := true
+					for _, v := range value {
+						if !isZero(v) {
+							zero = false
+							break
+						}
+					}
+					if zero {
+						delete(ctx, name)
+					} else if name == "session" && value["start"] == false {
+						delete(value, "start")
+					}
+					continue
+				}
+				if isZero(value) {
+					delete(ctx, name)
+				}
+			}
+		}
+		if typ, ok := record["type"]; ok {
+			switch typ.(string) {
+			case "alias":
+				delete(record, "category")
+				delete(record, "event")
+				delete(record, "groupId")
+				delete(record, "name")
+				delete(record, "properties")
+			case "identify":
+				delete(record, "category")
+				delete(record, "event")
+				delete(record, "groupId")
+				delete(record, "name")
+				delete(record, "properties")
+			case "group":
+				delete(record, "category")
+				delete(record, "event")
+				delete(record, "name")
+				delete(record, "properties")
+			case "page":
+				delete(record, "event")
+				delete(record, "groupId")
+			case "screen":
+				delete(record, "category")
+				delete(record, "event")
+				delete(record, "groupId")
+			case "track":
+				delete(record, "category")
+				delete(record, "groupId")
+				delete(record, "name")
+			}
+			if addedType {
+				delete(record, "type")
+			}
+		}
+	}
+	return records, nil
 }
 
 // LastIdentityResolution returns information about the last Identity
@@ -443,6 +408,115 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users
 // Mode returns the data warehouse mode.
 func (store *Store) Mode() state.WarehouseMode {
 	return store.mc.Mode()
+}
+
+// NewBatchIdentityWriter returns an identity writer for writing user identities
+// in batch, relative to the given action (which must be in execution) on the
+// data warehouse. purge reports whether identities should be purged from the
+// data warehouse after all identities have been written. The ack parameter is
+// the acknowledgment function.
+//
+// If the action's output schema does not align with the user schema, it returns
+// a *schemas.Error error.
+//
+// It panics if the ack function is nil.
+func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack IdentityWriterAckFunc) (*BatchIdentityWriter, error) {
+	store.mustBeOpen()
+
+	if ack == nil {
+		panic("nil ack function")
+	}
+
+	connection := action.Connection()
+	execution, ok := action.Execution()
+	if !ok {
+		return nil, fmt.Errorf("action is not in execution")
+	}
+
+	// Check that action's output schema is aligned with the user schema.
+	workspace := connection.Workspace()
+	err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+	if err != nil {
+		return nil, err
+	}
+	iw := BatchIdentityWriter{
+		store:      store,
+		action:     action.ID,
+		connection: connection.ID,
+		execution:  execution.ID,
+		flatter:    newFlatter(action.OutSchema, store.identityColumnByProperty()),
+		index:      map[identityKey]int{},
+		ack:        ack,
+		purge:      purge,
+		columns:    map[string]meergo.Column{},
+	}
+
+	return &iw, nil
+}
+
+// NewEventWriter returns a new writer to write events.
+func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
+	store.mustBeOpen()
+	return newEventWriter(store, ack)
+}
+
+// NewEventIdentityWriter returns an identity writer for writing user
+// identities, relative to the action, on the data warehouse, in case of
+// importing identities from events.
+//
+// It returns an error if an open event identity writer for the provided action
+// already exists.
+func (store *Store) NewEventIdentityWriter(actionID int, ack EventIdentityWriterAckFunc) (*EventIdentityWriter, error) {
+	store.mustBeOpen()
+
+	// Initialize the EventIdentityWriter.
+	iw := &EventIdentityWriter{
+		store:   store,
+		action:  actionID,
+		index:   map[identityKey]int{},
+		ack:     ack,
+		actions: map[int]struct{}{},
+	}
+
+	// Finalize the initialization of the EventIdentityWriter in a frozen state.
+	store.ds.state.Freeze()
+	action, ok := store.ds.state.Action(actionID)
+	if !ok {
+		store.ds.state.Unfreeze()
+		return nil, errors.New("action does not exist")
+	}
+	connection := action.Connection()
+	iw.connection = connection.ID
+	if action.OutSchema.Valid() {
+		workspace := connection.Workspace()
+		err := schemas.CheckAlignment(action.OutSchema, workspace.UserSchema, nil)
+		if err == nil {
+			iw.aligned = true
+			iw.flatter = newFlatter(action.OutSchema, store.identityColumnByProperty())
+		}
+	} else {
+		// The action's out schema is invalid when importing identities from
+		// events without any transformation in the action.
+		iw.aligned = true
+	}
+	for _, a := range connection.Actions() {
+		iw.actions[a.ID] = struct{}{}
+	}
+	var err error
+	store.mu.Lock()
+	if _, ok := store.eventIdentityWriters[action.ID]; ok {
+		err = errors.New("event identity writer for action already exists")
+	} else {
+		store.eventIdentityWriters[action.ID] = iw
+	}
+	store.mu.Unlock()
+	store.ds.state.Unfreeze()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return iw, nil
 }
 
 // PurgeActions purges the provided actions from the data warehouse, deleting
@@ -622,31 +696,11 @@ func (store *Store) close() error {
 	if store.closed.Swap(true) {
 		panic("core/datastore/store already closed")
 	}
-	store.mu.Lock()
-	if len(store.events) > 0 {
-		store.flushEvents(store.events)
-		store.events = nil
-	}
-	store.mu.Unlock()
 	err := store.warehouse().Close()
 	if err != nil {
-		return fmt.Errorf("error occurred closing data warehouse: %s", err)
+		err = fmt.Errorf("error occurred closing data warehouse: %s", err)
 	}
 	return err
-}
-
-// flushEvents flushes a batch of events to the data warehouse.
-func (store *Store) flushEvents(events [][]any) {
-	slog.Info("flush events", "count", len(events))
-	for {
-		err := store.warehouse().Merge(context.Background(), eventsMergeTable, events, nil)
-		if err != nil {
-			slog.Error("cannot flush the event queue", "workspace", store.workspace, "err", err)
-			time.Sleep(time.Duration(rand.IntN(2000)) * time.Millisecond)
-			continue
-		}
-		break
-	}
 }
 
 // identityColumnByProperty returns the map from properties to columns for the
@@ -825,4 +879,24 @@ func (store *Store) userColumnByProperty() map[string]meergo.Column {
 // warehouse returns the store's warehouse.
 func (store *Store) warehouse() meergo.Warehouse {
 	return store.wh.Load().(meergo.Warehouse)
+}
+
+// isZero reports whether v has its zero value. It supports only the types used
+// in the event schema.
+func isZero(v any) bool {
+	switch v := v.(type) {
+	case bool:
+		return !v
+	case int:
+		return v == 0
+	case float64:
+		return v == 0
+	case decimal.Decimal:
+		return v.Sign() == 0
+	case time.Time:
+		return v.IsZero()
+	case string:
+		return v == ""
+	}
+	panic(fmt.Sprintf("core/datastore: unexpected type %T", v))
 }

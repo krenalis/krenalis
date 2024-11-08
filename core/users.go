@@ -13,6 +13,7 @@ import (
 
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -28,15 +29,16 @@ type User struct {
 	id        uuid.UUID
 }
 
-// eventProperties contains the properties of the events as returned by the
-// (*User).Events method.
+// eventProperties contains the properties of events as returned by the
+// (*User).Events method. These include all properties from the event schema
+// except for "user" and "originalTimestamp".
 var eventProperties []string
 
 func init() {
-	eventProperties = make([]string, types.NumProperties(datastore.EventSchema)-1)
+	eventProperties = make([]string, types.NumProperties(events.Schema)-2)
 	i := 0
-	for _, p := range datastore.EventSchema.Properties() {
-		if p.Name == "user" {
+	for _, p := range events.Schema.Properties() {
+		if p.Name == "user" || p.Name == "originalTimestamp" {
 			continue
 		}
 		eventProperties[i] = p.Name
@@ -104,7 +106,7 @@ func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
 		es[i] = e
 	}
 
-	return json.MarshalBySchema(es, types.Array(datastore.EventSchema))
+	return json.MarshalBySchema(es, types.Array(events.Schema))
 }
 
 // Identities returns the user identities of the user, and an estimate of their

@@ -76,7 +76,7 @@ func New(conf *meergo.AppConfig) (*Mixpanel, error) {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (mp *Mixpanel) EventRequest(ctx context.Context, event *meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 
 	if properties["event"].(string) == "" {
 		return nil, errors.New("event cannot be empty")
@@ -102,71 +102,84 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, event *meergo.Event, event
 
 	body := properties["properties"].(map[string]any)
 	body["$insert_id"] = event.MessageId
-	body["time"] = formatTimestamp(event.Timestamp)
-	distinctID := event.AnonymousId
-	if event.UserId != "" {
-		distinctID = event.UserId
+	body["time"] = formatTimestamp(event.Timestamp())
+	distinctID := event.AnonymousId()
+	if userId := event.UserId(); userId != "" {
+		distinctID = userId
 	}
 	body["distinct_id"] = distinctID
 	body["$device_id"] = event.AnonymousId
-	if event.Context.IP == "" {
-		if event.Context.Location.Country != "" {
-			body["mp_country_code"] = event.Context.Location.Country
-		}
-		if event.Context.Location.City != "" {
-			body["$city"] = event.Context.Location.City
+	context := event.Context()
+	if ip := context.IP(); ip == "" {
+		if location, ok := context.Location(); ok {
+			if country := location.Country(); country != "" {
+				body["mp_country_code"] = country
+			}
+			if city := location.City(); city != "" {
+				body["$city"] = city
+			}
 		}
 	} else {
-		body["ip"] = event.Context.IP
+		body["ip"] = context.IP()
 		// Supplying the 'ip' property, Mixpanel automatically enriches the event with country, region, and city
 		// if they are not supplied. Provide either all or none of these properties to ensure that Mixpanel's
 		// enrichment occurs for all or none of them.
-		if event.Context.Location.Country != "" || event.Context.Location.City != "" {
-			if event.Context.Location.Country != "" {
-				body["mp_country_code"] = event.Context.Location.Country
-			} else {
-				body["mp_country_code"] = nil
+		if location, ok := context.Location(); ok {
+			country := location.Country()
+			city := location.City()
+			if country != "" || city != "" {
+				if country != "" {
+					body["mp_country_code"] = country
+				} else {
+					body["mp_country_code"] = nil
+				}
+				if city != "" {
+					body["$city"] = city
+				} else {
+					body["$city"] = nil
+				}
 			}
-			if event.Context.Location.City != "" {
-				body["$city"] = event.Context.Location.City
-			} else {
-				body["$city"] = nil
+		}
+	}
+	if os, ok := context.OS(); ok && os.Name() != "" {
+		body["$os"] = os.Name()
+	}
+	if browser, ok := context.Browser(); ok {
+		if browser.Name() != "" {
+			body["$browser"] = browser.Name()
+		} else if browser.Other() != "" {
+			body["$browser"] = browser.Other()
+		}
+		if browser.Version() != "" {
+			body["$browser_version"] = browser.Version()
+		}
+	}
+	if page, ok := context.Page(); ok {
+		if referrer := page.Referrer(); referrer != "" {
+			u, err := url.Parse(referrer)
+			if err == nil {
+				body["$referrer"] = referrer
+				body["$referring_domain"] = u.Hostname()
+			}
+		}
+		if pageURL := page.URL(); pageURL != "" {
+			body["$current_url"] = pageURL
+			body["current_page_title"] = page.Title()
+			u, err := url.Parse(pageURL)
+			if err == nil {
+				body["current_domain"] = u.Hostname()
+				body["current_url_path"] = u.Path
+				body["current_url_protocol"] = u.Scheme + ":"
 			}
 		}
 	}
-	if event.Context.OS.Name != "" {
-		body["$os"] = event.Context.OS.Name
-	}
-	if event.Context.Browser.Name != "" {
-		body["$browser"] = event.Context.Browser.Name
-	} else if event.Context.Browser.Other != "" {
-		body["$browser"] = event.Context.Browser.Other
-	}
-	if event.Context.Browser.Version != "" {
-		body["$browser_version"] = event.Context.Browser.Version
-	}
-	if event.Context.Page.Referrer != "" {
-		u, err := url.Parse(event.Context.Page.Referrer)
-		if err == nil {
-			body["$referrer"] = event.Context.Page.Referrer
-			body["$referring_domain"] = u.Hostname()
+	if screen, ok := context.Screen(); ok {
+		if w := screen.Width(); w != 0 {
+			body["$screen_width"] = w
 		}
-	}
-	if event.Context.Page.URL != "" {
-		body["$current_url"] = event.Context.Page.URL
-		body["current_page_title"] = event.Context.Page.Title
-		u, err := url.Parse(event.Context.Page.URL)
-		if err == nil {
-			body["current_domain"] = u.Hostname()
-			body["current_url_path"] = u.Path
-			body["current_url_protocol"] = u.Scheme + ":"
+		if h := screen.Height(); h != 0 {
+			body["$screen_height"] = h
 		}
-	}
-	if event.Context.Screen.Width != 0 {
-		body["$screen_width"] = event.Context.Screen.Width
-	}
-	if event.Context.Screen.Height != 0 {
-		body["$screen_height"] = event.Context.Screen.Height
 	}
 
 	var err error

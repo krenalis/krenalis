@@ -15,8 +15,8 @@ import (
 
 func Test_Schema(t *testing.T) {
 
-	if n := types.NumProperties(Schema); n != 15 {
-		t.Fatalf("expected 15 properties, got %d", n)
+	if n := types.NumProperties(Schema); n != 18 {
+		t.Fatalf("expected 18 properties, got %d", n)
 	}
 
 }

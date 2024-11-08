@@ -1,4 +1,5 @@
 import { NotFoundError, BadRequestError, UnavailableError, UnprocessableError, LoginRequiredError } from './errors';
+import JSONbig from 'json-bigint';
 
 const call = async (url: string, method: string, body?: any, opt?: any) => {
 	const request: RequestInit = {
@@ -6,7 +7,13 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 		...opt,
 	};
 
-	if (body !== undefined) request.body = JSON.stringify(body);
+	if (body !== undefined) {
+		try {
+			request.body = JSONbig.stringify(body);
+		} catch (err) {
+			throw new Error(`error while serializing request body for ${url}: ${err.message}`);
+		}
+	}
 
 	let res: Response;
 	try {
@@ -52,9 +59,16 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 		return null;
 	}
 
+	let text: string;
+	try {
+		text = await res.text();
+	} catch (err) {
+		throw new Error(`error while decoding response from ${url}: ${err.message}`);
+	}
+
 	let data: any;
 	try {
-		data = await res.json();
+		data = JSONbig.parse(text);
 	} catch (err) {
 		throw new Error(`error while parsing json response from ${url}: ${err.message}`);
 	}

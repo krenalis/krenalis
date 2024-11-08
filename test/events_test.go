@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
@@ -118,6 +119,7 @@ func TestEvents(t *testing.T) {
 		})
 	}
 
+	time.Sleep(time.Second)
 	c.ResolveIdentities()
 
 	ctx := context.Background()
@@ -127,6 +129,7 @@ func TestEvents(t *testing.T) {
 	c.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Run the identity resolution, so that the events GID are updated.
+	time.Sleep(time.Second)
 	c.ResolveIdentities()
 
 	// Retrieve the user imported from the event.
@@ -158,12 +161,12 @@ func TestEvents(t *testing.T) {
 
 	// Validate some fields of the first event.
 	{
+		var expectedProperties = map[string]any{"plan": "Enterprise", "some-index": json.Number("44")}
+		var expectedTraits = map[string]any{}
 		const (
 			expectedAnonymousId = "baeeb556-96f3-4631-a22d-928431af8bf6"
 			expectedIP          = "127.0.0.1"
 			expectedEvent       = "Signed Up"
-			expectedProperties  = `{"plan":"Enterprise","some-index":44}`
-			expectedTraits      = "{}"
 			expectedType        = "track"
 			expectedUserId      = "f4ca124298"
 		)
@@ -183,7 +186,7 @@ func TestEvents(t *testing.T) {
 		if !reflect.DeepEqual(event["properties"], expectedProperties) {
 			t.Fatalf("expected properties %#v, got %#v", expectedProperties, event["properties"])
 		}
-		if source, err := strconv.Atoi(string(event["source"].(json.Number))); err != nil || source != javaScriptID {
+		if source, err := strconv.Atoi(string(event["connection"].(json.Number))); err != nil || source != javaScriptID {
 			t.Fatalf("expected source %d, got %#v", javaScriptID, event["source"])
 		}
 		if !reflect.DeepEqual(event["traits"], expectedTraits) {
@@ -226,6 +229,7 @@ func TestEvents(t *testing.T) {
 		UserId:      "Zny0kLMyz",
 		AnonymousId: "bd857fe0-8f62-4d36-8e47-0161db0cc513",
 	})
+	time.Sleep(time.Second)
 	_, count = c.ConnectionIdentities(javaScript2ID, 0, 100)
 	if count != 1 {
 		t.Fatalf("expected one identity, got %d", count)

@@ -34,8 +34,8 @@ func newQueue(destination, endpoint int) *queue {
 
 // Ack acks an event in the queue.
 func (q *queue) Ack(event *dispatchingEvent, remove bool) {
-	off := q.sendingOffsets[event.AnonymousId]
-	delete(q.sendingOffsets, event.AnonymousId)
+	off := q.sendingOffsets[event.anonymousId]
+	delete(q.sendingOffsets, event.anonymousId)
 	if !remove {
 		q.head = min(q.head, off)
 		return
@@ -58,8 +58,8 @@ func (q *queue) Pop() *dispatchingEvent {
 		if event == nil {
 			continue
 		}
-		if _, ok := q.sendingOffsets[event.AnonymousId]; !ok {
-			q.sendingOffsets[event.AnonymousId] = i
+		if _, ok := q.sendingOffsets[event.anonymousId]; !ok {
+			q.sendingOffsets[event.anonymousId] = i
 			q.head = i + 1
 			return event
 		}

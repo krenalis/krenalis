@@ -1,0 +1,146 @@
+package events
+
+import (
+	"bytes"
+	"context"
+	"iter"
+	"log/slog"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/json"
+
+	"github.com/andybalholm/brotli"
+)
+
+type PendingOperation struct {
+	Event   Event
+	Actions []int
+}
+
+type OperationStore interface {
+
+	// Done marks the specified action on the given events as completed. Once Done
+	// has been called for every action associated with an event, the operation and
+	// its event are permanently removed from the store.
+	Done(action int, ids ...string)
+
+	// Pending returns an iterator to iterate over the pending operations.
+	// After completing the iteration, the caller should call the returned function
+	// to check for any errors that may have occurred during the iteration.
+	Pending(ctx context.Context) (iter.Seq[PendingOperation], func() error)
+
+	// Store permanently saves operations along with their associated events. Each
+	// operation remains in the store until all its actions are marked as complete.
+	Store(ctx context.Context, operations []PendingOperation) error
+}
+
+// PostgreStore implements the OperationStore interface storing the operations
+// on the Meergo PostgreSQL server.
+type PostgreStore struct {
+	db *postgres.DB
+}
+
+// NewPostgreStore return a new PostgreStore.
+func NewPostgreStore(db *postgres.DB) *PostgreStore {
+	return &PostgreStore{db}
+}
+
+// Done marks the specified action on the given events as completed.
+func (store *PostgreStore) Done(action int, ids ...string) {
+	var b strings.Builder
+	b.WriteString(`UPDATE event_payloads SET actions = array_remove(actions, $1) WHERE id IN ('`)
+	for i, id := range ids {
+		if i > 0 {
+			b.WriteString(`','`)
+		}
+		b.WriteString(id)
+	}
+	b.WriteString(`')`)
+	ctx := context.Background()
+	_, err := store.db.Exec(ctx, b.String(), action)
+	if err != nil {
+		slog.Error("cannot update event operations", "err", err)
+		return
+	}
+	_, err = store.db.Exec(ctx, "DELETE FROM event_payloads WHERE actions = '{}'")
+	if err != nil {
+		slog.Error("cannot delete event operations", "err", err)
+		return
+	}
+}
+
+// Pending returns an iterator to iterate over the pending operations.
+func (store *PostgreStore) Pending(ctx context.Context) (iter.Seq[PendingOperation], func() error) {
+	rows, err := store.db.Query(ctx, "SELECT actions, properties FROM event_payloads WHERE actions != '{}' ORDER BY received_at")
+	return func(yield func(PendingOperation) bool) {
+			if err != nil {
+				return
+			}
+			for rows.Next() {
+				op := PendingOperation{}
+				var properties []byte
+				if err = rows.Scan(&op.Actions, &properties); err != nil {
+					_ = rows.Close()
+					return
+				}
+				r := brotli.NewReader(bytes.NewReader(properties))
+				op.Event, err = json.DecodeByType[map[string]any](r, Schema)
+				if err != nil {
+					continue
+				}
+				if !yield(op) {
+					return
+				}
+			}
+		}, func() error {
+			return err
+		}
+}
+
+// Store permanently saves a batch of operations in the database.
+// operations must not be empty, and all operations must share the same
+// connection and receivedAt properties.
+func (store *PostgreStore) Store(ctx context.Context, operations []PendingOperation) error {
+	event := operations[0].Event
+	connection := strconv.Itoa(event["connection"].(int))
+	receivedAt := event["receivedAt"].(time.Time).Format(time.RFC3339Nano)
+	var properties []any
+	var insert strings.Builder
+	insert.WriteString("INSERT INTO event_payloads (id, connection, received_at, actions, properties) VALUES ")
+	for i, op := range operations {
+		if i > 0 {
+			insert.WriteByte(',')
+		}
+		insert.WriteString(`('`)
+		insert.WriteString(op.Event["id"].(string))
+		insert.WriteString(`',`)
+		insert.WriteString(connection)
+		insert.WriteString(`,'`)
+		insert.WriteString(receivedAt)
+		insert.WriteString(`','{`)
+		for j, action := range op.Actions {
+			if j > 0 {
+				insert.WriteString(`,`)
+			}
+			insert.WriteString(strconv.Itoa(action))
+		}
+		insert.WriteString(`}',$`)
+		insert.WriteString(strconv.Itoa(i + 1))
+		insert.WriteByte(')')
+		data, err := json.MarshalBySchema(op.Event, Schema)
+		if err != nil {
+			continue
+		}
+		var b bytes.Buffer
+		writer := brotli.NewWriter(&b)
+		_, _ = writer.Write(data)
+		_ = writer.Close()
+		properties = append(properties, b.Bytes())
+	}
+	insert.WriteString(" ON CONFLICT (id) DO NOTHING")
+	_, err := store.db.Exec(ctx, insert.String(), properties...)
+	return err
+}

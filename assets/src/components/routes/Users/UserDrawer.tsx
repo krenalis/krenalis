@@ -13,6 +13,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDateString from '../../../utils/toJSDateString';
 import { Link } from '../../base/Link/Link';
+import JSONbig from 'json-bigint';
 
 interface UserDrawerProps {
 	selectedUser: string;
@@ -169,7 +170,9 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 									<Fragment key={key}>
 										<span className='user-drawer__trait-key'>{key}:</span>{' '}
 										{typeof value === 'object' ? (
-											<span className='user-drawer__trait-object'>{JSON.stringify(value)}</span>
+											<span className='user-drawer__trait-object'>
+												{JSONbig.stringify(value)}
+											</span>
 										) : (
 											<div className='user-drawer__trait-value'>{value}</div>
 										)}

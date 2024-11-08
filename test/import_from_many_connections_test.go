@@ -166,6 +166,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"email": "kbuessen0@example.com",
 			},
 		})
+		time.Sleep(time.Second)
 		c.ResolveIdentities()
 		c.WaitEventsStoredIntoWarehouse(ctx, 1)
 	}

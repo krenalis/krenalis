@@ -2,6 +2,7 @@ import React from 'react';
 import './GridCell.css';
 import { GridCell as GridCellInterface } from '../Grid.types';
 import toJSDateString from '../../../../utils/toJSDateString';
+import JSONbig from 'json-bigint';
 
 interface GridCellProps {
 	cell: GridCellInterface;
@@ -14,7 +15,7 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 		case 'JSON':
 		case 'Array':
 		case 'Object':
-			value = JSON.stringify(cell.value);
+			value = JSONbig.stringify(cell.value);
 			break;
 		case 'DateTime':
 			if (cell.value != null) {
