@@ -1335,7 +1335,7 @@ func (this *Workspace) User(id uuid.UUID) (*User, error) {
 // their count without applying first and limit. It returns the users that
 // satisfies the filter, if not nil, and in range [first,first+limit] with first
 // >= 0 and 0 < limit <= 1000 and only the given properties. properties cannot
-// be empty and cannot contain meta properties.
+// be empty.
 //
 // order is the property by which to sort the returned users and cannot have
 // type JSON, Array, Object, or Map; when not provided, the users are ordered by
@@ -1363,12 +1363,6 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	if len(properties) == 0 {
 		return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
 	}
-	for _, p := range properties {
-		if isMetaProperty(p) {
-			return nil, types.Type{}, 0, errors.BadRequest("properties cannot contain meta properties")
-		}
-	}
-
 	propertyByName := map[string]types.Property{}
 	for _, p := range ws.UserSchema.Properties() {
 		propertyByName[p.Name] = p
@@ -1384,6 +1378,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 			return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 		}
 	}
+
+	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
 		_, err := validateFilter(filter, ws.UserSchema)
@@ -1395,12 +1391,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		}
 		where = convertFilterToWhere(filter, ws.UserSchema)
 	}
+
+	// Validate the order.
 	if order != "" {
 		if !types.IsValidPropertyName(order) {
 			return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
-		}
-		if isMetaProperty(order) {
-			return nil, types.Type{}, 0, errors.BadRequest("order %q cannot be a meta property", order)
 		}
 		orderProperty, ok := propertyByName[order]
 		if !ok {
@@ -1414,6 +1409,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	} else {
 		order = "__last_change_time__"
 	}
+
+	// Validate first and limit.
 	if first < 0 || first > maxInt32 {
 		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
 	}
