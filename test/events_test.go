@@ -153,7 +153,7 @@ func TestEvents(t *testing.T) {
 
 	// Retrieve the first event for the user.
 	var event map[string]any
-	events := c.UserEvents(userGID)
+	events := c.UserEvents(userGID, []string{"anonymousId", "context", "event", "properties", "connection", "traits", "type", "userId", "groupId"})
 	if len(events) != expectedEventsCount {
 		t.Fatalf("expected %d events for user %s, got %d", expectedEventsCount, userGID, len(events))
 	}

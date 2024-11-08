@@ -21,20 +21,6 @@ type user struct {
 	*apisServer
 }
 
-// Events returns the events of a user, ordered from the most recent to the
-// oldest.
-func (user user) Events(_ http.ResponseWriter, r *http.Request) (any, error) {
-	u, err := user.user(r)
-	if err != nil {
-		return nil, err
-	}
-	events, err := u.Events(r.Context(), 10)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"events": rawJSON(events)}, nil
-}
-
 // Identities returns the user identities of a user, and an estimate of their
 // count without applying first and limit.
 func (user user) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {

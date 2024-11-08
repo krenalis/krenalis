@@ -1010,6 +1010,107 @@ func (this *Workspace) Delete(ctx context.Context) error {
 	return err
 }
 
+// Events returns events that match the provided filter, if not nil, and are
+// within the range [first,first+limit], where first >= 0, 0 < limit <= 1000,
+// and only includes the specified properties from the event schema. properties
+// must contain at least one property.
+//
+// order specifies the property by which to sort the events. It cannot be of
+// type JSON or Object. If not provided, the events are sorted by their ID.
+// orderDesc controls whether the events should be sorted in descending order,
+// when true, or ascending order.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore. It returns an errors.UnprocessableError error with code
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+func (this *Workspace) Events(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]map[string]any, error) {
+
+	this.core.mustBeOpen()
+
+	// Validate the properties.
+	if len(properties) == 0 {
+		return nil, errors.BadRequest("properties is empty")
+	}
+	propertyByName := map[string]types.Property{}
+	for _, p := range events.Schema.Properties() {
+		propertyByName[p.Name] = p
+	}
+	for _, name := range properties {
+		if _, ok := propertyByName[name]; !ok {
+			if name == "" {
+				return nil, errors.BadRequest("a property name is empty")
+			}
+			if !types.IsValidPropertyName(name) {
+				return nil, errors.BadRequest("property name %q is not valid", name)
+			}
+			return nil, errors.BadRequest("property %q does not exist", name)
+		}
+	}
+
+	// Validate the filter.
+	var where *state.Where
+	if filter != nil {
+		_, err := validateFilter(filter, events.Schema)
+		if err != nil {
+			if err, ok := err.(types.PathNotExistError); ok {
+				return nil, errors.BadRequest("filter's property %q does not exist", err.Path)
+			}
+			return nil, errors.BadRequest("filter is not valid: %w", err)
+		}
+		where = convertFilterToWhere(filter, events.Schema)
+	}
+
+	// Validate the order.
+	if order != "" {
+		if !types.IsValidPropertyName(order) {
+			return nil, errors.BadRequest("order %q is not a valid property name", order)
+		}
+		orderProperty, ok := propertyByName[order]
+		if !ok {
+			return nil, errors.BadRequest("order property %q does not exist", order)
+		}
+		switch orderProperty.Type.Kind() {
+		case types.JSONKind, types.ObjectKind:
+			return nil, errors.BadRequest("cannot sort by %s: property has type %s", order, orderProperty.Type)
+		}
+	} else {
+		order = "id"
+	}
+
+	// Validate first and limit.
+	if first < 0 || first > maxInt32 {
+		return nil, errors.BadRequest("first %d in not valid", first)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	// Read the events.
+	evts, err := this.store.Events(ctx, datastore.Query{
+		Properties: properties,
+		Where:      where,
+		OrderBy:    order,
+		OrderDesc:  orderDesc,
+		First:      first,
+		Limit:      limit,
+	})
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			// TODO(marco): log the error in a log specific of the workspace.
+			slog.Error("cannot get users from the data warehouse", "workspace", this.workspace.ID, "err", err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse connection is failed: %w", err.Err)
+		}
+		return nil, err
+	}
+
+	return evts, nil
+}
+
 // IdentifiersSchema returns the properties of the "users" schema that can be
 // used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the

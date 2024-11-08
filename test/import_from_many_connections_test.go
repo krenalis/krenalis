@@ -200,7 +200,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that "kbuessen0@example.com" has one event associated.
-	events := c.UserEvents(kBuessenGid)
+	events := c.UserEvents(kBuessenGid, []string{"timestamp"})
 	if len(events) != 1 {
 		t.Fatalf("expected %q to have one event associated, got %d", "kbuessen0@example.com", len(events))
 	}

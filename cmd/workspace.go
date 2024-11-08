@@ -16,6 +16,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -524,6 +525,32 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 	}
 	err = ws.Delete(r.Context())
 	return nil, err
+}
+
+// Events returns the events.
+func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Properties []string
+		Filter     *core.Filter
+		Order      string
+		OrderDesc  bool
+		First      int
+		Limit      int
+	}
+	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	evts, err := ws.Events(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, body.Limit)
+	if err != nil {
+		return nil, err
+	}
+	events, _ := json.MarshalBySchema(evts, types.Array(events.Schema))
+	return map[string]any{"events": events}, nil
 }
 
 // IdentifiersSchema returns the properties of the "users" schema that can be

@@ -492,7 +492,41 @@ class Users {
 	};
 
 	events = async (user: string): Promise<UserEventsResponse> => {
-		return await call(`${this.apiURL}/users/${encodeURIComponent(user)}/events`, http.GET);
+		return await call(`${this.apiURL}/events`, http.POST, {
+			properties: [
+				'id',
+				'user',
+				'connection',
+				'anonymousId',
+				'category',
+				'context',
+				'event',
+				'groupId',
+				'messageId',
+				'name',
+				'properties',
+				'receivedAt',
+				'sentAt',
+				'timestamp',
+				'traits',
+				'type',
+				'userId',
+			],
+			filter: {
+				Logical: 'and',
+				Conditions: [
+					{
+						Property: 'user',
+						Operator: 'is',
+						Values: [user],
+					},
+				],
+			},
+			order: 'timestamp',
+			orderDesc: true,
+			first: 0,
+			limit: 10,
+		});
 	};
 
 	traits = async (user: string): Promise<userTraitsResponse> => {

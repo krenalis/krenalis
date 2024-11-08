@@ -440,18 +440,18 @@ func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
 }
 
 func (c *Meergo) Sheets(storage int, fileConnector string, path string, compression Compression, uiValues json.RawMessage) []string {
-	req := map[string]any{
+	request := map[string]any{
 		"FileConnector": fileConnector,
 		"Path":          path,
 		"Compression":   compression,
 		"UIValues":      uiValues,
 	}
-	var request struct {
+	var response struct {
 		Sheets []string `json:"sheets"`
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/sheets", c.ws, storage)
-	c.MustCall("POST", method, req, &request)
-	return request.Sheets
+	c.MustCall("POST", method, request, &response)
+	return response.Sheets
 }
 
 func (c *Meergo) TableSchema(conn int, table string) types.Type {
@@ -461,12 +461,27 @@ func (c *Meergo) TableSchema(conn int, table string) types.Type {
 	return schema
 }
 
-func (c *Meergo) UserEvents(user uuid.UUID) []map[string]any {
+func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]any {
+	request := map[string]any{
+		"properties": properties,
+		"filter": Filter{
+			Logical: OpAnd,
+			Conditions: []FilterCondition{
+				{Property: "user",
+					Operator: OpIs,
+					Values:   []string{user.String()}},
+			},
+		},
+		"order":     "timestamp",
+		"orderDesc": true,
+		"first":     0,
+		"limit":     10,
+	}
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/users/%s/events", c.ws, user)
-	c.MustCall("GET", method, nil, &response)
+	method := fmt.Sprintf("/api/workspaces/%d/events", c.ws)
+	c.MustCall("POST", method, request, &response)
 	return response.Events
 }
 

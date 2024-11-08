@@ -13,7 +13,6 @@ import (
 
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
-	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -27,86 +26,6 @@ type User struct {
 	workspace *state.Workspace
 	store     *datastore.Store
 	id        uuid.UUID
-}
-
-// eventProperties contains the properties of events as returned by the
-// (*User).Events method. These include all properties from the event schema
-// except for "user" and "originalTimestamp".
-var eventProperties []string
-
-func init() {
-	eventProperties = make([]string, types.NumProperties(events.Schema)-2)
-	i := 0
-	for _, p := range events.Schema.Properties() {
-		if p.Name == "user" || p.Name == "originalTimestamp" {
-			continue
-		}
-		eventProperties[i] = p.Name
-		i++
-	}
-}
-
-// Events returns the events of the user, ordered from the most recent to the
-// oldest. limit is the maximum number of events to return, it must be in range
-// [1, 200].
-//
-// It returns an errors.NotFoundError error, if the user does not exist.
-// It returns an errors.UnprocessableError error with code
-//
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - NoEventsSchema, if the data warehouse does not have events schema.
-func (this *User) Events(ctx context.Context, limit int) ([]byte, error) {
-
-	this.core.mustBeOpen()
-
-	if limit < 1 || limit > 200 {
-		return nil, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	// Retrieve the events records.
-	evs, err := this.store.Events(ctx, datastore.Query{
-		Properties: eventProperties,
-		Where: &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-			Property: []string{"user"},
-			Operator: state.OpIs,
-			Values:   []any{this.id.String()},
-		}}},
-		OrderBy:   "timestamp",
-		OrderDesc: true,
-		Limit:     limit,
-	})
-	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return nil, err
-	}
-	if len(evs) == 0 {
-		// Verify that the user exists.
-		_, count, err := this.store.Users(ctx, datastore.Query{
-			Properties: []string{"__id__"},
-			Where: &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-				Property: []string{"__id__"},
-				Operator: state.OpIs,
-				Values:   []any{this.id.String()},
-			}}},
-			Limit: 1,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if count == 0 {
-			return nil, errors.NotFound("user %s does not exist", this.id)
-		}
-	}
-
-	es := make([]any, len(evs))
-	for i, e := range evs {
-		es[i] = e
-	}
-
-	return json.MarshalBySchema(es, types.Array(events.Schema))
 }
 
 // Identities returns the user identities of the user, and an estimate of their
