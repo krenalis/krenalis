@@ -8,10 +8,12 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -345,4 +347,32 @@ func (raw *rawJSON) UnmarshalJSON(data []byte) error {
 	}
 	*raw = append((*raw)[:0], data...)
 	return nil
+}
+
+type bodyWriter struct {
+	w *bufio.Writer
+}
+
+func newBodyWriter(w io.Writer) bodyWriter {
+	return bodyWriter{w: bufio.NewWriter(w)}
+}
+
+func (bw bodyWriter) availableBuffer() []byte {
+	return bw.w.AvailableBuffer()
+}
+
+func (bw bodyWriter) flush() {
+	_ = bw.w.Flush()
+}
+
+func (bw bodyWriter) write(p []byte) {
+	_, _ = bw.w.Write(p)
+}
+
+func (bw bodyWriter) writeByte(c byte) {
+	_ = bw.w.WriteByte(c)
+}
+
+func (bw bodyWriter) writeString(s string) {
+	_, _ = bw.w.WriteString(s)
 }

@@ -1510,11 +1510,17 @@ func (this *Workspace) Traits(ctx context.Context, user string) ([]byte, error) 
 	return json.MarshalBySchema(records[0], ws.UserSchema)
 }
 
-// Users returns the users, the user schema of the workspace, and an estimate of
-// their count without applying first and limit. It returns the users that
-// satisfies the filter, if not nil, and in range [first,first+limit] with first
-// >= 0 and 0 < limit <= 1000 and only the given properties. properties cannot
-// be empty.
+// User represents a user.
+type User struct {
+	ID             string
+	Properties     map[string]any
+	LastChangeTime time.Time
+}
+
+// Users returns the users, the user schema, and an estimate of their count
+// without applying first and limit. It returns the users that satisfies the
+// filter, if not nil, and in range [first,first+limit] with first >= 0 and
+// 0 < limit <= 1000 and only the given properties. properties cannot be empty.
 //
 // order is the property by which to sort the returned users and cannot have
 // type JSON, Array, Object, or Map; when not provided, the users are ordered by
@@ -1524,15 +1530,14 @@ func (this *Workspace) Traits(ctx context.Context, user string) ([]byte, error) 
 // order instead of ascending, which is the default.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore.
-// It returns an errors.UnprocessableError error with code
+// anymore. It returns an errors.UnprocessableError error with code
 //
 //   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]byte, types.Type, int, error) {
+func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]User, types.Type, int, error) {
 
 	this.core.mustBeOpen()
 
@@ -1598,7 +1603,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Read the users.
-	users, count, err := this.store.Users(ctx, datastore.Query{
+	rows, count, err := this.store.Users(ctx, datastore.Query{
 		Properties: append([]string{"__id__", "__last_change_time__"}, properties...),
 		Where:      where,
 		OrderBy:    order,
@@ -1625,52 +1630,16 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 	schema := types.Object(props)
 
-	// Marshal the users into a JSON array like this:
-	//
-	//  [
-	//  	{
-	//  		"id": "f88893fb-fc04-4868-8ab7-041c225c79b4",
-	//          "lastChangeTime": "2000-01-03T12:00:00Z",
-	//  		"properties": {
-	//  			"email": "a@example.com"
-	//  		}
-	//  	},
-	//  	{
-	//  		"id": "e0bb8a23-d1ee-4fe4-8264-5892499d21e5",
-	//          "lastChangeTime": "2000-01-03T12:00:00Z",
-	//  		"properties": {
-	//  			"email": "c@example.com"
-	//  		}
-	//  	}
-	//  ]
-	var marshaledUsers bytes.Buffer
-	marshaledUsers.WriteRune('[')
-	for i, user := range users {
-		id := user["__id__"].(string)
-		delete(user, "__id__")
-		lastChangeTime := user["__last_change_time__"].(time.Time)
-		delete(user, "__last_change_time__")
-		marshaledUser, err := json.MarshalBySchema(user, schema)
-		if err != nil {
-			return nil, types.Type{}, 0, err
-		}
-		if i > 0 {
-			marshaledUsers.WriteByte(',')
-		}
-		marshaledUsers.WriteString(`{"id":"`)
-		marshaledUsers.WriteString(id)
-		marshaledUsers.WriteString(`","lastChangeTime":`)
-		err = jsonstd.NewEncoder(&marshaledUsers).Encode(lastChangeTime)
-		if err != nil {
-			return nil, types.Type{}, 0, err
-		}
-		marshaledUsers.WriteString(`,"properties":`)
-		marshaledUsers.Write(marshaledUser)
-		marshaledUsers.WriteRune('}')
+	users := make([]User, len(rows))
+	for i, row := range rows {
+		users[i].ID = row["__id__"].(string)
+		users[i].Properties = row
+		users[i].LastChangeTime = row["__last_change_time__"].(time.Time)
+		delete(row, "__id__")
+		delete(row, "__last_change_time__")
 	}
-	marshaledUsers.WriteRune(']')
 
-	return marshaledUsers.Bytes(), schema, count, nil
+	return users, schema, count, nil
 }
 
 // WarehouseSettings returns name and settings of the data warehouse for the

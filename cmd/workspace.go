@@ -760,7 +760,7 @@ func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, 
 
 // Users returns the users, the user schema of a workspace, and an estimate of
 // their count without applying first and limit.
-func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -781,11 +781,32 @@ func (workspace workspace) Users(_ http.ResponseWriter, r *http.Request) (any, e
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
-		"users":  rawJSON(users),
-		"schema": schema,
-		"count":  count,
-	}, nil
+	w.Header().Set("Content-Type", "application/json")
+	b := newBodyWriter(w)
+	b.writeString(`{"users":[`)
+	for i, user := range users {
+		if i > 0 {
+			b.writeByte(',')
+		}
+		b.writeString(`{"id":"`)
+		b.writeString(user.ID)
+		b.writeString(`","lastChangeTime":"`)
+		buf := b.availableBuffer()
+		b.write(user.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
+		b.writeString(`","properties":`)
+		s, _ := json.MarshalBySchema(user.Properties, schema)
+		b.write(s)
+		b.writeByte('}')
+	}
+	b.writeString(`],"schema":`)
+	buf, _ := schema.MarshalJSON()
+	b.write(buf)
+	b.writeString(`,"count":`)
+	buf = b.availableBuffer()
+	b.write(strconv.AppendInt(buf, int64(count), 10))
+	b.writeByte('}')
+	b.flush()
+	return nil, nil
 }
 
 // UserSchema returns the user schema of a workspace.
