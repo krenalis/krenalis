@@ -281,7 +281,7 @@ func MustInt(i int) Decimal {
 // MustParse parses n, which must contain a text representation of a decimal
 // number. It panics if n is not syntactically correct or if the number is out
 // of range for the [Decimal] type. See the [Parse] function for valid formats.
-func MustParse(n string) Decimal {
+func MustParse[T ~string | ~[]byte](n T) Decimal {
 	x, err := Parse(n, 0, 0)
 	if err != nil {
 		panic(err.Error())
