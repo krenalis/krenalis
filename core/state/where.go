@@ -186,7 +186,7 @@ func unmarshalConditionValue(v any, t types.Type) (any, error) {
 	case types.FloatKind:
 		return strconv.ParseFloat(string(v.(json.Number)), t.BitSize())
 	case types.DecimalKind:
-		return decimal.Parse(string(v.(json.Number)), 0, 0)
+		return decimal.Parse(v.(json.Number), 0, 0)
 	case types.DateTimeKind:
 		t, err := time.Parse(time.RFC3339Nano, v.(string))
 		if err != nil {

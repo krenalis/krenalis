@@ -50,6 +50,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"reflect"
 	"strings"
 
 	"github.com/ericlagergren/decimal"
@@ -344,7 +345,7 @@ func New(mantissa int64, scale int) Decimal {
 //	123.4560e7
 //	-123.4560E+7
 //	123.4560e-7
-func Parse[T string | []byte](n T, precision, scale int) (Decimal, error) {
+func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 	switch {
 	case
 		precision != 0 && (precision < MinPrecision || precision > MaxPrecision),
@@ -488,14 +489,16 @@ func Parse[T string | []byte](n T, precision, scale int) (Decimal, error) {
 	if str[0] == '-' {
 		x.b.SetSignbit(true)
 	}
-	if str, ok := interface{}(str).(string); ok {
-		if str[len(str)-zeros-1] == '0' {
+	if reflect.TypeFor[T]().Kind() == reflect.String {
+		s := string(str)
+		if s[len(s)-zeros-1] == '0' {
 			zeros--
 		}
 		if zeros > 0 {
-			str = str[:len(str)-zeros]
+			s = s[:len(s)-zeros]
 		}
-		x.s = strings.TrimSuffix(str, ".")
+		x.s = strings.TrimSuffix(s, ".")
+
 	}
 	return x, nil
 }

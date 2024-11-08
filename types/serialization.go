@@ -686,7 +686,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case DecimalKind:
-			min, err := decimal.Parse(string(minimum), precision, scale)
+			min, err := decimal.Parse(minimum, precision, scale)
 			if err != nil {
 				return Type{}, errors.New("minimum is out of range")
 			}
@@ -811,7 +811,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case DecimalKind:
-			max, err := decimal.Parse(string(maximum), precision, scale)
+			max, err := decimal.Parse(maximum, precision, scale)
 			if err != nil {
 				return Type{}, errors.New("maximum is out of range")
 			}
