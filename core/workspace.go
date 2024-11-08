@@ -1443,13 +1443,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Create the schema to return, with only the requested properties.
-	requestedProperties := make([]types.Property, len(properties)+2)
-	requestedProperties[0] = types.Property{Name: "__id__", Type: types.UUID()}
-	requestedProperties[1] = types.Property{Name: "__last_change_time__", Type: types.DateTime()}
+	props := make([]types.Property, len(properties))
 	for i, name := range properties {
-		requestedProperties[i+2] = propertyByName[name]
+		props[i] = propertyByName[name]
 	}
-	schema := types.Object(requestedProperties)
+	schema := types.Object(props)
 
 	// Marshal the users into a JSON array like this:
 	//
