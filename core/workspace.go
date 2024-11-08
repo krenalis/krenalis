@@ -34,7 +34,6 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
-	"github.com/google/uuid"
 	"github.com/jxskiss/base62"
 )
 
@@ -1122,6 +1121,48 @@ func (this *Workspace) IdentifiersSchema() types.Type {
 	})
 }
 
+// Identities returns the identities of the provider user, and an estimate of
+// their count without applying first and limit.
+//
+// It returns the user identities in range [first,first+limit] with first >= 0
+// and 0 < limit <= 1000.
+//
+// It returns an errors.NotFoundError error, if the user does not exist.
+// It returns an errors.UnprocessableError error with code
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+func (this *Workspace) Identities(ctx context.Context, user string, first, limit int) ([]UserIdentity, int, error) {
+	this.core.mustBeOpen()
+	if _, ok := parseUUID(user); !ok {
+		return nil, 0, errors.BadRequest("user %q is not a valid user identifier", user)
+	}
+	if first < 0 {
+		return nil, 0, errors.BadRequest("first %d is not valid", limit)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
+	}
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
+		Property: []string{"__gid__"},
+		Operator: state.OpIs,
+		Values:   []any{user},
+	}}}
+	ws := &Workspace{
+		core:      this.core,
+		store:     this.store,
+		workspace: this.workspace,
+	}
+	identities, count, err := ws.userIdentities(ctx, where, first, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	if identities == nil {
+		return nil, 0, errors.NotFound("user %q does not exist", user)
+	}
+	return identities, count, nil
+}
+
 // ListenedEvents returns the events listened to the specified listener and the
 // number of discarded events. If the listener does not exist, it returns an
 // errors.NotFoundError.
@@ -1420,16 +1461,53 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	return err
 }
 
-// User returns the user with identifier id of the workspace. If the user does
-// not exist, the error is deferred until methods of *User are called.
-func (this *Workspace) User(id uuid.UUID) (*User, error) {
+// Traits returns the traits of a user.
+//
+// It returns an errors.NotFoundError error, if the user does not exist.
+// It returns an errors.UnprocessableError error with code
+//
+//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+func (this *Workspace) Traits(ctx context.Context, user string) ([]byte, error) {
+
 	this.core.mustBeOpen()
-	return &User{
-		core:      this.core,
-		workspace: this.workspace,
-		store:     this.store,
-		id:        id,
-	}, nil
+
+	ws := this.workspace
+
+	// Validate the user.
+	if _, ok := parseUUID(user); !ok {
+		return nil, errors.BadRequest("user %q is not a valid user identifier", user)
+	}
+
+	properties := types.PropertyNames(this.workspace.UserSchema)
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
+		Property: []string{"__id__"},
+		Operator: state.OpIs,
+		Values:   []any{user},
+	}}}
+
+	// Retrieve the user traits.
+	records, _, err := this.store.Users(ctx, datastore.Query{
+		Properties: properties,
+		Where:      where,
+		Limit:      1,
+	})
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := err.(*datastore.DataWarehouseError); ok {
+			// TODO(marco): log the error in a log specific of the workspace.
+			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
+			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse connection is failed: %w", err.Err)
+		}
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, errors.NotFound("user %q does not exist", user)
+	}
+
+	return json.MarshalBySchema(records[0], ws.UserSchema)
 }
 
 // Users returns the users, the user schema of the workspace, and an estimate of

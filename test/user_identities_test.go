@@ -150,7 +150,7 @@ func Test_UserIdentities(t *testing.T) {
 			t.Fatalf("expected error, got nothing")
 		}
 		errorMsg := err.Error()
-		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user 7682c2a8-d85d-458b-9bd8-dc57cc12575a does not exist"}}`
+		const expectedErr = `unexpected HTTP status code 404: {"error":{"code":"NotFound","message":"user \"7682c2a8-d85d-458b-9bd8-dc57cc12575a\" does not exist"}}`
 		if expectedErr != errorMsg {
 			t.Fatalf("expected error %q, got %q", expectedErr, errorMsg)
 		}

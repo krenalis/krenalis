@@ -68,7 +68,6 @@ func newAPIsServer(core *core.Core, sessionKey []byte) *apisServer {
 	workspace := workspace{s}
 	connection := connection{s}
 	action := action{s}
-	user := user{s}
 
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
 		"DELETE /api/members/{member}":                                                                   organization.DeleteMember,
@@ -109,8 +108,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte) *apisServer {
 		"GET    /api/workspaces/{workspace}/identifiers-schema":                                          workspace.IdentifiersSchema,
 		"GET    /api/workspaces/{workspace}/identity-resolution/execution":                               workspace.LastIdentityResolution,
 		"GET    /api/workspaces/{workspace}/user-schema":                                                 workspace.UserSchema,
-		"GET    /api/workspaces/{workspace}/users/{user}/identities":                                     user.Identities,
-		"GET    /api/workspaces/{workspace}/users/{user}/traits":                                         user.Traits,
+		"GET    /api/workspaces/{workspace}/users/{user}/identities":                                     workspace.Identities,
+		"GET    /api/workspaces/{workspace}/users/{user}/traits":                                         workspace.Traits,
 		"GET    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.WarehouseSettings,
 		"POST    /api/workspaces/{workspace}/events":                                                     workspace.Events,
 		"POST   /api/can-initialize-warehouse":                                                           organization.CanInitializeWarehouse,

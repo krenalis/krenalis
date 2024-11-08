@@ -563,6 +563,39 @@ func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Requ
 	return ws.IdentifiersSchema(), nil
 }
 
+// Identities returns the user identities of a user, and an estimate of their
+// count without applying first and limit.
+func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	user := r.PathValue("user")
+	var first = 0
+	var limit = 1000
+	query := r.URL.Query()
+	if v, ok := query["first"]; ok {
+		first, err = strconv.Atoi(v[0])
+		if err != nil {
+			return nil, errors.BadRequest("first is not valid")
+		}
+	}
+	if v, ok := query["limit"]; ok {
+		limit, err = strconv.Atoi(v[0])
+		if err != nil {
+			return nil, errors.BadRequest("limit is not valid")
+		}
+	}
+	identities, count, err := ws.Identities(r.Context(), user, first, limit)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"identities": identities,
+		"count":      count,
+	}, nil
+}
+
 // LastIdentityResolution returns information about the last Identity
 // Resolution of a workspace.
 func (workspace workspace) LastIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -709,6 +742,20 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	}
 	err = ws.Set(r.Context(), body.Name, body.PrivacyRegion, body.DisplayedProperties)
 	return nil, err
+}
+
+// Traits returns the traits of a user.
+func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	user := r.PathValue("user")
+	traits, err := ws.Traits(r.Context(), user)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"traits": rawJSON(traits)}, nil
 }
 
 // Users returns the users, the user schema of a workspace, and an estimate of

@@ -474,6 +474,45 @@ func Test_parseUint(t *testing.T) {
 	}
 }
 
+func Test_parseUUID(t *testing.T) {
+	tests := []struct {
+		s    string
+		uuid string
+		ok   bool
+	}{
+
+		// Supported UUID formats.
+		{"2a9b8326-aadb-416a-adc1-71761f3ff4b9", "2a9b8326-aadb-416a-adc1-71761f3ff4b9", true},
+		{"2a9b8326-aadb-416a-ADC1-71761F3FF4B9", "2a9b8326-aadb-416a-adc1-71761f3ff4b9", true},
+		{"2A9B8326-AADB-416A-ADC1-71761F3FF4B9", "2a9b8326-aadb-416a-adc1-71761f3ff4b9", true},
+
+		// Unsupported UUID formats.
+		{"60af802184814c8389153f9055d57e6c", "", false},
+		{"60AF802184814C8389153F9055D57E6C", "", false},
+		{"{60af8021-8481-4c83-8915-3f9055d57e6c}", "", false},
+		{"{60AF8021-8481-4C83-8915-3F9055D57E6C}", "", false},
+		{"urn:uuid:60af8021-8481-4c83-8915-3f9055d57e6c", "", false},
+		{"urn:uuid:60AF8021-8481-4C83-8915-3F9055D57E6C", "", false},
+
+		// Strings that do not represent UUIDs.
+		{"", "", false},
+		{"12345", "", false},
+		{"abcdef0123456789", "", false},
+		{"2a9b8326-aadb-416a-adc1-71761f3ff4b92a9b8326-aadb-416a-adc1-71761f3ff4b9", "", false},
+	}
+	for _, test := range tests {
+		t.Run(test.s, func(t *testing.T) {
+			gotUUID, gotOk := parseUUID(test.s)
+			if gotUUID != test.uuid {
+				t.Fatalf("expected UUID %s, got %s", test.uuid, gotUUID)
+			}
+			if gotOk != test.ok {
+				t.Fatalf("expected ok = %t, got %t", test.ok, gotOk)
+			}
+		})
+	}
+}
+
 func Test_resolveFilterProperty(t *testing.T) {
 
 	schema := types.Object([]types.Property{
