@@ -16,8 +16,8 @@
 | Inet     |         |      |      |       |         |          |      |      |      |      | ✓    | ✓    | ✓    | ✓ [^2]   |        |        |
 | Text     | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓ [^2]   |        |        |
 | Array(T) |         |      |      |       |         |          |      |      |      |      | ✓    |      |      | ✓        |        |        |
-| Object   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      |        |
-| Map(T)   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          |        | ✓      |
+| Object   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      | ✓      |
+| Map(T)   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      | ✓      |
 
 [^1]: Only for Int(8) and Uint(8).
 [^2]: Only if it can be converted to the type of the array item. 

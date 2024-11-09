@@ -625,8 +625,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				}
 			}
 			return d, nil
-		case types.ObjectKind, types.MapKind:
-
 		}
 	case types.ObjectKind:
 		var d map[string]any
@@ -667,6 +665,27 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					return nil, err
 				}
 			}
+		case types.MapKind:
+			s := v.(map[string]any)
+			d := s
+			if !inPlace {
+				d = make(map[string]any)
+			}
+			vt := st.Elem()
+			var err error
+			for _, p := range dt.Properties() {
+				if value, ok := s[p.Name]; ok {
+					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, layouts, purpose)
+					if err != nil {
+						return nil, err
+					}
+					continue
+				}
+				if purpose == Create && p.CreateRequired || purpose == Update && p.UpdateRequired {
+					return nil, errInvalidConversion
+				}
+			}
+			return d, nil
 		case types.JSONKind:
 			v := v.(json.Value)
 			if v.Kind() != json.Object {
@@ -727,6 +746,23 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				d[key], err = convert(value, vt1, vt2, false, inPlace, layouts, purpose)
 				if err != nil {
 					return nil, err
+				}
+			}
+			return d, nil
+		case types.ObjectKind:
+			s := v.(map[string]any)
+			d := s
+			if !inPlace {
+				d = make(map[string]any, len(s))
+			}
+			vt := dt.Elem()
+			var err error
+			for _, p := range st.Properties() {
+				if value, ok := s[p.Name]; ok {
+					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, layouts, purpose)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 			return d, nil

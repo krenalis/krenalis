@@ -39,8 +39,8 @@ var convertMatrix = [...]int32{
 	/* Inet     */ 0b_0_0_0_00_000_00_111_100,
 	/* Text     */ 0b_1_1_1_11_111_11_111_100,
 	/* Array    */ 0b_0_0_0_00_000_00_100_100,
-	/* Object   */ 0b_0_0_0_00_000_00_100_010,
-	/* Map      */ 0b_0_0_0_00_000_00_100_001,
+	/* Object   */ 0b_0_0_0_00_000_00_100_011,
+	/* Map      */ 0b_0_0_0_00_000_00_100_011,
 }
 
 // convertibleTo reports whether a value of type st can be converted to type dt.
@@ -70,18 +70,40 @@ func convertibleTo(st, dt types.Type) bool {
 		case types.ObjectKind, types.MapKind:
 		}
 	case types.MapKind:
-		return convertibleTo(st.Elem(), dt.Elem())
-	case types.ObjectKind:
-		var hasSameNameProperty bool
-		for _, sp := range st.Properties() {
-			if dp, ok := dt.Property(sp.Name); ok {
-				if !convertibleTo(sp.Type, dp.Type) {
+		switch sk {
+		case types.MapKind:
+			return convertibleTo(st.Elem(), dt.Elem())
+		case types.ObjectKind:
+			mapElemType := dt.Elem()
+			for _, sp := range st.Properties() {
+				if !convertibleTo(sp.Type, mapElemType) {
 					return false
 				}
-				hasSameNameProperty = true
 			}
+			return true
 		}
-		return hasSameNameProperty
+	case types.ObjectKind:
+		switch sk {
+		case types.ObjectKind:
+			var hasSameNameProperty bool
+			for _, p := range st.Properties() {
+				if dp, ok := dt.Property(p.Name); ok {
+					if !convertibleTo(p.Type, dp.Type) {
+						return false
+					}
+					hasSameNameProperty = true
+				}
+			}
+			return hasSameNameProperty
+		case types.MapKind:
+			mapElemType := st.Elem()
+			for _, p := range dt.Properties() {
+				if !convertibleTo(mapElemType, p.Type) {
+					return false
+				}
+			}
+			return true
+		}
 	}
 	return true
 }

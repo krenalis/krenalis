@@ -25,8 +25,8 @@ func TestConvert(t *testing.T) {
 
 	tests := []struct {
 		t1, t2   types.Type
-		v        any
-		e        any
+		value    any
+		expected any
 		nullable bool
 		layouts  *state.TimeLayouts
 	}{
@@ -267,26 +267,35 @@ func TestConvert(t *testing.T) {
 			true,
 			nil,
 		},
+		{
+			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}),
+			types.Map(types.Text()),
+			map[string]any{"foo": 572},
+			map[string]any{"foo": "572"},
+			true,
+			nil,
+		},
 
 		// Map.
 		{types.Map(types.Boolean()), types.Map(types.Boolean()), map[string]any{"a": true, "b": false}, map[string]any{"a": true, "b": false}, true, nil},
 		{types.Map(types.Int(16)), types.Map(types.Float(32)), map[string]any{"a": 4032, "b": -721}, map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
 		{types.JSON(), types.Map(types.Float(32)), json.Value(`{"a":4032,"b":-721}`), map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
+		{types.JSON(), types.Map(types.Float(32)), json.Value(`{"a":4032,"b":-721}`), map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
+		{types.Map(types.Boolean()), types.Object([]types.Property{{Name: "x", Type: types.Text()}, {Name: "y", Type: types.Boolean()}}), map[string]any{"x": true, "y": false}, map[string]any{"x": "true", "y": false}, true, nil},
 	}
 
 	for _, test := range tests {
-		got, err := convert(test.v, test.t1, test.t2, test.nullable, false, test.layouts, Create)
+		got, err := convert(test.value, test.t1, test.t2, test.nullable, false, test.layouts, Create)
 		if err != nil {
-			t.Fatalf("cannot convert %s<%v> to type %s", test.t1, test.v, test.t2)
+			t.Fatalf("cannot convert %s<%v> to type %s", test.t1, test.value, test.t2)
 		}
-		expected := test.e
-		if !cmp.Equal(got, expected) {
-			if f, ok := expected.(float64); ok && math.IsNaN(f) {
+		if !cmp.Equal(test.expected, got) {
+			if f, ok := test.expected.(float64); ok && math.IsNaN(f) {
 				if f, ok := got.(float64); ok && math.IsNaN(f) {
 					continue
 				}
 			}
-			t.Fatalf("expected %T(%v), got %T(%v)", expected, expected, got, got)
+			t.Fatalf("expected %T(%v), got %T(%v)", test.expected, test.expected, got, got)
 		}
 	}
 
