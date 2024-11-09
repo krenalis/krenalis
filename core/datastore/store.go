@@ -64,7 +64,7 @@ type EventIdentityWriterAckFunc func(action int, ids []string, err error)
 type IdentityWriterAckFunc func(ids []string, err error)
 
 // destinationsUsersTable represents the _destinations_users table.
-var destinationsUsersTable = meergo.WarehouseTable{
+var destinationsUsersTable = meergo.Table{
 	Name: "_destinations_users",
 	Columns: []meergo.Column{
 		{Name: "__action__", Type: types.Int(32)},

@@ -74,11 +74,11 @@ func Test_Upsert_Query(t *testing.T) {
 
 	table := meergo.Table{
 		Name:    "test_meergo_query",
-		Columns: make([]types.Property, len(cols)),
-		Key:     "c0",
+		Columns: make([]meergo.Column, len(cols)),
+		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
-		table.Columns[i] = types.Property{
+		table.Columns[i] = meergo.Column{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: i > 0,

@@ -181,7 +181,7 @@ type Warehouse interface {
 	// exist.
 	// rows or deleted can be empty but not both.
 	// Note that rows may be changed by this method.
-	Merge(ctx context.Context, table WarehouseTable, rows [][]any, deleted []any) error
+	Merge(ctx context.Context, table Table, rows [][]any, deleted []any) error
 
 	// MergeIdentities merges existing identities, deletes them, and inserts new
 	// ones. columns are the columns whose values are present in the rows and
@@ -289,13 +289,6 @@ type RowQuery struct {
 	Limit int
 }
 
-// Column represents a table column.
-type Column struct {
-	Name     string
-	Type     types.Type
-	Nullable bool
-}
-
 // JoinType represents a type of JOIN statement.
 type JoinType int
 
@@ -316,13 +309,6 @@ type Join struct {
 // NormalizeFunc is a function type representing the normalization function
 // exposed by data warehouse drivers to normalize values returned by them.
 type NormalizeFunc func(name string, typ types.Type, v any, nullable bool) (any, error)
-
-// WarehouseTable represents a data warehouse table.
-type WarehouseTable struct {
-	Name    string
-	Columns []Column
-	Keys    []string
-}
 
 // IsValidIdentifier reports whether name is a valid identifier.
 // A valid identifier must:

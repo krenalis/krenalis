@@ -80,7 +80,7 @@ func Test_Merge(t *testing.T) {
 		{types.Map(types.Text()), map[string]any{"boo": "hello", "foo": "world"}},
 	}
 
-	table := meergo.WarehouseTable{
+	table := meergo.Table{
 		Name:    "test_meergo_merge",
 		Columns: make([]meergo.Column, len(cols)),
 		Keys:    []string{"c0"},

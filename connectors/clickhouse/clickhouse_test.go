@@ -71,11 +71,11 @@ func Test_Upsert_Query(t *testing.T) {
 
 	table := meergo.Table{
 		Name:    "test_meergo_query",
-		Columns: make([]types.Property, len(cols)),
-		Key:     "c0",
+		Columns: make([]meergo.Column, len(cols)),
+		Keys:    []string{"c0"},
 	}
 	for i, c := range cols {
-		table.Columns[i] = types.Property{
+		table.Columns[i] = meergo.Column{
 			Name:     fmt.Sprintf("c%d", i),
 			Type:     c.MeergoType,
 			Nullable: strings.HasPrefix(c.DriverType, "Nullable("),
@@ -112,7 +112,14 @@ func Test_Upsert_Query(t *testing.T) {
 		create.WriteByte(' ')
 		create.WriteString(cols[i].DriverType)
 	}
-	create.WriteString("\n)\nENGINE = MergeTree\nORDER BY " + table.Key)
+	create.WriteString("\n)\nENGINE = MergeTree\nORDER BY (")
+	for i, key := range table.Keys {
+		if i > 0 {
+			create.WriteByte(',')
+		}
+		create.WriteString(key)
+	}
+	create.WriteByte(')')
 	err = connector.db.Exec(context.Background(), create.String())
 	if err != nil {
 		t.Fatalf("cannot create table: %s", err)

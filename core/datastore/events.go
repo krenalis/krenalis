@@ -94,7 +94,7 @@ var eventColumnByProperty map[string]meergo.Column
 var eventsColumnsForMerge []meergo.Column
 
 // eventsMergeTable is the table used to merge the events.
-var eventsMergeTable meergo.WarehouseTable
+var eventsMergeTable meergo.Table
 
 // init initializes eventColumnByProperty, eventsColumnsForMerge, and
 // eventsMergeTable.
@@ -117,7 +117,7 @@ func init() {
 		}
 	}
 
-	eventsMergeTable = meergo.WarehouseTable{
+	eventsMergeTable = meergo.Table{
 		Name:    "events",
 		Columns: eventsColumnsForMerge,
 		Keys:    []string{"id"},

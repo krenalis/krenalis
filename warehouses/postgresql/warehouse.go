@@ -204,7 +204,7 @@ func (warehouse *PostgreSQL) Initialize(ctx context.Context) error {
 }
 
 // Merge performs a table merge operation.
-func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.WarehouseTable, rows [][]any, deleted []any) error {
+func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {

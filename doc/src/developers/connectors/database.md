@@ -225,19 +225,19 @@ If a column has an unsupported type, return an `*UnsupportedColumnTypeError` err
 Upsert(ctx context.Context, table meergo.Table, rows []map[string]any{}) error
 ```
 
-The `Upsert` method is used by Meergo during data export to the database. It updates existing rows or inserts new rows into a specified table. The `table` parameter contains information about the table, including its name, columns, and key:
+The `Upsert` method is used by Meergo during data export to the database. It updates existing rows or inserts new rows into a specified table. The `table` parameter contains information about the table, including its name, columns, and keys:
 
 ```go
 type Table struct {
 	Name    string
-	Columns []types.Property
-	Key     string
+	Columns []Column
+	Keys    []string
 }
 ```
 
 - `Name`: The name of the table.
 - `Columns`: The columns in the table that need to be updated. It may not include all the columns in the table.
-- `Key`: The column name to be used as the table's key, which generally is the primary key but not required to be.
+- `Keys`: The column names to be used as the table's keys, which generally is the primary key but not required to be.
 
 The `rows` parameter contains the rows to be updated or inserted. Each row has column names and their corresponding values. If a column's value is not provided, the default value for that column is used. The key column specified in `table.Key` is always present in the rows with a non-nil value.
 

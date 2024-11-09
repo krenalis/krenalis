@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -223,10 +224,17 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map
 		}
 		b.WriteByte(')')
 	}
-	b.WriteString(` ON CONFLICT (` + quoteColumn(table.Key) + `) DO UPDATE SET `)
+	b.WriteString(` ON CONFLICT (`)
+	for i, name := range table.Keys {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(quoteColumn(name))
+	}
+	b.WriteString(`) DO UPDATE SET `)
 	i := 0
 	for _, column := range table.Columns {
-		if column.Name == table.Key {
+		if slices.Contains(table.Keys, column.Name) {
 			continue
 		}
 		if i > 0 {
@@ -248,7 +256,7 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map
 	if err, ok := err.(*pgconn.PgError); ok {
 		// Clarify the "there is no unique or exclusion constraint matching the ON CONFLICT specification" error.
 		if err.Code == "42P10" {
-			return fmt.Errorf("table %q does not have a primary key named %q", table.Name, table.Key)
+			return fmt.Errorf("table %q does not have a primary key (%s)", table.Name, strings.Join(table.Keys, ","))
 		}
 	}
 

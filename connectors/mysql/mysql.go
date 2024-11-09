@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -189,7 +190,7 @@ func (my *MySQL) Upsert(ctx context.Context, table meergo.Table, rows []map[stri
 	b.WriteString(` ON DUPLICATE KEY UPDATE `)
 	i := 0
 	for _, column := range table.Columns {
-		if column.Name == table.Key {
+		if slices.Contains(table.Keys, column.Name) {
 			continue
 		}
 		if i > 0 {

@@ -90,8 +90,15 @@ type Database interface {
 // Table represents a table.
 type Table struct {
 	Name    string
-	Columns []types.Property
-	Key     string
+	Columns []Column
+	Keys    []string
+}
+
+// Column represents a table column.
+type Column struct {
+	Name     string
+	Type     types.Type
+	Nullable bool
 }
 
 // Rows is the result of a database query. Its cursor starts before the first

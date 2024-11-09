@@ -253,13 +253,24 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 		ack: ack,
 		table: meergo.Table{
 			Name:    action.TableName,
-			Columns: types.Properties(action.OutSchema),
-			Key:     action.TableKeyProperty,
+			Columns: columnsOfType(action.OutSchema),
+			Keys:    []string{action.TableKeyProperty},
 		},
 		schema: action.OutSchema,
 		inner:  database.inner,
 	}
 	return &w, nil
+}
+
+// columnsOfType returns the properties of a type as meergo.Column values.
+func columnsOfType(t types.Type) []meergo.Column {
+	columns := make([]meergo.Column, types.NumProperties(t))
+	for i, p := range t.Properties() {
+		columns[i].Name = p.Name
+		columns[i].Type = p.Type
+		columns[i].Nullable = p.Nullable
+	}
+	return columns
 }
 
 // databaseWriter implements the Writer interface for databases.
