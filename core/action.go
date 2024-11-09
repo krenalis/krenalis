@@ -413,7 +413,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
 	if m := action.Transformation.Mapping; m != nil {
-		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, nil)
+		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, false, nil)
 		n.Transformation.InProperties = m.InProperties()
 		n.Transformation.OutProperties = m.OutProperties()
 	}

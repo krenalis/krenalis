@@ -60,7 +60,8 @@ type Transformer struct {
 func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if m := action.Transformation.Mapping; m != nil {
-		mapping, err := mappings.New(m, action.InSchema, action.OutSchema, layouts)
+		inPlace := action.Target != state.Events
+		mapping, err := mappings.New(m, action.InSchema, action.OutSchema, inPlace, layouts)
 		if err != nil {
 			return nil, err
 		}

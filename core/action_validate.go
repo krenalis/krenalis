@@ -191,7 +191,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema is required by the mapping")
 		}
-		transformer, err := mappings.New(mapping, inSchema, outSchema, nil)
+		transformer, err := mappings.New(mapping, inSchema, outSchema, false, nil)
 		if err != nil {
 			return errors.BadRequest("invalid mapping: %s", err)
 		}

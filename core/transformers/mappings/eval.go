@@ -57,15 +57,15 @@ func (err *invalidConversionError) Error() string {
 //
 // Eval might replace JSON properties in the properties map with their
 // unmarshalled values.
-func (expr *Expression) Eval(properties map[string]any, purpose Purpose) (any, error) {
-	v, st, err := eval(expr.parts, properties, expr.timeLayouts, purpose)
+func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Purpose) (any, error) {
+	v, st, err := eval(expr.parts, expr.timeLayouts, properties, purpose)
 	if err != nil {
 		return nil, err
 	}
 	if v == nil {
 		return v, err
 	}
-	c, err := convert(v, st, expr.dt, true, expr.timeLayouts, purpose)
+	c, err := convert(v, st, expr.dt, true, inPlace, expr.timeLayouts, purpose)
 	if err != nil {
 		if err == errInvalidConversion {
 			err = &invalidConversionError{v, st, expr.dt, ""}
@@ -144,7 +144,7 @@ func digitCountUint(n uint64) int {
 // property values. layouts represents, if not nil, the layouts used to format
 // DateTime, Date, and Time values as strings, and purpose specifies the reason
 // for the evaluation.
-func eval(expression []part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
+func eval(expression []part, layouts *state.TimeLayouts, properties map[string]any, purpose Purpose) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
 	if len(expression) == 1 {
@@ -161,7 +161,7 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 					}
 					return v, p.typ, nil
 				}
-				return evalCall(p, properties, layouts, purpose)
+				return evalCall(p, layouts, properties, purpose)
 			}
 			v, err := valueOf(p.path, properties)
 			if err != nil {
@@ -190,7 +190,7 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 			}
 			vt = p.typ
 		} else {
-			v, vt, err = evalCall(p, properties, layouts, purpose)
+			v, vt, err = evalCall(p, layouts, properties, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -208,12 +208,12 @@ func eval(expression []part, properties map[string]any, layouts *state.TimeLayou
 // type. properties contains the property values. timeLayouts represents, if not
 // nil, the timeLayouts used to format DateTime, Date, and Time values as
 // strings. purpose specifies the reason for the evaluation.
-func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, purpose Purpose) (any, types.Type, error) {
+func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any, purpose Purpose) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
 		var null bool
 		for _, arg := range p.args {
-			v, _, err := eval(arg, properties, layouts, purpose)
+			v, _, err := eval(arg, layouts, properties, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -235,7 +235,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		enc.SetEscapeHTML(false)
 		arr := make([]any, len(p.args))
 		for i, arg := range p.args {
-			v, _, err := eval(arg, properties, layouts, purpose)
+			v, _, err := eval(arg, layouts, properties, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -253,7 +253,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		return arr, types.Array(types.JSON()), nil
 	case "coalesce":
 		for _, arg := range p.args {
-			v, vt, err := eval(arg, properties, layouts, purpose)
+			v, vt, err := eval(arg, layouts, properties, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -263,14 +263,14 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return nil, p.typ, nil
 	case "eq":
-		v0, t0, err := eval(p.args[0], properties, layouts, purpose)
+		v0, t0, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
 			return nil, types.Boolean(), nil
 		}
-		v1, t1, err := eval(p.args[1], properties, layouts, purpose)
+		v1, t1, err := eval(p.args[1], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -278,7 +278,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, layouts, purpose)
+			v0, err = convert(v0, t0, t1, true, false, layouts, purpose)
 			if err != nil {
 				if err == errInvalidConversion {
 					return false, types.Boolean(), nil
@@ -288,19 +288,19 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "if":
-		v0, _, err := eval(p.args[0], properties, layouts, purpose)
+		v0, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 != nil && v0.(bool) {
-			return eval(p.args[1], properties, layouts, purpose)
+			return eval(p.args[1], layouts, properties, purpose)
 		}
 		if len(p.args) == 3 {
-			return eval(p.args[2], properties, layouts, purpose)
+			return eval(p.args[2], layouts, properties, purpose)
 		}
 		return nil, types.JSON(), nil
 	case "initcap":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -309,7 +309,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return strings.Title(v.(string)), types.Text(), nil
 	case "len":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -360,7 +360,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return length, types.Int(32), nil
 	case "lower":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -369,7 +369,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return strings.ToLower(v.(string)), types.Text(), nil
 	case "ltrim":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -378,14 +378,14 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return strings.TrimLeftFunc(v.(string), unicode.IsSpace), types.Text(), nil
 	case "ne":
-		v0, t0, err := eval(p.args[0], properties, layouts, purpose)
+		v0, t0, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
 			return nil, types.Boolean(), nil
 		}
-		v1, t1, err := eval(p.args[1], properties, layouts, purpose)
+		v1, t1, err := eval(p.args[1], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -393,7 +393,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, layouts, purpose)
+			v0, err = convert(v0, t0, t1, true, false, layouts, purpose)
 			if err != nil {
 				if err == errInvalidConversion {
 					return true, types.Boolean(), nil
@@ -403,7 +403,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "not":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -414,7 +414,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 	case "or":
 		var null bool
 		for _, arg := range p.args {
-			v, _, err := eval(arg, properties, layouts, purpose)
+			v, _, err := eval(arg, layouts, properties, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -431,7 +431,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return false, types.Boolean(), nil
 	case "rtrim":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -440,14 +440,14 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return strings.TrimRightFunc(v.(string), unicode.IsSpace), types.Text(), nil
 	case "substring":
-		v0, _, err := eval(p.args[0], properties, layouts, purpose)
+		v0, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
 			return nil, types.Text(), nil
 		}
-		v1, _, err := eval(p.args[1], properties, layouts, purpose)
+		v1, _, err := eval(p.args[1], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -460,7 +460,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		length := -1
 		if len(p.args) == 3 {
-			v2, _, err := eval(p.args[2], properties, layouts, purpose)
+			v2, _, err := eval(p.args[2], layouts, properties, purpose)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -474,7 +474,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return substring(v0.(string), start, length), types.Text(), nil
 	case "trim":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -483,7 +483,7 @@ func evalCall(p part, properties map[string]any, layouts *state.TimeLayouts, pur
 		}
 		return strings.TrimSpace(v.(string)), types.Text(), nil
 	case "upper":
-		v, _, err := eval(p.args[0], properties, layouts, purpose)
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {
 			return nil, types.Type{}, err
 		}

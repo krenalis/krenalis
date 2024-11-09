@@ -509,7 +509,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
 	if m := action.Transformation.Mapping; m != nil {
-		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, nil)
+		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, false, nil)
 		n.Transformation.InProperties = m.InProperties()
 		n.Transformation.OutProperties = m.OutProperties()
 	}
@@ -1449,7 +1449,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			mapping, err := mappings.New(transformation.Mapping, events.Schema, outSchema, nil)
+			mapping, err := mappings.New(transformation.Mapping, events.Schema, outSchema, false, nil)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}

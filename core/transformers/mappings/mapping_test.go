@@ -8,6 +8,7 @@
 package mappings
 
 import (
+	"bytes"
 	"reflect"
 	"slices"
 	"testing"
@@ -81,7 +82,7 @@ func Test_InOutProperties(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			mapping, err := New(test.expressions, inSchema, outSchema, nil)
+			mapping, err := New(test.expressions, inSchema, outSchema, false, nil)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -309,7 +310,7 @@ func Test_Transform(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mapping, err := New(test.expressions, inSchema, outSchema, test.layouts)
+			mapping, err := New(test.expressions, inSchema, outSchema, false, test.layouts)
 			if err != nil {
 				t.Fatalf("unexpected error calling New: %q (%T)", err, err)
 			}
@@ -329,6 +330,86 @@ func Test_Transform(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_inPlace(t *testing.T) {
+
+	clone := func(v map[string]any, t types.Type) map[string]any {
+		j, _ := json.MarshalBySchema(v, t)
+		v, _ = json.DecodeByType[map[string]any](bytes.NewReader(j), t)
+		return v
+	}
+
+	tests := []struct {
+		inType   types.Type
+		outType  types.Type
+		value    any
+		expected any
+	}{
+		{
+			inType:   types.Array(types.Int(32)),
+			outType:  types.Array(types.Text()),
+			value:    []any{1, 2, 3},
+			expected: []any{"1", "2", "3"},
+		},
+		{
+			inType:   types.Map(types.Boolean()),
+			outType:  types.Map(types.Text()),
+			value:    map[string]any{"a": true, "b": false},
+			expected: map[string]any{"a": "true", "b": "false"},
+		},
+		{
+			inType:   types.Object([]types.Property{{Name: "a", Type: types.Int(16)}, {Name: "b", Type: types.UUID()}}),
+			outType:  types.Object([]types.Property{{Name: "a", Type: types.Text()}}),
+			value:    map[string]any{"a": 22, "b": "90620928-691e-4aab-9b5c-ce202cad156f"},
+			expected: map[string]any{"a": "22"},
+		},
+		{
+			inType:   types.Array(types.Map(types.Int(32))),
+			outType:  types.Array(types.Map(types.Float(64))),
+			value:    []any{map[string]any{"x": 12, "y": -68}, map[string]any{"a": 5, "b": 8032}},
+			expected: []any{map[string]any{"x": 12.0, "y": -68.0}, map[string]any{"a": 5.0, "b": 8032.0}},
+		},
+		{
+			inType:   types.Map(types.Array(types.Float(64))),
+			outType:  types.Map(types.Array(types.Text())),
+			value:    map[string]any{"foo": []any{4.67, -1.02}},
+			expected: map[string]any{"foo": []any{"4.67", "-1.02"}},
+		},
+	}
+	expressions := map[string]string{"out": "in"}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			inSchema := types.Object([]types.Property{{Name: "in", Type: test.inType}})
+			outSchema := types.Object([]types.Property{{Name: "out", Type: test.outType}})
+			v := map[string]any{"in": test.value}
+			z := clone(v, inSchema)
+			inPlace := false
+			for {
+				mapping, err := New(expressions, inSchema, outSchema, inPlace, nil)
+				if err != nil {
+					t.Fatalf("unexpected error calling New: %q (%T)", err, err)
+				}
+				got, err := mapping.Transform(z, None)
+				if err != nil {
+					t.Fatalf("unexpected error calling Transform: %q (%T)", err, err)
+				}
+				if !reflect.DeepEqual(map[string]any{"out": test.expected}, got) {
+					t.Fatalf("expected %#v, got %#v", test.expected, got)
+				}
+				if inPlace {
+					if !reflect.DeepEqual(z["in"], got["out"]) {
+						t.Fatal("expected changed value, got unchanged")
+					}
+					return
+				}
+				if !reflect.DeepEqual(v, z) {
+					t.Fatal("expected unchanged value, got changed")
+				}
+				inPlace = true
+			}
+		})
+	}
 }
 
 func Test_storeValue(t *testing.T) {

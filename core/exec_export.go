@@ -390,7 +390,7 @@ func internalToExternalMatchingProperty(internal any, internalProp, externalProp
 	expressions := map[string]string{externalProp.Name: internalProp.Name}
 	inSchema := types.Object([]types.Property{internalProp})
 	outSchema := types.Object([]types.Property{externalProp})
-	m, err := mappings.New(expressions, inSchema, outSchema, nil)
+	m, err := mappings.New(expressions, inSchema, outSchema, false, nil)
 	if err != nil {
 		return nil, err
 	}

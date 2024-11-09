@@ -43,6 +43,7 @@ func (err *validationError) PropertyPath() string {
 
 // Mapping represents a mapping transformer.
 type Mapping struct {
+	inPlace     bool
 	expressions []mappingExpr
 }
 
@@ -56,13 +57,18 @@ type mappingExpr struct {
 
 // New returns a new mapping that transforms values according to the provided
 // expressions. inSchema and outSchema represent the input and output schemas,
-// respectively. If layouts is not nil, it specifies the layouts used to format
-// DateTime, Date, and Time values as strings.
+// respectively.
+//
+// If inPlace is true, a transformation is permitted to modify Array, Object,
+// and Map values directly within the value being transformed.
+//
+// If layouts is not nil, it specifies the layouts used to format DateTime,
+// Date, and Time values as strings.
 //
 // The source type can be the invalid type if expressions do not contain paths.
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
-func New(expressions map[string]string, inSchema, outSchema types.Type, layouts *state.TimeLayouts) (*Mapping, error) {
+func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace bool, layouts *state.TimeLayouts) (*Mapping, error) {
 	if len(expressions) == 0 {
 		return nil, errors.New("there are no expressions")
 	}
@@ -102,7 +108,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, layouts 
 			return nil, fmt.Errorf("paths %q and %q have the same prefix", expr.path, prev.path)
 		}
 	}
-	return &Mapping{expressions: mappingExpressions}, nil
+	return &Mapping{expressions: mappingExpressions, inPlace: inPlace}, nil
 }
 
 // InProperties returns the input properties, i.e., the properties found in the
@@ -156,13 +162,10 @@ func (mapping *Mapping) OutProperties() []string {
 //
 // If the resulting value cannot be converted to the destination type, it
 // returns an error value implementing the ValidationError interface of core.
-//
-// Transform might replace JSON properties in the properties map with their
-// unmarshalled values.
 func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (map[string]any, error) {
 	out := make(map[string]any, len(mapping.expressions))
 	for _, e := range mapping.expressions {
-		v, err := e.expr.Eval(properties, purpose)
+		v, err := e.expr.Eval(properties, mapping.inPlace, purpose)
 		if err != nil {
 			if err, ok := err.(*invalidConversionError); ok {
 				return nil, &validationError{

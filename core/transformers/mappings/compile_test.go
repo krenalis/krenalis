@@ -397,7 +397,7 @@ func Test_Compile(t *testing.T) {
 			}
 
 			// Test Eval.
-			got, err := expr.Eval(properties, test.purpose)
+			got, err := expr.Eval(properties, false, test.purpose)
 			if test.evalErr != nil {
 				if err == nil {
 					t.Fatalf("expected eval error %q, got no errors", test.evalErr)
