@@ -23,7 +23,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/meergo/meergo/core/culture"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
@@ -493,18 +492,17 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				}
 				err := d.maxmind.Lookup(requestIP, &record)
 				if err == nil {
-					country := culture.Country(record.Country.IsoCode)
-					if country != nil {
-						loc["country"] = country.Code()
+					if code, ok := countryCode(record.Country.IsoCode); ok {
+						loc["country"] = code
 					}
 					loc["city"] = record.City.Names.EN
 					loc["latitude"] = record.Location.Latitude
 					loc["longitude"] = record.Location.Longitude
 				}
 			}
-		} else if country != "" {
-			if c := culture.Country(country); c != nil {
-				loc["country"] = c.Code()
+		} else {
+			if code, ok := countryCode(country); ok {
+				loc["country"] = code
 			}
 		}
 	}
@@ -664,11 +662,7 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 			tok, _ = d.dec.ReadToken()
 			s := tok.String()
 			if name == "locale" {
-				if locale := culture.Locale(s); locale == nil {
-					s = ""
-				} else {
-					s = locale.Name()
-				}
+				s, _ = localeCode(s)
 			}
 			if s != "" {
 				context[name] = s
