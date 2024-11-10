@@ -489,7 +489,7 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 			return nil, types.Text(), nil
 		}
 		v1, vt1, err := eval(p.args[1], layouts, properties)
-		if err == nil && v1 != nil && (vt1.Kind() != types.InetKind || vt1.BitSize() > 32) {
+		if err == nil && v1 != nil && (vt1.Kind() != types.IntKind || vt1.BitSize() > 32) {
 			v1, err = convert(v1, vt1, types.Int(32), true, false, layouts, None)
 		}
 		if err != nil {
@@ -505,7 +505,7 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		length := -1
 		if len(p.args) == 3 {
 			v2, vt2, err := eval(p.args[2], layouts, properties)
-			if err == nil && v2 != nil && (vt2.Kind() != types.InetKind || vt2.BitSize() > 32) {
+			if err == nil && v2 != nil && (vt2.Kind() != types.IntKind || vt2.BitSize() > 32) {
 				v2, err = convert(v2, vt2, types.Int(32), true, false, layouts, None)
 			}
 			if err != nil {
