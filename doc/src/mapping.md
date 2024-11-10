@@ -285,6 +285,28 @@ initcap(null)             -> null
 
 The argument of the `initcap` function should have type `text`, and the result has type `Text`.
 
+#### **json_parse** function
+
+The `json_parse` function parses its argument as JSON and returns the corresponding `JSON` value. For example:
+```
+┌──────────────────────────────────────────────┐
+│ json_parse('{"city":"Milan","zip":"20100"}') │ ->  address
+└──────────────────────────────────────────────┘
+```
+
+If its argument is `null`, the function returns `null`. For example:
+```
+json_parse('"Android"') -> "Android" as JSON
+json_parse('true')      -> true      as JSON
+json_parse('[1, 2, 3]') -> [1,2,3]   as JSON
+json_parse('null')      -> null      as JSON
+json_parse(null)        -> null
+```
+
+If the input is not valid JSON, `json_parse` will produce an error, causing the entire mapping to fail.
+
+The argument of the `json_parse` function should have type `Text`, and the result has type `JSON`.
+
 #### **len** function
 
 The `len` function returns the length of the given argument based on its type.
@@ -505,4 +527,4 @@ upper("usa") -> "USA"
 upper(null)  -> null
 ```
 
-The argument of the `upper` function should have type `text`, and the result has type `Text`.
+The argument of the `upper` function should have type `Text`, and the result has type `Text`.

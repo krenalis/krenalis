@@ -308,6 +308,19 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any, pur
 			return nil, types.Text(), nil
 		}
 		return strings.Title(v.(string)), types.Text(), nil
+	case "json_parse":
+		v, _, err := eval(p.args[0], layouts, properties, purpose)
+		if err != nil {
+			return nil, types.Type{}, err
+		}
+		if v == nil {
+			return nil, types.Text(), nil
+		}
+		jv := json.Value(v.(string))
+		if !json.Valid(jv) {
+			return nil, types.Type{}, errors.New("json_parse: input text is not valid JSON")
+		}
+		return jv, types.JSON(), nil
 	case "len":
 		v, _, err := eval(p.args[0], layouts, properties, purpose)
 		if err != nil {

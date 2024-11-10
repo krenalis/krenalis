@@ -235,6 +235,16 @@ func Test_Compile(t *testing.T) {
 		{expr: "initcap()", dt: types.Text(), compileErr: errors.New("'initcap' function requires a single argument")},
 		{expr: "initcap('a', 5)", dt: types.Text(), compileErr: errors.New("'initcap' function requires a single argument")},
 
+		// json_parse.
+		{expr: "json_parse('')", dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
+		{expr: `json_parse('"foo"')`, dt: types.JSON(), expected: json.Value(`"foo"`)},
+		{expr: `json_parse('[1, 2, 3]')`, dt: types.JSON(), expected: json.Value(`[1, 2, 3]`)},
+		{expr: `json_parse(' {"a": 5, "b": true }')`, dt: types.JSON(), expected: json.Value(` {"a": 5, "b": true }`)},
+		{expr: `json_parse('true')`, dt: types.JSON(), expected: json.Value(`true`)},
+		{expr: `json_parse('null')`, dt: types.JSON(), expected: json.Value(`null`)},
+		{expr: `json_parse('foo boo')`, dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
+		{expr: `json_parse(null)`, dt: types.JSON(), expected: nil},
+
 		// len.
 		{expr: "len('')", dt: types.Int(32), expected: 0},
 		{expr: "len('Hello World')", dt: types.Int(32), expected: 11},

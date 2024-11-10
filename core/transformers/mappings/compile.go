@@ -189,6 +189,18 @@ func checkInitCap(args [][]part, schema, dt types.Type, nullable bool, propertie
 	return dt, nil
 }
 
+// checkJSONParse type checks a call to 'json_parse' with the given arguments.
+func checkJSONParse(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
+	if len(args) != 1 {
+		return types.Type{}, errors.New("'json_parse' function requires a single argument")
+	}
+	err := typeCheck(args[0], schema, types.Text(), true, properties)
+	if err != nil {
+		return types.Type{}, err
+	}
+	return types.JSON(), nil
+}
+
 // checkLen type checks a call to 'len' with the given arguments.
 func checkLen(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	if len(args) != 1 {
@@ -424,6 +436,8 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 			expr[i].typ, err = checkIf(p.args, schema, typ, n, properties)
 		case "initcap":
 			expr[i].typ, err = checkInitCap(p.args, schema, typ, n, properties)
+		case "json_parse":
+			expr[i].typ, err = checkJSONParse(p.args, schema, typ, n, properties)
 		case "len":
 			expr[i].typ, err = checkLen(p.args, schema, typ, n, properties)
 		case "lower":

@@ -43,6 +43,12 @@ const MEERGO_FUNCTIONS: MeergoFunction[] = [
 		description: 'Converts the first letter of each word to uppercase and the rest to lowercase',
 	},
 	{
+		name: 'json_parse',
+		params: ['s: Text'],
+		return: 'JSON',
+		description: 'Parses s as JSON and returns a JSON value',
+	},
+	{
 		name: 'len',
 		params: ['s: Any'],
 		return: 'Int(32)',
