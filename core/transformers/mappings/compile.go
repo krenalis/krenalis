@@ -306,7 +306,7 @@ func checkRTrim(args [][]part, schema, dt types.Type, nullable bool, properties 
 // checkSubstring type checks a call to 'substring' with the given arguments.
 func checkSubstring(args [][]part, schema, dt types.Type, nullable bool, properties map[string]struct{}) (types.Type, error) {
 	n := len(args)
-	if n < 2 || 3 < n {
+	if n < 2 || n > 3 {
 		return types.Type{}, errors.New("'substring' function requires two or three arguments")
 	}
 	err := typeCheck(args[0], schema, types.Text(), true, properties)

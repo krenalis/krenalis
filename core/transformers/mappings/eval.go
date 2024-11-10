@@ -211,7 +211,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 	case "and":
 		var null bool
 		for _, arg := range p.args {
-			v, _, err := eval(arg, layouts, properties)
+			v, vt, err := eval(arg, layouts, properties)
+			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
+				v, err = convert(v, vt, types.Boolean(), true, false, layouts, None)
+			}
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -286,7 +289,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "if":
-		v0, _, err := eval(p.args[0], layouts, properties)
+		v0, vt0, err := eval(p.args[0], layouts, properties)
+		if err == nil && v0 != nil && vt0.Kind() != types.BooleanKind {
+			v0, err = convert(v0, vt0, types.Boolean(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -298,7 +304,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return nil, types.JSON(), nil
 	case "initcap":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -307,7 +316,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return strings.Title(v.(string)), types.Text(), nil
 	case "json_parse":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -371,7 +383,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return length, types.Int(32), nil
 	case "lower":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -380,7 +395,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return strings.ToLower(v.(string)), types.Text(), nil
 	case "ltrim":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -414,7 +432,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "not":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.BooleanKind {
+			v, err = convert(v, vt, types.Boolean(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -425,7 +446,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 	case "or":
 		var null bool
 		for _, arg := range p.args {
-			v, _, err := eval(arg, layouts, properties)
+			v, vt, err := eval(arg, layouts, properties)
+			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
+				v, err = convert(v, vt, types.Boolean(), true, false, layouts, None)
+			}
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -442,7 +466,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return false, types.Boolean(), nil
 	case "rtrim":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -451,14 +478,20 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return strings.TrimRightFunc(v.(string), unicode.IsSpace), types.Text(), nil
 	case "substring":
-		v0, _, err := eval(p.args[0], layouts, properties)
+		v0, vt0, err := eval(p.args[0], layouts, properties)
+		if err == nil && v0 != nil && vt0.Kind() != types.TextKind {
+			v0, err = convert(v0, vt0, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v0 == nil {
 			return nil, types.Text(), nil
 		}
-		v1, _, err := eval(p.args[1], layouts, properties)
+		v1, vt1, err := eval(p.args[1], layouts, properties)
+		if err == nil && v1 != nil && (vt1.Kind() != types.InetKind || vt1.BitSize() > 32) {
+			v1, err = convert(v1, vt1, types.Int(32), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -471,7 +504,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		length := -1
 		if len(p.args) == 3 {
-			v2, _, err := eval(p.args[2], layouts, properties)
+			v2, vt2, err := eval(p.args[2], layouts, properties)
+			if err == nil && v2 != nil && (vt2.Kind() != types.InetKind || vt2.BitSize() > 32) {
+				v2, err = convert(v2, vt2, types.Int(32), true, false, layouts, None)
+			}
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -485,7 +521,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return substring(v0.(string), start, length), types.Text(), nil
 	case "trim":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -494,7 +533,10 @@ func evalCall(p part, layouts *state.TimeLayouts, properties map[string]any) (an
 		}
 		return strings.TrimSpace(v.(string)), types.Text(), nil
 	case "upper":
-		v, _, err := eval(p.args[0], layouts, properties)
+		v, vt, err := eval(p.args[0], layouts, properties)
+		if err == nil && v != nil && vt.Kind() != types.TextKind {
+			v, err = convert(v, vt, types.Text(), true, false, layouts, None)
+		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}

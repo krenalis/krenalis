@@ -172,6 +172,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "and(1, true)", dt: types.Boolean(), compileErr: errors.New("cannot convert 1 (type Int(32)) to Boolean")},
 		{expr: "and(true, true)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
 		{expr: "and()", dt: types.Int(32), compileErr: errors.New("'and' function requires at least two argument")},
+		{expr: "and('true', 'true')", dt: types.Boolean(), expected: true},
 
 		// array.
 		{expr: "array()", dt: types.Array(types.JSON()), nullable: true, expected: []any{}},
@@ -226,6 +227,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "if(false, 2)", dt: types.Boolean(), compileErr: errors.New("cannot convert 2 (type Int(32)) to Boolean")},
 		{expr: "if()", dt: types.Boolean(), compileErr: errors.New("'if' function requires either two or three arguments")},
 		{expr: "if(1, 2, 3, 4)", dt: types.Boolean(), compileErr: errors.New("'if' function requires either two or three arguments")},
+		{expr: "if('true', 1, 2)", dt: types.Int(32), expected: 1},
 
 		// initcap.
 		{expr: "initcap('new york')", dt: types.Text(), expected: "New York"},
@@ -234,6 +236,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "initcap(null)", dt: types.Text(), expected: nil},
 		{expr: "initcap()", dt: types.Text(), compileErr: errors.New("'initcap' function requires a single argument")},
 		{expr: "initcap('a', 5)", dt: types.Text(), compileErr: errors.New("'initcap' function requires a single argument")},
+		{expr: "initcap(true)", dt: types.Text(), expected: "True"},
 
 		// json_parse.
 		{expr: "json_parse('')", dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
@@ -244,6 +247,7 @@ func Test_Compile(t *testing.T) {
 		{expr: `json_parse('null')`, dt: types.JSON(), expected: json.Value(`null`)},
 		{expr: `json_parse('foo boo')`, dt: types.JSON(), evalErr: errors.New("json_parse: input text is not valid JSON")},
 		{expr: `json_parse(null)`, dt: types.JSON(), expected: nil},
+		{expr: `json_parse(false)`, dt: types.JSON(), expected: json.Value(`false`)},
 
 		// len.
 		{expr: "len('')", dt: types.Int(32), expected: 0},
@@ -267,6 +271,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "lower('new york')", dt: types.Text(), expected: "new york"},
 		{expr: "lower()", dt: types.Text(), compileErr: errors.New("'lower' function requires a single argument")},
 		{expr: "lower('New', 'York')", dt: types.Text(), compileErr: errors.New("'lower' function requires a single argument")},
+		{expr: "lower(false)", dt: types.Text(), expected: "false"},
 
 		// ltrim.
 		{expr: "ltrim('')", dt: types.Text(), expected: ""},
@@ -276,6 +281,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "ltrim()", dt: types.Text(), compileErr: errors.New("'ltrim' function requires a single argument")},
 		{expr: "ltrim(' New', 'York ')", dt: types.Text(), compileErr: errors.New("'ltrim' function requires a single argument")},
 		{expr: "ltrim(null)", dt: types.Text(), expected: nil},
+		{expr: "ltrim(12.67)", dt: types.Text(), expected: "12.67"},
 
 		// ne.
 		{expr: "ne(1, 2)", dt: types.Boolean(), expected: true},
@@ -297,6 +303,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "not(null)", dt: types.Boolean(), expected: nil},
 		{expr: "not(true, false)", dt: types.Boolean(), compileErr: errors.New("'not' function requires a single argument")},
 		{expr: "not()", dt: types.Boolean(), compileErr: errors.New("'not' function requires a single argument")},
+		{expr: "not('false')", dt: types.Boolean(), expected: true},
 
 		// rtrim.
 		{expr: "rtrim('')", dt: types.Text(), expected: ""},
@@ -337,6 +344,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "or(true, false)", dt: types.Int(32), compileErr: errors.New("cannot convert expression (type Boolean) to Int(32)")},
 		{expr: "or()", dt: types.Int(32), compileErr: errors.New("'or' function requires at least two argument")},
 		{expr: "or(1)", dt: types.Int(32), compileErr: errors.New("'or' function requires at least two argument")},
+		{expr: "or('false', 'true')", dt: types.Boolean(), expected: true},
 
 		// trim.
 		{expr: "trim('')", dt: types.Text(), expected: ""},
@@ -346,6 +354,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "trim()", dt: types.Text(), compileErr: errors.New("'trim' function requires a single argument")},
 		{expr: "trim(' New', 'York ')", dt: types.Text(), compileErr: errors.New("'trim' function requires a single argument")},
 		{expr: "trim(null)", dt: types.Text(), expected: nil},
+		{expr: "trim(55)", dt: types.Text(), expected: "55"},
 
 		// upper.
 		{expr: "upper('')", dt: types.Text(), expected: ""},
@@ -353,6 +362,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "upper('NEW YORK')", dt: types.Text(), expected: "NEW YORK"},
 		{expr: "upper()", dt: types.Text(), compileErr: errors.New("'upper' function requires a single argument")},
 		{expr: "upper('New', 'York')", dt: types.Text(), compileErr: errors.New("'upper' function requires a single argument")},
+		{expr: "upper(false)", dt: types.Text(), expected: "FALSE"},
 	}
 
 	for _, test := range tests {
