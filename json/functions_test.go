@@ -119,6 +119,29 @@ func Test_MarshalBySchema(t *testing.T) {
 	}
 }
 
+func Test_Quote(t *testing.T) {
+	tests := []struct {
+		s        string
+		expected string
+		err      error
+	}{
+		{``, `""`, nil},
+		{`foo`, `"foo"`, nil},
+		{"\x00", `"\u0000"`, nil},
+		{`"foo boo"`, `"\"foo boo\""`, nil},
+		{"\xFF", ``, ErrInvalidUTF8},
+	}
+	for _, test := range tests {
+		got, err := Quote([]byte(test.s))
+		if !reflect.DeepEqual(test.err, err) {
+			t.Fatalf("expected error %v (type %T), got %v (type %T)", test.err, test.err, err, err)
+		}
+		if test.expected != string(got) {
+			t.Fatalf("unexpected value.\nexpected: %q\ngot:      %q\n", test.expected, got)
+		}
+	}
+}
+
 func Test_StripZeroBytes(t *testing.T) {
 	tests := []struct {
 		s        string

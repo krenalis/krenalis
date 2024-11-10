@@ -25,10 +25,6 @@ var (
 	_ Unmarshaler = (*Value)(nil)
 )
 
-// ErrInvalidJSON is returned when an argument is not valid JSON, or is not
-// UTF-8 encoded.
-var ErrInvalidJSON = errors.New("invalid JSON")
-
 // NotExistError is returned by the Lookup method when the specified path does
 // not exist.
 type NotExistError struct {

@@ -30,6 +30,13 @@ import (
 	"github.com/relvacode/iso8601"
 )
 
+// ErrInvalidJSON is returned when an argument is not valid JSON, or is not
+// UTF-8 encoded.
+var ErrInvalidJSON = errors.New("invalid JSON")
+
+// ErrInvalidUTF8 is returned when an argument is not UTF-8 encoded.
+var ErrInvalidUTF8 = errors.New("invalid UTF-8")
+
 // SchemaValidationError represents a validation error related to the output
 // schema. It can be returned by DecodeBySchema for each single result in the
 // Result.Error field.
@@ -248,6 +255,16 @@ type Marshaler interface {
 // behavior is undefined if the value does not validate against the type.
 func MarshalBySchema(v any, schema types.Type) (Value, error) {
 	return marshalBySchema(nil, v, schema)
+}
+
+// Quote returns a double-quoted JSON string literal representing s. It returns
+// ErrInvalidUTF8 if s is not valid UTF-8 encoded.
+func Quote(s []byte) ([]byte, error) {
+	d, err := jsontext.AppendQuote(nil, s)
+	if err != nil {
+		return nil, ErrInvalidUTF8
+	}
+	return d, nil
 }
 
 var zeroByte = []byte(`\u0000`)
