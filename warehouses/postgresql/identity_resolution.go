@@ -47,11 +47,9 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		// cases, where the IdentityResolution is aborted prematurely.
 		err := warehouse.endOperation(ctx, opID, time.Now().UTC())
 		if err != nil {
-			if err != nil {
-				go func() {
-					slog.Error("cannot end data warehouse operation", "id", opID, "err", err)
-				}()
-			}
+			go func() {
+				slog.Error("cannot end data warehouse operation", "id", opID, "err", err)
+			}()
 		}
 	}()
 
