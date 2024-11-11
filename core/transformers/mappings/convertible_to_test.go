@@ -29,8 +29,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Boolean(), types.DateTime(), false},
 		{types.Boolean(), types.JSON(), true},
 		{types.Boolean(), types.Text(), true},
-		{types.Boolean(), types.Array(types.Text()), true},
-		{types.Boolean(), types.Array(types.Float(32)), false},
+		{types.Boolean(), types.Array(types.Boolean()), false},
 		{types.Boolean(), types.Object([]types.Property{{Name: "s", Type: types.Text()}}), false},
 		{types.Boolean(), types.Map(types.Text()), false},
 		// Int(8).
@@ -48,7 +47,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Int(32), types.JSON(), true},
 		{types.Int(32), types.Year(), true},
 		{types.Int(32), types.Text(), true},
-		{types.Int(32), types.Array(types.Int(8)), true},
+		{types.Int(32), types.Array(types.Int(32)), false},
 		{types.Int(32), types.Map(types.Int(8)), false},
 		// Int(64).
 		{types.Int(64), types.Int(64), true},
@@ -69,7 +68,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.DateTime(), types.DateTime(), true},
 		// Date.
 		{types.Date(), types.Date(), true},
-		{types.Date(), types.Array(types.Date()), true},
+		{types.Date(), types.Array(types.Date()), false},
 		// Time.
 		{types.Time(), types.Time(), true},
 		// Year.
@@ -77,7 +76,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Year(), types.Int(32), true},
 		{types.Year(), types.Year(), true},
 		{types.Year(), types.JSON(), true},
-		{types.Year(), types.Array(types.Int(32)), true},
+		{types.Year(), types.Array(types.Year()), false},
 		// UUID.
 		{types.UUID(), types.UUID(), true},
 		// JSON.

@@ -216,9 +216,7 @@ func TestConvert(t *testing.T) {
 		// Array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
 		{types.Array(types.Int(32)), types.Array(types.Int(8)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
-		{types.Int(32), types.Array(types.Int(8)), 5, []any{5}, true, nil},
-		{types.Boolean(), types.Array(types.Boolean()).WithMinElements(1), false, []any{false}, true, nil},
-		{types.Text(), types.Array(types.UUID()), "123e4567-e89b-12d3-a456-426614174000", []any{"123e4567-e89b-12d3-a456-426614174000"}, true, nil},
+		{types.Array(types.Text()), types.Array(types.Text()), []any{"123e4567-e89b-12d3-a456-426614174000"}, []any{"123e4567-e89b-12d3-a456-426614174000"}, true, nil},
 		{types.JSON(), types.Array(types.Int(32)), json.Value("[1.0,2.0,3.0]"), []any{1, 2, 3}, true, nil},
 		{types.JSON(), types.Array(types.Int(32)), json.Value("[1,2,3]"), []any{1, 2, 3}, true, nil},
 		{types.JSON(), types.Array(types.Int(32)), json.Value("6.0"), []any{6}, true, nil},

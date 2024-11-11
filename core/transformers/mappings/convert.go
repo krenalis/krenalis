@@ -540,19 +540,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return s, nil
 	case types.ArrayKind:
 		switch spt {
-		default:
-			if dt.MinElements() > 1 {
-				return nil, errInvalidConversion
-			}
-			it := dt.Elem()
-			if !types.Equal(st, it) {
-				var err error
-				v, err = convert(v, st, it, false, inPlace, layouts, purpose)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return []any{v}, nil
 		case types.JSONKind:
 			s := v.(json.Value)
 			if s.Kind() == json.Object {
