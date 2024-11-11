@@ -34,7 +34,6 @@ import (
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -87,8 +86,6 @@ type Connection struct {
 // It returns an errors.NotFound error if the action does not exist.
 func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 	this.core.mustBeOpen()
-	_, span := telemetry.TraceSpan(ctx, "Connection.Action", "id", id)
-	defer span.End()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
 	}
@@ -125,9 +122,6 @@ var dummyGroupsSchema = types.Object([]types.Property{
 func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {
 
 	this.core.mustBeOpen()
-
-	ctx, span := telemetry.TraceSpan(ctx, "Connection.ActionSchemas", "target", target, "eventType", eventType)
-	defer span.End()
 
 	// Validate the target and the event type.
 	eventTypeSchema, err := this.validateTargetAndEventType(ctx, target, eventType)
@@ -446,9 +440,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	this.core.mustBeOpen()
 
-	ctx, span := telemetry.TraceSpan(ctx, "Connection.AddAction", "target", target, "eventType", eventType)
-	defer span.End()
-
 	// Retrieve the file connector, if specified in the action.
 	var fileConnector *state.Connector
 	if action.Connector != "" {
@@ -469,8 +460,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	if err != nil {
 		return 0, err
 	}
-
-	span.Log("action validated successfully")
 
 	connector := this.connection.Connector()
 
@@ -649,7 +638,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	if err != nil {
 		return 0, err
 	}
-	span.Log("action created successfully", "id", n.ID)
 
 	return n.ID, nil
 }
@@ -1576,9 +1564,6 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) error {
 
 	this.core.mustBeOpen()
-
-	ctx, span := telemetry.TraceSpan(ctx, "Connection.Set", "connection", this.connection.ID)
-	defer span.End()
 
 	if connection.Name == "" || containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
 		return errors.BadRequest("name %q is not valid", connection.Name)

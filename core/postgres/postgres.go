@@ -19,8 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meergo/meergo/telemetry"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -278,8 +276,6 @@ func (db *DB) QueryVoid(ctx context.Context, query string, args ...any) error {
 }
 
 func (db *DB) Begin(ctx context.Context) (*Tx, error) {
-	ctx, span := telemetry.TraceSpan(ctx, "DB.Transaction")
-	defer span.End()
 	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, err
@@ -288,8 +284,6 @@ func (db *DB) Begin(ctx context.Context) (*Tx, error) {
 }
 
 func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
-	ctx, span := telemetry.TraceSpan(ctx, "DB.Transaction")
-	defer span.End()
 	pqTx, err := db.db.Begin(ctx)
 	if err != nil {
 		return err

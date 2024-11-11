@@ -10,8 +10,6 @@ package cmd
 import (
 	"io/fs"
 	"net/http"
-
-	"github.com/meergo/meergo/telemetry"
 )
 
 type assets struct {
@@ -34,10 +32,5 @@ func (a *assets) Close() {
 }
 
 func (a *assets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	ctx, s := telemetry.TraceSpan(r.Context(), "ui.ServeHTTP", "urlPath", r.URL.Path)
-	defer s.End()
-	telemetry.IncrementCounter(ctx, "ui.ServeHTTP", 1)
-
 	a.handler.ServeHTTP(w, r)
 }

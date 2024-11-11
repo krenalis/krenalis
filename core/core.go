@@ -37,7 +37,6 @@ import (
 	"github.com/meergo/meergo/core/transformers/local"
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -273,7 +272,6 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 // name cannot be empty and cannot be longer than 45 runes.
 func (core *Core) AddOrganization(ctx context.Context, name string) (int, error) {
 	core.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "core.AddOrganization")
 	if name == "" {
 		return 0, errors.BadRequest("name is empty")
 	}
@@ -283,7 +281,6 @@ func (core *Core) AddOrganization(ctx context.Context, name string) (int, error)
 	if n := utf8.RuneCountInString(name); n > 45 {
 		return 0, errors.BadRequest("name is longer than 45 runes")
 	}
-	defer t.End()
 	var id int
 	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
 	if err != nil {
@@ -320,8 +317,6 @@ func (core *Core) Close() {
 // It returns an errors.NotFoundError error if the connector does not exist.
 func (core *Core) Connector(ctx context.Context, name string) (*Connector, error) {
 	core.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "core.Connector", "name", name)
-	defer t.End()
 	c, ok := core.state.Connector(name)
 	if !ok {
 		return nil, errors.NotFound("connector %q does not exist", name)
@@ -360,8 +355,6 @@ func (core *Core) Connector(ctx context.Context, name string) (*Connector, error
 // Connectors returns the connectors.
 func (core *Core) Connectors(ctx context.Context) []*Connector {
 	core.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "core.Connectors")
-	defer s.End()
 	cc := core.state.Connectors()
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
@@ -407,8 +400,6 @@ func (core *Core) Connectors(ctx context.Context) []*Connector {
 // CountOrganizations returns the total number of organizations.
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "core.CountOrganizations")
-	defer s.End()
 	return len(core.state.Organizations())
 }
 
@@ -481,8 +472,6 @@ func (core *Core) MemberInvitation(ctx context.Context, token string) (string, s
 // It returns an errors.NotFound error if the organization does not exist.
 func (core *Core) Organization(ctx context.Context, id int) (*Organization, error) {
 	core.mustBeOpen()
-	_, t := telemetry.TraceSpan(ctx, "core.Organization", "organization_id", id)
-	defer t.End()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid organization identifier", id)
 	}
@@ -504,8 +493,6 @@ func (core *Core) Organization(ctx context.Context, id int) (*Organization, erro
 // limit must be > 0.
 func (core *Core) Organizations(ctx context.Context, order OrganizationSort, first, limit int) ([]*Organization, error) {
 	core.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "core.Connectors")
-	defer s.End()
 	if order != SortByName {
 		return nil, errors.BadRequest("order %d is not valid", int(order))
 	}
@@ -732,8 +719,6 @@ type Warehouse struct {
 // Warehouses returns the data warehouses.
 func (core *Core) Warehouses(ctx context.Context) []*Warehouse {
 	core.mustBeOpen()
-	_, s := telemetry.TraceSpan(ctx, "core.Warehouses")
-	defer s.End()
 	whs := core.state.Warehouses()
 	warehouses := make([]*Warehouse, len(whs))
 	for i, wh := range whs {

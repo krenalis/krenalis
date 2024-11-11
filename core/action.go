@@ -27,7 +27,6 @@ import (
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/json"
-	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 )
 
@@ -315,8 +314,6 @@ func (this *Action) ServeUI(ctx context.Context, event string, values json.Value
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	this.core.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Action.Execute", "id", this.action.ID, "reload", reload)
-	defer span.End()
 	c := this.action.Connection()
 	if !c.Enabled {
 		return 0, errors.Unprocessable(ConnectionDisabled, "connection %d is disabled", c.ID)
@@ -354,9 +351,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	this.core.mustBeOpen()
 
-	ctx, span := telemetry.TraceSpan(ctx, "Action.Set", "action", this.action.ID)
-	defer span.End()
-
 	// Retrieve the file connector, if specified in the action.
 	var fileConnector *state.Connector
 	if action.Connector != "" {
@@ -388,8 +382,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
 		inSchema = events.Schema
 	}
-
-	span.Log("action validated successfully")
 
 	n := state.SetAction{
 		ID:                       this.action.ID,
@@ -561,7 +553,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 		return tx.Notify(ctx, n)
 	})
-	span.Log("action set successfully", "id", this.action.ID)
 
 	return err
 }
