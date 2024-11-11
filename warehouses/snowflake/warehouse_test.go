@@ -204,6 +204,24 @@ func Test_Merge(t *testing.T) {
 					elements[i] = v
 				}
 			}
+		case types.MapKind:
+			if c.MeergoType.Elem().Kind() == types.JSONKind {
+				elements, ok := got.(map[string]any)
+				if !ok {
+					t.Fatalf("type %s: expected a map[string]any value, got %#v (type %T)", c.MeergoType, got, got)
+				}
+				for key, value := range elements {
+					v, ok := value.(json.Value)
+					if !ok {
+						t.Fatalf("type %s: expected a json.Value element, got %#v (type %T)", c.MeergoType, value, value)
+					}
+					v, err = json.Compact(v)
+					if err != nil {
+						t.Fatalf("type %s: cannot compact JSON value %#v", c.MeergoType, got)
+					}
+					elements[key] = v
+				}
+			}
 		}
 		if !cmp.Equal(c.MeergoValue, got) {
 			t.Fatalf("type %s: expected %#v (type %T), got %#v (type %T)", c.MeergoType, c.MeergoValue, c.MeergoValue, got, got)
