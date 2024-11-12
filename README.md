@@ -14,9 +14,6 @@
   - [6. Create the workspace, connect a warehouse and initialize it](#6-create-the-workspace-connect-a-warehouse-and-initialize-it)
   - [7. Run and open the browser](#7-run-and-open-the-browser)
   - [8. Add properties to the user schema](#8-add-properties-to-the-user-schema)
-- [Enable telemetry (optional)](#enable-telemetry-optional)
-  - [For the first time](#for-the-first-time)
-  - [If you already have configured and enabled telemetry](#if-you-already-have-configured-and-enabled-telemetry)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
 - [Interact with Meergo using `meergo-cli`](#interact-with-meergo-using-meergo-cli)
@@ -156,37 +153,6 @@ Within the root of the repository, run:
 
 ```
 meergo-cli change-user-schema ./test/example_user_schema.json -w <workspace ID>
-```
-
-## Enable telemetry (optional)
-
-### For the first time
-
-1. see the documentation in the [telemetry directory](./telemetry) to learn how
-   to install and run tools needed for telemetry.
-2. update your local configuration file `config.yaml` according to the file
-   [config.example.yaml](config.example.yaml).
-
-### If you already have configured and enabled telemetry
-
-From the directory `telemetry` of this repository, run the following commands:
-
-To start the **OpenTelemetry Collector**:
-
-```bash
-otelcol --config confs/otelcol.yaml
-```
-
-To start **Jaeger**:
-
-```bash
-jaeger-all-in-one --collector.otlp.enabled=0
-```
-
-To start **Prometheus**:
-
-```bash
-prometheus --config.file=confs/prometheus.yml --web.listen-address="0.0.0.0:9095"
 ```
 
 ## Expose on the Internet (optional)

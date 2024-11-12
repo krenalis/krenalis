@@ -53,12 +53,8 @@ transformer:
 telemetry:
     # Set "enable" to "true" to enable telemetry.
     #
-    # In particular, this enables (1) sending traces and logs to Jaeger and (2)
-    # sending metrics to Prometheus (in both cases passing through the
-    # OpenTelemetry Collector).
-    #
-    # See the documentation under the directory "telemetry" of this repository
-    # for more details.
+    # See the documentation within 'doc/src/developers/telemetry.md' for more
+    # details.
     enable: false
 
 connectors:

@@ -6,20 +6,23 @@
 //
 
 // Package telemetry enables sending telemetry data to the OpenTelemetry
-// Collector on "localhost:4317". This, in turn, should be configured to send
-// traces and logs to Jaeger and metrics to Prometheus.
+// Collector.
+//
+// See the documentation within 'doc/src/developers/telemetry.md' for more
+// details.
 package telemetry
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -31,17 +34,17 @@ import (
 const (
 	tracerName     = "MeergoTracer"
 	meterName      = "MeergoMeter"
-	otlEndpoint    = "localhost:4317"
 	serviceNameKey = "Meergo"
 )
+
+// logTraces, when set to true, causes the trace information sent to Meergo to
+// be printed in the log. This is mainly useful for verifying the correct
+// sending of traces.
+const logTraces = false
 
 // Init initializes the telemetry.
 // The context ctx is kept, among other things, to perform the shutdown of the
 // telemetry when the context is cancelled.
-//
-// When the telemetry is initialized, traces and logs are sent to Jaeger while
-// metrics are sent to Prometheus; this requires the brokerage of the Open
-// Telemetry Collector, which should listens on "localhost:4317".
 //
 // Init should be called just once.
 func Init(ctx context.Context) error {
@@ -52,17 +55,13 @@ func Init(ctx context.Context) error {
 
 	// Init the TracerProvider.
 	{
-		exporter, err := otlptracegrpc.New(
-			ctx,
-			otlptracegrpc.WithEndpoint(otlEndpoint),
-			otlptracegrpc.WithInsecure(),
-		)
+		exporter, err := otlptracehttp.New(ctx, otlptracehttp.WithInsecure())
 		if err != nil {
 			return err
 		}
 		resource := resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(serviceNameKey),
+			semconv.ServiceNameKey.String("Meergo"),
 		)
 		tracerProvider := trace.NewTracerProvider(
 			trace.WithBatcher(exporter),
@@ -79,9 +78,7 @@ func Init(ctx context.Context) error {
 
 	// Init the MeterProvider.
 	{
-		exporter, err := otlpmetricgrpc.New(ctx,
-			otlpmetricgrpc.WithEndpoint(otlEndpoint),
-			otlpmetricgrpc.WithInsecure())
+		exporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure())
 		if err != nil {
 			return err
 		}
@@ -93,11 +90,11 @@ func Init(ctx context.Context) error {
 			exporter,
 			metric.WithInterval(1*time.Second),
 		)
-		meterProvider := metric.NewMeterProvider(
+		meter := metric.NewMeterProvider(
 			metric.WithResource(resource),
 			metric.WithReader(reader),
 		)
-		otel.SetMeterProvider(meterProvider)
+		otel.SetMeterProvider(meter)
 	}
 
 	telemetryEnabled = true
@@ -108,7 +105,7 @@ func Init(ctx context.Context) error {
 // IncrementCounter increments the int64 counter named name with the given
 // increment quantity.
 //
-// If the telemetry has not been initialized with the Init function, then this
+// If the telemetry has not been initialized with the [Init] function, then this
 // function is a no-op.
 func IncrementCounter(ctx context.Context, name string, incr int64) {
 	if !telemetryEnabled {
@@ -126,7 +123,7 @@ func IncrementCounter(ctx context.Context, name string, incr int64) {
 	}()
 }
 
-// TraceSpan traces a span. Returns a context and a Span, on which the method
+// TraceSpan traces a span. Returns a context and a [Span], on which the method
 // End should be called to indicate the Span ending.
 //
 // TraceSpan accepts a variadic args argument which is a key-value pair sequence
@@ -152,15 +149,20 @@ func TraceSpan(ctx context.Context, name string, args ...any) (context.Context, 
 		return ctx, &Span{span: span}
 	}
 	ctx, span := otel.Tracer(tracerName).Start(ctx, name, keyValuePairsToOptions(args))
+	if logTraces {
+		slog.Info("TraceSpan", name, "name", "id", span.SpanContext().TraceID())
+	}
 	return ctx, &Span{span: span}
 }
 
-// Span represents a tracer span. A new span can be created with TraceSpan.
+// Span represents a tracer span. A new span can be created with [TraceSpan].
 type Span struct {
 	span _trace.Span
 }
 
-// Log logs a message on this span.
+// AddEvent adds an event to this span.
+//
+// https://opentelemetry.io/docs/concepts/signals/traces/#span-events
 //
 // Accepts a variadic args argument which is a key-value pair sequence of
 // attributes that will be added to the log message. The even arguments -
@@ -170,11 +172,11 @@ type Span struct {
 //
 // Example usage:
 //
-//	span.Log("sum completed", "x", x, "y", y)
+//	span.AddEvent("sum completed", "x", x, "y", y)
 //
 // If the telemetry has not been initialized with the Init function, then this
 // method is a no-op.
-func (s *Span) Log(msg string, args ...any) {
+func (s *Span) AddEvent(msg string, args ...any) {
 	if !telemetryEnabled {
 		return
 	}

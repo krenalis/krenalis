@@ -18,6 +18,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jackc/pgx/v5"
@@ -28,6 +29,9 @@ var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
 func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+
+	_, span := telemetry.TraceSpan(ctx, "PostgreSQL.ResolveIdentities")
+	defer span.End()
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -40,6 +44,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	if err != nil {
 		return err
 	}
+	span.AddEvent("data warehouse operation started", "operationID", opID)
 	defer func() {
 		// In case there are no errors, the 'endOperation' has already been
 		// called in the normal execution flow, further down in the
@@ -64,6 +69,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 
 	// Create a copy of the current users table and set the related index in the
 	// operations table.
+	_, span = telemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
 		if err != nil {
@@ -75,6 +81,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 		}
 		return nil
 	})
+	span.End()
 	if err != nil {
 		return err
 	}
@@ -192,14 +199,18 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_users_name }}", quoteIdent(newUsersName))
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
+	_, span = telemetry.TraceSpan(ctx, "Creation of support objects and stored procedures")
 	_, err = pool.Exec(ctx, query)
+	span.End()
 	if err != nil {
 		return meergo.Error(err)
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
+	_, span = telemetry.TraceSpan(ctx, "CALL resolve_identities()")
 	_, err = pool.Exec(ctx, "CALL resolve_identities()")
+	span.End()
 	if err != nil {
 		return meergo.Error(err)
 	}

@@ -32,6 +32,7 @@ import (
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jxskiss/base62"
@@ -1309,6 +1310,9 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 func (this *Workspace) ResolveIdentities(ctx context.Context) error {
 	this.core.mustBeOpen()
+	ctx, span := telemetry.TraceSpan(ctx, "Workspace.ResolveIdentities", "workspace_id", this.workspace.ID)
+	defer span.End()
+	telemetry.IncrementCounter(ctx, "ResolveIdentitiesExecutions", 1)
 	err := this.store.ResolveIdentities(ctx)
 	if err != nil {
 		if err, ok := err.(*datastore.DataWarehouseError); ok {

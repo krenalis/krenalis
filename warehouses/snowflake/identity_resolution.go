@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 	"github.com/snowflakedb/gosnowflake"
 )
@@ -27,6 +28,10 @@ var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
 func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
+
+	_, span := telemetry.TraceSpan(ctx, "Snowflake.ResolveIdentities")
+	defer span.End()
+
 	db, err := warehouse.connection()
 	if err != nil {
 		return err
@@ -42,6 +47,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	if err != nil {
 		return err
 	}
+	span.AddEvent("data warehouse operation started", "operationID", opID)
 	defer func() {
 		// In case there are no errors, the 'endOperation' has already been
 		// called in the normal execution flow, further down in the
@@ -66,6 +72,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 
 	// Create a copy of the current users table and set the related index in the
 	// operations table.
+	_, span = telemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		likeTable := fmt.Sprintf(`_users_%d`, usersVersion)
 		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteTable(newUsersName), quoteTable(likeTable)))
@@ -78,6 +85,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		}
 		return nil
 	})
+	span.End()
 	if err != nil {
 		return err
 	}
@@ -184,19 +192,22 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	query = strings.Replace(query, "{{ merge_identities_in_users }}", mergeUsers.String(), 1)
 	query = strings.ReplaceAll(query, "{{ new_users_name }}", quoteTable(newUsersName))
 	query = strings.ReplaceAll(query, "{{ new_users_version }}", strconv.Itoa(newUsersVersion))
-
+	_, span = telemetry.TraceSpan(ctx, "Creation of support objects and stored procedures")
 	ctxMulti, err := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	if err != nil {
 		return err
 	}
 	_, err = conn.ExecContext(ctxMulti, query)
+	span.End()
 	if err != nil {
 		return meergo.Error(err)
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
+	_, span = telemetry.TraceSpan(ctx, "CALL resolve_identities()")
 	_, err = conn.ExecContext(ctx, "CALL resolve_identities()")
+	span.End()
 	if err != nil {
 		return meergo.Error(err)
 	}

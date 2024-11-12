@@ -21,6 +21,7 @@ import (
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 )
 
@@ -578,6 +579,9 @@ func (store *Store) Repair(ctx context.Context) error {
 // error.
 func (store *Store) ResolveIdentities(ctx context.Context) error {
 	store.mustBeOpen()
+
+	ctx, span := telemetry.TraceSpan(ctx, "Store.ResolveIdentities")
+	defer span.End()
 
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
