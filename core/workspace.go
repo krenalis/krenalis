@@ -14,7 +14,6 @@ import (
 	jsonstd "encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -1752,40 +1751,6 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 	count = max(len(identities), count)
 
 	return identities, count, nil
-}
-
-// validateEventListenerSources validates the sources from which events are
-// listened to.
-func (this *Workspace) validateEventListenerSources(sources []int) error {
-	if sources == nil {
-		return nil
-	}
-	if len(sources) == 0 {
-		return fmt.Errorf("sources, if not nil, cannot be empty")
-	}
-	for i, s := range sources {
-		if s < 1 || s > math.MaxInt32 {
-			return fmt.Errorf("source %d is not valid", s)
-		}
-		c, ok := this.workspace.Connection(s)
-		if !ok {
-			return errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", sources)
-		}
-		switch c.Connector().Type {
-		case state.Mobile, state.Server, state.Website:
-		default:
-			return errors.BadRequest("connection %d is not a mobile, server or website", sources)
-		}
-		if c.Role != state.Source {
-			return errors.BadRequest("connection %d is not a source", sources)
-		}
-		for _, s2 := range sources[i+1:] {
-			if s == s2 {
-				return fmt.Errorf("sources contains duplicated values")
-			}
-		}
-	}
-	return nil
 }
 
 // ConnectionToAdd represents a connection to add to a workspace.
