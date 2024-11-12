@@ -765,7 +765,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
 	isOutputDatabaseUserDestination := io == "output" && typ == state.Database && target == state.Users && role == state.Destination
 	for path, p := range types.Walk(schema) {
-		isTableKey := isOutputDatabaseUserDestination && p.Name == tableKey
+		isTableKey := isOutputDatabaseUserDestination && path == tableKey
 		if p.Placeholder != "" {
 			return errors.New("properties of an action schema cannot have placeholders")
 		}
