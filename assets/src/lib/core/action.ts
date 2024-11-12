@@ -919,11 +919,12 @@ const transformInActionToSet = async (
 
 	const isDatabaseExportOnUsers =
 		connection.type === 'Database' && connection.role === 'Destination' && actionType.Target === 'Users';
-	if (action.TableKeyProperty != null && action.TableKeyProperty !== '') {
-		// the table key property must be empty for actions that are not
-		// database type actions that export users.
-		if (!isDatabaseExportOnUsers) {
-			throw new Error('Table key property must be empty for this kind of action');
+
+	if (isDatabaseExportOnUsers) {
+		// the table key property must be defined for database type actions that
+		// export users.
+		if (action.TableKeyProperty == null || action.TableKeyProperty === '') {
+			throw new Error('Table key property cannot be empty');
 		}
 
 		// the table key property must be a valid property.
@@ -945,19 +946,20 @@ const transformInActionToSet = async (
 			}
 		}
 
-		// ensure the table key property is required for creation in the out
-		// schema.
-		const i = outSchema.properties.findIndex((p) => p.name === action.TableKeyProperty);
-		if (i === -1) {
-			throw new Error('Table key property must be in the out schema of the action');
+		// ensure that the properties are required for creation in the output schema,
+		// and that the table key property is nullable.
+		for (let i = 0; i < outSchema.properties.length; i++) {
+			const p = outSchema.properties[i];
+			p.updateRequired = true;
+			if (p.name === action.TableKeyProperty) {
+				p.nullable = false;
+			}
 		}
-		outSchema.properties[i].nullable = false;
-		outSchema.properties[i].updateRequired = true;
 	} else {
-		// the table key property must be defined for database type actions that
-		// export users.
-		if (isDatabaseExportOnUsers) {
-			throw new Error('Table key property cannot be empty');
+		// the table key property must be empty for actions that are not
+		// database type actions that export users.
+		if (action.TableKeyProperty != null && action.TableKeyProperty !== '') {
+			throw new Error('Table key property must be empty for this kind of action');
 		}
 	}
 

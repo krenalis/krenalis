@@ -228,17 +228,14 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	// The table key property is always required for updates and cannot be nullable.
-	// However, the current implementation of the connector's Columns method does not
-	// indicate if a column is required for updates (see issue #997). As a temporary
-	// workaround, this sets it as required and also marks the property as not nullable
-	// until we can ensure that all connector implementations correctly handle the
-	// Nullable attribute for each property (see issue #374).
 	for i, c := range columns {
+		columns[i].UpdateRequired = true
+		// The table key property cannot be nullable. This sets it as not nullable
+		// as a temporary workaround, until we can ensure that all connector
+		// implementations correctly handle the Nullable attribute for each property
+		// (see issue #374).
 		if c.Name == action.TableKeyProperty {
-			columns[i].UpdateRequired = true
 			columns[i].Nullable = false
-			break
 		}
 	}
 	tableSchema, err := types.ObjectOf(columns)

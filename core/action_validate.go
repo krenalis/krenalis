@@ -777,17 +777,17 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 				return errors.New("only the output properties of destination app actions can be required for creation")
 			}
 		}
-		if p.UpdateRequired {
-			if !isTableKey && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
-				return errors.New("only the table key property and the output properties of destination app actions with Users target can be required for the update")
-			}
-		}
-		if isTableKey {
+		if isOutputDatabaseUserDestination {
 			if !p.UpdateRequired {
-				return errors.New("table key property must be required for update")
+				return errors.New("properties of destination database must be required for the update")
 			}
-			if p.Nullable {
+			if isTableKey && p.Nullable {
 				return errors.New("table key property cannot be nullable")
+			}
+		} else {
+			if p.UpdateRequired && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
+				return fmt.Errorf("%s properties of %s %s with %s target target cannot be required for the update",
+					io, strings.ToLower(typ.String()), strings.ToLower(role.String()), target)
 			}
 		}
 		if isUserSchema {
