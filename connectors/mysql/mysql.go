@@ -177,12 +177,8 @@ func (my *MySQL) Upsert(ctx context.Context, table meergo.Table, rows []map[stri
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			if v, ok := row[column.Name]; ok {
-				if err = quoteValue(&b, v, column.Type); err != nil {
-					return err
-				}
-			} else {
-				b.WriteString(`DEFAULT`)
+			if err = quoteValue(&b, row[column.Name], column.Type); err != nil {
+				return err
 			}
 		}
 		b.WriteByte(')')

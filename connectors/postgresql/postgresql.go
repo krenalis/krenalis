@@ -216,11 +216,7 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map
 			if j > 0 {
 				b.WriteByte(',')
 			}
-			if v, ok := row[column.Name]; ok {
-				quoteValue(&b, v, column.Type)
-			} else {
-				b.WriteString(`DEFAULT`)
-			}
+			quoteValue(&b, row[column.Name], column.Type)
 		}
 		b.WriteByte(')')
 	}

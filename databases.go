@@ -82,8 +82,7 @@ type Database interface {
 
 	// Upsert inserts or updates the rows provided in the specified table. If a row
 	// with the same key value already exists in the database, it updates that row;
-	// otherwise, it inserts a new one. When inserting or updating a row, if a
-	// column is not provided, the column's default value is used.
+	// otherwise, it inserts a new one.
 	Upsert(ctx context.Context, table Table, rows []map[string]any) error
 }
 
