@@ -65,24 +65,25 @@ func (database *Database) Close() error {
 	return connectorError(err)
 }
 
-// Columns returns the columns of the provided table. If a column type is not
+// Schema returns the schema of the provided table. If a column type is not
 // supported, it returns a *meergo.UnsupportedColumnTypeError error. If the
 // connector returns an error, it returns an *UnavailableError error.
-func (database *Database) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (database *Database) Schema(ctx context.Context, table string) (types.Type, error) {
 	if database.err != nil {
-		return nil, database.err
+		return types.Type{}, database.err
 	}
 	columns, err := database.inner.Columns(ctx, table)
 	if err != nil {
-		return nil, connectorError(err)
+		return types.Type{}, connectorError(err)
 	}
 	if len(columns) == 0 {
-		return nil, errors.New("no columns defined for table")
+		return types.Type{}, errors.New("no columns defined for table")
 	}
-	if _, err = types.ObjectOf(columns); err != nil {
-		return nil, rewriteColumnErrors(err)
+	schema, err := types.ObjectOf(columnsToProperties(columns))
+	if err != nil {
+		return types.Type{}, rewriteColumnErrors(err)
 	}
-	return columns, nil
+	return schema, nil
 }
 
 // LastChangeTimeCondition returns the query condition, for the given action,
@@ -138,7 +139,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	if _, err = types.ObjectOf(columns); err != nil {
+	if _, err = types.ObjectOf(columnsToProperties(columns)); err != nil {
 		_ = rows.Close()
 		return nil, rewriteColumnErrors(err)
 	}
@@ -199,8 +200,9 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	if action.LastChangeTimeProperty != "" && lastChangeTimeProperty.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no last change time property %q", action.LastChangeTimeProperty)}
 	}
+
 	// Check that schema is aligned with the query's schema.
-	querySchema, err := types.ObjectOf(columns)
+	querySchema, err := types.ObjectOf(columnsToProperties(columns))
 	if err != nil {
 		return nil, rewriteColumnErrors(err)
 	}
@@ -228,17 +230,18 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	for i, c := range columns {
-		columns[i].UpdateRequired = true
+	properties := columnsToProperties(columns)
+	for i, p := range properties {
+		properties[i].UpdateRequired = true
 		// The table key property cannot be nullable. This sets it as not nullable
 		// as a temporary workaround, until we can ensure that all connector
 		// implementations correctly handle the Nullable attribute for each property
 		// (see issue #374).
-		if c.Name == action.TableKeyProperty {
-			columns[i].Nullable = false
+		if p.Name == action.TableKeyProperty {
+			properties[i].Nullable = false
 		}
 	}
-	tableSchema, err := types.ObjectOf(columns)
+	tableSchema, err := types.ObjectOf(properties)
 	if err != nil {
 		return nil, err
 	}
@@ -268,6 +271,20 @@ func columnsOfType(t types.Type) []meergo.Column {
 		columns[i].Nullable = p.Nullable
 	}
 	return columns
+}
+
+// columnsToProperties returns the provided column as types.Property values.
+func columnsToProperties(columns []meergo.Column) []types.Property {
+	properties := make([]types.Property, len(columns))
+	for i, c := range columns {
+		properties[i].Name = c.Name
+		properties[i].Type = c.Type
+		properties[i].Nullable = c.Nullable
+		if !c.Writable {
+			properties[i].Role = types.SourceRole
+		}
+	}
+	return properties
 }
 
 // databaseWriter implements the Writer interface for databases.
@@ -318,13 +335,13 @@ func (w *databaseWriter) upsert(ctx context.Context) {
 // Rows is the result of a query.
 type Rows struct {
 	rows        meergo.Rows
-	columns     []types.Property
+	columns     []meergo.Column
 	timeLayouts *state.TimeLayouts
 	dst         []any
 	closed      bool
 }
 
-func newRows(rows meergo.Rows, columns []types.Property, layouts *state.TimeLayouts) *Rows {
+func newRows(rows meergo.Rows, columns []meergo.Column, layouts *state.TimeLayouts) *Rows {
 	rs := &Rows{
 		rows:        rows,
 		columns:     columns,
@@ -343,9 +360,9 @@ func (rs *Rows) Close() error {
 	return rs.rows.Close()
 }
 
-// Columns returns the columns.
+// Columns returns the columns as properties.
 func (rs *Rows) Columns() []types.Property {
-	return rs.columns
+	return columnsToProperties(rs.columns)
 }
 
 // Err returns the error encountered during iteration, if any. It can be called
@@ -379,7 +396,7 @@ func (rs *Rows) Scan() (map[string]any, error) {
 // databaseRecords implements the Records interface for databases.
 type databaseRecords struct {
 	rows        meergo.Rows
-	columns     []types.Property
+	columns     []meergo.Column
 	action      *state.Action
 	timeLayouts *state.TimeLayouts
 	last        bool
@@ -387,7 +404,7 @@ type databaseRecords struct {
 	closed      bool
 }
 
-func newDatabaseRecords(rows meergo.Rows, columns []types.Property, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
+func newDatabaseRecords(rows meergo.Rows, columns []meergo.Column, action *state.Action, layouts *state.TimeLayouts) *databaseRecords {
 	records := databaseRecords{
 		rows:        rows,
 		columns:     columns,
@@ -535,7 +552,7 @@ func (r *databaseRecords) Last() bool {
 // queryScanValue implements the sql.Scanner interface to read the database
 // values from a database connector.
 type queryScanValue struct {
-	column      types.Property
+	column      meergo.Column
 	row         map[string]any
 	timeLayouts *state.TimeLayouts
 }

@@ -1767,7 +1767,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	}
 	database := this.database()
 	defer database.Close()
-	columns, err := database.Columns(ctx, table)
+	schema, err := database.Schema(ctx, table)
 	if err != nil {
 		switch err.(type) {
 		case *meergo.UnsupportedColumnTypeError:
@@ -1775,13 +1775,8 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("an error occurred fetching the columns: %w", err)
 		}
-		return types.Type{}, err
 	}
-	schema, err := types.ObjectOf(columns)
-	if err != nil {
-		return types.Type{}, err
-	}
-	return schema, nil
+	return schema, err
 }
 
 // app returns the app of the connection.

@@ -38,7 +38,7 @@ type pgTypeInfo struct {
 
 type tableSchema struct {
 	name    string
-	columns []types.Property
+	columns []meergo.Column
 	fds     []pgconn.FieldDescription
 }
 
@@ -133,8 +133,7 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		quoteString(&tablesNamesStr, name)
 	}
 	query = "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
-		" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable," +
-		" col_description(c.table_name::regclass::oid, c.ordinal_position)\n" +
+		" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable\n" +
 		"FROM information_schema.columns c\n" +
 		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
 		"WHERE t.table_schema = '" + schema + "' AND t.table_type = 'BASE TABLE' AND" +
@@ -148,9 +147,9 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 	defer rows.Close()
 	for rows.Next() {
 		var row pgTypeInfo
-		var tableName, columnName, dataType, udtName, isNullable, isUpdatable, description *string
+		var tableName, columnName, dataType, udtName, isNullable, isUpdatable *string
 		if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType,
-			&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable, &description); err != nil {
+			&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable); err != nil {
 			return nil, err
 		}
 		if tableName == nil {
@@ -175,13 +174,8 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 		if isUpdatable == nil {
 			return nil, errors.New("database has returned NULL as updatability of column")
 		}
-		var role types.Role
-		if *isUpdatable != "YES" {
-			role = types.SourceRole
-		}
-		column := types.Property{
+		column := meergo.Column{
 			Name:     row.column,
-			Role:     role,
 			Nullable: *isNullable == "YES",
 		}
 		column.Type, err = columnType(row, enums, attTypMods)
@@ -191,8 +185,8 @@ func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []s
 			}
 			return nil, fmt.Errorf("database has returned an invalid type: %s", err)
 		}
-		if description != nil {
-			column.Note = *description
+		if *isUpdatable == "YES" {
+			column.Writable = true
 		}
 		if table == nil || row.table != table.name {
 			table = &tableSchema{name: row.table}

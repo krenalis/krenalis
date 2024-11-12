@@ -69,7 +69,7 @@ func (sf *Snowflake) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (sf *Snowflake) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (sf *Snowflake) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
 	rows, columns, err := sf.query(ctx, "SELECT * FROM "+quoteTable(table))
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (sf *Snowflake) LastChangeTimeCondition(column string, typ types.Type, valu
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return sf.query(ctx, query)
 }
 
@@ -178,7 +178,7 @@ func (sf *Snowflake) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	if err := sf.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -191,7 +191,7 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []ty
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	columns := make([]types.Property, len(columnTypes))
+	columns := make([]meergo.Column, len(columnTypes))
 	for i, column := range columnTypes {
 		typ, err := propertyType(column)
 		if err != nil {
@@ -199,7 +199,7 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []ty
 			return nil, nil, err
 		}
 		nullable, ok := column.Nullable()
-		columns[i] = types.Property{
+		columns[i] = meergo.Column{
 			Name:     column.Name(),
 			Type:     typ,
 			Nullable: nullable || !ok,

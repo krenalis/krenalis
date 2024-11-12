@@ -41,7 +41,7 @@ func (ps *PostgreSQL) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
 	// ...
 }
 
@@ -53,7 +53,7 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	// ...
 }
 
@@ -128,17 +128,27 @@ type DatabaseConfig struct {
 Close() error
 ```
 
-The `Close` method is invoked by Meergo when no calls to the connector instance's methods are in progress and no more will be made, so the connector can close any connections eventually opened with the DBMS.
+The `Close` method is invoked by Meergo when no calls to the connector instance's methods are in progress and no more will be made, so the connector can close any connections eventually opened with the database.
 
 ### Columns method
 
 ```go
-Columns(ctx context.Context, table string) ([]types.Property, error)
+Columns(ctx context.Context, table string) ([]meergo.Column, error)
 ```
 
 Meergo invokes the `Columns` method when creating or updating a database destination action, retrieving the columns of the table to which data should be exported.
 
-The `Columns` method returns the table's columns as a slice of `Property` values, detailing the names and types of each column. 
+The `Columns` method returns the table's columns as a slice of `Column` values, detailing the names and types of each column:
+
+```go
+// Column represents a database table column.
+type Column struct {
+	Name     string     // column name
+	Type     types.Type // data type of the column
+	Nullable bool       // true if the column can contain NULL values
+	Writable bool       // true if the column is writable
+}
+```
 
 If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.  
 
@@ -199,12 +209,12 @@ LIMIT 1000
 ### Query method
 
 ```go
-Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error)
+Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error)
 ```
 
 Meergo invokes the `Query` method when previewing the rows returned by a query while creating or updating a database source action, and to get the data during an import. The query is provided after replacing any placeholders like `${limit}`.
 
-The `Query` method runs the query and gives back two things: the rows themselves, which follow the `Rows` interface, and the columns as a slice of `Property` values. Here's what the `Rows` interface look like:
+The `Query` method runs the query and gives back two things: the rows themselves, which follow the `Rows` interface, and the columns as a slice of `Column` values. Here's what the `Rows` interface look like:
 
 ```go
 type Rows interface {
@@ -222,7 +232,7 @@ If a column has an unsupported type, return an `*UnsupportedColumnTypeError` err
 ### Upsert Method
 
 ```go
-Upsert(ctx context.Context, table meergo.Table, rows []map[string]any{}) error
+Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error
 ```
 
 The `Upsert` method is used by Meergo during data export to the database. It updates existing rows or inserts new rows into a specified table. The `table` parameter contains information about the table, including its name, columns, and keys:

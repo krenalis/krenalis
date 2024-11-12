@@ -70,7 +70,7 @@ func (my *MySQL) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (my *MySQL) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (my *MySQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
@@ -107,7 +107,7 @@ func (my *MySQL) LastChangeTimeCondition(column string, typ types.Type, value an
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return my.query(ctx, query)
 }
 
@@ -225,7 +225,7 @@ func (my *MySQL) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	if err := my.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -238,7 +238,7 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []types.
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	columns := make([]types.Property, len(columnTypes))
+	columns := make([]meergo.Column, len(columnTypes))
 	for i, column := range columnTypes {
 		typ, err := propertyType(column)
 		if err != nil {
@@ -248,7 +248,7 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []types.
 		// Unlike what happens with PostgreSQL, the MySQL driver is able to
 		// determine whether a column returned by the query is nullable or not.
 		nullable, ok := column.Nullable()
-		columns[i] = types.Property{
+		columns[i] = meergo.Column{
 			Name:     column.Name(),
 			Type:     typ,
 			Nullable: nullable || !ok,

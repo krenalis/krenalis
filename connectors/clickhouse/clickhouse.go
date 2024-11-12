@@ -70,7 +70,7 @@ func (ch *ClickHouse) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
 	var err error
 	table, err = quoteTable(table)
 	if err != nil {
@@ -107,7 +107,7 @@ func (ch *ClickHouse) LastChangeTimeCondition(column string, typ types.Type, val
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return ch.query(ctx, query)
 }
 
@@ -205,7 +205,7 @@ func (ch *ClickHouse) openDB() error {
 }
 
 // query executes the given query and returns the resulting rows and columns.
-func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	if err := ch.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -214,14 +214,14 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []t
 		return nil, nil, err
 	}
 	columnTypes := rows.ColumnTypes()
-	columns := make([]types.Property, len(columnTypes))
+	columns := make([]meergo.Column, len(columnTypes))
 	for i, c := range columnTypes {
 		typ, nullable, err := propertyType(c)
 		if err != nil {
 			_ = rows.Close()
 			return nil, nil, err
 		}
-		columns[i] = types.Property{
+		columns[i] = meergo.Column{
 			Name:     c.Name(),
 			Type:     typ,
 			Nullable: nullable,

@@ -74,7 +74,7 @@ func (ps *PostgreSQL) Close() error {
 }
 
 // Columns returns the columns of the given table.
-func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]types.Property, error) {
+func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
 	if err := ps.openDB(); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]types.Proper
 	if err != nil {
 		return nil, err
 	}
-	var columns []types.Property
+	var columns []meergo.Column
 	err = conn.Raw(func(driverConn any) error {
 		conn := driverConn.(*stdlib.Conn)
 		tx, err := conn.Conn().Begin(ctx)
@@ -123,7 +123,7 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 }
 
 // Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []types.Property, error) {
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	if err := ps.openDB(); err != nil {
 		return nil, nil, err
 	}
@@ -136,14 +136,14 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []t
 		_ = rows.Close()
 		return nil, nil, err
 	}
-	columns := make([]types.Property, len(columnTypes))
+	columns := make([]meergo.Column, len(columnTypes))
 	for i, column := range columnTypes {
 		typ, err := propertyType(column)
 		if err != nil {
 			_ = rows.Close()
 			return nil, nil, err
 		}
-		columns[i] = types.Property{
+		columns[i] = meergo.Column{
 			Name: column.Name(),
 			Type: typ,
 			// Nullable is always considered true, as the PostgreSQL driver does

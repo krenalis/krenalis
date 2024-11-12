@@ -59,7 +59,7 @@ type Database interface {
 	// Columns returns the columns of the given table.
 	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
 	// error.
-	Columns(ctx context.Context, table string) ([]types.Property, error)
+	Columns(ctx context.Context, table string) ([]Column, error)
 
 	// LastChangeTimeCondition returns the query condition used for the
 	// last_change_time placeholder in the form "column >= value" or, if column is
@@ -78,7 +78,7 @@ type Database interface {
 	// Query executes the given query and returns the resulting rows and columns.
 	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
 	// error.
-	Query(ctx context.Context, query string) (Rows, []types.Property, error)
+	Query(ctx context.Context, query string) (Rows, []Column, error)
 
 	// Upsert inserts or updates the rows provided in the specified table. If a row
 	// with the same key value already exists in the database, it updates that row;
@@ -86,18 +86,19 @@ type Database interface {
 	Upsert(ctx context.Context, table Table, rows []map[string]any) error
 }
 
-// Table represents a table.
+// Table represents a database table.
 type Table struct {
 	Name    string
 	Columns []Column
 	Keys    []string
 }
 
-// Column represents a table column.
+// Column represents a database table column.
 type Column struct {
-	Name     string
-	Type     types.Type
-	Nullable bool
+	Name     string     // column name
+	Type     types.Type // data type of the column
+	Nullable bool       // true if the column can contain NULL values
+	Writable bool       // true if the column is writable
 }
 
 // Rows is the result of a database query. Its cursor starts before the first
