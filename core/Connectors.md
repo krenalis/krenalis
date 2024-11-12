@@ -3,7 +3,6 @@
 
 | Method         | Settings       | SetSettings    | OAuthAccount           | HTTPClient             | Region                 |
 |----------------|----------------|----------------|------------------------|------------------------|------------------------|
-| Create         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 | EventRequest   | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 | EventTypes     | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 | OAuthAccount   | -              | -              | -                      | ✓                      | ✓                      |
@@ -11,7 +10,7 @@
 | Records        | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 | Schema         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 | ServeUI        | -/✓            | -/✓            | ✓                      | ✓                      | -/✓                    |
-| Update         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| Upsert         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
 
 
 ## Database connectors
