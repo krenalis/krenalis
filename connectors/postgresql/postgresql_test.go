@@ -142,6 +142,7 @@ func Test_Upsert_Query(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query execution is failed: %s", err)
 	}
+	defer rows.Close()
 	if len(table.Columns) != len(columns) {
 		t.Fatalf("expected %d columns, got %d", len(table.Columns), len(columns))
 	}
