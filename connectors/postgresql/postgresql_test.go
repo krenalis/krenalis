@@ -55,7 +55,7 @@ func Test_Upsert_Query(t *testing.T) {
 		{"timestamp with time zone", time.Date(2023, 1, 1, 1, 2, 3, 0, time.Local), types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{"date", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{"time", "02:03:00", types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
-		{"time with time zone", "02:03:00+02", types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
+		{"time with time zone", time.Date(1970, 1, 1, 2, 3, 0, 0, time.Local).Format("15:04:05Z07"), types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
 		{"boolean", true, types.Boolean(), true},
 		{"inet", "127.0.0.1", types.Inet(), "127.0.0.1"},
 		{"uuid", "4d92d698-687d-4447-b34f-6b29d74a9730", types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
