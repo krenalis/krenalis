@@ -24,6 +24,86 @@ import (
 
 const settingsEnvKey = "MEERGO_TEST_PATH_SNOWFLAKE"
 
+func Test_Columns(t *testing.T) {
+
+	// Open connector.
+	connector := newSnowflakeFromENV(t)
+	defer func() {
+		if err := connector.Close(); err != nil {
+			t.Fatalf("unexpected error closing the database: %s", err)
+		}
+	}()
+
+	// Create the table
+	tableName := "test_columns"
+	create := `CREATE TABLE "` + tableName + `" (
+		"a" BOOLEAN NOT NULL,
+		"b" FLOAT NULL,
+		"c" NUMBER(10,3) NOT NULL,
+		"d" TIMESTAMP_NTZ NULL,
+		"e" DATE NOT NULL,
+		"f" TIME NULL,
+		"g" VARIANT,
+		"h" VARCHAR NOT NULL,
+		"i" VARCHAR(50),
+		"j" ARRAY NOT NULL
+	)`
+	_, err := connector.db.ExecContext(context.Background(), create)
+	if err != nil {
+		t.Fatalf("cannot create table: %s", err)
+	}
+	defer func() {
+		_, err = connector.db.ExecContext(context.Background(), `DROP TABLE "`+tableName+`"`)
+		if err != nil {
+			t.Logf("cannot drop %s table: %s", tableName, err)
+		}
+	}()
+
+	expected := []meergo.Column{
+		{Name: "a", Type: types.Boolean()},
+		{Name: "b", Type: types.Float(64), Nullable: true},
+		{Name: "c", Type: types.Decimal(10, 3)},
+		{Name: "d", Type: types.DateTime(), Nullable: true},
+		{Name: "e", Type: types.Date()},
+		{Name: "f", Type: types.Time(), Nullable: true},
+		{Name: "g", Type: types.JSON(), Nullable: true},
+		{Name: "h", Type: types.Text().WithByteLen(16_777_216).WithCharLen(16_777_216)},
+		{Name: "i", Type: types.Text().WithCharLen(50), Nullable: true},
+		{Name: "j", Type: types.Array(types.JSON())},
+	}
+
+	// Test the Columns method.
+	got, err := connector.Columns(context.Background(), tableName)
+	if err != nil {
+		t.Fatalf("columns execution is failed: %s", err)
+	}
+	if len(expected) != len(got) {
+		t.Fatalf("expected %d columns, got %d", len(expected), len(got))
+	}
+	for i, c := range expected {
+		if !reflect.DeepEqual(c, got[i]) {
+			t.Fatalf("unexpected column:\n\nexpected: %#v\ngot:      %#v\n", c, got[i])
+		}
+	}
+
+	// Test the 'columns' return parameter of the Query method.
+	query := `SELECT "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" FROM "` + tableName + `"`
+	rows, got, err := connector.Query(context.Background(), query)
+	if err != nil {
+		t.Fatalf("query execution is failed: %s", err)
+	}
+	_ = rows.Close()
+	if len(expected) != len(got) {
+		t.Fatalf("expected %d columns, got %d", len(expected), len(got))
+	}
+	for i, c := range expected {
+		if !reflect.DeepEqual(c, got[i]) {
+			t.Fatalf("unexpected column:\n\nexpected: %#v\ngot:      %#v\n", c, got[i])
+		}
+	}
+
+}
+
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
@@ -62,30 +142,13 @@ func Test_Merge_Query(t *testing.T) {
 		}
 	}
 
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
-	}
-
 	// Open connector.
-	settings, err := os.ReadFile(settingsFile)
-	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
-	}
-	var config = meergo.DatabaseConfig{Settings: settings}
-	connector, err := New(&config)
-	if err != nil {
-		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
-	}
+	connector := newSnowflakeFromENV(t)
 	defer func() {
-		err := connector.Close()
-		if err != nil {
+		if err := connector.Close(); err != nil {
 			t.Fatalf("unexpected error closing the database: %s", err)
 		}
 	}()
-	if err = connector.openDB(); err != nil {
-		t.Fatalf("cannot open the database: %s", err)
-	}
 
 	// Create the table and add a row.
 	create := bytes.NewBufferString(`CREATE TABLE "` + table.Name + "\" (\n\t\"")
@@ -98,7 +161,7 @@ func Test_Merge_Query(t *testing.T) {
 		create.WriteString(cols[i].DriverType)
 	}
 	create.WriteString("\n)")
-	_, err = connector.db.ExecContext(context.Background(), create.String())
+	_, err := connector.db.ExecContext(context.Background(), create.String())
 	if err != nil {
 		t.Fatalf("cannot create table: %s", err)
 	}
@@ -160,6 +223,27 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatalf("cannot scan row: %s", err)
 	}
 
+}
+
+func newSnowflakeFromENV(t *testing.T) *Snowflake {
+	settingsFile, ok := os.LookupEnv(settingsEnvKey)
+	if !ok {
+		t.Skipf("the %s environment variable is not present", settingsEnvKey)
+	}
+	// Open connector.
+	settings, err := os.ReadFile(settingsFile)
+	if err != nil {
+		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+	}
+	config := meergo.DatabaseConfig{Settings: settings}
+	connector, err := New(&config)
+	if err != nil {
+		t.Fatalf("cannot open the database from settings in the %s environment variable: %s", settingsEnvKey, err)
+	}
+	if err = connector.openDB(); err != nil {
+		t.Fatalf("cannot open the database: %s", err)
+	}
+	return connector
 }
 
 // scanner implements the sql.Scanner interface to read the database values.
