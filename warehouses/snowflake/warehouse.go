@@ -14,6 +14,7 @@ import (
 	jsonstd "encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -53,6 +54,9 @@ func init() {
 	}, New)
 }
 
+// accountFormat is the format of the account identifier in the settings.
+var accountFormat = regexp.MustCompile(`^[a-zA-z0-9]+[.-][a-zA-z0-9]+$`)
+
 // New returns a new Snowflake data warehouse driver instance.
 // It returns a SettingsError error if the settings are not valid.
 func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
@@ -62,8 +66,11 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Account.
-	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("account length must be in range [1,255]")
+	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
+		return nil, meergo.SettingsErrorf("account identifier length must be in range [3,255]")
+	}
+	if !accountFormat.MatchString(s.Account) {
+		return nil, meergo.SettingsErrorf("account identifier must be in the <organization>-<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
@@ -377,8 +384,12 @@ func (warehouse *Snowflake) connection() (*sql.DB, error) {
 
 // connector returns a driver.Connector from the settings.
 func (s *sfSettings) connector() gosnowflake.Connector {
+	account := s.Account
+	if i := strings.IndexByte(account, '.'); i > 0 {
+		account = account[:i] + "-" + account[i+1:]
+	}
 	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
-		Account:   s.Account,
+		Account:   account,
 		User:      s.Username,
 		Password:  s.Password,
 		Database:  s.Database,

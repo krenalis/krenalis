@@ -25,7 +25,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 			<SlInput
 				name='account'
 				label='Account'
-				placeholder='ABCDEFG-TUVWXYZ'
+				placeholder='ABCDEFG.TUVWXYZ'
 				minlength={1}
 				maxlength={255}
 				onSlChange={onSettingChange}

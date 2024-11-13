@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -136,7 +137,7 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values json.Valu
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Input{Name: "Account", Label: "Account", Placeholder: "ABCDEFG-TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
+			&meergo.Input{Name: "Account", Label: "Account", Placeholder: "ABCDEFG.TUVWXYZ", Type: "text", MinLength: 1, MaxLength: 255},
 			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "", Type: "password", MinLength: 1, MaxLength: 255},
 			&meergo.Input{Name: "Database", Label: "Database", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
@@ -165,8 +166,12 @@ type Settings struct {
 
 // connector returns a driver.Connector from the settings.
 func (s *Settings) connector() gosnowflake.Connector {
+	account := s.Account
+	if i := strings.IndexByte(account, '.'); i > 0 {
+		account = account[:i] + "-" + account[i+1:]
+	}
 	return gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, gosnowflake.Config{
-		Account:   s.Account,
+		Account:   account,
 		User:      s.Username,
 		Password:  s.Password,
 		Database:  s.Database,
@@ -219,6 +224,9 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []me
 	return rows, columns, nil
 }
 
+// accountFormat is the format of the account identifier in the settings.
+var accountFormat = regexp.MustCompile(`^[a-zA-z0-9]+[.-][a-zA-z0-9]+$`)
+
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
 func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test bool) error {
@@ -228,8 +236,11 @@ func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test boo
 		return err
 	}
 	// Validate Account.
-	if n := utf8.RuneCountInString(s.Account); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("account length must be in range [1,255]")
+	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
+		return meergo.SettingsErrorf("account identifier length must be in range [3,255]")
+	}
+	if !accountFormat.MatchString(s.Account) {
+		return meergo.SettingsErrorf("account identifier must be in the <organization>-<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
