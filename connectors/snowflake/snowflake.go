@@ -311,8 +311,12 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		if length < 0 {
 			return types.Type{}, errors.New("invalid TEXT length")
 		}
+		t := types.Text().WithCharLen(int(length))
 		const maxBytesLen = 16_777_216
-		return types.Text().WithByteLen(maxBytesLen).WithCharLen(int(length)), nil
+		if length > maxBytesLen/4 {
+			t = t.WithByteLen(min(int(length*4), maxBytesLen))
+		}
+		return t, nil
 	case "TIME":
 		return types.Time(), nil
 	case "TIMESTAMP_NTZ":
