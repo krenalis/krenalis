@@ -755,7 +755,7 @@ func (t Type) WithByteLen(l int) Type {
 	if t.kind != TextKind {
 		panic("cannot set byte length of a non-Text type")
 	}
-	if t.s > 0 {
+	if t.p > 0 {
 		panic("repeated length in bytes")
 	}
 	if l < 1 || MaxTextLen < l {
