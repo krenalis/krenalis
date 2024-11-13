@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -420,6 +421,10 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.InetKind:
 		switch src := src.(type) {
 		case string:
+			// Remove the number of bits in the netmask, if any.
+			if i := strings.IndexByte(src, '/'); i > 0 {
+				src = src[:i]
+			}
 			if v, err := netip.ParseAddr(src); err == nil {
 				value = v.String()
 				valid = true

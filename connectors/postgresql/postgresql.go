@@ -26,8 +26,10 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Connector icon.
@@ -62,45 +64,27 @@ func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
 type PostgreSQL struct {
 	conf     *meergo.DatabaseConfig
 	settings *Settings
-	db       *sql.DB
+	pool     *pgxpool.Pool
 }
 
 // Close closes the database.
 func (ps *PostgreSQL) Close() error {
-	if ps.db == nil {
+	if ps.pool == nil {
 		return nil
 	}
-	return ps.db.Close()
+	ps.pool.Close()
+	return nil
 }
 
 // Columns returns the columns of the given table.
 func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
-	if err := ps.openDB(); err != nil {
-		return nil, err
-	}
-	conn, err := ps.db.Conn(ctx)
+	tables, err := ps.tablesSchemas(ctx, "public", []string{table})
 	if err != nil {
 		return nil, err
 	}
 	var columns []meergo.Column
-	err = conn.Raw(func(driverConn any) error {
-		conn := driverConn.(*stdlib.Conn)
-		tx, err := conn.Conn().Begin(ctx)
-		if err != nil {
-			return err
-		}
-		defer tx.Rollback(ctx)
-		tables, err := tablesSchemas(ctx, tx, "public", []string{table})
-		if err != nil {
-			return err
-		}
-		if len(tables) == 1 {
-			columns = tables[0].columns
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	if len(tables) == 1 {
+		columns = tables[0].columns
 	}
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("table '%s' does not exist", table)
@@ -124,34 +108,39 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 
 // Query executes the given query and returns the resulting rows and columns.
 func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
-	if err := ps.openDB(); err != nil {
+	if err := ps.openDB(ctx); err != nil {
 		return nil, nil, err
 	}
-	rows, err := ps.db.QueryContext(ctx, query)
+	rows, err := ps.pool.Query(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}
-	columnTypes, err := rows.ColumnTypes()
-	if err != nil {
-		_ = rows.Close()
-		return nil, nil, err
-	}
-	columns := make([]meergo.Column, len(columnTypes))
-	for i, column := range columnTypes {
-		typ, err := propertyType(column)
+	fieldDescriptions := rows.FieldDescriptions()
+	columns := make([]meergo.Column, len(fieldDescriptions))
+	for i, field := range fieldDescriptions {
+		typ, err := ps.propertyType(ctx, field)
 		if err != nil {
-			_ = rows.Close()
+			rows.Close()
 			return nil, nil, err
 		}
 		columns[i] = meergo.Column{
-			Name: column.Name(),
+			Name: field.Name,
 			Type: typ,
 			// Nullable is always considered true, as the PostgreSQL driver does
 			// not have information about nullability of returned columns.
 			Nullable: true,
 		}
 	}
-	return rows, columns, nil
+	return withCloseError{rows}, columns, nil
+}
+
+type withCloseError struct {
+	pgx.Rows
+}
+
+func (rows withCloseError) Close() error {
+	rows.Rows.Close()
+	return nil
 }
 
 // ServeUI serves the connector's user interface.
@@ -245,10 +234,10 @@ func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map
 	}
 	query := b.String()
 
-	if err := ps.openDB(); err != nil {
+	if err := ps.openDB(ctx); err != nil {
 		return err
 	}
-	_, err := ps.db.ExecContext(ctx, query)
+	_, err := ps.pool.Exec(ctx, query)
 	if err, ok := err.(*pgconn.PgError); ok {
 		// Clarify the "there is no unique or exclusion constraint matching the ON CONFLICT specification" error.
 		if err.Code == "42P10" {
@@ -279,16 +268,19 @@ func (s *Settings) dsn() string {
 }
 
 // openDB opens the database. If the database is already open it does nothing.
-func (ps *PostgreSQL) openDB() error {
-	if ps.db != nil {
+func (ps *PostgreSQL) openDB(ctx context.Context) error {
+	if ps.pool != nil {
 		return nil
 	}
-	db, err := sql.Open("pgx", ps.settings.dsn())
+	config, err := pgxpool.ParseConfig(ps.settings.dsn())
 	if err != nil {
 		return err
 	}
-	db.SetMaxIdleConns(0)
-	ps.db = db
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		return err
+	}
+	ps.pool = pool
 	return nil
 }
 
@@ -349,56 +341,60 @@ func testConnection(ctx context.Context, settings *Settings) error {
 }
 
 // propertyType returns the property type of the column type t.
-func propertyType(t *sql.ColumnType) (types.Type, error) {
-	name := t.DatabaseTypeName()
-	switch name {
-	case "BOOL":
+func (ps *PostgreSQL) propertyType(ctx context.Context, fd pgconn.FieldDescription) (types.Type, error) {
+	switch fd.DataTypeOID {
+	case pgtype.BoolOID:
 		return types.Boolean(), nil
-	case "BYTEA", "TEXT":
-		return types.Text(), nil
-	case "CHAR", "VARCHAR", "BPCHAR":
-		length, ok := t.Length()
-		// The driver returns false for char(n) (BPCHAR).
-		if ok && length > 0 {
-			return types.Text().WithCharLen(int(length)), nil
-		}
-		return types.Text(), nil
-	case "DATE":
-		return types.Date(), nil
-	case "FLOAT4":
-		return types.Float(32), nil
-	case "FLOAT8":
-		return types.Float(64), nil
-	case "INET":
-		return types.Inet(), nil
-	case "INT2":
-		return types.Int(16), nil
-	case "INT4":
-		return types.Int(32), nil
-	case "INT8":
+	case pgtype.Int8OID:
 		return types.Int(64), nil
-	case "JSON", "JSONB":
-		return types.JSON(), nil
-	case "NUMERIC":
-		precision, scale, ok := t.DecimalSize()
-		if !ok {
-			return types.Type{}, errors.New("cannot get decimal size")
+	case pgtype.Int2OID:
+		return types.Int(16), nil
+	case pgtype.Int4OID:
+		return types.Int(32), nil
+	case pgtype.Float4OID:
+		return types.Float(32), nil
+	case pgtype.Float8OID:
+		return types.Float(64), nil
+	case pgtype.NumericOID:
+		mod := fd.TypeModifier - 4
+		precision, scale := int((mod>>16)&0xffff), int(mod&0xffff)
+		if 1 <= precision && precision <= types.MaxDecimalPrecision && 0 <= scale && scale <= types.MaxDecimalScale && scale <= precision {
+			return types.Decimal(precision, scale), nil
 		}
-		if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
-			return types.Type{}, fmt.Errorf("PostgreSQL type %s(%d,%d) is not supported",
-				t.DatabaseTypeName(), precision, scale)
-		}
-		return types.Decimal(int(precision), int(scale)), nil
-	case "TIME", "1266":
-		// 1266: time with time zone.
-		return types.Time(), nil
-	case "TIMESTAMP", "TIMESTAMPTZ":
+	case pgtype.TimestampOID, pgtype.TimestamptzOID:
 		return types.DateTime(), nil
-	case "UUID":
+	case pgtype.DateOID:
+		return types.Date(), nil
+	case pgtype.TimeOID, pgtype.TimetzOID:
+		return types.Time(), nil
+	case pgtype.UUIDOID:
 		return types.UUID(), nil
+	case pgtype.JSONOID, pgtype.JSONBOID:
+		return types.JSON(), nil
+	case pgtype.InetOID:
+		return types.Inet(), nil
+	case pgtype.BPCharOID, pgtype.VarcharOID:
+		length := int(fd.TypeModifier - 4)
+		if 1 <= length && length <= types.MaxTextLen {
+			return types.Text().WithCharLen(length), nil
+		}
+		return types.Text(), nil
+	case pgtype.TextOID, pgtype.ByteaOID:
+		return types.Text(), nil
 	}
-	if strings.HasPrefix(name, "_") {
-		name = "array"
+	conn, err := ps.pool.Acquire(ctx)
+	if err != nil {
+		return types.Type{}, err
 	}
-	return types.Type{}, meergo.NewUnsupportedColumnTypeError(t.Name(), name)
+	defer conn.Release()
+	var name string
+	if t, ok := conn.Conn().TypeMap().TypeForOID(fd.DataTypeOID); ok {
+		name = strings.ToUpper(t.Name)
+		if strings.HasPrefix(name, "_") {
+			name = "array"
+		}
+	} else {
+		name = strconv.FormatUint(uint64(fd.DataTypeOID), 10)
+	}
+	return types.Type{}, meergo.NewUnsupportedColumnTypeError(fd.Name, name)
 }

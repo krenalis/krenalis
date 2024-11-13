@@ -43,18 +43,26 @@ type tableSchema struct {
 }
 
 // tablesSchemas returns the schemas for the existing tables in the schema
-// specified in tableNames.
-// Therefore, if none of the tables indicated in tableNames exists, this
-// function returns an empty slice.
-// tableNames must always contain at least one table name.
+// specified in tableNames. Therefore, if none of the tables indicated in
+// tableNames exists, this function returns an empty slice. tableNames must
+// always contain at least one table name.
 //
 // It returns a *meergo.UnsupportedColumnTypeError error, if a column type is
 // not supported.
-func tablesSchemas(ctx context.Context, tx pgx.Tx, schema string, tableNames []string) ([]*tableSchema, error) {
+func (ps *PostgreSQL) tablesSchemas(ctx context.Context, schema string, tableNames []string) ([]*tableSchema, error) {
 
 	if len(tableNames) == 0 {
 		return nil, errors.New("tableNames cannot be empty")
 	}
+
+	if err := ps.openDB(ctx); err != nil {
+		return nil, err
+	}
+	tx, err := ps.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
 
 	var table *tableSchema
 	var tables []*tableSchema

@@ -22,8 +22,8 @@
 | Time      | time.Time       | string                       | -                    | string      | []byte    | time.Time   |              | -               | -      | -      |
 | Year      | int             | float64, json.Number         | -                    | -           | int64     | -           | -            | -               | -      | -      |
 | UUID      | string          | string                       | string               | string      | -         | -           |              | -               | -      | -      |
-| JSON      | json.Value      | JSON types [^4]              | - [^3]               | []byte [^8] | []byte    | string [^6] |              | JSON types [^4] | -      | -      |
-| Inet      | string          | string                       | net.IP               | string      | -         | -           | -            | -               | -      | -      |
+| JSON      | json.Value      | JSON types [^4]              | - [^3]               | string      | []byte    | string [^6] |              | JSON types [^4] | -      | -      |
+| Inet      | string          | string                       | net.IP               | string [^8] | -         | -           | -            | -               | -      | -      |
 | Text      | string          | string                       | string               | string      | []byte    | string      | []byte       | -               | string | string |
 | Array(T)  | []any           | []any                        | []T                  | []T [^5]    | -         | string [^7] | -            | -               | -      | -      |
 | Object    | map[string]any  | map[string]any               | -                    | -           | -         | -           | -            | -               | -      | -      |
@@ -32,9 +32,9 @@
 
 [^1]: The [github.com/shopspring/decimal.Decimal](https://pkg.go.dev/github.com/shopspring/decimal#Decimal) type.
 
-[^2]: the ClickHouse driver, for the `Date32` type, returns a `time.Time` value not corresponding to the stored value.
+[^2]: The ClickHouse driver, for the `Date32` type, returns a `time.Time` value not corresponding to the stored value.
 
-[^3]: the `JSON` type in ClickHouse is [experimental](https://github.com/ClickHouse/ClickHouse/issues/68428).
+[^3]: The `JSON` type in ClickHouse is [experimental](https://github.com/ClickHouse/ClickHouse/issues/68428).
 
 [^4]: JSON types: `json.RawMessage`, `bool`, `string`, `json.Number`, `float64`, `map[string]any`, and `[]any`. `nil` represents a `nil` value, not the JSON `null`.
 
@@ -44,4 +44,4 @@
 
 [^7]: Only supports `Array(JSON)` and `Map(JSON)` as Snowflake `ARRAY` and `OBJECT` types.
 
-[^8]: When using the packages `database/sql` and `github.com/jackc/pgx` as drivers, the Go type of the returned values is `[]byte` for both `json` and `jsonb`.
+[^8]: The returned IP address also includes the netmask bits, as in `"127.0.0.1/32"`.
