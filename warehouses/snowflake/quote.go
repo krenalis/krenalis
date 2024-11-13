@@ -57,40 +57,6 @@ func quoteBytes(b *strings.Builder, s []byte) {
 	b.WriteByte('\'')
 }
 
-// quoteCSVBytes is like quoteCSVString but gets a []byte value as argument.
-func quoteCSVBytes(b *bytes.Buffer, s []byte) {
-	b.WriteByte('\'')
-	for len(s) > 0 {
-		i := bytes.IndexByte(s, '\'')
-		if i == -1 {
-			b.Write(s)
-			break
-		}
-		b.Write(s[:i+1])
-		b.WriteByte('\'')
-		s = s[i+1:]
-	}
-	b.WriteByte('\'')
-}
-
-// quoteCSVString quotes the string s for use in a CSV file and writes it to b.
-// A string must be quoted if is empty, or starts with the character "'", or
-// contains characters "," or "\n".
-func quoteCSVString(b *bytes.Buffer, s string) {
-	b.WriteByte('\'')
-	for len(s) > 0 {
-		i := strings.IndexByte(s, '\'')
-		if i == -1 {
-			b.WriteString(s)
-			break
-		}
-		b.WriteString(s[:i+1])
-		b.WriteByte('\'')
-		s = s[i+1:]
-	}
-	b.WriteByte('\'')
-}
-
 // quoteColumn quotes a column name.
 func quoteColumn(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`

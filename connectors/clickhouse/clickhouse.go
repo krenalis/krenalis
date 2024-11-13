@@ -106,6 +106,16 @@ func (ch *ClickHouse) LastChangeTimeCondition(column string, typ types.Type, val
 	return b.String()
 }
 
+// Merge performs batch insert, update, and delete operations on the specified
+// table.
+func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+	if err := ch.openDB(); err != nil {
+		return err
+	}
+	// Merge rows.
+	return merge(ctx, ch.db, table, rows, deleted)
+}
+
 // Query executes the given query and returns the resulting rows and columns.
 func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return ch.query(ctx, query)
@@ -146,49 +156,6 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values json.Val
 	}
 
 	return ui, nil
-}
-
-// Upsert inserts or updates the rows provided in the specified table.
-func (ch *ClickHouse) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
-
-	name, err := quoteTable(table.Name)
-	if err != nil {
-		return err
-	}
-	var b strings.Builder
-	b.WriteString("INSERT INTO ")
-	b.WriteString(name)
-	b.WriteString(" (")
-	for i, column := range table.Columns {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteByte('"')
-		b.WriteString(column.Name)
-		b.WriteByte('"')
-	}
-	b.WriteString(") VALUES ")
-	for i, row := range rows {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString("(")
-		for j, column := range table.Columns {
-			if j > 0 {
-				b.WriteByte(',')
-			}
-			quoteValue(&b, row[column.Name], column.Type)
-		}
-		b.WriteByte(')')
-	}
-	query := b.String()
-
-	if err = ch.openDB(); err != nil {
-		return err
-	}
-	err = ch.db.Exec(ctx, query)
-
-	return err
 }
 
 // openDB opens the database. If the database is already open it does nothing.

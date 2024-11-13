@@ -15,7 +15,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -106,6 +105,22 @@ func (my *MySQL) LastChangeTimeCondition(column string, typ types.Type, value an
 	return b.String()
 }
 
+// Merge performs batch insert, update, and delete operations on the specified
+// table.
+func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+	if err := my.openDB(); err != nil {
+		return err
+	}
+	// Acquire a connection.
+	conn, err := my.db.Conn(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer conn.Close()
+	// Merge rows.
+	return merge(ctx, conn, table, rows, deleted)
+}
+
 // Query executes the given query and returns the resulting rows and columns.
 func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return my.query(ctx, query)
@@ -146,67 +161,6 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values json.Value, r
 	}
 
 	return ui, nil
-}
-
-// Upsert inserts or updates the rows provided in the specified table.
-func (my *MySQL) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
-
-	name, err := quoteTable(table.Name)
-	if err != nil {
-		return err
-	}
-	var b strings.Builder
-	b.WriteString("INSERT INTO ")
-	b.WriteString(name)
-	b.WriteString(" (")
-	for i, column := range table.Columns {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteByte('`')
-		b.WriteString(column.Name)
-		b.WriteByte('`')
-	}
-	b.WriteString(") VALUES ")
-	for i, row := range rows {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString("(")
-		for j, column := range table.Columns {
-			if j > 0 {
-				b.WriteByte(',')
-			}
-			if err = quoteValue(&b, row[column.Name], column.Type); err != nil {
-				return err
-			}
-		}
-		b.WriteByte(')')
-	}
-	b.WriteString(` ON DUPLICATE KEY UPDATE `)
-	i := 0
-	for _, column := range table.Columns {
-		if slices.Contains(table.Keys, column.Name) {
-			continue
-		}
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteByte('`')
-		b.WriteString(column.Name)
-		b.WriteString("` = VALUES(`")
-		b.WriteString(column.Name)
-		b.WriteString("`)")
-		i++
-	}
-	query := b.String()
-
-	if err = my.openDB(); err != nil {
-		return err
-	}
-	_, err = my.db.ExecContext(ctx, query)
-
-	return err
 }
 
 // openDB opens the database. If the database is already open it does nothing.

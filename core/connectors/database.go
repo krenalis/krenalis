@@ -292,7 +292,7 @@ type databaseWriter struct {
 	ack    AckFunc
 	table  meergo.Table
 	schema types.Type
-	rows   []map[string]any
+	rows   [][]any
 	ids    []string
 	inner  meergo.Database
 	closed bool
@@ -303,7 +303,7 @@ func (w *databaseWriter) Close(ctx context.Context) error {
 		return nil
 	}
 	if len(w.rows) > 0 {
-		w.upsert(ctx)
+		w.merge(ctx)
 	}
 	w.closed = true
 	return nil
@@ -314,19 +314,23 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 		panic("connectors: Write called on a closed writer")
 	}
 	// Append the row and the ack ids.
-	w.rows = append(w.rows, properties)
+	row := make([]any, len(w.table.Columns))
+	for i, c := range w.table.Columns {
+		row[i] = properties[c.Name]
+	}
+	w.rows = append(w.rows, row)
 	w.ids = append(w.ids, id)
 	// Upsert the rows.
 	if len(w.rows) == 100 {
-		w.upsert(ctx)
+		w.merge(ctx)
 	}
 	return true
 }
 
-// upsert calls the Upsert method of the database connector with the collected
+// merge calls the Merge method of the database connector with the collected
 // records.
-func (w *databaseWriter) upsert(ctx context.Context) {
-	err := w.inner.Upsert(ctx, w.table, w.rows)
+func (w *databaseWriter) merge(ctx context.Context) {
+	err := w.inner.Merge(ctx, w.table, w.rows, nil)
 	w.ack(w.ids, connectorError(err))
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
 	w.ids = slices.Delete(w.ids, 0, len(w.ids))

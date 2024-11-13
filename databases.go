@@ -75,15 +75,17 @@ type Database interface {
 	// `TRUE`.
 	LastChangeTimeCondition(column string, typ types.Type, value any) string
 
+	// Merge performs batch insert, update, and delete operations on the specified
+	// table. rows contains the rows to be inserted or updated; rows with matching
+	// primary keys are updated, while new rows are inserted. The deleted parameter
+	// contains the primary key(s) identifying rows to delete; if empty, no
+	// deletions occur.
+	Merge(ctx context.Context, table Table, rows [][]any, deleted []any) error
+
 	// Query executes the given query and returns the resulting rows and columns.
 	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
 	// error.
 	Query(ctx context.Context, query string) (Rows, []Column, error)
-
-	// Upsert inserts or updates the rows provided in the specified table. If a row
-	// with the same key value already exists in the database, it updates that row;
-	// otherwise, it inserts a new one.
-	Upsert(ctx context.Context, table Table, rows []map[string]any) error
 }
 
 // Table represents a database table.

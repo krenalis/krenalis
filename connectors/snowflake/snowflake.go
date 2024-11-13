@@ -95,6 +95,22 @@ func (sf *Snowflake) LastChangeTimeCondition(column string, typ types.Type, valu
 	return b.String()
 }
 
+// Merge performs batch insert, update, and delete operations on the specified
+// table.
+func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+	if err := sf.openDB(); err != nil {
+		return err
+	}
+	// Acquire a connection.
+	conn, err := sf.db.Conn(ctx)
+	if err != nil {
+		return meergo.Error(err)
+	}
+	defer conn.Close()
+	// Merge rows.
+	return merge(ctx, conn, table, rows, deleted)
+}
+
 // Query executes the given query and returns the resulting rows and columns.
 func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return sf.query(ctx, query)
@@ -135,11 +151,6 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values json.Valu
 	}
 
 	return ui, nil
-}
-
-// Upsert inserts or updates the rows provided in the specified table.
-func (sf *Snowflake) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
-	return errors.New("not implemented")
 }
 
 type Settings struct {

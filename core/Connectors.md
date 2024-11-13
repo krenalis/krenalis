@@ -15,13 +15,13 @@
 
 ## Database connectors
 
-| Method           | Settings | SetSettings |
-|------------------|----------|-------------|
-| Close            | -/✓      | -/✓         |
-| Columns          | ✓        | ✓           |
-| Query            | ✓        | ✓           |
-| ServeUI          | -/✓      | -/✓         |
-| Upsert           | ✓        | ✓           |
+| Method  | Settings | SetSettings |
+|---------|----------|-------------|
+| Close   | -/✓      | -/✓         |
+| Columns | ✓        | ✓           |
+| Merge   | ✓        | ✓           |
+| Query   | ✓        | ✓           |
+| ServeUI | -/✓      | -/✓         |
 
 
 ## File connectors

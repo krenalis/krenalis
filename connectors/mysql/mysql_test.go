@@ -24,13 +24,13 @@ import (
 
 const settingsEnvKey = "MEERGO_TEST_PATH_MYSQL"
 
-// Test_Upsert_Query tests the Upsert and Query methods on supported types. It
+// Test_Merge_Query tests the Merge and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
 //
 // Set the environment variable MEERGO_TEST_PATH_MYSQL with the path to the
 // database credentials in JSON format for running the test.
-func Test_Upsert_Query(t *testing.T) {
+func Test_Merge_Query(t *testing.T) {
 
 	cols := []struct {
 		DriverType  string
@@ -131,11 +131,11 @@ func Test_Upsert_Query(t *testing.T) {
 			t.Logf("cannot drop %s table: %s", table.Name, err)
 		}
 	}()
-	row := map[string]any{}
-	for i, c := range table.Columns {
-		row[c.Name] = cols[i].MeergoValue
+	row := make([]any, len(cols))
+	for i, c := range cols {
+		row[i] = c.MeergoValue
 	}
-	err = connector.Upsert(context.Background(), table, []map[string]any{row})
+	err = connector.Merge(context.Background(), table, [][]any{row}, nil)
 	if err != nil {
 		t.Fatalf("cannot upsert: %s", err)
 	}

@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -106,6 +105,22 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 	return b.String()
 }
 
+// Merge performs batch insert, update, and delete operations on the specified
+// table.
+func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+	if err := ps.openDB(ctx); err != nil {
+		return err
+	}
+	// Acquire a connection.
+	conn, err := ps.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	// Merge rows.
+	return merge(ctx, conn, table, rows, deleted)
+}
+
 // Query executes the given query and returns the resulting rows and columns.
 func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	if err := ps.openDB(ctx); err != nil {
@@ -178,74 +193,6 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values json.Val
 	}
 
 	return ui, nil
-}
-
-// Upsert inserts or updates the rows provided in the specified table.
-func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
-
-	var b strings.Builder
-	b.WriteString("INSERT INTO ")
-	b.WriteString(quoteTable(table.Name))
-	b.WriteString(" (")
-	for i, column := range table.Columns {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteByte('"')
-		b.WriteString(column.Name)
-		b.WriteByte('"')
-	}
-	b.WriteString(") VALUES ")
-	for i, row := range rows {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString("(")
-		for j, column := range table.Columns {
-			if j > 0 {
-				b.WriteByte(',')
-			}
-			quoteValue(&b, row[column.Name], column.Type)
-		}
-		b.WriteByte(')')
-	}
-	b.WriteString(` ON CONFLICT (`)
-	for i, name := range table.Keys {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(quoteColumn(name))
-	}
-	b.WriteString(`) DO UPDATE SET `)
-	i := 0
-	for _, column := range table.Columns {
-		if slices.Contains(table.Keys, column.Name) {
-			continue
-		}
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteByte('"')
-		b.WriteString(column.Name)
-		b.WriteString(`" = EXCLUDED."`)
-		b.WriteString(column.Name)
-		b.WriteByte('"')
-		i++
-	}
-	query := b.String()
-
-	if err := ps.openDB(ctx); err != nil {
-		return err
-	}
-	_, err := ps.pool.Exec(ctx, query)
-	if err, ok := err.(*pgconn.PgError); ok {
-		// Clarify the "there is no unique or exclusion constraint matching the ON CONFLICT specification" error.
-		if err.Code == "42P10" {
-			return fmt.Errorf("table %q does not have a primary key (%s)", table.Name, strings.Join(table.Keys, ","))
-		}
-	}
-
-	return err
 }
 
 type Settings struct {
