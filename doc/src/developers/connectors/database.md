@@ -52,13 +52,14 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 	// ...
 }
 
-// Query executes the given query and returns the resulting rows and columns.
-func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+// Merge performs batch insert, update, and delete operations on the specified
+// table.
+func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
 	// ...
 }
 
-// Upsert inserts or updates the rows provided in the specified table.
-func (ps *PostgreSQL) Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error {
+// Query executes the given query and returns the resulting rows and columns.
+func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	// ...
 }
 ```
@@ -206,6 +207,37 @@ WHERE TRUE
 LIMIT 1000
 ```
 
+### Merge Method
+
+```go
+Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error
+```
+
+The `Merge` method is used by Meergo during data export to a database. It updates existing rows if matching keys are found, or inserts new rows into the specified table.
+
+The `table` parameter provides details about the table to update, including its name, columns, and keys. Defined as:
+
+```go
+type Table struct {
+	Name    string
+	Columns []Column
+	Keys    []string
+}
+```
+
+- `Name`: The name of the table.
+- `Columns`: The columns in the table that need to be updated. It may not include all the columns in the table.
+- `Keys`: The columns that serve as keys for the table. This typically includes the primary key but does not have to. The columns specified in `table.Keys` are also included in `table.Columns`.
+
+The `rows` parameter contains the rows to be updated or inserted. For each `row`, `row[i]` contains the value for the column `table.Columns[i]`. If a column is nullable, the corresponding value in a raw can be `nil`, representing the `NULL` value in the database.
+
+If not `nil`, the `deleted` parameter contains the key values of rows to delete:
+
+* If the table has a single key, each element in `deleted` is the key value of a row to delete.
+* If the table has multiple keys (N keys), the first N values represent the keys of the first row to delete, the next N values represent the keys of the second row, and so on.
+
+A database connector can require that the columns in `table.Keys` form the primary key and can return an error if they do not.
+
 ### Query method
 
 ```go
@@ -228,29 +260,3 @@ type Rows interface {
 The standard Go library's `sql.Rows` type implements this interface. So, the connector can just return a `sql.Rows` value.
 
 If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.
-
-### Upsert Method
-
-```go
-Upsert(ctx context.Context, table meergo.Table, rows []map[string]any) error
-```
-
-The `Upsert` method is used by Meergo during data export to the database. It updates existing rows or inserts new rows into a specified table. The `table` parameter contains information about the table, including its name, columns, and keys:
-
-```go
-type Table struct {
-	Name    string
-	Columns []Column
-	Keys    []string
-}
-```
-
-- `Name`: The name of the table.
-- `Columns`: The columns in the table that need to be updated. It may not include all the columns in the table.
-- `Keys`: The column names to be used as the table's keys, which generally is the primary key but not required to be.
-
-The `rows` parameter contains the rows to be updated or inserted. Each row has column names and their corresponding values. If a column's value is not provided, the default value for that column is used. The key column specified in `table.Key` is always present in the rows with a non-nil value.
-
-The `Upsert` method checks if a row with the same key already exists in the table. If it does, it updates the existing row; otherwise, it inserts a new row.
-
-A connector may require that the column specified in `table.Key` is the primary key of the table and return an error if it is not.
