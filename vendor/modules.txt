@@ -53,11 +53,11 @@ github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service
 ## explicit; go 1.18
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
-# github.com/ClickHouse/ch-go v0.61.5
+# github.com/ClickHouse/ch-go v0.63.1
 ## explicit; go 1.21
 github.com/ClickHouse/ch-go/compress
 github.com/ClickHouse/ch-go/proto
-# github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix => github.com/open2b/clickhouse-go/v2 v2.29.0-fix
+# github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix => github.com/open2b/clickhouse-go/v2 v2.30.0-fix
 ## explicit; go 1.21
 github.com/ClickHouse/clickhouse-go/v2
 github.com/ClickHouse/clickhouse-go/v2/contributors
@@ -417,8 +417,8 @@ github.com/jordan-wright/email
 # github.com/jxskiss/base62 v1.1.0
 ## explicit; go 1.13
 github.com/jxskiss/base62
-# github.com/klauspost/compress v1.17.8
-## explicit; go 1.20
+# github.com/klauspost/compress v1.17.11
+## explicit; go 1.21
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
@@ -881,4 +881,4 @@ gopkg.in/ini.v1
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.29.0-fix
+# github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.30.0-fix

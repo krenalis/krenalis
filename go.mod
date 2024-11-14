@@ -2,7 +2,7 @@ module github.com/meergo/meergo
 
 go 1.23
 
-replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.29.0-fix
+replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.30.0-fix
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.29.0-fix
@@ -53,7 +53,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.2 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/ClickHouse/ch-go v0.61.5 // indirect
+	github.com/ClickHouse/ch-go v0.63.1 // indirect
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect
 	github.com/apache/arrow/go/v15 v15.0.0 // indirect
 	github.com/apache/thrift v0.17.0 // indirect
@@ -90,7 +90,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
