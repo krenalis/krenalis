@@ -110,10 +110,7 @@ func Test_Merge(t *testing.T) {
 	}
 	defer wh.Close()
 
-	db, err := wh.(*Snowflake).connection()
-	if err != nil {
-		t.Fatalf("cannot open the warehouse: %s", err)
-	}
+	db := wh.(*Snowflake).openDB()
 
 	// Create the table.
 	create := bytes.NewBufferString("CREATE TABLE \"" + table.Name + "\" (\n\t\"")

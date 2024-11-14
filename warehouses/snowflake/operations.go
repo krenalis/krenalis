@@ -36,10 +36,7 @@ const (
 //
 // If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *Snowflake) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return 0, err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return 0, err
@@ -98,10 +95,7 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 //
 // If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *Snowflake) endOperation(ctx context.Context, opID int, endTime time.Time) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err

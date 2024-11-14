@@ -118,10 +118,7 @@ type sfSettings struct {
 
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
@@ -172,16 +169,13 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 	if where == nil {
 		return errors.New("where is nil")
 	}
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
 	var s strings.Builder
 	s.WriteString(`DELETE FROM "` + table + `" WHERE `)
-	err = renderExpr(&s, where)
+	err := renderExpr(&s, where)
 	if err != nil {
 		return fmt.Errorf("cannot build WHERE expression: %s", err)
 	}
+	db := warehouse.openDB()
 	_, err = db.ExecContext(ctx, s.String())
 	if err != nil {
 		return err
@@ -197,11 +191,8 @@ func (warehouse *Snowflake) Initialize(ctx context.Context) error {
 
 // Merge performs a table merge operation.
 func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
 	// Acquire a connection.
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
@@ -222,11 +213,6 @@ var immutableMergeIdentitiesColumns = []string{
 
 // MergeIdentities merge existing identities, deletes them and inserts new ones.
 func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
-
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
 
 	// Generate a unique name for the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -302,6 +288,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 	}
 
 	// Acquire a connection.
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
@@ -359,30 +346,27 @@ func (warehouse *Snowflake) Settings() []byte {
 
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
-	_, err = db.ExecContext(ctx, `TRUNCATE TABLE "`+table+`"`)
+	db := warehouse.openDB()
+	_, err := db.ExecContext(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// connection returns the Snowflake connection.
-func (warehouse *Snowflake) connection() (*sql.DB, error) {
+// openDB opens a Snowflake database and returns it.
+func (warehouse *Snowflake) openDB() *sql.DB {
 	warehouse.mu.Lock()
 	defer warehouse.mu.Unlock()
 	if warehouse.db != nil {
-		return warehouse.db, nil
+		return warehouse.db
 	}
 	db := sql.OpenDB(warehouse.settings.connector())
 	warehouse.db = db
-	return db, nil
+	return db
 }
 
-// connector returns a driver.Connector from the settings.
+// connector returns a gosnowflake.Connector from the settings.
 func (s *sfSettings) connector() gosnowflake.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
@@ -403,10 +387,7 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 // initRepair initializes (or repairs) the database objects (as tables, types,
 // etc...) on the data warehouse.
 func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
@@ -433,10 +414,7 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 
 // usersVersion returns the version of the "users" table.
 func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return 0, err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return 0, err
@@ -454,10 +432,7 @@ func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 // error or panics, the transaction will be rolled back.
 func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx) error) error {
 	// TODO(Gianluca): is the use of the context in this method correct?
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err

@@ -33,10 +33,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	_, span := telemetry.TraceSpan(ctx, "Snowflake.ResolveIdentities")
 	defer span.End()
 
-	db, err := warehouse.connection()
-	if err != nil {
-		return err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return err
@@ -240,10 +237,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 // LastIdentityResolution returns information about the last Identity
 // Resolution.
 func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, nil, err
-	}
+	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return nil, nil, err

@@ -19,16 +19,13 @@ import (
 // Query executes a query and returns the results as Rows.
 func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, withCount bool) (meergo.Rows, int, error) {
 
-	db, err := warehouse.connection()
-	if err != nil {
-		return nil, 0, err
-	}
+	db := warehouse.openDB()
 
 	// Build the WHERE expression, if necessary.
 	var whereExpr string
 	if query.Where != nil {
 		var s strings.Builder
-		err = renderExpr(&s, query.Where)
+		err := renderExpr(&s, query.Where)
 		if err != nil {
 			return nil, 0, fmt.Errorf("cannot build WHERE expression: %s", err)
 		}
@@ -42,7 +39,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	if withCount {
 		b.WriteString(`SELECT COUNT(*) FROM `)
 		b.WriteString(quoteTable(query.Table))
-		err = appendJoins(&b, query.Joins)
+		err := appendJoins(&b, query.Joins)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -68,7 +65,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	b.WriteString(` FROM `)
 	b.WriteString(quoteTable(query.Table))
 
-	err = appendJoins(&b, query.Joins)
+	err := appendJoins(&b, query.Joins)
 	if err != nil {
 		return nil, 0, err
 	}
