@@ -644,6 +644,9 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 // AppUsers returns the users of an app connection and the cursor to get the
 // next users. The returned cursor is empty if there are no other users.
+//
+// It returns an errors.UnprocessableError error with code SchemaNotAligned if
+// the provided schema is not aligned with the app's source schema.
 func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) ([]byte, string, error) {
 
 	this.core.mustBeOpen()
@@ -666,8 +669,11 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	// Get the users.
 	records, err := this.app().Users(ctx, schema, lastChangeTime)
 	if err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
+		switch err.(type) {
+		case *connectors.UnavailableError:
 			err = errors.Unavailable("%s", err)
+		case *connectors.SchemaError:
+			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the app's source schema: %w", err)
 		}
 		return nil, "", err
 	}
@@ -689,6 +695,9 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 		}
 	}
 	if err = records.Err(); err != nil {
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("%s", err)
+		}
 		return nil, "", err
 	}
 

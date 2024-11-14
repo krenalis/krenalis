@@ -201,8 +201,12 @@ func (app *App) SendEvent(ctx context.Context, req *meergo.EventRequest) (*http.
 // lastChangeTime is the most recent lastChangeTime value read from the previous
 // import.
 //
-// If the provided schema, that must be valid, does not align with the app's
-// source schema, it returns a *schemas.Error error.
+// If the connector returns an error, it returns an *UnavailableError error. If
+// the provided schema, that must be valid, does not align with the app's source
+// schema, it returns a *schemas.Error error.
+//
+// The Err method of the returned iterator may return an *UnavailableError if
+// the connector encounters an error.
 func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime time.Time) (Records, error) {
 	if app.err != nil {
 		return nil, app.err
@@ -213,7 +217,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	// Check that the schema is aligned with the source user schema.
 	userSchema, err := app.userSchema(ctx, types.SourceRole)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get user schema: %s", err)
+		return nil, err
 	}
 	err = schemas.CheckAlignment(schema, userSchema, nil)
 	if err != nil {
@@ -397,7 +401,7 @@ func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, er
 	}
 	schema, err := app.inner.Schema(ctx, meergo.Users, meergo.Role(role), "")
 	if err != nil {
-		return types.Type{}, connectorError(err)
+		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
 	var schemas [3]types.Type
 	for r := types.BothRole; r <= types.DestinationRole; r++ {
