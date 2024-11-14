@@ -342,7 +342,7 @@ const ConnectorSettings = () => {
 								value={name}
 								label='Name'
 								type='text'
-								onSlChange={(e) => {
+								onSlInput={(e) => {
 									const target = e.currentTarget as any;
 									setName(target!.value);
 								}}
@@ -415,7 +415,7 @@ const ConnectorSettings = () => {
 										placeholder='www.example.com:443'
 										label='Host'
 										type='text'
-										onSlChange={(e) => {
+										onSlInput={(e) => {
 											const target = e.currentTarget as any;
 											setWebsiteHost(target.value);
 										}}

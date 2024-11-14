@@ -81,7 +81,7 @@ const GeneralSettings = () => {
 		[flatUserSchema, information],
 	);
 
-	const onNameChange = (e) => setName(e.target.value);
+	const onNameInput = (e) => setName(e.target.value);
 
 	const onUseEuropeRegionChange = () => setUseEuropeRegion(!useEuropeRegion);
 
@@ -159,8 +159,9 @@ const GeneralSettings = () => {
 				className='general-settings__name'
 				maxlength={100}
 				label="Workspace's name"
+				name='workspace-name'
 				value={name}
-				onSlChange={onNameChange}
+				onSlInput={onNameInput}
 			/>
 			<SlCheckbox
 				className='general-settings__use-europe-region'

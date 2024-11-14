@@ -122,6 +122,7 @@ const SchemaEdit = () => {
 									Cancel
 								</SlButton>
 								<SlButton
+									className='schema-edit__apply-alter-button'
 									size='small'
 									variant='danger'
 									onClick={onConfirmChanges}
@@ -144,6 +145,7 @@ const SchemaEdit = () => {
 						<SlButton onClick={onCancelRemove}>Cancel</SlButton>
 						<SlButton
 							variant='danger'
+							className='schema-edit__confirm-remove-property'
 							onClick={() => {
 								onRemoveProperty(propertyToRemove.key);
 								setPropertyToRemove(null);

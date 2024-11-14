@@ -154,11 +154,12 @@ const ActionQuery = () => {
 					onChange={onUpdateQuery}
 				></EditorWrapper>
 				<div className='action__query-buttons'>
-					<SlButton variant='neutral' size='small' onClick={onQueryPreview}>
+					<SlButton className='action__query-preview' variant='neutral' size='small' onClick={onQueryPreview}>
 						Preview
 					</SlButton>
 					<FeedbackButton
 						ref={queryConfirmButtonRef}
+						className='action__query-confirm'
 						variant='success'
 						size='small'
 						onClick={onConfirmQuery}

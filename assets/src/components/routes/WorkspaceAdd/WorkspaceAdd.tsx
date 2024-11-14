@@ -20,7 +20,7 @@ const WorkspaceAdd = () => {
 
 	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus } = useContext(appContext);
 
-	const onNameChange = (e) => setName(e.target.value);
+	const onNameInput = (e) => setName(e.target.value);
 
 	const onUseEuropeRegionChange = () => setUseEuropeRegion(!useEuropeRegion);
 
@@ -82,7 +82,7 @@ const WorkspaceAdd = () => {
 				maxlength={100}
 				label='Name'
 				value={name}
-				onSlChange={onNameChange}
+				onSlInput={onNameInput}
 			/>
 			<SlCheckbox
 				className='workspace-add__europe-region'

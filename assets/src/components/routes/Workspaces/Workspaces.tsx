@@ -69,6 +69,7 @@ const Workspaces = () => {
 									className='workspace-list__workspace'
 									icon={<SlIcon name='person-workspace' />}
 									name={workspace.Name}
+									id={String(workspace.ID)}
 									description={workspace.PrivacyRegion}
 									onClick={() => onWorkspaceClick(workspace.ID)}
 									action={<SlIcon name='chevron-right' />}

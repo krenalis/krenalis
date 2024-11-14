@@ -380,7 +380,7 @@ const PropertyDialog = ({
 		setProperty(p);
 	};
 
-	const onChangeNote = (e) => {
+	const onInputNote = (e) => {
 		const p = { ...property };
 		p.note = e.target.value;
 		setProperty(p);
@@ -644,6 +644,7 @@ const PropertyDialog = ({
 							size='small'
 							value={property.name}
 							label='Name'
+							name='name'
 							placeholder='first_name'
 							onSlInput={onInputName}
 						/>
@@ -661,6 +662,7 @@ const PropertyDialog = ({
 									className='property-dialog__type-select'
 									size='small'
 									label='Type'
+									name='type'
 									value={property.type?.name}
 									onSlChange={onChangeType}
 									hoist={true}
@@ -679,6 +681,7 @@ const PropertyDialog = ({
 											ref={elementTypeSelectRef}
 											size='small'
 											label='of'
+											name='element-type'
 											value={property.type?.elementType?.name}
 											onSlChange={onChangeAssociatedType}
 											hoist={true}
@@ -704,6 +707,7 @@ const PropertyDialog = ({
 											ref={valueTypeSelectRef}
 											size='small'
 											label='of'
+											name='value-type'
 											value={property.type?.valueType?.name}
 											onSlChange={onChangeAssociatedType}
 											hoist={true}
@@ -746,6 +750,7 @@ const PropertyDialog = ({
 						size='small'
 						value={property.label}
 						label='Label'
+						name='label'
 						placeholder='First name'
 						onSlInput={onInputLabel}
 					/>
@@ -754,7 +759,8 @@ const PropertyDialog = ({
 						size='small'
 						value={property.note}
 						label='Note'
-						onSlChange={onChangeNote}
+						name='note'
+						onSlInput={onInputNote}
 					/>
 					{property.type?.name !== 'Object' &&
 						property.type?.name !== 'Array' &&
@@ -769,6 +775,7 @@ const PropertyDialog = ({
 								size='small'
 								value={primarySource == null ? 'none' : String(primarySource)}
 								label='Primary Source'
+								name='primary-source'
 								onSlChange={onChangePrimarySource}
 							>
 								<div slot='prefix'>

@@ -32,7 +32,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 	const { api, handleError, redirect, setIsLoadingConnections } = useContext(AppContext);
 
-	const onNameChange = (e) => {
+	const onNameInput = (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.name = value;
@@ -109,7 +109,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				label='Name'
 				className='connection-settings__name-field'
 				value={connectionToSet.name}
-				onSlChange={onNameChange}
+				onSlInput={onNameInput}
 				maxlength={100}
 			/>
 
@@ -164,7 +164,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					label='Website host'
 					className='connection-settings__website-host-field'
 					value={connectionToSet.websiteHost}
-					onSlChange={onWebsitehostChange}
+					onSlInput={onWebsitehostChange}
 				/>
 			)}
 

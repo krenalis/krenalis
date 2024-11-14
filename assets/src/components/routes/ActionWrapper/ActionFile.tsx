@@ -755,11 +755,12 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			)}
 			{isImport && (
 				<div className='action__file-buttons'>
-					<SlButton variant='neutral' size='small' onClick={onFilePreview}>
+					<SlButton className='action__file-preview' variant='neutral' size='small' onClick={onFilePreview}>
 						Preview
 					</SlButton>
 					<FeedbackButton
 						ref={fileConfirmButtonRef}
+						className='action__file-confirm'
 						variant='success'
 						size='small'
 						onClick={onConfirmFile}

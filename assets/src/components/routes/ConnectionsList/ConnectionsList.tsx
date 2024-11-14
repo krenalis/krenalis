@@ -102,6 +102,7 @@ const ConnectionsList = () => {
 			}
 			rows.push({
 				cells: cells,
+				id: String(c.id),
 				onClick: () => {
 					redirect(`connections/${c.id}/actions`);
 				},

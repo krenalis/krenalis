@@ -845,4 +845,9 @@ class Connectors {
 	};
 }
 
+// TODO: review this for production.
+if (typeof window !== 'undefined') {
+	(window as any).API = API;
+}
+
 export default API;

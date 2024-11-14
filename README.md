@@ -2,6 +2,7 @@
 # meergo
 
 - [Before commit](#before-commit)
+  - [Run the UI tests](#run-the-ui-tests)
   - [Troubleshoot tests](#troubleshoot-tests)
   - [Short tests during development](#short-tests-during-development)
   - [Troubleshooting](#troubleshooting)
@@ -48,6 +49,64 @@ go test -run ^TestWarehousesIdentityResolution$ github.com/meergo/meergo/core/da
 ```
 go test -run ^Test_Merge$ github.com/meergo/meergo/warehouses/... -count 1 -v
 ```
+
+### Run the UI tests
+
+1. Start Meergo.
+
+2. Create a new workspace.
+
+3. Apply the test schema to the warehouse of the new workspace, replacing the placeholder `<YOUR_WORKSPACE_ID>` with the id of the newly created workspace:
+    ```
+    cd meergo-cli
+    go build
+    meergo-cli change-user-schema --yes ../test/example_user_schema.json -w <YOUR_WORKSPACE_ID>
+    ```
+
+5. In the directory `assets/tests`, add a file `test-config.json` and copy inside it the contents of the file `test-config-example.json`. Then, fill the various keys of the config file based on your local environment. For instance:
+
+    ```json
+    {
+        "baseURL": "https://localhost:9090",
+        "workspaceID": 1234567890,
+        "dbHost": "127.0.0.1",
+        "dbPort": 5432,
+        "dbUsername": "postgres",
+        "dbPassword": "foopass",
+        "dbName": "foodb"
+    }
+    ```
+    **NOTE**: the database credentials in the config file are used to test the creation of a "PostgreSQL" connection and the creation of actions associated with it. For this reason, any PostgreSQL database credentials can be provided, as long as: 
+    - the database can be modified by the tests without causing loss of relevant information
+    - the database is capable of satisfying the query `SELECT email, first_name, last_name FROM users WHERE ${last_change_time} LIMIT ${limit}` used in the test that adds the "Import Users" action 
+    - the database allows the use of `users` as the table in the test that adds the "Export Users" action
+    
+    For this purpose, you can create a new database and execute the following query to populate it so that it is compatible with the tests:
+    ```sql
+    CREATE TABLE users (
+        email VARCHAR(300),
+        first_name VARCHAR(300),
+        last_name VARCHAR(300)
+    );
+    ```
+
+5. Navigate to the `assets` directory and install all the dependencies:
+
+    ```
+    cd assets
+    npm install
+    npx playwright install chromium
+    ```
+  
+6. From the same `assets` directory, run the tests directly from the command line:
+
+    ```
+    npx playwright test
+    ```
+    or launch the Playwright UI to run and debug the tests visually:
+    ```
+    npx playwright test --ui
+    ```
 
 ### Troubleshoot tests
 

@@ -95,12 +95,12 @@ const GridNestedRows = ({
 				parentComponent = (
 					<Fragment key={i}>
 						<SlIcon className='grid__row-expand' name='caret-right-fill' onClick={onExpand}></SlIcon>
-						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' id={r.id} />
+						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' />
 					</Fragment>
 				);
 			} else {
 				const component = (
-					<GridRow key={i} row={r} columns={columns} className='grid__row grid__row--children' id={r.id} />
+					<GridRow key={i} row={r} columns={columns} className='grid__row grid__row--children' />
 				);
 				if (isSortable) {
 					const r = row as SortableGridRow;

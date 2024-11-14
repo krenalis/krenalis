@@ -158,7 +158,11 @@ const IdentityResolutionSettings = () => {
 						title='Automatic execution'
 						description='Define when the Identity Resolution should be automatically started'
 					>
-						<SlCheckbox checked={runOnBatchImport} onSlChange={onRunOnBatchImportChange}>
+						<SlCheckbox
+							className='identifiers__automatic-execution'
+							checked={runOnBatchImport}
+							onSlChange={onRunOnBatchImportChange}
+						>
 							Automatically run the Identity Resolution when importing users from apps, files and
 							databases
 						</SlCheckbox>
@@ -189,6 +193,7 @@ const IdentityResolutionSettings = () => {
 										</SlButton>
 										<SlMenu>
 											<SlMenuItem
+												className='identifiers__mapping-up'
 												onClick={() => moveIdentifierUp(position)}
 												disabled={position === 1}
 											>
@@ -196,6 +201,7 @@ const IdentityResolutionSettings = () => {
 												Move up
 											</SlMenuItem>
 											<SlMenuItem
+												className='identifiers__mapping-down'
 												onClick={() => moveIdentifierDown(position)}
 												disabled={position === identifiers.length}
 											>

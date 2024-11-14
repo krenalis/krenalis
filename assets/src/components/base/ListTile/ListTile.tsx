@@ -4,6 +4,7 @@ import './ListTile.css';
 interface ListTileProps {
 	icon: ReactNode;
 	name: ReactNode;
+	id?: string;
 	description?: ReactNode;
 	disabled?: boolean;
 	disablingReason?: string;
@@ -15,6 +16,7 @@ interface ListTileProps {
 const ListTile = ({
 	icon,
 	name,
+	id,
 	description,
 	disabled,
 	disablingReason,
@@ -26,6 +28,7 @@ const ListTile = ({
 		<div
 			className={`list-tile${className ? ' ' + className : ''}${disabled ? ' list-tile--disabled' : ''}`}
 			onClick={disabled ? null : onClick}
+			data-id={id ? id : ''}
 			style={
 				onClick && !disabled ? { cursor: 'pointer' } : onClick && disabled ? { cursor: 'not-allowed' } : null
 			}

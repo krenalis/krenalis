@@ -98,7 +98,7 @@ const ConnectionOverview = () => {
 	const { connection: c } = useContext(ConnectionContext);
 
 	const supportedTargets = useRef([]);
-	const currentMetricsIntervalID = useRef<number>();
+	const currentMetricsIntervalID = useRef<any>();
 
 	const { userActionErrorRows, eventActionErrorRows } = useMemo(() => {
 		return {

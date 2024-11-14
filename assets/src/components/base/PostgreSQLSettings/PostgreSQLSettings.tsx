@@ -9,7 +9,7 @@ interface settingsProps {
 }
 
 const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
-	const onSettingChange = (e) => {
+	const onSettingInput = (e) => {
 		const name = e.currentTarget.name;
 		let value = e.currentTarget.value;
 		if (name === 'port') {
@@ -31,7 +31,7 @@ const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
 				placeholder='example.com'
 				minlength={1}
 				maxlength={253}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.host || ''}
 			/>
 			<SlInput
@@ -41,7 +41,7 @@ const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
 				type='number'
 				minlength={1}
 				maxlength={5}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.port || ''}
 			/>
 			<SlInput
@@ -51,7 +51,7 @@ const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.username || ''}
 			/>
 			<SlInput
@@ -61,7 +61,7 @@ const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
 				type='password'
 				minlength={1}
 				maxlength={100}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.password || ''}
 				password-toggle
 			/>
@@ -72,7 +72,7 @@ const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
 			<SlInput
@@ -82,7 +82,7 @@ const PostgreSQLSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.schema || ''}
 			/>
 		</>

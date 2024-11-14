@@ -13,6 +13,7 @@ const ActionExportOnDuplicatedUsers = () => {
 	return (
 		<Section
 			title='Export on duplicated users'
+			className='action__export-on-duplicated'
 			description='Determine the behavior in case of duplicated users on the app, which are users which have the same value for the specified property'
 			padded={true}
 		>

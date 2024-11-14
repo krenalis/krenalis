@@ -9,7 +9,7 @@ interface settingsProps {
 }
 
 const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
-	const onSettingChange = (e) => {
+	const onSettingInput = (e) => {
 		const name = e.currentTarget.name;
 		const value = e.currentTarget.value;
 		setSettings((prevSettings: any) => {
@@ -28,7 +28,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				placeholder='ABCDEFG.TUVWXYZ'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.account || ''}
 			/>
 			<SlInput
@@ -38,7 +38,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.username || ''}
 			/>
 			<SlInput
@@ -48,7 +48,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				type='password'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.password || ''}
 				password-toggle
 			/>
@@ -59,7 +59,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
 			<SlInput
@@ -69,7 +69,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.schema || ''}
 			/>
 			<SlInput
@@ -79,7 +79,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.warehouse || ''}
 			/>
 			<SlInput
@@ -89,7 +89,7 @@ const SnowflakeSettings = ({ setSettings, settings }: settingsProps) => {
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlChange={onSettingChange}
+				onSlInput={onSettingInput}
 				value={settings?.role || ''}
 			/>
 		</>

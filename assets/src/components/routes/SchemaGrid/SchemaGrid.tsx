@@ -37,11 +37,11 @@ const SchemaGrid = () => {
 		<div className='schema-grid'>
 			<Toolbar className='schema-grid__toolbar'>
 				<div className='schema-grid__expansion-buttons'>
-					<SlButton onClick={onExpandClick}>
+					<SlButton className='schema-grid__expand-all-button' onClick={onExpandClick}>
 						<SlIcon name='arrows-expand' slot='prefix' />
 						Expand all
 					</SlButton>
-					<SlButton onClick={onCollapseClick}>
+					<SlButton className='schema-grid__collapse-all-button' onClick={onCollapseClick}>
 						<SlIcon name='arrows-collapse' slot='prefix' />
 						Collapse all
 					</SlButton>

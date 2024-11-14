@@ -1,0 +1,9 @@
+{
+	"baseURL": "",
+	"workspaceID": 0,
+	"dbHost": "",
+	"dbPort": 5432,
+	"dbUsername": "",
+	"dbPassword": "",
+	"dbName": ""
+}

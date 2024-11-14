@@ -8,10 +8,9 @@ interface GridRowProps {
 	row: StandardGridRow;
 	columns: GridColumn[];
 	className?: string;
-	id?: string;
 }
 
-const GridRow = ({ row, columns, className, id }: GridRowProps) => {
+const GridRow = ({ row, columns, className }: GridRowProps) => {
 	const cellComponents = [] as ReactNode[];
 	for (const [i, cell] of row.cells.entries()) {
 		const type = columns[i].type;
@@ -27,7 +26,7 @@ const GridRow = ({ row, columns, className, id }: GridRowProps) => {
 			className={`${className}${row.onClick ? ' grid__row--clickable' : ''}${row.selected ? ' grid__row--selected' : ''}`}
 			onClick={row.onClick}
 			data-animation={row.animation}
-			data-id={id}
+			data-id={row.id}
 		>
 			{cellComponents}
 		</div>

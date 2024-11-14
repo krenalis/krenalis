@@ -141,7 +141,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 				<div className='sidebar__bottom'>
 					<div className='sidebar__item' onClick={onLogout}>
 						<SlIcon name='box-arrow-left' />
-						<div className='sidebar__item-text'>Logout</div>
+						<div className='sidebar__item-text sidebar__item-text-logout'>Logout</div>
 					</div>
 				</div>
 			</div>

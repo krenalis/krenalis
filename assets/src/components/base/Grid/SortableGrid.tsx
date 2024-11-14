@@ -113,7 +113,6 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(({ columns, 
 					row={row as StandardGridRow}
 					columns={columns}
 					className={`grid__row${className ? ' ' + className : ''}`}
-					id={row.id}
 				/>
 			);
 			const isSortable = row.dragKey != null && row.dragKey !== '';

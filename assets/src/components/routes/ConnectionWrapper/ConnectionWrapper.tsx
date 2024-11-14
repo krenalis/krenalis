@@ -23,7 +23,7 @@ const ConnectionWrapper = () => {
 		setTitle(
 			<Flex alignItems='baseline' gap={10}>
 				<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(connection.connector.icon)}</span>
-				<div>{connection.name}</div>
+				<div className='connection-wrapper__name'>{connection.name}</div>
 				<StatusDot status={connection.status} />
 			</Flex>,
 		);

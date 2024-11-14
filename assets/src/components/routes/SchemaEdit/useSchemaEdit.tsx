@@ -502,11 +502,16 @@ const buildRow = (
 ): SortableGridRow => {
 	const buttons = (
 		<div className='schema-edit__property-buttons'>
-			<SlButton size='small' onClick={() => onEditClick(propertyKey, property)}>
+			<SlButton
+				className='schema-edit__property-buttons-edit'
+				size='small'
+				onClick={() => onEditClick(propertyKey, property)}
+			>
 				Edit
 			</SlButton>
 			<SlButton
 				size='small'
+				className='schema-edit__property-buttons-remove'
 				variant='danger'
 				outline={true}
 				onClick={() => onRemoveClick(propertyKey, property.name, property.type.name)}

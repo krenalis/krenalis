@@ -34,7 +34,7 @@ const ConnectorInput = ({
 		setValue(val);
 	}, [val]);
 
-	const onInputChange = (e) => {
+	const onInput = (e) => {
 		let v = e.currentTarget.value;
 		if (type === 'number') {
 			v = Number(v);
@@ -55,7 +55,7 @@ const ConnectorInput = ({
 				minlength={minlength !== 0 ? minlength : undefined}
 				maxlength={maxlength !== 0 ? maxlength : undefined}
 				passwordToggle={type === 'password'}
-				onSlChange={onInputChange}
+				onSlInput={onInput}
 			/>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>

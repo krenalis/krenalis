@@ -11,6 +11,7 @@ type GridRow = StandardGridRow | NestedGridRows;
 
 interface StandardGridRow {
 	cells: ReactNode[];
+	id?: string; // the id inserted in the 'data-id' attribute of the row. Can be used to select the row via JS and CSS.
 	key?: string;
 	onClick?: () => void;
 	animation?: string;
@@ -19,7 +20,6 @@ interface StandardGridRow {
 
 interface SortableGridRow extends StandardGridRow {
 	dragKey: string; // the key used to identify the row in the drag and drop.
-	id: string; // the id inserted in the 'data-id' attribute of the row. Can be used to select the row via JS and CSS.
 }
 
 type NestedGridRows = GridRow[];
