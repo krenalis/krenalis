@@ -79,25 +79,11 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const executeAction = async (actionID: number) => {
 		runButtonRefs.current[actionID].current!.load();
 		const startTime = new Date().getTime();
-		const errorButton = (
-			<div className='connection-actions__link-to-overview'>
-				Go to{' '}
-				<Link path={`connections/${connection.id}/overview?failed-execution-action=${actionID}`}>
-					<span className='connection-actions__link'>overview</span>
-				</Link>{' '}
-				for details
-			</div>
-		);
 		try {
 			await api.workspaces.connections.executeAction(connection.id, actionID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
-				runButtonRefs.current[actionID].current!.error(
-					<>
-						{err.message}
-						{errorButton}
-					</>,
-				);
+				runButtonRefs.current[actionID].current!.error(err.message);
 				return;
 			}
 			runButtonRefs.current[actionID].current!.stop();
@@ -136,7 +122,13 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			runButtonRefs.current[actionID].current!.error(
 				<>
 					{execution.Error}
-					{errorButton}
+					<div className='connection-actions__link-to-overview'>
+						Go to{' '}
+						<Link path={`connections/${connection.id}/overview?failed-execution-action=${actionID}`}>
+							<span className='connection-actions__link'>overview</span>
+						</Link>{' '}
+						for details
+					</div>
 				</>,
 			);
 			return;
