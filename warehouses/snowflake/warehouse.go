@@ -55,7 +55,7 @@ func init() {
 }
 
 // accountFormat is the format of the account identifier in the settings.
-var accountFormat = regexp.MustCompile(`^[a-zA-z0-9]+[.-][a-zA-z0-9]+$`)
+var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
 // New returns a new Snowflake data warehouse driver instance.
 // It returns a SettingsError error if the settings are not valid.
@@ -70,7 +70,7 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 		return nil, meergo.SettingsErrorf("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return nil, meergo.SettingsErrorf("account identifier must be in the <organization>-<account> or <organization>-<account> format")
+		return nil, meergo.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {

@@ -225,7 +225,7 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []me
 }
 
 // accountFormat is the format of the account identifier in the settings.
-var accountFormat = regexp.MustCompile(`^[a-zA-z0-9]+[.-][a-zA-z0-9]+$`)
+var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
 // saveValues saves the user-entered values as settings. If test is true, it
 // validates only the values without saving it.
@@ -240,7 +240,7 @@ func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test boo
 		return meergo.SettingsErrorf("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return meergo.SettingsErrorf("account identifier must be in the <organization>-<account> or <organization>-<account> format")
+		return meergo.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
