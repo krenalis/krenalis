@@ -61,7 +61,7 @@ func (s *scanner) Scan(dest ...any) error {
 	s.dest = dest
 	err := s.rows.Scan(s.values...)
 	s.dest = nil
-	return err
+	return snowflake(err)
 }
 
 // normalize normalizes the value v read from Snowflake.

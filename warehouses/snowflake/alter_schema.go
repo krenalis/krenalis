@@ -52,7 +52,7 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, userColumns []
 		for _, query := range queries {
 			_, err := tx.Exec(query)
 			if err != nil {
-				return err
+				return snowflake(err)
 			}
 		}
 		return nil

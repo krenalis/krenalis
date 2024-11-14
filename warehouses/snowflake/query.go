@@ -49,7 +49,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 		}
 		err = db.QueryRowContext(ctx, b.String()).Scan(&count)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, snowflake(err)
 		}
 		b.Reset()
 	}
@@ -94,7 +94,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	// Execute the query.
 	rows, err := db.QueryContext(ctx, b.String())
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, snowflake(err)
 	}
 
 	return newScanner(query.Columns, rows), count, nil

@@ -193,7 +193,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	_, err = db.ExecContext(ctxMulti, query)
 	span.End()
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
@@ -202,7 +202,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	_, err = db.ExecContext(ctx, "CALL resolve_identities()")
 	span.End()
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 
 	// End the IdentityResolution operation.
@@ -216,14 +216,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	// has changed its name.
 	_, err = db.ExecContext(ctx, createViewQuery(newUsersName, userColumns, true))
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
 	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 
 	return nil
@@ -235,7 +235,7 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, snowflake(err)
 	}
 	defer conn.Close()
 	err = warehouse.fixOperationsTable(ctx)
@@ -246,7 +246,7 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 		`"operation" = 'IdentityResolution' ORDER BY "id" DESC LIMIT 1`
 	err = conn.QueryRowContext(ctx, query).Scan(&startTime, &endTime)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, nil, err
+		return nil, nil, snowflake(err)
 	}
 	return startTime, endTime, nil
 }

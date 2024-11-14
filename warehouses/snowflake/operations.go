@@ -49,7 +49,7 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 		err = tx.QueryRow(`SELECT "operation" FROM "_operations" ` +
 			`WHERE "start_time" IS NOT NULL AND "end_time" IS NULL ORDER BY "id" DESC LIMIT 1`).Scan(&runningOp)
 		if err != nil && err != sql.ErrNoRows {
-			return err
+			return snowflake(err)
 		}
 		if runningOp != nil {
 			switch *runningOp {
@@ -64,13 +64,13 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 		_, err = tx.Exec(`INSERT INTO "_operations" ("operation", "start_time", "end_time") `+
 			`VALUES (?, SYSDATE(), NULL)`, operation)
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 		// TODO(Gianluca): this should be reviewed. It is just a workaround, as
 		// Snowflake does not support the "INSERT ... RETURNING" syntax.
 		err = tx.QueryRow(`SELECT MAX("id") FROM "_operations"`).Scan(&opID)
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 		return nil
 	})
@@ -86,7 +86,7 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 func (warehouse *Snowflake) endOperation(ctx context.Context, opID int, endTime time.Time) error {
 	db := warehouse.openDB()
 	_, err := db.ExecContext(ctx, `UPDATE "_operations" SET "end_time" = ? WHERE "id" = ? AND "end_time" IS NULL`, endTime, opID)
-	return err
+	return snowflake(err)
 }
 
 // fixOperationsTable fixes the '_operations' table.

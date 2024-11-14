@@ -121,7 +121,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	db := warehouse.openDB()
 	rows, err := db.QueryContext(ctx, "SHOW TERSE OBJECTS")
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	defer rows.Close()
 	var objects []string
@@ -130,13 +130,13 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 		var name, kind string
 		err := rows.Scan(&createdOn, &name, &kind, &databaseName, &schemaName)
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 		typ := strings.ToLower(kind)
 		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return snowflake(err)
 	}
 	if objects != nil {
 		reason := fmt.Sprintf("expected an empty database, got: %s", strings.Join(objects, ", "))
@@ -153,7 +153,7 @@ func (warehouse *Snowflake) Close() error {
 	err := warehouse.db.Close()
 	warehouse.db = nil
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	return nil
 }
@@ -173,7 +173,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 	db := warehouse.openDB()
 	_, err = db.ExecContext(ctx, s.String())
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	return nil
 }
@@ -194,7 +194,11 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.Table, rows 
 	}
 	defer conn.Close()
 	// Merge rows.
-	return merge(ctx, conn, table, rows, deleted)
+	err = merge(ctx, conn, table, rows, deleted)
+	if err != nil {
+		return snowflake(err)
+	}
+	return nil
 }
 
 // immutableMergeIdentitiesColumns are columns in the merge of identities that
@@ -286,14 +290,14 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	defer conn.Close()
 
 	// Create the temporary table.
 	_, err = conn.ExecContext(ctx, create)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 
 	// Copy the rows into the temporary table.
@@ -301,7 +305,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 		// Put the rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, csvReader), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 		// Copy the rows from the stage into the temporary table.
 		b.Reset()
@@ -315,14 +319,14 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, b.String())
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 	}
 
 	// Merge the temporary table's rows with the destination table's rows.
 	_, err = conn.ExecContext(ctx, merge)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 
 	return nil
@@ -344,7 +348,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	db := warehouse.openDB()
 	_, err := db.ExecContext(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	return nil
 }
@@ -384,7 +388,7 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 	for _, query := range queries {
 		_, err := db.ExecContext(ctx, query)
 		if err != nil {
-			return err
+			return snowflake(err)
 		}
 	}
 	return nil
@@ -408,7 +412,7 @@ func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 	var v int
 	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
 	if err != nil {
-		return 0, err
+		return 0, snowflake(err)
 	}
 	return v, nil
 }
@@ -420,16 +424,31 @@ func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx)
 	db := warehouse.openDB()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	defer tx.Rollback()
 	err = f(tx)
 	if err != nil {
-		return err
+		return snowflake(err)
 	}
 	err = tx.Commit()
 	if err != nil && !errors.Is(err, sql.ErrTxDone) {
-		return err
+		return snowflake(err)
 	}
 	return nil
+}
+
+// snowflake transforms Snowflake error messages into a more user-friendly,
+// readable format. It must be called for each error returned by the underlying
+// SQL driver.
+func snowflake(err error) error {
+	switch err := err.(type) {
+	case *gosnowflake.SnowflakeError:
+		switch err.Number {
+		case 261004:
+			err.Message = "Authentication failed. Ensure that the account identifier is correct."
+			err.MessageArgs = nil
+		}
+	}
+	return err
 }
