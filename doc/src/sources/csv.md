@@ -6,9 +6,9 @@ The CSV data source allows you to import user data from a CSV (Comma-Separated V
 
 ### On this page
 
-* [Add a CSV data source](#add-a-csv-data-source)
+* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
-### Add a CSV data source
+### <span class="action"></span> Import users into the workspace's data warehouse
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. Click on the storage data source from which you want to import the CSV file.

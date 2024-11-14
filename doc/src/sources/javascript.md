@@ -14,6 +14,8 @@ The JavaScript data source requires the use of the [JavaScript SDK](../javascrip
 
 * [Add a JavaScript data source](#add-a-javascript-data-source)
 * [Add the JavaScript snippet to website](#add-the-javascript-snippet-to-website)
+* <span class="action"></span> [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
+* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add a JavaScript data source
 
@@ -37,3 +39,19 @@ Once the JavaScript data source is added, the **Actions** page will be displayed
 5. Add the snippet to your site's pages between the **<head>** and **</head>** tags.
 
 > Refer to the [JavaScript SDK](../javascript-sdk/getting-started.html) documentation for more details and other ways to use the SDK.
+
+### <span class="action"></span> Import events into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the JavaScript data source from which you want to import the events.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import events**.
+5. Click **Add** to add the action.
+
+### <span class="action"></span> Import users into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the JavaScript data source from which you want to import the users.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import users**.
+5. Click **Add** to add the action.

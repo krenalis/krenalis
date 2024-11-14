@@ -81,3 +81,23 @@ table td .hljs { background: none; box-shadow: none; }
     --table-header-bg: #f3f4f7;
     --theme-hover: #fbfcff;
 }
+
+span.action {
+    background: #b1dff2;
+    border: 1px solid #66c7e6;
+    border-radius: 12px;
+    padding: 3px 13px 4px 14px;
+    margin-right: 2px;
+    font-size: 12px;
+}
+
+span.action::after {
+    content: "Action";
+    font-weight: bold;
+    color: #2d6578;
+}
+
+h3 span.action {
+    position: relative;
+    top: -3px;
+}

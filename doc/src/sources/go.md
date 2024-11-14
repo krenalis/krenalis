@@ -12,7 +12,9 @@ To use the Go data source, you will need the [Go SDK](../go-sdk.md) from Meergo.
 
 ### On this page
 
-- [Add a Go data source](#add-a-go-data-source)
+* [Add a Go data source](#add-a-go-data-source)
+* <span class="action"></span> [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
+* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add a Go data source
 
@@ -25,3 +27,19 @@ To use the Go data source, you will need the [Go SDK](../go-sdk.md) from Meergo.
 7. Click **Add**.
 
 Once the Go data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+
+### <span class="action"></span> Import events into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Go data source from which you want to import the events.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import events**.
+5. Click **Add** to add the action.
+
+### <span class="action"></span> Import users into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Go data source from which you want to import the users.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import users**.
+5. Click **Add** to add the action.

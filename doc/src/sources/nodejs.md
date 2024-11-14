@@ -12,7 +12,9 @@ To use the Node.js data source, you will need the [Node SDK](../node-sdk.md) fro
 
 ### On this page
 
-- [Add a Node.js data source](#add-a-nodejs-data-source)
+* [Add a Node.js data source](#add-a-nodejs-data-source)
+* <span class="action"></span> [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
+* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add a Node.js data source
 
@@ -25,3 +27,19 @@ To use the Node.js data source, you will need the [Node SDK](../node-sdk.md) fro
 7. Click **Add**.
 
 Once the Node.js data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
+
+### <span class="action"></span> Import events into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Node.js data source from which you want to import the events.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import events**.
+5. Click **Add** to add the action.
+
+### <span class="action"></span> Import users into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the Node.js data source from which you want to import the users.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import users**.
+5. Click **Add** to add the action.

@@ -7,6 +7,7 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 ### On this page
 
 * [Add a ClickHouse data source](#add-a-clickhouse-data-source)
+* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add a ClickHouse data source
 
@@ -25,3 +26,13 @@ ClickHouse is an open-source, column-oriented database optimized for real-time a
 8. Click **Add**.
 
 Once the ClickHouse data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the users read from ClickHouse.
+
+### <span class="action"></span> Import users into the workspace's data warehouse
+
+1. From the Meergo admin, go to **Connections > Sources**.
+2. Click on the ClickHouse data source from which you want to import the users.
+3. If there are no actions, click  **Add**, otherwise click  **Add new action**.
+4. Click **Import users**.
+5. In the **Query** editor, enter the query to read the users to import. 
+6. To see a preview of the users to import, click **Preview**. 
+5. Click **Add** to add the action.

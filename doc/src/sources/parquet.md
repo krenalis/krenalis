@@ -6,9 +6,9 @@ The Parquet data source allows you to import user data from Parquet files, which
 
 ### On this page
 
-* [Add a Parquet data source](#add-a-parquet-data-source)
+* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
-### Add a Parquet data source
+### <span class="action"></span> Import users into the workspace's data warehouse
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. Click on the storage data source from which you want to import the Parquet file.
