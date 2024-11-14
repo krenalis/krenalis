@@ -33,21 +33,12 @@ const (
 // In the case that an AlterSchema operation is already in progress, the error
 // ErrAlterInProgress is returned; if an IdentityResolution operation is
 // already in progress, the error ErrIdentityResolutionInProgress is returned.
-//
-// If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *Snowflake) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
-	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer conn.Close()
-	err = warehouse.fixOperationsTable(ctx)
+	err := warehouse.fixOperationsTable(ctx)
 	if err != nil {
 		return 0, err
 	}
 	var opID int
-
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		// TODO(Gianluca): find a way to implement lock mechanism, if necessary.
 		// _, err := tx.Exec(`LOCK TABLE "_operations"`)
@@ -92,20 +83,10 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 // endOperation marks the operation with the given ID as completed, setting its
 // endTime to the provided value. If the operation had already been completed
 // previously, the call to this method is a no-op.
-//
-// If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *Snowflake) endOperation(ctx context.Context, opID int, endTime time.Time) error {
 	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	_, err = conn.ExecContext(ctx, `UPDATE "_operations" SET "end_time" = ? WHERE "id" = ? AND "end_time" IS NULL`, endTime, opID)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := db.ExecContext(ctx, `UPDATE "_operations" SET "end_time" = ? WHERE "id" = ? AND "end_time" IS NULL`, endTime, opID)
+	return err
 }
 
 // fixOperationsTable fixes the '_operations' table.

@@ -102,8 +102,7 @@ var (
 	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
 )
 
-// Warehouse is the interface implemented by data warehouses. Its methods return
-// a *WarehouseError if an error occurs with the data warehouse.
+// Warehouse is the interface implemented by data warehouses.
 type Warehouse interface {
 
 	// AlterUserColumns alters the columns of the user tables.

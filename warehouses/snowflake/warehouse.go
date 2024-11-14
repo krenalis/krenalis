@@ -119,12 +119,7 @@ type sfSettings struct {
 // CanInitialize checks whether the data warehouse can be initialized.
 func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	rows, err := conn.QueryContext(ctx, "SHOW TERSE OBJECTS")
+	rows, err := db.QueryContext(ctx, "SHOW TERSE OBJECTS")
 	if err != nil {
 		return err
 	}
@@ -354,18 +349,6 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	return nil
 }
 
-// openDB opens a Snowflake database and returns it.
-func (warehouse *Snowflake) openDB() *sql.DB {
-	warehouse.mu.Lock()
-	defer warehouse.mu.Unlock()
-	if warehouse.db != nil {
-		return warehouse.db
-	}
-	db := sql.OpenDB(warehouse.settings.connector())
-	warehouse.db = db
-	return db
-}
-
 // connector returns a gosnowflake.Connector from the settings.
 func (s *sfSettings) connector() gosnowflake.Connector {
 	account := s.Account
@@ -387,12 +370,6 @@ func (s *sfSettings) connector() gosnowflake.Connector {
 // initRepair initializes (or repairs) the database objects (as tables, types,
 // etc...) on the data warehouse.
 func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
-	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,
@@ -403,8 +380,9 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
 		queries = append(queries, createUsersView)
 	}
+	db := warehouse.openDB()
 	for _, query := range queries {
-		_, err := conn.ExecContext(ctx, query)
+		_, err := db.ExecContext(ctx, query)
 		if err != nil {
 			return err
 		}
@@ -412,16 +390,23 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 	return nil
 }
 
+// openDB opens a Snowflake database and returns it.
+func (warehouse *Snowflake) openDB() *sql.DB {
+	warehouse.mu.Lock()
+	defer warehouse.mu.Unlock()
+	if warehouse.db != nil {
+		return warehouse.db
+	}
+	db := sql.OpenDB(warehouse.settings.connector())
+	warehouse.db = db
+	return db
+}
+
 // usersVersion returns the version of the "users" table.
 func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer conn.Close()
 	var v int
-	err = conn.QueryRowContext(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
 	if err != nil {
 		return 0, err
 	}
@@ -433,12 +418,7 @@ func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx) error) error {
 	// TODO(Gianluca): is the use of the context in this method correct?
 	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	tx, err := conn.BeginTx(ctx, nil)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}

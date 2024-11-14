@@ -33,12 +33,6 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	_, span := telemetry.TraceSpan(ctx, "Snowflake.ResolveIdentities")
 	defer span.End()
 
-	db := warehouse.openDB()
-	conn, err := db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-
 	// Start an IdentityResolution operation on the data warehouse, then defer
 	// its ending.
 	opID, err := warehouse.startOperation(ctx, identityResolution)
@@ -195,7 +189,8 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	if err != nil {
 		return err
 	}
-	_, err = conn.ExecContext(ctxMulti, query)
+	db := warehouse.openDB()
+	_, err = db.ExecContext(ctxMulti, query)
 	span.End()
 	if err != nil {
 		return err
@@ -204,7 +199,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
 	_, span = telemetry.TraceSpan(ctx, "CALL resolve_identities()")
-	_, err = conn.ExecContext(ctx, "CALL resolve_identities()")
+	_, err = db.ExecContext(ctx, "CALL resolve_identities()")
 	span.End()
 	if err != nil {
 		return err
@@ -219,14 +214,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	// Replace the current "users" view with a new one using the "CREATE OR
 	// REPLACE VIEW" statement since the table "_users" that the view refers to
 	// has changed its name.
-	_, err = conn.ExecContext(ctx, createViewQuery(newUsersName, userColumns, true))
+	_, err = db.ExecContext(ctx, createViewQuery(newUsersName, userColumns, true))
 	if err != nil {
 		return err
 	}
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
-	_, err = conn.ExecContext(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
+	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
 		return err
 	}
