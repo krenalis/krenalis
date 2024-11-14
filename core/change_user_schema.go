@@ -52,11 +52,11 @@ import (
 //     progress on the warehouse.
 //   - ConnectionNotExist, if a connections used as primary source does not
 //     exist.
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - IdentityResolutionInProgress, if an Identity Resolution is currently in
 //     progress on the warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaChange, if the schema change is invalid.
+//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
@@ -176,8 +176,8 @@ Identifiers:
 			if err == datastore.ErrInspectionMode {
 				return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 			}
-			if err, ok := err.(*datastore.DataWarehouseError); ok {
-				return errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+			if err, ok := err.(*datastore.WarehouseError); ok {
+				return errors.Unprocessable(WarehouseError, "%s", err)
 			}
 			return err
 		}
@@ -219,7 +219,7 @@ Identifiers:
 //
 // It returns an errors.UnprocessableError error with code:
 //   - InvalidSchemaChange, if the schema change is invalid.
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
+//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.core.mustBeOpen()
 	if !schema.Valid() {
@@ -243,8 +243,8 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	}
 	queries, err := this.store.AlterUserSchemaQueries(ctx, schema, operations)
 	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return nil, errors.Unprocessable(DataWarehouseFailed, "data warehouse has returned an error: %w", err.Err)
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return nil, errors.Unprocessable(WarehouseError, "%s", err)
 		}
 		return nil, err
 	}

@@ -10,6 +10,7 @@ package snowflake
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -41,7 +42,7 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return 0, meergo.Error(err)
+		return 0, err
 	}
 	defer conn.Close()
 	err = warehouse.fixOperationsTable(ctx)
@@ -60,7 +61,7 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 		err = tx.QueryRow(`SELECT "operation" FROM "_operations" ` +
 			`WHERE "start_time" IS NOT NULL AND "end_time" IS NULL ORDER BY "id" DESC LIMIT 1`).Scan(&runningOp)
 		if err != nil && err != sql.ErrNoRows {
-			return meergo.Error(err)
+			return err
 		}
 		if runningOp != nil {
 			switch *runningOp {
@@ -69,19 +70,19 @@ func (warehouse *Snowflake) startOperation(ctx context.Context, operation wareho
 			case identityResolution:
 				return meergo.ErrIdentityResolutionInProgress
 			default:
-				return meergo.Errorf("unexpected operation %q", *runningOp)
+				return fmt.Errorf("unexpected operation %q", *runningOp)
 			}
 		}
 		_, err = tx.Exec(`INSERT INTO "_operations" ("operation", "start_time", "end_time") `+
 			`VALUES (?, SYSDATE(), NULL)`, operation)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		// TODO(Gianluca): this should be reviewed. It is just a workaround, as
 		// Snowflake does not support the "INSERT ... RETURNING" syntax.
 		err = tx.QueryRow(`SELECT MAX("id") FROM "_operations"`).Scan(&opID)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		return nil
 	})
@@ -103,12 +104,12 @@ func (warehouse *Snowflake) endOperation(ctx context.Context, opID int, endTime 
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	_, err = conn.ExecContext(ctx, `UPDATE "_operations" SET "end_time" = ? WHERE "id" = ? AND "end_time" IS NULL`, endTime, opID)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }

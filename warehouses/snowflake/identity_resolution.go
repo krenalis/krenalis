@@ -20,6 +20,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
+
 	"github.com/snowflakedb/gosnowflake"
 )
 
@@ -38,7 +39,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	// Start an IdentityResolution operation on the data warehouse, then defer
@@ -77,11 +78,11 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		likeTable := fmt.Sprintf(`_users_%d`, usersVersion)
 		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteTable(newUsersName), quoteTable(likeTable)))
 		if err != nil {
-			return meergo.Error(fmt.Errorf("cannot create users table (with name %s) like table %s: %s", quoteTable(newUsersName), quoteTable(likeTable), err))
+			return fmt.Errorf("cannot create users table (with name %s) like table %s: %s", quoteTable(newUsersName), quoteTable(likeTable), err)
 		}
 		_, err = tx.Exec(`UPDATE "_operations" SET "users_version" = ? WHERE "operation" = 'IdentityResolution' AND "end_time" IS NULL`, newUsersVersion)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		return nil
 	})
@@ -200,7 +201,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	_, err = conn.ExecContext(ctxMulti, query)
 	span.End()
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
@@ -209,7 +210,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	_, err = conn.ExecContext(ctx, "CALL resolve_identities()")
 	span.End()
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	// End the IdentityResolution operation.
@@ -223,14 +224,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	// has changed its name.
 	_, err = conn.ExecContext(ctx, createViewQuery(newUsersName, userColumns, true))
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
 	_, err = conn.ExecContext(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	return nil
@@ -245,7 +246,7 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return nil, nil, meergo.Error(err)
+		return nil, nil, err
 	}
 	defer conn.Close()
 	err = warehouse.fixOperationsTable(ctx)
@@ -256,7 +257,7 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 		`"operation" = 'IdentityResolution' ORDER BY "id" DESC LIMIT 1`
 	err = conn.QueryRowContext(ctx, query).Scan(&startTime, &endTime)
 	if err != nil && err != sql.ErrNoRows {
-		return nil, nil, meergo.Error(err)
+		return nil, nil, err
 	}
 	return startTime, endTime, nil
 }

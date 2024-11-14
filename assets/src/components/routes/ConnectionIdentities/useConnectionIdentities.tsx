@@ -24,7 +24,7 @@ const useConnectionIdentities = () => {
 			} catch (err) {
 				setTimeout(() => setIsLoading(false), 200);
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'DataWarehouseFailed') {
+					if (err.code === 'WarehouseError') {
 						handleError('An error occurred with the data warehouse');
 						return;
 					}

@@ -58,7 +58,7 @@ func init() {
 var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
 // New returns a new Snowflake data warehouse driver instance.
-// It returns a SettingsError error if the settings are not valid.
+// It returns a *meergo.WarehouseSettingsError if the settings are not valid.
 func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	var s sfSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
@@ -67,34 +67,34 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return nil, meergo.SettingsErrorf("account identifier length must be in range [3,255]")
+		return nil, meergo.WarehouseSettingsErrorf("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return nil, meergo.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return nil, meergo.WarehouseSettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("username length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("password length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("password length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("database length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("schema length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("schema length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("warehouse length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("warehouse length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return nil, meergo.SettingsErrorf("role length must be in range [1,255]")
+		return nil, meergo.WarehouseSettingsErrorf("role length must be in range [1,255]")
 	}
 	return &Snowflake{conf: conf, settings: &s}, nil
 }
@@ -124,12 +124,12 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	rows, err := conn.QueryContext(ctx, "SHOW TERSE OBJECTS")
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer rows.Close()
 	var objects []string
@@ -138,17 +138,17 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 		var name, kind string
 		err := rows.Scan(&createdOn, &name, &kind, &databaseName, &schemaName)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		typ := strings.ToLower(kind)
 		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
 	}
 	if err := rows.Err(); err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	if objects != nil {
 		reason := fmt.Sprintf("expected an empty database, got: %s", strings.Join(objects, ", "))
-		return meergo.NewNotInitializableError(reason)
+		return meergo.NewWarehouseNonInitializableError(reason)
 	}
 	return nil
 }
@@ -161,7 +161,7 @@ func (warehouse *Snowflake) Close() error {
 	err := warehouse.db.Close()
 	warehouse.db = nil
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }
@@ -184,7 +184,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 	}
 	_, err = db.ExecContext(ctx, s.String())
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }
@@ -204,7 +204,7 @@ func (warehouse *Snowflake) Merge(ctx context.Context, table meergo.Table, rows 
 	// Acquire a connection.
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	// Merge rows.
@@ -304,14 +304,14 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 	// Acquire a connection.
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 
 	// Create the temporary table.
 	_, err = conn.ExecContext(ctx, create)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	// Copy the rows into the temporary table.
@@ -319,7 +319,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 		// Put the rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, csvReader), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		// Copy the rows from the stage into the temporary table.
 		b.Reset()
@@ -333,14 +333,14 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, b.String())
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 
 	// Merge the temporary table's rows with the destination table's rows.
 	_, err = conn.ExecContext(ctx, merge)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	return nil
@@ -365,7 +365,7 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	}
 	_, err = db.ExecContext(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }
@@ -409,7 +409,7 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	queries := []string{
@@ -425,7 +425,7 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 	for _, query := range queries {
 		_, err := conn.ExecContext(ctx, query)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 	return nil
@@ -439,13 +439,13 @@ func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return 0, meergo.Error(err)
+		return 0, err
 	}
 	defer conn.Close()
 	var v int
 	err = conn.QueryRowContext(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
 	if err != nil {
-		return 0, meergo.Error(err)
+		return 0, err
 	}
 	return v, nil
 }
@@ -460,21 +460,21 @@ func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx)
 	}
 	conn, err := db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer tx.Rollback()
 	err = f(tx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	err = tx.Commit()
 	if err != nil && !errors.Is(err, sql.ErrTxDone) {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }

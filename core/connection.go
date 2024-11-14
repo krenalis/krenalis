@@ -976,8 +976,8 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 //
 // It returns an errors.UnprocessableError error with code
 //
-//   - DataWarehouseFailed, if an error occurred with the data warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
 	if first < 0 {

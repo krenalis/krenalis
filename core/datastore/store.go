@@ -99,9 +99,7 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 		eventIdentityWriters: map[int]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	wh, err := meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
-		Settings: ws.Warehouse.Settings,
-	})
+	wh, err := registeredWarehouse(ws.Warehouse.Name, ws.Warehouse.Settings)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open data warehouse: %s", err)
 	}
@@ -198,9 +196,7 @@ func (store *Store) CanChangeWarehouseSettings(ctx context.Context, toSettings [
 		return err
 	}
 	// Count the users on the warehouse that will be connected.
-	dw, err := meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
-		Settings: toSettings,
-	})
+	dw, err := registeredWarehouse(ws.Warehouse.Name, toSettings)
 	if err != nil {
 		return err
 	}
@@ -882,7 +878,7 @@ func (store *Store) userColumnByProperty() map[string]meergo.Column {
 
 // warehouse returns the store's warehouse.
 func (store *Store) warehouse() meergo.Warehouse {
-	return store.wh.Load().(meergo.Warehouse)
+	return warehouse{inner: store.wh.Load().(meergo.Warehouse)}
 }
 
 // isZero reports whether v has its zero value. It supports only the types used

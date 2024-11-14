@@ -53,7 +53,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 		}
 		err = pool.QueryRow(ctx, b.String()).Scan(&count)
 		if err != nil {
-			return nil, 0, meergo.Error(err)
+			return nil, 0, err
 		}
 		b.Reset()
 	}
@@ -102,7 +102,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 	// Execute the query.
 	rows, err := pool.Query(ctx, b.String())
 	if err != nil {
-		return nil, 0, meergo.Error(err)
+		return nil, 0, err
 	}
 
 	return newScanner(query.Columns, rows), count, nil

@@ -27,6 +27,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/postgres"
@@ -91,12 +92,12 @@ type emailToSend struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - DataWarehouseFailed, if an operation on the data warehouse fails;
-//   - DataWarehouseNotExist, if a data warehouse with the provided name does
-//     not exist;
-//   - InvalidWarehouseSettings, if the warehouse settings are not valid;
-//   - WarehouseNotInitializable, if the warehouse intended for connection is
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - WarehouseError, if an operation on the data warehouse fails.
+//   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
+//   - WarehouseNotExist, if a data warehouse with the provided name does not
+//     exist.
 func (this *Organization) CanInitializeWarehouse(ctx context.Context, name string, settings []byte) error {
 	this.core.mustBeOpen()
 
@@ -109,9 +110,9 @@ func (this *Organization) CanInitializeWarehouse(ctx context.Context, name strin
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(name, settings)
 	if err != nil {
 		if err == datastore.DataWarehouseNotExist {
-			return errors.Unprocessable(DataWarehouseNotExist, "data warehouse %q does not exist", name)
+			return errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", name)
 		}
-		if err, ok := err.(*datastore.SettingsError); ok {
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
@@ -120,11 +121,11 @@ func (this *Organization) CanInitializeWarehouse(ctx context.Context, name strin
 	// Check if the warehouse is initializable.
 	err = this.core.datastore.CanInitialize(ctx, name, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
-			return errors.Unprocessable(WarehouseNotInitializable, "%w", err)
+		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
+			return errors.Unprocessable(WarehouseNonInitializable, "%s", err)
 		}
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return errors.Unprocessable(DataWarehouseFailed, "data warehouse error: %w", err)
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return errors.Unprocessable(WarehouseError, "%s", err)
 		}
 		return err
 	}
@@ -199,11 +200,11 @@ var defaultUserSchema = types.Object([]types.Property{
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - DataWarehouseFailed, if an operation on the data warehouse fails;
-//   - DataWarehouseNotExist, if a data warehouse with the provided name does
-//     not exist;
-//   - InvalidWarehouseSettings, if the warehouse settings are not valid;
-//   - WarehouseNotInitializable, if the warehouse is not initializable.
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - WarehouseError, if an operation on the data warehouse fails.
+//   - WarehouseNonInitializable, if the warehouse is not initializable.
+//   - WarehouseNotExist, if a data warehouse with the provided name does not
+//     exist.
 func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
@@ -225,9 +226,9 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	whSettings, err := this.core.datastore.NormalizeWarehouseSettings(whName, whSettings)
 	if err != nil {
 		if err == datastore.DataWarehouseNotExist {
-			return 0, errors.Unprocessable(DataWarehouseNotExist, "data warehouse %q does not exist", whName)
+			return 0, errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", whName)
 		}
-		if err, ok := err.(*datastore.SettingsError); ok {
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 			return 0, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return 0, err
@@ -236,11 +237,11 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	// Check if the warehouse is initializable.
 	err = this.core.datastore.CanInitialize(ctx, whName, whSettings)
 	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseNotInitializableError); ok {
-			return 0, errors.Unprocessable(WarehouseNotInitializable, "%w", err)
+		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
+			return 0, errors.Unprocessable(WarehouseNonInitializable, "%s", err)
 		}
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return 0, errors.Unprocessable(DataWarehouseFailed, "data warehouse error: %w", err)
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return 0, errors.Unprocessable(WarehouseError, "%s", err)
 		}
 		return 0, err
 	}
@@ -248,8 +249,8 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	// Initialize the data warehouse.
 	err = this.core.datastore.Initialize(ctx, whName, whSettings)
 	if err != nil {
-		if err, ok := err.(*datastore.DataWarehouseError); ok {
-			return 0, errors.Unprocessable(DataWarehouseFailed, "cannot check the data warehouse: %w", err)
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return 0, errors.Unprocessable(WarehouseError, "%s", err)
 		}
 		return 0, err
 	}

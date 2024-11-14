@@ -28,7 +28,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 					return;
 				}
 				if (err instanceof UnprocessableError) {
-					if (err.code === 'DataWarehouseFailed') {
+					if (err.code === 'WarehouseError') {
 						handleError('An error occurred with the data warehouse');
 						return;
 					}
@@ -66,7 +66,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 						return;
 					}
 					if (err instanceof UnprocessableError) {
-						if (err.code === 'DataWarehouseFailed') {
+						if (err.code === 'WarehouseError') {
 							handleError('An error occurred with the data warehouse');
 							return;
 						}
@@ -93,7 +93,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 						return;
 					}
 					if (err instanceof UnprocessableError) {
-						if (err.code === 'DataWarehouseFailed') {
+						if (err.code === 'WarehouseError') {
 							handleError('An error occurred with the data warehouse');
 							return;
 						}

@@ -53,7 +53,7 @@ func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, userColumns [
 		for _, query := range queries {
 			_, err := tx.Exec(ctx, query)
 			if err != nil {
-				return meergo.Error(err)
+				return err
 			}
 		}
 		return nil

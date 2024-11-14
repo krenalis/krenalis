@@ -18,8 +18,6 @@ const (
 	ConnectionDisabled           errors.Code = "ConnectionDisabled"
 	ConnectionNotExist           errors.Code = "ConnectionNotExist"
 	ConnectorNotExist            errors.Code = "ConnectorNotExist"
-	DataWarehouseFailed          errors.Code = "DataWarehouseFailed"
-	DataWarehouseNotExist        errors.Code = "DataWarehouseNotExist"
 	DifferentWarehouse           errors.Code = "DifferentWarehouse"
 	EmailSendFailed              errors.Code = "EmailSendFailed"
 	EventNotExist                errors.Code = "EventNotExist"
@@ -50,6 +48,8 @@ const (
 	TypeNotAllowed               errors.Code = "TypeNotAllowed"
 	UnsupportedColumnType        errors.Code = "UnsupportedColumnType"
 	UnsupportedLanguage          errors.Code = "UnsupportedLanguage"
-	WarehouseNotInitializable    errors.Code = "WarehouseNotInitializable"
+	WarehouseError               errors.Code = "WarehouseError"
+	WarehouseNonInitializable    errors.Code = "WarehouseNonInitializable"
+	WarehouseNotExist            errors.Code = "WarehouseNotExist"
 	WorkspaceNotExist            errors.Code = "WorkspaceNotExist"
 )

@@ -102,10 +102,8 @@ var (
 	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
 )
 
-// Warehouse is the interface implemented by data warehouses.
-//
-// Methods return a *DataWarehouseError error if an error occurs with the data
-// warehouse.
+// Warehouse is the interface implemented by data warehouses. Its methods return
+// a *WarehouseError if an error occurs with the data warehouse.
 type Warehouse interface {
 
 	// AlterUserColumns alters the columns of the user tables.
@@ -132,7 +130,8 @@ type Warehouse interface {
 	AlterUserColumnsQueries(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
 
 	// CanInitialize checks whether the data warehouse can be initialized.
-	// If it cannot, this method returns a *NotInitializableError.
+	// It returns a *WarehouseNonInitializableError error if the data warehouse
+	// cannot be initialized.
 	CanInitialize(ctx context.Context) error
 
 	// Close closes the data warehouse. When Close is called, no other calls to
@@ -470,4 +469,35 @@ func ValidateText(name string, t types.Type, s string) (any, error) {
 		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which is longer than %d characters", errors.Abbreviate(s, 20), name, max)
 	}
 	return s, nil
+}
+
+// WarehouseNonInitializableError indicates that the data warehouse is not
+// initializable.
+type WarehouseNonInitializableError struct {
+	reason string
+}
+
+// NewWarehouseNonInitializableError returns a new
+// WarehouseNonInitializableError error.
+func NewWarehouseNonInitializableError(reason string) error {
+	return &WarehouseNonInitializableError{reason: reason}
+}
+
+func (err *WarehouseNonInitializableError) Error() string {
+	return fmt.Sprintf("data warehouse is not initializable: %s", err.reason)
+}
+
+// WarehouseSettingsError represents an error in the data warehouse settings.
+type WarehouseSettingsError struct {
+	Err error
+}
+
+func (e *WarehouseSettingsError) Error() string {
+	return fmt.Sprintf("settings error: %s", e.Err)
+}
+
+// WarehouseSettingsErrorf returns a new WarehouseSettingsError error with a
+// fmt.Errorf(format, a...) error.
+func WarehouseSettingsErrorf(format string, a ...any) error {
+	return &WarehouseSettingsError{Err: fmt.Errorf(format, a...)}
 }

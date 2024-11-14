@@ -9,6 +9,7 @@ package postgresql
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -44,13 +45,13 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, "LOCK TABLE _operations")
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		var runningOp *warehouseOperation
 		err = tx.QueryRow(ctx, "SELECT operation FROM _operations "+
 			"WHERE start_time IS NOT NULL AND end_time IS NULL ORDER BY id DESC LIMIT 1").Scan(&runningOp)
 		if err != nil && err != pgx.ErrNoRows {
-			return meergo.Error(err)
+			return err
 		}
 		if runningOp != nil {
 			switch *runningOp {
@@ -59,13 +60,13 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 			case identityResolution:
 				return meergo.ErrIdentityResolutionInProgress
 			default:
-				return meergo.Errorf("unexpected operation %q", *runningOp)
+				return fmt.Errorf("unexpected operation %q", *runningOp)
 			}
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
 			`VALUES ($1, (clock_timestamp() at time zone 'utc')::timestamp, NULL) RETURNING id`, operation).Scan(&opID)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		return nil
 	})
@@ -87,7 +88,7 @@ func (warehouse *PostgreSQL) endOperation(ctx context.Context, opID int, endTime
 	}
 	_, err = pool.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE id = $2 AND end_time IS NULL`, endTime, opID)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }

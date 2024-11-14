@@ -16,7 +16,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
 )
@@ -24,22 +23,6 @@ import (
 // DataWarehouseNotExist is returned by the Datastore.NormalizeWarehouseSettings
 // method when the provided data warehouse does not exist.
 var DataWarehouseNotExist = errors.New("data warehouse does not exist")
-
-type (
-	DataWarehouseError                 = meergo.DataWarehouseError
-	DataWarehouseNotInitializableError = meergo.NotInitializableError
-	SettingsError                      = meergo.SettingsError
-)
-
-// InvalidSettings is the error returned when the data warehouse settings are
-// not valid.
-type InvalidSettings struct {
-	Err error
-}
-
-func (err InvalidSettings) Error() string {
-	return err.Err.Error()
-}
 
 // ConnectionFailed is the error returned when a connection to a data warehouse
 // cannot be established.
@@ -88,17 +71,13 @@ func New(st *state.State) *Datastore {
 // CanInitialize indicates whether the warehouse with the provided name and
 // settings can be initialized.
 //
-// It returns:
-//
-//   - A *DataWarehouseNotInitializableError if the data warehouse is not
-//     initializable;
-//   - a *SettingsError error if the settings are not valid;
-//   - a *DataWarehouseError if an error occurred with the data warehouse.
+// It returns a *meergo.WarehouseSettingsError error if the settings are not
+// valid, a *meergo.WarehouseNonInitializableError if the data warehouse is not
+// initializable, and a *meergo.WarehouseError if an error occurred with the
+// data warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
-	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
-		Settings: settings,
-	})
+	dw, err := registeredWarehouse(name, settings)
 	if err != nil {
 		return err
 	}
@@ -135,9 +114,7 @@ func (ds *Datastore) Close() {
 // *DataWarehouseError error if an error occurs with the data warehouse.
 func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
-	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
-		Settings: settings,
-	})
+	dw, err := registeredWarehouse(name, settings)
 	if err != nil {
 		return err
 	}
@@ -160,9 +137,7 @@ func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([
 	if _, ok := ds.state.Warehouse(name); !ok {
 		return nil, DataWarehouseNotExist
 	}
-	dw, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{
-		Settings: settings,
-	})
+	dw, err := registeredWarehouse(name, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -258,9 +233,7 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
 	// Update the warehouse if the settings have changed.
 	prevWarehouse := store.warehouse()
 	ws, _ := ds.state.Workspace(n.Workspace)
-	nextWarehouse, _ := meergo.RegisteredWarehouse(ws.Warehouse.Name).New(&meergo.WarehouseConfig{
-		Settings: n.Settings,
-	})
+	nextWarehouse, _ := registeredWarehouse(ws.Warehouse.Name, n.Settings)
 	if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.

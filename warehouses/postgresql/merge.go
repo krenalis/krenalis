@@ -136,26 +136,26 @@ func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][
 	// Create the temporary table.
 	_, err := conn.Exec(ctx, create)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
 		_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnNames, pgx.CopyFromRows(rows))
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 	// Copy the rows to delete into the temporary table.
 	if len(deleted) > 0 {
 		_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnsNamesDeleted, newCopyForDeleteFrom(len(table.Keys), deleted))
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 	// Merge the temporary table's rows with the destination table's rows.
 	_, err = conn.Exec(ctx, merge)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	return nil

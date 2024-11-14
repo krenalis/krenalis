@@ -56,7 +56,7 @@ func init() {
 }
 
 // New returns a new PostgreSQL data warehouse driver instance.
-// It returns a SettingsError error if the settings are not valid.
+// It returns a *meergo.WarehouseSettingsError if the settings are not valid.
 func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 	var s psSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
@@ -65,33 +65,33 @@ func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return nil, meergo.SettingsErrorf("host length in bytes must be in range [1,253]")
+		return nil, meergo.WarehouseSettingsErrorf("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return nil, meergo.SettingsErrorf("port must be in range [1,65536]")
+		return nil, meergo.WarehouseSettingsErrorf("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return nil, meergo.SettingsErrorf("username length in bytes must be in range [1,63]")
+		return nil, meergo.WarehouseSettingsErrorf("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return nil, meergo.SettingsErrorf("password length must be in range [1,100]")
+		return nil, meergo.WarehouseSettingsErrorf("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return nil, meergo.SettingsErrorf("database length in bytes must be in range [1,63]")
+		return nil, meergo.WarehouseSettingsErrorf("database length in bytes must be in range [1,63]")
 	}
 	// Validate Schema.
 	if n := len(s.Schema); n < 1 || n > 63 {
-		return nil, meergo.SettingsErrorf("schema length in bytes must be in range [1,63]")
+		return nil, meergo.WarehouseSettingsErrorf("schema length in bytes must be in range [1,63]")
 	}
 	if !meergo.IsValidSchemaName(s.Schema) {
-		return nil, meergo.SettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
+		return nil, meergo.WarehouseSettingsErrorf("schema must start with [A-Za-z_] and subsequently contain only [A-Za-z0-9_]")
 	}
 	if strings.HasPrefix(s.Schema, "pg_") {
-		return nil, meergo.SettingsErrorf("schema cannot start with 'pg_'")
+		return nil, meergo.WarehouseSettingsErrorf("schema cannot start with 'pg_'")
 	}
 	return &PostgreSQL{conf: conf, settings: &s}, nil
 }
@@ -140,7 +140,7 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		c.relname`
 	rows, err := pool.Query(ctx, query, warehouse.settings.Schema)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer rows.Close()
 	var objects []string
@@ -148,16 +148,16 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		var name, typ string
 		err := rows.Scan(&name, &typ)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
 	}
 	if err := rows.Err(); err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	if objects != nil {
 		reason := fmt.Sprintf("expected an empty database, got: %s", strings.Join(objects, ", "))
-		return meergo.NewNotInitializableError(reason)
+		return meergo.NewWarehouseNonInitializableError(reason)
 	}
 	return nil
 }
@@ -190,7 +190,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where mee
 	}
 	_, err = pool.Exec(ctx, s.String())
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }
@@ -318,17 +318,17 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 	// Create the temporary table.
 	_, err = conn.Exec(ctx, create)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	// Copy the rows into the temporary table.
 	_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnNames, newCopyForIdentities(columns, rows))
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	// Merge the temporary table's rows with the destination table's rows.
 	_, err = conn.Exec(ctx, merge)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	return nil
@@ -353,7 +353,7 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	}
 	_, err = pool.Exec(ctx, `TRUNCATE TABLE "`+table+`"`)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }
@@ -377,11 +377,11 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool,
 	}
 	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
-		return nil, meergo.Error(err)
+		return nil, err
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		return nil, meergo.Error(err)
+		return nil, err
 	}
 	warehouse.pool = pool
 	return pool, nil
@@ -396,16 +396,16 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	}
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer tx.Rollback(ctx)
 	err = f(tx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	err = tx.Commit(ctx)
 	if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-		return meergo.Error(err)
+		return err
 	}
 	return nil
 }
@@ -437,7 +437,7 @@ func (warehouse *PostgreSQL) initRepair(ctx context.Context, repair bool) error 
 	for _, query := range queries {
 		_, err := pool.Exec(ctx, query)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 	return nil
@@ -452,7 +452,7 @@ func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 	var v int
 	err = pool.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
 	if err != nil {
-		return 0, meergo.Error(err)
+		return 0, err
 	}
 	return v, nil
 }
