@@ -61,7 +61,7 @@ func New(conf *meergo.WarehouseConfig) (*PostgreSQL, error) {
 	var s psSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
-		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
+		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {

@@ -63,7 +63,7 @@ func New(conf *meergo.WarehouseConfig) (*Snowflake, error) {
 	var s sfSettings
 	err := jsonstd.Unmarshal(conf.Settings, &s)
 	if err != nil {
-		return nil, meergo.SettingsErrorf("cannot unmarshal settings: %s", err)
+		return nil, fmt.Errorf("cannot unmarshal settings: %s", err)
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
