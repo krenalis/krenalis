@@ -114,7 +114,7 @@ func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, de
 	// Acquire a connection.
 	conn, err := my.db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	// Merge rows.

@@ -105,7 +105,7 @@ func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any
 	// Acquire a connection.
 	conn, err := sf.db.Conn(ctx)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 	defer conn.Close()
 	// Merge rows.

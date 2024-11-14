@@ -149,7 +149,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 	// Create the temporary table.
 	_, err := conn.ExecContext(ctx, create)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	// Copy the rows into the temporary table.
@@ -157,7 +157,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 		// Put the rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, rowsCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		// Copy the rows from the stage into the temporary table.
 		b.Reset()
@@ -171,7 +171,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, b.String())
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 
@@ -180,7 +180,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 		// Put the deleted rows into the temporary table's stage.
 		_, err = conn.ExecContext(gosnowflake.WithFileStream(ctx, deletedCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 		// Copy the deleted rows from the stage into the temporary table.
 		b.Reset()
@@ -195,14 +195,14 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 			"ON_ERROR = ABORT_STATEMENT")
 		_, err = conn.ExecContext(ctx, b.String())
 		if err != nil {
-			return meergo.Error(err)
+			return err
 		}
 	}
 
 	// Merge the temporary table's rows with the destination table's rows.
 	_, err = conn.ExecContext(ctx, merge)
 	if err != nil {
-		return meergo.Error(err)
+		return err
 	}
 
 	return nil
