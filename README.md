@@ -18,6 +18,9 @@
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
 - [Interact with Meergo using `meergo-cli`](#interact-with-meergo-using-meergo-cli)
+- [Docker](#docker)
+  - [Building Meergo Image](#building-meergo-image)
+  - [Running Meergo within a Container](#running-meergo-within-a-container)
 - [Core](#core)
 
 ## Before commit
@@ -258,6 +261,36 @@ meergo-cli change-user-schema ./test/example_user_schema.json -w <workspace ID>
 ## Interact with Meergo using `meergo-cli`
 
 Refer to the [documentation of the meergo-cli tool](meergo-cli/README.md).
+
+## Docker
+
+### Building Meergo Image
+
+1. Cd the root of this repository
+   
+2. Run:
+   
+    ```bash
+    docker build -t meergo:dev . --progress=plain
+    ```
+
+### Running Meergo within a Container
+
+**Note about the network**: the network is the same as the host system (`--net host`), so Meergo responds to and makes network requests to the same addresses it would if it were running outside of a container. This also includes the address of the PostgreSQL server that Meergo connects to and the addresses of the admin UI.
+
+1. Cd the root of this repository
+   
+2. Run this command, replacing the paths on the left of `:` as needed (and leaving the paths on the right, `/bin/config.yaml`, etc... as they are):
+
+    ```bash
+    docker run -it \
+        -v ./cmd/meergo/config.yaml:/bin/config.yaml \
+        -v ./cmd/meergo/cert.pem:/bin/cert.pem \
+        -v ./cmd/meergo/key.pem:/bin/key.pem \
+        --net host \
+        meergo:dev
+    ```
+3. Visit Meergo at the address specified in `config.yaml` (for example [https://localhost:9090/ui/](https://localhost:9090/ui/))
 
 ## Core
 
