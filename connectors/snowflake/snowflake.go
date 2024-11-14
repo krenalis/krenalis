@@ -237,10 +237,10 @@ func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test boo
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return meergo.SettingsErrorf("account identifier length must be in range [3,255]")
+		return meergo.NewInvalidUIValuesError("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return meergo.SettingsErrorf("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return meergo.NewInvalidUIValuesError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
