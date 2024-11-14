@@ -120,9 +120,6 @@ type Warehouse interface {
 	//
 	// If an Identity Resolution is in progress, returns an
 	// ErrIdentityResolutionInProgress error.
-	//
-	// If an error occurs with the data warehouse, it returns a
-	// *warehouses.DataWarehouseError error.
 	AlterUserColumns(ctx context.Context, columns []Column, operations []AlterOperation) error
 
 	// AlterUserColumnsQueries returns the queries that alter the columns of the
@@ -132,15 +129,10 @@ type Warehouse interface {
 	// is useful for obtaining type information and for creating views), while
 	// operations is the set of operations to apply in order to migrate the current
 	// columns to the given columns.
-	//
-	// If an error occurs with the data warehouse, it returns a
-	// *warehouses.DataWarehouseError error.
 	AlterUserColumnsQueries(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
 
 	// CanInitialize checks whether the data warehouse can be initialized.
 	// If it cannot, this method returns a *NotInitializableError.
-	// If an error occurs with the data warehouse, it returns a
-	// *warehouses.DataWarehouseError error.
 	CanInitialize(ctx context.Context) error
 
 	// Close closes the data warehouse. When Close is called, no other calls to
@@ -149,15 +141,9 @@ type Warehouse interface {
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
 	Delete(ctx context.Context, table string, where Expr) error
 
 	// Initialize initializes the data warehouse.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
 	Initialize(ctx context.Context) error
 
 	// LastIdentityResolution returns information about the last Identity
@@ -169,9 +155,6 @@ type Warehouse interface {
 	//   start time and end time;
 	// - if it is in progress, returns its start time and nil for the end time;
 	// - if no Identity Resolution has ever been executed, returns nil and nil.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
 	LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error)
 
 	// Merge performs a table merge operation.
@@ -210,9 +193,6 @@ type Warehouse interface {
 	// Scan is called on the returned Rows with interface{} arguments. It copies
 	// data directly into these arguments, rather than into the values they point
 	// to.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
 	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
 
 	// ResolveIdentities resolves the identities.
@@ -232,9 +212,6 @@ type Warehouse interface {
 	//
 	// If an alter schema operation is in progress on the data warehouse, returns a
 	// ErrAlterInProgress error.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
 	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// Repair repairs the database objects on the data warehouse needed by Meergo.
@@ -242,18 +219,12 @@ type Warehouse interface {
 	// This method should only be called on warehouses that have already been
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Meergo functional again.
-	//
-	// If an error occurs with the data warehouse during the repair, it returns a
-	// *DataWarehouseError error.
 	Repair(ctx context.Context) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte
 
 	// Truncate truncates the specified table.
-	//
-	// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-	// error.
 	Truncate(ctx context.Context, table string) error
 }
 
