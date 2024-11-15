@@ -174,12 +174,22 @@ func Test_Merge_Query(t *testing.T) {
 			t.Fatalf("cannot scan row: %s", err)
 		}
 		for i, v := range scanner.values {
-			if t, ok := v.(time.Time); ok {
+			switch vt := v.(type) {
+			case time.Time:
 				switch table.Columns[i].Type.Kind() {
 				case types.DateTimeKind:
-					v = t.UTC()
+					v = vt.UTC()
 				case types.DateKind:
-					v = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+					v = time.Date(vt.Year(), vt.Month(), vt.Day(), 0, 0, 0, 0, time.UTC)
+				}
+			case fmt.Stringer:
+				// Normalize the Decimal type in the same way as the normalization does.
+				// This avoids the explicit dependency on "github.com/shopspring/decimal" for the meergo module.
+				if typ := cols[i].MeergoType; typ.Kind() == types.DecimalKind {
+					v, err = decimal.Parse(vt.String(), typ.Precision(), typ.Scale())
+					if err != nil {
+						t.Fatalf("column %q: an error occurred parsing %v (%T) as Decimal: %s", table.Columns[i].Name, v, v, err)
+					}
 				}
 			}
 			if expected := cols[i].DriverValue; !reflect.DeepEqual(expected, v) {
