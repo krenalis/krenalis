@@ -293,6 +293,8 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v, err = decimal.Parse(src, p, s)
 		case []byte:
 			v, err = decimal.Parse(src, p, s)
+		case fmt.Stringer:
+			v, err = decimal.Parse(src.String(), p, s)
 		}
 		if err == nil {
 			min, max := typ.DecimalRange()
