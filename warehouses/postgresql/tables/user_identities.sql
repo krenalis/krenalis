@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS _user_identities (
     "__identity_id__" text NOT NULL,
     "__connection__" integer NOT NULL,
     "__anonymous_ids__" text [],
-    "__last_change_time__" timestamp NOT NULL,
+    "__last_change_time__" timestamp without time zone NOT NULL,
     "__execution__" integer,
     "__gid__" uuid,
     "__cluster__" serial,
