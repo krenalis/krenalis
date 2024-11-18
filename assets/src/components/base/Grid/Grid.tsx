@@ -125,13 +125,17 @@ const Grid = forwardRef<GridRef, GridProps>(
 							rowComponents
 						) : noRowsMessage ? (
 							<div className='grid__no-rows'>
-								<SlIcon name='exclamation-circle'></SlIcon>
-								{noRowsMessage}
+								<div className='grid__no-rows-text'>
+									<SlIcon name='exclamation-circle'></SlIcon>
+									{noRowsMessage}
+								</div>
 							</div>
 						) : (
 							<div className='grid__no-rows'>
-								<SlIcon name='exclamation-circle'></SlIcon>
-								No rows to show
+								<div className='grid__no-rows-text'>
+									<SlIcon name='exclamation-circle'></SlIcon>
+									No rows to show
+								</div>
 							</div>
 						)}
 					</>

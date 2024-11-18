@@ -169,16 +169,20 @@ sl-popup::part(arrow) {
 	border-bottom-right-radius: var(--radius);
 }
 
-.grid__no-rows {
+.grid__no-rows-text {
 	color: var(--sl-color-neutral-400);
 	display: flex;
 	flex-flow: column;
 	gap: 7px;
 	align-items: center;
 	justify-content: center;
+	position: absolute;
+	left: 50%;
+	transform: translate(-50%);
+	max-width: 300px;
 }
 
-.grid__no-rows sl-icon {
+.grid__no-rows-text sl-icon {
 	color: var(--sl-color-neutral-400);
 	font-size: 25px;
 }
