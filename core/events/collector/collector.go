@@ -76,6 +76,18 @@ type actionIdentityWriter struct {
 	timer       *time.Timer
 }
 
+// newActionIdentityWriter returns a new actionIdentityWriter.
+func newActionIdentityWriter(ds *datastore.Datastore, action *state.Action, provider transformers.Provider, ack datastore.EventIdentityWriterAckFunc) *actionIdentityWriter {
+	sa := &actionIdentityWriter{id: action.ID}
+	ws := action.Connection().Workspace()
+	store := ds.Store(ws.ID)
+	sa.writer, _ = store.NewEventIdentityWriter(action.ID, ack)
+	if t := action.Transformation; t.Mapping != nil || t.Function != nil {
+		sa.transformer, _ = transformers.New(action, provider, nil)
+	}
+	return sa
+}
+
 // Close closes sa.
 func (sa *actionIdentityWriter) Close(ctx context.Context) error {
 	if sa.timer == nil {
@@ -131,17 +143,10 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, opStore even
 		if !canActionCollectIdentities(action) {
 			continue
 		}
-		connection := action.Connection()
 		if !canConnectionCollectIdentities(action.Connection()) {
 			continue
 		}
-		ws := connection.Workspace()
-		store := c.datastore.Store(ws.ID)
-		sa := &actionIdentityWriter{id: action.ID}
-		sa.writer, _ = store.NewEventIdentityWriter(action.ID, c.identityAck)
-		if t := action.Transformation; t.Mapping != nil || t.Function != nil {
-			sa.transformer, _ = transformers.New(action, provider, nil)
-		}
+		sa := newActionIdentityWriter(c.datastore, action, provider, c.identityAck)
 		c.actions.Store(action.ID, sa)
 	}
 	st.Unfreeze()
@@ -583,15 +588,7 @@ func (c *Collector) onAddAction(n state.AddAction) {
 		return
 	}
 	go func() {
-		ws := connection.Workspace()
-		store := c.datastore.Store(ws.ID)
-		writer, _ := store.NewEventIdentityWriter(action.ID, c.identityAck)
-		transformer, _ := transformers.New(action, c.transformerProvider, nil)
-		sa := &actionIdentityWriter{
-			id:          action.ID,
-			writer:      writer,
-			transformer: transformer,
-		}
+		sa := newActionIdentityWriter(c.datastore, action, c.transformerProvider, c.identityAck)
 		c.actions.Store(action.ID, sa)
 	}()
 }
