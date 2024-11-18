@@ -192,8 +192,8 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 							spinner
 						) : events && events.length > 0 ? (
 							events.map((event) => {
-								const source = connections.find((c) => c.id === event.source);
-								const logo = getConnectorLogo(source.connector.icon);
+								const source = connections.find((c) => c.id === event.connection);
+								const logo = getConnectorLogo(source?.connector.icon);
 								return (
 									<div className='user-drawer__event' key={event.sentAt}>
 										<div className='user-drawer__event-head'>
@@ -224,7 +224,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						) : identities && identities.length > 0 ? (
 							identities.map((identity) => {
 								const connection = connections.find((c) => c.id === identity.connection);
-								const logo = getConnectorLogo(connection.connector.icon);
+								const logo = getConnectorLogo(connection?.connector.icon);
 								return (
 									<div className='user-drawer__identity' key={identity.lastChangeTime}>
 										<Link path={`connections/${connection.id}/actions`}>

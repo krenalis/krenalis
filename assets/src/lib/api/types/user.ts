@@ -74,8 +74,12 @@ interface UserEventContextScreen {
 	density: number;
 }
 
+interface UserEventContextSession {
+	sessionId: number;
+	sessionStart: boolean;
+}
+
 interface UserEventContext {
-	active?: boolean;
 	app?: UserEventContextApp;
 	browser?: UserEventContextBrowser;
 	campaign?: UserEventContextCampaign;
@@ -89,13 +93,15 @@ interface UserEventContext {
 	page?: UserEventContextPage;
 	referrer?: UserEventContextReferrer;
 	screen?: UserEventContextScreen;
-	sessionId?: string;
-	sessionStart?: boolean;
+	session?: UserEventContextSession;
 	timezone?: string;
 	userAgent?: string;
 }
 
 interface UserEvent {
+	id?: string;
+	user?: string;
+	connection?: number;
 	anonymousId?: string;
 	category?: string;
 	context: UserEventContext;
@@ -106,7 +112,7 @@ interface UserEvent {
 	properties?: any;
 	receivedAt?: string;
 	sentAt?: string;
-	source?: number;
+	originalTimestamp?: number;
 	timestamp?: string;
 	traits?: any;
 	type?: string;
