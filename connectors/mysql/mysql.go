@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -267,6 +268,7 @@ func (s *Settings) config() *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
+	c.Addr = s.Host + ":" + strconv.Itoa(s.Port)
 	c.DBName = s.Database
 	c.AllowOldPasswords = true
 	c.ParseTime = true
