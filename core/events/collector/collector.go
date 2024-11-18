@@ -76,6 +76,15 @@ type actionIdentityWriter struct {
 	timer       *time.Timer
 }
 
+// Close closes sa.
+func (sa *actionIdentityWriter) Close(ctx context.Context) error {
+	if sa.timer == nil {
+		sa.timer.Stop()
+		sa.timer = nil
+	}
+	return sa.writer.Close(ctx)
+}
+
 // A Collector collects events, persists them in the database and sends them to
 // the dispatcher.
 type Collector struct {
@@ -595,16 +604,11 @@ func (c *Collector) onAddWorkspace(n state.AddWorkspace) {
 
 // onDeleteAction is called when an action is deleted.
 func (c *Collector) onDeleteAction(n state.DeleteAction) {
-	value, ok := c.actions.LoadAndDelete(n.ID)
+	sa, ok := c.actions.LoadAndDelete(n.ID)
 	if !ok {
 		return
 	}
-	sa := value.(*actionIdentityWriter)
-	if sa.timer != nil {
-		sa.timer.Stop()
-		sa.timer = nil
-	}
-	_ = sa.writer.Close(context.Background())
+	_ = sa.(*actionIdentityWriter).Close(context.Background())
 	// TODO(marco): should the ongoing transformations be interrupted?
 }
 
@@ -614,27 +618,15 @@ func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	if !canConnectionCollectIdentities(connection) {
 		return
 	}
-	var sourceActions []*actionIdentityWriter
 	for _, action := range connection.Actions() {
 		if !canActionCollectIdentities(action) {
 			continue
 		}
-		a, ok := c.actions.LoadAndDelete(action.ID)
+		sa, ok := c.actions.LoadAndDelete(action.ID)
 		if !ok {
 			continue
 		}
-		sa := a.(*actionIdentityWriter)
-		if sa.timer != nil {
-			sa.timer.Stop()
-			sa.timer = nil
-		}
-		sourceActions = append(sourceActions, sa)
-	}
-	if sourceActions == nil {
-		return
-	}
-	for _, sa := range sourceActions {
-		_ = sa.writer.Close(context.Background())
+		_ = sa.(*actionIdentityWriter).Close(context.Background())
 	}
 }
 
@@ -647,16 +639,11 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 func (c *Collector) onSetAction(n state.SetAction) {
 	action, _ := c.state.Action(n.ID)
 	if !canActionCollectIdentities(action) {
-		a, ok := c.actions.LoadAndDelete(action.ID)
+		sa, ok := c.actions.LoadAndDelete(action.ID)
 		if !ok {
 			return
 		}
-		sa := a.(*actionIdentityWriter)
-		if sa.timer == nil {
-			sa.timer.Stop()
-			sa.timer = nil
-		}
-		_ = sa.writer.Close(context.Background())
+		_ = sa.(*actionIdentityWriter).Close(context.Background())
 	}
 	// La trasformazione potrebbe essere cambiata.
 	a, ok := c.actions.Load(action.ID)
