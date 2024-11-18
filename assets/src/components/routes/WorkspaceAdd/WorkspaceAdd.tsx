@@ -17,6 +17,7 @@ const WorkspaceAdd = () => {
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('PostgreSQL');
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
+	const [isAddingWorkspace, setIsAddingWorkspace] = useState<boolean>(false);
 
 	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus } = useContext(appContext);
 
@@ -61,14 +62,17 @@ const WorkspaceAdd = () => {
 			handleError(err);
 			return;
 		}
+		setIsAddingWorkspace(true);
 		let id: number;
 		try {
 			const res = await api.workspaces.add(name, privacyRegion, selectedWarehouse, 'Normal', warehouseSettings);
 			id = res.id;
 		} catch (err) {
+			setIsAddingWorkspace(false);
 			handleError(err);
 			return;
 		}
+		setIsAddingWorkspace(false);
 		setSelectedWorkspace(id);
 		setIsLoadingState(true);
 		redirect('settings');
@@ -113,7 +117,12 @@ const WorkspaceAdd = () => {
 				>
 					Check warehouse
 				</SlButton>
-				<SlButton className='workspace-add__add-button' variant='primary' onClick={onAddWorkspace}>
+				<SlButton
+					className='workspace-add__add-button'
+					variant='primary'
+					onClick={onAddWorkspace}
+					loading={isAddingWorkspace}
+				>
 					Add workspace
 				</SlButton>
 			</div>
