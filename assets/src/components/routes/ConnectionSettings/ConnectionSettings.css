@@ -126,7 +126,8 @@
 }
 
 .connection-settings__keys-endpoint-copy > sl-copy-button {
-	transform: translateY(16px);
+	position: relative;
+	top: 14px;
 }
 
 .connection-settings__keys-endpoint-copy .editor-wrapper {
