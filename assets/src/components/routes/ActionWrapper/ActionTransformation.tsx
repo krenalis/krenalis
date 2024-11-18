@@ -270,6 +270,16 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				return;
 			}
 		}
+		let doesNotExist = errorMessage.endsWith('does not exist');
+		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.Target === 'Users';
+		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.Target === 'Events';
+		if (doesNotExist) {
+			if (isEventBasedUserImport) {
+				errorMessage += `, perhaps you meant "traits.${value}"?`;
+			} else if (isAppEventsExport) {
+				errorMessage += `, perhaps you meant "properties.${value}" or "traits.${value}"?`;
+			}
+		}
 		const updatedAction = updateMappingProperty(action, name, value, errorMessage);
 		setAction(updatedAction);
 	};
