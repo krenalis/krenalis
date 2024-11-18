@@ -197,7 +197,7 @@ const useAction = (
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
+			actionToSet = await transformInActionToSet(action, values, actionType, api, connection, true);
 		} catch (err) {
 			return err;
 		}

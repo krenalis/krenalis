@@ -617,6 +617,7 @@ const transformInActionToSet = async (
 	actionType: TransformedActionType,
 	api: API,
 	connection: TransformedConnection,
+	trimFunction: boolean = false,
 ): Promise<ActionToSet> => {
 	let mapping: Mapping;
 	let inSchema: ObjectType;
@@ -700,8 +701,12 @@ const transformInActionToSet = async (
 			}
 			outSchema = s as ObjectType;
 		}
+		let source = action.Transformation.Function.Source;
+		if (trimFunction) {
+			source = source.trim();
+		}
 		func = {
-			Source: action.Transformation.Function.Source.trim(),
+			Source: source,
 			Language: action.Transformation.Function.Language,
 			PreserveJSON: action.Transformation.Function.PreserveJSON,
 			InProperties: inSchema.properties === null ? [] : inSchema.properties.map((p) => p.name),
