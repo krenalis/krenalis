@@ -21,7 +21,6 @@
 - [Docker](#docker)
   - [Building Meergo Image](#building-meergo-image)
   - [Running Meergo within a Container](#running-meergo-within-a-container)
-- [Core](#core)
 
 ## Before commit
 
@@ -291,7 +290,3 @@ Refer to the [documentation of the meergo-cli tool](meergo-cli/README.md).
         meergo:dev
     ```
 3. Visit Meergo at the address specified in `config.yaml` (for example [https://localhost:9090/ui/](https://localhost:9090/ui/))
-
-## Core
-
-See [core](core) for a documentation of the APIs.
