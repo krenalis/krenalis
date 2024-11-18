@@ -154,6 +154,7 @@ const ConnectionActions = () => {
 				isOpen={isActionTypesDialogOpen}
 				setIsOpen={setIsActionTypesDialogOpen}
 				actionTypes={connection.actionTypes!}
+				connection={connection}
 				connectionLogo={getConnectorLogo(connection.connector.icon)}
 				onSelectActionType={onSelectActionType}
 			/>
