@@ -90,7 +90,7 @@ func newActionIdentityWriter(ds *datastore.Datastore, action *state.Action, prov
 
 // Close closes sa.
 func (sa *actionIdentityWriter) Close(ctx context.Context) error {
-	if sa.timer == nil {
+	if sa.timer != nil {
 		sa.timer.Stop()
 		sa.timer = nil
 	}
