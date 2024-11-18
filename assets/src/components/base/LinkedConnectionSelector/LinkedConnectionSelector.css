@@ -53,11 +53,6 @@
 	font-weight: 400;
 }
 
-.linked-connection-selector .grid .grid__no-rows {
-	padding-top: 40px;
-	padding-bottom: 50px;
-}
-
 .linked-connection-selector .grid .grid__no-rows > sl-icon {
 	display: none;
 }

@@ -5,6 +5,7 @@
 	border: 1px solid var(--sl-color-neutral-200);
 	box-shadow: var(--sl-shadow-small);
 	overflow: auto;
+	position: relative;
 }
 
 .grid::-webkit-scrollbar {
@@ -192,6 +193,14 @@ sl-popup::part(arrow) {
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
 	text-align: center;
+}
+
+.grid__no-rows {
+	padding-top: 50px;
+	padding-bottom: 150px;
+}
+
+.grid__loading {
 	padding: 120px 30px 170px 30px;
 }
 
