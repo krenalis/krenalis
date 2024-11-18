@@ -112,10 +112,11 @@ const PropertyDialog = ({
 
 	const onInputName = (e) => {
 		const name = e.target.value;
-		if (name === '') {
-			setNameError('Name cannot be empty');
-		} else {
+		try {
+			validatePropertyName(name);
 			setNameError('');
+		} catch (err) {
+			setNameError(err.message);
 		}
 		const p = { ...property };
 		p.name = name;
@@ -410,9 +411,10 @@ const PropertyDialog = ({
 	};
 
 	const onSave = () => {
-		if (property.name === '') {
-			setNameError('Name cannot be empty');
-			return;
+		try {
+			validatePropertyName(property.name);
+		} catch (err) {
+			setNameError(err.message);
 		}
 		if (property.type === null) {
 			setTypeError('Type cannot be empty');
@@ -638,7 +640,7 @@ const PropertyDialog = ({
 		>
 			{property != null && (
 				<>
-					<div className='property-dialog__control'>
+					<div className='property-dialog__control property-dialog__control--name'>
 						<SlInput
 							ref={nameInputRef}
 							size='small'
@@ -823,6 +825,24 @@ const checkDecimalType = (type: DecimalType) => {
 	}
 	if (type.scale < 0 || type.scale > MAX_DECIMAL_SCALE) {
 		return `Scale must be in range [0, ${MAX_DECIMAL_SCALE}]`;
+	}
+};
+
+const validatePropertyName = (name: string) => {
+	if (name === '') {
+		throw new Error('Name cannot be empty');
+	}
+	if (/\s/.test(name)) {
+		throw new Error('Name cannot contain spaces');
+	}
+	if (/^[0-9]/.test(name)) {
+		throw new Error('Name cannot start with a number');
+	}
+	if (!/^[A-Za-z_]/.test(name)) {
+		throw new Error('Name must start with an ASCII alphabet character or an underscore');
+	}
+	if (!/^.[A-Za-z0-9_]*$/.test(name)) {
+		throw new Error('Name must contain only ASCII alphabet characters, digits and underscores');
 	}
 };
 

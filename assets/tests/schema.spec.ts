@@ -195,3 +195,49 @@ test(`Remove schema properties`, async ({ page }) => {
 		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^test_obj$/ }),
 	).not.toBeVisible();
 });
+
+test(`Check that the property name is correctly validated`, async ({ page }) => {
+	await page.goto(`${uiURL}schema`);
+
+	await page.click('.schema-grid__edit-button');
+	await page.click('.schema-edit__add-property');
+
+	let error = page.locator('.property-dialog__control--name .property-dialog__control-error');
+	let saveButton = page.locator('.property-dialog__save');
+
+	// Name cannot be empty.
+	await page.locator('sl-input >> input[name="name"]').fill('test');
+	await page.locator('sl-input >> input[name="name"]').fill('');
+	await expect(error).toBeVisible();
+	await expect(error).toContainText('Name cannot be empty');
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	// Name cannot contain spaces.
+	await page.locator('sl-input >> input[name="name"]').fill('my property');
+	await expect(error).toBeVisible();
+	await expect(error).toContainText('Name cannot contain spaces');
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	// Name cannot start with a number.
+	await page.locator('sl-input >> input[name="name"]').fill('3foo');
+	await expect(error).toBeVisible();
+	await expect(error).toContainText('Name cannot start with a number');
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	// Name must start with an ASCII alphabet character or an
+	// underscore.
+	await page.locator('sl-input >> input[name="name"]').fill('$foo');
+	await expect(error).toBeVisible();
+	await expect(error).toContainText('Name must start with an ASCII alphabet character or an underscore');
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	// Name must contain only ASCII alphabet characters, digits and
+	// underscores.
+	await page.locator('sl-input >> input[name="name"]').fill('foo_3bar');
+	await expect(error).not.toBeVisible();
+	await expect(saveButton).not.toHaveAttribute('disabled');
+	await page.locator('sl-input >> input[name="name"]').fill('foo$bar');
+	await expect(error).toBeVisible();
+	await expect(error).toContainText('Name must contain only ASCII alphabet characters, digits and underscores');
+	await expect(saveButton).toHaveAttribute('disabled');
+});
