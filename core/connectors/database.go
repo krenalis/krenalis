@@ -141,7 +141,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	}
 	if _, err = types.ObjectOf(columnsToProperties(columns)); err != nil {
 		_ = rows.Close()
-		return nil, rewriteColumnErrors(err)
+		return nil, connectorError(rewriteColumnErrors(err))
 	}
 	return newRows(rows, columns, database.timeLayouts), nil
 }
@@ -392,7 +392,7 @@ func (rs *Rows) Scan() (map[string]any, error) {
 		rs.dst[i] = queryScanValue{column: c, row: row, timeLayouts: rs.timeLayouts}
 	}
 	if err := rs.rows.Scan(rs.dst...); err != nil {
-		return nil, err
+		return nil, &UnavailableError{Err: err}
 	}
 	return row, nil
 }
