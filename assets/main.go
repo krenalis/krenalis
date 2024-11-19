@@ -37,6 +37,8 @@ func main() {
 	fmt.Println(" ✔ The asset files have been generated.")
 }
 
+var generatedFiles = []string{"index.html", "index.js", "index.js.map", "index.css", "index.css.map"}
+
 // buildAssets builds and the assets.
 func buildAssets() error {
 
@@ -131,7 +133,7 @@ func buildAssets() error {
 			_ = out.Close()
 		}
 	}()
-	for _, name := range []string{"index.html", "index.js", "index.js.map", "index.css", "index.css.map"} {
+	for _, name := range generatedFiles {
 
 		srcPath := outDir + name
 		dstPath := dstDir + name + ".br"
@@ -185,9 +187,11 @@ func buildAssets() error {
 	}
 
 	// Copy the assets to the destination.
-	err = os.RemoveAll(filepath.Join(root, "meergo-assets"))
-	if err != nil {
-		return err
+	for _, file := range generatedFiles {
+		err = os.Remove(filepath.Join(root, "meergo-assets", file+".br"))
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
 	}
 	err = os.CopyFS(filepath.Join(root, "meergo-assets"), os.DirFS(dstDir))
 	if err != nil {

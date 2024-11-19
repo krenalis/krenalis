@@ -40,7 +40,7 @@ import (
 	_ "github.com/meergo/meergo/warehouses"
 )
 
-//go:embed meergo-assets
+//go:embed meergo-assets/*
 var assets embed.FS
 
 func main() {
