@@ -481,11 +481,11 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				arr := []any{}
 				for i, element := range v.Elements() {
 					if i == max {
-						return nil, newNormalizationErrorf(name, "is an array with more than %d elements; they must be in range [%d, %d]", min, min, max)
+						return nil, newNormalizationErrorf(name, "is an array with more than %d elements; they must be in range [%d, %d]", max, min, max)
 					}
 					arr = append(arr, element)
 				}
-				if len(arr) < max {
+				if len(arr) < min {
 					return nil, newNormalizationErrorf(name, "is an array with less than %d elements; they must be in range [%d, %d]", min, min, max)
 				}
 				value = arr
