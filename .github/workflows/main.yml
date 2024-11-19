@@ -20,7 +20,8 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          # Keep in sync with the version within "commit/commit.go".
+          deno-version: v2.0.1
 
       - uses: actions/setup-node@v4
         with:
