@@ -931,6 +931,7 @@ const FullscreenTransformation = ({
 	const lastExecutedSample = useRef<Sample>(null);
 	const lastExecutedEvent = useRef<EventListenerEvent>(null);
 	const eventSchema = useRef<ObjectType>(null);
+	const hasAlreadyFetchedSamples = useRef<boolean>(false);
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
@@ -1007,6 +1008,9 @@ const FullscreenTransformation = ({
 			if (actionType.Target !== 'Users') {
 				return;
 			}
+			if (!isFullscreenTransformationOpen || hasAlreadyFetchedSamples.current) {
+				return;
+			}
 			let samples: Sample[];
 			if (connection.isFileStorage && connection.isSource) {
 				let res: RecordsResponse;
@@ -1061,6 +1065,7 @@ const FullscreenTransformation = ({
 			} else {
 				return;
 			}
+			hasAlreadyFetchedSamples.current = true;
 			const idents = getSampleIdentifiers(samples[0]);
 			if (idents != null) {
 				firstNameIdentifier.current = idents.firstNameIdentifier;
@@ -1071,7 +1076,7 @@ const FullscreenTransformation = ({
 			setSamples(samples);
 		};
 		fetchSamples();
-	}, []);
+	}, [isFullscreenTransformationOpen]);
 
 	useEffect(() => {
 		let el: Element;
