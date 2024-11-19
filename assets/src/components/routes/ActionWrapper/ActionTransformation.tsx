@@ -1601,6 +1601,16 @@ const FullscreenTransformation = ({
 				</div>
 			);
 		}
+	} else if (connection.isDestination && actionType.Target === 'Users') {
+		inputPanelContent = (
+			<div className='fullscreen-transformation__no-sample'>
+				<SlIcon name='x-lg' />
+				<p className='fullscreen-transformation__no-sample-text'>
+					Users cannot be retrieved to test the transformation because no users have been imported into the
+					warehouse yet. Please import some users into the warehouse to enable transformation testing.
+				</p>
+			</div>
+		);
 	} else {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
