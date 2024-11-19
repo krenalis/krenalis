@@ -150,6 +150,7 @@ func main() {
 	cmd("npm", []string{"run", "make-vendor"}, repo, "assets", true)
 
 	// Format, test and build the files in the 'javascript-sdk' directory.
+	cmd("npm", []string{"install"}, repo, "javascript-sdk", true)
 	cmd("deno", []string{"fmt"}, repo, "javascript-sdk", true)
 	cmd("deno", []string{"task", "build"}, repo, "javascript-sdk", true)
 
