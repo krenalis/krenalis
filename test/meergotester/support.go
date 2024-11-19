@@ -19,10 +19,10 @@ import (
 
 	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/core"
+	"github.com/meergo/meergo/test/analytics-go"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
-	"github.com/open2b/analytics-go"
 )
 
 var defaultStrategy Strategy = "AB-C"

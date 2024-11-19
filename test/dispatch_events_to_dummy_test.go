@@ -14,10 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/test/analytics-go"
 	"github.com/meergo/meergo/test/meergotester"
 	"github.com/meergo/meergo/types"
-
-	"github.com/open2b/analytics-go"
 )
 
 func TestDispatchEventsToDummy(t *testing.T) {
