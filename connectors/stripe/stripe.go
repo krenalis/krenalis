@@ -275,21 +275,18 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values json.Val
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
-
-	id := records[0].ID
-	properties := records[0].Properties
-
+func (stripe *Stripe) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+	record := records.First()
 	var body bytes.Buffer
-	err := encodeRequest(&body, properties, nil)
+	err := encodeRequest(&body, record.Properties, nil)
 	if err != nil {
-		return nil, fmt.Errorf("cannot compute form-encoded request body: %s", err)
+		return fmt.Errorf("cannot compute form-encoded request body: %s", err)
 	}
 	u := "/v1/customers"
-	if id != "" {
-		u += "/" + id
+	if record.ID != "" {
+		u += "/" + record.ID
 	}
-	return nil, stripe.call(ctx, "POST", u, &body, 200, nil)
+	return stripe.call(ctx, "POST", u, &body, 200, nil)
 }
 
 func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {

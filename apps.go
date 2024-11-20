@@ -10,6 +10,8 @@ package meergo
 import (
 	"context"
 	"errors"
+	"fmt"
+	"iter"
 	"net/http"
 	"reflect"
 	"time"
@@ -212,16 +214,6 @@ type Record struct {
 	Err error
 }
 
-// UpsertRecord represents a record to update or create in the app.
-type UpsertRecord struct {
-	// Identifier of the record. It is empty when creating a new record.
-	ID string
-
-	// Properties of the record. It contains at least one property and conforms
-	// to the schema as returned by the Schema method.
-	Properties map[string]any // Properties of the record.
-}
-
 // AppRecords is the interface implemented by app connectors that manage users,
 // groups, or both. The target parameter is Users or Groups depending on the
 // connector supported targets.
@@ -247,14 +239,65 @@ type AppRecords interface {
 	// io.EOF error.
 	Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
 
-	// Upsert updates or creates records in the app for the specified target. It
-	// processes the first record in the records slice and may process additional
-	// records as needed based on the app's API capabilities.
+	// Upsert updates or creates records in the app for the specified target.
 	//
-	// It returns a slice representing the indexes of the processed records, along
-	// with any error encountered. Index 0 may be omitted from the returned slice,
-	// and nil may be returned if the only record processed is the first one.
-	Upsert(ctx context.Context, target Targets, records []UpsertRecord) ([]int, error)
+	// Upsert is expected to make a single call to the app per invocation.
+	// It processes one or more records, depending on the app's API capabilities.
+	// The caller will need to make successive calls for any unread records.
+	//
+	// If it returns an error, all read records are considered failed. If it returns
+	// a RecordsError value, only the records with indices as keys in the error
+	// value are considered failed, along with the respective error. All read
+	// records, whether failed or not, will no longer be available in successive
+	// invocations of the same export.
+	Upsert(ctx context.Context, target Targets, records Records) error
+}
+
+// RecordsError is returned by the AppRecords.Upsert method when only some
+// records have failed or when the method can distinguish errors based on
+// individual records. It maps record indices to their respective errors.
+type RecordsError map[int]error
+
+func (err RecordsError) Error() string {
+	var msg string
+	for i, e := range err {
+		msg += fmt.Sprintf("record %d: %v\n", i, e)
+	}
+	return msg
+}
+
+// Records represents a collection of records to be created or updated. A record
+// to be created has an empty ID. The collection is guaranteed to contain at
+// least one record.
+//
+// After calling First or once the iterator returned by All or Same stops, no
+// further method calls on Records are allowed.
+type Records interface {
+
+	// All returns an iterator to read all records. Properties of the records in the
+	// sequence may be modified unless the record is subsequently skipped.
+	All() iter.Seq2[int, Record]
+
+	// First returns the first record. The record's properties may be modified.
+	// After First is called, no further method calls on Records are allowed.
+	First() Record
+
+	// Peek retrieves the next record without advancing the iterator. It returns the
+	// record and true if a record is available, or false if there are no further
+	// records. The returned record must not be modified.
+	Peek() (Record, bool)
+
+	// Same returns an iterator for records: either all records to update
+	// (if the first record is for update) or all records to create
+	// (if the first record is for creation). Properties of the records in the
+	// sequence may be modified unless the record is subsequently skipped.
+	Same() iter.Seq2[int, Record]
+
+	// Skip skips the current record in the iteration and marks it as unread. The
+	// subsequent iteration will resume at the next record while preserving the same
+	// index. Skip may only be called during iterations from All or Same, and only
+	// if the record's properties have not been modified.
+	Skip()
 }
 
 // Webhooks is the interface implemented by app connectors that can receive

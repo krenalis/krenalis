@@ -475,12 +475,10 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values json.Valu
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
+func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	id := records[0].ID
-	properties := records[0].Properties
-
-	if id == "" {
+	record := records.First()
+	if record.ID == "" {
 		panic("TODO: create not implemented")
 	}
 
@@ -488,25 +486,25 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 		Operations []batchOperation `json:"operations"`
 	}
 	var basePath = "/lists/" + mc.settings.List + "/members/"
-	body, err := json.Marshal(properties)
+	body, err := json.Marshal(record.Properties)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	r.Operations = append(r.Operations, batchOperation{
 		Method: "PUT",
-		Path:   basePath + id,
+		Path:   basePath + record.ID,
 		Params: map[string]string{"skip_merge_validation": "true"},
 		Body:   string(body),
 	})
 	rq, err := json.Marshal(r)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var response batchResponse
 	err = mc.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if response.Status != "finished" {
@@ -517,19 +515,19 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 			time.Sleep(time.Minute)
 			err = mc.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if response.Status != "finished" {
 				continue
 			}
 			if response.ErroredOperations != 0 {
-				return nil, errors.New("could not update all users")
+				return errors.New("could not update all users")
 			}
 		}
-		return nil, errors.New("could not complete batch operation")
+		return errors.New("could not complete batch operation")
 	}
 
-	return nil, nil
+	return nil
 }
 
 // saveValues saves the user-entered values as settings.

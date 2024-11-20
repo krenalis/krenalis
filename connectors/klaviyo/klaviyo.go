@@ -433,19 +433,18 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values json.Value,
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
+func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	id := records[0].ID
-	properties := records[0].Properties
+	record := records.First()
 
-	customProperties, ok := properties["properties"]
+	customProperties, ok := record.Properties["properties"]
 	if ok {
-		delete(properties, "properties")
+		delete(record.Properties, "properties")
 	}
 	body := bytes.NewBufferString(`{"data":{"type":"profile","attributes":`)
 	enc := jsonstd.NewEncoder(body)
 	enc.SetEscapeHTML(false)
-	_ = enc.Encode(properties)
+	_ = enc.Encode(record.Properties)
 	body.Truncate(body.Len() - 1) // remove the trailing new line.
 	if ok {
 		body.Truncate(body.Len() - 1) // remove '}'.
@@ -454,19 +453,19 @@ func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records []
 		body.Truncate(body.Len() - 1) // remove the trailing new line.
 		body.WriteByte('}')           // add '}'.
 	}
-	if id != "" {
+	if record.ID != "" {
 		body.WriteString(`,"id":`)
-		_ = enc.Encode(id)
+		_ = enc.Encode(record.ID)
 		body.Truncate(body.Len() - 1) // remove the trailing new line.
 	}
 	body.WriteString(`}}`)
 
 	u := "https://a.klaviyo.com/api/profiles/"
-	if id == "" {
-		return nil, ky.call(ctx, "POST", u, body, 201, nil)
+	if record.ID == "" {
+		return ky.call(ctx, "POST", u, body, 201, nil)
 	}
 
-	return nil, ky.call(ctx, "PATCH", u+url.PathEscape(id)+"/", body, 200, nil)
+	return ky.call(ctx, "PATCH", u+url.PathEscape(record.ID)+"/", body, 200, nil)
 }
 
 // saveValues saves the user-entered values as settings.

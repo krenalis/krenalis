@@ -267,41 +267,44 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values json.Value
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (dummy *Dummy) Upsert(ctx context.Context, _ meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
-
-	id := records[0].ID
-	properties := records[0].Properties
-
-	// Prepare the properties to log.
-	propsDump, err := json.Marshal(properties)
-	if err != nil {
-		return nil, err
-	}
+func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	usersLock.Lock()
 	defer usersLock.Unlock()
 
-	if id == "" {
-		// Add a new users into the in-memory users.
-		log.Printf("[info] Dummy: CreateUser(%v)", string(propsDump))
-		user := maps.Clone(properties)
-		id = newUserID()
-		user["id"] = id
-		allUsers[id] = user
-	} else {
-		// Update the in-memory users.
-		user, ok := allUsers[id]
-		if !ok {
-			log.Printf("[info] Dummy: UpdateUser(%q, %v): user not found", id, string(propsDump))
-			return nil, nil
+	for _, record := range records.All() {
+
+		// Prepare the properties to log.
+		properties, err := json.Marshal(record.Properties)
+		if err != nil {
+			return err
 		}
-		log.Printf("[info] Dummy: UpdateUser(%q, %v)", id, string(propsDump))
-		maps.Copy(user, properties)
+
+		var id string
+		if record.ID == "" {
+			// Add a new users into the in-memory users.
+			log.Printf("[info] Dummy: CreateUser(%v)", string(properties))
+			user := maps.Clone(record.Properties)
+			id = newUserID()
+			user["id"] = id
+			allUsers[id] = user
+		} else {
+			// Update the in-memory users.
+			user, ok := allUsers[record.ID]
+			if !ok {
+				log.Printf("[info] Dummy: UpdateUser(%q, %v): user not found", record.ID, string(properties))
+				continue
+			}
+			log.Printf("[info] Dummy: UpdateUser(%q, %v)", record.ID, string(properties))
+			maps.Copy(user, record.Properties)
+			id = record.ID
+		}
+
+		usersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
+
 	}
 
-	usersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
-
-	return nil, nil
+	return nil
 }
 
 // saveValues validates the user-entered values and returns the settings.

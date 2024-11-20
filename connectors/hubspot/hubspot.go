@@ -17,6 +17,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	jsonstd "encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -89,7 +90,7 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 	var res struct {
 		PortalId int
 	}
-	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, 200, &res)
+	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, &res)
 	if err != nil {
 		return "", err
 	}
@@ -168,7 +169,7 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChang
 	}
 	hs.buf.WriteString(`]}`)
 
-	err = hs.call(ctx, "POST", path, &hs.buf, 200, &response)
+	err = hs.call(ctx, "POST", path, &hs.buf, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -311,7 +312,7 @@ func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meerg
 			}
 		}
 	}
-	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, 200, &response)
+	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -367,40 +368,52 @@ func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meerg
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error) {
-
-	id := records[0].ID
-	properties := records[0].Properties
+func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	if target == meergo.Groups {
-		return nil, nil
+		return errors.New("groups are not supported")
 	}
+
+	// Note that records.All() cannot be used because the HubSpot API's "upsert" method does not allow updating contacts using "hs_object_id".
+	// See https://community.hubspot.com/t5/APIs-Integrations/Create-or-update-a-batch-of-contacts-by-unique-property-values/m-p/1047925.
+
+	method := "update"
+	if first, _ := records.Peek(); first.ID == "" {
+		method = "create"
+	}
+
 	var body bytes.Buffer
-
-	// Create the user.
-	if id == "" {
-		body.WriteString(`{"properties":`)
-		err := jsonstd.NewEncoder(&body).Encode(properties)
-		if err != nil {
-			return nil, err
-		}
-		body.WriteString("}")
-		return nil, hs.call(ctx, "POST", "/crm/v3/objects/contacts", &body, 201, nil)
-	}
-
-	// Update the user.
 	body.WriteString(`{"inputs":[`)
-	idJSON, _ := json.Marshal(id)
-	body.WriteString(`{"id":`)
-	body.Write(idJSON)
-	body.WriteString(`,"properties":`)
-	err := jsonstd.NewEncoder(&body).Encode(properties)
-	if err != nil {
-		return nil, err
-	}
-	body.WriteString(`}]}`)
 
-	return nil, hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/update", &body, 200, nil)
+	enc := jsonstd.NewEncoder(&body)
+	enc.SetEscapeHTML(false)
+
+	for i, record := range records.Same() {
+		if i > 0 {
+			body.WriteByte(',')
+		}
+		body.WriteByte('{')
+		if method == "update" {
+			body.WriteString(`"id":`)
+			id, _ := json.Marshal(record.ID)
+			body.Write(id)
+			body.WriteByte(',')
+		}
+		body.WriteString(`"properties":`)
+		err := enc.Encode(record.Properties)
+		if err != nil {
+			return err
+		}
+		body.Truncate(body.Len() - 1) // remove the trailing new line.
+		body.WriteByte('}')
+		if i+1 == 100 {
+			break
+		}
+	}
+
+	body.WriteString(`]}`)
+
+	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, &body, nil)
 }
 
 // companyContacts returns the contacts of the given company.
@@ -423,7 +436,7 @@ func (hs *HubSpot) companyContacts(ctx context.Context, company string) ([]strin
 		if after != "" {
 			requestURL += "?after=" + url.QueryEscape(after)
 		}
-		err := hs.call(ctx, "GET", requestURL, nil, 200, &response)
+		err := hs.call(ctx, "GET", requestURL, nil, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -439,7 +452,7 @@ func (hs *HubSpot) companyContacts(ctx context.Context, company string) ([]strin
 	return contacts, nil
 }
 
-func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
+func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader, response any) error {
 	req, err := http.NewRequestWithContext(ctx, method, "https://api.hubapi.com/"+path[1:], body)
 	if err != nil {
 		return err
@@ -453,7 +466,9 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader
 		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
-	if res.StatusCode != expectedStatus {
+	switch res.StatusCode {
+	case 200, 201, 207:
+	default:
 		hsErr := &hubspotError{statusCode: res.StatusCode}
 		dec := jsonstd.NewDecoder(res.Body)
 		_ = dec.Decode(hsErr)

@@ -15,11 +15,11 @@ import (
 	"io"
 	"iter"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/connectors/appwriter"
 	"github.com/meergo/meergo/core/connectors/httpclient"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
@@ -28,8 +28,9 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// appUpdateBatchSize is the number of app updates to process in each batch.
-const appUpdateBatchSize = 1000
+// ErrRecordNotExist is returned when a record with the specified identifier
+// does not exist in the application. It is returned in the Record.Err field.
+var ErrRecordNotExist = errors.New("record not exist")
 
 // App represents the app of an app connection.
 type App struct {
@@ -233,7 +234,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	return records, nil
 }
 
-// Writer returns a Writer to create and update records of the provided action.
+// Writer returns a Writer to create and update app of the provided action.
 // If the action's output schema does not align with the app's destination
 // schema, it returns a *schemas.Error error.
 func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (Writer, error) {
@@ -252,137 +253,13 @@ func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	return newAppWriter(ack, action.Target, action.OutSchema, app.inner.(meergo.AppRecords)), nil
-}
+	writer := appwriter.New(
+		appwriter.AckFunc(ack),
+		meergo.Targets(action.Target),
+		app.inner.(meergo.AppRecords),
+		app.name)
+	return writer, nil
 
-// appWriter implements the Writer interface for apps.
-type appWriter struct {
-	ack     AckFunc
-	target  meergo.Targets
-	types   map[string]types.Type
-	records meergo.AppRecords
-
-	// Following fields are used by the doUpdates method to update records in the app.
-	updates    map[string]map[string]any // id -> property -> value
-	properties []string
-	ids        []string
-
-	closed bool
-}
-
-func newAppWriter(ack AckFunc, target state.Target, schema types.Type, records meergo.AppRecords) *appWriter {
-	w := &appWriter{
-		ack:     ack,
-		target:  meergo.Targets(target),
-		types:   map[string]types.Type{},
-		records: records,
-		updates: map[string]map[string]any{},
-	}
-	for _, p := range schema.Properties() {
-		w.types[p.Name] = p.Type
-	}
-	return w
-}
-
-func (w *appWriter) Close(ctx context.Context) error {
-	w.closed = true
-	if len(w.updates) > 0 {
-		w.doUpdates(ctx)
-	}
-	return nil
-}
-
-func (w *appWriter) Write(ctx context.Context, id string, properties map[string]any) bool {
-	if w.closed {
-		panic("connectors: Write called on a closed writer")
-	}
-	if id == "" {
-		_, err := w.records.Upsert(ctx, w.target, []meergo.UpsertRecord{{ID: "", Properties: properties}})
-		w.ack([]string{id}, connectorError(err))
-		return true
-	}
-	w.updates[id] = properties
-	if len(w.updates) == appUpdateBatchSize {
-		w.doUpdates(ctx)
-	}
-	return true
-}
-
-// ErrRecordNotExist is returned when a record with the specified identifier
-// does not exist in the application. It is returned in the Record.Err field.
-var ErrRecordNotExist = errors.New("record not exist")
-
-// doUpdates applies pending updates and avoids updating records that have not
-// changed.
-func (w *appWriter) doUpdates(ctx context.Context) {
-	var err error
-	defer func() {
-		if len(w.updates) > 0 {
-			if err == nil {
-				err = ErrRecordNotExist
-			}
-			w.ids = slices.Grow(w.ids, len(w.updates))
-			w.ids = w.ids[:len(w.updates)]
-			i := 0
-			for id := range w.updates {
-				w.ids[i] = id
-			}
-			w.ack(w.ids, err)
-		}
-		clear(w.updates)
-		w.properties = w.properties[0:0]
-		w.ids = w.ids[0:0]
-	}()
-	w.ids = slices.Grow(w.ids, len(w.updates))
-	w.ids = w.ids[:len(w.updates)]
-	i := 0
-	for id, properties := range w.updates {
-		w.ids[i] = id
-		for name := range properties {
-			if k, ok := slices.BinarySearch(w.properties, name); !ok {
-				w.properties = slices.Insert(w.properties, k, name)
-			}
-		}
-		i++
-	}
-	var cursor string
-	var records []meergo.Record
-	var eof bool
-	for !eof {
-		records, cursor, err = w.records.Records(ctx, w.target, time.Time{}, w.ids, w.properties, cursor)
-		if err != nil {
-			eof = err == io.EOF
-			if !eof {
-				return
-			}
-			err = nil
-		}
-		for _, record := range records {
-			properties, ok := w.updates[record.ID]
-			if !ok {
-				// Connectors may return more records than the requested ones.
-				continue
-			}
-			update := false
-			for name, v := range properties {
-				v2, ok := record.Properties[name]
-				if !ok {
-					update = true
-					break
-				}
-				t := w.types[name]
-				if !sameValue(t, v, v2) {
-					update = true
-					break
-				}
-			}
-			if update {
-				_, err = w.records.Upsert(ctx, w.target, []meergo.UpsertRecord{{ID: record.ID, Properties: properties}})
-			}
-			w.ack([]string{record.ID}, connectorError(err))
-			delete(w.updates, record.ID)
-		}
-	}
 }
 
 // userSchema returns the user schema with the provided role.

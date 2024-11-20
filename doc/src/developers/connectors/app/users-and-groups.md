@@ -30,7 +30,7 @@ The parameters for this method are:
 
 - `ctx`: The context, which is always non-nil.
 - `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
-- `ids`: Identifiers of the records to return. If `nil`, `Records` returns all records.
+- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
 - `properties`: Contains the names of the properties that must be returned for each record. The names correspond to the properties of the schema as returned by the `Schema` method.
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
@@ -93,27 +93,324 @@ If a method from `HTTPClient` returns an error, connector methods should return 
 To update or create a record, Meergo uses the connector's `Upsert` method:
 
 ```go
-Upsert(ctx context.Context, target meergo.Targets, records []meergo.UpsertRecord) ([]int, error)
+Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
 ```
 
-This method is called during an export when users or groups need to be updated or when new users or groups need to be created in the application. The `target` parameter can be either `Users` or `Groups`, depending on what the connector supports.
+This method is used during an export process to update existing users or groups, or to create new users or groups in the application. The `target` parameter specifies whether the operation applies to **Users** or **Groups**, depending on what the connector supports.
 
-The `records` parameter contains the records to be updated or created, with the following structure:
+The `records` parameter contains a collection of items to update or create. **You don’t need to process all the records in the collection at once.** Instead, only handle as many as you can send in a single HTTP request to the application. Even if the application supports processing only one record per request, that's fine. Meergo will automatically call the method again for any records that remain unprocessed.
+
+#### Key Concept: Processed Records
+
+Meergo considers a record processed as soon as it has been read from the `Records` collection. To better understand how this works, let’s first explore the methods provided by the `Records` interface. Afterward, we’ll review how to use these methods effectively in various scenarios.
 
 ```go
-type UpsertRecord struct {
-	ID         string
-	Properties map[string]any
+// Records represents a collection of records to be created or updated. A record
+// to be created has an empty ID. The collection is guaranteed to contain at
+// least one record.
+//
+// After calling First or once the iterator returned by All or Same stops, no
+// further method calls on Records are allowed.
+type Records interface {
+
+	// All returns an iterator to read all records. Properties of the records in the
+	// sequence may be modified unless the record is subsequently skipped.
+	All() iter.Seq2[int, Record]
+
+	// First returns the first record. The record's properties may be modified.
+	// After First is called, no further method calls on Records are allowed.
+	First() Record
+
+	// Peek retrieves the next record without advancing the iterator. It returns the
+	// record and true if a record is available, or false if there are no further
+	// records. The returned record must not be modified.
+	Peek() (Record, bool)
+
+	// Same returns an iterator for records: either all records to update
+	// (if the first record is for update) or all records to create
+	// (if the first record is for creation). Properties of the records in the
+	// sequence may be modified unless the record is subsequently skipped.
+	Same() iter.Seq2[int, Record]
+
+	// Skip skips the current record in the iteration and marks it as unread. The
+	// subsequent iteration will resume at the next record while preserving the same
+	// index. Skip may only be called during iterations from All or Same, and only
+	// if the record's properties have not been modified.
+	Skip()
+}
+
+```
+
+#### Sending One Record at a Time
+
+The most common scenario involves an application whose API can handle only one record (user or group) per request. In this case, you should use the `First` method of `Records` to read only the first record.
+
+Below is an example implementation:
+
+```go
+func (my *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+
+	// Read the first record.
+	record := records.First()
+
+	// Prepare request body.
+	var body bytes.Buffer
+	body.WriteString(`{"properties":`)
+	json.Encode(&body, record.Properties)
+	body.WriteString(`}`)
+
+	// Prepare the method for update (PUT) or create (POST).
+	method := http.MethodPut
+	if record.ID == "" {
+		method = http.MethodPost
+	}
+
+	// Prepare the path.
+	path := "/v1/customers"
+	if method == http.MethodPost {
+		path += "/" + url.PathEscape(record.ID)
+	}
+
+	// Create the HTTP request.
+	req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com"+path, &body)
+
+	// Send the HTTP request.
+	res, err := my.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	// Check the response status code.
+	if res.StatusCode != 200 {
+		return fmt.Errorf("app server response: %s", res.Status)
+	}
+
+	return nil
 }
 ```
 
-- **ID**: This is the identifier of the user or group in the app to be updated. It is left empty when creating a new record.
-- **Properties**: These are the properties of the record to be created or updated, following the schema provided by the connector's Schema method. Note that Properties always contain at least one property.
+#### Key Concepts:
 
-The method does not need to process all records in a single call. It must process at least the first record and can process additional records based on the app’s API capabilities. For example, if the app’s API only supports updating one record at a time, the `Upsert` method will handle only the first record in each call. If updates and creations need to be handled separately, and the first record is for updating, the method may process all update records together.
+* **Read the First Record**\
+   Use `records.First()` to read the first record that needs to be processed.
 
-The `Upsert` method returns a slice of integers representing the indexes of the processed records, along with an error related to these records. Notably, index `0`, which corresponds to the first record, can be omitted from the returned slice. If the only record processed is the first one, the method can return `nil` instead of `[]int{0}`.
+* **Determine the Type of Operation**\
+   If `record.ID` is empty, the record should be created; otherwise, it should be updated.
 
-If not all records are processed, Meergo will call `Upsert` again with the remaining records and any additional records as necessary.
+This method ensures that only one record is processed per request, aligning with the API's limitations. Meergo will automatically re-invoke the method for unread records.
 
-The `Upsert` method can use the HTTP client provided during construction to make HTTP requests to the application.
+### Batch of Records of the Same Type (Update or Create)
+
+If the application allows processing multiple records in a batch but requires them to be of the same type (either all updates or all creates), you can use the `Peek` method to peek the first record without consuming it. This helps you determine whether the batch should execute an update or a create operation. After that, you can iterate over `records.Same()` to read only records of the same type as the first record.
+
+Below is an example implementation:
+
+```go
+func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+
+	// Peek at the first record to determine the type of request.
+	record, _ := records.Peek()
+	method := http.MethodPut
+	if record.ID == "" {
+		method = http.MethodPost
+	}
+
+	// Prepare request body.
+	var body bytes.Buffer
+	body.WriteString(`{"customers":[`)
+	for i, record := range records.Same() {
+		if i > 0 {
+			body.WriteString(`,`)
+		}
+		body.WriteString(`{`)
+		if record.ID != "" {
+			body.WriteString(`"id":`)
+			json.Encode(&body, record.ID)
+			body.WriteString(`,`)
+		}
+		body.WriteString(`"properties":`)
+		json.Encode(&body, record.Properties)
+		body.WriteString(`}`)
+		if i+1 == bodyMaxRecords {
+			break
+		}
+	}
+	body.WriteString(`]}`)
+
+	// Create the HTTP request.
+	req, _ := http.NewRequestWithContext(ctx, method, "https://api.myapp.com/v1/customers/batch", &body)
+
+	// Send the HTTP request.
+	res, err := m.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	// Check the response status code.
+	if res.StatusCode != 200 {
+		return fmt.Errorf("server responded with status %s", res.Status)
+	}
+
+	return nil
+}
+```
+
+#### Key Concepts:
+
+* **Determine the Type of Operation**\
+   Use `records.Peek()` to examine the first record without consuming it.
+   - If the record has an `ID`, it's an update.
+   - If `ID` is empty, it's a creation.
+
+   Do not use the `records.First()` in this scenario, as it consumes the record and prevents any other methods from being called.
+
+* **Iterate Over Records**\
+   Use `records.Same()` to read only records of the same type as the first one. This ensures all records in the batch are valid for the chosen operation.
+
+* **Batch Size Limitation**\
+   The example demonstrates breaking the loop once the maximum number of records (`bodyMaxRecords`) is reached. This ensures the request complies with the application's API limits.
+
+### Batch of Records of Mixed Types (Create and Update)
+
+When the application allows sending multiple records of different types (both records to create and records to update) in a single HTTP request, you can iterate over all records using `records.All()`.
+
+Here is an example implementation:
+
+```go
+func (m *MyApp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+
+	// Prepare request body.
+	var body bytes.Buffer
+	body.WriteString(`{"customers":[`)
+	for i, record := range records.All() {
+		if i > 0 {
+			body.WriteString(`,`)
+		}
+		body.WriteString(`{`)
+		if record.ID != "" {
+			body.WriteString(`"id":`)
+			json.Encode(&body, record.ID)
+			body.WriteString(`,`)
+		}
+		body.WriteString(`"properties":`)
+		json.Encode(&body, record.Properties)
+		body.WriteString(`}`)
+		if i+1 == bodyMaxRecords {
+			break
+		}
+	}
+	body.WriteString(`}]`)
+
+	// Create the HTTP request.
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.myapp.com/v1/customers/batch", &body)
+
+	// Send the HTTP request.
+	res, err := m.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	// Check the response status code.
+	if res.StatusCode != 200 {
+		return fmt.Errorf("server responded with status %s", res.Status)
+	}
+
+	return nil
+}
+```
+
+#### Key Concepts:
+
+* **Iterating Over All Records**\
+   The method `records.All()` is used to iterate over both types of records—those to be created and those to be updated. This makes it possible to process mixed batches in a single request.
+
+* **Determine the Type of Operation**\
+   If the record has an `ID`, it's an update, if `ID` is empty, it's a creation.
+
+* **Limit on Records**\
+   The loop stops once the maximum number of records (`bodyMaxRecords`) is reached, ensuring that the body size does not exceed the application’s limit.
+
+This approach allows you to efficiently handle mixed record types (create and update) in a single batch request, reducing the number of API calls required.
+
+### Handling Body Size Limits
+
+In the previous examples, the loop stops when the number of records reaches the API's maximum limit. However, if the API imposes a body size limit rather than a record count limit, you can use the `Skip` method to skip a record after it has been read. This ensures that the record remains unprocessed and can be included in a subsequent call to the `Upsert` method.
+
+Below is an example implementation:
+
+```go
+	for i, record := range records.All() {
+
+		// Track length before adding the record.
+		n = body.Len()
+
+		if i > 0 {
+			body.WriteString(`,`)
+		}
+
+		// Build the record JSON object.
+		body.WriteString(`{`)
+		if record.ID != "" {
+			body.WriteString(`"id":`)
+			json.Encode(&body, record.ID)
+			body.WriteString(`,`)
+		}
+		body.WriteString(`"properties":`)
+		json.Encode(&body, record.Properties)
+		body.WriteString(`}`)
+
+		// Stop if body exceeds app size limit.
+		if body.Len() > bodySizeLimit {
+			body.Truncate(n)
+			records.Skip()
+			break
+		}
+
+	}
+```
+
+#### Key Concepts:
+
+* **Tracking Body Size**\
+  Before adding a record to the request body, the current length of the body is tracked using `body.Len()`. This allows for easy truncation if the body size limit is exceeded.
+
+* **Truncating the Body**\
+  To ensure the request is valid, the `body.Truncate(n)` method removes the last added record from the body. This prevents the body from exceeding the size limit while maintaining a valid JSON structure.
+
+* **Using `Skip` to Reprocess Records**\
+  When the body size exceeds the limit:
+    - The Skip method is called to notify Meergo that the last processed record has been skipped.
+    - The processed records remain unchanged, meaning they can potentially be skipped later.
+    - This skipped record will remain unprocessed and will be included in the next call to the `Upsert` method.
+
+### Differentiating Errors by Record
+
+When records are sent in a batch, some APIs respond with specific error messages for each individual record in the batch. In this case, instead of returning a common error for all records, you can return a specific error for each record that encountered an issue using the `RecordsError` type:
+
+```go
+// RecordsError is returned by the AppRecords.Upsert method when only some
+// records have failed or when the method can distinguish errors based on
+// individual records. It maps record indices to their respective errors.
+type RecordsError map[int]error
+
+func (err RecordsError) Error() string {
+    var msg string
+    for i, e := range err {
+        msg += fmt.Sprintf("record %d: %v\n", i, e)
+    }
+    return msg
+}
+```
+
+### Key Concepts:
+
+* **Error Handling for Individual Records**\
+   Instead of returning a single error for the entire batch, you can return an error specific to each record that failed. This helps identify exactly which record(s) caused the issue.
+
+* **Mapping Errors by Record Index**\
+   The key of the `RecordsError` type is the index of the record in the iteration, which corresponds to the position of the record in the request body (assuming the records were written in the same order). The value is the error associated with that specific record.
+
+This approach lets you identify and handle errors for each record separately, instead of having a single error for the whole batch.
