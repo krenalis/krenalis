@@ -21,10 +21,8 @@ import (
 	"github.com/meergo/meergo/cmd"
 )
 
-// buildMeergo builds Meergo and copies files needed for the execution.
-func buildMeergo(repo, meergoDir string, ctx context.Context) error {
-
-	// Build Meergo.
+// buildMeergo builds Meergo.
+func buildMeergo(ctx context.Context, repo, meergoDir string) error {
 	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(meergoDir, meergoExecFilename()), "./cmd/meergo")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -33,21 +31,6 @@ func buildMeergo(repo, meergoDir string, ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("cannot build Meergo: %s", err)
 	}
-
-	// Copy the certificates.
-	for _, cert := range []string{"cert.pem", "key.pem"} {
-		src := cert // the certificate under the "test" directory.
-		dst := filepath.Join(meergoDir, cert)
-		err = copyFile(dst, src)
-		if err != nil {
-			abs, err2 := filepath.Abs(src)
-			if err2 != nil {
-				return err2
-			}
-			return fmt.Errorf("cannot read HTTPS certificate %s: %s", abs, err)
-		}
-	}
-
 	return nil
 }
 

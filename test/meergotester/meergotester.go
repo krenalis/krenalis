@@ -202,7 +202,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			t.Fatalf("cannot write the YAML config file: %s", err)
 		}
 		if !meergoAlreadyBuilt {
-			err := buildMeergo(repo, meergoDir, ctx)
+			err := buildMeergo(ctx, repo, meergoDir)
 			if err != nil {
 				t.Fatalf("cannot build Meergo: %s", err)
 			}
