@@ -1,7 +1,7 @@
-CREATE OR REPLACE VIEW "users" AS
+CREATE OR REPLACE VIEW "USERS" AS
 SELECT
-    "__id__",
-    "__last_change_time__",
-    "email"
+    "__ID__",
+    "__LAST_CHANGE_TIME__",
+    "EMAIL"
 FROM
-    "_users_0";
+    "_USERS_0";

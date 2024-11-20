@@ -60,18 +60,18 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		return err
 	}
 	newUsersVersion := usersVersion + 1
-	newUsersName := fmt.Sprintf("_users_%d", newUsersVersion)
+	newUsersName := fmt.Sprintf("_USERS_%d", newUsersVersion)
 
 	// Create a copy of the current users table and set the related index in the
 	// operations table.
 	_, span = telemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		likeTable := fmt.Sprintf(`_users_%d`, usersVersion)
+		likeTable := fmt.Sprintf(`_USERS_%d`, usersVersion)
 		_, err = tx.Exec(fmt.Sprintf(`CREATE TABLE %s LIKE %s`, quoteTable(newUsersName), quoteTable(likeTable)))
 		if err != nil {
 			return fmt.Errorf("cannot create users table (with name %s) like table %s: %s", quoteTable(newUsersName), quoteTable(likeTable), err)
 		}
-		_, err = tx.Exec(`UPDATE "_operations" SET "users_version" = ? WHERE "operation" = 'IdentityResolution' AND "end_time" IS NULL`, newUsersVersion)
+		_, err = tx.Exec(`UPDATE "_OPERATIONS" SET "USERS_VERSION" = ? WHERE "OPERATION" = 'IdentityResolution' AND "END_TIME" IS NULL`, newUsersVersion)
 		if err != nil {
 			return err
 		}
@@ -89,13 +89,13 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		sameUser.WriteString("( CASE\n")
 		for _, ident := range identifiers {
 			id := quoteColumn(ident.Name)
-			sameUser.WriteString(`                WHEN "i1".`)
+			sameUser.WriteString(`                WHEN "I1".`)
 			sameUser.WriteString(id)
-			sameUser.WriteString(` IS NOT NULL AND "i2".`)
+			sameUser.WriteString(` IS NOT NULL AND "I2".`)
 			sameUser.WriteString(id)
-			sameUser.WriteString(` IS NOT NULL THEN "i1".`)
+			sameUser.WriteString(` IS NOT NULL THEN "I1".`)
 			sameUser.WriteString(id)
-			sameUser.WriteString(`::text = "i2".`)
+			sameUser.WriteString(`::text = "I2".`)
 			sameUser.WriteString(id)
 			sameUser.WriteString(`::text`)
 			sameUser.WriteByte('\n')
@@ -114,7 +114,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		mergeUsers.WriteString(quoteColumn(c.Name))
 		mergeUsers.WriteByte(',')
 	}
-	mergeUsers.WriteString(`"__identities__", "__id__", "__last_change_time__"`)
+	mergeUsers.WriteString(`"__IDENTITIES__", "__ID__", "__LAST_CHANGE_TIME__"`)
 	mergeUsers.WriteString(") SELECT\n")
 	for _, c := range userColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -125,14 +125,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 			if s, ok := userPrimarySources[c.Name]; ok {
 				// In the case of primary sources, list these values first,
 				// sorted by last change time, excluding those that are NULL.
-				mergeUsers.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "__connection__" = %d THEN %s END) WITHIN GROUP (ORDER BY "__last_change_time__" DESC)`, quoteColumn(c.Name), s, quoteColumn(c.Name)))
+				mergeUsers.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL AND "__CONNECTION__" = %d THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteColumn(c.Name), s, quoteColumn(c.Name)))
 			} else {
 				mergeUsers.WriteString(`ARRAY_CONSTRUCT()`)
 			}
 			mergeUsers.WriteString(", ")
-			// Concatenate the values ​​of all identities for which the value is
+			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
-			mergeUsers.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "__last_change_time__" DESC)`, quoteColumn(c.Name), quoteColumn(c.Name)))
+			mergeUsers.WriteString(fmt.Sprintf(`ARRAY_AGG(CASE WHEN %s IS NOT NULL THEN %s END) WITHIN GROUP (ORDER BY "__LAST_CHANGE_TIME__" DESC)`, quoteColumn(c.Name), quoteColumn(c.Name)))
 			mergeUsers.WriteString(`))[0]`)
 		}
 		mergeUsers.WriteString(" AS ")
@@ -140,7 +140,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		mergeUsers.WriteByte(',')
 	}
 	// Write the "__identities__" column.
-	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__pk__"), `)
+	mergeUsers.WriteString(`ARRAY_AGG(DISTINCT "__PK__"), `)
 	// Write the "__id__" column.
 	// If all GIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the user's GID; otherwise, if
@@ -149,32 +149,32 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	// in this case, create a new random GID.
 	mergeUsers.WriteString(`COALESCE(
 		CASE
-			WHEN COUNT(CASE WHEN "__gid__" IS NOT NULL THEN 1 ELSE 0 END) > 0
-				THEN MAX("__gid__"::text)::varchar
+			WHEN COUNT(CASE WHEN "__GID__" IS NOT NULL THEN 1 ELSE 0 END) > 0
+				THEN MAX("__GID__"::text)::varchar
 			ELSE UUID_STRING()
 		END,
 		UUID_STRING()
 	),`)
 	// Write the "__last_change_time__" column.
-	mergeUsers.WriteString(`MAX("__last_change_time__")`)
-	mergeUsers.WriteString(` FROM "_user_identities" GROUP BY "__cluster__"';` + "\n")
+	mergeUsers.WriteString(`MAX("__LAST_CHANGE_TIME__")`)
+	mergeUsers.WriteString(` FROM "_USER_IDENTITIES" GROUP BY "__CLUSTER__"';` + "\n")
 
 	// If two users who were previously one are split, they will end up having
 	// the same GID, which is incorrect. So this query, in that situation,
 	// replaces the GID of both users with new random GIDs.
 	mergeUsers.WriteString(`UPDATE `)
 	mergeUsers.WriteString(quoteTable(newUsersName))
-	mergeUsers.WriteString(` "u"
+	mergeUsers.WriteString(` "U"
 		SET
-			"__id__" = UUID_STRING()
+			"__ID__" = UUID_STRING()
 		WHERE
-			"u"."__id__" IN (
+			"U"."__ID__" IN (
 				SELECT
-					"u2"."__id__"
+					"U2"."__ID__"
 				FROM
-					` + quoteTable(newUsersName) + ` "u2"
+					` + quoteTable(newUsersName) + ` "U2"
 				GROUP BY
-					"u2"."__id__"
+					"U2"."__ID__"
 				HAVING
 					COUNT(*) > 1
 	)`)
@@ -196,10 +196,10 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 		return snowflake(err)
 	}
 
-	// Call the 'resolve_identities' stored procedure (which is declared in the
+	// Call the 'RESOLVE_IDENTITIES' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
-	_, span = telemetry.TraceSpan(ctx, "CALL resolve_identities()")
-	_, err = db.ExecContext(ctx, "CALL resolve_identities()")
+	_, span = telemetry.TraceSpan(ctx, "CALL RESOLVE_IDENTITIES()")
+	_, err = db.ExecContext(ctx, "CALL RESOLVE_IDENTITIES()")
 	span.End()
 	if err != nil {
 		return snowflake(err)
@@ -221,7 +221,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 
 	// Drop the 'users' table that existed before executing this Identity
 	// Resolution.
-	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_users_`+strconv.Itoa(usersVersion)+`"`)
+	_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "_USERS_`+strconv.Itoa(usersVersion)+`"`)
 	if err != nil {
 		return snowflake(err)
 	}
@@ -242,8 +242,8 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 	if err != nil {
 		return nil, nil, err
 	}
-	query := `SELECT "start_time", "end_time" FROM "_operations" WHERE ` +
-		`"operation" = 'IdentityResolution' ORDER BY "id" DESC LIMIT 1`
+	query := `SELECT "START_TIME", "END_TIME" FROM "_OPERATIONS" WHERE ` +
+		`"OPERATION" = 'IdentityResolution' ORDER BY "ID" DESC LIMIT 1`
 	err = conn.QueryRowContext(ctx, query).Scan(&startTime, &endTime)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, nil, snowflake(err)

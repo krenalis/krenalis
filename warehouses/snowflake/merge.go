@@ -32,8 +32,13 @@ import (
 // merge performs a table merge operation.
 func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any, deleted []any) error {
 
+	quotedColumn := make(map[string]string, len(table.Columns))
+	for _, column := range table.Columns {
+		quotedColumn[column.Name] = quoteColumn(column.Name)
+	}
+
 	// Generate a unique name for the temporary table.
-	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	tempTableName := "TEMP_TABLE_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
 	// Prepare the "create temporary table" statement.
 	var b strings.Builder
@@ -41,34 +46,32 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
 	for _, c := range table.Columns {
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteString(`",`)
+		b.WriteString(quotedColumn[c.Name])
+		b.WriteByte(',')
 	}
-	b.WriteString(` FALSE AS "$purge" FROM "`)
-	b.WriteString(table.Name)
-	b.WriteString("\" LIMIT 0")
+	b.WriteString(` FALSE AS "$PURGE" FROM `)
+	b.WriteString(quoteTable(table.Name))
+	b.WriteString(" LIMIT 0")
 	create := b.String()
 
 	// Create the 'merge' statement.
 	b.Reset()
 	b.WriteString(`MERGE INTO `)
 	b.WriteString(quoteTable(table.Name))
-	b.WriteString(" d\nUSING \"")
+	b.WriteString(" \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" s\nON ")
+	b.WriteString("\" \"S\"\nON ")
 	for i, key := range table.Keys {
 		if i > 0 {
 			b.WriteString(" AND ")
 		}
-		b.WriteString(`d."`)
-		b.WriteString(key)
-		b.WriteString(`" = s."`)
-		b.WriteString(key)
-		b.WriteByte('"')
+		b.WriteString(`"D".`)
+		b.WriteString(quotedColumn[key])
+		b.WriteString(` = "S".`)
+		b.WriteString(quotedColumn[key])
 	}
 	if len(rows) > 0 {
-		b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
+		b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
 		i := 0
 		for _, c := range table.Columns {
 			if slices.Contains(table.Keys, c.Name) {
@@ -77,33 +80,28 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteByte('"')
-			b.WriteString(c.Name)
-			b.WriteString(`" = s."`)
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			b.WriteString(quotedColumn[c.Name])
+			b.WriteString(` = "S".`)
+			b.WriteString(quotedColumn[c.Name])
 			i++
 		}
 		if i == 0 {
 			return errors.New("snowflake.Merge: there must be at least one column in 'columns' apart from the keys")
 		}
-		b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
+		b.WriteString("\nWHEN NOT MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteByte('"')
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			b.WriteString(quotedColumn[c.Name])
 		}
 		b.WriteString(")\n  VALUES (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteString(`s."`)
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			b.WriteString(`"S".`)
+			b.WriteString(quotedColumn[c.Name])
 		}
 		b.WriteString(`)`)
 	}
@@ -209,7 +207,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 }
 
 // serializeRowsToCSV serializes rows as CSV, using columns as header, and
-// returns it as an io.Reader. It also appends a boolean column called $purge
+// returns it as an io.Reader. It also appends a boolean column called $PURGE
 // with the value of the 'deleted' argument as value for each row.
 func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io.Reader, error) {
 	var err error
@@ -218,9 +216,9 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(c.Name)
+		b.WriteString(strings.ToUpper(c.Name))
 	}
-	b.WriteString(",$purge\n")
+	b.WriteString(",$PURGE\n")
 	for i, row := range rows {
 		if i > 0 {
 			b.WriteByte('\n')
@@ -234,7 +232,7 @@ func serializeRowsToCSV(columns []meergo.Column, rows [][]any, deleted bool) (io
 				return nil, err
 			}
 		}
-		// Add the value for the column $purge.
+		// Add the value for the column $PURGE.
 		if deleted {
 			b.WriteString(",true")
 		} else {
@@ -280,7 +278,7 @@ func quoteCSVString(b *bytes.Buffer, s string) {
 
 // serializeIdentitiesToCSV serializes identities as CSV, using columns as
 // header, and returns it as an io.Reader. It also appends a boolean column
-// called $purge with the value of the 'deleted' argument as value for each row.
+// called $PURGE with the value of the 'deleted' argument as value for each row.
 func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (io.Reader, error) {
 	var err error
 	var b bytes.Buffer
@@ -288,9 +286,9 @@ func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (i
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(c.Name)
+		b.WriteString(strings.ToUpper(c.Name))
 	}
-	b.WriteString(",$purge\n")
+	b.WriteString(",$PURGE\n")
 	for i, row := range rows {
 		if i > 0 {
 			b.WriteByte('\n')
@@ -308,8 +306,8 @@ func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (i
 				return nil, err
 			}
 		}
-		// Add the value for the column $purge.
-		if purge, ok := row["$purge"].(bool); ok {
+		// Add the value for the column $PURGE.
+		if purge, ok := row["$PURGE"].(bool); ok {
 			if purge {
 				b.WriteString(",true")
 			} else {

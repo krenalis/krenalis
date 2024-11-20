@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS "_users_0" (
-    "__id__" VARCHAR(36),
-    "__identities__" ARRAY,
-    "__last_change_time__" TIMESTAMP NOT NULL,
-    "email" VARCHAR(300)
+CREATE TABLE IF NOT EXISTS "_USERS_0" (
+    "__ID__" VARCHAR(36),
+    "__IDENTITIES__" ARRAY,
+    "__LAST_CHANGE_TIME__" TIMESTAMP NOT NULL,
+    "EMAIL" VARCHAR(300)
 );

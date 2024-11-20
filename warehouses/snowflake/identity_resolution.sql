@@ -1,34 +1,34 @@
-DROP TABLE IF EXISTS "_edges";
-CREATE TABLE "_edges" (
-    "i1" int,
-    "i2" int
+DROP TABLE IF EXISTS "_EDGES";
+CREATE TABLE "_EDGES" (
+    "I1" int,
+    "I2" int
 );
 
-DROP TABLE IF EXISTS "_clusters_to_merge";
-CREATE TABLE "_clusters_to_merge"("c1" int, "c2" int);
+DROP TABLE IF EXISTS "_CLUSTERS_TO_MERGE";
+CREATE TABLE "_CLUSTERS_TO_MERGE"("C1" int, "C2" int);
 
-CREATE OR REPLACE PROCEDURE resolve_identities()
+CREATE OR REPLACE PROCEDURE RESOLVE_IDENTITIES()
 RETURNS BOOLEAN
 LANGUAGE SQL
 AS $$
 BEGIN
 
     -- Determine the edges of the identities graph.
-    TRUNCATE "_edges";
+    TRUNCATE "_EDGES";
     EXECUTE IMMEDIATE 'INSERT INTO
-        "_edges"
+        "_EDGES"
     SELECT
-        "i1"."__pk__",
-        "i2"."__pk__"
+        "I1"."__PK__",
+        "I2"."__PK__"
     FROM
-        "_user_identities" "i1"
+        "_USER_IDENTITIES" "I1"
             CROSS JOIN
-        "_user_identities" "i2"
+        "_USER_IDENTITIES" "I2"
     WHERE
-        "i1"."__pk__" < "i2"."__pk__" AND (
-            ("i1"."__connection__" = "i2"."__connection__"
-                AND "i1"."__identity_id__" = "i2"."__identity_id__"
-                AND "i1"."__is_anonymous__" = "i2"."__is_anonymous__"
+        "I1"."__PK__" < "I2"."__PK__" AND (
+            ("I1"."__CONNECTION__" = "I2"."__CONNECTION__"
+                AND "I1"."__IDENTITY_ID__" = "I2"."__IDENTITY_ID__"
+                AND "I1"."__IS_ANONYMOUS__" = "I2"."__IS_ANONYMOUS__"
             )
             OR {{ same_user }} -- This placeholder will be replaced by Meergo.
         )';
@@ -43,49 +43,49 @@ BEGIN
     LOOP
     
         -- Determine the clusters to merge.
-        TRUNCATE "_clusters_to_merge";
+        TRUNCATE "_CLUSTERS_TO_MERGE";
         INSERT INTO
-            "_clusters_to_merge"
+            "_CLUSTERS_TO_MERGE"
         SELECT
-            "i1"."__cluster__" "c1",
-            "i2"."__cluster__" "c2"
+            "I1"."__CLUSTER__" "C1",
+            "I2"."__CLUSTER__" "C2"
         FROM
-            "_edges"
-            JOIN "_user_identities" "i1" ON "_edges"."i1" = "i1"."__pk__"
-            JOIN "_user_identities" "i2" ON "_edges"."i2" = "i2"."__pk__"
+            "_EDGES"
+            JOIN "_USER_IDENTITIES" "I1" ON "_EDGES"."I1" = "I1"."__PK__"
+            JOIN "_USER_IDENTITIES" "I2" ON "_EDGES"."I2" = "I2"."__PK__"
         WHERE
-            "i1"."__cluster__" <> "i2"."__cluster__";
+            "I1"."__CLUSTER__" <> "I2"."__CLUSTER__";
 
         -- Stop iterating when there are no more clusters to merge.
-        SELECT count(*) > 0 INTO :has_clusters_to_merge FROM "_clusters_to_merge";
+        SELECT count(*) > 0 INTO :has_clusters_to_merge FROM "_CLUSTERS_TO_MERGE";
         IF (NOT has_clusters_to_merge) THEN
             BREAK;
         END IF;
 
-        -- Make the "_clusters_to_merge" table symmetric.
+        -- Make the "_CLUSTERS_TO_MERGE" table symmetric.
         -- TODO(Gianluca): is this necessary?
-        INSERT INTO "_clusters_to_merge"
-            SELECT "c2", "c1"
-            FROM "_clusters_to_merge";
+        INSERT INTO "_CLUSTERS_TO_MERGE"
+            SELECT "C2", "C1"
+            FROM "_CLUSTERS_TO_MERGE";
         
         -- Update the clusters of the user identities.
         UPDATE
-            "_user_identities" "identities_a"
+            "_USER_IDENTITIES" "IDENTITIES_A"
         SET
-            "__cluster__" = least("identities_a"."__cluster__", "target")
+            "__CLUSTER__" = least("IDENTITIES_A"."__CLUSTER__", "TARGET")
         FROM
-            "_user_identities" "identities_b"
+            "_USER_IDENTITIES" "IDENTITIES_B"
             JOIN (
                 SELECT
-                    "c1" "source",
-                    min("c2") "target"
+                    "C1" "SOURCE",
+                    min("C2") "TARGET"
                 FROM
-                    "_clusters_to_merge"
+                    "_CLUSTERS_TO_MERGE"
                 GROUP BY
-                    "source"
-            ) "new_clusters" ON "new_clusters"."source" = "identities_b"."__cluster__"
+                    "SOURCE"
+            ) "NEW_CLUSTERS" ON "NEW_CLUSTERS"."SOURCE" = "IDENTITIES_B"."__CLUSTER__"
         WHERE
-            "identities_a"."__pk__" = "identities_b"."__pk__";
+            "IDENTITIES_A"."__PK__" = "IDENTITIES_B"."__PK__";
 
     END LOOP;
     END;
@@ -95,22 +95,22 @@ BEGIN
 
     -- Update associations between identities and users by updating the GID of
     -- the identities.
-    UPDATE "_user_identities" AS "ui"
-    SET "__gid__" = "u"."__id__"
-    FROM {{ new_users_name }} AS "u"
-    WHERE ARRAY_CONTAINS("ui"."__pk__", "u"."__identities__");
+    UPDATE "_USER_IDENTITIES" AS "UI"
+    SET "__GID__" = "U"."__ID__"
+    FROM {{ new_users_name }} AS "U"
+    WHERE ARRAY_CONTAINS("UI"."__PK__", "U"."__IDENTITIES__");
 
     -- Update associations between events and users by updating the user ID of
     -- the events.
-    UPDATE "events" SET "user" = null;
-    UPDATE "events" SET "user" = "_user_identities"."__gid__"
-    FROM "_user_identities" WHERE
-       "events"."connection" = "_user_identities"."__connection__"
+    UPDATE "EVENTS" SET "USER" = null;
+    UPDATE "EVENTS" SET "USER" = "_USER_IDENTITIES"."__GID__"
+    FROM "_USER_IDENTITIES" WHERE
+       "EVENTS"."CONNECTION" = "_USER_IDENTITIES"."__CONNECTION__"
            AND
        (
-           ("events"."user_id" <> '' AND "events"."user_id" = "_user_identities"."__identity_id__")
+           ("EVENTS"."USER_ID" <> '' AND "EVENTS"."USER_ID" = "_USER_IDENTITIES"."__IDENTITY_ID__")
                OR
-           ("events"."user_id" = '' AND ARRAY_CONTAINS("events"."anonymous_id"::variant, "_user_identities"."__anonymous_ids__"))
+           ("EVENTS"."USER_ID" = '' AND ARRAY_CONTAINS("EVENTS"."ANONYMOUS_ID"::variant, "_USER_IDENTITIES"."__ANONYMOUS_IDS__"))
        );
 
     RETURN true;

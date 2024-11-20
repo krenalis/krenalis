@@ -45,7 +45,7 @@ func (warehouse *Snowflake) AlterUserColumns(ctx context.Context, userColumns []
 	}
 
 	// Determine the alter schema queries.
-	queries := alterUserColumnsQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserColumnsQueries("_USERS_"+strconv.Itoa(usersVersion), userColumns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
@@ -68,7 +68,7 @@ func (warehouse *Snowflake) AlterUserColumnsQueries(ctx context.Context, userCol
 	if err != nil {
 		return nil, err
 	}
-	queries := alterUserColumnsQueries("_users_"+strconv.Itoa(usersVersion), userColumns, operations)
+	queries := alterUserColumnsQueries("_USERS_"+strconv.Itoa(usersVersion), userColumns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
@@ -97,7 +97,7 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 	var queries []string
 
 	// DROP VIEW.
-	queries = append(queries, `DROP VIEW "users"`)
+	queries = append(queries, `DROP VIEW "USERS"`)
 
 	// ALTER TABLE ... DROP COLUMN.
 	{
@@ -108,14 +108,14 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 			}
 		}
 		if len(toDrop) > 0 {
-			for _, table := range []string{usersTableName, "_user_identities"} {
+			for _, table := range []string{usersTableName, "_USER_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteTable(table) + "\n\t")
 				for i, c := range toDrop {
 					if i > 0 {
 						b.WriteString(",\n\t")
 					}
-					b.WriteString(`DROP COLUMN "` + c + `"`)
+					b.WriteString(`DROP COLUMN ` + quoteColumn(c))
 				}
 				queries = append(queries, b.String())
 			}
@@ -125,8 +125,8 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 	// ALTER TABLE ... RENAME COLUMN.
 	for _, op := range operations {
 		if op.Operation == meergo.OperationRenameColumn {
-			queries = append(queries, `ALTER TABLE `+quoteTable(usersTableName)+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
-			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
+			queries = append(queries, `ALTER TABLE `+quoteTable(usersTableName)+"\n\tRENAME COLUMN "+quoteColumn(op.Column)+` TO `+quoteColumn(op.NewColumn))
+			queries = append(queries, `ALTER TABLE "_USER_IDENTITIES"`+"\n\tRENAME COLUMN "+quoteColumn(op.Column)+` TO `+quoteColumn(op.NewColumn))
 		}
 	}
 
@@ -139,7 +139,7 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 			}
 		}
 		if len(toAdd) > 0 {
-			for _, table := range []string{usersTableName, "_user_identities"} {
+			for _, table := range []string{usersTableName, "_USER_IDENTITIES"} {
 				b := strings.Builder{}
 				b.WriteString("ALTER TABLE " + quoteTable(table) + "\n\t")
 				for i, op := range toAdd {
@@ -158,7 +158,7 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 		}
 	}
 
-	// CREATE VIEW "users".
+	// CREATE VIEW "USERS".
 	queries = append(queries, createViewQuery(usersTableName, userColumns, false))
 
 	return queries
@@ -175,8 +175,8 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 	if replace {
 		b.WriteString(`OR REPLACE `)
 	}
-	b.WriteString(`VIEW "users" AS SELECT` + "\n")
-	metaProps := []string{"__id__", "__last_change_time__"}
+	b.WriteString(`VIEW "USERS" AS SELECT` + "\n")
+	metaProps := []string{"__ID__", "__LAST_CHANGE_TIME__"}
 	for i, p := range metaProps {
 		if i > 0 {
 			b.WriteString(",\n")
@@ -186,9 +186,8 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 		b.WriteRune('"')
 	}
 	for _, c := range userColumns {
-		b.WriteString(",\n\t\"")
-		b.WriteString(c.Name)
-		b.WriteRune('"')
+		b.WriteString(",\n\t")
+		b.WriteString(quoteColumn(c.Name))
 	}
 	b.WriteString("\nFROM ")
 	b.WriteString(quoteTable(usersTableName))

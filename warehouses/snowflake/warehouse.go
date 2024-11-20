@@ -165,7 +165,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 		return errors.New("where is nil")
 	}
 	var s strings.Builder
-	s.WriteString(`DELETE FROM "` + table + `" WHERE `)
+	s.WriteString("DELETE FROM " + quoteTable(table) + " WHERE ")
 	err := renderExpr(&s, where)
 	if err != nil {
 		return fmt.Errorf("cannot build WHERE expression: %s", err)
@@ -213,8 +213,13 @@ var immutableMergeIdentitiesColumns = []string{
 // MergeIdentities merge existing identities, deletes them and inserts new ones.
 func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
 
+	quotedColumn := make(map[string]string, len(columns))
+	for _, column := range columns {
+		quotedColumn[column.Name] = quoteColumn(column.Name)
+	}
+
 	// Generate a unique name for the temporary table.
-	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	tempTableName := "TEMP_TABLE_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
 	// Prepare the "create temporary table" statement.
 	var b strings.Builder
@@ -222,19 +227,18 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
 	for _, c := range columns {
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteString(`",`)
+		b.WriteString(quotedColumn[c.Name])
+		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$purge" FROM "_user_identities" LIMIT 0`)
+	b.WriteString(`FALSE AS "$PURGE" FROM "_USER_IDENTITIES" LIMIT 0`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_user_identities\" AS d\nUSING \"")
+	b.WriteString("MERGE INTO \"_USER_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" AS s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
-	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
+	b.WriteString("\" AS \"S\"\nON \"D\".\"__ACTION__\" = \"S\".\"__ACTION__\" AND \"D\".\"__IDENTITY_ID__\" = \"S\".\"__IDENTITY_ID__\" AND \"D\".\"__IS_ANONYMOUS__\" = \"S\".\"__IS_ANONYMOUS__\"")
+	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
 		if slices.Contains(immutableMergeIdentitiesColumns, c.Name) {
@@ -243,41 +247,37 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString("\n\"")
-		b.WriteString(c.Name)
-		b.WriteString(`" = `)
+		b.WriteString("\n")
+		b.WriteString(quotedColumn[c.Name])
+		b.WriteString(` = `)
 		if c.Name == "__anonymous_ids__" {
-			b.WriteString(`CASE WHEN s."__anonymous_ids__" IS NULL OR ARRAY_CONTAINS(d."__anonymous_ids__", s."__anonymous_ids__"[0]) THEN d."__anonymous_ids__" ELSE ARRAY_CAT(d."__anonymous_ids__", ARRAY_CONSTRUCT(s."__anonymous_ids__"[0])) END`)
+			b.WriteString(`CASE WHEN "S"."__ANONYMOUS_IDS__" IS NULL OR ARRAY_CONTAINS("D"."__ANONYMOUS_IDS__", "S"."__ANONYMOUS_IDS__"[0]) THEN "D"."__ANONYMOUS_IDS__" ELSE ARRAY_CAT("D"."__ANONYMOUS_IDS__", ARRAY_CONSTRUCT("S"."__ANONYMOUS_IDS__"[0])) END`)
 		} else {
-			b.WriteString(`s."`)
-			b.WriteString(c.Name)
-			b.WriteString(`"`)
+			b.WriteString(`"S".`)
+			b.WriteString(quotedColumn[c.Name])
 		}
 		i++
 	}
 	if i == 0 {
 		return errors.New("snowflake.MergeIdentities: there must be at least one column in 'columns' apart from the immutable identities columns")
 	}
-	b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
+	b.WriteString("\nWHEN NOT MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  INSERT (")
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteByte('"')
+		b.WriteString(quotedColumn[c.Name])
 	}
 	b.WriteString(")\n  VALUES (")
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(`s."`)
-		b.WriteString(c.Name)
-		b.WriteByte('"')
+		b.WriteString(`"S".`)
+		b.WriteString(quotedColumn[c.Name])
 	}
-	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" = FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
-	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" = TRUE THEN\n  DELETE")
+	b.WriteString(")\nWHEN MATCHED AND \"S\".\"$PURGE\" = FALSE THEN\n  UPDATE SET \"__EXECUTION__\" = \"S\".\"__EXECUTION__\"")
+	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 
 	// Serialize the rows in CSV format.
@@ -346,7 +346,7 @@ func (warehouse *Snowflake) Settings() []byte {
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	db := warehouse.openDB()
-	_, err := db.ExecContext(ctx, `TRUNCATE TABLE "`+table+`"`)
+	_, err := db.ExecContext(ctx, "TRUNCATE TABLE "+quoteTable(table))
 	if err != nil {
 		return snowflake(err)
 	}
@@ -406,11 +406,11 @@ func (warehouse *Snowflake) openDB() *sql.DB {
 	return db
 }
 
-// usersVersion returns the version of the "users" table.
+// usersVersion returns the version of the "USERS" table.
 func (warehouse *Snowflake) usersVersion(ctx context.Context) (int, error) {
 	db := warehouse.openDB()
 	var v int
-	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX("USERS_VERSION"), 0) FROM "_OPERATIONS"`).Scan(&v)
 	if err != nil {
 		return 0, snowflake(err)
 	}

@@ -169,9 +169,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	case nil:
 		b.WriteString("NULL")
 	case meergo.Column:
-		b.WriteByte('"')
-		b.WriteString(v.Name)
-		b.WriteByte('"')
+		b.WriteString(quoteColumn(v.Name))
 	case bool:
 		if v {
 			b.WriteString("TRUE")

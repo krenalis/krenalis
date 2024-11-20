@@ -113,13 +113,13 @@ func Test_Merge(t *testing.T) {
 	db := wh.(*Snowflake).openDB()
 
 	// Create the table.
-	create := bytes.NewBufferString("CREATE TABLE \"" + table.Name + "\" (\n\t\"")
+	create := bytes.NewBufferString("CREATE TABLE " + quoteTable(table.Name) + " (\n\t")
 	for i, c := range table.Columns {
 		if i > 0 {
-			create.WriteString(",\n\t\"")
+			create.WriteString(",\n\t")
 		}
-		create.WriteString(c.Name)
-		create.WriteString(`" `)
+		create.WriteString(quoteColumn(c.Name))
+		create.WriteString(` `)
 		create.WriteString(typeToSnowflakeType(cols[i].MeergoType))
 	}
 	create.WriteString("\n)")
@@ -128,7 +128,7 @@ func Test_Merge(t *testing.T) {
 		t.Fatalf("cannot create table: %s", err)
 	}
 	defer func() {
-		_, err = db.ExecContext(context.Background(), `DROP TABLE "`+table.Name+`"`)
+		_, err = db.ExecContext(context.Background(), `DROP TABLE `+quoteTable(table.Name))
 		if err != nil {
 			t.Logf("cannot drop %s table: %s", table.Name, err)
 		}

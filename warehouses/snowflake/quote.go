@@ -59,7 +59,7 @@ func quoteBytes(b *strings.Builder, s []byte) {
 
 // quoteColumn quotes a column name.
 func quoteColumn(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+	return `"` + strings.ReplaceAll(strings.ToUpper(name), `"`, `""`) + `"`
 }
 
 // quoteString quotes s as a string and writes it into b.
@@ -109,5 +109,5 @@ func quoteString(b *strings.Builder, s string) {
 
 // quoteTable quotes a table name.
 func quoteTable(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+	return `"` + strings.ReplaceAll(strings.ToUpper(name), `"`, `""`) + `"`
 }

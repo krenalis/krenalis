@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS "_destinations_users" (
-    "__action__" INT NOT NULL,
-    "__user__" VARCHAR NOT NULL DEFAULT '',
-    "__property__" VARCHAR NOT NULL,
-    PRIMARY KEY ("__action__", "__user__")
+CREATE TABLE IF NOT EXISTS "_DESTINATIONS_USERS" (
+    "__ACTION__" INT NOT NULL,
+    "__USER__" VARCHAR NOT NULL DEFAULT '',
+    "__PROPERTY__" VARCHAR NOT NULL,
+    PRIMARY KEY ("__ACTION__", "__USER__")
 );

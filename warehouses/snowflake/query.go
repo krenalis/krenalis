@@ -58,7 +58,7 @@ func (warehouse *Snowflake) Query(ctx context.Context, query meergo.RowQuery, wi
 	b.WriteString(`SELECT `)
 	for i, c := range query.Columns {
 		if i > 0 {
-			b.WriteString(", ")
+			b.WriteByte(',')
 		}
 		b.WriteString(quoteColumn(c.Name))
 	}

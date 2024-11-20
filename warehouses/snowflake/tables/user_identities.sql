@@ -1,14 +1,14 @@
-CREATE TABLE IF NOT EXISTS "_user_identities" (
-    "__pk__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
-    "__action__" INT NOT NULL,
-    "__is_anonymous__" BOOLEAN NOT NULL DEFAULT FALSE,
-    "__identity_id__" VARCHAR NOT NULL,
-    "__connection__" INT NOT NULL,
-    "__anonymous_ids__" ARRAY,
-    "__last_change_time__" TIMESTAMP_NTZ NOT NULL,
-    "__execution__" INT,
-    "__gid__" VARCHAR(36),
-    "__cluster__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
-    "email" VARCHAR(300),
-    PRIMARY KEY ("__pk__")
+CREATE TABLE IF NOT EXISTS "_USER_IDENTITIES" (
+    "__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
+    "__ACTION__" INT NOT NULL,
+    "__IS_ANONYMOUS__" BOOLEAN NOT NULL DEFAULT FALSE,
+    "__IDENTITY_ID__" VARCHAR NOT NULL,
+    "__CONNECTION__" INT NOT NULL,
+    "__ANONYMOUS_IDS__" ARRAY,
+    "__LAST_CHANGE_TIME__" TIMESTAMP_NTZ NOT NULL,
+    "__EXECUTION__" INT,
+    "__GID__" VARCHAR(36),
+    "__CLUSTER__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
+    "EMAIL" VARCHAR(300),
+    PRIMARY KEY ("__PK__")
 );
