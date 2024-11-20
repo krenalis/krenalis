@@ -5,7 +5,6 @@
   - [Run the UI tests](#run-the-ui-tests)
   - [Troubleshoot tests](#troubleshoot-tests)
   - [Short tests during development](#short-tests-during-development)
-  - [Troubleshooting](#troubleshooting)
 - [How to execute Meergo for development](#how-to-execute-meergo-for-development)
   - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
   - [2. Configure and add certificates](#2-configure-and-add-certificates)
@@ -131,17 +130,6 @@ go run ./commit -short
 
 Note: don't use the option `-short` before committing because it runs only a
 subset of the tests.
-
-### Troubleshooting
-
-If one of the commands above returned an error in the form:
-
-```
-pattern ./...: main module (meergo) does not contain package meergo/connectors/mysql
-```
-
-that may mean that the file `go.work` at the top of this repository has not been
-updated to use a given module.
 
 ## How to execute Meergo for development
 
