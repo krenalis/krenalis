@@ -207,9 +207,6 @@ const useSchemaEdit = (
 
 			// Update the RePaths.
 			for (const k in rePaths.current) {
-				if (!rePaths.current.hasOwnProperty(k)) {
-					continue;
-				}
 				if (rePaths.current[k] === key) {
 					// If it was already renamed previously, delete the
 					// old repath.
@@ -281,9 +278,6 @@ const useSchemaEdit = (
 					}
 					// Check if nested property is in the RePaths.
 					for (const k in rePaths.current) {
-						if (!rePaths.current.hasOwnProperty(k)) {
-							continue;
-						}
 						if (rePaths.current[k] === key) {
 							delete rePaths.current[k];
 						}
@@ -358,9 +352,6 @@ const useSchemaEdit = (
 		// are based on the editable schema keys).
 		const sources: PrimarySources = {};
 		for (const k in primarySources.current) {
-			if (!primarySources.current.hasOwnProperty(k)) {
-				continue;
-			}
 			let path: string = '';
 			let fragments = k.split('.');
 			for (let i = 0; i < fragments.length; i++) {
