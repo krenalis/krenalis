@@ -29,3 +29,5 @@ jobs:
 
       - name: Run commit (short)
         run: go run ./commit --short
+
+      - uses: numtide/clean-git-action@v2
