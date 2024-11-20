@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Run commit (short)
-        run: go run ./commit --short
+      - name: go run ./commit
+        run: go run ./commit
 
       - uses: numtide/clean-git-action@v2
