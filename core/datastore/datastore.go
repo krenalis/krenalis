@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -267,15 +268,16 @@ func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 // to "input", "output", or "users" schema.
 //
 // A property conflicts with another if their representation as columns in the
-// data warehouse has the same name.
+// data warehouse has the same name when compared case-insensitively.
 func CheckConflictingProperties(io string, schema types.Type) error {
 	columns := propertiesToColumns(schema)
 	names := make(map[string]struct{})
 	for _, c := range columns {
-		if _, ok := names[c.Name]; ok {
-			return fmt.Errorf("two properties in the %s schema would have the same column name %q in the data warehouse", io, c.Name)
+		name := strings.ToLower(c.Name)
+		if _, ok := names[name]; ok {
+			return fmt.Errorf("two properties in the %s schema would have the same column name %q in the data warehouse, case-insensitively", io, name)
 		}
-		names[c.Name] = struct{}{}
+		names[name] = struct{}{}
 	}
 	return nil
 }

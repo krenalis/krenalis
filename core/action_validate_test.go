@@ -1967,7 +1967,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "two properties in the output schema would have the same column name \"email_out\" in the data warehouse",
+			err:                     "two properties in the output schema would have the same column name \"email_out\" in the data warehouse, case-insensitively",
 		},
 		{
 			name: "BAD: Source/App/Users - schema properties cannot specify a role",

@@ -42,7 +42,7 @@ func Test_CheckConflictingProperties(t *testing.T) {
 				{Name: "x_a", Type: types.Text()},
 				{Name: "x_b", Type: types.Text()},
 			}),
-			err: `two properties in the users schema would have the same column name "x_a" in the data warehouse`,
+			err: `two properties in the users schema would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 		{
 			io: "input",
@@ -56,7 +56,7 @@ func Test_CheckConflictingProperties(t *testing.T) {
 				{Name: "x_a", Type: types.Text()},
 				{Name: "x_b", Type: types.Text()},
 			}),
-			err: `two properties in the input schema would have the same column name "x_y_a" in the data warehouse`,
+			err: `two properties in the input schema would have the same column name "x_y_a" in the data warehouse, case-insensitively`,
 		},
 		{
 			io: "output",
@@ -79,7 +79,18 @@ func Test_CheckConflictingProperties(t *testing.T) {
 				{Name: "x_a", Type: types.Text()},
 				{Name: "x_b", Type: types.Text()},
 			}),
-			err: `two properties in the output schema would have the same column name "x_a" in the data warehouse`,
+			err: `two properties in the output schema would have the same column name "x_a" in the data warehouse, case-insensitively`,
+		},
+		{
+			io: "users",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "A", Type: types.Text()},
+				})},
+				{Name: "x_a", Type: types.Text()},
+				{Name: "x_b", Type: types.Text()},
+			}),
+			err: `two properties in the users schema would have the same column name "x_a" in the data warehouse, case-insensitively`,
 		},
 	}
 	for _, test := range tests {
