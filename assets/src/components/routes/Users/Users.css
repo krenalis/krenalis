@@ -190,7 +190,7 @@
 
 .user-drawer__customize {
 	font-size: 13px;
-	font-weight: 700;
+	font-weight: 600;
 }
 
 .user-drawer__customize-link {
@@ -233,7 +233,7 @@
 }
 
 .user-drawer__trait-object {
-	font-family: 'Source Code Pro', monospace;
+	font-family: var(--monospace-fonts);
 	background-color: var(--sl-color-neutral-100);
 	width: fit-content;
 	border-radius: 5px;

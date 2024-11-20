@@ -30,7 +30,7 @@
 
 .grid__header-cell {
 	color: #616261;
-	font-weight: 800;
+	font-weight: 600;
 }
 
 .grid__header-cell,
@@ -68,7 +68,7 @@ sl-popup::part(arrow) {
 }
 
 .grid__cell-content-object {
-	font-family: 'Source Code Pro', monospace;
+	font-family: var(--monospace-fonts);
 	background-color: var(--sl-color-neutral-100);
 	font-size: 13px;
 	border-radius: 5px;

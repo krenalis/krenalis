@@ -93,7 +93,7 @@
 	animation: pulse 2s infinite;
 	border: 12px solid var(--color-primary-400);
 	font-weight: 600;
-	font-family: 'Source Code Pro', monospace;
+	font-family: var(--monospace-fonts);
 }
 
 @keyframes pulse {

@@ -83,7 +83,7 @@
 }
 
 .combobox-input sl-input::part(input) {
-	font-family: 'Source Code Pro', monospace;
+	font-family: var(--monospace-fonts);
 	font-size: 14px;
 }
 
@@ -92,7 +92,7 @@
 }
 
 .combobox-input sl-input::part(input)::placeholder {
-	font-family: 'DM Sans', sans-serif;
+	font-family: var(--system-fonts);
 }
 
 .combobox-list__tabs::part(nav) {
@@ -110,7 +110,7 @@
 
 .combobox-list__function-signature,
 .combobox-list__function-param {
-	font-family: 'Source Code Pro', monospace !important;
+	font-family: var(--monospace-fonts) !important;
 	font-size: 15px;
 }
 
@@ -133,7 +133,7 @@
 
 .combobox-list .function-item__head-name,
 .combobox-list .function-item__head-signature {
-	font-family: 'Source Code Pro', monospace !important;
+	font-family: var(--monospace-fonts) !important;
 }
 
 .combobox-list .function-item__head-params {
