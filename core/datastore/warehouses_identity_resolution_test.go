@@ -19,9 +19,15 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
 
 	_ "github.com/meergo/meergo/warehouses" // for registering warehouses.
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // This file contains tests on Identity Resolution. These tests are executed on
@@ -469,19 +475,69 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 	}
 	for warehouseName, warehouseInfo := range warehouses {
 		t.Run(warehouseName, func(t *testing.T) {
+			var settings []byte
+			switch warehouseName {
+			case "PostgreSQL":
+				const (
+					database = "test_meergo"
+					username = "test_meergo"
+					password = "test_meergo"
+				)
+				ctx := context.Background()
+				postgresContainer, err := postgres.Run(ctx,
+					testimages.PostgreSQL,
+					postgres.WithDatabase(database),
+					postgres.WithUsername(username),
+					postgres.WithPassword(password),
+					testcontainers.WithWaitStrategy(
+						wait.ForLog("database system is ready to accept connections").
+							WithOccurrence(2).
+							WithStartupTimeout(60*time.Second)),
+				)
+				defer func() {
+					if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
+						t.Error(err)
+					}
+				}()
+				if err != nil {
+					t.Fatal(err)
+				}
+				host, err := postgresContainer.Host(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				port, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+				if err != nil {
+					t.Fatal(err)
+				}
 
-			// Read the warehouse settings, if the env variable is set,
-			// otherwise skip this warehouse.
-			settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseName))
-			settingsFile, ok := os.LookupEnv(settingsEnvKey)
-			if !ok {
-				t.Skipf("the %s environment variable is not present", settingsEnvKey)
-			}
-
-			// Read the JSON file with the warehouse settings.
-			settings, err := os.ReadFile(settingsFile)
-			if err != nil {
-				t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+				settings, err = json.Marshal(map[string]any{
+					"Host":     host,
+					"Port":     port.Int(),
+					"Username": username,
+					"Password": password,
+					"Database": database,
+					"Schema":   "public",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+			case "Snowflake":
+				// Read the warehouse settings, if the env variable is set,
+				// otherwise skip this warehouse.
+				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseName))
+				settingsFile, ok := os.LookupEnv(settingsEnvKey)
+				if !ok {
+					t.Skipf("the %s environment variable is not present", settingsEnvKey)
+				}
+				// Read the JSON file with the warehouse settings.
+				var err error
+				settings, err = os.ReadFile(settingsFile)
+				if err != nil {
+					t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+				}
+			default:
+				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseName))
 			}
 
 			// Open the warehouse.

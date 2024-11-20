@@ -11,8 +11,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -20,17 +20,17 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/decimal"
+	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
-)
 
-const settingsEnvKey = "MEERGO_TEST_PATH_CLICKHOUSE"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
+)
 
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
 // returned columns and values match the expected results.
-//
-// Set the environment variable MEERGO_TEST_PATH_CLICKHOUSE with the path to the
-// database credentials in JSON format for running the test.
 func Test_Merge_Query(t *testing.T) {
 
 	cols := []struct {
@@ -82,20 +82,51 @@ func Test_Merge_Query(t *testing.T) {
 		}
 	}
 
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
+	// Run the Clickhouse container.
+	const (
+		username = "test_meergo"
+		password = "test_meergo"
+		database = "test_meergo"
+	)
+	ctx := context.Background()
+	clickHouseContainer, err := clickhouse.Run(ctx,
+		testimages.ClickHouse,
+		clickhouse.WithUsername(username),
+		clickhouse.WithPassword(password),
+		clickhouse.WithDatabase(database),
+	)
+	defer func() {
+		if err := testcontainers.TerminateContainer(clickHouseContainer); err != nil {
+			log.Printf("failed to terminate container: %s", err)
+		}
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testHost, err := clickHouseContainer.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testPort, err := clickHouseContainer.MappedPort(ctx, "9000/tcp")
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Open connector.
-	settings, err := os.ReadFile(settingsFile)
+	settings, err := json.Marshal(Settings{
+		Host:     testHost,
+		Port:     testPort.Int(),
+		Username: username,
+		Password: password,
+		Database: database,
+	})
 	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
+		t.Fatal(err)
 	}
 	var config = meergo.DatabaseConfig{Settings: settings}
 	connector, err := New(&config)
 	if err != nil {
-		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
+		t.Fatal(err)
 	}
 	defer connector.Close()
 	if err = connector.openDB(); err != nil {

@@ -30,10 +30,15 @@ import (
 
 	"github.com/meergo/meergo/cmd"
 	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
 
 	_ "github.com/meergo/meergo/connectors"
 	_ "github.com/meergo/meergo/warehouses"
+
+	"github.com/testcontainers/testcontainers-go"
+	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // launchMeergoExternally determines if Meergo should be launched externally
@@ -60,6 +65,8 @@ type Meergo struct {
 	transformationsTempDir string
 	httpClient             *http.Client
 	ws                     int
+	stopPostgresContainer  func() error
+	stopWarehouseContainer func() error
 }
 
 var meergoAlreadyLaunched bool
@@ -106,17 +113,74 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 
 	ctx := context.Background()
 
+	c := Meergo{t: t}
+
+	// Create a temporary directory that will hold the transformation files.
+	transformationsTempDir, err := os.MkdirTemp("", "meergo-tests-python-transformation-*")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory for Python transformation files: %s", err)
+	}
+	c.transformationsTempDir = transformationsTempDir
+
+	// In case of an error during the test initialization, stop Meergo.
+	var initOk bool
+	defer func() {
+		if !initOk {
+			c.Stop()
+		}
+	}()
+
+	// Start the PostgreSQL container.
+	postgresContainer, err := _postgres.Run(ctx,
+		testimages.PostgreSQL,
+		_postgres.WithDatabase("test_postgres"),
+		_postgres.WithUsername("test_postgres"),
+		_postgres.WithPassword("test_postgres"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(60*time.Second)),
+	)
+	c.stopPostgresContainer = func() error {
+		return testcontainers.TerminateContainer(postgresContainer)
+	}
+	if err != nil {
+		t.Fatalf("cannot start the PostgreSQL container: %s", err)
+	}
+	postgresPort, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testsSettings.Database.Port = postgresPort.Int()
+
+	// Start the warehouse container.
+	warehouseContainer, err := _postgres.Run(ctx,
+		testimages.PostgreSQL,
+		_postgres.WithDatabase("test_warehouse"),
+		_postgres.WithUsername("test_warehouse"),
+		_postgres.WithPassword("test_warehouse"),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(60*time.Second)),
+	)
+	c.stopWarehouseContainer = func() error {
+		return testcontainers.TerminateContainer(warehouseContainer)
+	}
+	if err != nil {
+		t.Fatalf("cannot start the warehouse container: %s", err)
+	}
+	warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testsSettings.Warehouse.Port = warehousePort.Int()
+
+	// Reset the PostgreSQL warehouse.
 	err = resetDatabase(ctx, testsSettings.Database)
 	if err != nil {
 		t.Fatalf("cannot reset database: %s", err)
 	}
-
-	err = resetWarehouse(ctx, testsSettings.Warehouse)
-	if err != nil {
-		t.Fatalf("cannot reset warehouse: %s", err)
-	}
-
-	c := Meergo{t: t}
 
 	// Create the HTTP client.
 	jar, err := cookiejar.New(nil)
@@ -132,21 +196,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		},
 		Jar: jar,
 	}
-
-	// In case of an error during the test initialization, stop Meergo.
-	var initOk bool
-	defer func() {
-		if !initOk {
-			c.Stop()
-		}
-	}()
-
-	// Create a temporary directory that will hold the transformation files.
-	transformationsTempDir, err := os.MkdirTemp("", "meergo-tests-python-transformation-*")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory for Python transformation files: %s", err)
-	}
-	c.transformationsTempDir = transformationsTempDir
 
 	// Create a UI session key.
 	var sessionKey string
@@ -320,7 +369,9 @@ func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
 
 // Stop stops the execution of Meergo.
 func (c *Meergo) Stop() {
-	c.cancel()
+	if c.cancel != nil {
+		c.cancel()
+	}
 	if c.meergoRunning != nil {
 		<-c.meergoRunning
 	}
@@ -331,6 +382,18 @@ func (c *Meergo) Stop() {
 	if err != nil {
 		log.Printf("cannot remove transformations temporary directory: %s", err)
 		return
+	}
+	if c.stopPostgresContainer != nil {
+		err := c.stopPostgresContainer()
+		if err != nil {
+			log.Printf("cannot stop PostgreSQL container: %s", err)
+		}
+	}
+	if c.stopWarehouseContainer != nil {
+		err := c.stopWarehouseContainer()
+		if err != nil {
+			log.Printf("cannot stop warehouse container: %s", err)
+		}
 	}
 }
 
@@ -383,10 +446,6 @@ func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
 	err := validDatabaseNameForTests(dbSetts.Database)
 	if err != nil {
 		return err
-	}
-	err = recreateDatabase(ctx, dbSetts.Host, dbSetts.Port, dbSetts.Username, dbSetts.Password, dbSetts.Database)
-	if err != nil {
-		return fmt.Errorf("cannot recreate database: %s", err)
 	}
 	db, err := postgres.Open(&postgres.Options{
 		Host:     dbSetts.Host,
@@ -455,45 +514,6 @@ func (c *Meergo) QueryRowTestDatabase(ctx context.Context, dest any, query strin
 // operates.
 func (c *Meergo) WorkspaceID() int {
 	return c.ws
-}
-
-func resetWarehouse(ctx context.Context, warehouse *DBSettings) error {
-	err := validDatabaseNameForTests(warehouse.Database)
-	if err != nil {
-		return err
-	}
-	err = recreateDatabase(ctx, warehouse.Host, warehouse.Port, warehouse.Username, warehouse.Password, warehouse.Database)
-	if err != nil {
-		return fmt.Errorf("cannot recreate database: %s", err)
-	}
-	return nil
-}
-
-func recreateDatabase(ctx context.Context, host string, port int, username, password, database string) error {
-	db, err := postgres.Open(&postgres.Options{
-		Host:     host,
-		Port:     port,
-		Username: username,
-		Password: password,
-		Database: "postgres",
-	})
-	if err != nil {
-		return fmt.Errorf("cannot connect to database: %s", err)
-	}
-	defer db.Close()
-	err = validDatabaseNameForTests(database)
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec(ctx, "DROP DATABASE IF EXISTS "+database)
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec(ctx, "CREATE DATABASE "+database)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // execQueries executes on db the queries read from queriesFile, separated by a

@@ -97,17 +97,17 @@ func main() {
 	fmt.Println("Tidying modules")
 	for _, module := range modules {
 		removeGoSum(repo, module, verbose)
-		cmd("go", []string{"mod", "tidy"}, repo, module, verbose)
+		NewCmd("go", "mod", "tidy").InDir(repo, module).Run()
 	}
 
 	fmt.Println("Formatting modules")
 	for _, module := range modules {
-		cmd("go", []string{"fmt", "./..."}, repo, module, verbose)
+		NewCmd("go", "fmt", "./...").InDir(repo, module).Run()
 	}
 
 	fmt.Println("Running 'go vet' on every module")
 	for _, module := range modules {
-		cmd("go", []string{"vet", "./..."}, repo, module, verbose)
+		NewCmd("go", "vet", "./...").InDir(repo, module).Run()
 	}
 
 	// Test single packages or modules.
@@ -121,38 +121,38 @@ func main() {
 	}
 	if testPackages {
 		for _, pkg := range packages {
-			cmd("go", args, repo, pkg, verbose)
+			NewCmd("go", args...).InDir(repo, pkg).Run()
 		}
 	} else {
 		args = append(args, "./...")
 		for _, module := range modules {
-			cmd("go", args, repo, module, verbose)
+			NewCmd("go", args...).InDir(repo, module).Run()
 		}
 	}
 
 	// Sync and vendor the workspace.
-	cmd("go", []string{"work", "sync"}, repo, ".", true)
-	cmd("go", []string{"work", "vendor"}, repo, ".", true)
+	NewCmd("go", "work", "sync").InDir(repo).Run()
+	NewCmd("go", "work", "vendor").InDir(repo).Run()
 
 	// Run 'npm install' in the 'assets' directory.
-	cmd("npm", []string{"install"}, repo, "assets", true)
+	NewCmd("npm", "install").InDir(repo, "assets")
 
 	// Format the files in the 'assets' directory.
-	cmd("npm", []string{"run", "prettier"}, repo, "assets", true)
+	NewCmd("npm", "run", "prettier").InDir(repo, "assets")
 
 	// Minify the JavaScript snippet in the 'assets' directory.
-	cmd("npm", []string{"run", "minify-snippet"}, repo, "assets", true)
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets")
 
 	// Typecheck the Typescript code in the 'assets' directory.
-	cmd("npm", []string{"run", "typecheck"}, repo, "assets", true)
+	NewCmd("npm", "run", "typecheck").InDir(repo, "assets")
 
 	// Make the vendor of assets' 'node_modules' directory.
-	cmd("npm", []string{"run", "make-vendor"}, repo, "assets", true)
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets")
 
 	// Format, test and build the files in the 'javascript-sdk' directory.
-	cmd("npm", []string{"install"}, repo, "javascript-sdk", true)
-	cmd("deno", []string{"fmt"}, repo, "javascript-sdk", true)
-	cmd("deno", []string{"task", "build"}, repo, "javascript-sdk", true)
+	NewCmd("npm", "install").InDir(repo, "javascript-sdk")
+	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk")
+	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk")
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
@@ -183,17 +183,53 @@ func checkDenoVersion() {
 	fmt.Printf("Locally installed Deno version is correct: %s\n", version)
 }
 
-func cmd(name string, arg []string, repo, moduleDir string, echo bool) {
-	cmd := exec.Command(name, arg...)
-	cmd.Dir = filepath.Join(repo, moduleDir)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if echo {
-		logCmd(moduleDir, strings.Join(append([]string{name}, arg...), " "))
+func logCmd(dir, cmd string) {
+	const (
+		Reset = "\033[0m"
+		Bold  = "\033[1m"
+	)
+	fmt.Printf("%s%s$ %s%s\n", Bold, dir, cmd, Reset)
+}
+
+type Cmd struct {
+	Name          string
+	Args          []string
+	Echo          bool
+	Dir           string
+	AdditionalEnv []string
+}
+
+func NewCmd(name string, args ...string) *Cmd {
+	return &Cmd{Name: name, Args: args, Echo: true}
+}
+
+func (cmd *Cmd) Silent() *Cmd {
+	cmd.Echo = false
+	return cmd
+}
+
+func (cmd *Cmd) WithEnv(name, value string) *Cmd {
+	cmd.AdditionalEnv = append(cmd.AdditionalEnv, name+"="+value)
+	return cmd
+}
+
+func (cmd *Cmd) InDir(elem ...string) *Cmd {
+	cmd.Dir = filepath.Join(elem...)
+	return cmd
+}
+
+func (cmd *Cmd) Run() {
+	goCmd := exec.Command(cmd.Name, cmd.Args...)
+	goCmd.Stdout = os.Stdout
+	goCmd.Stderr = os.Stderr
+	if cmd.Echo {
+		logCmd(cmd.Dir, strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
 	}
-	err := cmd.Run()
+	goCmd.Env = append(os.Environ(), cmd.AdditionalEnv...)
+	goCmd.Dir = cmd.Dir
+	err := goCmd.Run()
 	if err != nil {
-		fatal("command %q failed (%s)", name, err)
+		fatal("command %q failed (%s)", cmd.Name, err)
 	}
 }
 
@@ -210,8 +246,4 @@ func removeGoSum(repo, module string, verbose bool) {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		fatal("cannot remove 'go.sum': %s", err)
 	}
-}
-
-func logCmd(dir, cmd string) {
-	fmt.Printf("%-39s %s\n", dir, cmd)
 }

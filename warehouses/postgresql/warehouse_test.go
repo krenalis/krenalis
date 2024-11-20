@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -19,12 +18,20 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/testimages"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-const settingsEnvKey = "MEERGO_TEST_PATH_POSTGRESQL"
+const (
+	testDatabase = "meergo"
+	testUser     = "meergo"
+	testPassword = "meergo"
+)
 
 func Test_Merge(t *testing.T) {
 
@@ -93,21 +100,53 @@ func Test_Merge(t *testing.T) {
 		}
 	}
 
-	settingsFile, ok := os.LookupEnv(settingsEnvKey)
-	if !ok {
-		t.Skipf("the %s environment variable is not present", settingsEnvKey)
+	// Run the PostgreSQL container.
+	ctx := context.Background()
+	postgresContainer, err := postgres.Run(ctx,
+		testimages.PostgreSQL,
+		postgres.WithDatabase(testDatabase),
+		postgres.WithUsername(testUser),
+		postgres.WithPassword(testPassword),
+		testcontainers.WithWaitStrategy(
+			wait.ForLog("database system is ready to accept connections").
+				WithOccurrence(2).
+				WithStartupTimeout(60*time.Second)),
+	)
+	defer func() {
+		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testHost, err := postgresContainer.Host(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testPort, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	settings, err := json.Marshal(map[string]any{
+		"Host":     testHost,
+		"Port":     testPort.Int(),
+		"Username": testUser,
+		"Password": testPassword,
+		"Database": testDatabase,
+		"Schema":   "public",
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Open the data warehouse.
-	settings, err := os.ReadFile(settingsFile)
-	if err != nil {
-		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
-	}
 	wh, err := meergo.RegisteredWarehouse("PostgreSQL").New(&meergo.WarehouseConfig{
 		Settings: settings,
 	})
 	if err != nil {
-		t.Fatalf("cannot open the warehouse from settings in the %s environment variable: %s", settingsEnvKey, err)
+		t.Fatal(err)
 	}
 	defer wh.Close()
 

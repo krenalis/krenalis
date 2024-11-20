@@ -50,6 +50,8 @@ var testsSettings *TestsSettings
 
 // loadTestConfig loads the tests configuration from the file
 // "meergo-tests.json", if not already loaded.
+//
+// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
 func loadTestConfig() error {
 
 	if testsSettings != nil {
@@ -82,6 +84,21 @@ func loadTestConfig() error {
 	}
 
 	setts.MeergoHost = strings.TrimRight(setts.MeergoHost, "/")
+
+	// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
+	setts.Database.Database = "test_postgres"
+	setts.Database.Username = "test_postgres"
+	setts.Database.Password = "test_postgres"
+
+	// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
+	setts.Warehouse.Database = "test_warehouse"
+	setts.Warehouse.Username = "test_warehouse"
+	setts.Warehouse.Password = "test_warehouse"
+
+	// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
+	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
+		setts.PythonExecutable = pythonPath
+	}
 
 	testsSettings = setts
 

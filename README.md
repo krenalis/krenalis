@@ -1,10 +1,12 @@
 
 # meergo
 
-- [Before commit](#before-commit)
-  - [Run the UI tests](#run-the-ui-tests)
-  - [Troubleshoot tests](#troubleshoot-tests)
-  - [Short tests during development](#short-tests-during-development)
+- [Before Pushing Commits to `main`](#before-pushing-commits-to-main)
+- [Local Testing Cookbook](#local-testing-cookbook)
+  - [Testing Snowflake](#testing-snowflake)
+  - [Testing the UI with Playwright](#testing-the-ui-with-playwright)
+  - [Partially run the tests](#partially-run-the-tests)
+  - [Troubleshooting Tests](#troubleshooting-tests)
 - [How to execute Meergo for development](#how-to-execute-meergo-for-development)
   - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
   - [2. Configure and add certificates](#2-configure-and-add-certificates)
@@ -21,37 +23,45 @@
   - [Building Meergo Image](#building-meergo-image)
   - [Running Meergo within a Container](#running-meergo-within-a-container)
 
-## Before commit
+## Before Pushing Commits to `main`
 
-1. From the root of this repository, run:
+Before pushing commits to the `main` branch of Meergo, from the root of this repository, run:
 
 ```
 go run ./commit
 ```
 
-2. Set these environment variables, where each of them must point to a JSON file with the credentials of an **empty, i.e. initializable, data warehouse**.
+## Local Testing Cookbook
 
-* `MEERGO_TEST_PATH_WAREHOUSE_POSTGRESQL`
-* `MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE`
+Here are some guides to run various local tests and handle various situations that may arise. These are not mandatory but may be useful in some situations.
 
-3. From the root of this repository, run:
+### Testing Snowflake
 
-```
-go test -run ^TestWarehousesIdentityResolution$ github.com/meergo/meergo/core/datastore -count 1 -v
-```
+1. Set this environment variable, which must point to a JSON file with the credentials of an **empty, i.e. initializable**, Snowflake data warehouse:
 
-4. Set these environment variables, where each of them must point to a JSON file with the credentials of a data warehouse: 
+    ```
+    MEERGO_TEST_PATH_WAREHOUSE_SNOWFLAKE
+    ```
 
-* `MEERGO_TEST_PATH_POSTGRESQL`
-* `MEERGO_TEST_PATH_SNOWFLAKE`
+2. From the root of this repository, run:
 
-5. From the root of this repository, run:
+    ```
+    go test -run ^TestWarehousesIdentityResolution$ github.com/meergo/meergo/core/datastore -count 1 -v
+    ```
 
-```
-go test -run ^Test_Merge$ github.com/meergo/meergo/warehouses/... -count 1 -v
-```
+3. Set this environment variable, which must point to a JSON file with the credentials of a Snowflake data warehouse:
 
-### Run the UI tests
+   ```
+   MEERGO_TEST_PATH_SNOWFLAKE
+   ```
+
+4. From the root of this repository, run:
+
+   ```
+   go test -run ^Test_Merge$ github.com/meergo/meergo/warehouses/... -count 1 -v
+   ```
+
+### Testing the UI with Playwright
 
 1. Start Meergo.
 
@@ -109,18 +119,7 @@ go test -run ^Test_Merge$ github.com/meergo/meergo/warehouses/... -count 1 -v
     npx playwright test --ui
     ```
 
-### Troubleshoot tests
-
-To troubleshoot bad tests, for example if they block indefinitely, you can run:
-
-```
-go run ./commit -pkg -v
-```
-
-to execute tests on every package printing verbose output. This should help
-locating the problem.
-
-### Short tests during development
+### Partially run the tests
 
 For short tests during development you can also use the command:
 
@@ -130,6 +129,17 @@ go run ./commit -short
 
 Note: don't use the option `-short` before committing because it runs only a
 subset of the tests.
+
+### Troubleshooting Tests
+
+In case the tests get stuck or you encounter an error that is not easy to understand, you can try running the tests with this command:
+
+```
+go run ./commit -pkg -v
+```
+
+to execute tests on every package, printing verbose output. This should help
+locating the problem.
 
 ## How to execute Meergo for development
 
