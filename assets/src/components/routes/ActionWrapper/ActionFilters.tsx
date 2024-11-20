@@ -1,4 +1,4 @@
-import React, { useContext, ReactNode, useMemo } from 'react';
+import React, { useContext, ReactNode, useMemo, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
@@ -20,8 +20,8 @@ import {
 } from '../../../lib/core/action';
 import { FilterLogical, FilterOperator } from '../../../lib/api/types/action';
 
-const ActionFilters = () => {
-	const { action, setAction, actionType } = useContext(ActionContext);
+const ActionFilters = forwardRef<any>((_, ref) => {
+	const { action, setAction, actionType, connection, isTransformationDisabled } = useContext(ActionContext);
 
 	const flatInputSchema = useMemo(() => {
 		return flattenSchema(actionType.InputSchema);
@@ -226,6 +226,14 @@ const ActionFilters = () => {
 		setAction(a);
 	};
 
+	const isFileStorageImport = connection.isFileStorage && connection.isSource;
+
+	// For file storage imports, the filter section is displayed
+	// together with the transformation section when the file's settings
+	// are confirmed. It must be disabled when the settings are changed
+	// and not yet re-confirmed.
+	const isDisabled = isFileStorageImport && isTransformationDisabled;
+
 	const conditions: ReactNode[] = [];
 	if (action.Filter != null) {
 		for (const [i, condition] of action.Filter.Conditions.entries()) {
@@ -258,6 +266,7 @@ const ActionFilters = () => {
 							size='small'
 							variant={action.Filter!.Logical === 'and' ? 'primary' : 'default'}
 							onClick={() => onLogicalClick('and')}
+							disabled={isDisabled}
 						>
 							and
 						</SlButton>
@@ -265,6 +274,7 @@ const ActionFilters = () => {
 							size='small'
 							variant={action.Filter!.Logical === 'or' ? 'primary' : 'default'}
 							onClick={() => onLogicalClick('or')}
+							disabled={isDisabled}
 						>
 							or
 						</SlButton>
@@ -288,6 +298,7 @@ const ActionFilters = () => {
 					name={`property-${i}`}
 					items={getFilterPropertyComboboxItems(actionType.InputSchema)}
 					isExpression={false}
+					disabled={isDisabled}
 					placeholder={'Property'}
 					caret={true}
 					controlled={true}
@@ -303,6 +314,7 @@ const ActionFilters = () => {
 						value={path}
 						onSlInput={onInputPathFragment}
 						name={`path-${i}`}
+						disabled={isDisabled}
 						placeholder='Path'
 					/>
 				);
@@ -316,7 +328,7 @@ const ActionFilters = () => {
 					value={String(FILTER_OPERATORS.findIndex((op) => op === condition.Operator))}
 					onSlChange={onChangeOperatorFragment}
 					placeholder='Operator'
-					disabled={isInvalidProperty}
+					disabled={isInvalidProperty || isDisabled}
 				>
 					{property != null
 						? getCompatibleFilterOperators(property).map((i) => (
@@ -342,7 +354,7 @@ const ActionFilters = () => {
 						value={condition.Values != null ? condition.Values[0] : ''}
 						onSlInput={onInputValueFragment}
 						name={id}
-						disabled={isInvalidProperty}
+						disabled={isInvalidProperty || isDisabled}
 					/>,
 				);
 				if (isBetween) {
@@ -360,7 +372,7 @@ const ActionFilters = () => {
 							value={condition.Values != null ? (condition.Values[1] ? condition.Values[1] : '') : ''}
 							onSlInput={onInputValueFragment}
 							name={id}
-							disabled={isInvalidProperty}
+							disabled={isInvalidProperty || isDisabled}
 						/>,
 					);
 				} else if (isOneOf) {
@@ -376,7 +388,7 @@ const ActionFilters = () => {
 								value={value}
 								onSlInput={onInputValueFragment}
 								name={id}
-								disabled={isInvalidProperty}
+								disabled={isInvalidProperty || isDisabled}
 							>
 								<SlButton
 									variant='default'
@@ -385,6 +397,7 @@ const ActionFilters = () => {
 									className='action__filters-value-remove'
 									onClick={() => onRemoveValue(i, currentK)}
 									slot='suffix'
+									disabled={isDisabled}
 								>
 									<SlIcon name='x' />
 								</SlButton>
@@ -403,6 +416,7 @@ const ActionFilters = () => {
 							key='add-button'
 							variant='default'
 							size='small'
+							disabled={isDisabled}
 							onClick={() => onAddValue(i)}
 						>
 							Add value
@@ -436,6 +450,7 @@ const ActionFilters = () => {
 								className='action__filters-remove-condition'
 								size='small'
 								onClick={() => onRemoveCondition(i)}
+								disabled={isDisabled}
 								circle
 							>
 								<SlIcon name='x' />
@@ -449,18 +464,25 @@ const ActionFilters = () => {
 
 	return (
 		<Section
-			className='action__filters'
+			className={`action__filters${isDisabled ? ' action__filters--disabled' : ''}`}
 			title='Filter'
 			description='The filters that define the action'
 			padded={true}
+			ref={ref}
 		>
 			{conditions}
-			<SlButton className='action__filters-add-condition' size='medium' variant='text' onClick={onAddCondition}>
+			<SlButton
+				className='action__filters-add-condition'
+				size='medium'
+				variant='text'
+				onClick={onAddCondition}
+				disabled={isDisabled}
+			>
 				<SlIcon slot='prefix' name='plus-circle' />
 				Add {conditions.length > 0 ? 'new ' : ''}filter
 			</SlButton>
 		</Section>
 	);
-};
+});
 
 export default ActionFilters;

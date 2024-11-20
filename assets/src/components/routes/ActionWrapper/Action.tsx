@@ -70,6 +70,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 
 	if (action == null || actionType == null) return;
 
+	const isFileStorageImport = connection.isFileStorage && connection.isSource;
+
 	return (
 		<ActionContext.Provider
 			value={{
@@ -105,15 +107,18 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 			<div className='action'>
 				<ActionHeader onClose={onClose} />
 				<div className='action__body'>
-					{actionType!.Fields.includes('Filter') && <ActionFilters />}
+					{actionType!.Fields.includes('Filter') && !isFileStorageImport && <ActionFilters />}
 					{actionType!.Fields.includes('Query') && <ActionQuery />}
 					{actionType!.Fields.includes('File') && <ActionFile />}
 					{actionType!.Fields.includes('Table') && <ActionTable />}
 					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
 					{actionType!.Fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
+					{actionType!.Fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (
+						<ActionFilters ref={transformationSectionRef} />
+					)}
 					{actionType!.Fields.includes('Transformation') && !isTransformationHidden && (
-						<ActionTransformation ref={transformationSectionRef} />
+						<ActionTransformation ref={isFileStorageImport ? null : transformationSectionRef} />
 					)}
 				</div>
 			</div>

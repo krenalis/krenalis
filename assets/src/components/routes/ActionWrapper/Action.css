@@ -112,6 +112,14 @@
 	font-weight: 400;
 }
 
+.action__filters--disabled {
+	opacity: 0.7;
+}
+
+.action__filters--disabled * {
+	opacity: 1;
+}
+
 .action__filters-filter {
 	display: flex;
 }
