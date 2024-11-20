@@ -139,7 +139,7 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 	}
 	defer core.Close()
 
-	apisServer := newAPIsServer(core, sessionKey)
+	apisServer := newAPIsServer(core, sessionKey, settings.Main.HTTPS)
 
 	assets, err := newAssets(assetsFS)
 	if err != nil {

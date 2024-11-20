@@ -58,7 +58,7 @@ func (c *Meergo) MustCall(httpMethod, method string, body, response any) {
 func (c *Meergo) call(httpMethod, method string, body any, response any) error {
 
 	method = strings.TrimLeft(method, "/")
-	url := "https://" + testsSettings.MeergoHost + "/" + method
+	url := "http://" + testsSettings.MeergoHost + "/" + method
 
 	data := &bytes.Buffer{}
 	err := json.NewEncoder(data).Encode(body)

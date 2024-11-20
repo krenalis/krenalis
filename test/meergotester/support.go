@@ -403,7 +403,7 @@ func (c *Meergo) ResolveIdentities() {
 }
 
 func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
-	endpoint := "https://" + testsSettings.MeergoHost + "/" + "api"
+	endpoint := "http://" + testsSettings.MeergoHost + "/" + "api"
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}

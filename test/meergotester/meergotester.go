@@ -161,7 +161,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 
 	setts := cmd.Settings{}
 	setts.Main.Host = testsSettings.MeergoHost
-	setts.Main.HTTPS = true
+	setts.Main.HTTPS = false
 	setts.UI.SessionKey = sessionKey
 	setts.PostgreSQL.Host = testsSettings.Database.Host
 	setts.PostgreSQL.Port = testsSettings.Database.Port

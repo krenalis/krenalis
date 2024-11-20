@@ -47,18 +47,20 @@ type apisServer struct {
 	core         *core.Core
 	secureCookie *securecookie.SecureCookie // secureCookie contains keys to encrypt/decrypt/remove the session cookie.
 	mux          *http.ServeMux
+	runsOnHTTPS  bool
 }
 
 // newAPIsServer returns an APIs server that handles requests for the given
 // Core. sessionKey is the key used to encrypt the session cookie.
+// runsOnHTTPs indicates if the server runs on HTTPS.
 // It panics if the session key is not at least 64 bytes long.
-func newAPIsServer(core *core.Core, sessionKey []byte) *apisServer {
+func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisServer {
 
 	if len(sessionKey) != 64 {
 		panic("sessionKey is not 64 bytes long")
 	}
 
-	s := &apisServer{core: core}
+	s := &apisServer{core: core, runsOnHTTPS: runsOnHTTPS}
 
 	hashKey, blockKey := sessionKey[:32], sessionKey[32:]
 	s.secureCookie = securecookie.New(hashKey, blockKey)
@@ -260,11 +262,16 @@ func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) 
 	if err != nil {
 		return nil, err
 	}
+
 	c := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    value,
-		Path:     sessionCookiePath,
-		Secure:   true,
+		Name:  sessionCookieName,
+		Value: value,
+		Path:  sessionCookiePath,
+		// TODO(Gianluca): disabling Secure for HTTP connections is necessary
+		// because we currently have only a loing mecanism based on cookies,
+		// that would not work on HTTP connections.
+		// See the issue https://github.com/meergo/meergo/issues/1153.
+		Secure:   s.runsOnHTTPS,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
@@ -293,10 +300,14 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 	}
 	// Remove the session.
 	c := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    "",
-		Path:     sessionCookiePath,
-		Secure:   true,
+		Name:  sessionCookieName,
+		Value: "",
+		Path:  sessionCookiePath,
+		// TODO(Gianluca): disabling Secure for HTTP connections is necessary
+		// because we currently have only a loing mecanism based on cookies,
+		// that would not work on HTTP connections.
+		// See the issue https://github.com/meergo/meergo/issues/1153.
+		Secure:   s.runsOnHTTPS,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
