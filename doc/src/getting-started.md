@@ -8,7 +8,7 @@ First of all, you will need:
 
 - PostgreSQL 13 or higher
 - Linux, Unix, OSX or Windows
-- A data warehouse (currently only PostgreSQL)
+- A data warehouse (Snowflake or PostgreSQL)
 
 Various installation methods may then require additional requirements depending on the level of customization required, specified in the sections below.
 
