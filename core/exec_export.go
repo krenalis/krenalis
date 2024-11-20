@@ -45,10 +45,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			return newActionError(metrics.OutputValidationStep, err)
 		}
 		internalMatchingProperty, _ = action.InSchema.Property(action.MatchingProperties.Internal)
-		p := action.MatchingProperties.External
 		matching = &datastore.Matching{
 			Action:          action.ID,
-			Property:        p.Name,
+			Property:        internalMatchingProperty.Name,
 			ExportMode:      *this.action.ExportMode,
 			AllowDuplicates: *action.ExportOnDuplicatedUsers,
 		}
