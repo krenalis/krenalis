@@ -155,7 +155,7 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo
 }
 
 // Records returns the records of the specified target.
-func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, _ types.Type, lastChangeTime time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	path := "/lists/" + mc.settings.List + "/members"
 	values := url.Values{

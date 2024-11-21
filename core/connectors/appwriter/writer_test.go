@@ -108,7 +108,7 @@ func newApp(t *testing.T, seed int64) *app {
 	return &app{t: t, rng: rand.New(rand.NewSource(seed))}
 }
 
-func (app *app) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (app *app) Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 	return nil, "", nil
 }
 

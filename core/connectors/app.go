@@ -215,17 +215,18 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	if !schema.Valid() {
 		return nil, fmt.Errorf("schema is not valid")
 	}
-	// Check that the schema is aligned with the source user schema.
-	userSchema, err := app.userSchema(ctx, types.SourceRole)
+	// Check that the user schema is aligned with the app user schema.
+	appSchema, err := app.userSchema(ctx, types.SourceRole)
 	if err != nil {
 		return nil, err
 	}
-	err = schemas.CheckAlignment(schema, userSchema, nil)
+	err = schemas.CheckAlignment(schema, appSchema, nil)
 	if err != nil {
 		return nil, err
 	}
 	records := &appRecords{
 		schema:         schema,
+		appSchema:      appSchema,
 		timeLayouts:    app.timeLayouts,
 		lastChangeTime: lastChangeTime,
 		appName:        app.name,
@@ -357,6 +358,7 @@ func sameValue(t types.Type, v, v2 any) bool {
 // appRecords implements the Records interface for apps.
 type appRecords struct {
 	schema         types.Type
+	appSchema      types.Type
 	timeLayouts    *state.TimeLayouts
 	lastChangeTime time.Time
 	appName        string
@@ -388,7 +390,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, r.lastChangeTime, nil, names, cursor)
+			users, cursor, err = r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, r.appSchema, r.lastChangeTime, nil, names, cursor)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

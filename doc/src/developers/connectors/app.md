@@ -56,7 +56,7 @@ func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, err
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (ky *Klavyio) Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 	// ...
 }
 

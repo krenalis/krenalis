@@ -23,13 +23,14 @@ Let's start by looking at how to read records using the `Records` method.
 Meergo calls the connector's `Records` method to read records from the app:
 
 ```go
-Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
+Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
 ```
 
 The parameters for this method are:
 
 - `ctx`: The context, which is always non-nil.
 - `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
+- `schema`: Represents the expected schema for the returned records.
 - `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
 - `properties`: Contains the names of the properties that must be returned for each record. The names correspond to the properties of the schema as returned by the `Schema` method.
