@@ -527,7 +527,10 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			for _, p := range typ.Properties() {
 				value, ok := src[p.Name]
 				if !ok {
-					return nil, fmt.Errorf(`there is not a value for the "%s.%s" property`, name, p.Name)
+					if !p.ReadOptional {
+						return nil, fmt.Errorf(`property "%s.%s" does not have a value`, name, p.Name)
+					}
+					continue
 				}
 				src[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
 				if err != nil {
