@@ -2,6 +2,7 @@
 # meergo
 
 - [Before Pushing Commits to `main`](#before-pushing-commits-to-main)
+- [How to run tests using GitHub Action](#how-to-run-tests-using-github-action)
 - [Local Testing Cookbook](#local-testing-cookbook)
   - [Testing Snowflake](#testing-snowflake)
   - [Testing the UI with Playwright](#testing-the-ui-with-playwright)
@@ -30,6 +31,15 @@ Before pushing commits to the `main` branch of Meergo, from the root of this rep
 ```
 go run ./commit
 ```
+
+## How to run tests using GitHub Action
+
+1. Go to https://github.com/meergo/meergo/actions/workflows/main.yml
+4. Click on the button "Run workflow"
+5. Choose the branch on which you want to run the tests
+6. Click on "Run workflow"
+
+> ⌛ Note that this may take some time, even something on the order of about ten minutes.
 
 ## Local Testing Cookbook
 
