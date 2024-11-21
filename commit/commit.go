@@ -135,24 +135,24 @@ func main() {
 	NewCmd("go", "work", "vendor").InDir(repo).Run()
 
 	// Run 'npm install' in the 'assets' directory.
-	NewCmd("npm", "install").InDir(repo, "assets")
+	NewCmd("npm", "install").InDir(repo, "assets").Run()
 
 	// Format the files in the 'assets' directory.
-	NewCmd("npm", "run", "prettier").InDir(repo, "assets")
+	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run()
 
 	// Minify the JavaScript snippet in the 'assets' directory.
-	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets")
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run()
 
 	// Typecheck the Typescript code in the 'assets' directory.
-	NewCmd("npm", "run", "typecheck").InDir(repo, "assets")
+	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
 
 	// Make the vendor of assets' 'node_modules' directory.
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets")
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run()
 
 	// Format, test and build the files in the 'javascript-sdk' directory.
-	NewCmd("npm", "install").InDir(repo, "javascript-sdk")
-	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk")
-	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk")
+	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run()
+	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run()
+	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run()
 
 	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 }
