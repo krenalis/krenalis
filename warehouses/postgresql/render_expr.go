@@ -184,9 +184,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	case nil:
 		b.WriteString("NULL")
 	case meergo.Column:
-		b.WriteByte('"')
-		b.WriteString(v.Name)
-		b.WriteByte('"')
+		b.WriteString(quoteIdent(v.Name))
 	case bool:
 		if v {
 			b.WriteString("TRUE")
@@ -194,7 +192,9 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 			b.WriteString("FALSE")
 		}
 	case int:
-		b.WriteString(strconv.Itoa(v))
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 	case decimal.Decimal:
@@ -215,34 +215,4 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
-}
-
-// quoteString quotes s as a string and writes it into b.
-// Null bytes ('\x00') in s are removed.
-//
-// See the documentation at
-// https://www.postgresql.org/docs/17/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS
-// (for the escaping of single quotes) and at
-// https://www.postgresql.org/docs/17/datatype-character.html (for the character
-// with code 0).
-//
-// NOTE: keep this function in sync with the one within the PostgreSQL
-// connector.
-func quoteString(b *strings.Builder, s string) {
-	b.WriteByte('\'')
-	for len(s) > 0 {
-		p := strings.IndexAny(s, "'\x00")
-		if p == -1 {
-			p = len(s)
-		}
-		b.WriteString(s[:p])
-		if p == len(s) {
-			break
-		}
-		if s[p] == '\'' {
-			b.WriteString("''")
-		}
-		s = s[p+1:]
-	}
-	b.WriteByte('\'')
 }

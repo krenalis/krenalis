@@ -119,25 +119,25 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 		return err
 	}
 	const query = `SELECT
-		c.relname,
+		"c"."relname",
 		CASE
-			c.relkind
+			"c"."relkind"
 			WHEN 'r' THEN 'table'
 			WHEN 'm' THEN 'materialized view'
 			WHEN 'i' THEN 'index'
 			WHEN 'S' THEN 'sequence'
 			WHEN 'v' THEN 'view'
 			WHEN 'c' THEN 'type'
-			ELSE c.relkind::text
+			ELSE "c"."relkind"::text
 		END
 	FROM
-		pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
+		"pg_class" "c"
+		JOIN "pg_namespace" "n" ON "n"."oid" = "c"."relnamespace"
 	WHERE
-		n.nspname = $1
-		AND n.nspname NOT LIKE 'pg_toast%'
+		"n"."nspname" = $1
+		AND "n"."nspname" NOT LIKE 'pg_toast%'
 	ORDER BY
-		c.relname`
+		"c"."relname"`
 	rows, err := pool.Query(ctx, query, warehouse.settings.Schema)
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where mee
 		return err
 	}
 	var s strings.Builder
-	s.WriteString(`DELETE FROM "` + table + `" WHERE `)
+	s.WriteString("DELETE FROM " + quoteIdent(table) + " WHERE ")
 	err = renderExpr(&s, where)
 	if err != nil {
 		return fmt.Errorf("cannot build WHERE expression: %s", err)
@@ -235,6 +235,11 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 		return err
 	}
 
+	quotedColumn := make(map[string]string, len(columns))
+	for _, column := range columns {
+		quotedColumn[column.Name] = quoteIdent(column.Name)
+	}
+
 	// Generate a unique name for the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
@@ -244,19 +249,18 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
 	for _, c := range columns {
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteString(`",`)
+		b.WriteString(quotedColumn[c.Name])
+		b.WriteByte(',')
 	}
-	b.WriteString("FALSE AS \"$purge\" FROM \"_user_identities\"\nWITH NO DATA")
+	b.WriteString(`FALSE AS "$purge" FROM "_user_identities"` + "\n" + `WITH NO DATA`)
 	create := b.String()
 
 	// Prepare the "merge" statement.
 	b.Reset()
-	b.WriteString("MERGE INTO \"_user_identities\" AS d\nUSING \"")
+	b.WriteString("MERGE INTO \"_user_identities\" AS \"d\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" AS s\nON d.\"__action__\" = s.\"__action__\" AND d.\"__identity_id__\" = s.\"__identity_id__\" AND d.\"__is_anonymous__\" = s.\"__is_anonymous__\"")
-	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
+	b.WriteString(`" AS "s"` + "\n" + `ON "d"."__action__" = "s"."__action__" AND "d"."__identity_id__" = "s"."__identity_id__" AND "d"."__is_anonymous__" = "s"."__is_anonymous__"`)
+	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
 		if slices.Contains(immutableMergeIdentitiesColumns, c.Name) {
@@ -265,41 +269,37 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meer
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString("\n\"")
-		b.WriteString(c.Name)
-		b.WriteString(`" = `)
+		b.WriteString("\n")
+		b.WriteString(quotedColumn[c.Name])
+		b.WriteString(` = `)
 		if c.Name == "__anonymous_ids__" {
-			b.WriteString(`CASE WHEN s."__anonymous_ids__" IS NULL OR s."__anonymous_ids__"[1] = ANY(d."__anonymous_ids__") THEN d."__anonymous_ids__" ELSE d."__anonymous_ids__" || s."__anonymous_ids__"[1] END`)
+			b.WriteString(`CASE WHEN "s"."__anonymous_ids__" IS NULL OR "s"."__anonymous_ids__"[1] = ANY("d"."__anonymous_ids__") THEN "d"."__anonymous_ids__" ELSE "d"."__anonymous_ids__" || "s"."__anonymous_ids__"[1] END`)
 		} else {
-			b.WriteString(`s."`)
-			b.WriteString(c.Name)
-			b.WriteString(`"`)
+			b.WriteString(`"s".`)
+			b.WriteString(quotedColumn[c.Name])
 		}
 		i++
 	}
 	if i == 0 {
 		return errors.New("postgresql.MergeIdentities: there must be at least one column in 'columns' apart from the immutable identities columns")
 	}
-	b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
+	b.WriteString("\nWHEN NOT MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  INSERT (")
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteByte('"')
+		b.WriteString(quotedColumn[c.Name])
 	}
 	b.WriteString(")\n  VALUES (")
 	for i, c := range columns {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		b.WriteString(`s."`)
-		b.WriteString(c.Name)
-		b.WriteByte('"')
+		b.WriteString(`"s".`)
+		b.WriteString(quotedColumn[c.Name])
 	}
-	b.WriteString(")\nWHEN MATCHED AND s.\"$purge\" = FALSE THEN\n  UPDATE SET \"__execution__\" = s.\"__execution__\"")
-	b.WriteString("\nWHEN MATCHED AND s.\"$purge\" = TRUE THEN\n  DELETE")
+	b.WriteString(")\nWHEN MATCHED AND \"s\".\"$purge\" = FALSE THEN\n  UPDATE SET \"__execution__\" = \"s\".\"__execution__\"")
+	b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" = TRUE THEN\n  DELETE")
 	merge := b.String()
 
 	// Prepare the columns names.
@@ -351,11 +351,8 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	if err != nil {
 		return err
 	}
-	_, err = pool.Exec(ctx, `TRUNCATE TABLE "`+table+`"`)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err = pool.Exec(ctx, "TRUNCATE TABLE "+quoteIdent(table))
+	return err
 }
 
 // connection returns the PostgreSQL connection pool.
@@ -450,7 +447,7 @@ func (warehouse *PostgreSQL) usersVersion(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	var v int
-	err = pool.QueryRow(ctx, "SELECT COALESCE(MAX(users_version), 0) FROM _operations").Scan(&v)
+	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("users_version"), 0) FROM "_operations"`).Scan(&v)
 	if err != nil {
 		return 0, err
 	}

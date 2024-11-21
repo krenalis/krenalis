@@ -156,12 +156,12 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Create the table.
-	create := bytes.NewBufferString("CREATE TABLE " + table.Name + " (\n\t")
+	create := bytes.NewBufferString("CREATE TABLE " + quoteIdent(table.Name) + " (\n\t")
 	for i, c := range table.Columns {
 		if i > 0 {
 			create.WriteString(",\n\t")
 		}
-		create.WriteString(c.Name)
+		create.WriteString(quoteIdent(c.Name))
 		create.WriteByte(' ')
 		create.WriteString(typeToPostgresType(cols[i].MeergoType))
 		if i == 0 {
@@ -174,7 +174,7 @@ func Test_Merge(t *testing.T) {
 		t.Fatalf("cannot create table: %s", err)
 	}
 	defer func() {
-		_, err = pool.Exec(context.Background(), "DROP TABLE "+table.Name)
+		_, err = pool.Exec(context.Background(), "DROP TABLE "+quoteIdent(table.Name))
 		if err != nil {
 			t.Logf("cannot drop %s table: %s", table.Name, err)
 		}

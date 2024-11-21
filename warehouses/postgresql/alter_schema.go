@@ -26,7 +26,7 @@ func (warehouse *PostgreSQL) AlterUserColumns(ctx context.Context, userColumns [
 
 	// Start an AlterSchema operation on the data warehouse, then defer its
 	// ending.
-	opID, err := warehouse.startOperation(ctx, alterSchema)
+	opID, err := warehouse.startOperation(ctx, alterUserColumns)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 	var queries []string
 
 	// DROP VIEW.
-	queries = append(queries, "DROP VIEW \"users\"")
+	queries = append(queries, `DROP VIEW "users"`)
 
 	// ALTER TABLE ... DROP COLUMN.
 	{
@@ -116,7 +116,7 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 					if i > 0 {
 						b.WriteString(",\n\t")
 					}
-					b.WriteString(`DROP COLUMN "` + c + `"`)
+					b.WriteString(`DROP COLUMN ` + quoteIdent(c))
 				}
 				queries = append(queries, b.String())
 			}
@@ -126,8 +126,8 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 	// ALTER TABLE ... RENAME COLUMN.
 	for _, op := range operations {
 		if op.Operation == meergo.OperationRenameColumn {
-			queries = append(queries, `ALTER TABLE `+quoteIdent(usersTableName)+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
-			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN \""+op.Column+`" TO "`+op.NewColumn+`"`)
+			queries = append(queries, `ALTER TABLE `+quoteIdent(usersTableName)+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
+			queries = append(queries, `ALTER TABLE "_user_identities"`+"\n\tRENAME COLUMN "+quoteIdent(op.Column)+` TO `+quoteIdent(op.NewColumn))
 		}
 	}
 
@@ -148,7 +148,10 @@ func alterUserColumnsQueries(usersTableName string, userColumns []meergo.Column,
 						b.WriteString(",\n\t")
 					}
 					typ := typeToPostgresType(op.Type)
-					b.WriteString(`ADD COLUMN "` + op.Column + `" ` + typ)
+					b.WriteString("ADD COLUMN ")
+					b.WriteString(quoteIdent(op.Column))
+					b.WriteByte(' ')
+					b.WriteString(typ)
 				}
 				queries = append(queries, b.String())
 			}
@@ -183,9 +186,8 @@ func createViewQuery(usersTableName string, userColumns []meergo.Column, replace
 		b.WriteRune('"')
 	}
 	for _, c := range userColumns {
-		b.WriteString(",\n\t\"")
-		b.WriteString(c.Name)
-		b.WriteRune('"')
+		b.WriteString(",\n\t")
+		b.WriteString(quoteIdent(c.Name))
 	}
 	b.WriteString("\nFROM ")
 	b.WriteString(quoteIdent(usersTableName))

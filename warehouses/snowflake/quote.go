@@ -57,8 +57,8 @@ func quoteBytes(b *strings.Builder, s []byte) {
 	b.WriteByte('\'')
 }
 
-// quoteColumn quotes a column name.
-func quoteColumn(name string) string {
+// quoteIdent quotes the identifier name.
+func quoteIdent(name string) string {
 	return `"` + strings.ReplaceAll(strings.ToUpper(name), `"`, `""`) + `"`
 }
 
@@ -105,9 +105,4 @@ func quoteString(b *strings.Builder, s string) {
 		}
 	}
 	b.WriteByte('\'')
-}
-
-// quoteTable quotes a table name.
-func quoteTable(name string) string {
-	return `"` + strings.ReplaceAll(strings.ToUpper(name), `"`, `""`) + `"`
 }

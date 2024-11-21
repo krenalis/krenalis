@@ -90,7 +90,7 @@ func (sf *Snowflake) LastChangeTimeCondition(column string, typ types.Type, valu
 		return "TRUE"
 	}
 	b := strings.Builder{}
-	b.WriteString(quoteColumn(column))
+	b.WriteString(quoteIdent(column))
 	b.WriteString(` >= `)
 	quoteValue(&b, value, typ)
 	return b.String()

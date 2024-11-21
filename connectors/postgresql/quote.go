@@ -19,14 +19,10 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// quoteColumn quotes a column name.
-func quoteColumn(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
-}
-
-// quoteTable quotes a table name.
-func quoteTable(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+// quoteIdent quotes the identifier name.
+func quoteIdent(name string) string {
+	name = strings.ReplaceAll(name, `"`, `""`)
+	return `"` + name + `"`
 }
 
 var jsonZeroByte = []byte(`\u0000`)

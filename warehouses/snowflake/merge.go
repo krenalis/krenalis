@@ -34,7 +34,7 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 
 	quotedColumn := make(map[string]string, len(table.Columns))
 	for _, column := range table.Columns {
-		quotedColumn[column.Name] = quoteColumn(column.Name)
+		quotedColumn[column.Name] = quoteIdent(column.Name)
 	}
 
 	// Generate a unique name for the temporary table.
@@ -50,14 +50,14 @@ func merge(ctx context.Context, conn *sql.Conn, table meergo.Table, rows [][]any
 		b.WriteByte(',')
 	}
 	b.WriteString(` FALSE AS "$PURGE" FROM `)
-	b.WriteString(quoteTable(table.Name))
+	b.WriteString(quoteIdent(table.Name))
 	b.WriteString(" LIMIT 0")
 	create := b.String()
 
 	// Create the 'merge' statement.
 	b.Reset()
 	b.WriteString(`MERGE INTO `)
-	b.WriteString(quoteTable(table.Name))
+	b.WriteString(quoteIdent(table.Name))
 	b.WriteString(" \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
 	b.WriteString("\" \"S\"\nON ")
@@ -274,50 +274,6 @@ func quoteCSVString(b *bytes.Buffer, s string) {
 		s = s[i+1:]
 	}
 	b.WriteByte('\'')
-}
-
-// serializeIdentitiesToCSV serializes identities as CSV, using columns as
-// header, and returns it as an io.Reader. It also appends a boolean column
-// called $PURGE with the value of the 'deleted' argument as value for each row.
-func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (io.Reader, error) {
-	var err error
-	var b bytes.Buffer
-	for i, c := range columns {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(strings.ToUpper(c.Name))
-	}
-	b.WriteString(",$PURGE\n")
-	for i, row := range rows {
-		if i > 0 {
-			b.WriteByte('\n')
-		}
-		for j, column := range columns {
-			if j > 0 {
-				b.WriteByte(',')
-			}
-			v, ok := row[column.Name]
-			if !ok {
-				continue
-			}
-			err = serializeValueToCSV(&b, columns[j].Type, v)
-			if err != nil {
-				return nil, err
-			}
-		}
-		// Add the value for the column $PURGE.
-		if purge, ok := row["$PURGE"].(bool); ok {
-			if purge {
-				b.WriteString(",true")
-			} else {
-				b.WriteString(",false")
-			}
-		} else {
-			b.WriteString(",")
-		}
-	}
-	return &b, nil
 }
 
 func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {

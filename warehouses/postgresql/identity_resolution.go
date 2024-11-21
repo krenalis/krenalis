@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
 
@@ -71,11 +70,11 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	// operations table.
 	_, span = telemetry.TraceSpan(ctx, "Switching user table", "current version", usersVersion, "next version", newUsersVersion)
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, postgres.QuoteIdent(newUsersName), usersVersion))
+		_, err = tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "_users_%d")`, quoteIdent(newUsersName), usersVersion))
 		if err != nil {
-			return fmt.Errorf("cannot create users table (with name %s): %s", postgres.QuoteIdent(newUsersName), err)
+			return fmt.Errorf("cannot create users table (with name %s): %s", quoteIdent(newUsersName), err)
 		}
-		_, err = tx.Exec(ctx, `UPDATE _operations SET users_version = $1 WHERE operation = 'IdentityResolution' AND end_time IS NULL`, newUsersVersion)
+		_, err = tx.Exec(ctx, `UPDATE "_operations" SET "users_version" = $1 WHERE "operation" = 'IdentityResolution' AND "end_time" IS NULL`, newUsersVersion)
 		if err != nil {
 			return err
 		}
@@ -128,9 +127,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	mergeUsers.WriteString(quoteIdent(newUsersName))
 	mergeUsers.WriteString(` (`)
 	for _, c := range userColumns {
-		mergeUsers.WriteByte('"')
-		mergeUsers.WriteString(c.Name)
-		mergeUsers.WriteByte('"')
+		mergeUsers.WriteString(quoteIdent(c.Name))
 		mergeUsers.WriteByte(',')
 	}
 	mergeUsers.WriteString(`"__identities__", "__id__", "__last_change_time__"`)
@@ -145,7 +142,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 				// sorted by last change time, excluding those that are NULL.
 				mergeUsers.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL AND "__connection__" = ` + strconv.Itoa(s) + `) || `)
 			}
-			// Concatenate the values ​​of all identities for which the value is
+			// Concatenate the values of all identities for which the value is
 			// not NULL, sorted by last change time.
 			mergeUsers.WriteString(`ARRAY_AGG(` + quoteIdent(c.Name) + ` ORDER BY "__last_change_time__" DESC) FILTER (WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL)`)
 			mergeUsers.WriteString(`)[1]`)

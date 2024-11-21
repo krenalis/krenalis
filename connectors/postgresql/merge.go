@@ -28,6 +28,11 @@ import (
 // merge performs a table merge operation.
 func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][]any, deleted []any) error {
 
+	quotedColumn := make(map[string]string, len(table.Columns))
+	for _, column := range table.Columns {
+		quotedColumn[column.Name] = quoteIdent(column.Name)
+	}
+
 	// Generate a unique name for the temporary table.
 	tempTableName := "temp_table_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
@@ -37,34 +42,32 @@ func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][
 	b.WriteString(tempTableName)
 	b.WriteString("\" AS\n  SELECT ")
 	for _, c := range table.Columns {
-		b.WriteByte('"')
-		b.WriteString(c.Name)
-		b.WriteString(`",`)
+		b.WriteString(quotedColumn[c.Name])
+		b.WriteByte(',')
 	}
-	b.WriteString(`FALSE AS "$purge" FROM "`)
-	b.WriteString(table.Name)
-	b.WriteString("\"\nWITH NO DATA")
+	b.WriteString(`FALSE AS "$purge" FROM `)
+	b.WriteString(quoteIdent(table.Name))
+	b.WriteString("\nWITH NO DATA")
 	create := b.String()
 
 	// Create the 'merge' statement.
 	b.Reset()
-	b.WriteString(`MERGE INTO "`)
-	b.WriteString(table.Name)
-	b.WriteString("\" d\nUSING \"")
+	b.WriteString(`MERGE INTO `)
+	b.WriteString(quoteIdent(table.Name))
+	b.WriteString(" \"d\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" s\nON ")
+	b.WriteString("\" \"s\"\nON ")
 	for i, key := range table.Keys {
 		if i > 0 {
 			b.WriteString(" AND ")
 		}
-		b.WriteString(`d."`)
-		b.WriteString(key)
-		b.WriteString(`" = s."`)
-		b.WriteString(key)
-		b.WriteByte('"')
+		b.WriteString(`"d".`)
+		b.WriteString(quotedColumn[key])
+		b.WriteString(` = "s".`)
+		b.WriteString(quotedColumn[key])
 	}
 	if len(rows) > 0 {
-		b.WriteString("\nWHEN MATCHED AND s.\"$purge\" IS NULL THEN\n  UPDATE SET ")
+		b.WriteString("\nWHEN MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  UPDATE SET ")
 		i := 0
 		for _, c := range table.Columns {
 			if slices.Contains(table.Keys, c.Name) {
@@ -73,33 +76,28 @@ func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteByte('"')
-			b.WriteString(c.Name)
-			b.WriteString(`" = s."`)
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			b.WriteString(quotedColumn[c.Name])
+			b.WriteString(` = "s".`)
+			b.WriteString(quotedColumn[c.Name])
 			i++
 		}
 		if i == 0 {
 			return errors.New("postgresql.Merge: there must be at least one column in 'columns' apart from the keys")
 		}
-		b.WriteString("\nWHEN NOT MATCHED AND s.\"$purge\" IS NULL THEN\n  INSERT (")
+		b.WriteString("\nWHEN NOT MATCHED AND \"s\".\"$purge\" IS NULL THEN\n  INSERT (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteByte('"')
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			b.WriteString(quotedColumn[c.Name])
 		}
 		b.WriteString(")\n  VALUES (")
 		for i, c := range table.Columns {
 			if i > 0 {
 				b.WriteByte(',')
 			}
-			b.WriteString(`s."`)
-			b.WriteString(c.Name)
-			b.WriteByte('"')
+			b.WriteString(`"s".`)
+			b.WriteString(quotedColumn[c.Name])
 		}
 		b.WriteString(`)`)
 	}
@@ -138,6 +136,7 @@ func merge(ctx context.Context, conn *pgxpool.Conn, table meergo.Table, rows [][
 	if err != nil {
 		return err
 	}
+
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
 		_, err = conn.CopyFrom(ctx, []string{tempTableName}, columnNames, pgx.CopyFromRows(rows))

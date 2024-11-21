@@ -76,7 +76,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		meergo.OpIsAfter,
 		meergo.OpIsOnOrAfter:
 
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 
 		switch op {
 		case meergo.OpIs:
@@ -95,7 +95,7 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case meergo.OpIsBetween, meergo.OpIsNotBetween:
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		if op == meergo.OpIsNotBetween {
 			b.WriteString(" NOT")
 		}
@@ -109,13 +109,13 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 			b.WriteString("NOT ")
 		}
 		b.WriteString("CONTAINS(")
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(", ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case meergo.OpIsOneOf, meergo.OpIsNotOneOf:
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		if op == meergo.OpIsOneOf {
 			b.WriteString(" IN (")
 		} else {
@@ -135,24 +135,24 @@ func renderExpr(b *strings.Builder, exp meergo.Expr) error {
 		} else {
 			b.WriteString("ENDSWITH(")
 		}
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(", ")
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case meergo.OpIsTrue:
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 
 	case meergo.OpIsFalse:
 		b.WriteString("NOT ")
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 
 	case meergo.OpIsNull:
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(" IS NULL")
 
 	case meergo.OpIsNotNull:
-		b.WriteString(quoteColumn(c.Name))
+		b.WriteString(quoteIdent(c.Name))
 		b.WriteString(" IS NOT NULL")
 
 	default:
@@ -169,7 +169,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	case nil:
 		b.WriteString("NULL")
 	case meergo.Column:
-		b.WriteString(quoteColumn(v.Name))
+		b.WriteString(quoteIdent(v.Name))
 	case bool:
 		if v {
 			b.WriteString("TRUE")
@@ -183,7 +183,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 	case float64:
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, 64))
 	case decimal.Decimal:
-		_, _ = v.WriteTo(b)
+		v.WriteTo(b)
 	case time.Time:
 		b.WriteByte('\'')
 		switch t.Kind() {

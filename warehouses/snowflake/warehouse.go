@@ -8,12 +8,14 @@
 package snowflake
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	_ "embed"
 	jsonstd "encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"slices"
 	"strconv"
@@ -22,9 +24,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/snowflakedb/gosnowflake"
-
 	"github.com/meergo/meergo"
+
+	"github.com/snowflakedb/gosnowflake"
 )
 
 // Connector icon.
@@ -165,7 +167,7 @@ func (warehouse *Snowflake) Delete(ctx context.Context, table string, where meer
 		return errors.New("where is nil")
 	}
 	var s strings.Builder
-	s.WriteString("DELETE FROM " + quoteTable(table) + " WHERE ")
+	s.WriteString("DELETE FROM " + quoteIdent(table) + " WHERE ")
 	err := renderExpr(&s, where)
 	if err != nil {
 		return fmt.Errorf("cannot build WHERE expression: %s", err)
@@ -210,12 +212,13 @@ var immutableMergeIdentitiesColumns = []string{
 	"__connection__",
 }
 
-// MergeIdentities merge existing identities, deletes them and inserts new ones.
+// MergeIdentities merges existing identities, deletes them, and inserts new
+// ones.
 func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
 
 	quotedColumn := make(map[string]string, len(columns))
 	for _, column := range columns {
-		quotedColumn[column.Name] = quoteColumn(column.Name)
+		quotedColumn[column.Name] = quoteIdent(column.Name)
 	}
 
 	// Generate a unique name for the temporary table.
@@ -237,7 +240,7 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []meerg
 	b.Reset()
 	b.WriteString("MERGE INTO \"_USER_IDENTITIES\" AS \"D\"\nUSING \"")
 	b.WriteString(tempTableName)
-	b.WriteString("\" AS \"S\"\nON \"D\".\"__ACTION__\" = \"S\".\"__ACTION__\" AND \"D\".\"__IDENTITY_ID__\" = \"S\".\"__IDENTITY_ID__\" AND \"D\".\"__IS_ANONYMOUS__\" = \"S\".\"__IS_ANONYMOUS__\"")
+	b.WriteString(`" AS "S"` + "\n" + `ON "D"."__ACTION__" = "S"."__ACTION__" AND "D"."__IDENTITY_ID__" = "S"."__IDENTITY_ID__" AND "D"."__IS_ANONYMOUS__" = "S"."__IS_ANONYMOUS__"`)
 	b.WriteString("\nWHEN MATCHED AND \"S\".\"$PURGE\" IS NULL THEN\n  UPDATE SET ")
 	i := 0
 	for _, c := range columns {
@@ -346,7 +349,7 @@ func (warehouse *Snowflake) Settings() []byte {
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	db := warehouse.openDB()
-	_, err := db.ExecContext(ctx, "TRUNCATE TABLE "+quoteTable(table))
+	_, err := db.ExecContext(ctx, "TRUNCATE TABLE "+quoteIdent(table))
 	if err != nil {
 		return snowflake(err)
 	}
@@ -436,6 +439,50 @@ func (warehouse *Snowflake) execTransaction(ctx context.Context, f func(*sql.Tx)
 		return snowflake(err)
 	}
 	return nil
+}
+
+// serializeIdentitiesToCSV serializes identities as CSV, using columns as
+// header, and returns it as an io.Reader. It also appends a boolean column
+// called $PURGE with the value of the 'deleted' argument as value for each row.
+func serializeIdentitiesToCSV(columns []meergo.Column, rows []map[string]any) (io.Reader, error) {
+	var err error
+	var b bytes.Buffer
+	for i, c := range columns {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strings.ToUpper(c.Name))
+	}
+	b.WriteString(",$PURGE\n")
+	for i, row := range rows {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		for j, column := range columns {
+			if j > 0 {
+				b.WriteByte(',')
+			}
+			v, ok := row[column.Name]
+			if !ok {
+				continue
+			}
+			err = serializeValueToCSV(&b, columns[j].Type, v)
+			if err != nil {
+				return nil, err
+			}
+		}
+		// Add the value for the column $PURGE.
+		if purge, ok := row["$PURGE"].(bool); ok {
+			if purge {
+				b.WriteString(",true")
+			} else {
+				b.WriteString(",false")
+			}
+		} else {
+			b.WriteString(",")
+		}
+	}
+	return &b, nil
 }
 
 // snowflake transforms Snowflake error messages into a more user-friendly,

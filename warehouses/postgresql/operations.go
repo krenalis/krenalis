@@ -21,7 +21,7 @@ import (
 type warehouseOperation string
 
 const (
-	alterSchema        warehouseOperation = "AlterUserColumns"
+	alterUserColumns   warehouseOperation = "AlterUserColumns"
 	identityResolution warehouseOperation = "IdentityResolution"
 )
 
@@ -34,8 +34,6 @@ const (
 // In the case that an AlterSchema operation is already in progress, the error
 // ErrAlterInProgress is returned; if an IdentityResolution operation is
 // already in progress, the error ErrIdentityResolutionInProgress is returned.
-//
-// If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
 	err := warehouse.fixOperationsTable(ctx)
 	if err != nil {
@@ -43,19 +41,19 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 	}
 	var opID int
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, "LOCK TABLE _operations")
+		_, err := tx.Exec(ctx, `LOCK TABLE "_operations"`)
 		if err != nil {
 			return err
 		}
 		var runningOp *warehouseOperation
-		err = tx.QueryRow(ctx, "SELECT operation FROM _operations "+
-			"WHERE start_time IS NOT NULL AND end_time IS NULL ORDER BY id DESC LIMIT 1").Scan(&runningOp)
+		err = tx.QueryRow(ctx, `SELECT "operation" FROM "_operations" `+
+			`WHERE "start_time" IS NOT NULL AND "end_time" IS NULL ORDER BY "id" DESC LIMIT 1`).Scan(&runningOp)
 		if err != nil && err != pgx.ErrNoRows {
 			return err
 		}
 		if runningOp != nil {
 			switch *runningOp {
-			case alterSchema:
+			case alterUserColumns:
 				return meergo.ErrAlterInProgress
 			case identityResolution:
 				return meergo.ErrIdentityResolutionInProgress
@@ -63,8 +61,8 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 				return fmt.Errorf("unexpected operation %q", *runningOp)
 			}
 		}
-		err = tx.QueryRow(ctx, `INSERT INTO _operations (operation, start_time, end_time) `+
-			`VALUES ($1, (clock_timestamp() at time zone 'utc')::timestamp, NULL) RETURNING id`, operation).Scan(&opID)
+		err = tx.QueryRow(ctx, `INSERT INTO "_operations" ("operation", "start_time", "end_time") `+
+			`VALUES ($1, (clock_timestamp() at time zone 'utc')::timestamp, NULL) RETURNING "id"`, operation).Scan(&opID)
 		if err != nil {
 			return err
 		}
@@ -79,18 +77,13 @@ func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation wareh
 // endOperation marks the operation with the given ID as completed, setting its
 // endTime to the provided value. If the operation had already been completed
 // previously, the call to this method is a no-op.
-//
-// If a database error occurs, a *DataWarehouseError is returned.
 func (warehouse *PostgreSQL) endOperation(ctx context.Context, opID int, endTime time.Time) error {
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = pool.Exec(ctx, `UPDATE _operations SET end_time = $1 WHERE id = $2 AND end_time IS NULL`, endTime, opID)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err = pool.Exec(ctx, `UPDATE "_operations" SET "end_time" = $1 WHERE "id" = $2 AND "end_time" IS NULL`, endTime, opID)
+	return err
 }
 
 // fixOperationsTable fixes the '_operations' table.

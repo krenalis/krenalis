@@ -16,8 +16,8 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// quoteColumn quotes a column name.
-func quoteColumn(name string) string {
+// quoteIdent quotes the identifier name.
+func quoteIdent(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
