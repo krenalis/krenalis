@@ -176,10 +176,10 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	}
 	testsSettings.Warehouse.Port = warehousePort.Int()
 
-	// Reset the PostgreSQL warehouse.
-	err = resetDatabase(ctx, testsSettings.Database)
+	// Initialize the PostgreSQL database.
+	err = initializePostgreSQLDatabase(ctx, testsSettings.Database)
 	if err != nil {
-		t.Fatalf("cannot reset database: %s", err)
+		t.Fatalf("cannot inizialize the PostgreSQL database: %s", err)
 	}
 
 	// Create the HTTP client.
@@ -442,7 +442,7 @@ func (c *Meergo) login() error {
 	return c.call("POST", "/api/members/login", body, nil)
 }
 
-func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
+func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) error {
 	err := validDatabaseNameForTests(dbSetts.Database)
 	if err != nil {
 		return err
@@ -460,10 +460,7 @@ func resetDatabase(ctx context.Context, dbSetts *DBSettings) error {
 	}
 	defer db.Close()
 	err = execQueries(ctx, db, "../database/PostgreSQL.sql")
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // ExecQueryTestDatabase executes a query on the test database.
