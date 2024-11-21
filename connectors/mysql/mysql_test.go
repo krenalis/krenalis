@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/types"
 
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/mysql"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -90,24 +89,42 @@ func Test_Merge_Query(t *testing.T) {
 		username = "meergo"
 		password = "meergo"
 	)
-	ctx := context.Background()
-	mysqlContainer, err := mysql.Run(ctx,
-		testimages.MySQL,
-		mysql.WithDatabase(database),
-		mysql.WithUsername(username),
-		mysql.WithPassword(password),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("port: 3306  MySQL Community Server").
-				WithStartupTimeout(60*time.Second),
-		),
-	)
-	defer func() {
-		if err := testcontainers.TerminateContainer(mysqlContainer); err != nil {
+	var mysqlContainer testcontainers.Container
+	{
+		// Note that a generic container is used here instead of:
+		//
+		//    github.com/testcontainers/testcontainers-go/modules/mysql
+		//
+		// because 'testcontainers-go/modules/mysql' seems to not allow to
+		// increase the startup timeout above 1 minute, causing the startup to
+		// fail in cases when the host is under load (for example when executing
+		// many tests).
+		req := testcontainers.ContainerRequest{
+			Image:        testimages.MySQL,
+			ExposedPorts: []string{"3306/tcp", "33060/tcp"},
+			Env: map[string]string{
+				"MYSQL_USER":                 username,
+				"MYSQL_PASSWORD":             password,
+				"MYSQL_DATABASE":             database,
+				"MYSQL_ALLOW_EMPTY_PASSWORD": "true",
+			},
+			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server").WithStartupTimeout(3 * time.Minute),
+		}
+		genericContainerReq := testcontainers.GenericContainerRequest{
+			ContainerRequest: req,
+			Started:          true,
+		}
+		var err error
+		ctx := context.Background()
+		mysqlContainer, err = testcontainers.GenericContainer(ctx, genericContainerReq)
+		if err != nil {
 			t.Fatal(err)
 		}
-	}()
-	if err != nil {
-		t.Fatal(err)
+		defer func() {
+			if err := testcontainers.TerminateContainer(mysqlContainer); err != nil {
+				t.Fatal(err)
+			}
+		}()
 	}
 	host, err := mysqlContainer.Host(ctx)
 	if err != nil {

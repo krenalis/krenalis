@@ -34,7 +34,6 @@ require (
 	github.com/snowflakedb/gosnowflake v1.12.0
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
 	github.com/twmb/franz-go v1.18.0
 	github.com/xuri/excelize/v2 v2.9.0

@@ -319,8 +319,6 @@ github.com/testcontainers/testcontainers-go v0.34.0 h1:5fbgF0vIN5u+nD3IWabQwRybu
 github.com/testcontainers/testcontainers-go v0.34.0/go.mod h1:6P/kMkQe8yqPHfPWNulFGdFHTD8HB2vLq/231xY2iPQ=
 github.com/testcontainers/testcontainers-go/modules/clickhouse v0.34.0 h1:1CO1aV5kFXWvFCTxgIVjcMXaXwO8cznw58F+V8Kp+Fg=
 github.com/testcontainers/testcontainers-go/modules/clickhouse v0.34.0/go.mod h1:TTecjXxuNwIyNfSKo6X071LoUkMIa3+unU5yam8Db+s=
-github.com/testcontainers/testcontainers-go/modules/mysql v0.34.0 h1:Tqz17mGXjPORHFS/oBUGdeJyIsZXLsVVHRhaBqhewGI=
-github.com/testcontainers/testcontainers-go/modules/mysql v0.34.0/go.mod h1:hDpm3DLfjo7rd6232wWflEBDGr6Ow9ys43mJTiJwWx8=
 github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0 h1:c51aBXT3v2HEBVarmaBnsKzvgZjC5amn0qsj8Naqi50=
 github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0/go.mod h1:EWP75ogLQU4M4L8U+20mFipjV4WIR9WtlMXSB6/wiuc=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
