@@ -58,7 +58,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()}, // TODO(Gianluca): removed 'CreateRequired' until https://github.com/meergo/meergo/issues/934 is fixed.
+				{Name: "email", Type: types.Text()},
 				{Name: "lastName", Type: types.Text()},
 			}),
 			Transformation: meergotester.Transformation{
