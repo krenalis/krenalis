@@ -106,7 +106,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 		switch v.Kind() {
 		case json.Array, json.Object:
 		case json.String:
-			return v.AppendUnquote(b)
+			return v.AppendUnquote(b), nil
 		default:
 			return append(b, v...), nil
 		}

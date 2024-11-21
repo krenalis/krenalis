@@ -111,13 +111,6 @@ func (err *SchemaValidationError) appendNameToPath(name string) {
 	}
 }
 
-// AppendUnquote writes the unquoted value of v into dst, and returns the
-// extended buffer. v may contain leading and trailing JSON whitespace.
-// It returns an error if v is not of String kind.
-func (v Value) AppendUnquote(dst []byte) ([]byte, error) {
-	return jsontext.AppendUnquote(dst, TrimSpace(v))
-}
-
 // Compact returns a copy of data with all insignificant whitespace removed. If
 // data is already compact, it returns the original data unchanged. If data does
 // not contain valid JSON, it returns nil and ErrInvalidJSON.

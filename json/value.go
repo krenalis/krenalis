@@ -42,6 +42,14 @@ func (err NotExistError) Error() string {
 // leading and trailing JSON spaces; otherwise, the behavior is undefined.
 type Value []byte
 
+// AppendUnquote writes the unquoted value of v into dst, and returns the
+// extended buffer. v may contain leading and trailing JSON whitespace.
+// It returns an error if v is not of String kind.
+func (v Value) AppendUnquote(dst []byte) []byte {
+	dst, _ = jsontext.AppendUnquote(dst, TrimSpace(v))
+	return dst
+}
+
 // Bytes returns a copy of v as []byte. If v is a string, it returns it
 // unquoted. If v is an array or an object it returns nil.
 func (v Value) Bytes() []byte {

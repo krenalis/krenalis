@@ -745,7 +745,7 @@ func (d decoder) unquoteString(v []byte) string {
 
 // formatString formats a JSON string into a formatted string.
 func (d decoder) formatString(v []byte) string {
-	b, _ := json.Value(v).AppendUnquote(nil)
+	b := json.Value(v).AppendUnquote(nil)
 	return `"` + strings.ReplaceAll(strings.ReplaceAll(string(b), `\`, `\\`), `"`, `\"`) + `"`
 }
 
