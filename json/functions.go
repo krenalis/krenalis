@@ -310,17 +310,6 @@ type Unmarshaler interface {
 	UnmarshalJSON([]byte) error
 }
 
-// Unquote removes the quotes from a JSON-encoded string and returns the
-// unquoted data. If data is not valid JSON string it returns nil and
-// ErrInvalidJSON.
-func Unquote(data []byte) ([]byte, error) {
-	d, err := jsontext.AppendUnquote(nil, TrimSpace(data))
-	if err != nil {
-		return nil, ErrInvalidJSON
-	}
-	return d, err
-}
-
 // Valid reports whether data is a valid JSON encoding and properly encoded in
 // UTF-8.
 func Valid(data []byte) bool {
@@ -544,8 +533,7 @@ func (d decoderByType) unmarshal(t types.Type) (_ any, err error) {
 
 // unquoteString unquote a JSON string.
 func (d decoderByType) unquoteString(v []byte) []byte {
-	b, _ := Unquote(v)
-	return b
+	return Value(v).AppendUnquote(nil)
 }
 
 // formatString formats a JSON string into a formatted string.
@@ -639,12 +627,10 @@ func (d decoderByType) value(v Value, t types.Type) (any, error) {
 		}
 	case types.DateTimeKind:
 		if v.Kind() == '"' {
-			if v, err := Unquote(v); err == nil {
-				if t, err := iso8601.Parse(v); err == nil {
-					t = t.UTC()
-					if y := t.Year(); 1 <= y && y <= 9999 {
-						return t, nil
-					}
+			if t, err := iso8601.Parse(v.AppendUnquote(nil)); err == nil {
+				t = t.UTC()
+				if y := t.Year(); 1 <= y && y <= 9999 {
+					return t, nil
 				}
 			}
 		}
@@ -676,19 +662,13 @@ func (d decoderByType) value(v Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if v, err := Unquote(v); err == nil {
-				if u, err := uuid.ParseBytes(v); err == nil {
-					return u.String(), nil
-				}
+			if u, err := uuid.ParseBytes(v.AppendUnquote(nil)); err == nil {
+				return u.String(), nil
 			}
 		}
 	case types.JSONKind:
 		if v.Kind() == '"' {
-			s, err := Unquote(v)
-			if err != nil {
-				return nil, newErrInvalidValue(fmt.Sprint("contains invalid JSON"), "")
-			}
-			return Value(s), nil
+			return v.AppendUnquote(nil), nil
 		}
 	case types.InetKind:
 		if v.Kind() == '"' {

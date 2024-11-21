@@ -672,17 +672,15 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if s, err := json.Unquote(v); err == nil {
-				if u, err := uuid.ParseBytes(s); err == nil {
-					return u.String(), nil
-				}
+			if u, err := uuid.ParseBytes(v.AppendUnquote(nil)); err == nil {
+				return u.String(), nil
 			}
 		}
 	case types.JSONKind:
 		if v.Kind() == '"' {
-			data, err := json.Unquote(v)
-			if err != nil {
-				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", data), "", d.opts.terms)
+			data := v.AppendUnquote(nil)
+			if !json.Valid(data) {
+				return nil, newErrInvalidValue(fmt.Sprintf("does not contain valid JSON: %s", v), "", d.opts.terms)
 			}
 			return json.Value(data), nil
 		}
@@ -739,8 +737,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 
 // unquoteString unquote a JSON string.
 func (d decoder) unquoteString(v []byte) string {
-	b, _ := json.Unquote(v)
-	return string(b)
+	return string(json.Value(v).AppendUnquote(nil))
 }
 
 // formatString formats a JSON string into a formatted string.
