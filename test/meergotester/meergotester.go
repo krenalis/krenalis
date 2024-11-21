@@ -106,11 +106,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		}
 	}
 
-	err := loadTestConfig()
-	if err != nil {
-		t.Fatalf("cannot load tests configuration: %s", err)
-	}
-
 	ctx := context.Background()
 
 	c := Meergo{t: t}
@@ -130,51 +125,65 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		}
 	}()
 
-	// Start the PostgreSQL container.
-	postgresContainer, err := _postgres.Run(ctx,
-		testimages.PostgreSQL,
-		_postgres.WithDatabase("test_postgres"),
-		_postgres.WithUsername("test_postgres"),
-		_postgres.WithPassword("test_postgres"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
-	)
-	c.stopPostgresContainer = func() error {
-		return testcontainers.TerminateContainer(postgresContainer)
+	// Start the PostgreSQL container and set the global test settings.
+	{
+		postgresContainer, err := _postgres.Run(ctx,
+			testimages.PostgreSQL,
+			_postgres.WithDatabase("test_postgres"),
+			_postgres.WithUsername("test_postgres"),
+			_postgres.WithPassword("test_postgres"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").
+					WithOccurrence(2).
+					WithStartupTimeout(60*time.Second)),
+		)
+		c.stopPostgresContainer = func() error {
+			return testcontainers.TerminateContainer(postgresContainer)
+		}
+		if err != nil {
+			t.Fatalf("cannot start the PostgreSQL container: %s", err)
+		}
+		postgresHost, err := postgresContainer.Host(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		postgresPort, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testsSettings.Database.Host = postgresHost
+		testsSettings.Database.Port = postgresPort.Int()
 	}
-	if err != nil {
-		t.Fatalf("cannot start the PostgreSQL container: %s", err)
-	}
-	postgresPort, err := postgresContainer.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testsSettings.Database.Port = postgresPort.Int()
 
-	// Start the warehouse container.
-	warehouseContainer, err := _postgres.Run(ctx,
-		testimages.PostgreSQL,
-		_postgres.WithDatabase("test_warehouse"),
-		_postgres.WithUsername("test_warehouse"),
-		_postgres.WithPassword("test_warehouse"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
-	)
-	c.stopWarehouseContainer = func() error {
-		return testcontainers.TerminateContainer(warehouseContainer)
+	// Start the warehouse container and set the global test settings.
+	{
+		warehouseContainer, err := _postgres.Run(ctx,
+			testimages.PostgreSQL,
+			_postgres.WithDatabase("test_warehouse"),
+			_postgres.WithUsername("test_warehouse"),
+			_postgres.WithPassword("test_warehouse"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").
+					WithOccurrence(2).
+					WithStartupTimeout(60*time.Second)),
+		)
+		c.stopWarehouseContainer = func() error {
+			return testcontainers.TerminateContainer(warehouseContainer)
+		}
+		if err != nil {
+			t.Fatalf("cannot start the warehouse container: %s", err)
+		}
+		warehouseHost, err := warehouseContainer.Host(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testsSettings.Warehouse.Host = warehouseHost
+		testsSettings.Warehouse.Port = warehousePort.Int()
 	}
-	if err != nil {
-		t.Fatalf("cannot start the warehouse container: %s", err)
-	}
-	warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testsSettings.Warehouse.Port = warehousePort.Int()
 
 	// Initialize the PostgreSQL database.
 	err = initializePostgreSQLDatabase(ctx, testsSettings.Database)

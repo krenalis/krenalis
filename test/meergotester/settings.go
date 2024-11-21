@@ -8,12 +8,7 @@
 package meergotester
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 )
 
 type TestsSettings struct {
@@ -48,59 +43,27 @@ func PostgresWarehouseSettings() []byte {
 
 var testsSettings *TestsSettings
 
-// loadTestConfig loads the tests configuration from the file
-// "meergo-tests.json", if not already loaded.
-//
-// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
-func loadTestConfig() error {
-
-	if testsSettings != nil {
-		return nil
+func init() {
+	testsSettings = &TestsSettings{
+		MeergoHost: "127.0.0.1:9091",
+		Database: &DBSettings{
+			// Host and Port will be set when PostgreSQL container starts.
+			Database: "test_postgres",
+			Username: "test_postgres",
+			Password: "test_postgres",
+			Schema:   "public",
+		},
+		PythonExecutable: "python3",
+		WarehouseName:    "PostgreSQL",
+		Warehouse: &DBSettings{
+			// Host and Port will be set when warehouse container starts.
+			Database: "test_warehouse",
+			Username: "test_warehouse",
+			Password: "test_warehouse",
+			Schema:   "public",
+		},
 	}
-
-	absFilename, _ := filepath.Abs("meergo-tests.json")
-	f, err := os.Open("meergo-tests.json")
-	if err != nil {
-		return fmt.Errorf("cannot load JSON file %q: %s", absFilename, err)
-	}
-	defer f.Close()
-	var setts *TestsSettings
-	err = json.NewDecoder(f).Decode(&setts)
-	if err != nil {
-		return fmt.Errorf("cannot decode JSON from %q: %s", absFilename, err)
-	}
-
-	if setts.MeergoHost == "" {
-		return errors.New("missing value for 'MeergoHost'")
-	}
-	if setts.PythonExecutable == "" {
-		return errors.New("missing value for 'PythonExecutable'")
-	}
-	if setts.WarehouseName == "" {
-		return errors.New("missing value for 'WarehouseName'")
-	}
-	if setts.WarehouseName != "PostgreSQL" {
-		return errors.New("currently only the PostgreSQL warehouse is supported by the tests")
-	}
-
-	setts.MeergoHost = strings.TrimRight(setts.MeergoHost, "/")
-
-	// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
-	setts.Database.Database = "test_postgres"
-	setts.Database.Username = "test_postgres"
-	setts.Database.Password = "test_postgres"
-
-	// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
-	setts.Warehouse.Database = "test_warehouse"
-	setts.Warehouse.Username = "test_warehouse"
-	setts.Warehouse.Password = "test_warehouse"
-
-	// TODO(Gianluca): this can be simplified. See https://github.com/meergo/meergo/issues/1154.
 	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
-		setts.PythonExecutable = pythonPath
+		testsSettings.PythonExecutable = pythonPath
 	}
-
-	testsSettings = setts
-
-	return nil
 }
