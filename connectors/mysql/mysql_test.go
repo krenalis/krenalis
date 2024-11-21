@@ -90,6 +90,7 @@ func Test_Merge_Query(t *testing.T) {
 		password = "meergo"
 	)
 	var mysqlContainer testcontainers.Container
+	ctx := context.Background()
 	{
 		// Note that a generic container is used here instead of:
 		//
@@ -115,7 +116,6 @@ func Test_Merge_Query(t *testing.T) {
 			Started:          true,
 		}
 		var err error
-		ctx := context.Background()
 		mysqlContainer, err = testcontainers.GenericContainer(ctx, genericContainerReq)
 		if err != nil {
 			t.Fatal(err)
