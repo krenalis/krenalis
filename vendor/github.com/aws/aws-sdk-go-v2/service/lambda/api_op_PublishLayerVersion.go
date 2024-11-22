@@ -84,9 +84,12 @@ type PublishLayerVersionOutput struct {
 
 	// The layer's compatible runtimes.
 	//
-	// The following list includes deprecated runtimes. For more information, see [Runtime deprecation policy].
+	// The following list includes deprecated runtimes. For more information, see [Runtime use after deprecation].
 	//
-	// [Runtime deprecation policy]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy
+	// For a list of all currently supported runtimes, see [Supported runtimes].
+	//
+	// [Runtime use after deprecation]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-deprecation-levels
+	// [Supported runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 	CompatibleRuntimes []types.Runtime
 
 	// Details about the layer version.
@@ -161,6 +164,9 @@ func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.St
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -198,6 +204,18 @@ func (c *Client) addOperationPublishLayerVersionMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

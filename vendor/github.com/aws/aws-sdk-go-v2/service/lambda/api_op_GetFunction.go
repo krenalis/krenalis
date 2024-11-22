@@ -12,7 +12,7 @@ import (
 	smithytime "github.com/aws/smithy-go/time"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	smithywaiter "github.com/aws/smithy-go/waiter"
-	"github.com/jmespath/go-jmespath"
+	jmespath "github.com/jmespath/go-jmespath"
 	"time"
 )
 
@@ -73,10 +73,15 @@ type GetFunctionOutput struct {
 	// The configuration of the function or version.
 	Configuration *types.FunctionConfiguration
 
-	// The function's [tags].
+	// The function's [tags]. Lambda returns tag data only if you have explicit allow
+	// permissions for [lambda:ListTags].
 	//
+	// [lambda:ListTags]: https://docs.aws.amazon.com/lambda/latest/api/API_ListTags.html
 	// [tags]: https://docs.aws.amazon.com/lambda/latest/dg/tagging.html
 	Tags map[string]string
+
+	// An object that contains details about an error related to retrieving tags.
+	TagsError *types.TagsError
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -127,6 +132,9 @@ func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, opt
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -164,6 +172,18 @@ func (c *Client) addOperationGetFunctionMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

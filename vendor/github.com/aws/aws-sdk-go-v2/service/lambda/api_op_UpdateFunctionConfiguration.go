@@ -26,7 +26,7 @@ import (
 // only the unpublished version.
 //
 // To configure function concurrency, use PutFunctionConcurrency. To grant invoke permissions to an
-// Amazon Web Services account or Amazon Web Service, use AddPermission.
+// Amazon Web Services account or Amazon Web Services service, use AddPermission.
 //
 // [Lambda function states]: https://docs.aws.amazon.com/lambda/latest/dg/functions-states.html
 func (c *Client) UpdateFunctionConfiguration(ctx context.Context, params *UpdateFunctionConfigurationInput, optFns ...func(*Options)) (*UpdateFunctionConfigurationOutput, error) {
@@ -98,15 +98,28 @@ type UpdateFunctionConfigurationInput struct {
 	ImageConfig *types.ImageConfig
 
 	// The ARN of the Key Management Service (KMS) customer managed key that's used to
-	// encrypt your function's [environment variables]. When [Lambda SnapStart] is activated, Lambda also uses this key is to
-	// encrypt your function's snapshot. If you deploy your function using a container
-	// image, Lambda also uses this key to encrypt your function when it's deployed.
-	// Note that this is not the same key that's used to protect your container image
-	// in the Amazon Elastic Container Registry (Amazon ECR). If you don't provide a
-	// customer managed key, Lambda uses a default service key.
+	// encrypt the following resources:
 	//
+	//   - The function's [environment variables].
+	//
+	//   - The function's [Lambda SnapStart]snapshots.
+	//
+	//   - When used with SourceKMSKeyArn , the unzipped version of the .zip deployment
+	//   package that's used for function invocations. For more information, see [Specifying a customer managed key for Lambda].
+	//
+	//   - The optimized version of the container image that's used for function
+	//   invocations. Note that this is not the same key that's used to protect your
+	//   container image in the Amazon Elastic Container Registry (Amazon ECR). For more
+	//   information, see [Function lifecycle].
+	//
+	// If you don't provide a customer managed key, Lambda uses an [Amazon Web Services owned key] or an [Amazon Web Services managed key].
+	//
+	// [Amazon Web Services owned key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-owned-cmk
+	// [Specifying a customer managed key for Lambda]: https://docs.aws.amazon.com/lambda/latest/dg/encrypt-zip-package.html#enable-zip-custom-encryption
 	// [Lambda SnapStart]: https://docs.aws.amazon.com/lambda/latest/dg/snapstart-security.html
 	// [environment variables]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-encryption
+	// [Function lifecycle]: https://docs.aws.amazon.com/lambda/latest/dg/images-create.html#images-lifecycle
+	// [Amazon Web Services managed key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-managed-cmk
 	KMSKeyArn *string
 
 	// A list of [function layers] to add to the function's execution environment. Specify each layer
@@ -134,12 +147,18 @@ type UpdateFunctionConfigurationInput struct {
 	Role *string
 
 	// The identifier of the function's [runtime]. Runtime is required if the deployment
-	// package is a .zip file archive.
+	// package is a .zip file archive. Specifying a runtime results in an error if
+	// you're deploying a function using a container image.
 	//
-	// The following list includes deprecated runtimes. For more information, see [Runtime deprecation policy].
+	// The following list includes deprecated runtimes. Lambda blocks creating new
+	// functions and updating existing functions shortly after each runtime is
+	// deprecated. For more information, see [Runtime use after deprecation].
 	//
+	// For a list of all currently supported runtimes, see [Supported runtimes].
+	//
+	// [Runtime use after deprecation]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-deprecation-levels
 	// [runtime]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
-	// [Runtime deprecation policy]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy
+	// [Supported runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 	Runtime types.Runtime
 
 	// The function's [SnapStart] setting.
@@ -218,12 +237,29 @@ type UpdateFunctionConfigurationOutput struct {
 	// The function's image configuration values.
 	ImageConfigResponse *types.ImageConfigResponse
 
-	// The KMS key that's used to encrypt the function's [environment variables]. When [Lambda SnapStart] is activated, this
-	// key is also used to encrypt the function's snapshot. This key is returned only
-	// if you've configured a customer managed key.
+	// The ARN of the Key Management Service (KMS) customer managed key that's used to
+	// encrypt the following resources:
 	//
+	//   - The function's [environment variables].
+	//
+	//   - The function's [Lambda SnapStart]snapshots.
+	//
+	//   - When used with SourceKMSKeyArn , the unzipped version of the .zip deployment
+	//   package that's used for function invocations. For more information, see [Specifying a customer managed key for Lambda].
+	//
+	//   - The optimized version of the container image that's used for function
+	//   invocations. Note that this is not the same key that's used to protect your
+	//   container image in the Amazon Elastic Container Registry (Amazon ECR). For more
+	//   information, see [Function lifecycle].
+	//
+	// If you don't provide a customer managed key, Lambda uses an [Amazon Web Services owned key] or an [Amazon Web Services managed key].
+	//
+	// [Amazon Web Services owned key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-owned-cmk
+	// [Specifying a customer managed key for Lambda]: https://docs.aws.amazon.com/lambda/latest/dg/encrypt-zip-package.html#enable-zip-custom-encryption
 	// [Lambda SnapStart]: https://docs.aws.amazon.com/lambda/latest/dg/snapstart-security.html
 	// [environment variables]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-encryption
+	// [Function lifecycle]: https://docs.aws.amazon.com/lambda/latest/dg/images-create.html#images-lifecycle
+	// [Amazon Web Services managed key]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#aws-managed-cmk
 	KMSKeyArn *string
 
 	// The date and time that the function was last updated, in [ISO-8601 format]
@@ -267,12 +303,18 @@ type UpdateFunctionConfigurationOutput struct {
 	Role *string
 
 	// The identifier of the function's [runtime]. Runtime is required if the deployment
-	// package is a .zip file archive.
+	// package is a .zip file archive. Specifying a runtime results in an error if
+	// you're deploying a function using a container image.
 	//
-	// The following list includes deprecated runtimes. For more information, see [Runtime deprecation policy].
+	// The following list includes deprecated runtimes. Lambda blocks creating new
+	// functions and updating existing functions shortly after each runtime is
+	// deprecated. For more information, see [Runtime use after deprecation].
 	//
+	// For a list of all currently supported runtimes, see [Supported runtimes].
+	//
+	// [Runtime use after deprecation]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-deprecation-levels
 	// [runtime]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
-	// [Runtime deprecation policy]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtime-support-policy
+	// [Supported runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 	Runtime types.Runtime
 
 	// The ARN of the runtime and any errors that occured.
@@ -364,6 +406,9 @@ func (c *Client) addOperationUpdateFunctionConfigurationMiddlewares(stack *middl
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -401,6 +446,18 @@ func (c *Client) addOperationUpdateFunctionConfigurationMiddlewares(stack *middl
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

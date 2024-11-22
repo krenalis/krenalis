@@ -15,8 +15,8 @@ import (
 // doesn't require the user to have explicit permissions for DeleteAlias.
 //
 // To delete Lambda event source mappings that invoke a function, use DeleteEventSourceMapping. For Amazon
-// Web Services and resources that invoke your function directly, delete the
-// trigger in the service where you originally configured it.
+// Web Services services and resources that invoke your function directly, delete
+// the trigger in the service where you originally configured it.
 func (c *Client) DeleteFunction(ctx context.Context, params *DeleteFunctionInput, optFns ...func(*Options)) (*DeleteFunctionOutput, error) {
 	if params == nil {
 		params = &DeleteFunctionInput{}
@@ -108,6 +108,9 @@ func (c *Client) addOperationDeleteFunctionMiddlewares(stack *middleware.Stack, 
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -145,6 +148,18 @@ func (c *Client) addOperationDeleteFunctionMiddlewares(stack *middleware.Stack, 
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

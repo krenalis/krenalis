@@ -23,10 +23,14 @@ import (
 // queue for too long, Lambda discards it. To retain discarded events, configure a
 // dead-letter queue with UpdateFunctionConfiguration.
 //
-// To send an invocation record to a queue, topic, function, or event bus, specify
-// a [destination]. You can configure separate destinations for successful invocations
-// (on-success) and events that fail all processing attempts (on-failure). You can
-// configure destinations in addition to or instead of a dead-letter queue.
+// To send an invocation record to a queue, topic, S3 bucket, function, or event
+// bus, specify a [destination]. You can configure separate destinations for successful
+// invocations (on-success) and events that fail all processing attempts
+// (on-failure). You can configure destinations in addition to or instead of a
+// dead-letter queue.
+//
+// S3 buckets are supported only for on-failure destinations. To retain records of
+// successful invocations, use another destination type.
 //
 // [asynchronous invocation]: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html
 // [destination]: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html#invocation-async-destinations
@@ -72,9 +76,14 @@ type PutFunctionEventInvokeConfigInput struct {
 	//
 	//   - Queue - The ARN of a standard SQS queue.
 	//
+	//   - Bucket - The ARN of an Amazon S3 bucket.
+	//
 	//   - Topic - The ARN of a standard SNS topic.
 	//
 	//   - Event Bus - The ARN of an Amazon EventBridge event bus.
+	//
+	// S3 buckets are supported only for on-failure destinations. To retain records of
+	// successful invocations, use another destination type.
 	DestinationConfig *types.DestinationConfig
 
 	// The maximum age of a request that Lambda sends to a function for processing.
@@ -99,9 +108,14 @@ type PutFunctionEventInvokeConfigOutput struct {
 	//
 	//   - Queue - The ARN of a standard SQS queue.
 	//
+	//   - Bucket - The ARN of an Amazon S3 bucket.
+	//
 	//   - Topic - The ARN of a standard SNS topic.
 	//
 	//   - Event Bus - The ARN of an Amazon EventBridge event bus.
+	//
+	// S3 buckets are supported only for on-failure destinations. To retain records of
+	// successful invocations, use another destination type.
 	DestinationConfig *types.DestinationConfig
 
 	// The Amazon Resource Name (ARN) of the function.
@@ -165,6 +179,9 @@ func (c *Client) addOperationPutFunctionEventInvokeConfigMiddlewares(stack *midd
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -202,6 +219,18 @@ func (c *Client) addOperationPutFunctionEventInvokeConfigMiddlewares(stack *midd
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

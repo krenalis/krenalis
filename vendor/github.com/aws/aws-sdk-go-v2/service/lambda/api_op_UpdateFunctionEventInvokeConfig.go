@@ -58,9 +58,14 @@ type UpdateFunctionEventInvokeConfigInput struct {
 	//
 	//   - Queue - The ARN of a standard SQS queue.
 	//
+	//   - Bucket - The ARN of an Amazon S3 bucket.
+	//
 	//   - Topic - The ARN of a standard SNS topic.
 	//
 	//   - Event Bus - The ARN of an Amazon EventBridge event bus.
+	//
+	// S3 buckets are supported only for on-failure destinations. To retain records of
+	// successful invocations, use another destination type.
 	DestinationConfig *types.DestinationConfig
 
 	// The maximum age of a request that Lambda sends to a function for processing.
@@ -85,9 +90,14 @@ type UpdateFunctionEventInvokeConfigOutput struct {
 	//
 	//   - Queue - The ARN of a standard SQS queue.
 	//
+	//   - Bucket - The ARN of an Amazon S3 bucket.
+	//
 	//   - Topic - The ARN of a standard SNS topic.
 	//
 	//   - Event Bus - The ARN of an Amazon EventBridge event bus.
+	//
+	// S3 buckets are supported only for on-failure destinations. To retain records of
+	// successful invocations, use another destination type.
 	DestinationConfig *types.DestinationConfig
 
 	// The Amazon Resource Name (ARN) of the function.
@@ -151,6 +161,9 @@ func (c *Client) addOperationUpdateFunctionEventInvokeConfigMiddlewares(stack *m
 	if err = addRecordResponseTiming(stack); err != nil {
 		return err
 	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
+		return err
+	}
 	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
@@ -188,6 +201,18 @@ func (c *Client) addOperationUpdateFunctionEventInvokeConfigMiddlewares(stack *m
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

@@ -1,3 +1,128 @@
+# v1.68.0 (2024-11-21)
+
+* **Feature**: Adds support for metrics for event source mappings for AWS Lambda
+
+# v1.67.0 (2024-11-20)
+
+* **Feature**: Add Node 22.x (node22.x) support to AWS Lambda
+
+# v1.66.1 (2024-11-18)
+
+* **Dependency Update**: Update to smithy-go v1.22.1.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.66.0 (2024-11-11)
+
+* **Feature**: Add Python 3.13 (python3.13) support to AWS Lambda
+
+# v1.65.0 (2024-11-08)
+
+* **Feature**: This release adds support for using AWS KMS customer managed keys to encrypt AWS Lambda .zip deployment packages.
+
+# v1.64.3 (2024-11-07)
+
+* **Bug Fix**: Adds case-insensitive handling of error message fields in service responses
+
+# v1.64.2 (2024-11-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.64.1 (2024-10-28)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.64.0 (2024-10-25)
+
+* **Feature**: Add TagsError field in Lambda GetFunctionResponse. The TagsError field contains details related to errors retrieving tags.
+
+# v1.63.2 (2024-10-08)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.63.1 (2024-10-07)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.63.0 (2024-10-04)
+
+* **Feature**: Add support for HTTP client metrics.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.62.2 (2024-10-03)
+
+* No change notes available for this release.
+
+# v1.62.1 (2024-09-27)
+
+* No change notes available for this release.
+
+# v1.62.0 (2024-09-26)
+
+* **Feature**: Reverting Lambda resource-based policy and block public access APIs.
+
+# v1.61.2 (2024-09-25)
+
+* No change notes available for this release.
+
+# v1.61.1 (2024-09-23)
+
+* No change notes available for this release.
+
+# v1.61.0 (2024-09-20)
+
+* **Feature**: Add tracing and metrics support to service clients.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.60.0 (2024-09-19)
+
+* **Feature**: Tagging support for Lambda event source mapping, and code signing configuration resources.
+
+# v1.59.0 (2024-09-17)
+
+* **Feature**: Support for JSON resource-based policies and block public access
+* **Bug Fix**: **BREAKFIX**: Only generate AccountIDEndpointMode config for services that use it. This is a compiler break, but removes no actual functionality, as no services currently use the account ID in endpoint resolution.
+
+# v1.58.3 (2024-09-04)
+
+* No change notes available for this release.
+
+# v1.58.2 (2024-09-03)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.58.1 (2024-08-22)
+
+* No change notes available for this release.
+
+# v1.58.0 (2024-08-21)
+
+* **Feature**: Release FilterCriteria encryption for Lambda EventSourceMapping,  enabling customers to encrypt their filter criteria using a customer-owned KMS key.
+
+# v1.57.0 (2024-08-19)
+
+* **Feature**: Release Lambda FunctionRecursiveConfig, enabling customers to turn recursive loop detection on or off on individual functions. This release adds two new APIs, GetFunctionRecursionConfig and PutFunctionRecursionConfig.
+
+# v1.56.4 (2024-08-15)
+
+* **Dependency Update**: Bump minimum Go version to 1.21.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.56.3 (2024-07-10.2)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.56.2 (2024-07-10)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.56.1 (2024-06-28)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.56.0 (2024-06-26)
+
+* **Feature**: Support list-of-string endpoint parameter.
+
 # v1.55.1 (2024-06-19)
 
 * **Dependency Update**: Updated to the latest SDK module versions

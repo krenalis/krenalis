@@ -84,6 +84,23 @@ func (EndPointType) Values() []EndPointType {
 	}
 }
 
+type EventSourceMappingMetric string
+
+// Enum values for EventSourceMappingMetric
+const (
+	EventSourceMappingMetricEventCount EventSourceMappingMetric = "EventCount"
+)
+
+// Values returns all known values for EventSourceMappingMetric. Note that this
+// can be expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (EventSourceMappingMetric) Values() []EventSourceMappingMetric {
+	return []EventSourceMappingMetric{
+		"EventCount",
+	}
+}
+
 type EventSourcePosition string
 
 // Enum values for EventSourcePosition
@@ -374,6 +391,25 @@ func (ProvisionedConcurrencyStatusEnum) Values() []ProvisionedConcurrencyStatusE
 	}
 }
 
+type RecursiveLoop string
+
+// Enum values for RecursiveLoop
+const (
+	RecursiveLoopAllow     RecursiveLoop = "Allow"
+	RecursiveLoopTerminate RecursiveLoop = "Terminate"
+)
+
+// Values returns all known values for RecursiveLoop. Note that this can be
+// expanded in the future, and so it is only as up to date as the client.
+//
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (RecursiveLoop) Values() []RecursiveLoop {
+	return []RecursiveLoop{
+		"Allow",
+		"Terminate",
+	}
+}
+
 type ResponseStreamingInvocationType string
 
 // Enum values for ResponseStreamingInvocationType
@@ -436,6 +472,8 @@ const (
 	RuntimeProvidedal2023 Runtime = "provided.al2023"
 	RuntimePython312      Runtime = "python3.12"
 	RuntimeJava21         Runtime = "java21"
+	RuntimePython313      Runtime = "python3.13"
+	RuntimeNodejs22x      Runtime = "nodejs22.x"
 )
 
 // Values returns all known values for Runtime. Note that this can be expanded in
@@ -482,6 +520,8 @@ func (Runtime) Values() []Runtime {
 		"provided.al2023",
 		"python3.12",
 		"java21",
+		"python3.13",
+		"nodejs22.x",
 	}
 }
 
