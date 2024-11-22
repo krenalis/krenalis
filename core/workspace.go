@@ -1295,39 +1295,25 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	return nil
 }
 
-// ResolveIdentities resolves the identities of the workspace by creating and
-// starting an Identity Resolution operation.
+// StartIdentityResolution starts an Identity Resolution operation that resolves
+// the identities of the workspace.
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - AlterSchemaInProgress, if an alter schema operation is currently in
-//     in progresso on the data warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
-//   - IdentityResolutionInProgress, if an Identity Resolution is already in
-//     progress on the warehouse.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) ResolveIdentities(ctx context.Context) error {
+func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 	this.core.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Workspace.ResolveIdentities", "workspace_id", this.workspace.ID)
+	ctx, span := telemetry.TraceSpan(ctx, "Workspace.StartIdentityResolution", "workspace_id", this.workspace.ID)
 	defer span.End()
-	telemetry.IncrementCounter(ctx, "ResolveIdentitiesExecutions", 1)
-	err := this.store.ResolveIdentities(ctx)
+	telemetry.IncrementCounter(ctx, "IdentityResolutionExecutions", 1)
+	err := this.store.StartIdentityResolution(ctx)
 	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		if err == datastore.ErrAlterInProgress {
-			return errors.Unprocessable(AlterSchemaInProgress, "an alter schema operation is in progress on the data warehouse")
-		}
 		if err == datastore.ErrInspectionMode {
 			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 		}
 		if err == datastore.ErrMaintenanceMode {
 			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		if err == datastore.ErrIdentityResolutionInProgress {
-			return errors.Unprocessable(IdentityResolutionInProgress, "the Identity Resolution is already running on the data warehouse")
 		}
 		return err
 	}

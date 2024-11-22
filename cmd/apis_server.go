@@ -139,7 +139,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /api/workspaces/{workspace}/connections/{connection}/ui-event":                           connection.ServeUI,
 		"POST   /api/workspaces/{workspace}/event-listeners":                                             workspace.AddEventListener,
 		"POST   /api/workspaces/{workspace}/events":                                                      workspace.Events,
-		"POST   /api/workspaces/{workspace}/identity-resolutions":                                        workspace.ResolveIdentities,
+		"POST   /api/workspaces/{workspace}/identity-resolutions":                                        workspace.StartIdentityResolution,
 		"POST   /api/workspaces/{workspace}/oauth-token":                                                 workspace.OAuthToken,
 		"POST   /api/workspaces/{workspace}/ui":                                                          workspace.ServeUI,
 		"POST   /api/workspaces/{workspace}/ui-event":                                                    workspace.ServeUI,

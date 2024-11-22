@@ -1,5 +1,4 @@
 import React, { useContext, useState, useEffect } from 'react';
-import * as icons from '../../../constants/icons';
 import UsersContext from '../../../context/UsersContext';
 import Toolbar from '../../base/Toolbar/Toolbar';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -25,7 +24,7 @@ const UsersList = () => {
 	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
 	const [lastIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 
-	const { api, handleError, showStatus } = useContext(AppContext);
+	const { api, handleError } = useContext(AppContext);
 	const { users, usersCount, usersProperties, isLoading, fetchUsers } = useContext(UsersContext);
 	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: string) =>
 		setSelectedUser(id),
@@ -86,13 +85,13 @@ const UsersList = () => {
 		fetchUsers();
 	};
 
-	const onResolveIdentities = async () => {
+	const onStartIdentityResolution = async () => {
 		setIsLoadingIdentityResolution(true);
 		setAskResolveIdentitiesConfirmation(false);
 		setSecondsSinceIRStart(undefined);
 		setLastIRExecutionEnd(undefined);
 		try {
-			await api.workspaces.resolveIdentities();
+			await api.workspaces.startIdentityResolution();
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
@@ -101,7 +100,6 @@ const UsersList = () => {
 			return;
 		}
 		setTimeout(() => {
-			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity resolution completed successfully' });
 			setIsLoadingIdentityResolution(false);
 			handleIdentityResolutionExecution();
 			fetchUsers();
@@ -169,7 +167,7 @@ const UsersList = () => {
 						actions={
 							<>
 								<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
-								<SlButton variant='primary' onClick={onResolveIdentities}>
+								<SlButton variant='primary' onClick={onStartIdentityResolution}>
 									Run identity resolution
 								</SlButton>
 							</>

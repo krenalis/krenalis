@@ -675,13 +675,14 @@ func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Reques
 	return nil, err
 }
 
-// ResolveIdentities resolves the identities of a workspace.
-func (workspace workspace) ResolveIdentities(_ http.ResponseWriter, r *http.Request) (any, error) {
+// StartIdentityResolution starts an Identity Resolution operation that resolves
+// the identities of the workspace.
+func (workspace workspace) StartIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	err = ws.ResolveIdentities(r.Context())
+	err = ws.StartIdentityResolution(r.Context())
 	return nil, err
 }
 

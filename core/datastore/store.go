@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -560,26 +561,21 @@ func (store *Store) Repair(ctx context.Context) error {
 	return store.warehouse().Repair(ctx)
 }
 
-// ResolveIdentities resolves the identities of the store's workspace.
+// StartIdentityResolution starts an Identity Resolution on the store's
+// workspace.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-//
-// If an Identity Resolution is already in execution, returns an
-// IdentityResolutionInProgress error.
-//
-// If an alter schema operation is in progress on the data warehouse, returns a
-// AlterSchemaInProgress error.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) ResolveIdentities(ctx context.Context) error {
+func (store *Store) StartIdentityResolution(ctx context.Context) error {
 	store.mustBeOpen()
 
-	ctx, span := telemetry.TraceSpan(ctx, "Store.ResolveIdentities")
+	ctx, span := telemetry.TraceSpan(ctx, "Store.StartIdentityResolution")
 	defer span.End()
 
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	// TODO(Gianluca): the context here is discarded, rather than passed to the
+	// actual IR execution. See issue
+	// https://github.com/meergo/meergo/issues/1162.
+	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err
 	}
@@ -615,7 +611,18 @@ func (store *Store) ResolveIdentities(ctx context.Context) error {
 		userPrimarySources[c] = s
 	}
 
-	return store.warehouse().ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources)
+	// Resolve the identities in a separate goroutine.
+	go func() {
+		// TODO(Gianluca): The Background context is used here, since the store
+		// does not provide any. See issue
+		// https://github.com/meergo/meergo/issues/1162.
+		err := store.warehouse().ResolveIdentities(context.Background(), identifiers, userColumns, userPrimarySources)
+		if err != nil {
+			slog.Error("the execution of the Identity Resolution failed", "workspace", store.workspace, "err", err)
+		}
+	}()
+
+	return nil
 }
 
 // UserIdentities returns the user identities according to the provided query.

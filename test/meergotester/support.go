@@ -400,6 +400,9 @@ func (c *Meergo) RepairWarehouse() {
 func (c *Meergo) ResolveIdentities() {
 	method := fmt.Sprintf("/api/workspaces/%d/identity-resolutions", c.ws)
 	c.MustCall("POST", method, nil, nil)
+	// TODO(Gianluca): a timeout is used here until we implement a reliable
+	// mechanism to check the current status of Identity Resolution.
+	time.Sleep(3 * time.Second)
 }
 
 func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {

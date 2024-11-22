@@ -14,7 +14,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/meergo/meergo/core/datastore"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
@@ -177,12 +176,12 @@ func (this *Action) exec(ctx context.Context) {
 			)
 		}
 
-		// Resolve the identities, if necessary.
+		// Start the Identity Resolution, if necessary.
 		ws := this.action.Connection().Workspace()
 		if actionImportedUsers && ws.ResolveIdentitiesOnBatchImport {
-			err = this.connection.store.ResolveIdentities(ctx)
-			if err != nil && err != datastore.ErrIdentityResolutionInProgress {
-				slog.Error("error while resolving identities at the end of user import", "err", err)
+			err = this.connection.store.StartIdentityResolution(ctx)
+			if err != nil {
+				slog.Error("cannot start Identity Resolution at the end of import", "action", this.action.ID, "execution", execution.ID, "err", err)
 				return
 			}
 		}
