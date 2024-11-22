@@ -79,7 +79,6 @@ const PropertyDialog = ({
 	const bitSizeSelectRef = useRef<any>();
 	const precisionInputRef = useRef<any>();
 	const elementTypeSelectRef = useRef<any>();
-	const valueTypeSelectRef = useRef<any>();
 	const byteLengthInputRef = useRef<any>();
 	const charLengthInputRef = useRef<any>();
 
@@ -146,8 +145,8 @@ const PropertyDialog = ({
 			setTimeout(() => elementTypeSelectRef.current?.focus(), 50);
 		}
 		if (typeName === 'Map') {
-			typ.valueType = { name: '' };
-			setTimeout(() => valueTypeSelectRef.current?.focus(), 50);
+			typ.elementType = { name: '' };
+			setTimeout(() => elementTypeSelectRef.current?.focus(), 50);
 		}
 		p.nullable = false;
 		p.type = typ;
@@ -169,9 +168,9 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.name === 'Map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.valueType as IntType | UintType | FloatType;
+			const valueTyp = typ.elementType as IntType | UintType | FloatType;
 			valueTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
-			typ.valueType = valueTyp;
+			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as IntType | UintType | FloatType;
@@ -191,9 +190,9 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.name === 'Map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.valueType as DecimalType;
+			const valueTyp = typ.elementType as DecimalType;
 			valueTyp.precision = Number(e.target.value);
-			typ.valueType = valueTyp;
+			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as DecimalType;
@@ -216,9 +215,9 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.name === 'Map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.valueType as DecimalType;
+			const valueTyp = typ.elementType as DecimalType;
 			valueTyp.scale = Number(e.target.value);
-			typ.valueType = valueTyp;
+			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as DecimalType;
@@ -241,9 +240,9 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.name === 'Map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.valueType as FloatType;
+			const valueTyp = typ.elementType as FloatType;
 			valueTyp.real = !valueTyp.real;
-			typ.valueType = valueTyp;
+			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as FloatType;
@@ -273,7 +272,7 @@ const PropertyDialog = ({
 		if (p.type.name === 'Array') {
 			(p.type as ArrayType).elementType = typ;
 		} else {
-			(p.type as MapType).valueType = typ;
+			(p.type as MapType).elementType = typ;
 		}
 		setProperty(p);
 		if (typeError !== '') {
@@ -317,13 +316,13 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.name === 'Map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.valueType as TextType;
+			const valueTyp = typ.elementType as TextType;
 			if (length == null) {
 				delete valueTyp.byteLen;
 			} else {
 				valueTyp.byteLen = length;
 			}
-			typ.valueType = valueTyp;
+			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as TextType;
@@ -355,13 +354,13 @@ const PropertyDialog = ({
 			p.type = typ;
 		} else if (p.type.name === 'Map') {
 			const typ = p.type as MapType;
-			const valueTyp = typ.valueType as TextType;
+			const valueTyp = typ.elementType as TextType;
 			if (length == null) {
 				delete valueTyp.charLen;
 			} else {
 				valueTyp.charLen = length;
 			}
-			typ.valueType = valueTyp;
+			typ.elementType = valueTyp;
 			p.type = typ;
 		} else {
 			const typ = p.type as TextType;
@@ -423,13 +422,13 @@ const PropertyDialog = ({
 		if (
 			property.type.name === 'Decimal' ||
 			(property.type.name === 'Array' && (property.type as ArrayType).elementType.name === 'Decimal') ||
-			(property.type.name === 'Map' && (property.type as MapType).valueType.name === 'Decimal')
+			(property.type.name === 'Map' && (property.type as MapType).elementType.name === 'Decimal')
 		) {
 			const typ: DecimalType = (
 				property.type.name === 'Array'
 					? property.type.elementType
 					: property.type.name === 'Map'
-						? property.type.valueType
+						? property.type.elementType
 						: property.type
 			) as DecimalType;
 			const err = checkDecimalType(typ);
@@ -463,12 +462,12 @@ const PropertyDialog = ({
 		const hasBitSize =
 			hasBitSizeConstraint(property.type.name) ||
 			(isArray && hasBitSizeConstraint((property.type as ArrayType).elementType.name)) ||
-			(isMap && hasBitSizeConstraint((property.type as MapType).valueType.name));
+			(isMap && hasBitSizeConstraint((property.type as MapType).elementType.name));
 		if (hasBitSize) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
 				: isMap
-					? (property.type as MapType).valueType
+					? (property.type as MapType).elementType
 					: property.type;
 			bitSizeSection = (
 				<SlSelect
@@ -503,12 +502,12 @@ const PropertyDialog = ({
 		const hasDecimal =
 			property.type.name === 'Decimal' ||
 			(isArray && (property.type as ArrayType).elementType.name === 'Decimal') ||
-			(isMap && (property.type as MapType).valueType.name === 'Decimal');
+			(isMap && (property.type as MapType).elementType.name === 'Decimal');
 		if (hasDecimal) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
 				: isMap
-					? (property.type as MapType).valueType
+					? (property.type as MapType).elementType
 					: property.type;
 			precisionSection = (
 				<SlInput
@@ -545,12 +544,12 @@ const PropertyDialog = ({
 		const hasFloat =
 			property.type.name === 'Float' ||
 			(isArray && (property.type as ArrayType).elementType.name === 'Float') ||
-			(isMap && (property.type as MapType).valueType.name === 'Float');
+			(isMap && (property.type as MapType).elementType.name === 'Float');
 		if (hasFloat) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
 				: isMap
-					? (property.type as MapType).valueType
+					? (property.type as MapType).elementType
 					: property.type;
 			realSection = (
 				<SlCheckbox
@@ -572,12 +571,12 @@ const PropertyDialog = ({
 		const hasText =
 			property.type.name === 'Text' ||
 			(isArray && (property.type as ArrayType).elementType.name === 'Text') ||
-			(isMap && (property.type as MapType).valueType.name === 'Text');
+			(isMap && (property.type as MapType).elementType.name === 'Text');
 		if (hasText) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
 				: isMap
-					? (property.type as MapType).valueType
+					? (property.type as MapType).elementType
 					: property.type;
 			const byteLengthSection = (
 				<>
@@ -703,14 +702,14 @@ const PropertyDialog = ({
 									</span>
 								)}
 								{property.type?.name === 'Map' && (
-									<span className='property-dialog__valuetype-section'>
+									<span className='property-dialog__elementype-section'>
 										<SlSelect
-											className='property-dialog__valuetype'
-											ref={valueTypeSelectRef}
+											className='property-dialog__elementype'
+											ref={elementTypeSelectRef}
 											size='small'
 											label='of'
 											name='value-type'
-											value={property.type?.valueType?.name}
+											value={property.type?.elementType?.name}
 											onSlChange={onChangeAssociatedType}
 											hoist={true}
 										>

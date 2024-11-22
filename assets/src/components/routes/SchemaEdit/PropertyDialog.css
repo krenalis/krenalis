@@ -29,32 +29,32 @@
 }
 
 .property-dialog__elementtype-section,
-.property-dialog__valuetype-section {
+.property-dialog__elementype-section {
 	margin-top: 30px;
 }
 
 .property-dialog__type-select sl-option sl-icon,
 .property-dialog__elementtype-section sl-option sl-icon,
-.property-dialog__valuetype-section sl-option sl-icon {
+.property-dialog__elementype-section sl-option sl-icon {
 	opacity: 0.7;
 	font-size: 14px;
 }
 
 .property-dialog__bitsize,
 .property-dialog__elementtype-section,
-.property-dialog__valuetype-section {
+.property-dialog__elementype-section {
 	width: 40%;
 }
 
 .property-dialog__elementtype::part(form-control),
-.property-dialog__valuetype::part(form-control) {
+.property-dialog__elementype::part(form-control) {
 	display: flex;
 	align-items: end;
 	column-gap: 15px;
 }
 
 .property-dialog__elementtype::part(form-control-label),
-.property-dialog__valuetype::part(form-control-label) {
+.property-dialog__elementype::part(form-control-label) {
 	padding-bottom: 0;
 	font-weight: 400;
 }
@@ -78,7 +78,7 @@
 }
 
 .property-dialog__elementtype-section .property-dialog__length-section,
-.property-dialog__valuetype-section .property-dialog__length-section {
+.property-dialog__elementype-section .property-dialog__length-section {
 	margin-top: 15px;
 }
 

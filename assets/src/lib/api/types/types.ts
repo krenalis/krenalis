@@ -141,7 +141,7 @@ interface ObjectType {
 
 interface MapType {
 	name: 'Map';
-	valueType?: Type;
+	elementType?: Type;
 }
 
 const typeNameToIconName: Record<TypeName, string> = {
