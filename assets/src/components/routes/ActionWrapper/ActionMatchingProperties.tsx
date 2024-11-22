@@ -80,6 +80,7 @@ const ActionMatchingProperties = () => {
 			title={`Matching properties`}
 			description='The properties used to identify and match the resources'
 			padded={true}
+			annotated={true}
 		>
 			<div className='action__matching-properties'>
 				<Combobox

@@ -17,11 +17,10 @@ interface ConnectionSelectorProps {
 	connections: TransformedConnection[];
 	role: ConnectionRole;
 	title?: ReactNode;
-	description?: string;
+	description?: ReactNode;
 	onLink?: (id: Number) => Promise<void>;
 	onUnlink?: (id: Number) => Promise<void>;
 	isClickable?: boolean;
-	isShown?: boolean;
 	children?: ReactNode;
 }
 
@@ -35,7 +34,6 @@ const LinkedConnectionSelector = ({
 	onLink,
 	onUnlink,
 	isClickable,
-	isShown,
 }: ConnectionSelectorProps) => {
 	const { rows, columns } = useLinkedConnectionsGrid(linkedConnections, setLinkedConnections, onUnlink, isClickable);
 
@@ -76,49 +74,51 @@ const LinkedConnectionSelector = ({
 	return (
 		<div className='linked-connection-selector'>
 			{linkableConnections.length === 0 ? (
-				`Currently there is no linked ${role === 'Source' ? 'destination' : 'source'}`
+				`Currently there is no linkable ${role === 'Source' ? 'destination' : 'source'}`
 			) : (
 				<div className={'linked-connection-selector__content'}>
-					<div
-						className={`linked-connection-selector__head${
-							(title || description) && hasSelectableConnections
-								? ' linked-connection-selector__head--flex'
-								: ''
-						}`}
-					>
-						<div className='linked-connection-selector__head-text'>
-							{title}
-							<div className='linked-connection-selector__head-description'>{description}</div>
+					{(title != null || description != null || hasSelectableConnections) && (
+						<div
+							className={`linked-connection-selector__head${
+								(title || description) && hasSelectableConnections
+									? ' linked-connection-selector__head--flex'
+									: ''
+							}`}
+						>
+							<div className='linked-connection-selector__head-text'>
+								<div className='linked-connection-selector__head-title'>{title}</div>
+								<div className='linked-connection-selector__head-description'>{description}</div>
+							</div>
+							{hasSelectableConnections && (
+								<SlDropdown className='linked-connection-selector__dropdown'>
+									<SlButton slot='trigger' caret>
+										<SlIcon slot='prefix' name='plus' />
+										Link {role === 'Source' ? 'destination' : 'source'}...
+									</SlButton>
+									<SlMenu onSlSelect={onSelectLinkedConnection}>
+										{selectableConnections.map((c) => {
+											const isAlreadySelected =
+												linkedConnections?.find((id) => id === c.id) != null;
+											if (!isAlreadySelected) {
+												return (
+													<SlMenuItem key={c.id} value={String(c.id)}>
+														<LittleLogo icon={c.connector.icon} />
+														{c.name}
+													</SlMenuItem>
+												);
+											}
+										})}
+									</SlMenu>
+								</SlDropdown>
+							)}
 						</div>
-						{hasSelectableConnections && (
-							<SlDropdown className='linked-connection-selector__dropdown'>
-								<SlButton slot='trigger' caret>
-									<SlIcon slot='prefix' name='plus' />
-									Link {role === 'Source' ? 'destination' : 'source'}...
-								</SlButton>
-								<SlMenu onSlSelect={onSelectLinkedConnection}>
-									{selectableConnections.map((c) => {
-										const isAlreadySelected = linkedConnections?.find((id) => id === c.id) != null;
-										if (!isAlreadySelected) {
-											return (
-												<SlMenuItem key={c.id} value={String(c.id)}>
-													<LittleLogo icon={c.connector.icon} />
-													{c.name}
-												</SlMenuItem>
-											);
-										}
-									})}
-								</SlMenu>
-							</SlDropdown>
-						)}
-					</div>
+					)}
 					<Grid
 						rows={rows}
 						columns={columns}
 						noRowsMessage={`Select "Link ${role === 'Source' ? 'destination' : 'source'}..." to link a ${
 							role === 'Source' ? 'destination' : 'source'
 						} connection`}
-						isShown={isShown}
 					/>
 					{!hasSelectableConnections && (
 						<div className='linked-connection-selector__no-connection-message'>

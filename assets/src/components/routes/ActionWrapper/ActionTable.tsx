@@ -109,7 +109,7 @@ const ActionTable = () => {
 
 	return (
 		<>
-			<Section title='Table' description='The name of the table of the database'>
+			<Section title='Table' description='The name of the table of the database' padded={true} annotated={true}>
 				<div className='action__table'>
 					<SlInput value={action.Table} onSlInput={onUpdateTable} />
 					<FeedbackButton
@@ -131,6 +131,8 @@ const ActionTable = () => {
 				<Section
 					title='Table key'
 					description='The property of the table that is used as key in export queries'
+					padded={true}
+					annotated={true}
 					ref={tableKeySectionRef}
 					className={`action__table-key-section${isTransformationDisabled ? ' action__table-key-section--disabled' : ''}`}
 				>

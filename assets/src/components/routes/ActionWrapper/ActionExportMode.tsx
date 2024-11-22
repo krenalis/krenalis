@@ -16,10 +16,11 @@ const ActionExportMode = () => {
 
 	return (
 		<Section
-			title='Export Mode'
+			title='Export mode'
 			description='The mode used to export the data'
 			padded={true}
 			className='action__export-mode'
+			annotated={true}
 		>
 			<SlSelect
 				className='action__export-mode-select'

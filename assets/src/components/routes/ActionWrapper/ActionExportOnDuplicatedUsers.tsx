@@ -16,6 +16,7 @@ const ActionExportOnDuplicatedUsers = () => {
 			className='action__export-on-duplicated'
 			description='Determine the behavior in case of duplicated users on the app, which are users which have the same value for the specified property'
 			padded={true}
+			annotated={true}
 		>
 			<SlCheckbox checked={action.ExportOnDuplicatedUsers!} onSlChange={onChangeExportOnDuplicatedUsers}>
 				Run the export even in case of duplicated users on the app, instead of not starting the export

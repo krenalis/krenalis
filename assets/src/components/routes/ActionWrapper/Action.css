@@ -95,13 +95,17 @@
 }
 
 .action__body {
-	max-width: 1200px;
+	max-width: 1600px;
 	margin: 50px auto;
 	padding: 0 40px;
 }
 
 .action .section {
 	margin-bottom: 70px;
+}
+
+.action .section--annotated {
+	justify-content: center;
 }
 
 .action .section:last-of-type {

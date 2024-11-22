@@ -10,30 +10,19 @@ import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
-import { isEventConnection } from '../../../lib/core/connection';
-import { LinkedConnections } from './LinkedConnections';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
 import { debounce } from '../../../utils/debounce';
 
-type TabName = 'general' | 'linked-connections' | 'snippet' | 'connection' | 'keys';
+type TabName = 'general' | 'snippet' | 'connection' | 'keys';
 
 const ConnectionSettings = () => {
 	const [isDeleted, setIsDeleted] = useState<boolean>(false);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isSmallViewport, setIsSmallViewport] = useState<boolean>(false);
-	const [isLinkedConnectionsPanelShown, setIsLinkedConnectionsPanelShown] = useState<boolean>(false); // used to recompute the event connections grid.
 	const [hasUIFields, setHasUIFields] = useState<boolean>(false);
 
 	const { redirect, api, handleError } = useContext(AppContext);
 	const { connection: c } = useContext(ConnectionContext);
-
-	const onTabShow = (e) => {
-		if (e.detail.name === 'linked-connections') {
-			setIsLinkedConnectionsPanelShown(true);
-			return;
-		}
-		setIsLinkedConnectionsPanelShown(false);
-	};
 
 	useEffect(() => {
 		if (isDeleted) {
@@ -95,10 +84,6 @@ const ConnectionSettings = () => {
 	const tabs = useMemo(() => {
 		const tabs: TabName[] = ['general'];
 
-		if (isEventConnection(c.role, c.type, c.connector.targets)) {
-			tabs.push('linked-connections');
-		}
-
 		if ((c.type === 'Website' || c.type === 'Mobile') && c.role === 'Source') {
 			tabs.push('snippet');
 		}
@@ -131,7 +116,7 @@ const ConnectionSettings = () => {
 	return (
 		<div className={`connection-settings${isSmallViewport ? ' connection-settings--small-viewport' : ''}`}>
 			{tabs.length > 1 ? (
-				<SlTabGroup onSlTabShow={onTabShow} placement={isSmallViewport ? 'top' : 'start'}>
+				<SlTabGroup placement={isSmallViewport ? 'top' : 'start'}>
 					<SlTab slot='nav' panel='general'>
 						General
 					</SlTab>
@@ -139,20 +124,6 @@ const ConnectionSettings = () => {
 						<div className='connection-settings__panel-title'>General</div>
 						<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
 					</SlTabPanel>
-
-					{tabs.includes('linked-connections') && (
-						<>
-							<SlTab slot='nav' panel='linked-connections'>
-								{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
-							</SlTab>
-							<SlTabPanel name='linked-connections'>
-								<div className='connection-settings__panel-title'>
-									{c.isSource ? 'Linked Destinations' : 'Linked Sources'}
-								</div>
-								<LinkedConnections connection={c} isShown={isLinkedConnectionsPanelShown} />
-							</SlTabPanel>
-						</>
-					)}
 
 					{tabs.includes('snippet') && (
 						<>

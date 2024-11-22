@@ -1,15 +1,20 @@
-import React, { useContext, useState } from 'react';
+import React, { ReactNode, useContext, useEffect, useState } from 'react';
 import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
 import { LinkedConnectionSelector } from '../../base/LinkedConnectionSelector/LinkedConnectionSelector';
 
 interface LinkedConnectionProps {
 	connection: TransformedConnection;
-	isShown: boolean;
+	title?: string;
+	description?: ReactNode;
 }
 
-const LinkedConnections = ({ connection, isShown }: LinkedConnectionProps) => {
-	const [linkedConnections, setLinkedConnections] = useState<Number[] | null>(connection.linkedConnections);
+const LinkedConnections = ({ connection, title, description }: LinkedConnectionProps) => {
+	const [linkedConnections, setLinkedConnections] = useState<Number[] | null>();
+
+	useEffect(() => {
+		setLinkedConnections(connection.linkedConnections);
+	}, [connection]);
 
 	const { connections, setIsLoadingConnections, api, handleError } = useContext(AppContext);
 
@@ -43,12 +48,8 @@ const LinkedConnections = ({ connection, isShown }: LinkedConnectionProps) => {
 				onLink={onLink}
 				onUnlink={onUnlink}
 				isClickable={true}
-				isShown={isShown}
-				description={
-					connection.isSource
-						? 'The destinations to which the events are dispatched.'
-						: 'The sources whose events are dispatched to the destination.'
-				}
+				title={title}
+				description={description != null ? description : null}
 			/>
 		</div>
 	);

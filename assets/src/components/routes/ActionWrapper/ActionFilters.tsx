@@ -469,6 +469,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 			description='The filters that define the action'
 			padded={true}
 			ref={ref}
+			annotated={true}
 		>
 			{conditions}
 			<SlButton

@@ -157,6 +157,8 @@ const IdentityResolutionSettings = () => {
 					<Section
 						title='Automatic execution'
 						description='Define when the Identity Resolution should be automatically started'
+						padded={true}
+						annotated={true}
 					>
 						<SlCheckbox
 							className='identifiers__automatic-execution'
@@ -170,6 +172,8 @@ const IdentityResolutionSettings = () => {
 					<Section
 						title='Identifiers'
 						description='Define the identifiers used to resolve the identity of the users'
+						padded={true}
+						annotated={true}
 					>
 						{identifiers.map((identifier, i) => {
 							const position = i + 1;

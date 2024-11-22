@@ -29,7 +29,7 @@
 }
 
 .grid__header-cell {
-	color: #616261;
+	color: var(--text-light);
 	font-weight: 600;
 }
 

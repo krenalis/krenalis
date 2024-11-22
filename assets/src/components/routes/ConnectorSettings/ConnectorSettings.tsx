@@ -23,8 +23,6 @@ import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/res
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
-import { isEventConnection } from '../../../lib/core/connection';
-import { LinkedConnectionSelector } from '../../base/LinkedConnectionSelector/LinkedConnectionSelector';
 import * as icons from '../../../constants/icons';
 
 const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
@@ -39,24 +37,14 @@ const ConnectorSettings = () => {
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
 	const [SendingMode, setSendingMode] = useState<SendingModeType | null>(null);
-	const [linkedConnections, setLinkedConnections] = useState<Number[]>();
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
 	const [values, setValues] = useState<ConnectorValues>({});
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
-	const {
-		api,
-		handleError,
-		showStatus,
-		redirect,
-		connectors,
-		connections,
-		setIsLoadingConnections,
-		setTitle,
-		selectedWorkspace,
-	} = useContext(AppContext);
+	const { api, handleError, showStatus, redirect, connectors, setIsLoadingConnections, setTitle, selectedWorkspace } =
+		useContext(AppContext);
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
@@ -186,7 +174,7 @@ const ConnectorSettings = () => {
 					websiteHost: websiteHost,
 					SendingMode: SendingMode,
 					uiValues: values,
-					linkedConnections: linkedConnections,
+					linkedConnections: null,
 				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
 			} catch (err) {
@@ -306,30 +294,6 @@ const ConnectorSettings = () => {
 
 	const showStrategy = hasStrategy(connectionRole, c);
 
-	let linkedConnectionsContainer: ReactNode = null;
-	if (isEventConnection(connectionRole, connector.type, connector.targets)) {
-		linkedConnectionsContainer = (
-			<div className='connector-settings__linked-connections'>
-				<LinkedConnectionSelector
-					linkedConnections={linkedConnections}
-					setLinkedConnections={setLinkedConnections}
-					connections={connections}
-					role={connectionRole}
-					title={
-						<div className='connector-settings__linked-connections-label'>
-							Linked {connectionRole === 'Source' ? 'destinations' : 'sources'}
-						</div>
-					}
-					description={
-						connectionRole === 'Source'
-							? 'The destinations to which the events are dispatched.'
-							: 'The sources whose events are dispatched to the destination.'
-					}
-				/>
-			</div>
-		);
-	}
-
 	return (
 		<div className='connector-settings'>
 			<div className='route-content'>
@@ -430,14 +394,9 @@ const ConnectorSettings = () => {
 							buttons={buttonsToRender}
 							values={values}
 							onChange={onFieldChange}
-						>
-							{linkedConnectionsContainer}
-						</ConnectorUI>
+						/>
 					) : (
-						<>
-							{linkedConnectionsContainer}
-							{buttonsToRender}
-						</>
+						<>{buttonsToRender}</>
 					)}
 				</div>
 			</div>

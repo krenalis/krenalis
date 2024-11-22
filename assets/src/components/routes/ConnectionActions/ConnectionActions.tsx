@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, useLayoutEffect } from 'react';
 import './ConnectionActions.css';
 import Flex from '../../base/Flex/Flex';
-import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import ActionsGrid from './ActionsGrid';
 import ListTile from '../../base/ListTile/ListTile';
 import ActionTypesDialog from './ActionTypesDialog';
@@ -13,6 +12,9 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import { Action, ActionType } from '../../../lib/api/types/action';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
+import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
+import { isEventConnection } from '../../../lib/core/connection';
+import Section from '../../base/Section/Section';
 
 const ConnectionActions = () => {
 	const [isActionTypesDialogOpen, setIsActionTypesDialogOpen] = useState<boolean>(false);
@@ -98,14 +100,17 @@ const ConnectionActions = () => {
 	}
 
 	return (
-		<>
-			<div className='connection-actions'>
+		<div
+			className={`connection-actions${connection.actions!.length === 0 ? ' connection-actions--no-action' : ''}`}
+		>
+			<Section
+				className='connection-actions__list'
+				title='Actions'
+				description={`Actions import events, users, and groups from a website into the workspace's data warehouse using ${connection.name}`}
+				annotated={true}
+			>
 				{connection.actions!.length === 0 ? (
 					<div className='connection-actions__no-action'>
-						<IconWrapper name='play-circle' size={40} />
-						<div className='connection-actions__no-action-description'>
-							Add an action to {connection.description}
-						</div>
 						<div className='connection-actions__no-action-action-types'>
 							{connection.actionTypes.map((actionType) => (
 								<ListTile
@@ -137,6 +142,7 @@ const ConnectionActions = () => {
 								onClick={() => {
 									setIsActionTypesDialogOpen(true);
 								}}
+								className='connection-actions__add'
 							>
 								<SlIcon slot='suffix' name='plus-circle' />
 								Add a new action
@@ -149,7 +155,29 @@ const ConnectionActions = () => {
 						/>
 					</>
 				)}
-			</div>
+			</Section>
+
+			{isEventConnection(connection.role, connection.type, connection.connector.targets) && (
+				<Section
+					title={connection.isSource ? 'Linked destinations' : 'Linked sources'}
+					description={
+						<>
+							{connection.isSource
+								? 'Select which destinations should receive events from this source.'
+								: 'Select which sources should send events to this destination.'}
+							<br />
+							{connection.isSource
+								? 'When you link a destination connection here, events from this source will automatically be forwarded to that destination and processed by its actions.'
+								: 'When you link a source connection here, events from that source will automatically be forwarded to this destination and processed by its actions.'}
+						</>
+					}
+					annotated={true}
+					className='connection-actions__linked'
+				>
+					<LinkedConnections connection={connection} />
+				</Section>
+			)}
+
 			<ActionTypesDialog
 				isOpen={isActionTypesDialogOpen}
 				setIsOpen={setIsActionTypesDialogOpen}
@@ -159,7 +187,7 @@ const ConnectionActions = () => {
 				onSelectActionType={onSelectActionType}
 			/>
 			<Outlet context={{ setIsActionOpen }} />
-		</>
+		</div>
 	);
 };
 

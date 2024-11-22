@@ -407,7 +407,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			ref={ref}
 		>
 			{hasIdentityAndTimestamp && (
-				<Section title='Special properties' padded={true}>
+				<Section title='Special properties' padded={true} annotated={true}>
 					<div className='action__transformation-special-properties'>
 						<div className='action__transformation-identity-property'>
 							<div className='action__transformation-special-properties-label'>
@@ -502,6 +502,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				title='Transformation'
 				description='The relation between the event properties and the action type properties'
 				padded={false}
+				annotated={true}
 			>
 				{box}
 				<FullscreenTransformation

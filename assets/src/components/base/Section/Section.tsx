@@ -4,18 +4,22 @@ import './Section.css';
 
 interface SectionProps {
 	title: string;
-	description?: string;
+	description?: ReactNode;
 	actions?: ReactNode[] | ReactNode;
 	children: ReactNode;
 	padded?: boolean;
+	annotated?: boolean;
 	className?: string;
 }
 
 const Section = forwardRef<any, SectionProps>(
-	({ title, description, actions, children, padded, className }: SectionProps, ref) => {
+	({ title, description, actions, children, padded, annotated, className }: SectionProps, ref) => {
 		return (
-			<div className={`section${className ? ' ' + className : ''}`} ref={ref}>
-				<Flex justifyContent='space-between' alignItems='center'>
+			<div
+				className={`section${className ? ' ' + className : ''}${padded ? ' section--padded' : ''}${annotated ? ' section--annotated' : ''}`}
+				ref={ref}
+			>
+				<div className='section__heading'>
 					<div className='section__text'>
 						<div className='section__title'>{title}</div>
 						{description && <div className='section__description'>{description}</div>}
@@ -23,8 +27,8 @@ const Section = forwardRef<any, SectionProps>(
 					<Flex className='section__actions' justifyContent='end' alignItems='center'>
 						{actions}
 					</Flex>
-				</Flex>
-				<div className={`section__content${padded ? ' section__content--padded' : ''}`}>{children}</div>
+				</div>
+				<div className='section__content'>{children}</div>
 			</div>
 		);
 	},

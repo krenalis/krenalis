@@ -30,7 +30,7 @@ interface gridMethods {
 type GridRef = gridMethods & any;
 
 const Grid = forwardRef<GridRef, GridProps>(
-	({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }, ref) => {
+	({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }: GridProps, ref) => {
 		const gridRef = useRef<any>();
 
 		const { columnsWidths, reloadColumnsWidths } = useGrid(gridRef, rows, columns, isLoading, isShown);

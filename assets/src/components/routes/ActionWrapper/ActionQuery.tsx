@@ -145,6 +145,8 @@ const ActionQuery = () => {
 				title='Query'
 				description='The query used to import the data. It must contain the placeholder ${limit}.'
 				className='action__query'
+				padded={true}
+				annotated={true}
 			>
 				<EditorWrapper
 					language='sql'

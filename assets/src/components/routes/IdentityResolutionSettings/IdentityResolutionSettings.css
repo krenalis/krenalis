@@ -1,7 +1,11 @@
 .identifiers {
-	max-width: 900px;
+	max-width: 1200px;
 	margin: auto;
 	padding: 30px;
+}
+
+.identifiers .section {
+	margin-bottom: 50px;
 }
 
 .identifiers .combobox {

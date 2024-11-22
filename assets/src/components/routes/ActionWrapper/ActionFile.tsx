@@ -185,7 +185,13 @@ const ActionFile = () => {
 	}
 
 	return (
-		<Section title={`File`} className='action__file' description='The settings of the file' padded>
+		<Section
+			title={`File`}
+			className='action__file'
+			description='The settings of the file'
+			padded={true}
+			annotated={true}
+		>
 			<SlSelect
 				label='Type'
 				className='action__file-connector'

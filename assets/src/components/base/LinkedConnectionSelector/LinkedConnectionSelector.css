@@ -1,5 +1,5 @@
 .linked-connection-selector__head {
-	margin-bottom: 15px;
+	margin-bottom: 10px;
 	display: flex;
 	align-items: end;
 	min-height: 40px;
@@ -47,10 +47,6 @@
 
 .linked-connection-grid__status {
 	gap: 0;
-}
-
-.linked-connection-selector .grid .grid__header-cell {
-	font-weight: 400;
 }
 
 .linked-connection-selector .grid .grid__no-rows > sl-icon {
