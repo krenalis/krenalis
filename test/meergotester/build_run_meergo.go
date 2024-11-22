@@ -10,7 +10,6 @@ package meergotester
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,21 +58,6 @@ func launchMeergo(ctx context.Context) error {
 	cmd.Stdout = os.Stdout
 	cmd.Dir = meergoDir
 	return cmd.Run()
-}
-
-func copyFile(dst, src string) error {
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-	_, err = io.Copy(destination, source)
-	return err
 }
 
 func meergoExecFilename() string {
