@@ -301,6 +301,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		lastUpdate: {},
 	});
 
+	const hasRecordsError = useRef(false);
+
 	const fieldsToRender = useMemo(() => {
 		const fields: ReactNode[] = [];
 		for (const f of fileFields) {
@@ -406,7 +408,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				}
 			}
 		}
-		if (isPathChanged || isSheetChanged || isCompressionChanged || areSettingsChanged) {
+		if (isPathChanged || isSheetChanged || isCompressionChanged || areSettingsChanged || hasRecordsError.current) {
 			setIsFileChanged(true);
 		} else {
 			setIsFileChanged(false);
@@ -553,8 +555,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			handleError('Please enter a sheet');
 			return;
 		}
-		const res = await records(20);
-		if (res == null) {
+		let res: RecordsResponse;
+		try {
+			res = await records(20);
+		} catch (err) {
 			return;
 		}
 		const columns: GridColumn[] = [];
@@ -596,8 +600,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			return;
 		}
 		fileConfirmButtonRef.current!.load();
-		const res = await records(0, true);
-		if (res == null) {
+		let res: RecordsResponse;
+		try {
+			res = await records(0, true);
+		} catch (err) {
 			fileConfirmButtonRef.current!.stop();
 			return;
 		}
@@ -632,7 +638,12 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			);
 		} catch (err) {
 			handleError(err);
-			return;
+			const isAlreadyConfirmed = actionType.InputSchema != null;
+			if (isAlreadyConfirmed) {
+				hasRecordsError.current = true;
+				checkIsFileChanged();
+			}
+			throw err;
 		}
 		if (isConfirmation) {
 			pathRef.current.lastConfirmation = action.Path;
@@ -641,6 +652,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			if (action.Sheet != null) {
 				sheetRef.current.lastConfirmation = action.Sheet;
 			}
+			hasRecordsError.current = false;
 			setIsFileChanged(false);
 		}
 		return res;
