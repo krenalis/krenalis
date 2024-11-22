@@ -135,13 +135,18 @@ func newStore(ds *Datastore, ws *state.Workspace) (*Store, error) {
 // *DataWarehouseError error.
 func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) error {
 	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
+	// TODO(Gianluca): the context here is discarded, rather than passed to the
+	// actual IR execution. See issue
+	// https://github.com/meergo/meergo/issues/1162.
+	_, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
 	if err != nil {
 		return err
 	}
 	defer done()
 	columns := propertiesToColumns(schema)
-	return store.warehouse().AlterUserColumns(ctx, columns, operations)
+	// TODO(Gianluca): The Background context is used here, since the store does
+	// not provide any. See issue https://github.com/meergo/meergo/issues/1162.
+	return store.warehouse().AlterUserColumns(context.Background(), columns, operations)
 }
 
 // AlterUserSchemaQueries returns the queries of a schema altering operation.
