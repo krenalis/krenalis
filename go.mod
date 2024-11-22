@@ -1,5 +1,8 @@
 module github.com/meergo/meergo
 
+// Keep in sync with the version within ".github/workflows/main.yml".
+// Keep in sync with the version within "Dockerfile".
+// Keep in sync with the version within "go.work".
 go 1.23
 
 replace github.com/ClickHouse/clickhouse-go/v2 => github.com/open2b/clickhouse-go/v2 v2.30.0-fix

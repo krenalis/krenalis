@@ -1,6 +1,10 @@
 # Stage 0: Meergo Building Stage.
 
+# Keep in sync with the version within ".github/workflows/main.yml".
+# Keep in sync with the version within "go.mod".
+# Keep in sync with the version within "go.work".
 FROM golang:1.23
+
 WORKDIR /meergo
 # Note that this command copies all files present in the local repository,
 # including unversioned files, so a reproducible build can be achieved by

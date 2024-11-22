@@ -16,6 +16,9 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
+          # Keep in sync with the version within "Dockerfile".
+          # Keep in sync with the version within "go.mod".
+          # Keep in sync with the version within "go.work".
           go-version: "1.23"
 
       - uses: denoland/setup-deno@v2
