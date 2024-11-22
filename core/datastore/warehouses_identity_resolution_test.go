@@ -8,6 +8,7 @@
 package datastore
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"maps"
@@ -659,6 +660,25 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
+					// The returned users are sorted solely by email, as it is
+					// only possible to sort users by one property. Therefore,
+					// in the case of users with the same email but with
+					// different values for first_name, etc..., the tests may
+					// randomly fail based on how Meergo returned them. For this
+					// reason, here the users are sorted based on all their Text
+					// properties, in ascending order.
+					slices.SortFunc(gotUsers, func(u1, u2 map[string]any) int {
+						for _, c := range columns {
+							if c.Type.Kind() == types.TextKind {
+								v1, _ := u1[c.Name].(string)
+								v2, _ := u2[c.Name].(string)
+								if v1 != v2 {
+									return cmp.Compare(v1, v2)
+								}
+							}
+						}
+						return 0
+					})
 					if !reflect.DeepEqual(test.expectedUsers, gotUsers) {
 						t.Fatalf("\nexpected users:\n\t%v\ngot:\n\t%v", test.expectedUsers, gotUsers)
 					}
