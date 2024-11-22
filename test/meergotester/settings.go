@@ -63,6 +63,9 @@ func init() {
 			Schema:   "public",
 		},
 	}
+	if host := os.Getenv("MEERGO_TESTS_HOST"); host != "" {
+		testsSettings.MeergoHost = host
+	}
 	if pythonPath := os.Getenv("MEERGO_TESTS_PYTHON_PATH"); pythonPath != "" {
 		testsSettings.PythonExecutable = pythonPath
 	}

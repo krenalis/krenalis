@@ -5,6 +5,7 @@
 - [How to run tests using GitHub Action](#how-to-run-tests-using-github-action)
 - [Local Testing Cookbook](#local-testing-cookbook)
   - [Testing Snowflake](#testing-snowflake)
+  - [Altering the tests configuration](#altering-the-tests-configuration)
   - [Testing the UI with Playwright](#testing-the-ui-with-playwright)
   - [Partially run the tests](#partially-run-the-tests)
   - [Troubleshooting Tests](#troubleshooting-tests)
@@ -70,6 +71,15 @@ Here are some guides to run various local tests and handle various situations th
    ```
    go test -run ^Test_Merge$ github.com/meergo/meergo/warehouses/... -count 1 -v
    ```
+
+### Altering the tests configuration
+
+The tests inside `/test/` are already configured by default when the repository is clean, and they can be run as they are; owever, in certain circumstances, it may become necessary to modify the test configuration, perhaps to meet a specific configuration of the system that runs them. Below are the documented environment variables that affect the tests:
+
+| Variable                   | Description                                                                | Default          |
+|----------------------------|----------------------------------------------------------------------------|------------------|
+| `MEERGO_TESTS_HOST`        | The host on which Meergo is started                                        | `127.0.0.1:9091` |
+| `MEERGO_TESTS_PYTHON_PATH` | The path to the Python executable for running the transformation functions | `python3`        |
 
 ### Testing the UI with Playwright
 
