@@ -283,6 +283,68 @@ func Test_AsRole(t *testing.T) {
 				},
 			}),
 		},
+		{
+			object: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), ReadOptional: true},
+						{Name: "City", Type: Text(), Role: SourceRole},
+						{Name: "Country", Type: Text(), Role: DestinationRole},
+					}),
+					ReadOptional: true,
+				},
+			}),
+			role: DestinationRole,
+			expected: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text()},
+						{Name: "Country", Type: Text(), Role: DestinationRole},
+					}),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), ReadOptional: true},
+						{Name: "City", Type: Text(), Role: SourceRole},
+						{Name: "Country", Type: Text(), Role: DestinationRole},
+					}),
+					ReadOptional: true,
+				},
+			}),
+			role: BothRole,
+			expected: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), ReadOptional: true},
+						{Name: "City", Type: Text(), Role: SourceRole},
+						{Name: "Country", Type: Text(), Role: DestinationRole},
+					}),
+					ReadOptional: true,
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), Role: DestinationRole},
+						{Name: "City", Type: Text(), Role: DestinationRole},
+						{Name: "Country", Type: Text(), Role: DestinationRole},
+					}),
+				},
+			}),
+			role:     SourceRole,
+			expected: Type{},
+		},
 	}
 	for _, cas := range cases {
 		t.Run("", func(t *testing.T) {

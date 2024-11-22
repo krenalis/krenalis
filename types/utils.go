@@ -43,42 +43,8 @@ func AsRole(t Type, role Role) Type {
 	if role == BothRole {
 		return t
 	}
-	last := 0
-	var roleProperties []Property
-	properties := t.vl.([]Property)
-	for i, p := range properties {
-		if p.Role == role {
-			continue
-		}
-		if p.Role == BothRole && (role == SourceRole && !p.CreateRequired && !p.UpdateRequired ||
-			role == DestinationRole && !p.ReadOptional) {
-			continue
-		}
-		if last < i {
-			roleProperties = append(roleProperties, properties[last:i]...)
-		}
-		if p.Role == BothRole {
-			switch role {
-			case SourceRole:
-				p.CreateRequired = false
-				p.UpdateRequired = false
-			case DestinationRole:
-				p.ReadOptional = false
-			}
-			roleProperties = append(roleProperties, p)
-		}
-		last = i + 1
-	}
-	if last == 0 {
-		return t
-	}
-	if last < len(properties) {
-		roleProperties = append(roleProperties, properties[last:]...)
-	}
-	if roleProperties == nil {
-		return Type{}
-	}
-	return Type{kind: ObjectKind, vl: roleProperties}
+	t, _ = asRole(t, role)
+	return t
 }
 
 // Equal reports whether two types are equal.
@@ -408,4 +374,50 @@ func Walk(t Type) iter.Seq2[string, Property] {
 			}
 		}
 	}
+}
+
+// asRole is a recursive function called by the Type.AsRole method. t must be an
+// Object type, and role must be either Source or Destination. It returns the
+// resulting type and a boolean indicating whether the returned type is
+// different from t.
+func asRole(t Type, role Role) (Type, bool) {
+	last := 0
+	var roleProperties []Property
+	properties := t.vl.([]Property)
+	for i, p := range properties {
+		ok := p.Role == role || p.Role == BothRole &&
+			(role == SourceRole && !p.CreateRequired && !p.UpdateRequired || role == DestinationRole && !p.ReadOptional)
+		if p.Type.Kind() == ObjectKind && (ok || p.Role == BothRole) {
+			var changed bool
+			p.Type, changed = asRole(p.Type, role)
+			ok = ok && !changed
+		}
+		if ok {
+			continue
+		}
+		if last < i {
+			roleProperties = append(roleProperties, properties[last:i]...)
+		}
+		if p.Role == BothRole && p.Type.Valid() {
+			switch role {
+			case SourceRole:
+				p.CreateRequired = false
+				p.UpdateRequired = false
+			case DestinationRole:
+				p.ReadOptional = false
+			}
+			roleProperties = append(roleProperties, p)
+		}
+		last = i + 1
+	}
+	if last == 0 {
+		return t, false
+	}
+	if last < len(properties) {
+		roleProperties = append(roleProperties, properties[last:]...)
+	}
+	if roleProperties == nil {
+		return Type{}, true
+	}
+	return Type{kind: ObjectKind, vl: roleProperties}, true
 }
