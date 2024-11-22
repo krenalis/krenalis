@@ -786,7 +786,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 			}
 		} else {
 			if p.UpdateRequired && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
-				return fmt.Errorf("%s properties of %s %s with %s target target cannot be required for the update",
+				return fmt.Errorf("%s properties of %s %s with %s target cannot be required for the update",
 					io, strings.ToLower(typ.String()), strings.ToLower(role.String()), target)
 			}
 		}
