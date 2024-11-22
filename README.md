@@ -33,6 +33,8 @@ Before pushing commits to the `main` branch of Meergo, from the root of this rep
 go run ./commit
 ```
 
+Refer to the file [.github/workflows/main.yml](.github/workflows/main.yml) for the list of dependencies required to run the tests and their respective supported versions.
+
 ## How to run tests using GitHub Action
 
 1. Go to https://github.com/meergo/meergo/actions/workflows/main.yml
