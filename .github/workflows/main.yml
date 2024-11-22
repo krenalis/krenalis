@@ -30,6 +30,10 @@ jobs:
         with:
           node-version: 22
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: go run ./commit
         run: go run ./commit
 
