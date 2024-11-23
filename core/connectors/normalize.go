@@ -290,6 +290,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case decimal.Decimal:
 			v, err = decimal.Parse(v.String(), p, s)
 		case string:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			v, err = decimal.Parse(src, p, s)
 		case []byte:
 			v, err = decimal.Parse(src, p, s)
@@ -313,6 +316,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case float64:
 			t, valid = dateTimeFromUnixFloat(src, layouts.DateTime)
 		case string:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			switch layouts.DateTime {
 			case "":
 				var err error
@@ -343,6 +349,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			t = src
 			valid = true
 		case string:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			var err error
 			if layouts.Date == "" {
 				t, err = iso8601.ParseString(src)
@@ -364,6 +373,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			value = time.Date(1970, 1, 1, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), time.UTC)
 			valid = true
 		case string:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			var t time.Time
 			var err error
 			if layouts.Time == "" {
@@ -395,6 +407,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		valid = valid && types.MinYear <= v && v <= types.MaxYear
 	case types.UUIDKind:
 		if s, ok := src.(string); ok {
+			if s == "" && nullable {
+				return nil, nil
+			}
 			value, valid = parseUUID(s)
 		}
 	case types.JSONKind:
@@ -405,6 +420,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case []byte:
 			data = src
 		case string:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			data = []byte(src)
 		case json.Marshaler:
 			var err error
@@ -423,6 +441,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.InetKind:
 		switch src := src.(type) {
 		case string:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			// Remove the number of bits in the netmask, if any.
 			if i := strings.IndexByte(src, '/'); i > 0 {
 				src = src[:i]
@@ -439,6 +460,11 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		var v string
 		switch s := src.(type) {
 		case string:
+			if s == "" {
+				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
+					return nil, nil
+				}
+			}
 			v = s
 			valid = true
 		case []byte:
