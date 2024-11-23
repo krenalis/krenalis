@@ -224,9 +224,9 @@ func Indent(data []byte, prefix, indent string) ([]byte, error) {
 	return v, nil
 }
 
-// Marshal encodes the given value.
-func Marshal(v any) (Value, error) {
-	val, err := json.Marshal(v)
+// Marshal encodes the given data.
+func Marshal(data any) (Value, error) {
+	val, err := json.Marshal(data)
 	if _, ok := err.(*jsontext.SyntacticError); ok {
 		return Value{}, &SyntaxError{err: err}
 	}
@@ -239,15 +239,15 @@ type Marshaler interface {
 	MarshalJSON() ([]byte, error)
 }
 
-// MarshalBySchema encodes the given value, based on the provided schema, into
+// MarshalBySchema encodes the given data, based on the provided schema, into
 // JSON, and returns it. schema cannot be the invalid type.
 //
 // For JSON properties, both nil and Value("null") are marshaled as JSON null.
 //
-// Unlike DecodeBySchema, this function does not validate the value. Its
+// Unlike DecodeBySchema, this function does not validate the data. Its
 // behavior is undefined if the value does not validate against the type.
-func MarshalBySchema(v any, schema types.Type) (Value, error) {
-	return marshalBySchema(nil, v, schema)
+func MarshalBySchema(data any, schema types.Type) (Value, error) {
+	return marshalBySchema(nil, data, schema)
 }
 
 // Quote returns a double-quoted JSON string literal representing s. It returns
@@ -297,6 +297,22 @@ func TrimSpace(data []byte) []byte {
 	for ; lookupTable[data[j]] == 1; j-- {
 	}
 	return data[i : j+1]
+}
+
+// Unmarshal decodes the JSON-encoded data into the value pointed to by out.
+// It returns a [SyntaxError] if the input data is not valid JSON. It also
+// returns an error if out is nil or is not a pointer, or if data cannot be
+// decoded into out.
+//
+// Calling Unmarshal(data, out) is equivalent to calling
+// Value(data).Unmarshal(out), with the key difference that the latter assumes
+// data is valid JSON.
+func Unmarshal(data []byte, out any) error {
+	err := json.Unmarshal(data, out)
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		return &SyntaxError{err: err}
+	}
+	return err
 }
 
 // Unmarshaler is the interface for types that can unmarshal a JSON
@@ -744,11 +760,11 @@ func formatValues(values []string) string {
 }
 
 // marshalBySchema marshals v as a JSON value and appends it to b.
-func marshalBySchema(b []byte, v any, t types.Type) (Value, error) {
-	if v == nil {
+func marshalBySchema(b []byte, data any, t types.Type) (Value, error) {
+	if data == nil {
 		return append(b, "null"...), nil
 	}
-	switch v := v.(type) {
+	switch v := data.(type) {
 	case bool:
 		if v {
 			b = append(b, "true"...)

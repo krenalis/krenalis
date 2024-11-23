@@ -305,11 +305,12 @@ func (v Value) Uint() (uint, error) {
 }
 
 // Unmarshal unmarshals v into the value pointed by out.
-// It returns an error if out is nil or is not a pointer.
+// It returns an error if out is nil or is not a pointer, or if v cannot be
+// decoded into out.
 func (v Value) Unmarshal(out any) error {
 	err := json.Unmarshal(v, out)
 	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return &SyntaxError{err: err}
+		return fmt.Errorf("%s", err)
 	}
 	return err
 }
