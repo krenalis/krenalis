@@ -10,7 +10,6 @@ package collector
 import (
 	"compress/gzip"
 	"context"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +29,7 @@ import (
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
+	"github.com/meergo/meergo/json"
 
 	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang"
@@ -409,9 +409,7 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=10800")
 	w.Header().Set("Access-Control-Allow-Origin", origin)
-	enc := jsonstd.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(map[string]any{
+	_ = json.Encode(w, map[string]any{
 		"strategy": strategy,
 		"integrations": map[string]any{
 			"Meergo": map[string]any{

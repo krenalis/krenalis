@@ -13,7 +13,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	jsonstd "encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
@@ -534,7 +533,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	// Marshal the mapping.
 	var mapping []byte
 	if action.Transformation.Mapping != nil {
-		mapping, err = jsonstd.Marshal(action.Transformation.Mapping)
+		mapping, err = json.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return 0, err
 		}
@@ -602,11 +601,11 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		var matchPropInternal, matchPropExternal []byte
 		if n.MatchingProperties != nil {
 			var err error
-			matchPropInternal, err = jsonstd.Marshal(n.MatchingProperties.Internal)
+			matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
 			if err != nil {
 				return err
 			}
-			matchPropExternal, err = jsonstd.Marshal(n.MatchingProperties.External)
+			matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
 			if err != nil {
 				return err
 			}
@@ -1555,10 +1554,11 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		ct := req.Header.Get("Content-Type")
 		switch ct {
 		case "application/json":
-			err = jsonstd.Indent(&b, req.Body, "", "\t")
+			indented, err := json.Indent(req.Body, "", "\t")
 			if err != nil {
 				return nil, err
 			}
+			b.Write(indented)
 		case "application/x-ndjson":
 			b.Write(req.Body)
 		default:
@@ -2021,7 +2021,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := jsonstd.Unmarshal(data, &v)
+	err := json.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -2095,7 +2095,7 @@ func deserializeCursor(cursor string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	var c time.Time
-	err = jsonstd.Unmarshal(data, &c)
+	err = json.Unmarshal(data, &c)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -2105,14 +2105,11 @@ func deserializeCursor(cursor string) (time.Time, error) {
 
 // serializeCursor serializes a cursor to be returned by the API.
 func serializeCursor(cursor time.Time) (string, error) {
-	var b bytes.Buffer
-	enc := jsonstd.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	err := enc.Encode(cursor)
+	b, err := json.Marshal(cursor)
 	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(b.Bytes()), nil
+	return hex.EncodeToString(b), nil
 }
 
 // tempTransformerProvider is a function transformer provider that creates a

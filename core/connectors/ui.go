@@ -8,9 +8,7 @@
 package connectors
 
 import (
-	"bytes"
 	"context"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -239,15 +237,13 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 		return []byte("null"), nil
 	}
 
-	var b bytes.Buffer
-	enc := jsonstd.NewEncoder(&b)
-
+	var b json.Buffer
 	b.WriteString("{")
 
 	// Serialize the alert, if present.
 	if ui.Alert != nil {
 		b.WriteString(`"Alert":{"Message":`)
-		err := enc.Encode(ui.Alert.Message)
+		err := b.Encode(ui.Alert.Message)
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +262,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 		values := map[string]any{}
 		if len(ui.Values) > 0 {
-			err := jsonstd.Unmarshal(ui.Values, &values)
+			err := json.Unmarshal(ui.Values, &values)
 			if err != nil {
 				return nil, err
 			}
@@ -284,13 +280,13 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 			}
 		}
 		b.WriteString(`],"Buttons":`)
-		err := enc.Encode(ui.Buttons)
+		err := b.Encode(ui.Buttons)
 		if err != nil {
 			return nil, err
 		}
 		if len(ui.Values) > 0 {
 			b.WriteString(`,"Values":`)
-			err = jsonstd.NewEncoder(&b).Encode(values)
+			err = b.Encode(values)
 			if err != nil {
 				return nil, err
 			}
@@ -305,7 +301,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 // marshalUIComponent marshals component with the provided role in JSON format.
 // If comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIComponent(b *bytes.Buffer, component meergo.Component, role meergo.Role, values map[string]any, comma bool) (bool, error) {
+func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.Role, values map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
 	if r := meergo.Role(rv.FieldByName("Role").Int()); r != meergo.Both && r != role {
@@ -342,7 +338,7 @@ func marshalUIComponent(b *bytes.Buffer, component meergo.Component, role meergo
 			}
 			b.WriteByte(']')
 		default:
-			err = jsonstd.NewEncoder(b).Encode(field)
+			err = b.Encode(field)
 		}
 		if err != nil {
 			return false, err
@@ -354,7 +350,7 @@ func marshalUIComponent(b *bytes.Buffer, component meergo.Component, role meergo
 
 // marshalUIFieldSet marshals fieldSet with the provided role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIFieldSet(b *bytes.Buffer, fieldSet meergo.FieldSet, role meergo.Role, values map[string]any, comma bool) (bool, error) {
+func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Role, values map[string]any, comma bool) (bool, error) {
 	if fieldSet.Role != meergo.Both && fieldSet.Role != role {
 		return false, nil
 	}
@@ -362,9 +358,9 @@ func marshalUIFieldSet(b *bytes.Buffer, fieldSet meergo.FieldSet, role meergo.Ro
 		b.WriteByte(',')
 	}
 	b.WriteString(`{"Name":`)
-	_ = jsonstd.NewEncoder(b).Encode(fieldSet.Name)
+	_ = b.Encode(fieldSet.Name)
 	b.WriteString(`,"Label":`)
-	_ = jsonstd.NewEncoder(b).Encode(fieldSet.Label)
+	_ = b.Encode(fieldSet.Label)
 	b.WriteString(`,"Fields":[`)
 	comma = false
 	for _, c := range fieldSet.Fields {

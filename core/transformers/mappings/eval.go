@@ -8,12 +8,11 @@
 package mappings
 
 import (
-	"bytes"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +23,10 @@ import (
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
+
+// encodeSorted encodes JSON values with their object keys sorted.
+// It is set to true during tests to ensure deterministic output.
+var encodeSorted = false
 
 // invalidConversionError is the error returned by the Eval and Transform
 // methods of when a value resulted from an evaluation cannot be converted to
@@ -228,9 +231,6 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 		}
 		return true, types.Boolean(), nil
 	case "array":
-		var b bytes.Buffer
-		enc := jsonstd.NewEncoder(&b)
-		enc.SetEscapeHTML(false)
 		arr := make([]any, len(p.args))
 		for i, arg := range p.args {
 			v, _, err := eval(arg, properties)
@@ -242,9 +242,13 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 				v = json.Value("null")
 			case json.Value:
 			default:
-				b.Reset()
-				_ = enc.Encode(v)
-				v = json.Value(bytes.Clone(b.Bytes()))
+				if encodeSorted {
+					var b json.Buffer
+					_ = b.EncodeSorted(v)
+					v = json.Value(slices.Clone(b.Bytes()))
+				} else {
+					v, _ = json.Marshal(v)
+				}
 			}
 			arr[i] = v
 		}
@@ -333,12 +337,6 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 		if err != nil {
 			return nil, types.Type{}, err
 		}
-		if v2, ok := v.(json.Value); ok {
-			dec := jsonstd.NewDecoder(bytes.NewReader(v2))
-			dec.UseNumber()
-			v = nil
-			_ = dec.Decode(&v)
-		}
 		var length int
 		switch v := v.(type) {
 		case nil:
@@ -371,11 +369,21 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 			case types.TimeKind:
 				length = len(v.Format("15:04:05.999999999"))
 			}
+		case json.Value:
+			switch v.Kind() {
+			case json.Null:
+			case json.True, json.False, json.Number:
+				length = len(json.TrimSpace(v))
+			case json.String:
+				length = utf8.RuneCountInString(v.String())
+			case json.Object:
+				length = v.NumProperty()
+			case json.Array:
+				length = v.NumElement()
+			}
 		case []any:
 			length = len(v)
 		case map[string]any:
-			length = len(v)
-		case jsonstd.Number:
 			length = len(v)
 		}
 		return length, types.Int(32), nil

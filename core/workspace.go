@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	jsonstd "encoding/json"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -478,7 +477,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
 		var account authorizedOAuthAccount
-		err = jsonstd.Unmarshal(data, &account)
+		err = json.Unmarshal(data, &account)
 		if err != nil {
 			return 0, errors.BadRequest("OAuth is not valid")
 		}
@@ -740,7 +739,7 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 				return err
 			}
 			var schema types.Type
-			err = jsonstd.Unmarshal(s, &schema)
+			err = json.Unmarshal(s, &schema)
 			if err != nil {
 				return err
 			}
@@ -1224,7 +1223,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 		return "", err
 	}
 
-	account, err := jsonstd.Marshal(authorizedOAuthAccount{
+	account, err := json.Marshal(authorizedOAuthAccount{
 		Workspace:    this.workspace.ID,
 		Connector:    connector,
 		Code:         auth.AccountCode,
@@ -1363,7 +1362,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values json.Va
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
-		err = jsonstd.Unmarshal(data, &a)
+		err = json.Unmarshal(data, &a)
 		if err != nil {
 			return nil, errors.BadRequest("oAuth is not valid")
 		}
@@ -1812,7 +1811,7 @@ func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := jsonstd.Unmarshal(data, &v)
+	err := json.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -1868,7 +1867,7 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := jsonstd.Unmarshal(data, &v)
+	err := json.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}

@@ -365,6 +365,11 @@ func Test_Compile(t *testing.T) {
 		{expr: "upper(false)", dt: types.Text(), expected: "FALSE"},
 	}
 
+	encodeSorted = true
+	defer func() {
+		encodeSorted = false
+	}()
+
 	for _, test := range tests {
 		t.Run(test.expr, func(t *testing.T) {
 

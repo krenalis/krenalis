@@ -9,7 +9,6 @@ package transformers
 
 import (
 	"bytes"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -70,21 +69,46 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 	}
 	k := t.Kind()
 	if k == types.JSONKind {
-		raw := v.(json.Value)
+		value := v.(json.Value)
 		if preserveJSON {
 			b = append(b, '\'')
-			b = jsStringEscape(b, string(raw))
+			b = jsStringEscape(b, string(value))
 			b = append(b, '\'')
 			return b, nil
 		}
-		dec := jsonstd.NewDecoder(bytes.NewReader(raw))
-		dec.UseNumber()
-		v = nil
-		err := dec.Decode(&v)
-		if err != nil {
-			return nil, fmt.Errorf("core/transformers: cannot unmarshal JSON: %s", err)
+		var comma bool
+		dec := json.NewDecoder(bytes.NewReader(value))
+		for {
+			kind := dec.PeekKind()
+			if kind == json.Invalid {
+				break
+			}
+			if comma && kind != '}' && kind != ']' {
+				b = append(b, ',')
+			}
+			comma = true
+			switch kind {
+			case '"':
+				tok, _ := dec.ReadToken()
+				b = append(b, '\'')
+				b = jsStringEscape(b, tok.String())
+				b = append(b, '\'')
+				if dec.IsKey() {
+					b = append(b, ':')
+					comma = false
+				}
+			case '{', '}', '[', ']':
+				b = append(b, byte(kind))
+				_ = dec.SkipToken()
+				if kind == '{' || kind == '[' {
+					comma = false
+				}
+			default:
+				v, _ := dec.ReadValue()
+				b = append(b, v...)
+			}
 		}
-		return marshalJavaScriptFromJSON(b, v), nil
+		return b, nil
 	}
 	switch v := v.(type) {
 	case bool:
@@ -186,56 +210,6 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 	return b, nil
 }
 
-// marshalJavaScriptFromJSON marshals the JSON value v into b as JavaScript. v
-// can be nil or have type bool, int, float64 (not Nan, +Inf, and -Inf), string,
-// json.Number, []any, and map[string]any.
-func marshalJavaScriptFromJSON(b []byte, v any) []byte {
-	switch v := v.(type) {
-	case nil:
-		b = append(b, "null"...)
-	case bool:
-		if v {
-			b = append(b, "true"...)
-		} else {
-			b = append(b, "false"...)
-		}
-	case int:
-		b = strconv.AppendInt(b, int64(v), 10)
-	case float64:
-		b = strconv.AppendFloat(b, v, 'f', -1, 64)
-	case string:
-		b = append(b, '\'')
-		b = jsStringEscape(b, v)
-		b = append(b, '\'')
-	case jsonstd.Number:
-		b = append(b, v...)
-	case []any:
-		b = append(b, '[')
-		for i, e := range v {
-			if i > 0 {
-				b = append(b, ',')
-			}
-			b = marshalJavaScriptFromJSON(b, e)
-		}
-		b = append(b, ']')
-	case map[string]any:
-		b = append(b, '{')
-		i := 0
-		for k, e := range v {
-			if i > 0 {
-				b = append(b, ',')
-			}
-			b = append(b, '\'')
-			b = jsStringEscape(b, k)
-			b = append(b, '\'', ':')
-			b = marshalJavaScriptFromJSON(b, e)
-			i++
-		}
-		b = append(b, '}')
-	}
-	return b
-}
-
 // marshalPython marshals v as a Python value.
 func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, error) {
 	if v == nil {
@@ -243,21 +217,55 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 	}
 	k := t.Kind()
 	if k == types.JSONKind {
-		raw := v.(json.Value)
+		value := v.(json.Value)
 		if preserveJSON {
 			b = append(b, '\'')
-			b = pyStringEscape(b, string(raw))
+			b = pyStringEscape(b, string(value))
 			b = append(b, '\'')
 			return b, nil
 		}
-		dec := jsonstd.NewDecoder(bytes.NewReader(raw))
-		dec.UseNumber()
-		v = nil
-		err := dec.Decode(&v)
-		if err != nil {
-			return nil, fmt.Errorf("core/transformers: cannot unmarshal JSON: %s", err)
+		var comma bool
+		dec := json.NewDecoder(bytes.NewReader(value))
+		for {
+			kind := dec.PeekKind()
+			if kind == json.Invalid {
+				break
+			}
+			if comma && kind != '}' && kind != ']' {
+				b = append(b, ',')
+			}
+			comma = true
+			switch kind {
+			case 'n':
+				b = append(b, "None"...)
+				_ = dec.SkipToken()
+			case 't':
+				b = append(b, "True"...)
+				_ = dec.SkipToken()
+			case 'f':
+				b = append(b, "False"...)
+				_ = dec.SkipToken()
+			case '"':
+				tok, _ := dec.ReadToken()
+				b = append(b, '\'')
+				b = pyStringEscape(b, tok.String())
+				b = append(b, '\'')
+				if dec.IsKey() {
+					b = append(b, ':')
+					comma = false
+				}
+			case '{', '}', '[', ']':
+				b = append(b, byte(kind))
+				_ = dec.SkipToken()
+				if kind == '{' || kind == '[' {
+					comma = false
+				}
+			default:
+				v, _ := dec.ReadValue()
+				b = append(b, v...)
+			}
 		}
-		return marshalPythonFromJSON(b, v), nil
+		return b, nil
 	}
 	switch v := v.(type) {
 	case bool:
@@ -364,56 +372,6 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		return nil, fmt.Errorf("core/transformers: unexpected type %s", k)
 	}
 	return b, nil
-}
-
-// marshalPythonFromJSON marshals the JSON value v into b as Python. v can be
-// nil or have type bool, int, float64 (not Nan, +Inf, and -Inf), string,
-// json.Number, []any, and map[string]any.
-func marshalPythonFromJSON(b []byte, v any) []byte {
-	switch v := v.(type) {
-	case nil:
-		b = append(b, "None"...)
-	case bool:
-		if v {
-			b = append(b, "True"...)
-		} else {
-			b = append(b, "False"...)
-		}
-	case int:
-		b = strconv.AppendInt(b, int64(v), 10)
-	case float64:
-		b = strconv.AppendFloat(b, v, 'f', -1, 64)
-	case string:
-		b = append(b, '\'')
-		b = pyStringEscape(b, v)
-		b = append(b, '\'')
-	case jsonstd.Number:
-		b = append(b, v...)
-	case []any:
-		b = append(b, '[')
-		for i, e := range v {
-			if i > 0 {
-				b = append(b, ',')
-			}
-			b = marshalPythonFromJSON(b, e)
-		}
-		b = append(b, ']')
-	case map[string]any:
-		b = append(b, '{')
-		i := 0
-		for k, e := range v {
-			if i > 0 {
-				b = append(b, ',')
-			}
-			b = append(b, '\'')
-			b = pyStringEscape(b, k)
-			b = append(b, '\'', ':')
-			b = marshalPythonFromJSON(b, e)
-			i++
-		}
-		b = append(b, '}')
-	}
-	return b
 }
 
 // jsStringEscapes contains the runes that must be escaped when placed within

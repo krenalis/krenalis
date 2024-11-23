@@ -10,7 +10,6 @@ package core
 import (
 	"bytes"
 	"context"
-	jsonstd "encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -214,7 +213,7 @@ func (at Target) String() string {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (at *Target) UnmarshalJSON(data []byte) error {
 	var v any
-	err := jsonstd.Unmarshal(data, &v)
+	err := json.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}
@@ -442,7 +441,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	// Marshal the mapping.
 	var mapping []byte
 	if action.Transformation.Mapping != nil {
-		mapping, err = jsonstd.Marshal(action.Transformation.Mapping)
+		mapping, err = json.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return err
 		}
@@ -452,11 +451,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	var matchPropInternal, matchPropExternal []byte
 	if n.MatchingProperties != nil {
 		var err error
-		matchPropInternal, err = jsonstd.Marshal(n.MatchingProperties.Internal)
+		matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
 		if err != nil {
 			return err
 		}
-		matchPropExternal, err = jsonstd.Marshal(n.MatchingProperties.External)
+		matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
 		if err != nil {
 			return err
 		}
@@ -835,7 +834,7 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	var v any
-	err := jsonstd.Unmarshal(data, &v)
+	err := json.Unmarshal(data, &v)
 	if err != nil {
 		return err
 	}

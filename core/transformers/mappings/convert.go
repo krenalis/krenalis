@@ -8,8 +8,6 @@
 package mappings
 
 import (
-	"bytes"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -439,16 +437,20 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		if spt == types.JSONKind {
 			return v, nil
 		}
-		var b bytes.Buffer
-		enc := jsonstd.NewEncoder(&b)
-		enc.SetEscapeHTML(false)
-		err := enc.Encode(v)
+		// TODO(marco): time types are not correctly marshaled
+		if encodeSorted {
+			var b json.Buffer
+			err := b.EncodeSorted(v)
+			if err != nil {
+				return nil, errInvalidConversion
+			}
+			return json.Value(slices.Clone(b.Bytes())), nil
+		}
+		value, err := json.Marshal(v)
 		if err != nil {
 			return nil, errInvalidConversion
 		}
-		b.Truncate(b.Len() - 1)
-		// TODO(marco): time types are not correctly marshaled
-		return json.Value(b.Bytes()), nil
+		return value, nil
 	case types.InetKind:
 		switch spt {
 		case types.InetKind:
