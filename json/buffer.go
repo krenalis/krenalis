@@ -15,9 +15,9 @@ import (
 )
 
 // Buffer wraps a bytes.Buffer, implementing all its methods, and additionally
-// provides the [Buffer.Encode] and [Buffer.EncodeQuoted] methods for appending
-// JSON-encoded values to the buffer.
-// The zero value of Buffer is an empty buffer, ready for use.
+// provides the [Buffer.Encode],  [Buffer.EncodeIndent], [Buffer.EncodeQuoted],
+// and [Buffer.EncodeSorted] methods for appending JSON-encoded values to the
+// buffer. The zero value of Buffer is an empty buffer, ready for use.
 type Buffer struct {
 	buffer
 	enc         jsontext.Encoder
@@ -45,22 +45,32 @@ func (b *Buffer) Encode(in any) error {
 	return nil
 }
 
-// EncodeSorted is like Encode but sorts object keys.
-func (b *Buffer) EncodeSorted(in any) error {
+// EncodeIndent is like [Encode], but writes the resulting JSON with
+// indentation. It also sorts the object keys. Each element in a JSON object or
+// array begins on a new line with the specified prefix, followed by copies of
+// the indent string, added according to the nesting depth. The returned JSON
+// does not start or end with the prefix or any indentation.
+//
+// Example usage:
+//
+//	err = buf.EncodeIndent(in, "", "\t")
+//
+// It panics if the prefix or indent strings contain characters other than
+// spaces or tabs (' ' or '\t').
+func (b *Buffer) EncodeIndent(in any, prefix, indent string) error {
 	if !b.initialized {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
 	}
-	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
-	if err != nil {
-		return err
+	err := json.MarshalEncode(&b.enc, in, jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent), json.Deterministic(true))
+	if _, ok := err.(*jsontext.SyntacticError); ok {
+		return &SyntaxError{err: err}
 	}
-	b.Truncate(b.Len() - 1)
-	return nil
+	return err
 }
 
-// EncodeQuoted is like Encode but wraps the resulting JSON in quotes as a JSON
-// string.
+// EncodeQuoted is like [Encode] but wraps the resulting JSON in quotes as a
+// JSON string.
 func (b *Buffer) EncodeQuoted(in any) error {
 	if !b.initialized {
 		b.enc.Reset(&b.buffer)
@@ -78,6 +88,20 @@ func (b *Buffer) EncodeQuoted(in any) error {
 	_ = json.MarshalEncode(&b.enc, b.text)
 	b.Truncate(b.Len() - 1)
 	b.text = b.text[:0]
+	return nil
+}
+
+// EncodeSorted is like [Encode] but sorts object keys.
+func (b *Buffer) EncodeSorted(in any) error {
+	if !b.initialized {
+		b.enc.Reset(&b.buffer)
+		b.initialized = true
+	}
+	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
+	if err != nil {
+		return err
+	}
+	b.Truncate(b.Len() - 1)
 	return nil
 }
 

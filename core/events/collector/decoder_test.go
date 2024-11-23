@@ -8,7 +8,6 @@
 package collector
 
 import (
-	"bytes"
 	"io"
 	"net/http"
 	"net/url"
@@ -374,11 +373,11 @@ func Test_Decoder(t *testing.T) {
 						delete(got, name)
 					}
 				}
-				var buf bytes.Buffer
-				_ = json.EncodeIndent(&buf, expected.event, "", "\t")
+				var buf json.Buffer
+				_ = buf.EncodeIndent(expected.event, "", "\t")
 				expectedJSON := buf.String()
 				buf.Reset()
-				err = json.EncodeIndent(&buf, got, "", "\t")
+				err = buf.EncodeIndent(got, "", "\t")
 				if err != nil {
 					t.Fatalf("unexpected error encoding the event: %s", err)
 				}

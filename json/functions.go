@@ -184,25 +184,6 @@ func Encode(out io.Writer, v any) error {
 	return err
 }
 
-// EncodeIndent writes to out the JSON encoding of v in an indented form. Each
-// element in a JSON object or array begins on a new line with the specified
-// prefix followed by copies of the indent string, added according to nesting
-// depth. The returned does not start or end with the prefix or any indentation.
-//
-// Example usage:
-//
-//	err = json.EncodeIndent(out, v, "", "\t")
-//
-// It panics if prefix or indent strings do not contain only spaces or tabs
-// (' ' or '\t').
-func EncodeIndent(out io.Writer, v any, prefix, indent string) error {
-	err := json.MarshalWrite(out, v, jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent), json.Deterministic(true))
-	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return &SyntaxError{err: err}
-	}
-	return err
-}
-
 // Indent returns a copy of data with the JSON code indented. Each element in a
 // JSON object or array begins on a new line with the specified prefix followed
 // by copies of the indent string, added according to nesting depth. The
