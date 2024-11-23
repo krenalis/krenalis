@@ -35,6 +35,12 @@ func (d *Decoder) ByteOffset() int64 {
 	return d.dec.InputOffset()
 }
 
+// IsKey returns true if the last token read is a key in an object.
+func (d *Decoder) IsKey() bool {
+	k, n := d.dec.StackIndex(d.dec.StackDepth())
+	return k == '{' && n%2 == 1
+}
+
 // PeekKind returns the type of the next token without advancing the read
 // offset. It returns Invalid if there are no more tokens.
 func (d *Decoder) PeekKind() Kind {
