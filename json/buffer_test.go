@@ -53,4 +53,14 @@ func Test_Buffer(t *testing.T) {
 		t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
 	}
 
+	var buf3 Buffer
+	err = buf3.EncodeSorted(map[string]any{"a": 45, "f": false, "b": 2, "d": "foo", "e": []int{5, 9, 2}, "c": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = `{"a":45,"b":2,"c":true,"d":"foo","e":[5,9,2],"f":false}`
+	if got := buf3.String(); expected != got {
+		t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+	}
+
 }

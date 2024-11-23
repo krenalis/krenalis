@@ -45,9 +45,22 @@ func (b *Buffer) Encode(in any) error {
 	return nil
 }
 
-// EncodeQuoted appends the JSON encoding of in, further quoted as a JSON
-// string, to the buffer.
-// It returns an error if the value cannot be encoded as JSON.
+// EncodeSorted is like Encode but sorts object keys.
+func (b *Buffer) EncodeSorted(in any) error {
+	if !b.initialized {
+		b.enc.Reset(&b.buffer)
+		b.initialized = true
+	}
+	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
+	if err != nil {
+		return err
+	}
+	b.Truncate(b.Len() - 1)
+	return nil
+}
+
+// EncodeQuoted is like Encode but wraps the resulting JSON in quotes as a JSON
+// string.
 func (b *Buffer) EncodeQuoted(in any) error {
 	if !b.initialized {
 		b.enc.Reset(&b.buffer)
