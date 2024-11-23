@@ -252,6 +252,40 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	return v, nil
 }
 
+// NumElement returns the number of elements in an array.
+// It panics if v is not an array.
+func (v Value) NumElement() int {
+	if !v.IsArray() {
+		panic("expected array")
+	}
+	dec := getDecoder(v)
+	defer putDecoder(dec)
+	_, _ = dec.ReadToken()
+	for i := 0; ; i++ {
+		err := dec.SkipValue()
+		if err != nil {
+			return i
+		}
+	}
+}
+
+// NumProperty returns the number of properties in an object.
+// It panics if v is not an object.
+func (v Value) NumProperty() int {
+	if !v.IsObject() {
+		panic("expected object")
+	}
+	dec := getDecoder(v)
+	defer putDecoder(dec)
+	_, _ = dec.ReadToken()
+	for i := 0; ; i++ {
+		err := dec.SkipValue()
+		if err != nil {
+			return i / 2
+		}
+	}
+}
+
 // Properties returns an iterator over the key-value pairs of an object.
 // It panics if v is not an object.
 func (v Value) Properties() iter.Seq2[string, Value] {

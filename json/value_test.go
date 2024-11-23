@@ -364,6 +364,24 @@ func Test_Value(t *testing.T) {
 		}
 	})
 
+	t.Run("NumElement", func(t *testing.T) {
+		if n := Value(`[ ] `).NumElement(); n != 0 {
+			t.Fatalf("expected 0, got %d", n)
+		}
+		if n := Value(`[1, 6,0,23 ]`).NumElement(); n != 4 {
+			t.Fatalf("expected 4, got %d", n)
+		}
+	})
+
+	t.Run("NumProperty", func(t *testing.T) {
+		if n := Value(` { } `).NumProperty(); n != 0 {
+			t.Fatalf("expected 0, got %d", n)
+		}
+		if n := Value(`{ "a": 5, "b": [8, 6, 1], "c" : true} `).NumProperty(); n != 3 {
+			t.Fatalf("expected 3, got %d", n)
+		}
+	})
+
 	t.Run("Properties", func(t *testing.T) {
 		properties := []struct {
 			K string
