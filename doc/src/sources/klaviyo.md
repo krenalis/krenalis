@@ -18,7 +18,8 @@ Before you can add a Klaviyo data source, you need to create a private key in yo
 4. On the **API Keys** page, click **Create Private API Key**.
 5. In the **Private API Key Name** field, enter a name for the new key, for example, “Meergo data source.”
 6. With the *Custom Key* option enabled, under the API scope **Profiles**, select **Read Access**.
-7. Copy your **Private Key**.
+7. Click **Create**.
+8. Copy your **Private Key**.
 
 Now proceed to add a Klaviyo data source:
 
