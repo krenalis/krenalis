@@ -58,6 +58,18 @@ func Test_Buffer(t *testing.T) {
 		}
 	})
 
+	t.Run("EncodeIndent", func(t *testing.T) {
+		var buf Buffer
+		err := buf.EncodeIndent(map[string]any{"a": 45, "f": false, "b": 2, "d": "foo", "e": []int{5, 9, 2}, "c": true}, "\t", " ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := "{\n\t \"a\": 45,\n\t \"b\": 2,\n\t \"c\": true,\n\t \"d\": \"foo\",\n\t \"e\": [\n\t  5,\n\t  9,\n\t  2\n\t ],\n\t \"f\": false\n\t}"
+		if got := buf.String(); expected != got {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+	})
+
 	t.Run("EncodeSorted", func(t *testing.T) {
 		var buf Buffer
 		err := buf.EncodeSorted(map[string]any{"a": 45, "f": false, "b": 2, "d": "foo", "e": []int{5, 9, 2}, "c": true})
@@ -101,4 +113,30 @@ func Test_Buffer(t *testing.T) {
 
 	})
 
+	t.Run("mixed", func(t *testing.T) {
+		s := []int{1, 2}
+		var buf Buffer
+		if err := buf.Encode(s); err != nil {
+			t.Fatal(err)
+		}
+		if err := buf.EncodeIndent(s, "\t", " "); err != nil {
+			t.Fatal(err)
+		}
+		if err := buf.EncodeSorted(s); err != nil {
+			t.Fatal(err)
+		}
+		if err := buf.EncodeIndent(s, " ", "\t"); err != nil {
+			t.Fatal(err)
+		}
+		if err := buf.EncodeQuoted(s); err != nil {
+			t.Fatal(err)
+		}
+		if err := buf.EncodeIndent(s, "\t", " "); err != nil {
+			t.Fatal(err)
+		}
+		expected := "[1,2][\n\t 1,\n\t 2\n\t][1,2][\n \t1,\n \t2\n ]\"[1,2]\"[\n\t 1,\n\t 2\n\t]"
+		if got := buf.String(); expected != got {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+	})
 }

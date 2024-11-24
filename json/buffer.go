@@ -24,6 +24,7 @@ type Buffer struct {
 	enc         jsontext.Encoder
 	text        textMarshaler
 	initialized bool
+	indent      bool
 }
 
 // NewBuffer returns a new buffer.
@@ -34,9 +35,10 @@ func NewBuffer() *Buffer {
 // Encode appends the JSON encoding of in to the buffer.
 // It returns an error if the value cannot be encoded as JSON.
 func (b *Buffer) Encode(in any) error {
-	if !b.initialized {
+	if !b.initialized || b.indent {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
+		b.indent = false
 	}
 	err := json.MarshalEncode(&b.enc, in)
 	if err != nil {
@@ -59,23 +61,26 @@ func (b *Buffer) Encode(in any) error {
 // It panics if the prefix or indent strings contain characters other than
 // spaces or tabs (' ' or '\t').
 func (b *Buffer) EncodeIndent(in any, prefix, indent string) error {
-	if !b.initialized {
-		b.enc.Reset(&b.buffer)
+	if !b.initialized || !b.indent {
+		b.enc.Reset(&b.buffer, jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent))
 		b.initialized = true
+		b.indent = true
 	}
-	err := json.MarshalEncode(&b.enc, in, jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent), json.Deterministic(true))
-	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return &SyntaxError{err: err}
+	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
+	if err != nil {
+		return err
 	}
-	return err
+	b.Truncate(b.Len() - 1)
+	return nil
 }
 
 // EncodeQuoted is like [Encode] but wraps the resulting JSON in quotes as a
 // JSON string.
 func (b *Buffer) EncodeQuoted(in any) error {
-	if !b.initialized {
+	if !b.initialized || b.indent {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
+		b.indent = false
 	}
 	n1 := b.Len()
 	err := json.MarshalEncode(&b.enc, in)
@@ -94,9 +99,10 @@ func (b *Buffer) EncodeQuoted(in any) error {
 
 // EncodeSorted is like [Encode] but sorts object keys.
 func (b *Buffer) EncodeSorted(in any) error {
-	if !b.initialized {
+	if !b.initialized || b.indent {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
+		b.indent = false
 	}
 	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
 	if err != nil {
