@@ -216,7 +216,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			for i, record := range transformationRecords {
 				user := users[i]
 				if record.Err != nil {
-					if _, ok := record.Err.(ValidationError); ok {
+					if _, ok := record.Err.(validationError); ok {
 						this.core.metrics.TransformationPassed(action.ID, 1)
 						this.core.metrics.OutputValidationFailed(action.ID, 1, record.Err.Error())
 						continue

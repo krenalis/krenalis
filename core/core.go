@@ -43,8 +43,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// ValidationError is the interface implemented by validation errors.
-type ValidationError interface {
+// validationError is the interface implemented by validation errors.
+type validationError interface {
 	error
 	PropertyPath() string
 }

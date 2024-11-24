@@ -1506,7 +1506,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
 			}
-			if err, ok := err.(ValidationError); ok {
+			if err, ok := err.(validationError); ok {
 				return nil, errors.Unprocessable(TransformationFailed, err.Error())
 			}
 			return nil, err

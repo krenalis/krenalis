@@ -123,7 +123,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 		if user.Err != nil {
 			iw.Keep(user.ID)
-			if _, ok := user.Err.(ValidationError); ok {
+			if _, ok := user.Err.(validationError); ok {
 				this.core.metrics.ReceivePassed(action.ID, 1)
 				this.core.metrics.InputValidationFailed(action.ID, 1, user.Err.Error())
 				goto Next
@@ -172,7 +172,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 			for i, record := range transformationRecords {
 				user := users[i]
 				if record.Err != nil {
-					if _, ok := record.Err.(ValidationError); ok {
+					if _, ok := record.Err.(validationError); ok {
 						this.core.metrics.TransformationPassed(action.ID, 1)
 						this.core.metrics.OutputValidationFailed(action.ID, 1, record.Err.Error())
 						continue
