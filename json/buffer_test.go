@@ -8,6 +8,7 @@
 package json
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -19,48 +20,85 @@ func Test_Buffer(t *testing.T) {
 		S: "text",
 	}
 
-	buf := NewBuffer()
-	buf.WriteString("[")
-	err := buf.Encode("a")
-	if err != nil {
-		t.Fatal(err)
-	}
-	buf.WriteByte(',')
-	err = buf.Encode(map[string]bool{"boo": true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	buf.WriteByte(',')
-	buf.Write(Value("true"))
-	buf.WriteByte(',')
-	err = buf.EncodeQuoted(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	buf.WriteString("]")
-	expected := `["a",{"boo":true},true,"{\"s\":\"text\"}"]`
-	if got := buf.String(); expected != got {
-		t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
-	}
+	t.Run("Encode", func(t *testing.T) {
+		expected := `["a",{"boo":true},true,"{\"s\":\"text\"}"]`
+		buf := NewBuffer()
+		buf.WriteString("[")
+		err := buf.Encode("a")
+		if err != nil {
+			t.Fatal(err)
+		}
+		buf.WriteByte(',')
+		err = buf.Encode(map[string]bool{"boo": true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		buf.WriteByte(',')
+		buf.Write(Value("true"))
+		buf.WriteByte(',')
+		err = buf.EncodeQuoted(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		buf.WriteString("]")
+		if got := buf.String(); expected != got {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+	})
 
-	var buf2 Buffer
-	err = buf2.Encode([]int{1, 2, 3})
-	if err != nil {
-		t.Fatal(err)
-	}
-	expected = `[1,2,3]`
-	if got := buf2.String(); expected != got {
-		t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
-	}
+	t.Run("Encode (2)", func(t *testing.T) {
+		expected := `[1,2,3]`
+		var buf Buffer
+		err := buf.Encode([]int{1, 2, 3})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := buf.String(); expected != got {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+	})
 
-	var buf3 Buffer
-	err = buf3.EncodeSorted(map[string]any{"a": 45, "f": false, "b": 2, "d": "foo", "e": []int{5, 9, 2}, "c": true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	expected = `{"a":45,"b":2,"c":true,"d":"foo","e":[5,9,2],"f":false}`
-	if got := buf3.String(); expected != got {
-		t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
-	}
+	t.Run("EncodeSorted", func(t *testing.T) {
+		var buf Buffer
+		err := buf.EncodeSorted(map[string]any{"a": 45, "f": false, "b": 2, "d": "foo", "e": []int{5, 9, 2}, "c": true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := `{"a":45,"b":2,"c":true,"d":"foo","e":[5,9,2],"f":false}`
+		if got := buf.String(); expected != got {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+	})
+
+	t.Run("Value", func(t *testing.T) {
+
+		expected := Value(`{"a":5,"b":{"x":true}}`)
+		var buf Buffer
+		buf.WriteString(`{"a":5,"b":`)
+		err := buf.Encode(map[string]any{"x": true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		buf.WriteString(`}`)
+		got, err := buf.Value()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(expected, got) {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+
+		buf.Reset()
+
+		buf.WriteString(`[1,2,3]4`)
+		_, err = buf.Value()
+		if err == nil {
+			t.Fatal("expected error, got no error")
+		}
+		if _, ok := err.(*SyntaxError); !ok {
+			t.Fatalf("expected *SyntaxError, got %T", err)
+		}
+
+	})
 
 }

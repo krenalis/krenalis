@@ -9,6 +9,7 @@ package json
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/meergo/meergo/json/internal/json"
 	"github.com/meergo/meergo/json/internal/json/jsontext"
@@ -103,6 +104,16 @@ func (b *Buffer) EncodeSorted(in any) error {
 	}
 	b.Truncate(b.Len() - 1)
 	return nil
+}
+
+// Value returns a copy of the unread portion of the buffer as a Value.
+// It returns a *SyntaxError if the unread portion is not valid JSON.
+func (b *Buffer) Value() (Value, error) {
+	v := b.buffer.Bytes()
+	if err := Validate(v); err != nil {
+		return nil, err
+	}
+	return slices.Clone(v), nil
 }
 
 type buffer struct {
