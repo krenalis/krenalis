@@ -11,7 +11,6 @@ package dummy
 import (
 	"context"
 	_ "embed"
-	jsonstd "encoding/json"
 	"errors"
 	"io"
 	"log"
@@ -172,7 +171,7 @@ func init() {
 		ID         string
 		Properties map[string]any
 	}
-	err := jsonstd.Unmarshal(jsonUsers, &rawUsers)
+	err := json.Unmarshal(jsonUsers, &rawUsers)
 	if err != nil {
 		panic(err)
 	}

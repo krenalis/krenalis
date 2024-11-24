@@ -16,7 +16,6 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/base64"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -88,7 +87,7 @@ type HubSpot struct {
 // authorization.
 func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 	var res struct {
-		PortalId int
+		PortalId int `json:"portalId"`
 	}
 	err := hs.call(ctx, "GET", "/account-info/v3/details", nil, &res)
 	if err != nil {
@@ -112,15 +111,15 @@ func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, _ types.T
 
 	var response struct {
 		Results []struct {
-			ID         string
-			Properties map[string]any
-			UpdatedAt  string
-		}
+			ID         string         `json:"id"`
+			Properties map[string]any `json:"properties"`
+			UpdatedAt  string         `json:"updatedAt"`
+		} `json:"results"`
 		Paging struct {
 			Next struct {
-				After string
-			}
-		}
+				After string `json:"after"`
+			} `json:"next"`
+		} `json:"paging"`
 	}
 
 	var err error
@@ -226,14 +225,14 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.W
 
 	// Read the requests.
 	var requests []struct {
-		ObjectId         int
-		OccurredAt       int64
-		PortalId         int
-		PropertyName     string
-		PropertyValue    string
-		SubscriptionType string
+		ObjectId         int    `json:"objectId"`
+		OccurredAt       int64  `json:"occurredAt"`
+		PortalId         int    `json:"portalId"`
+		PropertyName     string `json:"propertyName"`
+		PropertyValue    string `json:"propertyValue"`
+		SubscriptionType string `json:"subscriptionType"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&requests)
+	err = json.Decode(r.Body, &requests)
 	if err != nil {
 		return nil, err
 	}
@@ -293,24 +292,24 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.W
 }
 
 // Schema returns the schema of the specified target.
-func (hs *HubSpot) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, _ meergo.Role, _ string) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
-			Hidden  bool
-			Name    string
+			Hidden  bool   `json:"hidden"`
+			Name    string `json:"name"`
 			Options []struct {
-				Label  string
-				Value  string
-				Hidden bool
-			}
-			Label                string
-			Description          string
-			Type                 string
+				Label  string `json:"label"`
+				Value  string `json:"value"`
+				Hidden bool   `json:"hidden"`
+			} `json:"options"`
+			Label                string `json:"label"`
+			Description          string `json:"description"`
+			Type                 string `json:"type"`
 			ModificationMetadata struct {
-				ReadOnlyValue bool
-			}
-		}
+				ReadOnlyValue bool `json:"readOnlyValue"`
+			} `json:"modificationMetadata"`
+		} `json:"results"`
 	}
 	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, &response)
 	if err != nil {
@@ -382,11 +381,8 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		method = "create"
 	}
 
-	var body bytes.Buffer
+	var body json.Buffer
 	body.WriteString(`{"inputs":[`)
-
-	enc := jsonstd.NewEncoder(&body)
-	enc.SetEscapeHTML(false)
 
 	for i, record := range records.Same() {
 		if i > 0 {
@@ -395,16 +391,11 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		body.WriteByte('{')
 		if method == "update" {
 			body.WriteString(`"id":`)
-			id, _ := json.Marshal(record.ID)
-			body.Write(id)
+			_ = body.Encode(record.ID)
 			body.WriteByte(',')
 		}
 		body.WriteString(`"properties":`)
-		err := enc.Encode(record.Properties)
-		if err != nil {
-			return err
-		}
-		body.Truncate(body.Len() - 1) // remove the trailing new line.
+		_ = body.Encode(record.Properties)
 		body.WriteByte('}')
 		if i+1 == 100 {
 			break
@@ -424,13 +415,13 @@ func (hs *HubSpot) companyContacts(ctx context.Context, company string) ([]strin
 	for {
 		var response struct {
 			Results []struct {
-				ID string
-			}
+				ID string `json:"id"`
+			} `json:"results"`
 			Paging struct {
 				Next struct {
-					After string
-				}
-			}
+					After string `json:"after"`
+				} `json:"next"`
+			} `json:"paging"`
 		}
 		requestURL := path
 		if after != "" {
@@ -470,13 +461,14 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, body io.Reader
 	case 200, 201, 207:
 	default:
 		hsErr := &hubspotError{statusCode: res.StatusCode}
-		dec := jsonstd.NewDecoder(res.Body)
-		_ = dec.Decode(hsErr)
+		err := json.Decode(res.Body, hsErr)
+		if err != nil {
+			return err
+		}
 		return hsErr
 	}
 	if response != nil {
-		dec := jsonstd.NewDecoder(res.Body)
-		return dec.Decode(response)
+		return json.Decode(res.Body, response)
 	}
 	return nil
 }
@@ -523,14 +515,14 @@ func isValidWebhook(clientSecret string, r *http.Request) bool {
 
 type hubspotError struct {
 	statusCode int
-	Status     string
-	Message    string
+	Status     string `json:"status"`
+	Message    string `json:"message"`
 	Errors     []struct {
-		Message string
-		In      string
-	}
-	Category      string
-	CorrelationId string
+		Message string `json:"message"`
+		In      string `json:"in"`
+	} `json:"errors"`
+	Category      string `json:"category"`
+	CorrelationId string `json:"correlationId"`
 }
 
 func (err *hubspotError) Error() string {

@@ -13,7 +13,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/base64"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -282,14 +281,15 @@ func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reade
 
 	if res.StatusCode != expectedStatus {
 		mpErr := &mixpanelError{}
-		dec := jsonstd.NewDecoder(res.Body)
-		_ = dec.Decode(mpErr)
+		err := json.Decode(res.Body, mpErr)
+		if err != nil {
+			return err
+		}
 		return mpErr
 	}
 
 	if response != nil {
-		dec := jsonstd.NewDecoder(res.Body)
-		return dec.Decode(response)
+		return json.Decode(res.Body, response)
 	}
 
 	return nil
@@ -334,15 +334,15 @@ func formatTimestamp(t time.Time) string {
 }
 
 type mixpanelError struct {
-	Code               int
+	Code               int    `json:"code"`
 	ErrorText          string `json:"error"`
 	NumRecordsImported int    `json:"num_records_imported"`
-	Status             string
+	Status             string `json:"status"`
 	FailedRecords      []struct {
-		Index    int
-		InsertId string `json:"insert_id"`
-		Field    string
-		Message  string
+		Index    int    `json:"index"`
+		InsertID string `json:"insert_id"`
+		Field    string `json:"field"`
+		Message  string `json:"message"`
 	} `json:"failed_records"`
 }
 

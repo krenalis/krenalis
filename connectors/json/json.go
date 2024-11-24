@@ -57,7 +57,7 @@ type JSON struct {
 }
 
 type Settings struct {
-	Properties         []meergo.KV `json:",omitempty"`
+	Properties         []meergo.KV `json:",omitzero"`
 	Indent             bool
 	GenerateASCII      bool
 	AllowSpecialFloats bool
@@ -316,7 +316,7 @@ func (j *JSON) saveValues(ctx context.Context, values json.Value, role meergo.Ro
 	} else {
 		s.Properties = nil
 	}
-	b, err := jsonstd.Marshal(s)
+	b, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}

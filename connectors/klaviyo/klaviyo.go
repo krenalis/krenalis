@@ -10,10 +10,8 @@
 package klaviyo
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -185,12 +183,12 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ types.Type, 
 
 	var response struct {
 		Data []struct {
-			ID         string
-			Attributes map[string]any
-		}
+			ID         string         `json:"id"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
 		Links struct {
-			Next string
-		}
+			Next string `json:"next"`
+		} `json:"links"`
 	}
 
 	err := ky.call(ctx, "GET", u, nil, 200, &response)
@@ -441,31 +439,27 @@ func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records me
 	if ok {
 		delete(record.Properties, "properties")
 	}
-	body := bytes.NewBufferString(`{"data":{"type":"profile","attributes":`)
-	enc := jsonstd.NewEncoder(body)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(record.Properties)
-	body.Truncate(body.Len() - 1) // remove the trailing new line.
+	var body json.Buffer
+	body.WriteString(`{"data":{"type":"profile","attributes":`)
+	_ = body.Encode(record.Properties)
 	if ok {
 		body.Truncate(body.Len() - 1) // remove '}'.
 		body.WriteString(`,"properties":`)
-		_ = enc.Encode(customProperties)
-		body.Truncate(body.Len() - 1) // remove the trailing new line.
-		body.WriteByte('}')           // add '}'.
+		_ = body.Encode(customProperties)
+		body.WriteByte('}') // add '}'.
 	}
 	if record.ID != "" {
 		body.WriteString(`,"id":`)
-		_ = enc.Encode(record.ID)
-		body.Truncate(body.Len() - 1) // remove the trailing new line.
+		_ = body.Encode(record.ID)
 	}
 	body.WriteString(`}}`)
 
 	u := "https://a.klaviyo.com/api/profiles/"
 	if record.ID == "" {
-		return ky.call(ctx, "POST", u, body, 201, nil)
+		return ky.call(ctx, "POST", u, &body, 201, nil)
 	}
 
-	return ky.call(ctx, "PATCH", u+url.PathEscape(record.ID)+"/", body, 200, nil)
+	return ky.call(ctx, "PATCH", u+url.PathEscape(record.ID)+"/", &body, 200, nil)
 }
 
 // saveValues saves the user-entered values as settings.
@@ -502,15 +496,15 @@ func (ky *Klavyio) saveValues(ctx context.Context, values json.Value) error {
 type klaviyoError struct {
 	statusCode int
 	Errors     []struct {
-		ID     string
-		Code   string
-		Title  string
-		Detail string
+		ID     string `json:"id"`
+		Code   string `json:"code"`
+		Title  string `json:"title"`
+		Detail string `json:"detail"`
 		Source struct {
-			Pointer   string
-			Parameter string
-		}
-	}
+			Pointer   string `json:"pointer"`
+			Parameter string `json:"parameter"`
+		} `json:"source"`
+	} `json:"errors"`
 }
 
 func (err *klaviyoError) Error() string {
@@ -543,14 +537,15 @@ func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader,
 
 	if res.StatusCode != expectedStatus {
 		kErr := &klaviyoError{statusCode: res.StatusCode}
-		dec := jsonstd.NewDecoder(res.Body)
-		_ = dec.Decode(kErr)
+		err := json.Decode(res.Body, kErr)
+		if err != nil {
+			return err
+		}
 		return kErr
 	}
 
 	if response != nil {
-		dec := jsonstd.NewDecoder(res.Body)
-		return dec.Decode(response)
+		return json.Decode(res.Body, response)
 	}
 
 	return nil

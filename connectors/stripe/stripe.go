@@ -16,7 +16,6 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -152,16 +151,16 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meerg
 	}
 
 	var message struct {
-		Id   string
+		ID   string `json:"id"`
 		Data struct {
-			Object             map[string]any
+			Object             map[string]any `json:"object"`
 			PreviousAttributes map[string]any `json:"previous_attributes"`
-		}
-		Type    string
-		Created int64
+		} `json:"data"`
+		Type    string `json:"type"`
+		Created int64  `json:"created"`
 	}
 
-	err = jsonstd.Unmarshal(body, &message)
+	err = json.Unmarshal(body, &message)
 	if err != nil {
 		return nil, errors.New("webhook message is malformed")
 	}
@@ -209,7 +208,7 @@ func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ types.Typ
 	}
 
 	var response struct {
-		Data []map[string]any
+		Data []map[string]any `json:"data"`
 	}
 
 	err := stripe.call(ctx, "GET", "/v1/customers", body, 200, &response)
@@ -310,15 +309,16 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Rea
 	}()
 	if res.StatusCode != expectedStatus {
 		var errorResponse stripeErrorResponse
-		dec := jsonstd.NewDecoder(res.Body)
-		_ = dec.Decode(&errorResponse)
-		err := errorResponse.Error
-		err.statusCode = res.StatusCode
-		return &err
+		err := json.Decode(res.Body, &errorResponse)
+		if err != nil {
+			return err
+		}
+		errResponse := errorResponse.Error
+		errResponse.statusCode = res.StatusCode
+		return &errResponse
 	}
 	if response != nil {
-		dec := jsonstd.NewDecoder(res.Body)
-		return dec.Decode(response)
+		return json.Decode(res.Body, response)
 	}
 	return nil
 }
@@ -357,8 +357,8 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 	body := strings.NewReader(form.Encode())
 
 	response := struct {
-		ID     string
-		Secret string
+		ID     string `json:"id"`
+		Secret string `json:"secret"`
 	}{}
 	err := stripe.call(context.TODO(), "POST", "/v1/webhook_endpoints", body, 200, &response)
 	if err != nil {
@@ -382,15 +382,15 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 }
 
 type stripeErrorResponse struct {
-	Error stripeError
+	Error stripeError `json:"error"`
 }
 
 type stripeError struct {
 	statusCode int
-	Type       string
-	Code       string
-	Message    string
-	Param      string
+	Type       string `json:"type"`
+	Code       string `json:"code"`
+	Message    string `json:"message"`
+	Param      string `json:"param"`
 }
 
 func (err *stripeError) Error() string {

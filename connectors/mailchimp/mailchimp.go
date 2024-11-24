@@ -14,7 +14,6 @@ import (
 	"context"
 	"crypto/rand"
 	_ "embed"
-	jsonstd "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -172,8 +171,8 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, _ types.Type
 	}
 
 	var response struct {
-		Members    []Member
-		TotalItems int `json:"total_items"`
+		Members    []Member `json:"members"`
+		TotalItems int      `json:"total_items"`
 	}
 
 	err := mc.call(ctx, "GET", path, values, nil, 200, &response)
@@ -215,11 +214,11 @@ func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role mee
 	var res struct {
 		MergeFields []struct {
 			Options struct {
-				Choices []string
-			}
-			Name string
-			Tag  string
-			Type string
+				Choices []string `json:"choices"`
+			} `json:"options"`
+			Name string `json:"name"`
+			Tag  string `json:"tag"`
+			Type string `json:"type"`
 		} `json:"merge_fields"`
 	}
 	err := mc.call(ctx, "GET", "/lists/"+mc.settings.List+"/merge-fields", params, nil, 200, &res)
@@ -578,29 +577,29 @@ func (mc *MailChimp) saveValues(ctx context.Context, values json.Value) error {
 }
 
 type batchOperation struct {
-	Method string
-	Path   string
-	Params map[string]string
-	Body   string
+	Method string            `json:"method"`
+	Path   string            `json:"path"`
+	Params map[string]string `json:"params"`
+	Body   string            `json:"body"`
 }
 
 type batchResponse struct {
-	ID                string
-	Status            string
+	ID                string `json:"id"`
+	Status            string `json:"status"`
 	ErroredOperations int    `json:"errored_operations"`
 	ResponseBodyURL   string `json:"response_body_url"`
 }
 
 type mailchimpError struct {
-	Type     string
-	Title    string
-	Status   int
-	Detail   string
-	Instance string
+	Type     string `json:"type"`
+	Title    string `json:"title"`
+	Status   int    `json:"status"`
+	Detail   string `json:"detail"`
+	Instance string `json:"instance"`
 	Errors   []struct {
-		Field   string
-		Message string
-	}
+		Field   string `json:"field"`
+		Message string `json:"message"`
+	} `json:"errors"`
 }
 
 func (err *mailchimpError) Error() string {
@@ -732,14 +731,15 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 
 	if res.StatusCode != expectedStatus {
 		mcErr := &mailchimpError{Status: res.StatusCode}
-		dec := jsonstd.NewDecoder(res.Body)
-		_ = dec.Decode(mcErr)
+		err := json.Decode(res.Body, mcErr)
+		if err != nil {
+			return err
+		}
 		return mcErr
 	}
 
 	if response != nil {
-		dec := jsonstd.NewDecoder(res.Body)
-		return dec.Decode(response)
+		return json.Decode(res.Body, response)
 	}
 
 	return nil
@@ -779,20 +779,20 @@ func (mc *MailChimp) lists(ctx context.Context) ([]list, error) {
 
 type webhook struct {
 	Events struct {
-		Campaign    bool
-		Cleaned     bool
-		Profile     bool
-		Subscribe   bool
-		Unsubscribe bool
-		Upemail     bool
-	}
-	ID      string
+		Campaign    bool `json:"campaign"`
+		Cleaned     bool `json:"cleaned"`
+		Profile     bool `json:"profile"`
+		Subscribe   bool `json:"subscribe"`
+		Unsubscribe bool `json:"unsubscribe"`
+		Upemail     bool `json:"upemail"`
+	} `json:"events"`
+	ID      string `json:"id"`
 	Sources struct {
-		Admin bool
-		API   bool
-		User  bool
-	}
-	URL string
+		Admin bool `json:"admin"`
+		API   bool `json:"api"`
+		User  bool `json:"user"`
+	} `json:"sources"`
+	URL string `json:"url"`
 }
 
 // initWebhooks initializes webhooks.
@@ -854,7 +854,7 @@ var errListNotExist = errors.New("list does not exist")
 // If list does not exist, it returns the errListNotExist error.
 func (mc *MailChimp) webhooks(ctx context.Context, list string) ([]webhook, error) {
 	var response struct {
-		Webhooks []webhook
+		Webhooks []webhook `json:"webhooks"`
 	}
 	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(list)+"/webhooks", nil, nil, 200, &response)
 	if err != nil {
@@ -1032,10 +1032,10 @@ func (mc *MailChimp) metadata() (string, string, error) {
 		return "", "", fmt.Errorf("fetching metadata, MailChimp returned a %d status code", res.StatusCode)
 	}
 	r := struct {
-		DC     string
-		UserID int `json:"user_id"`
+		DC     string `json:"dc"`
+		UserID int    `json:"user_id"`
 	}{}
-	err = jsonstd.NewDecoder(res.Body).Decode(&r)
+	err = json.Decode(res.Body, &r)
 	if err != nil {
 		return "", "", err
 	}
