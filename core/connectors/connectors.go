@@ -252,7 +252,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	}
 	account, err := aa.OAuthAccount(ctx)
 	if err != nil {
-		return nil, err
+		return nil, connectorError(err)
 	}
 	authorization := &Authorization{
 		AccountCode:  account,
