@@ -1540,7 +1540,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	}
 
 	// Construct the preview.
-	var b bytes.Buffer
+	var b json.Buffer
 	b.WriteString(req.Method)
 	b.WriteString(" ")
 	b.WriteString(req.URL)
@@ -1554,11 +1554,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		ct := req.Header.Get("Content-Type")
 		switch ct {
 		case "application/json":
-			indented, err := json.Indent(req.Body, "", "\t")
+			err = b.EncodeIndent(req.Body, "", "\t")
 			if err != nil {
 				return nil, err
 			}
-			b.Write(indented)
 		case "application/x-ndjson":
 			b.Write(req.Body)
 		default:
