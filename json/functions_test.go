@@ -511,6 +511,44 @@ func Test_Valid(t *testing.T) {
 	}
 }
 
+func Test_Validate(t *testing.T) {
+	tests := []struct {
+		data   string
+		err    string
+		offset int64
+	}{
+		{data: ``, err: "content is empty", offset: 0},
+		{data: `   `, err: "content is empty", offset: 0},
+		{data: `{"a":@}`, err: "invalid character '@' at start of token", offset: 5},
+		{data: `[1,2,3]4`, err: "invalid token '4' after top-level value", offset: 7},
+		{data: `true false`, err: "invalid token 'false' after top-level value", offset: 4},
+		{data: "\"\xFF\"", err: "invalid UTF-8 within string", offset: 1},
+		{data: ` { "foo": "boo" } `},
+	}
+	for _, test := range tests {
+		err := Validate([]byte(test.data))
+		if err == nil {
+			if test.err != "" {
+				t.Fatalf("expected error %q, got no error", test.err)
+			}
+			continue
+		}
+		if test.err == "" {
+			t.Fatalf("expected no error, got %q (%T)", err, err)
+		}
+		err2, ok := err.(*SyntaxError)
+		if !ok {
+			t.Fatalf("expected *SyntaxError error, got %q (%T)", err, err)
+		}
+		if test.err != err.Error() {
+			t.Fatalf("expected error %q, got error %q", test.err, err)
+		}
+		if got := err2.ByteOffset(); test.offset != got {
+			t.Fatalf("expected offset %d, got %d", test.offset, got)
+		}
+	}
+}
+
 // equalValues reports whether v1 and v2 are equal according to the type t.
 // v1 is supposed to conform to type t, and v2 is checked for equality with v1.
 func equalValues(t types.Type, v1, v2 any) error {

@@ -86,9 +86,7 @@ func (err *SyntaxError) ByteOffset() int64 {
 func (err *SyntaxError) Error() string {
 	str := err.err.Error()
 	if _, ok := err.err.(*jsontext.SyntacticError); ok {
-		if strings.HasPrefix(str, "jsontext: ") {
-			str = str[len("jsontext: "):]
-		}
+		str = strings.TrimPrefix(str, "jsontext: ")
 	}
 	return str
 }
@@ -308,9 +306,40 @@ type Unmarshaler interface {
 }
 
 // Valid reports whether data is a valid JSON encoding and properly encoded in
-// UTF-8.
+// UTF-8. For detailed error reporting, see the Validate function.
 func Valid(data []byte) bool {
 	return jsontext.Value(data).IsValid()
+}
+
+// Validate validates data and returns a SyntaxError error if data is not valid
+// JSON encoding and properly encoded in UTF-8. For a simple boolean check, see
+// the Valid function.
+func Validate(data []byte) error {
+	dec := getDecoder(data)
+	defer putDecoder(dec)
+	err := dec.SkipValue()
+	if err != nil {
+		if err == io.EOF {
+			return &SyntaxError{err: errors.New("content is empty")}
+		}
+		if _, ok := err.(*jsontext.SyntacticError); ok {
+			return &SyntaxError{err: err}
+		}
+		return err
+	}
+	if dec.PeekKind() == 0 {
+		return nil
+	}
+	offset := dec.InputOffset()
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return &SyntaxError{err: err, offset: offset}
+	}
+	err = &SyntaxError{
+		err:    fmt.Errorf("invalid token '%s' after top-level value", tok),
+		offset: offset,
+	}
+	return err
 }
 
 var (
