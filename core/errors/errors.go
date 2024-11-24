@@ -31,11 +31,11 @@
 package errors
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/meergo/meergo/json"
 )
 
 // Code represents an error code in an unprocessable error.
@@ -203,30 +203,24 @@ func (e *UnprocessableError) WriteTo(w http.ResponseWriter) error {
 	return writeTo(w, http.StatusUnprocessableEntity, e.Code, e.Message, cause)
 }
 
-// marshalString marshals s as a JSON string and returns the result.
-func marshalString(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b)
-}
-
 // writeTo writes code, message and, cause as JSON to w with status as HTTP
 // response status code. It returns an error from the json package if an error
 // occurs marshalling data and another error if an error occurs writing to w.
 func writeTo(w http.ResponseWriter, status int, code Code, message, cause string) error {
-	var b bytes.Buffer
+	var b json.Buffer
 	b.WriteString(`{"error":{"code":`)
-	b.WriteString(marshalString(string(code)))
+	_ = b.Encode(code)
 	b.WriteString(`,"message":`)
-	b.WriteString(marshalString(message))
+	_ = b.Encode(message)
 	if cause != "" {
 		b.WriteString(`,"cause":`)
-		b.WriteString(marshalString(cause))
+		_ = b.Encode(cause)
 	}
 	b.WriteString(`}}`)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
-	_, err := w.Write(b.Bytes())
+	_, err := b.WriteTo(w)
 	return err
 }

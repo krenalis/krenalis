@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -245,7 +244,7 @@ func evalCall(p part, properties map[string]any) (any, types.Type, error) {
 				if encodeSorted {
 					var b json.Buffer
 					_ = b.EncodeSorted(v)
-					v = json.Value(slices.Clone(b.Bytes()))
+					v, _ = b.Value()
 				} else {
 					v, _ = json.Marshal(v)
 				}

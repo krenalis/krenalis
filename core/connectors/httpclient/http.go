@@ -11,7 +11,6 @@ package httpclient
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -23,6 +22,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 )
 
 // HTTP allows creating HTTP clients for connections and enables granting,
@@ -126,12 +126,12 @@ func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, 
 	}
 
 	tokens := struct {
-		AccessToken  string       `json:"access_token"`
-		TokenType    string       `json:"token_type"` // TODO(carlo): validate the value
-		ExpiresIn    *json.Number `json:"expires_in"`
-		RefreshToken string       `json:"refresh_token"`
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"` // TODO(carlo): validate the value
+		ExpiresIn    *int   `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
 	}{}
-	err = json.NewDecoder(resp.Body).Decode(&tokens)
+	err = json.Decode(resp.Body, &tokens)
 	if err != nil {
 		return "", "", time.Time{}, fmt.Errorf("cannot decode response from %s: %s", auth.TokenURL, err)
 	}
@@ -151,9 +151,9 @@ func (h *HTTP) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code, 
 		if tokens.ExpiresIn == nil {
 			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s did not returned expires_in", auth.TokenURL)
 		}
-		s, _ := tokens.ExpiresIn.Int64()
+		s := *tokens.ExpiresIn
 		if s < 1 {
-			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s returned an invalid expires_in = %q", auth.TokenURL, tokens.ExpiresIn)
+			return "", "", time.Time{}, fmt.Errorf("the OAuth provider for %s returned an invalid expires_in = %v", auth.TokenURL, tokens.ExpiresIn)
 		}
 		expiresIn = int32(s)
 		if s > math.MaxInt32 {

@@ -12,7 +12,6 @@ package main
 
 import (
 	"embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +19,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/meergo/meergo/json"
 
 	"github.com/andybalholm/brotli"
 	"github.com/evanw/esbuild/pkg/api"

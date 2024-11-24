@@ -14,7 +14,6 @@ import (
 	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
-	"encoding/json"
 	"html"
 	"maps"
 	"math"
@@ -32,6 +31,7 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/jordan-wright/email"

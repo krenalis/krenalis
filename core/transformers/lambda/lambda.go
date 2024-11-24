@@ -11,7 +11,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +22,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/embed"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -137,11 +137,10 @@ func (fn *function) Call(ctx context.Context, name, version string, inSchema, ou
 
 	// Unmarshal the records.
 	if out.FunctionError != nil {
-		dec := json.NewDecoder(bytes.NewReader(out.Payload))
 		payload := struct {
-			ErrorMessage string
+			ErrorMessage string `json:"errorMessage"`
 		}{}
-		err = dec.Decode(&payload)
+		err := json.Unmarshal(out.Payload, &payload)
 		if err != nil {
 			return fmt.Errorf("transformers/lambda: cannot decode response executing function %q: %s", name, err)
 		}

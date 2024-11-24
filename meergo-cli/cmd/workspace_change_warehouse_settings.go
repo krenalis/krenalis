@@ -8,10 +8,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/meergo-cli/meergoapis"
 
 	"github.com/spf13/cobra"
@@ -30,8 +30,8 @@ var workspaceChangeWarehouseSettings = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		if !json.Valid(settings) {
-			log.Fatalf("content of file %q is not JSON valid", filename)
+		if err := json.Validate(settings); err != nil {
+			log.Fatalf("content of file %q is not JSON valid: %s", filename, err)
 		}
 		meergoapis.ChangeWarehouseSettings(workspace(cmd), mode, settings)
 	},

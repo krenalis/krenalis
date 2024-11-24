@@ -9,12 +9,13 @@ package cmd
 
 import (
 	"bufio"
-	"encoding/json"
+	jsonstd "encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/meergo-cli/meergoapis"
 	"github.com/meergo/meergo/types"
 
@@ -37,14 +38,14 @@ var workspaceChangeUserSchema = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		if !json.Valid(content) {
-			log.Fatalf("content of file %q is not JSON valid", filename)
+		if err := json.Validate(content); err != nil {
+			log.Fatalf("content of file %q is not JSON valid: %s", filename, err)
 		}
 		var req struct {
 			Schema  types.Type
 			RePaths map[string]any
 		}
-		err = json.Unmarshal(content, &req)
+		err = jsonstd.Unmarshal(content, &req)
 		if err != nil {
 			log.Fatalf("cannot unmarshal content of JSON file %q: %s", filename, err)
 		}

@@ -8,14 +8,13 @@
 package diffschemas
 
 import (
-	"bytes"
-	"encoding/json"
 	"os"
 	"reflect"
 	"slices"
 	"testing"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -819,18 +818,17 @@ func Test_propertyPaths(t *testing.T) {
 }
 
 func dumpToJSONFile(content any) string {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetIndent("", "    ")
-	err := enc.Encode(content)
-	if err != nil {
-		panic(err)
-	}
 	fi, err := os.CreateTemp("", "diffschemas_test_*.json")
 	if err != nil {
 		panic(err)
 	}
-	_, err = fi.Write(buf.Bytes())
+	defer fi.Close()
+	var b json.Buffer
+	err = b.EncodeIndent(content, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	_, err = b.WriteTo(fi)
 	if err != nil {
 		panic(err)
 	}

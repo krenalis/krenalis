@@ -444,7 +444,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if err != nil {
 				return nil, errInvalidConversion
 			}
-			return json.Value(slices.Clone(b.Bytes())), nil
+			return b.Value()
 		}
 		value, err := json.Marshal(v)
 		if err != nil {

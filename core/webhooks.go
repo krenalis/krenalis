@@ -9,7 +9,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -21,6 +20,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 )
 
 // WebhooksPer values indicates if webhooks are per account, connection, or

@@ -9,11 +9,11 @@ package core
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
 )
 
 // Connector represents a connector.

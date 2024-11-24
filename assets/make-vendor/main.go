@@ -8,8 +8,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -20,6 +18,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/meergo/meergo/json"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
@@ -254,8 +254,7 @@ func (f *resolveFile) ResolvedPaths() []string {
 
 func (f *resolveFile) MarshalJSON() ([]byte, error) {
 	f.mu.Lock()
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
+	var b json.Buffer
 	b.WriteString("{")
 	paths := slices.Sorted(maps.Keys(f.imports))
 	for i, name := range paths {
@@ -263,8 +262,7 @@ func (f *resolveFile) MarshalJSON() ([]byte, error) {
 			b.WriteByte(',')
 		}
 		b.WriteString("\n\t")
-		_ = enc.Encode(name)
-		b.Truncate(b.Len() - 1)
+		_ = b.Encode(name)
 		b.WriteString(": ")
 		value := f.imports[name]
 		if f.sideEffects[name] {
@@ -272,8 +270,7 @@ func (f *resolveFile) MarshalJSON() ([]byte, error) {
 		} else {
 			value += ";false"
 		}
-		_ = enc.Encode(value)
-		b.Truncate(b.Len() - 1)
+		_ = b.Encode(value)
 	}
 	b.WriteString("\n}")
 	f.mu.Unlock()
@@ -327,11 +324,12 @@ func copyPackageFile(dst, src string) error {
 	if err != nil {
 		return err
 	}
-	data, err = json.MarshalIndent(file, "", "  ")
+	var b json.Buffer
+	err = b.EncodeIndent(file, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	return os.WriteFile(dst, b.Bytes(), 0644)
 }
 
 func moveToModuleRoot() (string, error) {

@@ -9,7 +9,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
@@ -21,6 +20,8 @@ import (
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/json"
+
 	"github.com/meergo/meergo/types"
 )
 
