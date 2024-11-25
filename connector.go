@@ -103,6 +103,8 @@ const (
 // It panics if role is not a valid Role value.
 func (role Role) String() string {
 	switch role {
+	case Both:
+		return "Both"
 	case Source:
 		return "Source"
 	case Destination:
