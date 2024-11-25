@@ -1,5 +1,9 @@
 module github.com/meergo/meergo/meergo-cli
 
+// Keep in sync with the version within ".github/workflows/main.yml".
+// Keep in sync with the version within "Dockerfile".
+// Keep in sync with the version within "go.mod".
+// Keep in sync with the version within "go.work".
 go 1.23
 
 replace github.com/meergo/meergo => ../

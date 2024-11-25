@@ -3,6 +3,7 @@
 # Keep in sync with the version within ".github/workflows/main.yml".
 # Keep in sync with the version within "go.mod".
 # Keep in sync with the version within "go.work".
+# Keep in sync with the version within "meergo-cli/go.mod".
 FROM golang:1.23
 
 WORKDIR /meergo
