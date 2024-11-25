@@ -17,6 +17,7 @@ import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/Fee
 import { Execution } from '../../../lib/api/types/responses';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
+import AlertDialog from '../../base/AlertDialog/AlertDialog';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -30,6 +31,8 @@ interface ActionsGridProps {
 
 const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps) => {
 	const [runningActions, setRunningActions] = useState<number[]>([]);
+	const [actionToDelete, setActionToDelete] = useState<number>();
+
 	const { api, handleError, setIsLoadingConnections } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
@@ -65,14 +68,20 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		setIsLoadingConnections(true);
 	};
 
-	const onDeleteAction = async (actionID: number) => {
-		newActionID.current = 0; // avoid repainting with the animation on the new action's row
+	const onDeleteAction = (actionID: number) => {
+		setActionToDelete(actionID);
+	};
+
+	const onConfirmDeleteAction = async () => {
+		newActionID.current = 0; // do not re-trigger the animation of the new action's row during the repainting.
 		try {
-			await api.workspaces.connections.deleteAction(connection.id, actionID);
+			await api.workspaces.connections.deleteAction(connection.id, actionToDelete);
 		} catch (err) {
 			handleError(err);
+			setActionToDelete(null);
 			return;
 		}
+		setActionToDelete(null);
 		setIsLoadingConnections(true);
 	};
 
@@ -272,7 +281,27 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		rows.push(row);
 	}
 
-	return <Grid rows={rows} columns={GRID_COLUMNS} noRowsMessage='No actions to show'></Grid>;
+	return (
+		<>
+			<Grid rows={rows} columns={GRID_COLUMNS} noRowsMessage='No actions to show'></Grid>
+			<AlertDialog
+				variant='danger'
+				isOpen={actionToDelete != null}
+				onClose={() => setActionToDelete(null)}
+				title='Are you sure?'
+				actions={
+					<>
+						<SlButton onClick={() => setActionToDelete(null)}>Cancel</SlButton>
+						<SlButton variant='danger' onClick={onConfirmDeleteAction}>
+							Delete
+						</SlButton>
+					</>
+				}
+			>
+				<p>If you continue, you will permanently lose the action</p>
+			</AlertDialog>
+		</>
+	);
 };
 
 export default ActionsGrid;
