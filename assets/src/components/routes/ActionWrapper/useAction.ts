@@ -10,13 +10,12 @@ import {
 } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/core/connection';
-import { NotFoundError, UnavailableError, UnprocessableError } from '../../../lib/api/errors';
+import { UnprocessableError } from '../../../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../../../lib/api/types/action';
 import {
 	ActionSchemasResponse,
 	ExecQueryResponse,
 	RecordsResponse,
-	ConnectorUIResponse,
 	ConnectorValues,
 } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
@@ -89,12 +88,26 @@ const useAction = (
 				inputMatchingSchema = schemas.Matchings ? schemas.Matchings.Internal : null;
 				outputMatchingSchema = schemas.Matchings ? schemas.Matchings.External : null;
 
-				// If the action type is an import from a database source, the
-				// input schema is the schema of the database table itself.
+				// If the action type is an import from a database
+				// source, the input schema is the schema of the
+				// database table itself.
 				if (fields.includes('Query') && isEditing) {
 					let res: ExecQueryResponse;
-					res = await api.workspaces.connections.query(connection.id, providedAction.Query!, 0);
-					inputSchema = res.Schema;
+					try {
+						res = await api.workspaces.connections.query(connection.id, providedAction.Query!, 0);
+						inputSchema = res.Schema;
+					} catch (err) {
+						if (
+							err instanceof UnprocessableError &&
+							(err.code === 'InvalidPlaceholder' || err.code === 'UnsupportedColumnType')
+						) {
+							handleError(err.message);
+							// continue execution so that user can fix
+							// the action.
+						} else {
+							throw err;
+						}
+					}
 				}
 
 				// If the action type is an import from a file source,
@@ -104,45 +117,41 @@ const useAction = (
 					const connector = connectors.find((c) => c.name === providedAction.Connector);
 					if (connector.hasUI) {
 						// get the values of the file settings.
-						let ui: ConnectorUIResponse;
-						try {
-							ui = await api.workspaces.connections.actionUiEvent(
-								connection.id,
-								providedAction.ID,
-								'load',
-								null,
-							);
-						} catch (err) {
-							if (err instanceof NotFoundError) {
-								redirect('connectors');
-								handleError('The connector does not exist anymore');
-								return;
-							}
-							if (err instanceof UnprocessableError) {
-								if (err.code === 'EventNotExist') {
-									handleError(
-										'An unexpected error has occurred. Please contact the administrator for more information.',
-									);
-									return;
-								}
-							}
-							handleError(err);
-							return;
-						}
+						let ui = await api.workspaces.connections.actionUiEvent(
+							connection.id,
+							providedAction.ID,
+							'load',
+							null,
+						);
 						values = ui.Values;
 						setValues(ui.Values);
 					}
 					let res: RecordsResponse;
-					res = await api.workspaces.connections.records(
-						connection.id,
-						providedAction.Connector,
-						providedAction.Path!,
-						providedAction.Sheet,
-						providedAction.Compression,
-						values,
-						0,
-					);
-					inputSchema = res.schema;
+					try {
+						res = await api.workspaces.connections.records(
+							connection.id,
+							providedAction.Connector,
+							providedAction.Path!,
+							providedAction.Sheet,
+							providedAction.Compression,
+							values,
+							0,
+						);
+						inputSchema = res.schema;
+					} catch (err) {
+						if (
+							err instanceof UnprocessableError &&
+							(err.code === 'NoColumnsFound' ||
+								err.code === 'SheetNotExist' ||
+								err.code === 'UnsupportedColumnType')
+						) {
+							handleError(err.message);
+							// continue execution so that user can fix
+							// the action.
+						} else {
+							throw err;
+						}
+					}
 				}
 
 				// If the action type is an export to a database
@@ -150,22 +159,27 @@ const useAction = (
 				// database table itself.
 				if (fields.includes('Table') && isEditing) {
 					let schema: ObjectType;
-					schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
-					outputSchema = schema;
+					try {
+						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
+						outputSchema = schema;
+					} catch (err) {
+						if (err instanceof UnprocessableError && err.code === 'UnsupportedColumnType') {
+							handleError(err.message);
+							// continue execution so that user can fix
+							// the action.
+						} else {
+							throw err;
+						}
+					}
 				}
 			} catch (err) {
-				if (err instanceof UnprocessableError || err instanceof UnavailableError) {
-					handleError(err.message);
-					// continue execution so that user can fix the action.
-				} else {
-					setTimeout(() => {
-						setIsLoading(false);
-						closeFullscreen();
-						redirect('connections');
-						handleError(err);
-					}, 300);
-					return;
-				}
+				setTimeout(() => {
+					setIsLoading(false);
+					closeFullscreen();
+					redirect(`connections/${connection.id}/actions`);
+					handleError(err);
+				}, 300);
+				return;
 			}
 
 			const transformedActionType = transformActionType(
