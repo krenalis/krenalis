@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/postgres"
-	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/types"
 
 	"github.com/andybalholm/brotli"
 )
@@ -87,7 +87,7 @@ func (store *PostgreStore) Pending(ctx context.Context) (iter.Seq[PendingOperati
 					return
 				}
 				r := brotli.NewReader(bytes.NewReader(properties))
-				op.Event, err = json.DecodeByType[map[string]any](r, Schema)
+				op.Event, err = types.Decode[map[string]any](r, Schema)
 				if err != nil {
 					continue
 				}
@@ -130,7 +130,7 @@ func (store *PostgreStore) Store(ctx context.Context, operations []PendingOperat
 		insert.WriteString(`}',$`)
 		insert.WriteString(strconv.Itoa(i + 1))
 		insert.WriteByte(')')
-		data, err := json.MarshalBySchema(op.Event, Schema)
+		data, err := types.Marshal(op.Event, Schema)
 		if err != nil {
 			continue
 		}

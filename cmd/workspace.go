@@ -549,7 +549,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	events, _ := json.MarshalBySchema(evts, types.Array(events.Schema))
+	events, _ := types.Marshal(evts, types.Array(events.Schema))
 	return map[string]any{"events": events}, nil
 }
 
@@ -795,7 +795,7 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		buf := b.availableBuffer()
 		b.write(user.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","properties":`)
-		s, _ := json.MarshalBySchema(user.Properties, schema)
+		s, _ := types.Marshal(user.Properties, schema)
 		b.write(s)
 		b.writeByte('}')
 	}

@@ -310,13 +310,13 @@ func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 		case types.TimeKind:
 			b.WriteString(v.(time.Time).Format("15:04:05.999999999"))
 		case types.ArrayKind:
-			value, err := json.MarshalBySchema(v.([]any), t)
+			value, err := types.Marshal(v.([]any), t)
 			if err != nil {
 				return err
 			}
 			quoteCSVBytes(b, value)
 		case types.MapKind:
-			value, err := json.MarshalBySchema(v.(map[string]any), t)
+			value, err := types.Marshal(v.(map[string]any), t)
 			if err != nil {
 				return err
 			}

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -138,14 +137,14 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	case types.ArrayKind:
 		if v, ok := v.(string); ok {
 			r := strings.NewReader(v)
-			if v, err := json.DecodeByType[[]any](r, typ); err == nil {
+			if v, err := types.Decode[[]any](r, typ); err == nil {
 				return v, nil
 			}
 		}
 	case types.MapKind:
 		if v, ok := v.(string); ok {
 			r := strings.NewReader(v)
-			if v, err := json.DecodeByType[map[string]any](r, typ); err == nil {
+			if v, err := types.Decode[map[string]any](r, typ); err == nil {
 				return v, nil
 			}
 		}

@@ -335,8 +335,8 @@ func Test_Transform(t *testing.T) {
 func Test_inPlace(t *testing.T) {
 
 	clone := func(v map[string]any, t types.Type) map[string]any {
-		j, _ := json.MarshalBySchema(v, t)
-		v, _ = json.DecodeByType[map[string]any](bytes.NewReader(j), t)
+		j, _ := types.Marshal(v, t)
+		v, _ = types.Decode[map[string]any](bytes.NewReader(j), t)
 		return v
 	}
 

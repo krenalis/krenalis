@@ -706,7 +706,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 		return nil, "", err
 	}
 
-	marshaledUsers, err := json.MarshalBySchema(users, types.Array(schema))
+	marshaledUsers, err := types.Marshal(users, types.Array(schema))
 	if err != nil {
 		return nil, "", err
 	}
@@ -913,7 +913,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	schema := types.Object(rows.Columns())
 
-	marshaledRows, err := json.MarshalBySchema(results, types.Array(schema))
+	marshaledRows, err := types.Marshal(results, types.Array(schema))
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -1240,7 +1240,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 	}
 
 	schema := types.Object(columns)
-	marshaledRecords, err := json.MarshalBySchema(recs, types.Array(schema))
+	marshaledRecords, err := types.Marshal(recs, types.Array(schema))
 	if err != nil {
 		return nil, types.Type{}, err
 	}
@@ -1415,7 +1415,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 		return nil, errors.BadRequest("mapping and function transformations cannot both be present")
 	}
 
-	properties, err := json.DecodeByType[map[string]any](bytes.NewReader(event), events.Schema)
+	properties, err := types.Decode[map[string]any](bytes.NewReader(event), events.Schema)
 	if err != nil {
 		return nil, errors.BadRequest("event is not valid: %s", err)
 	}

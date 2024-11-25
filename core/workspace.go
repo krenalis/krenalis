@@ -1495,7 +1495,7 @@ func (this *Workspace) Traits(ctx context.Context, user string) ([]byte, error) 
 		return nil, errors.NotFound("user %q does not exist", user)
 	}
 
-	return json.MarshalBySchema(records[0], ws.UserSchema)
+	return types.Marshal(records[0], ws.UserSchema)
 }
 
 // User represents a user.

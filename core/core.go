@@ -36,7 +36,6 @@ import (
 	"github.com/meergo/meergo/core/transformers/lambda"
 	"github.com/meergo/meergo/core/transformers/local"
 	"github.com/meergo/meergo/core/transformers/mappings"
-	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
@@ -646,7 +645,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.BadRequest("mapping (or transformation) is required")
 	}
 
-	properties, err := json.DecodeByType[map[string]any](bytes.NewReader(data), inSchema)
+	properties, err := types.Decode[map[string]any](bytes.NewReader(data), inSchema)
 	if err != nil {
 		return nil, errors.BadRequest("data does not validate against the input schema: %w", err)
 	}
@@ -673,7 +672,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		return nil, errors.Unprocessable(TransformationFailed, "%w", err)
 	}
 
-	return json.MarshalBySchema(records[0].Properties, outSchema)
+	return types.Marshal(records[0].Properties, outSchema)
 }
 
 // TransformationLanguages returns the supported transformation languages.

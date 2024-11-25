@@ -271,7 +271,7 @@ func (enc rowEncoder) encode(row []any) error {
 				}
 			}
 		case types.MapKind:
-			b, err := json.MarshalBySchema(row[i].(map[string]any), t)
+			b, err := types.Marshal(row[i].(map[string]any), t)
 			if err != nil {
 				return err
 			}

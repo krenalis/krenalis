@@ -20,6 +20,7 @@ import (
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
 )
@@ -150,7 +151,7 @@ func (observer *Observer) addEvent(event events.Event) {
 			}
 		}
 		if properties == nil {
-			properties, _ = json.MarshalBySchema(event, events.Schema)
+			properties, _ = types.Marshal(event, events.Schema)
 			receivedAt = event["receivedAt"].(time.Time)
 		}
 		if listener.discarded == 0 {
