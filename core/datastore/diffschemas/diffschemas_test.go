@@ -736,6 +736,53 @@ func TestDiff(t *testing.T) {
 			}),
 			expectedOps: []meergo.AlterOperation{},
 		},
+		{
+			name: "Rename an Object property while adding a new property to it",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+			}),
+			rePaths:     map[string]any{"x2": "x"},
+			expectedErr: "it is not possible to rename an Object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
+		},
+		{
+			name: "Rename an Object property while deleting a property of it",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+					{Name: "b", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			rePaths:     map[string]any{"x2": "x"},
+			expectedErr: "it is not possible to rename an Object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
+		},
+		{
+			name: "Rename an Object property while renaming a new property of it",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x2", Type: types.Object([]types.Property{
+					{Name: "a2", Type: types.Text()},
+				})},
+			}),
+			rePaths:     map[string]any{"x2": "x", "x2.a2": "x.a"},
+			expectedErr: "it is not possible to rename an Object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
+		},
 	}
 
 	for _, test := range tests {

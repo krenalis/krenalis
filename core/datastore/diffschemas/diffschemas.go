@@ -117,11 +117,12 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			oldName := propPathToName(oldPath)
 			oldProp := oldPropsByName[oldName]
 			newProp := newPropsByName[addedName]
-			if !types.Equal(oldProp.Type, newProp.Type) {
-				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
-			}
 			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
+				if !types.Equal(oldProp.Type, newProp.Type) {
+					return nil, fmt.Errorf("it is not possible to rename an Object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
+
+				}
 				for _, c := range propertiesToColumns(newProp.Type) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
@@ -130,6 +131,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					})
 				}
 			} else {
+				if !types.Equal(oldProp.Type, newProp.Type) {
+					return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), appendPath(path, addedName))
+				}
 				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationRenameColumn,
 					Column:    pathToColumn(oldPath),
