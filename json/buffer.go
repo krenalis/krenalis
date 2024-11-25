@@ -15,10 +15,13 @@ import (
 	"github.com/meergo/meergo/json/internal/json/jsontext"
 )
 
-// Buffer wraps a bytes.Buffer, implementing all its methods, and additionally
-// provides the [Buffer.Encode],  [Buffer.EncodeIndent], [Buffer.EncodeQuoted],
-// and [Buffer.EncodeSorted] methods for appending JSON-encoded values to the
-// buffer. The zero value of Buffer is an empty buffer, ready for use.
+// Buffer embeds a bytes.Buffer, providing all its methods along with
+// additional functionality. It includes [Buffer.Encode], [Buffer.EncodeIndent],
+// [Buffer.EncodeQuoted], and [Buffer.EncodeSorted] for appending JSON-encoded
+// values to the buffer. Additionally, the [Buffer.Value] method allows copying
+// the unread portion of the buffer as a Value.
+//
+// The zero value of Buffer represents an empty buffer, ready for use.
 type Buffer struct {
 	buffer
 	enc         jsontext.Encoder

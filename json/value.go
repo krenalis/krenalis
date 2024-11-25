@@ -44,8 +44,11 @@ type Value []byte
 
 // AppendUnquote writes the unquoted value of v into dst, and returns the
 // extended buffer. v may contain leading and trailing JSON whitespace.
-// It returns an error if v is not of String kind.
+// It panics if v is not a string.
 func (v Value) AppendUnquote(dst []byte) []byte {
+	if !v.IsString() {
+		panic("expected string")
+	}
 	dst, _ = jsontext.AppendUnquote(dst, TrimSpace(v))
 	return dst
 }
