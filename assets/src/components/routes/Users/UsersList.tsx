@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useMemo } from 'react';
 import UsersContext from '../../../context/UsersContext';
 import Toolbar from '../../base/Toolbar/Toolbar';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -42,6 +42,16 @@ const UsersList = () => {
 		};
 	}, []);
 
+	const usedProperties = useMemo(() => {
+		const used: UserProperty[] = [];
+		for (const p of usersProperties) {
+			if (p.isUsed) {
+				used.push(p);
+			}
+		}
+		return used;
+	}, [usersProperties]);
+
 	const handleIdentityResolutionExecution = async () => {
 		let res: IdentityResolutionExecution;
 		try {
@@ -74,6 +84,11 @@ const UsersList = () => {
 
 	const onToggleColumn = (name: string) => {
 		const updatedProps: UserProperty[] = [];
+		const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === name;
+		if (isLastUsed) {
+			// Prevent the user from hiding all the columns.
+			return;
+		}
 		for (const p of usersProperties) {
 			const cp = { ...p };
 			if (cp.name === name) {
@@ -117,12 +132,14 @@ const UsersList = () => {
 						</SlButton>
 						<SlMenu>
 							{usersProperties.map((p) => {
+								const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === p.name;
 								return (
 									<SlOption key={p.name}>
 										<SlSwitch
 											size='small'
 											onSlChange={() => onToggleColumn(p.name)}
 											checked={p.isUsed}
+											disabled={isLastUsed}
 										>
 											{p.name}
 										</SlSwitch>
