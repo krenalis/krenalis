@@ -115,58 +115,51 @@ const ConnectionSettings = () => {
 
 	return (
 		<div className={`connection-settings${isSmallViewport ? ' connection-settings--small-viewport' : ''}`}>
-			{tabs.length > 1 ? (
-				<SlTabGroup placement={isSmallViewport ? 'top' : 'start'}>
-					<SlTab slot='nav' panel='general'>
-						General
-					</SlTab>
-					<SlTabPanel name='general'>
-						<div className='connection-settings__panel-title'>General</div>
-						<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
-					</SlTabPanel>
-
-					{tabs.includes('snippet') && (
-						<>
-							<SlTab slot='nav' panel='snippet'>
-								Snippet
-							</SlTab>
-							<SlTabPanel name='snippet'>
-								<div className='connection-settings__panel-title'>Snippet</div>
-								<ConnectionSnippet />
-							</SlTabPanel>
-						</>
-					)}
-
-					{tabs.includes('connection') && (
-						<>
-							<SlTab slot='nav' panel='connection'>
-								{c.type} Settings
-							</SlTab>
-							<SlTabPanel name='connection'>
-								<div className='connection-settings__panel-title'>{c.type} Settings</div>
-								<ConnectionConnectorSettings connection={c} />
-							</SlTabPanel>
-						</>
-					)}
-
-					{tabs.includes('keys') && (
-						<>
-							<SlTab slot='nav' panel='keys'>
-								Write Keys
-							</SlTab>
-							<SlTabPanel name='keys'>
-								<div className='connection-settings__panel-title'>Write Keys</div>
-								<ConnectionKeys connection={c} />
-							</SlTabPanel>
-						</>
-					)}
-				</SlTabGroup>
-			) : (
-				<>
+			<SlTabGroup placement={isSmallViewport ? 'top' : 'start'}>
+				<SlTab slot='nav' panel='general'>
+					General
+				</SlTab>
+				<SlTabPanel name='general'>
 					<div className='connection-settings__panel-title'>General</div>
 					<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
-				</>
-			)}
+				</SlTabPanel>
+
+				{tabs.includes('snippet') && (
+					<>
+						<SlTab slot='nav' panel='snippet'>
+							Snippet
+						</SlTab>
+						<SlTabPanel name='snippet'>
+							<div className='connection-settings__panel-title'>Snippet</div>
+							<ConnectionSnippet />
+						</SlTabPanel>
+					</>
+				)}
+
+				{tabs.includes('connection') && (
+					<>
+						<SlTab slot='nav' panel='connection'>
+							{c.type} Settings
+						</SlTab>
+						<SlTabPanel name='connection'>
+							<div className='connection-settings__panel-title'>{c.type} Settings</div>
+							<ConnectionConnectorSettings connection={c} />
+						</SlTabPanel>
+					</>
+				)}
+
+				{tabs.includes('keys') && (
+					<>
+						<SlTab slot='nav' panel='keys'>
+							Write Keys
+						</SlTab>
+						<SlTabPanel name='keys'>
+							<div className='connection-settings__panel-title'>Write Keys</div>
+							<ConnectionKeys connection={c} />
+						</SlTabPanel>
+					</>
+				)}
+			</SlTabGroup>
 		</div>
 	);
 };
