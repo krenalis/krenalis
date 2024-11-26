@@ -39,12 +39,6 @@ var (
 	createEventsTable string
 	//go:embed tables/operations.sql
 	createOperationsTable string
-	//go:embed tables/user_identities.sql
-	createUserIdentitiesTable string
-	//go:embed tables/users.sql
-	createUsersTable string
-	//go:embed tables/users_view.sql
-	createUsersView string
 )
 
 var _ meergo.Warehouse = &Snowflake{}

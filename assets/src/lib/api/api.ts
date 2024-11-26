@@ -566,6 +566,7 @@ class Workspaces {
 	add = async (
 		name: string,
 		privacyRegion: PrivacyRegion,
+		userSchema: ObjectType,
 		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
@@ -573,6 +574,7 @@ class Workspaces {
 		return await call(`${this.baseAPIURL}`, http.POST, {
 			name: name,
 			privacyRegion: privacyRegion,
+			userSchema: userSchema,
 			warehouse: {
 				name: warehouseName,
 				mode: warehouseMode,

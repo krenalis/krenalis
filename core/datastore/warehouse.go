@@ -78,8 +78,8 @@ func (dw warehouse) Delete(ctx context.Context, table string, where meergo.Expr)
 	return wrapWarehouseError(dw.inner.Delete(ctx, table, where))
 }
 
-func (dw warehouse) Initialize(ctx context.Context) error {
-	return wrapWarehouseError(dw.inner.Initialize(ctx))
+func (dw warehouse) Initialize(ctx context.Context, userColumns []meergo.Column) error {
+	return wrapWarehouseError(dw.inner.Initialize(ctx, userColumns))
 }
 
 func (dw warehouse) LastIdentityResolution(ctx context.Context) (*time.Time, *time.Time, error) {
@@ -106,8 +106,8 @@ func (dw warehouse) ResolveIdentities(ctx context.Context, identifiers, userColu
 	return wrapWarehouseError(dw.inner.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources))
 }
 
-func (dw warehouse) Repair(ctx context.Context) error {
-	return wrapWarehouseError(dw.inner.Repair(ctx))
+func (dw warehouse) Repair(ctx context.Context, userColumns []meergo.Column) error {
+	return wrapWarehouseError(dw.inner.Repair(ctx, userColumns))
 }
 
 func (dw warehouse) Settings() []byte {

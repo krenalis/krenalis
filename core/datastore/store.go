@@ -549,6 +549,7 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
+// The given user schema will be used to repair the user tables.
 //
 // This method should only be called on warehouses that have already been
 // initialized, with the aim of correcting any extraordinary issues (such as
@@ -556,14 +557,15 @@ func (store *Store) PurgeActions(ctx context.Context, actions []int) error {
 //
 // If an error occurs with the data warehouse during the repair, it returns a
 // *DataWarehouseError error.
-func (store *Store) Repair(ctx context.Context) error {
+func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {
 		return err
 	}
 	defer done()
-	return store.warehouse().Repair(ctx)
+	userColumns := propertiesToColumns(userSchema)
+	return store.warehouse().Repair(ctx, userColumns)
 }
 
 // StartIdentityResolution starts an Identity Resolution on the store's

@@ -46,27 +46,27 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
-func (warehouse *Snowflake) Initialize(ctx context.Context) error {
-	return warehouse.initRepair(ctx, false)
+func (warehouse *Snowflake) Initialize(ctx context.Context, userColumns []meergo.Column) error {
+	return warehouse.initRepair(ctx, userColumns, false)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
-func (warehouse *Snowflake) Repair(ctx context.Context) error {
-	return warehouse.initRepair(ctx, true)
+func (warehouse *Snowflake) Repair(ctx context.Context, userColumns []meergo.Column) error {
+	return warehouse.initRepair(ctx, userColumns, true)
 }
 
 // initRepair initializes (or repairs) the database objects (as tables, types,
 // etc...) on the data warehouse.
-func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
+func (warehouse *Snowflake) initRepair(ctx context.Context, userColumns []meergo.Column, repair bool) error {
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,
 		createOperationsTable,
-		createUserIdentitiesTable,
-		createUsersTable,
+		userIdentitiesSQLSchema(userColumns),
+		usersSQLSchema("_users_0", userColumns),
 	}
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
-		queries = append(queries, createUsersView)
+		queries = append(queries, usersViewSQLSchema(userColumns, "_users_0"))
 	}
 	db := warehouse.openDB()
 	for _, query := range queries {
@@ -76,4 +76,68 @@ func (warehouse *Snowflake) initRepair(ctx context.Context, repair bool) error {
 		}
 	}
 	return nil
+}
+
+// userIdentitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE
+// ...") of the user identities table, which includes, in addition to the
+// columns used internally by the driver, the given user columns.
+func userIdentitiesSQLSchema(userColumns []meergo.Column) string {
+	var b strings.Builder
+	b.WriteString(`CREATE TABLE IF NOT EXISTS "_USER_IDENTITIES" (
+		"__PK__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER,
+		"__ACTION__" INT NOT NULL,
+		"__IS_ANONYMOUS__" BOOLEAN NOT NULL DEFAULT FALSE,
+		"__IDENTITY_ID__" VARCHAR NOT NULL,
+		"__CONNECTION__" INT NOT NULL,
+		"__ANONYMOUS_IDS__" ARRAY,
+		"__LAST_CHANGE_TIME__" TIMESTAMP_NTZ NOT NULL,
+		"__EXECUTION__" INT,
+		"__GID__" VARCHAR(36),
+		"__CLUSTER__" INT AUTOINCREMENT START 0 INCREMENT 1 ORDER`)
+	for _, c := range userColumns {
+		b.WriteString(",\n")
+		b.WriteString(quoteIdent(c.Name))
+		b.WriteByte(' ')
+		b.WriteString(typeToSnowflakeType(c.Type))
+	}
+	b.WriteString(",\n" + `PRIMARY KEY ("__pk__"))`)
+	return b.String()
+}
+
+// usersSQLSchema returns the SQL schema (in the form "CREATE TABLE ...") of the
+// users table with the given name, which includes, in addition to the columns
+// used internally by the driver, the given user columns.
+func usersSQLSchema(name string, userColumns []meergo.Column) string {
+	var b strings.Builder
+	b.WriteString(`CREATE TABLE IF NOT EXISTS `)
+	b.WriteString(quoteIdent(name))
+	b.WriteString(` (
+		"__ID__" VARCHAR(36),
+		"__IDENTITIES__" ARRAY,
+		"__LAST_CHANGE_TIME__" TIMESTAMP NOT NULL`)
+	for _, c := range userColumns {
+		b.WriteString(",\n")
+		b.WriteString(quoteIdent(c.Name))
+		b.WriteByte(' ')
+		b.WriteString(typeToSnowflakeType(c.Type))
+	}
+	b.WriteByte(')')
+	return b.String()
+}
+
+// usersViewSQLSchema returns the SQL schema (in the form "CREATE ... VIEW ...")
+// of the users view which is based on the users table with the given name.
+func usersViewSQLSchema(userColumns []meergo.Column, fromUsersTable string) string {
+	var b strings.Builder
+	b.WriteString(`CREATE OR REPLACE VIEW "USERS" AS
+		SELECT
+			"__ID__",
+			"__LAST_CHANGE_TIME__"`)
+	for _, c := range userColumns {
+		b.WriteString(",\n")
+		b.WriteString(quoteIdent(c.Name))
+	}
+	b.WriteString(` FROM `)
+	b.WriteString(quoteIdent(fromUsersTable))
+	return b.String()
 }

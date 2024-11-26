@@ -1285,7 +1285,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 // if an error occurred during the repairing of the data warehouse.
 func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()
-	err := this.store.Repair(ctx)
+	err := this.store.Repair(ctx, this.workspace.UserSchema)
 	if err != nil {
 		if err, ok := (err).(*datastore.WarehouseError); ok {
 			return errors.Unprocessable(WarehouseError, "%s", err)

@@ -557,23 +557,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = wh.Initialize(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// Create the necessary columns on the warehouse.
-			var ops []meergo.AlterOperation
-			for _, c := range columns {
-				if c.Name == "email" {
-					// TODO(Gianluca): the "email" column is omitted as it is already
-					// part of the default schema. This can be reviewed in relation to
-					// issue https://github.com/meergo/meergo/issues/1075.
-					continue
-				}
-				ops = append(ops, meergo.AlterOperation{Operation: meergo.OperationAddColumn, Column: c.Name, Type: c.Type})
-			}
-			err = wh.AlterUserColumns(ctx, columns, ops)
+			err = wh.Initialize(ctx, columns)
 			if err != nil {
 				t.Fatal(err)
 			}

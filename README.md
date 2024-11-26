@@ -206,10 +206,19 @@ Populate the Meergo's database with the queries in [database/PostgreSQL.sql](dat
 Create the workspace, connect a PostgreSQL warehouse and initialize it with:
 
 ```
-meergo-cli create-workspace PostgreSQL ./postgresql.json
+meergo-cli create-workspace ./myschema.json PostgreSQL ./postgresql.json
 ```
 
-where `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
+where `./myschema.json` is a JSON file containing the definition of a user schema, for example:
+
+```json
+{
+    "name": "Object",
+    "properties": [ { "name": "email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true } ]
+}
+```
+
+and `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
 
 ```json
 {

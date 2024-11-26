@@ -142,7 +142,9 @@ type Warehouse interface {
 	Delete(ctx context.Context, table string, where Expr) error
 
 	// Initialize initializes the data warehouse.
-	Initialize(ctx context.Context) error
+	// The given user schema will be used by the initialization to build the user
+	// tables on the warehouse with the corresponding columns.
+	Initialize(ctx context.Context, userColumns []Column) error
 
 	// LastIdentityResolution returns information about the last Identity
 	// Resolution.
@@ -213,11 +215,12 @@ type Warehouse interface {
 	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// Repair repairs the database objects on the data warehouse needed by Meergo.
+	// The given user schema will be used to repair the user tables.
 	//
 	// This method should only be called on warehouses that have already been
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Meergo functional again.
-	Repair(ctx context.Context) error
+	Repair(ctx context.Context, userColumns []Column) error
 
 	// Settings returns the data warehouse settings.
 	Settings() []byte

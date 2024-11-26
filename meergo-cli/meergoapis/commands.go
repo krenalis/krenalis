@@ -87,12 +87,14 @@ const (
 	PrivacyRegionEurope       PrivacyRegion = "Europe"
 )
 
-func CreateWorkspace(name string, privacyRegion PrivacyRegion, warehouseName string, warehouseSettings json.Value) int {
+func CreateWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type, warehouseName string, warehouseSettings json.Value) int {
 	var b json.Buffer
 	b.WriteString(`{"name":`)
 	_ = b.Encode(name)
 	b.WriteString(`,"privacyRegion":`)
 	_ = b.Encode(privacyRegion)
+	b.WriteString(`,"userSchema":`)
+	_ = b.Encode(userSchema)
 	b.WriteString(`,"warehouse":{"name":`)
 	_ = b.Encode(warehouseName)
 	b.WriteString(`,"settings":`)

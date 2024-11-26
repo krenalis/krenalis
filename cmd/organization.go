@@ -16,6 +16,7 @@ import (
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/types"
 )
 
 type organization struct {
@@ -30,6 +31,7 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	}
 	var body struct {
 		Name          string             `json:"name"`
+		UserSchema    types.Type         `json:"userSchema"`
 		PrivacyRegion core.PrivacyRegion `json:"privacyRegion"`
 		Warehouse     struct {
 			Name     string             `json:"name"`
@@ -41,7 +43,7 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
+	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
 	}

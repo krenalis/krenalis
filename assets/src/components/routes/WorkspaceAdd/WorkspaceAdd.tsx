@@ -1,5 +1,6 @@
 import React, { useState, useContext } from 'react';
 import './WorkspaceAdd.css';
+import { ObjectType } from '../../../lib/api/types/types';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
@@ -63,9 +64,22 @@ const WorkspaceAdd = () => {
 			return;
 		}
 		setIsAddingWorkspace(true);
+		let initialSchema = {
+			name: 'Object',
+			properties: [
+				{ name: 'email', note: '', type: { name: 'Text', charLen: 300 }, label: '', readOptional: true },
+			],
+		} as ObjectType;
 		let id: number;
 		try {
-			const res = await api.workspaces.add(name, privacyRegion, selectedWarehouse, 'Normal', warehouseSettings);
+			const res = await api.workspaces.add(
+				name,
+				privacyRegion,
+				initialSchema,
+				selectedWarehouse,
+				'Normal',
+				warehouseSettings,
+			);
 			id = res.id;
 		} catch (err) {
 			setIsAddingWorkspace(false);

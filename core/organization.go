@@ -181,17 +181,10 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	return err
 }
 
-// defaultUserSchema is the default user schema (without meta properties).
-// It must be kept in sync with the SQL script that initializes the data
-// warehouse.
-var defaultUserSchema = types.Object([]types.Property{
-	{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-})
-
-// AddWorkspace adds a workspace with the given name and privacy region, and
-// connects to a data warehouse of the provided name and settings. Returns the
-// identifier of the workspace that has been created. name must be between 1 and
-// 100 runes long.
+// AddWorkspace adds a workspace with the given name, privacy region and user
+// schema, and connects to a data warehouse of the provided name and settings.
+// Returns the identifier of the workspace that has been created. name must be
+// between 1 and 100 runes long.
 //
 // whMode specifies the initial mode of the workspace's data warehouse.
 //
@@ -205,13 +198,16 @@ var defaultUserSchema = types.Object([]types.Property{
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseNotExist, if a data warehouse with the provided name does not
 //     exist.
-func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
+func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, userSchema types.Type, whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
 
 	// Validate the parameters.
 	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
 		return 0, errors.BadRequest("name %q is not valid", name)
+	}
+	if !userSchema.Valid() {
+		return 0, errors.BadRequest("user schema is invalid")
 	}
 	switch region {
 	case PrivacyRegionNotSpecified, PrivacyRegionEurope:
@@ -220,6 +216,14 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 	if whName == "" {
 		return 0, errors.BadRequest("warehouse name is empty")
+	}
+
+	// Perform additional checks on the compliance of the user schema.
+	if err := checkAllowedPropertyUserSchema(userSchema); err != nil {
+		return 0, errors.BadRequest("%s", err)
+	}
+	if err := datastore.CheckConflictingProperties("users", userSchema); err != nil {
+		return 0, errors.BadRequest("%s", err)
 	}
 
 	// Normalize the warehouse settings.
@@ -247,7 +251,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, whName, whSettings)
+	err = this.core.datastore.Initialize(ctx, whName, whSettings, userSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return 0, errors.Unprocessable(WarehouseError, "%s", err)
@@ -258,7 +262,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	n := state.AddWorkspace{
 		Organization:                   this.organization.ID,
 		Name:                           name,
-		UserSchema:                     defaultUserSchema,
+		UserSchema:                     userSchema,
 		ResolveIdentitiesOnBatchImport: true,
 		PrivacyRegion:                  state.PrivacyRegion(region),
 	}
@@ -273,7 +277,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	}
 
 	// Encode the user schema to JSON.
-	userSchema, err := json.Marshal(n.UserSchema)
+	encodedUserSchema, err := json.Marshal(n.UserSchema)
 	if err != nil {
 		return 0, err
 	}
@@ -283,7 +287,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 			" user_schema, resolve_identities_on_batch_import, privacy_region,"+
 			" warehouse_name, warehouse_mode, warehouse_settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-			n.ID, n.Organization, n.Name, userSchema, n.ResolveIdentitiesOnBatchImport,
+			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,
 			n.PrivacyRegion, n.Warehouse.Name, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {

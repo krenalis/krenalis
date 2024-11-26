@@ -331,7 +331,14 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	}
 
 	// Create the workspace and connect the warehouse.
-	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified)
+	//
+	// TODO(Gianluca): here we can simplify the test a bit by directly creating
+	// the workspace with the correct schema, thus avoiding an alter schema and
+	// possibly speeding up the test a bit.
+	initialUserSchema := types.Object([]types.Property{
+		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+	})
+	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified, initialUserSchema)
 	if err != nil {
 		t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -424,10 +431,11 @@ func (c *Meergo) changeUserSchema() error {
 	return c.call("PUT", method, req, nil)
 }
 
-func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion) (int, error) {
+func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type) (int, error) {
 	req := map[string]any{
 		"name":          name,
 		"privacyRegion": privacyRegion,
+		"userSchema":    userSchema,
 		"warehouse": map[string]any{
 			"name":     testsSettings.WarehouseName,
 			"settings": testsSettings.Warehouse,

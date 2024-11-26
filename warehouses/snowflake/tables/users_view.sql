@@ -1,7 +1,0 @@
-CREATE OR REPLACE VIEW "USERS" AS
-SELECT
-    "__ID__",
-    "__LAST_CHANGE_TIME__",
-    "EMAIL"
-FROM
-    "_USERS_0";

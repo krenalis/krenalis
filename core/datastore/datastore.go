@@ -110,17 +110,20 @@ func (ds *Datastore) Close() {
 
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
+// The given user schema will be used by the initialization to build the user
+// tables on the warehouse with the corresponding columns.
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *DataWarehouseError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte) error {
+func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte, userSchema types.Type) error {
 	ds.mustBeOpen()
 	dw, err := registeredWarehouse(name, settings)
 	if err != nil {
 		return err
 	}
 	defer dw.Close()
-	err = dw.Initialize(ctx)
+	userColumns := propertiesToColumns(userSchema)
+	err = dw.Initialize(ctx, userColumns)
 	if err != nil {
 		return err
 	}
