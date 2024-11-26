@@ -347,6 +347,19 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 				}
 			}
 			b.WriteByte(']')
+		case []meergo.Option:
+			b.WriteByte('[')
+			for i, option := range field {
+				if i > 0 {
+					b.WriteByte(',')
+				}
+				b.WriteString(`{"text":`)
+				_ = b.Encode(option.Text)
+				b.WriteString(`,"value":`)
+				_ = b.Encode(option.Value)
+				b.WriteString(`}`)
+			}
+			b.WriteByte(']')
 		default:
 			err = b.Encode(field)
 		}
