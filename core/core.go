@@ -36,6 +36,7 @@ import (
 	"github.com/meergo/meergo/core/transformers/lambda"
 	"github.com/meergo/meergo/core/transformers/local"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
 	"github.com/google/uuid"
