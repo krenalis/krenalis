@@ -25,8 +25,8 @@ const Header = ({ title, member }: HeaderProps) => {
 				<Link path='members/current'>
 					<SlAvatar
 						className='header__account-avatar'
-						initials={member.Initials}
-						image={member.Avatar ? `data:${member.Avatar.MimeType};base64, ${member.Avatar.Image}` : ''}
+						initials={member.initials}
+						image={member.avatar ? `data:${member.avatar.mimeType};base64, ${member.avatar.image}` : ''}
 					/>
 				</Link>
 			</div>

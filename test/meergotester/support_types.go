@@ -21,57 +21,57 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type Action struct {
-	ID                       int
-	Connection               int
-	Target                   *Target
-	Name                     string
-	Enabled                  bool
-	EventType                *string
-	Running                  bool
-	ScheduleStart            *int
-	SchedulePeriod           *SchedulePeriod
-	InSchema                 types.Type
-	OutSchema                types.Type
-	Filter                   *Filter
-	Transformation           Transformation
-	Query                    *string
-	Connector                int
-	Path                     *string
-	Sheet                    *string
-	Compression              Compression
-	Table                    *string
-	TableKeyProperty         *string
-	IdentityProperty         *string
-	LastChangeTimeProperty   *string
-	LastChangeTimeFormat     *string
-	FileOrderingPropertyPath string
-	ExportMode               *ExportMode
-	MatchingProperties       *MatchingProperties
-	ExportOnDuplicatedUsers  *bool
+	ID                       int                 `json:"id"`
+	Connection               int                 `json:"connection"`
+	Target                   *Target             `json:"target"`
+	Name                     string              `json:"name"`
+	Enabled                  bool                `json:"enabled"`
+	EventType                *string             `json:"eventType"`
+	Running                  bool                `json:"running"`
+	ScheduleStart            *int                `json:"scheduleStart"`
+	SchedulePeriod           *SchedulePeriod     `json:"schedulePeriod"`
+	InSchema                 types.Type          `json:"inSchema"`
+	OutSchema                types.Type          `json:"outSchema"`
+	Filter                   *Filter             `json:"filter"`
+	Transformation           Transformation      `json:"transformation"`
+	Query                    *string             `json:"query"`
+	Connector                int                 `json:"connector"`
+	Path                     *string             `json:"path"`
+	Sheet                    *string             `json:"sheet"`
+	Compression              Compression         `json:"compression"`
+	Table                    *string             `json:"table"`
+	TableKeyProperty         *string             `json:"tableKeyProperty"`
+	IdentityProperty         *string             `json:"identityProperty"`
+	LastChangeTimeProperty   *string             `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat     *string             `json:"lastChangeTimeFormat"`
+	FileOrderingPropertyPath string              `json:"fileOrderingPropertyPath"`
+	ExportMode               *ExportMode         `json:"exportMode"`
+	MatchingProperties       *MatchingProperties `json:"matchingProperties"`
+	ExportOnDuplicatedUsers  *bool               `json:"exportOnDuplicatedUsers"`
 }
 
 type ActionToSet struct {
-	Name                     string
-	Enabled                  bool
-	Filter                   *Filter
-	InSchema                 types.Type
-	OutSchema                types.Type
-	Transformation           Transformation
-	Connector                string
-	Query                    string
-	Path                     string
-	Sheet                    string
-	Compression              Compression
-	UIValues                 json.RawMessage `json:",omitempty"`
-	TableName                string
-	TableKeyProperty         string
-	IdentityProperty         string
-	LastChangeTimeProperty   string
-	LastChangeTimeFormat     string
-	FileOrderingPropertyPath string
-	ExportMode               *ExportMode
-	MatchingProperties       *MatchingProperties
-	ExportOnDuplicatedUsers  *bool
+	Name                     string              `json:"name"`
+	Enabled                  bool                `json:"enabled"`
+	Filter                   *Filter             `json:"filter"`
+	InSchema                 types.Type          `json:"inSchema"`
+	OutSchema                types.Type          `json:"outSchema"`
+	Transformation           Transformation      `json:"transformation"`
+	Connector                string              `json:"connector"`
+	Query                    string              `json:"query"`
+	Path                     string              `json:"path"`
+	Sheet                    string              `json:"sheet"`
+	Compression              Compression         `json:"compression"`
+	UIValues                 json.RawMessage     `json:"uiValues,omitempty"`
+	TableName                string              `json:"tableName"`
+	TableKeyProperty         string              `json:"tableKeyProperty"`
+	IdentityProperty         string              `json:"identityProperty"`
+	LastChangeTimeProperty   string              `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat     string              `json:"lastChangeTimeFormat"`
+	FileOrderingPropertyPath string              `json:"fileOrderingPropertyPath"`
+	ExportMode               *ExportMode         `json:"exportMode"`
+	MatchingProperties       *MatchingProperties `json:"matchingProperties"`
+	ExportOnDuplicatedUsers  *bool               `json:"exportOnDuplicatedUsers"`
 }
 
 type Compression string
@@ -86,22 +86,22 @@ const (
 type Strategy string
 
 type ConnectionToAdd struct {
-	Name              string
-	Role              Role
-	Enabled           bool
-	Connector         string
-	Strategy          *Strategy
-	WebsiteHost       string
-	LinkedConnections []int
-	SendingMode       *SendingMode
-	UIValues          json.RawMessage
+	Name              string          `json:"name"`
+	Role              Role            `json:"role"`
+	Enabled           bool            `json:"enabled"`
+	Connector         string          `json:"connector"`
+	Strategy          *Strategy       `json:"strategy"`
+	WebsiteHost       string          `json:"websiteHost"`
+	LinkedConnections []int           `json:"linkedConnections"`
+	SendingMode       *SendingMode    `json:"sendingMode"`
+	UIValues          json.RawMessage `json:"uiValues"`
 }
 
 type DisplayedProperties struct {
-	Image       string
-	FirstName   string
-	LastName    string
-	Information string
+	Image       string `json:"image"`
+	FirstName   string `json:"firstName"`
+	LastName    string `json:"lastName"`
+	Information string `json:"information"`
 }
 
 type DummySettings struct {
@@ -109,13 +109,13 @@ type DummySettings struct {
 }
 
 type Execution struct {
-	ID        int
-	Action    int
-	StartTime time.Time
-	EndTime   *time.Time
-	Passed    int
-	Failed    int
-	Error     string
+	ID        int        `json:"id"`
+	Action    int        `json:"action"`
+	StartTime time.Time  `json:"startTime"`
+	EndTime   *time.Time `json:"endTime"`
+	Passed    int        `json:"passed"`
+	Failed    int        `json:"failed"`
+	Error     string     `json:"error"`
 }
 
 type ExportMode string
@@ -134,8 +134,8 @@ const (
 )
 
 type Filter struct {
-	Logical    FilterLogical
-	Conditions []FilterCondition
+	Logical    FilterLogical     `json:"logical"`
+	Conditions []FilterCondition `json:"conditions"`
 }
 
 type FilterLogical string
@@ -146,9 +146,9 @@ const (
 )
 
 type FilterCondition struct {
-	Property string
-	Operator FilterOperator
-	Values   []string
+	Property string         `json:"property"`
+	Operator FilterOperator `json:"operator"`
+	Values   []string       `json:"values"`
 }
 
 type FilterOperator string
@@ -200,15 +200,15 @@ type UserIdentity struct {
 }
 
 type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' within package 'apis'.
-	Label string
-	Value string
+	Label string `json:"label"`
+	Value string `json:"value"`
 }
 
 type Language string
 
 type MatchingProperties struct {
-	Internal string
-	External types.Property
+	Internal string         `json:"internal"`
+	External types.Property `json:"external"`
 }
 
 type PrivacyRegion string
@@ -373,25 +373,25 @@ func (at *Target) UnmarshalJSON(data []byte) error {
 }
 
 type Transformation struct {
-	Mapping  map[string]string
-	Function *TransformationFunction
+	Mapping  map[string]string       `json:"mapping"`
+	Function *TransformationFunction `json:"function"`
 }
 
 type TransformationFunction struct {
-	Source        string
-	Language      Language
-	PreserveJSON  bool
-	InProperties  []string
-	OutProperties []string
+	Source        string   `json:"source"`
+	Language      Language `json:"language"`
+	PreserveJSON  bool     `json:"preserveJSON"`
+	InProperties  []string `json:"inProperties"`
+	OutProperties []string `json:"outProperties"`
 }
 
 type Workspace struct {
-	ID                             int
-	Name                           string
-	UserSchema                     types.Type
-	UserPrimarySources             map[string]int
-	ResolveIdentitiesOnBatchImport bool
-	Identifiers                    []string
-	PrivacyRegion                  PrivacyRegion
-	DisplayedProperties            DisplayedProperties
+	ID                             int                 `json:"id"`
+	Name                           string              `json:"name"`
+	UserSchema                     types.Type          `json:"userSchema"`
+	UserPrimarySources             map[string]int      `json:"userPrimarySources"`
+	ResolveIdentitiesOnBatchImport bool                `json:"ResolveIdentitiesOnBatchImport"`
+	Identifiers                    []string            `json:"identifiers"`
+	PrivacyRegion                  PrivacyRegion       `json:"privacyRegion"`
+	DisplayedProperties            DisplayedProperties `json:"displayedProperties"`
 }

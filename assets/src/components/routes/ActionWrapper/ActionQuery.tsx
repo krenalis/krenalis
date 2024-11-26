@@ -39,7 +39,7 @@ const ActionQuery = () => {
 
 	useEffect(() => {
 		if (isEditing) {
-			lastQueryConfirmation.current = action.Query;
+			lastQueryConfirmation.current = action.query;
 		}
 	}, []);
 
@@ -49,7 +49,7 @@ const ActionQuery = () => {
 			return;
 		}
 		const columns: GridColumn[] = [];
-		for (const prop of res.Schema.properties!) {
+		for (const prop of res.schema.properties!) {
 			let name: string;
 			if (prop.label != null && prop.label !== '') {
 				name = prop.label;
@@ -59,9 +59,9 @@ const ActionQuery = () => {
 			columns.push({ name: name, type: prop.type.name });
 		}
 		const rows: GridRow[] = [];
-		for (const row of res.Rows) {
+		for (const row of res.rows) {
 			const cells: any[] = [];
-			for (const prop of res.Schema.properties!) {
+			for (const prop of res.schema.properties!) {
 				const key = prop.name;
 				cells.push(row[key]);
 			}
@@ -74,7 +74,7 @@ const ActionQuery = () => {
 	const onUpdateQuery = async (value: string | undefined) => {
 		if (value == null) return;
 		const a = { ...action };
-		a.Query = value;
+		a.query = value;
 		setAction(a);
 		if (value.trim() !== lastQueryConfirmation.current.trim() && lastQueryConfirmation.current.trim() !== '') {
 			setIsQueryChanged(true);
@@ -93,7 +93,7 @@ const ActionQuery = () => {
 		queryConfirmButtonRef.current.confirm();
 		setTimeout(() => {
 			const actionTyp = { ...actionType };
-			actionTyp.InputSchema = res.Schema;
+			actionTyp.inputSchema = res.schema;
 			setActionType(actionTyp);
 			setTimeout(() => {
 				const top = transformationSectionRef.current.getBoundingClientRect().top;
@@ -107,7 +107,7 @@ const ActionQuery = () => {
 	};
 
 	const query = async (limit: number, isConfirmation: boolean) => {
-		const q = action.Query!.trim();
+		const q = action.query!.trim();
 		if (q.length > queryMaxSize) {
 			handleError('The query is too long');
 			return;
@@ -128,7 +128,7 @@ const ActionQuery = () => {
 			handleError(err);
 			return;
 		}
-		if (res.Schema.properties!.length === 0) {
+		if (res.schema.properties!.length === 0) {
 			handleError('The query execution did not yield any columns');
 			return;
 		}
@@ -152,7 +152,7 @@ const ActionQuery = () => {
 					language='sql'
 					height={400}
 					name='actionQueryEditor'
-					value={action.Query!}
+					value={action.query!}
 					onChange={onUpdateQuery}
 				></EditorWrapper>
 				<div className='action__query-buttons'>

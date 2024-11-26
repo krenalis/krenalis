@@ -63,14 +63,14 @@ const ConnectionActions = () => {
 
 	const onSelectActionType = (actionType: ActionType) => {
 		let name: string;
-		if (actionType.Target === 'Events') {
-			if (actionType.EventType) {
-				name = `event/${actionType.EventType}`;
+		if (actionType.target === 'Events') {
+			if (actionType.eventType) {
+				name = `event/${actionType.eventType}`;
 			} else {
 				name = 'event';
 			}
 		} else {
-			name = actionType.Target.toLowerCase();
+			name = actionType.target.toLowerCase();
 		}
 		const newLocation = `connections/${connection.id}/actions/add/${name}`;
 		setIsActionTypesDialogOpen(false);
@@ -78,7 +78,7 @@ const ConnectionActions = () => {
 	};
 
 	const onSelectAction = (action: Action) => {
-		const newLocation = `connections/${connection.id}/actions/edit/${action.ID}`;
+		const newLocation = `connections/${connection.id}/actions/edit/${action.id}`;
 		redirect(newLocation);
 	};
 
@@ -114,10 +114,10 @@ const ConnectionActions = () => {
 						<div className='connection-actions__no-action-action-types'>
 							{connection.actionTypes.map((actionType) => (
 								<ListTile
-									key={actionType.Name}
+									key={actionType.name}
 									icon={getConnectorLogo(connection.connector.icon)}
-									name={actionType.Name}
-									description={actionType.Description}
+									name={actionType.name}
+									description={actionType.description}
 									className='connection-actions__action-type'
 									action={
 										<SlButton

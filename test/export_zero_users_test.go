@@ -109,10 +109,10 @@ func TestExportZeroUsers(t *testing.T) {
 
 		wsID := c.WorkspaceID()
 		c.MustCall("PUT", "/api/workspaces/"+strconv.Itoa(wsID)+"/connections/"+strconv.Itoa(fsID), map[string]any{
-			"Connection": map[string]any{
-				"Name":        "Storage",
-				"Enabled":     true,
-				"Compression": core.NoCompression,
+			"connection": map[string]any{
+				"name":        "Storage",
+				"enabled":     true,
+				"compression": core.NoCompression,
 			},
 		}, nil)
 

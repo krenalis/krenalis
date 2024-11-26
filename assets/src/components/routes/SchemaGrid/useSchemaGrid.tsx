@@ -23,8 +23,8 @@ const useSchemaGrid = (schema: ObjectType, isLoading: boolean) => {
 			return [];
 		}
 		const flatSchema = flattenSchema(schema);
-		const w = workspaces.find((ws) => ws.ID === selectedWorkspace);
-		return getRows(flatSchema, w.UserPrimarySources, connections);
+		const w = workspaces.find((ws) => ws.id === selectedWorkspace);
+		return getRows(flatSchema, w.userPrimarySources, connections);
 	}, [schema]);
 
 	return {

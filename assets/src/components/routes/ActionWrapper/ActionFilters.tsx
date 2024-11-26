@@ -24,23 +24,23 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	const { action, setAction, actionType, connection, isTransformationDisabled } = useContext(ActionContext);
 
 	const flatInputSchema = useMemo(() => {
-		return flattenSchema(actionType.InputSchema);
-	}, [actionType.InputSchema]);
+		return flattenSchema(actionType.inputSchema);
+	}, [actionType.inputSchema]);
 
 	const onAddCondition = () => {
 		const a = { ...action };
-		if (a.Filter == null) {
-			a.Filter = { Logical: 'and', Conditions: [] };
+		if (a.filter == null) {
+			a.filter = { logical: 'and', conditions: [] };
 		}
-		a.Filter.Conditions = [...a.Filter.Conditions, { Property: '', Operator: '', Values: [''] }];
+		a.filter.conditions = [...a.filter.conditions, { property: '', operator: '', values: [''] }];
 		setAction(a);
 	};
 
 	const onRemoveCondition = (id: number) => {
 		const a = { ...action };
-		a.Filter!.Conditions.splice(id, 1);
-		if (a.Filter!.Conditions.length === 0) {
-			a.Filter = null;
+		a.filter!.conditions.splice(id, 1);
+		if (a.filter!.conditions.length === 0) {
+			a.filter = null;
 		}
 		setAction(a);
 	};
@@ -54,7 +54,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 
 		const a = { ...action };
 		const id = Number(name.split('-')[1]);
-		const currentOperator = a.Filter!.Conditions[id]['Operator'];
+		const currentOperator = a.filter!.conditions[id]['operator'];
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === currentOperator);
 		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value]);
 		const isCompatible = compatibleOperators.includes(currentOperatorIndex);
@@ -89,7 +89,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	const updatePropertyFragment = (name: string, value: string) => {
 		const a = { ...action };
 		const id = Number(name.split('-')[1]);
-		const propertyName = a.Filter!.Conditions[id]['Property'];
+		const propertyName = a.filter!.conditions[id]['property'];
 		const [_, path] = splitPropertyAndPath(propertyName, flatInputSchema);
 		let newPropertyName = '';
 		if (path !== '' && flatInputSchema[value]?.type === 'JSON') {
@@ -98,24 +98,24 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 			newPropertyName = value;
 		}
 		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[newPropertyName]);
-		const currentOperator = a.Filter!.Conditions[id]['Operator'];
+		const currentOperator = a.filter!.conditions[id]['operator'];
 		if (currentOperator != null && currentOperator !== '') {
 			const index = FILTER_OPERATORS.indexOf(currentOperator);
 			if (!compatibleOperators.includes(index)) {
 				// The current operator is not compatible with the new property.
 				// Reset the operator and the values.
-				a.Filter!.Conditions[id]['Operator'] = '';
-				a.Filter!.Conditions[id]['Values'] = [''];
+				a.filter!.conditions[id]['operator'] = '';
+				a.filter!.conditions[id]['values'] = [''];
 			}
 		}
-		a.Filter!.Conditions[id]['Property'] = newPropertyName;
+		a.filter!.conditions[id]['property'] = newPropertyName;
 		setAction(a);
 	};
 
 	const onInputPathFragment = (e) => {
 		const a = { ...action };
 		const id = Number(e.target.name.split('-')[1]);
-		const propertyName = a.Filter!.Conditions[id]['Property'];
+		const propertyName = a.filter!.conditions[id]['property'];
 		const [base, _] = splitPropertyAndPath(propertyName, flatInputSchema);
 		let newPropertyName = '';
 		const newPath = e.target.value;
@@ -124,7 +124,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		} else {
 			newPropertyName = base;
 		}
-		a.Filter!.Conditions[id]['Property'] = newPropertyName;
+		a.filter!.conditions[id]['property'] = newPropertyName;
 		setAction(a);
 	};
 
@@ -146,9 +146,9 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	const changeOperator = (conditionID: number, operator: FilterOperator) => {
 		const id = conditionID;
 		const a = { ...action };
-		a.Filter!.Conditions[id]['Operator'] = operator;
+		a.filter!.conditions[id]['operator'] = operator;
 		if (isUnaryOperator(operator)) {
-			a.Filter!.Conditions[id]['Values'] = null;
+			a.filter!.conditions[id]['values'] = null;
 		} else {
 			const isBetween = isBetweenOperator(operator);
 			const isOneOf = isOneOfOperator(operator);
@@ -156,28 +156,28 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 			let values: string[] | null;
 			if (isBetween) {
 				let v = ['', ''];
-				if (a.Filter!.Conditions[id]['Values'] != null) {
-					v = a.Filter!.Conditions[id]['Values'].slice(0, 2);
+				if (a.filter!.conditions[id]['values'] != null) {
+					v = a.filter!.conditions[id]['values'].slice(0, 2);
 					if (v.length === 1) {
 						v.push('');
 					}
 				}
 				values = v;
 			} else if (isOneOf) {
-				let v = a.Filter!.Conditions[id]['Values'];
+				let v = a.filter!.conditions[id]['values'];
 				if (v == null) {
 					v = [''];
 				}
 				values = v;
 			} else {
 				let v = '';
-				if (a.Filter!.Conditions[id]['Values'] != null) {
-					v = a.Filter!.Conditions[id]['Values'][0];
+				if (a.filter!.conditions[id]['values'] != null) {
+					v = a.filter!.conditions[id]['values'][0];
 				}
 				values = [v];
 			}
 
-			a.Filter!.Conditions[id]['Values'] = values;
+			a.filter!.conditions[id]['values'] = values;
 		}
 		setAction(a);
 	};
@@ -187,20 +187,20 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		const split = e.target.name.split('-');
 		const id = Number(split[1]);
 		const position = Number(split[2]);
-		a.Filter!.Conditions[id]['Values'][position] = e.target.value;
+		a.filter!.conditions[id]['values'][position] = e.target.value;
 		setAction(a);
 	};
 
 	const onLogicalClick = (logical: FilterLogical) => {
 		const a = { ...action };
-		a.Filter!.Logical = logical;
+		a.filter!.logical = logical;
 		setAction(a);
 	};
 
 	const onAddValue = (index: number) => {
 		const a = { ...action };
-		const currentLength = a.Filter!.Conditions[index]['Values'].length;
-		a.Filter!.Conditions[index]['Values'] = [...a.Filter!.Conditions[index]['Values'], ''];
+		const currentLength = a.filter!.conditions[index]['values'].length;
+		a.filter!.conditions[index]['values'] = [...a.filter!.conditions[index]['values'], ''];
 		setAction(a);
 		setTimeout(() => {
 			// focus the new input.
@@ -215,14 +215,14 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 
 	const onRemoveValue = (conditionIndex: number, valueIndex: number) => {
 		const a = { ...action };
-		const values = a.Filter!.Conditions[conditionIndex]['Values'];
+		const values = a.filter!.conditions[conditionIndex]['values'];
 		const filtered = [];
 		for (const [i, v] of values.entries()) {
 			if (i !== valueIndex) {
 				filtered.push(v);
 			}
 		}
-		a.Filter!.Conditions[conditionIndex]['Values'] = filtered;
+		a.filter!.conditions[conditionIndex]['values'] = filtered;
 		setAction(a);
 	};
 
@@ -235,15 +235,15 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 	const isDisabled = isFileStorageImport && isTransformationDisabled;
 
 	const conditions: ReactNode[] = [];
-	if (action.Filter != null) {
-		for (const [i, condition] of action.Filter.Conditions.entries()) {
-			const [base, path] = splitPropertyAndPath(condition.Property, flatInputSchema);
+	if (action.filter != null) {
+		for (const [i, condition] of action.filter.conditions.entries()) {
+			const [base, path] = splitPropertyAndPath(condition.property, flatInputSchema);
 
 			let property = flatInputSchema[base];
-			const isUnary = isUnaryOperator(condition.Operator);
+			const isUnary = isUnaryOperator(condition.operator);
 			const isJSON = property?.type === 'JSON';
-			const isBetween = isBetweenOperator(condition.Operator);
-			const isOneOf = isOneOfOperator(condition.Operator);
+			const isBetween = isBetweenOperator(condition.operator);
+			const isOneOf = isOneOfOperator(condition.operator);
 			const isInvalidProperty = property == null;
 
 			let logicalElement: ReactNode;
@@ -253,7 +253,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 			let valueElements: ReactNode[] = [];
 
 			if (i === 0) {
-				if (action.Filter.Conditions.length > 1) {
+				if (action.filter.conditions.length > 1) {
 					// Add a placeholder to mantain alignment.
 					logicalElement = (
 						<div className='action__filters-logical action__filters-logical--placeholder'></div>
@@ -264,7 +264,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					<SlButtonGroup className='action__filters-logical'>
 						<SlButton
 							size='small'
-							variant={action.Filter!.Logical === 'and' ? 'primary' : 'default'}
+							variant={action.filter!.logical === 'and' ? 'primary' : 'default'}
 							onClick={() => onLogicalClick('and')}
 							disabled={isDisabled}
 						>
@@ -272,7 +272,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 						</SlButton>
 						<SlButton
 							size='small'
-							variant={action.Filter!.Logical === 'or' ? 'primary' : 'default'}
+							variant={action.filter!.logical === 'or' ? 'primary' : 'default'}
 							onClick={() => onLogicalClick('or')}
 							disabled={isDisabled}
 						>
@@ -283,7 +283,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 			} else if (i > 1) {
 				logicalElement = (
 					<div className='action__filters-logical action__filters-logical--text'>
-						{action.Filter!.Logical}
+						{action.filter!.logical}
 					</div>
 				);
 			}
@@ -292,11 +292,11 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 				<Combobox
 					onInput={onInputPropertyFragment}
 					onSelect={onSelectPropertyFragment}
-					initialValue={isJSON ? base : condition.Property}
+					initialValue={isJSON ? base : condition.property}
 					className='action__filters-property'
 					size='small'
 					name={`property-${i}`}
-					items={getFilterPropertyComboboxItems(actionType.InputSchema)}
+					items={getFilterPropertyComboboxItems(actionType.inputSchema)}
 					isExpression={false}
 					disabled={isDisabled}
 					placeholder={'Property'}
@@ -325,7 +325,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 					size='small'
 					name={`operator-${i}`}
 					className='action__filters-operator'
-					value={String(FILTER_OPERATORS.findIndex((op) => op === condition.Operator))}
+					value={String(FILTER_OPERATORS.findIndex((op) => op === condition.operator))}
 					onSlChange={onChangeOperatorFragment}
 					placeholder='Operator'
 					disabled={isInvalidProperty || isDisabled}
@@ -351,7 +351,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 						key={id}
 						size='small'
 						className='action__filters-value-input'
-						value={condition.Values != null ? condition.Values[0] : ''}
+						value={condition.values != null ? condition.values[0] : ''}
 						onSlInput={onInputValueFragment}
 						name={id}
 						disabled={isInvalidProperty || isDisabled}
@@ -369,14 +369,14 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 							key={id}
 							size='small'
 							className='action__filters-value-input'
-							value={condition.Values != null ? (condition.Values[1] ? condition.Values[1] : '') : ''}
+							value={condition.values != null ? (condition.values[1] ? condition.values[1] : '') : ''}
 							onSlInput={onInputValueFragment}
 							name={id}
 							disabled={isInvalidProperty || isDisabled}
 						/>,
 					);
 				} else if (isOneOf) {
-					const additionalValues = condition.Values.slice(1);
+					const additionalValues = condition.values.slice(1);
 					let k = 1;
 					for (const value of additionalValues) {
 						const currentK = k;

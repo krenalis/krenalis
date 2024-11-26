@@ -54,7 +54,7 @@ const ActionFile = () => {
 		isEditing,
 	} = useContext(actionContext);
 
-	const fileConnectorRef = useRef<string>(action.Connector);
+	const fileConnectorRef = useRef<string>(action.connector);
 	const pathInputRef = useRef<any>();
 
 	useEffect(() => {
@@ -76,8 +76,8 @@ const ActionFile = () => {
 			fileConnectorRef.current = name;
 			const connector = connectors.find((c) => c.name === name);
 			const a = { ...action };
-			a.Connector = name;
-			a.Sheet = connector.hasSheets ? '' : null;
+			a.connector = name;
+			a.sheet = connector.hasSheets ? '' : null;
 			setIsFileConnectorLoading(true);
 			setAction(a);
 		}
@@ -85,7 +85,7 @@ const ActionFile = () => {
 
 	useEffect(() => {
 		const fetchFields = async () => {
-			const connector = connectors.find((c) => c.name === action.Connector);
+			const connector = connectors.find((c) => c.name === action.connector);
 			if (connector.hasUI === false) {
 				setFileFields([]);
 				setTimeout(() => setIsFileConnectorLoading(false), 300);
@@ -95,7 +95,7 @@ const ActionFile = () => {
 			let ui: ConnectorUIResponse;
 			if (isEditing && !isFileConnectorChanged) {
 				try {
-					ui = await api.workspaces.connections.actionUiEvent(connection.id, action.ID, 'load', null);
+					ui = await api.workspaces.connections.actionUiEvent(connection.id, action.id, 'load', null);
 				} catch (err) {
 					setTimeout(() => setIsFileConnectorLoading(false), 300);
 					if (err instanceof NotFoundError) {
@@ -139,19 +139,19 @@ const ActionFile = () => {
 					return;
 				}
 			}
-			setFileFields(ui.Fields);
-			setValues(ui.Values);
+			setFileFields(ui.fields);
+			setValues(ui.values);
 			setTimeout(() => setIsFileConnectorLoading(false), 300);
 		};
 
-		if (action.Connector == '') {
+		if (action.connector == '') {
 			return;
 		}
 		fetchFields();
 	}, [fileConnectorRef.current]);
 
 	const { hasSheets, icon, fileExtension } = useMemo(() => {
-		const connector = connectors.find((c) => c.name === action.Connector);
+		const connector = connectors.find((c) => c.name === action.connector);
 		return { hasSheets: connector?.hasSheets, icon: connector?.icon, fileExtension: connector?.fileExtension };
 	}, [action]);
 
@@ -161,15 +161,15 @@ const ActionFile = () => {
 		const connector = connectors.find((c) => c.name === name);
 		const a = { ...action };
 		// reset the action.
-		a.Connector = name;
-		a.Compression = '';
-		a.Sheet = connector.hasSheets ? '' : null;
-		a.Path = '';
-		a.IdentityProperty = '';
-		a.LastChangeTimeProperty = '';
-		a.LastChangeTimeFormat = '';
-		a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
-		a.Transformation.Function = null;
+		a.connector = name;
+		a.compression = '';
+		a.sheet = connector.hasSheets ? '' : null;
+		a.path = '';
+		a.identityProperty = '';
+		a.lastChangeTimeProperty = '';
+		a.lastChangeTimeFormat = '';
+		a.transformation.mapping = flattenSchema(actionType.outputSchema);
+		a.transformation.function = null;
 		setValues(null);
 		setIsFileConnectorLoading(true);
 		setIsFileConnectorChanged(true);
@@ -195,10 +195,10 @@ const ActionFile = () => {
 			<SlSelect
 				label='Type'
 				className='action__file-connector'
-				value={String(action.Connector)}
+				value={String(action.connector)}
 				onSlChange={onFileConnectorChange}
 			>
-				{action.Connector !== '' && (
+				{action.connector !== '' && (
 					<div className='action__file-connector-logo' slot='prefix'>
 						<LittleLogo icon={icon} />
 					</div>
@@ -226,7 +226,7 @@ const ActionFile = () => {
 					}
 				></SlSpinner>
 			) : (
-				action.Connector !== '' && (
+				action.connector !== '' && (
 					<div className='action__file-settings'>
 						<FileSettings
 							hasSheets={hasSheets}
@@ -306,14 +306,14 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const fieldsToRender = useMemo(() => {
 		const fields: ReactNode[] = [];
 		for (const f of fileFields) {
-			fields.push(<ConnectorField key={f.Label} field={f} />);
+			fields.push(<ConnectorField key={f.label} field={f} />);
 		}
 		return fields;
 	}, [fileFields]);
 
 	const orderingPropertyError = useMemo<string>(() => {
-		const filteredSchema = filterOrderingPropertySchema(actionType.InputSchema);
-		const property = action.FileOrderingPropertyPath;
+		const filteredSchema = filterOrderingPropertySchema(actionType.inputSchema);
+		const property = action.fileOrderingPropertyPath;
 		if (filteredSchema == null || property === '') {
 			return '';
 		}
@@ -326,16 +326,16 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	useEffect(() => {
 		pathRef.current = {
 			...pathRef.current,
-			lastConfirmation: action.Path,
-			lastUpdate: action.Path,
+			lastConfirmation: action.path,
+			lastUpdate: action.path,
 		};
 		sheetRef.current = {
-			lastConfirmation: action.Sheet,
-			lastUpdate: action.Sheet,
+			lastConfirmation: action.sheet,
+			lastUpdate: action.sheet,
 		};
 		compressionRef.current = {
-			lastConfirmation: action.Compression,
-			lastUpdate: action.Compression,
+			lastConfirmation: action.compression,
+			lastUpdate: action.compression,
 		};
 		settingsRef.current = {
 			lastConfirmation: { ...values },
@@ -344,13 +344,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	}, []);
 
 	useEffect(() => {
-		if (isImport || isEditing || actionType.Target !== 'Users') {
+		if (isImport || isEditing || actionType.target !== 'Users') {
 			return;
 		}
-		const hasEmailColumn = actionType.InputSchema.properties.find((p) => p.name === 'email');
+		const hasEmailColumn = actionType.inputSchema.properties.find((p) => p.name === 'email');
 		if (hasEmailColumn) {
 			const a = { ...action };
-			a.FileOrderingPropertyPath = 'email';
+			a.fileOrderingPropertyPath = 'email';
 			setAction(a);
 		}
 	}, []);
@@ -362,9 +362,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			try {
 				res = await api.workspaces.connections.sheets(
 					connection.id,
-					action.Connector,
-					action.Path!,
-					action.Compression,
+					action.connector,
+					action.path!,
+					action.compression,
 					values,
 				);
 			} catch (err) {
@@ -384,7 +384,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			}
 			setSheets(sheets);
 		};
-		if (!hasSheets || action.Path === '') {
+		if (!hasSheets || action.path === '') {
 			return;
 		}
 		if (connection.isSource) {
@@ -421,9 +421,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		const path = e.currentTarget.value;
 		pathRef.current.lastUpdate = path;
 		checkIsFileChanged();
-		a.Path = path;
-		if (a.Sheet != null) {
-			a.Sheet = '';
+		a.path = path;
+		if (a.sheet != null) {
+			a.sheet = '';
 		}
 		setAction(a);
 		setCompletePath('');
@@ -457,13 +457,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		}
 		sheetRef.current.lastUpdate = sheet;
 		checkIsFileChanged();
-		a.Sheet = sheet;
+		a.sheet = sheet;
 		setAction(a);
 	};
 
 	const loadSheets = async () => {
 		const a = { ...action };
-		a.Sheet = '';
+		a.sheet = '';
 		setAction(a);
 		sheetsSelectRef.current.classList.add('action__file-sheets--hide-list-box'); // prevent the listbox from flashing.
 		setSheets({});
@@ -473,9 +473,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.sheets(
 				connection.id,
-				action.Connector,
-				action.Path!,
-				action.Compression,
+				action.connector,
+				action.path!,
+				action.compression,
 				values,
 			);
 		} catch (err) {
@@ -524,19 +524,19 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		const compression = e.target.value;
 		compressionRef.current.lastUpdate = compression;
 		checkIsFileChanged();
-		a.Compression = compression;
+		a.compression = compression;
 		setAction(a);
 	};
 
 	const onOrderingPropertyChange = (_: string, value: string) => {
 		const a = { ...action };
-		a.FileOrderingPropertyPath = value;
+		a.fileOrderingPropertyPath = value;
 		setAction(a);
 	};
 
 	const onOrderingPropertySelect = (_: string, value: string) => {
 		const a = { ...action };
-		a.FileOrderingPropertyPath = value;
+		a.fileOrderingPropertyPath = value;
 		setAction(a);
 	};
 
@@ -547,11 +547,11 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	};
 
 	const onFilePreview = async () => {
-		if (action.Path === '') {
+		if (action.path === '') {
 			handleError('Please enter a path');
 			return;
 		}
-		if (hasSheets && action.Sheet === '') {
+		if (hasSheets && action.sheet === '') {
 			handleError('Please enter a sheet');
 			return;
 		}
@@ -591,11 +591,11 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	};
 
 	const onConfirmFile = async () => {
-		if (action.Path === '') {
+		if (action.path === '') {
 			handleError('Please enter a path');
 			return;
 		}
-		if (hasSheets && action.Sheet === '') {
+		if (hasSheets && action.sheet === '') {
 			handleError('Please enter a sheet');
 			return;
 		}
@@ -610,7 +610,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		fileConfirmButtonRef.current!.confirm();
 		setTimeout(() => {
 			const actionTyp = { ...actionType };
-			actionTyp.InputSchema = res.schema;
+			actionTyp.inputSchema = res.schema;
 			setActionType(actionTyp);
 			setIsFileConnectorChanged(false);
 			setTimeout(() => {
@@ -629,16 +629,16 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.records(
 				connection.id,
-				action.Connector,
-				action.Path,
-				action.Sheet === undefined ? null : action.Sheet,
-				action.Compression,
+				action.connector,
+				action.path,
+				action.sheet === undefined ? null : action.sheet,
+				action.compression,
 				values,
 				limit,
 			);
 		} catch (err) {
 			handleError(err);
-			const isAlreadyConfirmed = actionType.InputSchema != null;
+			const isAlreadyConfirmed = actionType.inputSchema != null;
 			if (isAlreadyConfirmed) {
 				hasRecordsError.current = true;
 				checkIsFileChanged();
@@ -646,11 +646,11 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			throw err;
 		}
 		if (isConfirmation) {
-			pathRef.current.lastConfirmation = action.Path;
-			compressionRef.current.lastConfirmation = action.Compression;
+			pathRef.current.lastConfirmation = action.path;
+			compressionRef.current.lastConfirmation = action.compression;
 			settingsRef.current.lastConfirmation = { ...values };
-			if (action.Sheet != null) {
-				sheetRef.current.lastConfirmation = action.Sheet;
+			if (action.sheet != null) {
+				sheetRef.current.lastConfirmation = action.sheet;
 			}
 			hasRecordsError.current = false;
 			setIsFileChanged(false);
@@ -664,10 +664,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<SlInput
 					className='action__file-path'
 					name='path'
-					value={action.Path!}
+					value={action.path!}
 					type='text'
 					onSlInput={onUpdatePath}
-					placeholder={`${actionType.Target.toLowerCase()}.${fileExtension}`}
+					placeholder={`${actionType.target.toLowerCase()}.${fileExtension}`}
 					ref={pathInputRef}
 				>
 					<div className='action__file-path-label' slot='label'>
@@ -700,15 +700,15 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 							ref={sheetsSelectRef}
 							name='sheet'
 							value={
-								action.Sheet == null
+								action.sheet == null
 									? undefined
-									: Object.keys(sheets).find((k) => sheets[k] === action.Sheet)
+									: Object.keys(sheets).find((k) => sheets[k] === action.sheet)
 							}
 							label='Sheet'
 							onSlChange={onUpdateSheet}
 							disabled={
-								action.Path == null ||
-								action.Path === '' ||
+								action.path == null ||
+								action.path === '' ||
 								completePathError !== '' ||
 								areSheetsLoading ||
 								(pathRef.current.lastSheetFetch === pathRef.current.lastUpdate && hasSheetsError)
@@ -725,7 +725,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 						</SlSelect>
 						<SlButton
 							onClick={onSheetsReload}
-							disabled={action.Path == null || action.Path === '' || areSheetsLoading}
+							disabled={action.path == null || action.path === '' || areSheetsLoading}
 						>
 							<SlIcon slot='prefix' name='arrow-clockwise' />
 							Reload
@@ -735,7 +735,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					<SlInput
 						className='action__file-sheets-input'
 						name='input'
-						value={action.Sheet!}
+						value={action.sheet!}
 						label='Sheet'
 						type='text'
 						onSlInput={onUpdateSheet}
@@ -744,7 +744,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			<SlSelect
 				className='action__file-compression'
 				name='compression'
-				value={action.Compression}
+				value={action.compression}
 				label='Compression'
 				onSlChange={onCompressionChange}
 			>
@@ -753,13 +753,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<SlOption value='Gzip'>Gzip</SlOption>
 				<SlOption value='Snappy'>Snappy</SlOption>
 			</SlSelect>
-			{actionType.Fields.includes('FileOrderingProperty') && (
+			{actionType.fields.includes('FileOrderingProperty') && (
 				<div className='action__file-ordering'>
 					<Combobox
-						initialValue={action.FileOrderingPropertyPath}
+						initialValue={action.fileOrderingPropertyPath}
 						onInput={onOrderingPropertyChange}
 						onSelect={onOrderingPropertySelect}
-						items={getOrderingPropertyPathComboboxItems(actionType.InputSchema)}
+						items={getOrderingPropertyPathComboboxItems(actionType.inputSchema)}
 						label='Order users by'
 						isExpression={false}
 						error={orderingPropertyError && orderingPropertyError}

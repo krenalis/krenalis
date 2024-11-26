@@ -90,7 +90,7 @@ class API {
 			{
 				expression,
 				properties,
-				type: type,
+				type,
 			},
 			{ signal },
 		);
@@ -139,8 +139,8 @@ class API {
 
 	acceptInvitation = async (token: string, name: string, password: string): Promise<void> => {
 		return await call(`${this.apiURL}/members/invitations/${token}`, http.PUT, {
-			name: name,
-			password: password,
+			name,
+			password,
 		});
 	};
 
@@ -150,7 +150,7 @@ class API {
 
 	updateMember = async (memberToSet: MemberToSet): Promise<void> => {
 		return await call(`${this.apiURL}/members/current`, http.PUT, {
-			memberToSet: memberToSet,
+			memberToSet,
 		});
 	};
 
@@ -164,9 +164,9 @@ class API {
 		settings: any,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/can-initialize-warehouse`, http.POST, {
-			Name: warehouseName,
-			Mode: warehouseMode,
-			Settings: settings,
+			name: warehouseName,
+			mode: warehouseMode,
+			settings: settings,
 		});
 	};
 }
@@ -188,9 +188,9 @@ class Connections {
 		return c as Connection;
 	};
 
-	set = async (connection: number, connectionToSet: ConnectionToSet) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}`, http.PUT, {
-			connection: connectionToSet,
+	set = async (id: number, connection: ConnectionToSet) => {
+		return await call(`${this.apiURL}/connections/${encodeURIComponent(id)}`, http.PUT, {
+			connection,
 		});
 	};
 
@@ -226,12 +226,12 @@ class Connections {
 		limit: number,
 	): Promise<RecordsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/records`, http.POST, {
-			FileConnector: fileConnector,
-			Path: path,
-			Sheet: sheet,
-			Compression: compression,
-			UIValues: uiValues,
-			Limit: limit,
+			fileConnector,
+			path,
+			sheet,
+			compression,
+			uiValues,
+			limit,
 		});
 	};
 
@@ -243,10 +243,10 @@ class Connections {
 		uiValues: ConnectorValues,
 	): Promise<SheetsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets`, http.POST, {
-			FileConnector: fileConnector,
-			Path: path,
-			Compression: compression,
-			UIValues: uiValues,
+			fileConnector,
+			path,
+			compression,
+			uiValues,
 		});
 	};
 
@@ -256,8 +256,8 @@ class Connections {
 
 	uiEvent = async (connection: number, event: string, values: ConnectorValues): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui-event`, http.POST, {
-			event: event,
-			values: values,
+			event,
+			values,
 		});
 	};
 
@@ -306,20 +306,20 @@ class Connections {
 		connection: number,
 		target: ActionTarget,
 		eventType: string,
-		actionToSet: ActionToSet,
+		action: ActionToSet,
 	): Promise<number> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions`, http.POST, {
-			target: target,
-			eventType: eventType,
-			action: actionToSet,
+			target,
+			eventType,
+			action,
 		});
 	};
 
-	setAction = async (connection: number, action: number, actionToSet: ActionToSet): Promise<void> => {
+	setAction = async (connection: number, id: number, action: ActionToSet): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(id)}`,
 			http.PUT,
-			actionToSet,
+			action,
 		);
 	};
 
@@ -334,7 +334,7 @@ class Connections {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}/status`,
 			http.PUT,
-			{ Enabled: enabled },
+			{ enabled },
 		);
 	};
 
@@ -348,7 +348,7 @@ class Connections {
 				action,
 			)}/schedule-period`,
 			http.PUT,
-			{ SchedulePeriod: schedulePeriod },
+			{ schedulePeriod },
 		);
 	};
 
@@ -358,7 +358,7 @@ class Connections {
 				action,
 			)}/executions`,
 			http.POST,
-			{ Reload: false },
+			{ reload: false },
 		);
 	};
 
@@ -374,8 +374,8 @@ class Connections {
 			)}/ui-event`,
 			http.POST,
 			{
-				event: event,
-				values: values,
+				event,
+				values,
 			},
 		);
 	};
@@ -400,8 +400,8 @@ class Connections {
 
 	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/app-users`, http.POST, {
-			Schema: schema,
-			Cursor: cursor,
+			schema,
+			cursor,
 		});
 	};
 
@@ -416,10 +416,10 @@ class Connections {
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/send-previews`,
 			http.POST,
 			{
-				eventType: eventType,
-				event: event,
-				outSchema: outSchema,
-				transformation: transformation,
+				eventType,
+				event,
+				outSchema,
+				transformation,
 			},
 		);
 	};
@@ -452,8 +452,8 @@ class Eventlisteners {
 
 	add = async (size: number, filter: Filter): Promise<AddEventListenerResponse> => {
 		return await call(`${this.apiURL}/event-listeners`, http.POST, {
-			size: size,
-			filter: filter,
+			size,
+			filter,
 		});
 	};
 
@@ -482,12 +482,12 @@ class Users {
 		limit: number,
 	): Promise<FindUsersResponse> => {
 		return await call(`${this.apiURL}/users`, http.POST, {
-			properties: properties,
-			filter: filter,
-			order: order,
-			orderDesc: orderDesc,
-			first: first,
-			limit: limit,
+			properties,
+			filter,
+			order,
+			orderDesc,
+			first,
+			limit,
 		});
 	};
 
@@ -513,12 +513,12 @@ class Users {
 				'userId',
 			],
 			filter: {
-				Logical: 'and',
-				Conditions: [
+				logical: 'and',
+				conditions: [
 					{
-						Property: 'user',
-						Operator: 'is',
-						Values: [user],
+						property: 'user',
+						operator: 'is',
+						values: [user],
 					},
 				],
 			},
@@ -609,26 +609,26 @@ class Workspaces {
 		return await call(`${this.apiURL}/identifiers-schema`, http.GET);
 	};
 
-	addConnection = async (connection: ConnectionToAdd, oAuthToken: string): Promise<number> => {
+	addConnection = async (connection: ConnectionToAdd, oauthToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/connections`, http.POST, {
-			connection: connection,
-			oAuthToken: oAuthToken,
+			connection,
+			oauthToken,
 		});
 	};
 
 	oauthToken = async (connector: string, oauthCode: string): Promise<string> => {
 		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
 		return await call(`${this.apiURL}/oauth-token`, http.POST, {
-			connector: connector,
-			oauthCode: oauthCode,
-			redirectURI: redirectURI,
+			connector,
+			oauthCode,
+			redirectURI,
 		});
 	};
 
 	changeIdentityResolutionSettings = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {
 		return await call(`${this.apiURL}/identity-resolution/settings`, http.PUT, {
-			runOnBatchImport: runOnBatchImport,
-			identifiers: identifiers,
+			runOnBatchImport,
+			identifiers,
 		});
 	};
 
@@ -638,14 +638,14 @@ class Workspaces {
 
 	changeWarehouseMode = async (mode: WarehouseMode, cancelIncompatibleOperations: boolean): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/mode`, http.PUT, {
-			Mode: mode,
-			CancelIncompatibleOperations: cancelIncompatibleOperations,
+			mode,
+			cancelIncompatibleOperations,
 		});
 	};
 
 	canChangeWarehouseSettings = async (settings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/can-change-settings`, http.POST, {
-			Settings: settings,
+			settings,
 		});
 	};
 
@@ -656,10 +656,10 @@ class Workspaces {
 		cancelIncompatibleOperations: boolean,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/settings`, http.PUT, {
-			Name: name,
-			Mode: mode,
-			Settings: settings,
-			CancelIncompatibleOperations: cancelIncompatibleOperations,
+			name,
+			mode,
+			settings,
+			cancelIncompatibleOperations,
 		});
 	};
 
@@ -709,7 +709,7 @@ class Workspaces {
 			http.GET,
 		);
 		for (let i = 0; i < r.errors.length; i++) {
-			r.errors[i].LastOccurred = new Date(r.errors[i].LastOccurred);
+			r.errors[i].lastOccurred = new Date(r.errors[i].lastOccurred);
 		}
 		return r;
 	};
@@ -821,9 +821,9 @@ class Connectors {
 		oauthToken: string,
 	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/workspaces/${workspace}/ui`, http.POST, {
-			connector: connector,
-			role: role,
-			oauthToken: oauthToken,
+			connector,
+			role,
+			oauthToken,
 		});
 	};
 
@@ -836,11 +836,11 @@ class Connectors {
 		oauthToken: string,
 	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/workspaces/${workspace}/ui-event`, http.POST, {
-			connector: connector,
-			event: event,
-			values: values,
-			role: role,
-			oauthToken: oauthToken,
+			connector,
+			event,
+			values,
+			role,
+			oauthToken,
 		});
 	};
 }

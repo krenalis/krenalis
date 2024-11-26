@@ -40,13 +40,13 @@ const GeneralSettings = () => {
 	} = useContext(appContext);
 
 	useLayoutEffect(() => {
-		const ws = workspaces.find((workspace) => workspace.ID === selectedWorkspace);
-		setName(ws.Name);
-		setUseEuropeRegion(ws.PrivacyRegion === 'Europe');
-		setImage(ws.DisplayedProperties.Image);
-		setFirstName(ws.DisplayedProperties.FirstName);
-		setLastName(ws.DisplayedProperties.LastName);
-		setInformation(ws.DisplayedProperties.Information);
+		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);
+		setName(ws.name);
+		setUseEuropeRegion(ws.privacyRegion === 'Europe');
+		setImage(ws.displayedProperties.image);
+		setFirstName(ws.displayedProperties.firstName);
+		setLastName(ws.displayedProperties.lastName);
+		setInformation(ws.displayedProperties.information);
 	}, [selectedWorkspace]);
 
 	useEffect(() => {
@@ -112,10 +112,10 @@ const GeneralSettings = () => {
 	const onSave = async () => {
 		const privacyRegion = useEuropeRegion ? 'Europe' : '';
 		const displayedProperties = {
-			Image: image,
-			FirstName: firstName,
-			LastName: lastName,
-			Information: information,
+			image,
+			firstName,
+			lastName,
+			information,
 		};
 		try {
 			await api.workspaces.update(name, privacyRegion, displayedProperties);

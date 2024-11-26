@@ -26,8 +26,8 @@ const ActionTypesDialog = ({
 	const eventActionTypes: ReactNode[] = [];
 	for (const type of actionTypes) {
 		let disablingReason = null;
-		if (connection.actions != null && type.Target === 'Events' && connection.isSource) {
-			let importEventAction = connection.actions.findIndex((a) => a.Target === 'Events');
+		if (connection.actions != null && type.target === 'Events' && connection.isSource) {
+			let importEventAction = connection.actions.findIndex((a) => a.target === 'Events');
 			if (importEventAction > -1) {
 				disablingReason = 'You can add only one action that imports events';
 			}
@@ -35,10 +35,10 @@ const ActionTypesDialog = ({
 
 		const tile = (
 			<ListTile
-				key={type.Name}
+				key={type.name}
 				icon={connectionLogo}
-				name={type.Name}
-				description={type.Description}
+				name={type.name}
+				description={type.description}
 				disablingReason={disablingReason}
 				disabled={disablingReason != null}
 				onClick={() => {
@@ -47,7 +47,7 @@ const ActionTypesDialog = ({
 				action={<SlIcon name='chevron-right' />}
 			/>
 		);
-		if (type.Target === 'Users' || type.Target === 'Groups') {
+		if (type.target === 'Users' || type.target === 'Groups') {
 			standardActionTypes.push(tile);
 		} else {
 			eventActionTypes.push(tile);

@@ -7,7 +7,7 @@ const ActionExportOnDuplicatedUsers = () => {
 	const { action, setAction } = useContext(ActionContext);
 	const onChangeExportOnDuplicatedUsers = (e) => {
 		const a = { ...action };
-		a.ExportOnDuplicatedUsers = e.currentTarget.checked;
+		a.exportOnDuplicatedUsers = e.currentTarget.checked;
 		setAction(a);
 	};
 	return (
@@ -18,7 +18,7 @@ const ActionExportOnDuplicatedUsers = () => {
 			padded={true}
 			annotated={true}
 		>
-			<SlCheckbox checked={action.ExportOnDuplicatedUsers!} onSlChange={onChangeExportOnDuplicatedUsers}>
+			<SlCheckbox checked={action.exportOnDuplicatedUsers!} onSlChange={onChangeExportOnDuplicatedUsers}>
 				Run the export even in case of duplicated users on the app, instead of not starting the export
 			</SlCheckbox>
 		</Section>

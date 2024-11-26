@@ -1,5 +1,5 @@
 {
-    "Schema": {
+    "schema": {
         "name": "Object",
         "properties": [
             {
@@ -231,5 +231,5 @@
             }
         ]
     },
-    "RePaths": {}
+    "rePaths": {}
 }

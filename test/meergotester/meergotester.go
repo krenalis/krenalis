@@ -413,8 +413,8 @@ func (c *Meergo) changeUserSchema() error {
 	}
 	defer f.Close()
 	var req struct {
-		Schema  types.Type
-		RePaths map[string]any
+		Schema  types.Type     `json:"schema"`
+		RePaths map[string]any `json:"rePaths"`
 	}
 	err = json.NewDecoder(f).Decode(&req)
 	if err != nil {
@@ -426,11 +426,11 @@ func (c *Meergo) changeUserSchema() error {
 
 func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion) (int, error) {
 	req := map[string]any{
-		"Name":          name,
-		"PrivacyRegion": privacyRegion,
-		"Warehouse": map[string]any{
-			"Name":     testsSettings.WarehouseName,
-			"Settings": testsSettings.Warehouse,
+		"name":          name,
+		"privacyRegion": privacyRegion,
+		"warehouse": map[string]any{
+			"name":     testsSettings.WarehouseName,
+			"settings": testsSettings.Warehouse,
 		},
 	}
 	var response struct {
@@ -445,8 +445,8 @@ func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion) (int,
 
 func (c *Meergo) login() error {
 	body := map[string]any{
-		"Email":    "acme@open2b.com",
-		"Password": "foopass2",
+		"email":    "acme@open2b.com",
+		"password": "foopass2",
 	}
 	return c.call("POST", "/api/members/login", body, nil)
 }

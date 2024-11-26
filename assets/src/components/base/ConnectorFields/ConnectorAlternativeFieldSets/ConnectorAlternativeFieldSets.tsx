@@ -6,9 +6,9 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 interface FieldSet {
-	Name: string;
-	Label: string;
-	Fields: ConnectorField[];
+	name: string;
+	label: string;
+	fields: ConnectorField[];
 }
 
 interface ConnectorAlternativeFieldSetsProps {
@@ -28,13 +28,13 @@ const ConnectorAlternativeFieldSets = ({
 }: ConnectorAlternativeFieldSetsProps) => {
 	let initialSet: string = '';
 	for (const s of sets) {
-		if (val[s.Name] != null) {
-			initialSet = s.Name;
+		if (val[s.name] != null) {
+			initialSet = s.name;
 			break;
 		}
 	}
 
-	const [selected, setSelected] = useState(initialSet === '' ? sets[0].Name : initialSet);
+	const [selected, setSelected] = useState(initialSet === '' ? sets[0].name : initialSet);
 
 	const onSelectChange = (e) => {
 		// TODO: get from the server the information required to identify any
@@ -44,12 +44,12 @@ const ConnectorAlternativeFieldSets = ({
 		setSelected(e.currentTarget.value);
 	};
 
-	const selectedSet = sets.find((set) => set.Name === selected);
+	const selectedSet = sets.find((set) => set.name === selected);
 	const fieldSet = (
 		<ConnectorFieldSet
-			name={selectedSet!.Name}
-			fields={selectedSet!.Fields}
-			val={val[selectedSet!.Name]}
+			name={selectedSet!.name}
+			fields={selectedSet!.fields}
+			val={val[selectedSet!.name]}
 			onChange={onChange}
 		></ConnectorFieldSet>
 	);
@@ -59,8 +59,8 @@ const ConnectorAlternativeFieldSets = ({
 			<div className='connector-alternative-fieldsets__label'>{label}</div>
 			<SlSelect value={selected} onSlChange={onSelectChange}>
 				{sets.map((s) => (
-					<SlOption key={s.Name} value={s.Name}>
-						{s.Label}
+					<SlOption key={s.name} value={s.name}>
+						{s.label}
 					</SlOption>
 				))}
 			</SlSelect>

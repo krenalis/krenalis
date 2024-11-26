@@ -49,9 +49,9 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 				handleError(err);
 				return;
 			}
-			setFields(ui.Fields);
-			setButtons(ui.Buttons);
-			setValues(ui.Values);
+			setFields(ui.fields);
+			setButtons(ui.buttons);
+			setValues(ui.values);
 		};
 		fetchUI();
 	}, []);
@@ -66,9 +66,9 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		// remove the errors
 		const fls: ConnectorFieldInterface[] = [];
 		for (const f of fields) {
-			if ('Error' in f) {
-				if (f.Error) {
-					f.Error = '';
+			if ('error' in f) {
+				if (f.error) {
+					f.error = '';
 				}
 			}
 			fls.push(f);
@@ -125,13 +125,13 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			}
 			return;
 		}
-		if (ui.Alert != null) {
-			showStatus({ variant: ui.Alert.Variant, icon: icons.EXCLAMATION, text: ui.Alert.Message });
+		if (ui.alert != null) {
+			showStatus({ variant: ui.alert.variant, icon: icons.EXCLAMATION, text: ui.alert.message });
 		}
-		if (ui.Fields != null) {
-			setFields(ui.Fields);
-			setButtons(ui.Buttons);
-			setValues(ui.Values);
+		if (ui.fields != null) {
+			setFields(ui.fields);
+			setButtons(ui.buttons);
+			setValues(ui.values);
 		}
 	};
 
@@ -149,16 +149,16 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		for (const [i, b] of buttons.entries()) {
 			buttonsToRender.push(
 				<FeedbackButton
-					key={b.Event}
-					variant={b.Variant}
+					key={b.event}
+					variant={b.variant}
 					onClick={async () => {
-						await onActionClick(b.Event, i);
+						await onActionClick(b.event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
 					}}
 				>
-					{b.Text}
+					{b.text}
 				</FeedbackButton>,
 			);
 		}

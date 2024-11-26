@@ -119,8 +119,8 @@ type SMTPConfig struct {
 }
 
 type ExpressionToBeExtracted struct {
-	Value string
-	Type  types.Type
+	Value string     `json:"value"`
+	Type  types.Type `json:"type"`
 }
 
 // New returns a *Core instance. It can only be called once.
@@ -537,16 +537,16 @@ func (core *Core) ServeEvents(w http.ResponseWriter, r *http.Request) {
 // DataTransformation represents transformation passed to (*Core).TransformData
 // and (*Connection).PreviewSendEvent methods.
 type DataTransformation struct {
-	Mapping  map[string]string
-	Function *DataTransformationFunction
+	Mapping  map[string]string           `json:"mapping,format:emitnull"`
+	Function *DataTransformationFunction `json:"function"`
 }
 
 // DataTransformationFunction represents transformation function passed to
 // (*Core).TransformData and (*Connection).PreviewSendEvent methods.
 type DataTransformationFunction struct {
-	Source       string
-	Language     Language
-	PreserveJSON bool
+	Source       string   `json:"source"`
+	Language     Language `json:"language"`
+	PreserveJSON bool     `json:"preserveJSON"`
 }
 
 // Purpose represents the purpose of a data transformation.
@@ -568,7 +568,7 @@ const (
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) ([]byte, error) {
+func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
 
 	core.mustBeOpen()
 
@@ -711,8 +711,8 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 
 // Warehouse represents a data warehouse.
 type Warehouse struct {
-	Name string
-	Icon string
+	Name string `json:"name"`
+	Icon string `json:"icon"`
 }
 
 // Warehouses returns the data warehouses.

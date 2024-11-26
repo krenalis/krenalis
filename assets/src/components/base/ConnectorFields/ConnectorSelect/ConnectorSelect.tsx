@@ -49,8 +49,8 @@ const ConnectorSelect = ({
 			>
 				{options.map((opt) => {
 					return (
-						<SlOption key={opt.Value} value={opt.Value}>
-							{opt.Text}
+						<SlOption key={opt.value} value={opt.value}>
+							{opt.text}
 						</SlOption>
 					);
 				})}

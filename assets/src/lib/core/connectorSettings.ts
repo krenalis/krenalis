@@ -19,11 +19,11 @@ const validateConnectorSettings = (values: ConnectorValues, fields: ConnectorFie
 
 const hasOnlyIntegerPart = (key: string, fields: ConnectorField[]): boolean => {
 	for (const f of fields) {
-		const isInput = f.ComponentType === 'Input';
+		const isInput = f.componentType === 'Input';
 		if (isInput) {
 			const input = f as InputField;
-			if (input.Name === key) {
-				return input.OnlyIntegerPart;
+			if (input.name === key) {
+				return input.onlyIntegerPart;
 			}
 		}
 	}

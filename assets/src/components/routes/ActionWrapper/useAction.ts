@@ -52,11 +52,11 @@ const useAction = (
 			// Get the action type.
 			let actionType: ActionType;
 			if (isEditing) {
-				const typ = getActionTypeFromConnection(connection, providedAction.Target, providedAction.EventType);
+				const typ = getActionTypeFromConnection(connection, providedAction.target, providedAction.eventType);
 				if (typ == null) {
 					console.error(
-						`Action type with target ${providedAction.Target}${
-							providedAction.EventType ? ' and event type ' + providedAction.EventType : ''
+						`Action type with target ${providedAction.target}${
+							providedAction.eventType ? ' and event type ' + providedAction.eventType : ''
 						} does not exists anymore`,
 					);
 					return;
@@ -79,14 +79,14 @@ const useAction = (
 				let schemas: ActionSchemasResponse;
 				schemas = await api.workspaces.connections.actionSchemas(
 					connection.id,
-					actionType.Target,
-					actionType.EventType,
+					actionType.target,
+					actionType.eventType,
 				);
 
-				inputSchema = schemas.In;
-				outputSchema = schemas.Out;
-				inputMatchingSchema = schemas.Matchings ? schemas.Matchings.Internal : null;
-				outputMatchingSchema = schemas.Matchings ? schemas.Matchings.External : null;
+				inputSchema = schemas.in;
+				outputSchema = schemas.out;
+				inputMatchingSchema = schemas.matchings ? schemas.matchings.internal : null;
+				outputMatchingSchema = schemas.matchings ? schemas.matchings.external : null;
 
 				// If the action type is an import from a database
 				// source, the input schema is the schema of the
@@ -94,8 +94,8 @@ const useAction = (
 				if (fields.includes('Query') && isEditing) {
 					let res: ExecQueryResponse;
 					try {
-						res = await api.workspaces.connections.query(connection.id, providedAction.Query!, 0);
-						inputSchema = res.Schema;
+						res = await api.workspaces.connections.query(connection.id, providedAction.query!, 0);
+						inputSchema = res.schema;
 					} catch (err) {
 						if (
 							err instanceof UnprocessableError &&
@@ -114,26 +114,26 @@ const useAction = (
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
 					let values: ConnectorValues = null;
-					const connector = connectors.find((c) => c.name === providedAction.Connector);
+					const connector = connectors.find((c) => c.name === providedAction.connector);
 					if (connector.hasUI) {
 						// get the values of the file settings.
 						let ui = await api.workspaces.connections.actionUiEvent(
 							connection.id,
-							providedAction.ID,
+							providedAction.id,
 							'load',
 							null,
 						);
-						values = ui.Values;
-						setValues(ui.Values);
+						values = ui.values;
+						setValues(ui.values);
 					}
 					let res: RecordsResponse;
 					try {
 						res = await api.workspaces.connections.records(
 							connection.id,
-							providedAction.Connector,
-							providedAction.Path!,
-							providedAction.Sheet,
-							providedAction.Compression,
+							providedAction.connector,
+							providedAction.path!,
+							providedAction.sheet,
+							providedAction.compression,
 							values,
 							0,
 						);
@@ -160,7 +160,7 @@ const useAction = (
 				if (fields.includes('Table') && isEditing) {
 					let schema: ObjectType;
 					try {
-						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.Table);
+						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.table);
 						outputSchema = schema;
 					} catch (err) {
 						if (err instanceof UnprocessableError && err.code === 'UnsupportedColumnType') {
@@ -219,12 +219,12 @@ const useAction = (
 		let id: number = 0;
 		try {
 			if (isEditing) {
-				await api.workspaces.connections.setAction(connection.id, action.ID!, actionToSet);
+				await api.workspaces.connections.setAction(connection.id, action.id!, actionToSet);
 			} else {
 				id = await api.workspaces.connections.addAction(
 					connection.id,
-					actionType.Target,
-					actionType.EventType,
+					actionType.target,
+					actionType.eventType,
 					actionToSet,
 				);
 			}
@@ -241,7 +241,7 @@ const useAction = (
 
 	const isTransformationFunctionSupported = useMemo(() => {
 		if (isLoading) return false;
-		if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+		if (actionType.target === 'Users' || actionType.target === 'Groups') {
 			if (connection.isSource) {
 				return connection.isApp || connection.isDatabase || connection.isFileStorage || connection.isEventBased;
 			} else {
@@ -256,8 +256,8 @@ const useAction = (
 		let isTransformationHidden: boolean = false;
 		let isTransformationDisabled: boolean = false;
 
-		const inputSchemaIsNotDefined = actionType.InputSchema == null;
-		const outputSchemaIsNotDefined = actionType.OutputSchema == null;
+		const inputSchemaIsNotDefined = actionType.inputSchema == null;
+		const outputSchemaIsNotDefined = actionType.outputSchema == null;
 
 		if (connection.isDatabase) {
 			if (isQueryChanged || isTableChanged) {

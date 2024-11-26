@@ -28,7 +28,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	const { isLoading, traits, events, identities } = useUserDrawer(selectedUser, selectedTab);
 
 	const workspace = useMemo(
-		() => workspaces.find((w) => w.ID === selectedWorkspace),
+		() => workspaces.find((w) => w.id === selectedWorkspace),
 		[workspaces, selectedWorkspace],
 	);
 
@@ -96,16 +96,16 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	if (traits && traits.size > 0) {
 		const t = Array.from(traits);
 		for (const [key, value] of t) {
-			if (key == workspace.DisplayedProperties.Image) {
+			if (key == workspace.displayedProperties.image) {
 				userImage = value;
 			}
-			if (key == workspace.DisplayedProperties.FirstName) {
+			if (key == workspace.displayedProperties.firstName) {
 				userFirstName = value;
 			}
-			if (key == workspace.DisplayedProperties.LastName) {
+			if (key == workspace.displayedProperties.lastName) {
 				userLastName = value;
 			}
-			if (key == workspace.DisplayedProperties.Information) {
+			if (key == workspace.displayedProperties.information) {
 				userInformation = value;
 			}
 		}

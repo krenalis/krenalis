@@ -25,8 +25,8 @@ const ConnectionEvents = () => {
 	};
 
 	const { startListening } = useEventListener(collectEvents, setDiscarded, {
-		Logical: 'and',
-		Conditions: [{ Property: 'connection', Operator: 'is one of', Values: [String(c.id)] }],
+		logical: 'and',
+		conditions: [{ property: 'connection', operator: 'is one of', values: [String(c.id)] }],
 	});
 
 	useEffect(() => {

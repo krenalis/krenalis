@@ -9,12 +9,12 @@ import { Combobox } from '../../base/Combobox/Combobox';
 const ActionMatchingProperties = () => {
 	const { connection, action, setAction, actionType, mode } = useContext(ActionContext);
 
-	const flatInputMatchingSchema = useMemo(() => flattenSchema(actionType.InputMatchingSchema), [actionType]);
+	const flatInputMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
 
 	const { externalMatchingPropertiesItems, flatExternalMatchingPropertiesSchema } = useMemo(() => {
-		if (action.ExportMode === 'CreateOnly' || action.ExportMode === 'CreateOrUpdate') {
-			const flatExternalMatchingSchema = flattenSchema(actionType.OutputMatchingSchema);
-			const flatOutputSchema = flattenSchema(actionType.OutputSchema);
+		if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
+			const flatExternalMatchingSchema = flattenSchema(actionType.outputMatchingSchema);
+			const flatOutputSchema = flattenSchema(actionType.outputSchema);
 			const filteredSchema: TransformedMapping = {};
 			for (const [k, v] of Object.entries(flatExternalMatchingSchema)) {
 				const isInOutputSchema = flatOutputSchema[k] && flatOutputSchema[k].type === v.type;
@@ -28,28 +28,28 @@ const ActionMatchingProperties = () => {
 			};
 		}
 		return {
-			externalMatchingPropertiesItems: getSchemaComboboxItems(actionType.OutputMatchingSchema),
-			flatExternalMatchingPropertiesSchema: flattenSchema(actionType.OutputMatchingSchema),
+			externalMatchingPropertiesItems: getSchemaComboboxItems(actionType.outputMatchingSchema),
+			flatExternalMatchingPropertiesSchema: flattenSchema(actionType.outputMatchingSchema),
 		};
 	}, [action]);
 
 	const internalPropertyError = useMemo<string>(() => {
-		return checkIfPropertyExists(action.MatchingProperties.Internal, flatInputMatchingSchema);
+		return checkIfPropertyExists(action.matchingProperties.internal, flatInputMatchingSchema);
 	}, [action]);
 
 	const externalPropertyError = useMemo<string>(() => {
-		return checkIfPropertyExists(action.MatchingProperties.External, flatExternalMatchingPropertiesSchema);
+		return checkIfPropertyExists(action.matchingProperties.external, flatExternalMatchingPropertiesSchema);
 	}, [action]);
 
 	const onUpdateMatchingProperties = (name: string, value: string) => {
 		const a = { ...action };
 		if (name === 'internal') {
-			a.MatchingProperties!.Internal = value;
+			a.matchingProperties!.internal = value;
 		} else {
-			a.MatchingProperties!.External = value;
+			a.matchingProperties!.external = value;
 			// The external matching properties cannot be transformed.
 			if (mode === 'mappings') {
-				a.Transformation.Mapping[value].value = '';
+				a.transformation.mapping[value].value = '';
 			}
 			// TODO(@Andrea): remove the property from the transformation even
 			// in case of transformation function (this must be addressed after
@@ -61,12 +61,12 @@ const ActionMatchingProperties = () => {
 	const onSelectMatchingProperties = (name: string, value: string) => {
 		const a = { ...action };
 		if (name === 'internal') {
-			a.MatchingProperties!.Internal = value;
+			a.matchingProperties!.internal = value;
 		} else {
-			a.MatchingProperties!.External = value;
+			a.matchingProperties!.external = value;
 			// The external matching properties cannot be transformed.
 			if (mode === 'mappings') {
-				a.Transformation.Mapping[value].value = '';
+				a.transformation.mapping[value].value = '';
 			}
 			// TODO(@Andrea): remove the property from the transformation even
 			// in case of transformation function (this must be addressed after
@@ -85,11 +85,11 @@ const ActionMatchingProperties = () => {
 			<div className='action__matching-properties'>
 				<Combobox
 					onInput={onUpdateMatchingProperties}
-					initialValue={action.MatchingProperties!.Internal}
+					initialValue={action.matchingProperties!.internal}
 					label={`User's schema property`}
 					name='internal'
 					className='action__transformation-input-property'
-					items={getSchemaComboboxItems(actionType.InputMatchingSchema)}
+					items={getSchemaComboboxItems(actionType.inputMatchingSchema)}
 					onSelect={onSelectMatchingProperties}
 					isExpression={false}
 					caret={true}
@@ -99,7 +99,7 @@ const ActionMatchingProperties = () => {
 				<Combobox
 					onInput={onUpdateMatchingProperties}
 					label={`${connection.name}'s property`}
-					initialValue={action.MatchingProperties!.External}
+					initialValue={action.matchingProperties!.external}
 					name='external'
 					isExpression={false}
 					items={externalMatchingPropertiesItems}

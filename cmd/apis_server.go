@@ -9,9 +9,7 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +18,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/json"
 
 	"github.com/gorilla/securecookie"
 )
@@ -179,7 +178,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 			}
 			if response != nil {
 				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(response)
+				_ = json.Encode(w, response)
 			}
 		})
 	}
@@ -233,12 +232,11 @@ func (s *apisServer) credentials(r *http.Request) (*core.Member, *core.Organizat
 // login logs a user in.
 func (s *apisServer) login(w http.ResponseWriter, r *http.Request) (any, error) {
 
-	body := struct {
-		Email    string
-		Password string
-	}{}
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&body)
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("")
 	}
@@ -326,38 +324,6 @@ func (s *apisServer) logout(w http.ResponseWriter, r *http.Request) (any, error)
 		header.Add("Set-Cookie", v+"; Priority=High")
 	}
 	return nil, nil
-}
-
-var _ json.Marshaler = (*rawJSON)(nil)
-var _ json.Unmarshaler = (*rawJSON)(nil)
-
-// rawJSON is a raw encoded JSON value.
-// It implements the json.Marshaler and json.Unmarshaler interfaces.
-type rawJSON []byte
-
-// MarshalJSON returns the JSON encoding form of raw.
-func (raw rawJSON) MarshalJSON() ([]byte, error) {
-	if raw == nil {
-		return []byte("null"), nil
-	}
-	return raw, nil
-}
-
-var null = []byte("null")
-
-// UnmarshalJSON sets *raw to a copy of data.
-// Unlike the UnmarshalJSON method of json.RawMessage, it unmarshal a "null"
-// JSON value to []byte(nil) instead of []byte("null").
-func (raw *rawJSON) UnmarshalJSON(data []byte) error {
-	if raw == nil {
-		return errors.New("rawJSON.UnmarshalJSON: raw cannot be a nil pointer")
-	}
-	if bytes.Equal(data, null) {
-		*raw = nil
-		return nil
-	}
-	*raw = append((*raw)[:0], data...)
-	return nil
 }
 
 type bodyWriter struct {

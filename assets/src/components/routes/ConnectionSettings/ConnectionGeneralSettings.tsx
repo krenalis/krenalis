@@ -25,7 +25,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		enabled: connection.enabled,
 		strategy: connection.strategy,
 		websiteHost: connection.websiteHost,
-		SendingMode: connection.SendingMode,
+		sendingMode: connection.sendingMode,
 	});
 	const [askDeletionConfirmation, setAskDeletionConfirmation] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -56,7 +56,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const onModeChange = (e) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
-		c.SendingMode = value;
+		c.sendingMode = value;
 		setConnectionToSet(c);
 	};
 
@@ -129,7 +129,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 			{connection.isDestination && connection.connector.supportedSendingModes.length > 0 && (
 				<SlSelect
-					value={connectionToSet.SendingMode}
+					value={connectionToSet.sendingMode}
 					label='Sending mode'
 					className='connection-settings__mode-field'
 					onSlChange={onModeChange}
@@ -137,9 +137,9 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<div className='connection-settings__mode-value-icon' slot='prefix'>
 						<SlIcon
 							name={
-								connectionToSet.SendingMode === 'Cloud'
+								connectionToSet.sendingMode === 'Cloud'
 									? 'cloud'
-									: connectionToSet.SendingMode === 'Device'
+									: connectionToSet.sendingMode === 'Device'
 										? 'phone'
 										: 'send'
 							}

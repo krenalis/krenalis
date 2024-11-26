@@ -162,13 +162,13 @@ interface TransformedProperty {
 type TransformedMapping = Record<string, TransformedProperty>;
 
 interface TransformedTransformation {
-	Mapping: TransformedMapping | null;
-	Function: TransformationFunction | null;
+	mapping: TransformedMapping | null;
+	function: TransformationFunction | null;
 }
 
 interface TransformedMatchingProperties {
-	Internal: string;
-	External: string;
+	internal: string;
+	external: string;
 }
 
 type ActionTypeField =
@@ -183,45 +183,45 @@ type ActionTypeField =
 	| 'Table';
 
 interface TransformedActionType {
-	Name: string;
-	Description: string;
-	Target: ActionTarget;
-	EventType: string;
-	InputSchema: ObjectType;
-	OutputSchema: ObjectType;
-	InputMatchingSchema: ObjectType | null;
-	OutputMatchingSchema: ObjectType | null;
-	Fields: ActionTypeField[];
+	name: string;
+	description: string;
+	target: ActionTarget;
+	eventType: string;
+	inputSchema: ObjectType;
+	outputSchema: ObjectType;
+	inputMatchingSchema: ObjectType | null;
+	outputMatchingSchema: ObjectType | null;
+	fields: ActionTypeField[];
 }
 
 interface TransformedAction {
-	ID?: number;
-	Connection?: number;
-	Target?: ActionTarget;
-	Name: string;
-	Enabled: boolean;
-	EventType?: string | null;
-	Running?: boolean;
-	ScheduleStart?: number | null;
-	SchedulePeriod?: SchedulePeriod | null;
-	InSchema: ObjectType | null;
-	OutSchema: ObjectType | null;
-	Filter: Filter | null;
-	Transformation: TransformedTransformation | null;
-	Query?: string | null;
-	Path?: string | null;
-	Table?: string | null;
-	TableKeyProperty?: string | null;
-	Sheet?: string | null;
-	IdentityProperty?: string | null;
-	LastChangeTimeProperty?: string | null;
-	LastChangeTimeFormat?: string | null;
-	FileOrderingPropertyPath?: string | null;
-	ExportMode?: ExportMode | null;
-	MatchingProperties?: TransformedMatchingProperties | null;
-	ExportOnDuplicatedUsers?: boolean | null;
-	Compression?: Compression;
-	Connector?: string;
+	id?: number;
+	connection?: number;
+	target?: ActionTarget;
+	name: string;
+	enabled: boolean;
+	eventType?: string | null;
+	running?: boolean;
+	scheduleStart?: number | null;
+	schedulePeriod?: SchedulePeriod | null;
+	inSchema: ObjectType | null;
+	outSchema: ObjectType | null;
+	filter: Filter | null;
+	transformation: TransformedTransformation | null;
+	query?: string | null;
+	path?: string | null;
+	table?: string | null;
+	tableKeyProperty?: string | null;
+	sheet?: string | null;
+	identityProperty?: string | null;
+	lastChangeTimeProperty?: string | null;
+	lastChangeTimeFormat?: string | null;
+	fileOrderingPropertyPath?: string | null;
+	exportMode?: ExportMode | null;
+	matchingProperties?: TransformedMatchingProperties | null;
+	exportOnDuplicatedUsers?: boolean | null;
+	compression?: Compression;
+	connector?: string;
 }
 
 const getCompatibleFilterOperators = (property: TransformedProperty): number[] => {
@@ -320,11 +320,11 @@ const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMappi
 };
 
 const hasTransformationFunction = (action: ActionToSet) => {
-	return action.transformation?.Function != null;
+	return action.transformation?.function != null;
 };
 
 const hasTransformationMapping = (action: ActionToSet) => {
-	return action.transformation?.Mapping != null;
+	return action.transformation?.mapping != null;
 };
 
 const hasSchemas = (action: ActionToSet) => {
@@ -352,7 +352,7 @@ const validateTransformation = (
 ) => {
 	if (connection.isSource) {
 		if (connection.isApp) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					if (hasEmptyMapping(action)) {
 						throw new Error(
@@ -363,7 +363,7 @@ const validateTransformation = (
 				}
 			}
 		} else if (connection.isDatabase) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					if (hasEmptyMapping(action)) {
 						throw new Error(
@@ -374,7 +374,7 @@ const validateTransformation = (
 				}
 			}
 		} else if (connection.isFileStorage) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					if (hasEmptyMapping(action)) {
 						throw new Error(
@@ -385,14 +385,14 @@ const validateTransformation = (
 				}
 			}
 		} else if (connection.isMobile || connection.isServer || connection.isWebsite) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (hasValidTransformation(action)) {
 					if (hasTransformationFunction(action)) {
 						throw new Error(`Action supports only transformations via mapping`);
 					}
 				}
 			}
-			if (actionType.Target === 'Events') {
+			if (actionType.target === 'Events') {
 				if (hasValidTransformation(action)) {
 					throw new Error('Action does not support transformations');
 				}
@@ -400,7 +400,7 @@ const validateTransformation = (
 		}
 	} else {
 		if (connection.isApp) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					if (hasEmptyMapping(action)) {
 						throw new Error(
@@ -411,7 +411,7 @@ const validateTransformation = (
 				}
 			}
 		} else if (connection.isDatabase) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
 					if (hasEmptyMapping(action)) {
 						throw new Error(
@@ -422,7 +422,7 @@ const validateTransformation = (
 				}
 			}
 		} else if (connection.isFileStorage) {
-			if (actionType.Target === 'Users' || actionType.Target === 'Groups') {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (hasValidTransformation(action)) {
 					throw new Error('Action does not support transformations');
 				}
@@ -499,15 +499,15 @@ const transformActionType = (
 	outputMatchingSchema: ObjectType,
 ): TransformedActionType => {
 	return {
-		Name: actionType.Name,
-		Description: actionType.Description,
-		Target: actionType.Target,
-		EventType: actionType.EventType,
-		InputSchema: inputSchema,
-		OutputSchema: outputSchema,
-		InputMatchingSchema: inputMatchingSchema,
-		OutputMatchingSchema: outputMatchingSchema,
-		Fields: fields,
+		name: actionType.name,
+		description: actionType.description,
+		target: actionType.target,
+		eventType: actionType.eventType,
+		inputSchema: inputSchema,
+		outputSchema: outputSchema,
+		inputMatchingSchema: inputMatchingSchema,
+		outputMatchingSchema: outputMatchingSchema,
+		fields: fields,
 	};
 };
 
@@ -535,79 +535,79 @@ const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): Tra
 };
 
 const transformAction = (action: Action, outputSchema: ObjectType): TransformedAction => {
-	let actionMapping = action.Transformation.Mapping;
-	if (action.Transformation.Function == null && actionMapping == null) {
+	let actionMapping = action.transformation.mapping;
+	if (action.transformation.function == null && actionMapping == null) {
 		// Mappings are selected but there is nothing mapped.
 		actionMapping = {};
 	}
 
 	if (
-		action.LastChangeTimeFormat != null &&
-		action.LastChangeTimeFormat != '' &&
-		action.LastChangeTimeFormat.startsWith("'") &&
-		action.LastChangeTimeFormat.endsWith("'")
+		action.lastChangeTimeFormat != null &&
+		action.lastChangeTimeFormat != '' &&
+		action.lastChangeTimeFormat.startsWith("'") &&
+		action.lastChangeTimeFormat.endsWith("'")
 	) {
-		action.LastChangeTimeFormat = action.LastChangeTimeFormat.substring(1, action.LastChangeTimeFormat.length - 1);
+		action.lastChangeTimeFormat = action.lastChangeTimeFormat.substring(1, action.lastChangeTimeFormat.length - 1);
 	}
 
 	let transformedMatchingProperties: TransformedMatchingProperties;
-	if (action.MatchingProperties) {
+	if (action.matchingProperties) {
 		transformedMatchingProperties = {
-			Internal: action.MatchingProperties.Internal,
-			External: action.MatchingProperties.External.name,
+			internal: action.matchingProperties.internal,
+			external: action.matchingProperties.external.name,
 		};
 	}
 
-	if (action.Filter) {
+	if (action.filter) {
 		const conditions: FilterCondition[] = [];
-		for (const condition of action.Filter.Conditions) {
+		for (const condition of action.filter.conditions) {
 			let cond = { ...condition };
 			let values: string[] | null = [];
-			if (condition.Values == null) {
+			if (condition.values == null) {
 				values = null;
 			} else {
-				for (const v of condition.Values) {
+				for (const v of condition.values) {
 					const formatted = formatText(v);
 					values.push(formatted);
 				}
 			}
-			cond.Values = values;
+			cond.values = values;
 			conditions.push(cond);
 		}
-		action.Filter.Conditions = conditions;
+		action.filter.conditions = conditions;
 	}
 
 	return {
-		ID: action.ID,
-		Connection: action.Connection,
-		Target: action.Target,
-		Name: action.Name,
-		Enabled: action.Enabled,
-		EventType: action.EventType,
-		Running: action.Running,
-		ScheduleStart: action.ScheduleStart,
-		SchedulePeriod: action.SchedulePeriod,
-		InSchema: action.InSchema,
-		OutSchema: action.OutSchema,
-		Filter: action.Filter,
-		Transformation: {
-			Mapping: actionMapping != null ? transformActionMapping(actionMapping, outputSchema) : null,
-			Function: action.Transformation.Function,
+		id: action.id,
+		connection: action.connection,
+		target: action.target,
+		name: action.name,
+		enabled: action.enabled,
+		eventType: action.eventType,
+		running: action.running,
+		scheduleStart: action.scheduleStart,
+		schedulePeriod: action.schedulePeriod,
+		inSchema: action.inSchema,
+		outSchema: action.outSchema,
+		filter: action.filter,
+		transformation: {
+			mapping: actionMapping != null ? transformActionMapping(actionMapping, outputSchema) : null,
+			function: action.transformation.function,
 		},
-		Query: action.Query,
-		Path: action.Path,
-		Table: action.Table,
-		TableKeyProperty: action.TableKeyProperty,
-		Sheet: action.Sheet,
-		IdentityProperty: action.IdentityProperty,
-		LastChangeTimeProperty: action.LastChangeTimeProperty,
-		LastChangeTimeFormat: action.LastChangeTimeFormat,
-		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
-		ExportMode: action.ExportMode,
-		MatchingProperties: transformedMatchingProperties,
-		ExportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
-		Connector: action.Connector,
-		Compression: action.Compression,
+		query: action.query,
+		path: action.path,
+		table: action.table,
+		tableKeyProperty: action.tableKeyProperty,
+		sheet: action.sheet,
+		identityProperty: action.identityProperty,
+		lastChangeTimeProperty: action.lastChangeTimeProperty,
+		lastChangeTimeFormat: action.lastChangeTimeFormat,
+		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
+		exportMode: action.exportMode,
+		matchingProperties: transformedMatchingProperties,
+		exportOnDuplicatedUsers: action.exportOnDuplicatedUsers,
+		connector: action.connector,
+		compression: action.compression,
 	};
 };
 
@@ -626,20 +626,20 @@ const transformInActionToSet = async (
 	let query: string;
 
 	const isDestinationFileOnUsers =
-		connection.isDestination && connection.isFileStorage && actionType.Target === 'Users';
+		connection.isDestination && connection.isFileStorage && actionType.target === 'Users';
 
-	const flattenedInputSchema = flattenSchema(actionType.InputSchema);
-	const flattenedOutputSchema = flattenSchema(actionType.OutputSchema);
+	const flattenedInputSchema = flattenSchema(actionType.inputSchema);
+	const flattenedOutputSchema = flattenSchema(actionType.outputSchema);
 
-	if (action.Transformation.Mapping != null) {
+	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 		const mappingToSave = {};
 		const expressions: ExpressionToBeExtracted[] = [];
 		const purpose: TransformationPurpose =
-			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
-		for (const k in action.Transformation.Mapping) {
-			const v = action.Transformation.Mapping[k];
+			action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
+		for (const k in action.transformation.mapping) {
+			const v = action.transformation.mapping[k];
 			if (v.value === '') {
 				if (purpose === 'Update' && v.updateRequired) {
 					throw new Error(
@@ -670,7 +670,7 @@ const transformInActionToSet = async (
 		}
 		let inputProperties: string[];
 		try {
-			inputProperties = await api.expressionsProperties(expressions, actionType.InputSchema);
+			inputProperties = await api.expressionsProperties(expressions, actionType.inputSchema);
 		} catch (err) {
 			throw err;
 		}
@@ -687,46 +687,46 @@ const transformInActionToSet = async (
 		}
 		inSchema = inputSchema;
 		outSchema = outputSchema;
-	} else if (action.Transformation.Function != null) {
-		inSchema = actionType.InputSchema;
-		outSchema = actionType.OutputSchema;
-		if (action.MatchingProperties?.External) {
+	} else if (action.transformation.function != null) {
+		inSchema = actionType.inputSchema;
+		outSchema = actionType.outputSchema;
+		if (action.matchingProperties?.external) {
 			// recompute the out schema to prevent updates in place on the
 			// version used by the UI.
 			const s = { name: 'Object', properties: [] };
 			for (const p of outSchema.properties) {
-				if (p.name !== action.MatchingProperties.External) {
+				if (p.name !== action.matchingProperties.external) {
 					s.properties.push(p);
 				}
 			}
 			outSchema = s as ObjectType;
 		}
-		let source = action.Transformation.Function.Source;
+		let source = action.transformation.function.source;
 		if (trimFunction) {
 			source = source.trim();
 		}
 		func = {
-			Source: source,
-			Language: action.Transformation.Function.Language,
-			PreserveJSON: action.Transformation.Function.PreserveJSON,
-			InProperties: inSchema.properties === null ? [] : inSchema.properties.map((p) => p.name),
-			OutProperties: outSchema.properties!.map((p) => p.name),
+			source: source,
+			language: action.transformation.function.language,
+			preserveJSON: action.transformation.function.preserveJSON,
+			inProperties: inSchema.properties === null ? [] : inSchema.properties.map((p) => p.name),
+			outProperties: outSchema.properties!.map((p) => p.name),
 		};
 	} else if (isDestinationFileOnUsers) {
-		inSchema = actionType.InputSchema;
+		inSchema = actionType.inputSchema;
 		outSchema = null; // TODO(Gianluca): it this necessary?
 	}
 
 	let matchingProperties: MatchingProperties;
-	if (action.MatchingProperties != null) {
-		const internal = action.MatchingProperties.Internal;
-		const external = action.MatchingProperties.External;
+	if (action.matchingProperties != null) {
+		const internal = action.matchingProperties.internal;
+		const external = action.matchingProperties.external;
 		if (internal === '' || external === '') {
 			throw new Error('Matching properties cannot be empty');
 		}
 
-		const flattenedInputMatchingSchema = flattenSchema(actionType.InputMatchingSchema);
-		const flattenedOutputMatchingSchema = flattenSchema(actionType.OutputMatchingSchema);
+		const flattenedInputMatchingSchema = flattenSchema(actionType.inputMatchingSchema);
+		const flattenedOutputMatchingSchema = flattenSchema(actionType.outputMatchingSchema);
 
 		const doesInternalExist = flattenedInputMatchingSchema[internal] != null;
 		if (!doesInternalExist) {
@@ -739,8 +739,8 @@ const transformInActionToSet = async (
 
 		const fullExternalProperty = flattenedOutputMatchingSchema[external].full;
 		matchingProperties = {
-			Internal: internal,
-			External: fullExternalProperty,
+			internal: internal,
+			external: fullExternalProperty,
 		};
 
 		// Add the internal matching property to the in schema of the action.
@@ -749,13 +749,13 @@ const transformInActionToSet = async (
 			inSchema.properties.push(flattenedInputMatchingSchema[internal].full);
 		}
 
-		if (action.ExportMode === 'CreateOnly' || action.ExportMode === 'CreateOrUpdate') {
+		if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
 			// add the external matching property (not directly the one from the
 			// output matching schema, but instead the corresponding "writable"
 			// one in the output schema of the transformation) to the out schema
 			// of the action.
 			let externalPropertyToAdd: Property;
-			const p = flattenSchema(actionType.OutputSchema)[external]?.full;
+			const p = flattenSchema(actionType.outputSchema)[external]?.full;
 			if (p?.type.name === fullExternalProperty.type.name) {
 				externalPropertyToAdd = p;
 			}
@@ -773,33 +773,33 @@ const transformInActionToSet = async (
 	}
 
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-		if (action.IdentityProperty == null || action.IdentityProperty === '') {
+		if (action.identityProperty == null || action.identityProperty === '') {
 			throw new Error('User identifier cannot be empty');
 		}
-		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.IdentityProperty) !== -1;
+		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.identityProperty) !== -1;
 		if (!isAlreadyInSchema) {
-			const identityProperty = flattenedInputSchema[action.IdentityProperty];
+			const identityProperty = flattenedInputSchema[action.identityProperty];
 			if (identityProperty == null) {
 				throw new Error('User identifier must be a valid property');
 			}
 			inSchema.properties.push(identityProperty.full);
 		}
 
-		if (action.LastChangeTimeProperty) {
+		if (action.lastChangeTimeProperty) {
 			const isAlreadyInSchema =
-				inSchema.properties!.findIndex((p) => p.name === action.LastChangeTimeProperty) !== -1;
+				inSchema.properties!.findIndex((p) => p.name === action.lastChangeTimeProperty) !== -1;
 			if (!isAlreadyInSchema) {
-				const lastChangeTimeProperty = flattenedInputSchema[action.LastChangeTimeProperty];
+				const lastChangeTimeProperty = flattenedInputSchema[action.lastChangeTimeProperty];
 				if (lastChangeTimeProperty == null) {
 					throw new Error('LastChangeTimeProperty must be a valid property');
 				}
 				inSchema.properties.push(lastChangeTimeProperty.full);
 			}
-			if (doesLastChangeTimePropertyNeedFormat(action.LastChangeTimeProperty, actionType.InputSchema)) {
-				if (action.LastChangeTimeFormat !== 'ISO8601' && action.LastChangeTimeFormat !== 'Excel') {
+			if (doesLastChangeTimePropertyNeedFormat(action.lastChangeTimeProperty, actionType.inputSchema)) {
+				if (action.lastChangeTimeFormat !== 'ISO8601' && action.lastChangeTimeFormat !== 'Excel') {
 					// the format is custom.
 					try {
-						validateCustomLastChangeTimeFormat(action.LastChangeTimeFormat);
+						validateCustomLastChangeTimeFormat(action.lastChangeTimeFormat);
 					} catch (err) {
 						throw err;
 					}
@@ -809,18 +809,18 @@ const transformInActionToSet = async (
 	}
 
 	let filter: Filter = null;
-	if (action.Filter != null) {
+	if (action.filter != null) {
 		if (inSchema == null) {
 			inSchema = { name: 'Object', properties: [] };
 		}
 
-		let f = { Logical: action.Filter.Logical, Conditions: [] };
+		let f = { logical: action.filter.logical, conditions: [] };
 
 		// Exclude conditions that have empty properties.
-		let conditions = action.Filter.Conditions.filter((condition) => condition.Property !== '');
+		let conditions = action.filter.conditions.filter((condition) => condition.property !== '');
 
 		for (const condition of conditions) {
-			const propertyName = condition.Property;
+			const propertyName = condition.property;
 			const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
 			const property = flattenedInputSchema[base];
 
@@ -835,7 +835,7 @@ const transformInActionToSet = async (
 				}
 			}
 
-			if (condition.Operator == '') {
+			if (condition.operator == '') {
 				throw new Error(`Operator of filter condition is required`);
 			}
 
@@ -848,9 +848,9 @@ const transformInActionToSet = async (
 			}
 
 			let values: string[] | null = [];
-			if (isJsonOrText && condition.Values != null) {
-				for (const [i, v] of condition.Values.entries()) {
-					if ((i === 0 && v === '') || (i === 1 && v === '' && isBetweenOperator(condition.Operator))) {
+			if (isJsonOrText && condition.values != null) {
+				for (const [i, v] of condition.values.entries()) {
+					if ((i === 0 && v === '') || (i === 1 && v === '' && isBetweenOperator(condition.operator))) {
 						throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
 					}
 					if (v === '') {
@@ -866,11 +866,11 @@ const transformInActionToSet = async (
 					values.push(parsed);
 				}
 			} else {
-				values = condition.Values;
+				values = condition.values;
 			}
 
 			try {
-				validateFilterConditionValues(property.full.type, condition.Values, propertyName);
+				validateFilterConditionValues(property.full.type, condition.values, propertyName);
 			} catch (err) {
 				throw err;
 			}
@@ -882,21 +882,21 @@ const transformInActionToSet = async (
 				inSchema.properties.push(rootProperty);
 			}
 
-			const c: FilterCondition = { Property: condition.Property, Operator: condition.Operator, Values: values };
-			f.Conditions.push(c);
+			const c: FilterCondition = { property: condition.property, operator: condition.operator, values: values };
+			f.conditions.push(c);
 		}
 
-		if (f.Conditions.length > 0) {
+		if (f.conditions.length > 0) {
 			filter = f;
 		}
 	}
 
-	if (action.Query != null) {
-		query = action.Query.trim();
+	if (action.query != null) {
+		query = action.query.trim();
 	}
 
-	if (action.Sheet != null) {
-		const s = action.Sheet;
+	if (action.sheet != null) {
+		const s = action.sheet;
 		if (s.length < 1 || s.length > 31) {
 			throw new Error('Sheet must be in range [1, 31]');
 		}
@@ -909,12 +909,12 @@ const transformInActionToSet = async (
 		}
 	}
 
-	if (action.FileOrderingPropertyPath != null) {
-		const p = action.FileOrderingPropertyPath;
+	if (action.fileOrderingPropertyPath != null) {
+		const p = action.fileOrderingPropertyPath;
 		if (p === '') {
 			throw new Error('File ordering property cannot be empty');
 		}
-		const filteredSchema = filterOrderingPropertySchema(actionType.InputSchema);
+		const filteredSchema = filterOrderingPropertySchema(actionType.inputSchema);
 		if (filteredSchema != null) {
 			if (filteredSchema[p] == null) {
 				throw new Error(`File ordering property "${p}" does not exist in the user schema`);
@@ -923,17 +923,17 @@ const transformInActionToSet = async (
 	}
 
 	const isDatabaseExportOnUsers =
-		connection.type === 'Database' && connection.role === 'Destination' && actionType.Target === 'Users';
+		connection.type === 'Database' && connection.role === 'Destination' && actionType.target === 'Users';
 
 	if (isDatabaseExportOnUsers) {
 		// the table key property must be defined for database type actions that
 		// export users.
-		if (action.TableKeyProperty == null || action.TableKeyProperty === '') {
+		if (action.tableKeyProperty == null || action.tableKeyProperty === '') {
 			throw new Error('Table key property cannot be empty');
 		}
 
 		// the table key property must be a valid property.
-		const property = flattenedOutputSchema[action.TableKeyProperty];
+		const property = flattenedOutputSchema[action.tableKeyProperty];
 		if (property == null) {
 			throw new Error('Table key property must be a valid property');
 		}
@@ -942,11 +942,11 @@ const transformInActionToSet = async (
 		if (mapping == null && func == null) {
 			throw new Error('Table key property must be transformed');
 		} else if (mapping != null) {
-			if (!Object.keys(mapping).includes(action.TableKeyProperty)) {
+			if (!Object.keys(mapping).includes(action.tableKeyProperty)) {
 				throw new Error('Table key property must be transformed');
 			}
 		} else if (func != null) {
-			if (!func.OutProperties.includes(action.TableKeyProperty)) {
+			if (!func.outProperties.includes(action.tableKeyProperty)) {
 				throw new Error('Table key property must be transformed');
 			}
 		}
@@ -956,14 +956,14 @@ const transformInActionToSet = async (
 		for (let i = 0; i < outSchema.properties.length; i++) {
 			const p = outSchema.properties[i];
 			p.updateRequired = true;
-			if (p.name === action.TableKeyProperty) {
+			if (p.name === action.tableKeyProperty) {
 				p.nullable = false;
 			}
 		}
 	} else {
 		// the table key property must be empty for actions that are not
 		// database type actions that export users.
-		if (action.TableKeyProperty != null && action.TableKeyProperty !== '') {
+		if (action.tableKeyProperty != null && action.tableKeyProperty !== '') {
 			throw new Error('Table key property must be empty for this kind of action');
 		}
 	}
@@ -975,38 +975,38 @@ const transformInActionToSet = async (
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.Target == 'Events';
-	let dispatchEventsToApps = connection.isDestination && connection.type == 'App' && actionType.Target == 'Events';
-	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.Target == 'Users';
+	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.target == 'Events';
+	let dispatchEventsToApps = connection.isDestination && connection.type == 'App' && actionType.target == 'Events';
+	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.target == 'Users';
 	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
 	}
 
 	const actionToSet: ActionToSet = {
-		name: action.Name,
-		enabled: action.Enabled,
+		name: action.name,
+		enabled: action.enabled,
 		filter: filter,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: {
-			Mapping: mapping,
-			Function: func,
+			mapping: mapping,
+			function: func,
 		},
 		query: query!,
-		path: action.Path,
-		tableName: action.Table,
-		tableKeyProperty: action.TableKeyProperty,
-		sheet: action.Sheet,
-		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
-		exportMode: action.ExportMode,
-		IdentityProperty: action.IdentityProperty,
-		LastChangeTimeProperty: action.LastChangeTimeProperty,
-		LastChangeTimeFormat: action.LastChangeTimeFormat,
+		path: action.path,
+		tableName: action.table,
+		tableKeyProperty: action.tableKeyProperty,
+		sheet: action.sheet,
+		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
+		exportMode: action.exportMode,
+		identityProperty: action.identityProperty,
+		lastChangeTimeProperty: action.lastChangeTimeProperty,
+		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		matchingProperties: matchingProperties,
-		exportOnDuplicatedUsers: action.ExportOnDuplicatedUsers,
-		Compression: action.Compression,
-		Connector: action.Connector,
-		UIValues: uiValues,
+		exportOnDuplicatedUsers: action.exportOnDuplicatedUsers,
+		compression: action.compression,
+		connector: action.connector,
+		uiValues: uiValues,
 	};
 
 	try {
@@ -1025,46 +1025,46 @@ const computeDefaultAction = (
 	fields: ActionTypeField[],
 ): TransformedAction => {
 	const action: TransformedAction = {
-		Name: actionType.Name,
-		Enabled: false,
-		Filter: null,
-		Transformation: {
-			Mapping: flattenSchema(outputSchema),
-			Function: null,
+		name: actionType.name,
+		enabled: false,
+		filter: null,
+		transformation: {
+			mapping: flattenSchema(outputSchema),
+			function: null,
 		},
-		InSchema: null,
-		OutSchema: null,
+		inSchema: null,
+		outSchema: null,
 	};
 	if (fields.includes('Query')) {
-		action.Query = connection.connector.sampleQuery;
-		action.IdentityProperty = '';
-		action.LastChangeTimeProperty = '';
-		action.LastChangeTimeFormat = '';
+		action.query = connection.connector.sampleQuery;
+		action.identityProperty = '';
+		action.lastChangeTimeProperty = '';
+		action.lastChangeTimeFormat = '';
 	}
 	if (fields.includes('File')) {
-		action.Path = '';
-		action.IdentityProperty = '';
-		action.LastChangeTimeProperty = '';
-		action.LastChangeTimeFormat = '';
-		action.Sheet = null;
-		action.Compression = '';
-		action.Connector = '';
+		action.path = '';
+		action.identityProperty = '';
+		action.lastChangeTimeProperty = '';
+		action.lastChangeTimeFormat = '';
+		action.sheet = null;
+		action.compression = '';
+		action.connector = '';
 	}
 	if (fields.includes('FileOrderingProperty')) {
-		action.FileOrderingPropertyPath = '';
+		action.fileOrderingPropertyPath = '';
 	}
 	if (fields.includes('Table')) {
-		action.Table = '';
-		action.TableKeyProperty = '';
+		action.table = '';
+		action.tableKeyProperty = '';
 	}
 	if (fields.includes('ExportMode')) {
-		action.ExportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
+		action.exportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
 	}
 	if (fields.includes('MatchingProperties')) {
-		action.MatchingProperties = { Internal: '', External: '' };
+		action.matchingProperties = { internal: '', external: '' };
 	}
 	if (fields.includes('ExportOnDuplicatedUsers')) {
-		action.ExportOnDuplicatedUsers = false;
+		action.exportOnDuplicatedUsers = false;
 	}
 	return action;
 };
@@ -1073,7 +1073,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	const fields: ActionTypeField[] = [];
 	// Filters are always allowed except for actions that import users from
 	// databases.
-	if (!(connection.role === 'Source' && connection.type === 'Database' && actionType.Target === 'Users')) {
+	if (!(connection.role === 'Source' && connection.type === 'Database' && actionType.target === 'Users')) {
 		fields.push('Filter');
 	}
 	if (
@@ -1082,14 +1082,14 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		(connection.type === 'FileStorage' && connection.role === 'Source') ||
 		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
 			connection.role === 'Source' &&
-			(actionType.Target === 'Users' || actionType.Target === 'Groups'))
+			(actionType.target === 'Users' || actionType.target === 'Groups'))
 	) {
 		fields.push('Transformation');
 	}
 	if (
 		connection.type === 'App' &&
 		connection.role === 'Destination' &&
-		(actionType.Target === 'Users' || actionType.Target === 'Groups')
+		(actionType.target === 'Users' || actionType.target === 'Groups')
 	) {
 		fields.push('MatchingProperties');
 		fields.push('ExportOnDuplicatedUsers');
@@ -1102,7 +1102,7 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 	if (connection.type === 'FileStorage') {
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
-			if (actionType.Target === 'Users') {
+			if (actionType.target === 'Users') {
 				fields.push('FileOrderingProperty');
 			}
 		}
@@ -1143,14 +1143,14 @@ const getTransformationFunctionParameterName = (
 	connection: TransformedConnection,
 	actionType: TransformedActionType,
 ): String => {
-	if (isSourceEventConnection(connection.role, connection.type) && actionType.Target === 'Users') {
+	if (isSourceEventConnection(connection.role, connection.type) && actionType.target === 'Users') {
 		return 'event';
 	}
-	if (actionType.Target === 'Users') {
+	if (actionType.target === 'Users') {
 		return 'user';
-	} else if (actionType.Target === 'Events') {
+	} else if (actionType.target === 'Events') {
 		return 'event';
-	} else if (actionType.Target === 'Groups') {
+	} else if (actionType.target === 'Groups') {
 		return 'group';
 	}
 };

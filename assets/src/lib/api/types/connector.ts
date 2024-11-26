@@ -7,22 +7,22 @@ type WebhooksPer = 'None' | 'Account' | 'Connection' | 'Connector';
 type SendingMode = 'Cloud' | 'Device' | 'Combined';
 
 interface Connector {
-	Name: string;
-	SourceDescription: string;
-	DestinationDescription: string;
-	Type: ConnectorType;
-	HasSheets: boolean;
-	HasUI: boolean;
-	Icon: string;
-	FileExtension: string;
-	SampleQuery: string;
-	WebhooksPer: WebhooksPer;
-	OAuth: boolean;
-	TermForUsers: string;
-	TermForGroups: string;
-	SendingMode: SendingMode | null;
-	Targets: Record<ActionTarget, boolean>;
-	IdentityIDLabel: string;
+	name: string;
+	sourceDescription: string;
+	destinationDescription: string;
+	type: ConnectorType;
+	hasSheets: boolean;
+	hasUI: boolean;
+	icon: string;
+	fileExtension: string;
+	sampleQuery: string;
+	webhooksPer: WebhooksPer;
+	oauth: boolean;
+	termForUsers: string;
+	termForGroups: string;
+	sendingMode: SendingMode | null;
+	targets: Record<ActionTarget, boolean>;
+	identityIDLabel: string;
 }
 
 export type { Connector, ConnectorType, WebhooksPer, SendingMode };

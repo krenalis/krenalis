@@ -21,42 +21,42 @@ const updateMappingProperty = (action: TransformedAction, name: string, value: s
 
 	const a = { ...action };
 
-	if (a.Transformation.Mapping == null) return a;
+	if (a.transformation.mapping == null) return a;
 
-	if (a.Transformation.Mapping[name].value === '' && value !== '') {
-		const alternativeProperties = getAlternativeProperties(name, a.Transformation.Mapping);
+	if (a.transformation.mapping[name].value === '' && value !== '') {
+		const alternativeProperties = getAlternativeProperties(name, a.transformation.mapping);
 		// disable
-		for (const k in a.Transformation.Mapping) {
+		for (const k in a.transformation.mapping) {
 			if (alternativeProperties.includes(k)) {
-				a.Transformation.Mapping[k].disabled = true;
+				a.transformation.mapping[k].disabled = true;
 			}
 		}
 	} else if (value === '') {
 		let hasFilledSiblings = false;
-		const { root, indentation } = a.Transformation.Mapping[name];
-		for (const k in a.Transformation.Mapping) {
+		const { root, indentation } = a.transformation.mapping[name];
+		for (const k in a.transformation.mapping) {
 			if (
 				k !== name &&
-				a.Transformation.Mapping[k].root === root &&
-				a.Transformation.Mapping[k].indentation === indentation &&
-				a.Transformation.Mapping[k].value !== ''
+				a.transformation.mapping[k].root === root &&
+				a.transformation.mapping[k].indentation === indentation &&
+				a.transformation.mapping[k].value !== ''
 			) {
 				hasFilledSiblings = true;
 			}
 		}
 		if (!hasFilledSiblings) {
 			// enable
-			const alternativeProperties = getAlternativeProperties(name, a.Transformation.Mapping);
-			for (const k in a.Transformation.Mapping) {
+			const alternativeProperties = getAlternativeProperties(name, a.transformation.mapping);
+			for (const k in a.transformation.mapping) {
 				if (alternativeProperties.includes(k)) {
-					a.Transformation.Mapping[k].disabled = false;
+					a.transformation.mapping[k].disabled = false;
 				}
 			}
 		}
 	}
 
-	a.Transformation.Mapping[name].error = error;
-	a.Transformation.Mapping[name].value = value;
+	a.transformation.mapping[name].error = error;
+	a.transformation.mapping[name].value = value;
 	return a;
 };
 

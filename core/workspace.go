@@ -46,15 +46,15 @@ type Workspace struct {
 	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
-	ID                             int
-	Name                           string
-	UserSchema                     types.Type
-	UserPrimarySources             map[string]int
-	ResolveIdentitiesOnBatchImport bool
-	Identifiers                    []string
-	WarehouseMode                  WarehouseMode
-	PrivacyRegion                  PrivacyRegion
-	DisplayedProperties            DisplayedProperties
+	ID                             int                 `json:"id"`
+	Name                           string              `json:"name"`
+	UserSchema                     types.Type          `json:"userSchema"`
+	UserPrimarySources             map[string]int      `json:"userPrimarySources,format:emitnull"`
+	ResolveIdentitiesOnBatchImport bool                `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string            `json:"identifiers,format:emitnull"`
+	WarehouseMode                  WarehouseMode       `json:"warehouseMode"`
+	PrivacyRegion                  PrivacyRegion       `json:"privacyRegion"`
+	DisplayedProperties            DisplayedProperties `json:"displayedProperties"`
 }
 
 // PrivacyRegion represents a privacy region.
@@ -67,10 +67,10 @@ const (
 
 // DisplayedProperties represents the displayed properties.
 type DisplayedProperties struct {
-	Image       string
-	FirstName   string
-	LastName    string
-	Information string
+	Image       string `json:"image"`
+	FirstName   string `json:"firstName"`
+	LastName    string `json:"lastName"`
+	Information string `json:"information"`
 }
 
 // ActionStep represents a step of an action.
@@ -125,11 +125,11 @@ func ParseActionStep(step string) (ActionStep, error) {
 
 // ActionError represents an action error.
 type ActionError struct {
-	Action       int
-	Step         ActionStep
-	Count        int
-	Message      string
-	LastOccurred time.Time
+	Action       int        `json:"action"`
+	Step         ActionStep `json:"step"`
+	Count        int        `json:"count"`
+	Message      string     `json:"message"`
+	LastOccurred time.Time  `json:"lastOccurred"`
 }
 
 // ActionErrors returns the errors for the provided actions within the time
@@ -208,9 +208,10 @@ func (this *Workspace) ActionErrors(ctx context.Context, start, end time.Time, a
 
 // ActionMetrics represents action metrics for a time period.
 type ActionMetrics struct {
-	Start, End time.Time
-	Passed     [][6]int
-	Failed     [][6]int
+	Start  time.Time `json:"start"`
+	End    time.Time `json:"end"`
+	Passed [][6]int  `json:"passed"`
+	Failed [][6]int  `json:"failed"`
 }
 
 // MetricUnit represents the unit of time used for aggregating metrics.
@@ -1456,7 +1457,7 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 //
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) Traits(ctx context.Context, user string) ([]byte, error) {
+func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
@@ -1500,9 +1501,9 @@ func (this *Workspace) Traits(ctx context.Context, user string) ([]byte, error) 
 
 // User represents a user.
 type User struct {
-	ID             string
-	Properties     map[string]any
-	LastChangeTime time.Time
+	ID             string         `json:"id"`
+	Properties     map[string]any `json:"properties"`
+	LastChangeTime time.Time      `json:"lastChangeTime"`
 }
 
 // Users returns the users, the user schema, and an estimate of their count
@@ -1632,10 +1633,10 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 
 // WarehouseSettings returns name and settings of the data warehouse for the
 // workspace.
-func (this *Workspace) WarehouseSettings() (string, []byte) {
+func (this *Workspace) WarehouseSettings() (string, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	return ws.Warehouse.Name, slices.Clone(ws.Warehouse.Settings)
+	return ws.Warehouse.Name, json.Value(slices.Clone(ws.Warehouse.Settings))
 }
 
 // userIdentities returns the user identities matching the provided where
@@ -1743,40 +1744,40 @@ type ConnectionToAdd struct {
 
 	// Name is the name of the connection. It cannot be longer than 100 runes.
 	// If empty, the connection name will be the name of its connector.
-	Name string
+	Name string `json:"name"`
 
 	// Role is the role.
-	Role Role
+	Role Role `json:"role"`
 
 	// Enable reports whether the connection is enabled or disabled when added.
-	Enabled bool
+	Enabled bool `json:"enabled"`
 
 	// Connector is the name of the connector.
-	Connector string
+	Connector string `json:"connector"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It must be nil for destination connections and
 	// non-event source connections.
-	Strategy *Strategy
+	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It must be nil for
 	// source connections and connections that does not support events.
-	SendingMode *SendingMode
+	SendingMode *SendingMode `json:"sendingMode"`
 
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
-	WebsiteHost string
+	WebsiteHost string `json:"websiteHost"`
 
 	// LinkedConnections, for connections supporting events, indicate the
 	// connections to which events can be sent or received. It is nil if there
 	// are no linked connections or if the connection do not support events.
-	LinkedConnections []int
+	LinkedConnections []int `json:"linkedConnections"`
 
 	// UIValues represents the user-entered values of the connector user interface
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
-	UIValues json.Value
+	UIValues json.Value `json:"uiValues"`
 }
 
 // WarehouseType represents a data warehouse type.
@@ -1926,8 +1927,8 @@ type UserIdentity struct {
 	// future, we will remove this field.
 	Connection     int       `json:"connection"`
 	Action         int       `json:"action"`
-	ID             string    `json:"id"`           // empty string for identities imported from anonymous events.
-	AnonymousIds   []string  `json:"anonymousIds"` // nil for identities not imported from events.
+	ID             string    `json:"id"`                           // empty string for identities imported from anonymous events.
+	AnonymousIds   []string  `json:"anonymousIds,format:emitnull"` // nil for identities not imported from events.
 	LastChangeTime time.Time `json:"lastChangeTime"`
 }
 

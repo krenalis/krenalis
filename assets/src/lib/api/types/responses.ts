@@ -10,18 +10,18 @@ interface authCodeURLResponse {
 type ConnectorValues = Record<string, any>;
 
 interface ConnectorUIResponse {
-	Alert: ConnectorAlert;
-	Fields: ConnectorField[];
-	Buttons: ConnectorButton[];
-	Values: ConnectorValues;
+	alert: ConnectorAlert;
+	fields: ConnectorField[];
+	buttons: ConnectorButton[];
+	values: ConnectorValues;
 }
 
 interface Execution {
-	ID: number;
-	Action: number;
-	StartTime: string;
-	EndTime?: string;
-	Error: string;
+	id: number;
+	action: number;
+	startTime: string;
+	endTime?: string;
+	error: string;
 }
 
 type Event = Record<string, any>;
@@ -36,19 +36,19 @@ interface AddEventListenerResponse {
 }
 
 interface ActionMatchingSchemas {
-	Internal: ObjectType;
-	External: ObjectType;
+	internal: ObjectType;
+	external: ObjectType;
 }
 
 interface ActionSchemasResponse {
-	In: ObjectType;
-	Out: ObjectType;
-	Matchings: ActionMatchingSchemas;
+	in: ObjectType;
+	out: ObjectType;
+	matchings: ActionMatchingSchemas;
 }
 
 interface ExecQueryResponse {
-	Rows: Record<string, any>[];
-	Schema: ObjectType;
+	rows: Record<string, any>[];
+	schema: ObjectType;
 }
 
 interface RecordsResponse {
@@ -112,24 +112,24 @@ interface EventPreviewResponse {
 }
 
 interface MemberAvatar {
-	Image: string;
-	MimeType: string;
+	image: string;
+	mimeType: string;
 }
 
 interface Member {
-	ID: number;
-	Name: string;
-	Email: string;
-	Avatar: MemberAvatar;
-	Invitation: '' | 'Invited' | 'Expired';
-	CreatedAt: string;
+	id: number;
+	name: string;
+	email: string;
+	avatar: MemberAvatar;
+	invitation: '' | 'Invited' | 'Expired';
+	createdAt: string;
 }
 
 interface MemberToSet {
-	Name: string;
-	Image: string;
-	Email: string;
-	Password?: string;
+	name: string;
+	image: string;
+	email: string;
+	password?: string;
 }
 
 interface MemberInvitationResponse {
@@ -140,7 +140,7 @@ interface MemberInvitationResponse {
 type RePaths = Record<string, string | null>;
 
 interface ChangeUserSchemaQueriesResponse {
-	Queries: string[];
+	queries: string[];
 }
 
 interface ActionErrorsResponse {

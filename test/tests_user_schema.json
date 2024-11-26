@@ -1,5 +1,5 @@
 {
-    "Schema": {
+    "schema": {
         "name": "Object",
         "properties": [
             {
@@ -198,6 +198,6 @@
             }
         ]
     },
-    "PrimarySources": {},
-    "RePaths": {}
+    "primarySources": {},
+    "rePaths": {}
 }

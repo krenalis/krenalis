@@ -63,7 +63,7 @@ const useSchemaEdit = (
 		useContext(AppContext);
 
 	const primarySources = useRef<PrimarySources>(
-		workspaces.find((w) => w.ID === selectedWorkspace).UserPrimarySources,
+		workspaces.find((w) => w.id === selectedWorkspace).userPrimarySources,
 	);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
@@ -342,7 +342,7 @@ const useSchemaEdit = (
 			return;
 		}
 		setTimeout(() => {
-			setQueries(res.Queries);
+			setQueries(res.queries);
 			setIsQueriesLoading(false);
 		}, 300);
 	};

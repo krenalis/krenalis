@@ -8,12 +8,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
 
@@ -25,11 +25,11 @@ type api struct {
 //
 // Login is not required to call AcceptInvitation.
 func (api api) AcceptInvitation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	body := struct {
-		Name     string
-		Password string
-	}{}
-	err := json.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Name     string `json:"name"`
+		Password string `json:"password"`
+	}
+	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -68,11 +68,11 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	body := struct {
-		Expressions []core.ExpressionToBeExtracted
-		Schema      types.Type
-	}{}
-	err := json.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Expressions []core.ExpressionToBeExtracted `json:"expressions"`
+		Schema      types.Type                     `json:"schema"`
+	}
+	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -106,14 +106,14 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	body := struct {
-		Data           rawJSON
-		InSchema       types.Type
-		OutSchema      types.Type
-		Transformation core.DataTransformation
-		Purpose        core.Purpose
-	}{}
-	err := json.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Data           json.Value              `json:"data"`
+		InSchema       types.Type              `json:"inSchema"`
+		OutSchema      types.Type              `json:"outSchema"`
+		Transformation core.DataTransformation `json:"transformation"`
+		Purpose        core.Purpose            `json:"purpose"`
+	}
+	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -121,7 +121,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"data": rawJSON(data)}, nil
+	return map[string]any{"data": data}, nil
 }
 
 // TransformationLanguages returns the supported transformation languages.
@@ -138,12 +138,12 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	body := struct {
-		Expression string
-		Properties []types.Property
-		Type       types.Type
-	}{}
-	err := json.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Expression string           `json:"expression"`
+		Properties []types.Property `json:"properties"`
+		Type       types.Type       `json:"type"`
+	}
+	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}

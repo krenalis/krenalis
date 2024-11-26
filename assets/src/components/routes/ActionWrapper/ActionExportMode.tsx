@@ -10,7 +10,7 @@ const ActionExportMode = () => {
 
 	const onChangeExportMode = (e) => {
 		const a = { ...action };
-		a.ExportMode = e.currentTarget.value;
+		a.exportMode = e.currentTarget.value;
 		setAction(a);
 	};
 
@@ -25,7 +25,7 @@ const ActionExportMode = () => {
 			<SlSelect
 				className='action__export-mode-select'
 				size='medium'
-				value={action.ExportMode!}
+				value={action.exportMode!}
 				onSlChange={onChangeExportMode}
 			>
 				{Object.keys(EXPORT_MODE_OPTIONS).map((k) => (

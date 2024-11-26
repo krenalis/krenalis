@@ -9,7 +9,6 @@ package cmd
 
 import (
 	"bufio"
-	jsonstd "encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -42,10 +41,10 @@ var workspaceChangeUserSchema = &cobra.Command{
 			log.Fatalf("content of file %q is not JSON valid: %s", filename, err)
 		}
 		var req struct {
-			Schema  types.Type
-			RePaths map[string]any
+			Schema  types.Type     `json:"schema"`
+			RePaths map[string]any `json:"rePaths"`
 		}
-		err = jsonstd.Unmarshal(content, &req)
+		err = json.Unmarshal(content, &req)
 		if err != nil {
 			log.Fatalf("cannot unmarshal content of JSON file %q: %s", filename, err)
 		}

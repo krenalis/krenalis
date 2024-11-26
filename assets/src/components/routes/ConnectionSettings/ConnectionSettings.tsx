@@ -42,7 +42,7 @@ const ConnectionSettings = () => {
 				}, 300);
 				return;
 			}
-			if (ui.Fields.length === 0) {
+			if (ui.fields.length === 0) {
 				setHasUIFields(false);
 			} else {
 				setHasUIFields(true);

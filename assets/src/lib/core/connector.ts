@@ -16,7 +16,7 @@ class TransformedConnector {
 	oAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
-	SendingMode: SendingMode | null;
+	sendingMode: SendingMode | null;
 	targets: Record<ActionTarget, boolean>;
 	identityIDLabel: string;
 
@@ -34,7 +34,7 @@ class TransformedConnector {
 		destinationDescription: string,
 		termForUsers: string,
 		termForGroups: string,
-		SendingMode: SendingMode,
+		sendingMode: SendingMode,
 		targets: Record<ActionTarget, boolean>,
 		identityIDLabel: string,
 	) {
@@ -51,7 +51,7 @@ class TransformedConnector {
 		this.destinationDescription = destinationDescription;
 		this.termForUsers = termForUsers;
 		this.termForGroups = termForGroups;
-		this.SendingMode = SendingMode;
+		this.sendingMode = sendingMode;
 		this.targets = targets;
 		this.identityIDLabel = identityIDLabel;
 	}
@@ -89,13 +89,13 @@ class TransformedConnector {
 	}
 
 	get supportedSendingModes(): SendingMode[] {
-		switch (this.SendingMode) {
+		switch (this.sendingMode) {
 			case null:
 				return [];
 			case 'Combined':
 				return ['Cloud', 'Device', 'Combined'];
 			default:
-				return [this.SendingMode];
+				return [this.sendingMode];
 		}
 	}
 

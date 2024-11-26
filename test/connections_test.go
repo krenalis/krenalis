@@ -45,17 +45,17 @@ func TestConnections(t *testing.T) {
 	}
 	dummy := connections[0].(map[string]any)
 	expectedName := "Dummy (source)"
-	gotName := dummy["Name"].(string)
+	gotName := dummy["name"].(string)
 	if expectedName != gotName {
 		t.Fatalf("expected name %q, got %q", expectedName, gotName)
 	}
 
 	// Retrieve the input and the output schema, which must me both valid.
 	schemas := c.ActionSchemas(dummyID, core.Users, "")
-	if err := isValidSchema(schemas["In"]); err != nil {
+	if err := isValidSchema(schemas["in"]); err != nil {
 		t.Fatal(err)
 	}
-	if err := isValidSchema(schemas["Out"]); err != nil {
+	if err := isValidSchema(schemas["out"]); err != nil {
 		t.Fatal(err)
 	}
 

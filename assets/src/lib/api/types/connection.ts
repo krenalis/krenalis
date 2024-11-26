@@ -8,23 +8,23 @@ type ConnectionRole = 'Source' | 'Destination';
 type Health = 'Healthy' | 'NoRecentData' | 'RecentError';
 
 interface Connection {
-	ID: number;
-	Name: string;
-	Type: ConnectorType;
-	Role: ConnectionRole;
-	Connector: string;
-	Storage: number;
-	Compression: Compression;
-	Strategy?: Strategy | null;
-	WebsiteHost: string;
-	SendingMode: SendingMode | null;
-	HasUI: boolean;
-	Enabled: boolean;
-	ActionsCount: number;
-	Health: Health;
-	ActionTypes?: ActionType[];
-	Actions?: Action[];
-	LinkedConnections?: number[];
+	id: number;
+	name: string;
+	type: ConnectorType;
+	role: ConnectionRole;
+	connector: string;
+	storage: number;
+	compression: Compression;
+	strategy?: Strategy | null;
+	websiteHost: string;
+	sendingMode: SendingMode | null;
+	hasUI: boolean;
+	enabled: boolean;
+	actionsCount: number;
+	health: Health;
+	actionTypes?: ActionType[];
+	actions?: Action[];
+	linkedConnections?: number[];
 }
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
@@ -40,7 +40,7 @@ interface ConnectionToAdd {
 	connector: string;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	SendingMode?: SendingMode | null;
+	sendingMode?: SendingMode | null;
 	uiValues: ConnectorValues;
 	linkedConnections: Number[] | null;
 }
@@ -50,7 +50,7 @@ interface ConnectionToSet {
 	enabled: boolean;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	SendingMode?: SendingMode | null;
+	sendingMode?: SendingMode | null;
 }
 
 export type {

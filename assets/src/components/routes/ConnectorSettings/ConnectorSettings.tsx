@@ -36,7 +36,7 @@ const ConnectorSettings = () => {
 	const [name, setName] = useState<string>('');
 	const [strategy, setStrategy] = useState<Strategy | null>(null);
 	const [websiteHost, setWebsiteHost] = useState<string>('');
-	const [SendingMode, setSendingMode] = useState<SendingModeType | null>(null);
+	const [sendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
 	const [values, setValues] = useState<ConnectorValues>({});
@@ -125,9 +125,9 @@ const ConnectorSettings = () => {
 				handleError(err);
 				return;
 			}
-			setFields(ui.Fields);
-			setButtons(ui.Buttons);
-			setValues(ui.Values);
+			setFields(ui.fields);
+			setButtons(ui.buttons);
+			setValues(ui.values);
 		};
 		fetchData();
 	}, []);
@@ -142,9 +142,9 @@ const ConnectorSettings = () => {
 		// remove the errors
 		const fls: ConnectorFieldInterface[] = [];
 		for (const f of fields) {
-			if ('Error' in f) {
-				if (f.Error) {
-					f.Error = '';
+			if ('error' in f) {
+				if (f.error) {
+					f.error = '';
 				}
 			}
 			fls.push(f);
@@ -172,7 +172,7 @@ const ConnectorSettings = () => {
 					connector: connectorName,
 					strategy: strategy,
 					websiteHost: websiteHost,
-					SendingMode: SendingMode,
+					sendingMode: sendingMode,
 					uiValues: values,
 					linkedConnections: null,
 				};
@@ -233,13 +233,13 @@ const ConnectorSettings = () => {
 			}
 			return;
 		}
-		if (ui.Alert != null) {
-			showStatus({ variant: ui.Alert.Variant, icon: icons.EXCLAMATION, text: ui.Alert.Message });
+		if (ui.alert != null) {
+			showStatus({ variant: ui.alert.variant, icon: icons.EXCLAMATION, text: ui.alert.message });
 		}
-		if (ui.Fields != null) {
-			setFields(ui.Fields);
-			setButtons(ui.Buttons);
-			setValues(ui.Values);
+		if (ui.fields != null) {
+			setFields(ui.fields);
+			setButtons(ui.buttons);
+			setValues(ui.values);
 		}
 	};
 
@@ -249,7 +249,7 @@ const ConnectorSettings = () => {
 
 	const fieldsToRender: ReactNode[] = [];
 	for (const f of fields) {
-		fieldsToRender.push(<ConnectorField key={f.Label} field={f} />);
+		fieldsToRender.push(<ConnectorField key={f.label} field={f} />);
 	}
 
 	const buttonsToRender: ReactNode[] = [];
@@ -257,16 +257,16 @@ const ConnectorSettings = () => {
 		for (const [i, b] of buttons.entries()) {
 			buttonsToRender.push(
 				<FeedbackButton
-					key={b.Event}
-					variant={b.Variant}
+					key={b.event}
+					variant={b.variant}
 					onClick={async () => {
-						await onActionClick(b.Event, i);
+						await onActionClick(b.event, i);
 					}}
 					ref={(ref) => {
 						confirmationButtonsRef.current[i] = ref!;
 					}}
 				>
-					{b.Text}
+					{b.text}
 				</FeedbackButton>,
 			);
 		}
@@ -336,7 +336,7 @@ const ConnectorSettings = () => {
 								<SlSelect
 									className='connector-settings__mode-field'
 									name='mode'
-									value={SendingMode}
+									value={sendingMode}
 									label='Sending mode'
 									onSlChange={(e) => {
 										const target = e.currentTarget as any;
@@ -347,9 +347,9 @@ const ConnectorSettings = () => {
 									<div className='connector-settings__mode-value-icon' slot='prefix'>
 										<SlIcon
 											name={
-												SendingMode === 'Cloud'
+												sendingMode === 'Cloud'
 													? 'cloud'
-													: SendingMode === 'Device'
+													: sendingMode === 'Device'
 														? 'phone'
 														: 'send'
 											}

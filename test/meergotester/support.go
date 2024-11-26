@@ -62,8 +62,8 @@ func (c *Meergo) AddAction(conn int, target string, action ActionToSet) int {
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
 	data := map[string]any{
-		"Target": target,
-		"Action": action,
+		"target": target,
+		"action": action,
 	}
 	var id int
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
@@ -73,9 +73,9 @@ func (c *Meergo) AddAction(conn int, target string, action ActionToSet) int {
 
 func (c *Meergo) AddEventAction(conn int, eventType string, action ActionToSet) int {
 	data := map[string]any{
-		"Target":    "Events",
-		"EventType": eventType,
-		"Action":    action,
+		"target":    "Events",
+		"eventType": eventType,
+		"action":    action,
 	}
 	var id int
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
@@ -91,8 +91,8 @@ func (c *Meergo) AddActionErr(conn int, target string, action ActionToSet) (int,
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
 	data := map[string]any{
-		"Target": target,
-		"Action": action,
+		"target": target,
+		"action": action,
 	}
 	var id int
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
@@ -105,7 +105,7 @@ func (c *Meergo) AddActionErr(conn int, target string, action ActionToSet) (int,
 
 func (c *Meergo) AddConnection(connection ConnectionToAdd) int {
 	data := map[string]any{
-		"Connection": connection,
+		"connection": connection,
 	}
 	var id int
 	method := fmt.Sprintf("/api/workspaces/%d/connections", c.ws)
@@ -225,7 +225,7 @@ func (c *Meergo) IdentityResolutionExecution() (startTime, endTime *time.Time) {
 
 func (c *Meergo) CanChangeWarehouseSettings(settings []byte) {
 	body := map[string]any{
-		"Settings": json.RawMessage(settings),
+		"settings": json.RawMessage(settings),
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/warehouse/can-change-settings", c.ws)
 	c.MustCall("POST", method, body, nil)
@@ -233,16 +233,16 @@ func (c *Meergo) CanChangeWarehouseSettings(settings []byte) {
 
 func (c *Meergo) CanInitializeWarehouse(name string, settings []byte) error {
 	body := map[string]any{
-		"Name":     name,
-		"Settings": json.RawMessage(settings),
+		"name":     name,
+		"settings": json.RawMessage(settings),
 	}
 	return c.Call("POST", "/api/can-initialize-warehouse", body, nil)
 }
 
 func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
-		"RunOnBatchImport": runOnBatchImport,
-		"Identifiers":      identifiers,
+		"runOnBatchImport": runOnBatchImport,
+		"identifiers":      identifiers,
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
 	c.MustCall("PUT", method, body, nil)
@@ -250,7 +250,7 @@ func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identif
 
 func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error {
 	body := map[string]any{
-		"Identifiers": identifiers,
+		"identifiers": identifiers,
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
 	return c.Call("PUT", method, body, nil)
@@ -259,9 +259,9 @@ func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error
 func (c *Meergo) ChangeUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
-		"Schema":         schema,
-		"PrimarySources": primarySources,
-		"RePaths":        rePaths,
+		"schema":         schema,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
 	}
 	c.MustCall("PUT", method, req, nil)
 }
@@ -271,17 +271,17 @@ func (c *Meergo) ChangeUserSchema(schema types.Type, primarySources map[string]i
 func (c *Meergo) ChangeUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
-		"Schema":         schema,
-		"PrimarySources": primarySources,
-		"RePaths":        rePaths,
+		"schema":         schema,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
 	}
 	return c.Call("PUT", method, req, nil)
 }
 
 func (c *Meergo) ChangeUserSchemaQueries(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
-		"Schema":  schema,
-		"RePaths": rePaths,
+		"schema":  schema,
+		"rePaths": rePaths,
 	}
 	var response struct {
 		Queries []string
@@ -295,8 +295,8 @@ func (c *Meergo) ChangeUserSchemaQueries(schema types.Type, rePaths map[string]a
 // error instead of panicking.
 func (c *Meergo) ChangeUserSchemaQueriesErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
-		"Schema":  schema,
-		"RePaths": rePaths,
+		"schema":  schema,
+		"rePaths": rePaths,
 	}
 	var response struct {
 		Queries []string
@@ -311,8 +311,8 @@ func (c *Meergo) ChangeUserSchemaQueriesErr(schema types.Type, rePaths map[strin
 
 func (c *Meergo) ChangeWarehouseSettings(mode string, settings []byte) {
 	body := map[string]any{
-		"Mode":     mode,
-		"Settings": json.RawMessage(settings),
+		"mode":     mode,
+		"settings": json.RawMessage(settings),
 	}
 	method := fmt.Sprintf("/api/workspaces/%d/warehouse/settings", c.ws)
 	c.MustCall("PUT", method, body, nil)
@@ -329,8 +329,8 @@ func (c *Meergo) CompletePath(storage int, path string) string {
 
 func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {
 	req := map[string]any{
-		"First": first,
-		"Limit": limit,
+		"first": first,
+		"limit": limit,
 	}
 	var response struct {
 		Count      int            `json:"count"`
@@ -376,12 +376,12 @@ func (c *Meergo) IdentifiersSchema() types.Type {
 
 func (c *Meergo) Records(storage int, fileConnector string, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	req := map[string]any{
-		"FileConnector": fileConnector,
-		"Path":          path,
-		"Sheet":         sheet,
-		"Compression":   compression,
-		"UIValues":      uiValues,
-		"Limit":         limit,
+		"fileConnector": fileConnector,
+		"path":          path,
+		"sheet":         sheet,
+		"compression":   compression,
+		"uiValues":      uiValues,
+		"limit":         limit,
 	}
 	var response struct {
 		Records []map[string]any `json:"records"`
@@ -444,10 +444,10 @@ func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
 
 func (c *Meergo) Sheets(storage int, fileConnector string, path string, compression Compression, uiValues json.RawMessage) []string {
 	request := map[string]any{
-		"FileConnector": fileConnector,
-		"Path":          path,
-		"Compression":   compression,
-		"UIValues":      uiValues,
+		"fileConnector": fileConnector,
+		"path":          path,
+		"compression":   compression,
+		"uiValues":      uiValues,
 	}
 	var response struct {
 		Sheets []string `json:"sheets"`
@@ -500,11 +500,11 @@ func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 
 func (c *Meergo) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, count int) {
 	req := map[string]any{
-		"Properties": properties,
-		"Order":      order,
-		"OrderDesc":  orderDesc,
-		"First":      first,
-		"Limit":      limit,
+		"properties": properties,
+		"order":      order,
+		"orderDesc":  orderDesc,
+		"first":      first,
+		"limit":      limit,
 	}
 	var response struct {
 		Users  []User     `json:"users"`

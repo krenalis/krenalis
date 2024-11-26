@@ -242,12 +242,12 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 	// Serialize the alert, if present.
 	if ui.Alert != nil {
-		b.WriteString(`"Alert":{"Message":`)
+		b.WriteString(`"alert":{"message":`)
 		err := b.Encode(ui.Alert.Message)
 		if err != nil {
 			return nil, err
 		}
-		b.WriteString(`,"Variant":"`)
+		b.WriteString(`,"variant":"`)
 		b.WriteString(ui.Alert.Variant.String())
 		b.WriteString(`"`)
 		b.WriteString("}")
@@ -269,7 +269,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 		}
 
 		comma := false
-		b.WriteString(`"Fields":[`)
+		b.WriteString(`"fields":[`)
 		for _, field := range ui.Fields {
 			ok, err := marshalUIComponent(&b, field, role, values, comma)
 			if err != nil {
@@ -279,14 +279,22 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 				comma = true
 			}
 		}
-		b.WriteString(`],"Buttons":`)
-		err := b.Encode(ui.Buttons)
-		if err != nil {
-			return nil, err
+		b.WriteString(`],"buttons":[`)
+		for _, button := range ui.Buttons {
+			b.WriteString(`{"event":`)
+			b.Encode(button.Event)
+			b.WriteString(`,"text":`)
+			b.Encode(button.Text)
+			b.WriteString(`,"variant":`)
+			b.Encode(button.Variant)
+			b.WriteString(`,"role":"`)
+			b.WriteString(button.Role.String())
+			b.WriteString(`"}`)
 		}
+		b.WriteString(`]`)
 		if len(ui.Values) > 0 {
-			b.WriteString(`,"Values":`)
-			err = b.Encode(values)
+			b.WriteString(`,"values":`)
+			err := b.Encode(values)
 			if err != nil {
 				return nil, err
 			}
@@ -310,7 +318,7 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 	if comma {
 		b.WriteString(`,`)
 	}
-	b.WriteString(`{"ComponentType":"`)
+	b.WriteString(`{"componentType":"`)
 	b.WriteString(rt.Name())
 	b.WriteString(`"`)
 	for j := 0; j < rt.NumField(); j++ {
@@ -318,9 +326,11 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 		if name == "Role" {
 			continue
 		}
+		// Writes the field name in camelCase format.
 		field := rv.Field(j)
 		b.WriteString(`,"`)
-		b.WriteString(name)
+		b.WriteByte(name[0] + ('a' - 'A'))
+		b.WriteString(name[1:])
 		b.WriteString(`":`)
 		var err error
 		switch field := field.Interface().(type) {
@@ -357,11 +367,11 @@ func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Rol
 	if comma {
 		b.WriteByte(',')
 	}
-	b.WriteString(`{"Name":`)
+	b.WriteString(`{"name":`)
 	_ = b.Encode(fieldSet.Name)
-	b.WriteString(`,"Label":`)
+	b.WriteString(`,"label":`)
 	_ = b.Encode(fieldSet.Label)
-	b.WriteString(`,"Fields":[`)
+	b.WriteString(`,"fields":[`)
 	comma = false
 	for _, c := range fieldSet.Fields {
 		var valuesOfSet map[string]any

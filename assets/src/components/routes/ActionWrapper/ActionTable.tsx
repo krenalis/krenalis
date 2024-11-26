@@ -35,13 +35,13 @@ const ActionTable = () => {
 
 	useEffect(() => {
 		tableRef.current = {
-			lastConfirmation: action.Table!,
-			lastUpdate: action.Table!,
+			lastConfirmation: action.table!,
+			lastUpdate: action.table!,
 		};
 	}, []);
 
 	const tableKeyComboboxItems = useMemo(() => {
-		return getTableKeyComboboxItems(actionType.OutputSchema);
+		return getTableKeyComboboxItems(actionType.outputSchema);
 	}, [actionType]);
 
 	const onUpdateTable = (e) => {
@@ -56,19 +56,19 @@ const ActionTable = () => {
 			setIsTableChanged(false);
 		}
 		const a = { ...action };
-		a.Table = value;
+		a.table = value;
 		setAction(a);
 	};
 
 	const onTableKeyPropertyUpdate = (_: string, value: string) => {
 		const a = { ...action };
-		a.TableKeyProperty = value;
+		a.tableKeyProperty = value;
 		setAction(a);
 	};
 
 	const onTableKeyPropertySelect = (_: string, value: string) => {
 		const a = { ...action };
-		a.TableKeyProperty = value;
+		a.tableKeyProperty = value;
 		setAction(a);
 	};
 
@@ -76,7 +76,7 @@ const ActionTable = () => {
 		tableConfirmationButtonRef.current!.load();
 		let schema: ObjectType;
 		try {
-			schema = await api.workspaces.connections.tableSchema(connection.id, action.Table);
+			schema = await api.workspaces.connections.tableSchema(connection.id, action.table);
 		} catch (err) {
 			tableConfirmationButtonRef.current!.stop();
 			handleError(err);
@@ -84,13 +84,13 @@ const ActionTable = () => {
 		}
 		tableConfirmationButtonRef.current!.confirm();
 		setTimeout(() => {
-			tableRef.current.lastConfirmation = action.Table;
+			tableRef.current.lastConfirmation = action.table;
 			setIsTableChanged(false);
 			const actionTyp = { ...actionType };
-			actionTyp.OutputSchema = schema;
+			actionTyp.outputSchema = schema;
 			setActionType(actionTyp);
 			const a = { ...action };
-			a.Transformation.Mapping = flattenSchema(schema);
+			a.transformation.mapping = flattenSchema(schema);
 			setAction(a);
 			setTimeout(() => {
 				let scrollSection = transformationSectionRef.current;
@@ -111,7 +111,7 @@ const ActionTable = () => {
 		<>
 			<Section title='Table' description='The name of the table of the database' padded={true} annotated={true}>
 				<div className='action__table'>
-					<SlInput value={action.Table} onSlInput={onUpdateTable} />
+					<SlInput value={action.table} onSlInput={onUpdateTable} />
 					<FeedbackButton
 						ref={tableConfirmationButtonRef}
 						variant='success'
@@ -127,7 +127,7 @@ const ActionTable = () => {
 					/>
 				</div>
 			</Section>
-			{actionType.Target === 'Users' && !isTransformationHidden && (
+			{actionType.target === 'Users' && !isTransformationHidden && (
 				<Section
 					title='Table key'
 					description='The property of the table that is used as key in export queries'
@@ -138,7 +138,7 @@ const ActionTable = () => {
 				>
 					<div className='action__table-key-property' ref={tableKeyRef}>
 						<Combobox
-							initialValue={action.TableKeyProperty}
+							initialValue={action.tableKeyProperty}
 							onInput={onTableKeyPropertyUpdate}
 							name='table-key'
 							items={tableKeyComboboxItems}

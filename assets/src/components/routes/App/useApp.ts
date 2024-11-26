@@ -55,8 +55,8 @@ const useApp = (
 			const isDeleted = workspaces != null && ws.length < workspaces.length;
 			if (selectedWorkspace === 0) {
 				if (ws.length === 1 && !isDeleted) {
-					setSelectedWorkspace(ws[0].ID);
-					api = new API(window.location.origin, ws[0].ID);
+					setSelectedWorkspace(ws[0].id);
+					api = new API(window.location.origin, ws[0].id);
 				} else {
 					// the user must choose a workspace.
 					redirect('workspaces');
@@ -77,22 +77,22 @@ const useApp = (
 			for (const c of connectors) {
 				transformedConnectors.push(
 					new TransformedConnector(
-						c.Name,
-						c.Type,
-						c.HasSheets,
-						c.HasUI,
-						c.Icon,
-						c.FileExtension,
-						c.SampleQuery,
-						c.WebhooksPer,
-						c.OAuth,
-						c.SourceDescription,
-						c.DestinationDescription,
-						c.TermForUsers,
-						c.TermForGroups,
-						c.SendingMode,
-						c.Targets,
-						c.IdentityIDLabel,
+						c.name,
+						c.type,
+						c.hasSheets,
+						c.hasUI,
+						c.icon,
+						c.fileExtension,
+						c.sampleQuery,
+						c.webhooksPer,
+						c.oauth,
+						c.sourceDescription,
+						c.destinationDescription,
+						c.termForUsers,
+						c.termForGroups,
+						c.sendingMode,
+						c.targets,
+						c.identityIDLabel,
 					),
 				);
 			}
@@ -141,27 +141,27 @@ const useApp = (
 			}
 			const transformedConnections: TransformedConnection[] = [];
 			for (const c of connections) {
-				const connector = getConnectionFullConnector(c.Connector, transformedConnectors!);
+				const connector = getConnectionFullConnector(c.connector, transformedConnectors!);
 				const transformedConnection = new TransformedConnection(
-					c.ID,
-					c.Name,
-					c.Type,
-					c.Role,
+					c.id,
+					c.name,
+					c.type,
+					c.role,
 					connector,
-					c.HasUI,
-					c.Enabled,
-					c.ActionsCount,
-					c.Health,
-					c.Storage,
-					c.Compression,
-					c.Strategy,
-					c.WebsiteHost,
-					c.SendingMode,
+					c.hasUI,
+					c.enabled,
+					c.actionsCount,
+					c.health,
+					c.storage,
+					c.compression,
+					c.strategy,
+					c.websiteHost,
+					c.sendingMode,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
-				if (c.LinkedConnections) {
-					transformedConnection.linkedConnections = c.LinkedConnections;
+				if (c.linkedConnections) {
+					transformedConnection.linkedConnections = c.linkedConnections;
 				}
 				transformedConnections.push(transformedConnection);
 			}
@@ -211,27 +211,27 @@ const useApp = (
 			}
 			const transformedConnections: TransformedConnection[] = [];
 			for (const c of connections) {
-				const connector = getConnectionFullConnector(c.Connector, connectors!);
+				const connector = getConnectionFullConnector(c.connector, connectors!);
 				const transformedConnection = new TransformedConnection(
-					c.ID,
-					c.Name,
-					c.Type,
-					c.Role,
+					c.id,
+					c.name,
+					c.type,
+					c.role,
 					connector,
-					c.HasUI,
-					c.Enabled,
-					c.ActionsCount,
-					c.Health,
-					c.Storage,
-					c.Compression,
-					c.Strategy,
-					c.WebsiteHost,
-					c.SendingMode,
+					c.hasUI,
+					c.enabled,
+					c.actionsCount,
+					c.health,
+					c.storage,
+					c.compression,
+					c.strategy,
+					c.websiteHost,
+					c.sendingMode,
 					getConnectionStatus(c),
 					getConnectionDescription(c, connector),
 				);
-				if (c.LinkedConnections) {
-					transformedConnection.linkedConnections = c.LinkedConnections;
+				if (c.linkedConnections) {
+					transformedConnection.linkedConnections = c.linkedConnections;
 				}
 				transformedConnections.push(transformedConnection);
 			}

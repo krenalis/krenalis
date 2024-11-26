@@ -1,17 +1,17 @@
 import { Member, MemberAvatar, MemberToSet } from '../api/types/responses';
 
 interface TransformedMember {
-	ID: number;
-	Name: string;
-	Email: string;
-	Avatar: MemberAvatar;
-	Initials: string;
-	Invitation: '' | 'Invited' | 'Expired';
-	CreatedAt: string;
+	id: number;
+	name: string;
+	email: string;
+	avatar: MemberAvatar;
+	initials: string;
+	invitation: '' | 'Invited' | 'Expired';
+	createdAt: string;
 }
 
 const transformMember = (member: Member): TransformedMember => {
-	const split = member.Name.split(' ');
+	const split = member.name.split(' ');
 	let initials = '';
 	for (let i = 0; i < 2; i++) {
 		const word = split[i];
@@ -19,7 +19,7 @@ const transformMember = (member: Member): TransformedMember => {
 			initials += word[0];
 		}
 	}
-	const transformed = { ...member, Initials: initials };
+	const transformed = { ...member, initials: initials };
 	return transformed;
 };
 
@@ -34,24 +34,24 @@ const validateMemberEmail = (email: string): string => {
 };
 
 const validateMemberToSet = (member: MemberToSet, isPasswordRequired: boolean): string => {
-	if (member.Name === '') {
+	if (member.name === '') {
 		return 'name must not be empty';
 	}
-	if (member.Name.length > 45) {
+	if (member.name.length > 45) {
 		return 'name must be shorter than 45 characters';
 	}
-	const error = validateMemberEmail(member.Email);
+	const error = validateMemberEmail(member.email);
 	if (error !== '') {
 		return error;
 	}
-	if (isPasswordRequired && member.Password === '') {
+	if (isPasswordRequired && member.password === '') {
 		return 'password must not be empty';
 	}
-	if (member.Password != null) {
-		if (member.Password.length < 8) {
+	if (member.password != null) {
+		if (member.password.length < 8) {
 			return 'password must be at least 8 characters long';
 		}
-		if (member.Password.length > 72) {
+		if (member.password.length > 72) {
 			return 'password must be shorter than 72 characters';
 		}
 	}

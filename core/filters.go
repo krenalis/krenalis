@@ -28,8 +28,8 @@ import (
 
 // Filter represents a filter.
 type Filter struct {
-	Logical    FilterLogical     // can be OpAnd or OpOr.
-	Conditions []FilterCondition // cannot be empty.
+	Logical    FilterLogical     `json:"logical"`    // can be OpAnd or OpOr.
+	Conditions []FilterCondition `json:"conditions"` // cannot be empty.
 }
 
 // FilterLogical represents the logical operator of a filter.
@@ -61,9 +61,9 @@ func convertLogicalFromWhere(op state.WhereLogical) FilterLogical {
 
 // FilterCondition represents the condition of a filter.
 type FilterCondition struct {
-	Property string         // property's path.
-	Operator FilterOperator // operator.
-	Values   []string       `json:",omitempty"` // values; a value cannot be longer than 60 runes and cannot contain the NUL rune.
+	Property string         `json:"property"`        // property's path.
+	Operator FilterOperator `json:"operator"`        // operator.
+	Values   []string       `json:"values,omitzero"` // values; a value cannot be longer than 60 runes and cannot contain the NUL rune.
 }
 
 // FilterOperator represents a filter condition operator.

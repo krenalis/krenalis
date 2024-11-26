@@ -34,33 +34,33 @@ type Action struct {
 	core                     *Core
 	action                   *state.Action
 	connection               *Connection
-	ID                       int
-	Connection               int
-	Target                   Target
-	Name                     string
-	Enabled                  bool
-	EventType                *string
-	Running                  bool
-	ScheduleStart            *int
-	SchedulePeriod           *SchedulePeriod
-	InSchema                 types.Type
-	OutSchema                types.Type
-	Filter                   *Filter
-	Transformation           Transformation
-	Query                    *string
-	Connector                string
-	Path                     *string
-	Sheet                    *string
-	Compression              Compression
-	Table                    *string
-	TableKeyProperty         *string
-	IdentityProperty         *string
-	LastChangeTimeProperty   *string
-	LastChangeTimeFormat     *string
-	FileOrderingPropertyPath *string
-	ExportMode               *ExportMode
-	MatchingProperties       *MatchingProperties
-	ExportOnDuplicatedUsers  *bool
+	ID                       int                 `json:"id"`
+	Connection               int                 `json:"connection"`
+	Target                   Target              `json:"target"`
+	Name                     string              `json:"name"`
+	Enabled                  bool                `json:"enabled"`
+	EventType                *string             `json:"eventType"`
+	Running                  bool                `json:"running"`
+	ScheduleStart            *int                `json:"scheduleStart"`
+	SchedulePeriod           *SchedulePeriod     `json:"schedulePeriod"`
+	InSchema                 types.Type          `json:"inSchema"`
+	OutSchema                types.Type          `json:"outSchema"`
+	Filter                   *Filter             `json:"filter"`
+	Transformation           Transformation      `json:"transformation"`
+	Query                    *string             `json:"query"`
+	Connector                string              `json:"connector"`
+	Path                     *string             `json:"path"`
+	Sheet                    *string             `json:"sheet"`
+	Compression              Compression         `json:"compression"`
+	Table                    *string             `json:"table"`
+	TableKeyProperty         *string             `json:"tableKeyProperty"`
+	IdentityProperty         *string             `json:"identityProperty"`
+	LastChangeTimeProperty   *string             `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat     *string             `json:"lastChangeTimeFormat"`
+	FileOrderingPropertyPath *string             `json:"fileOrderingPropertyPath"`
+	ExportMode               *ExportMode         `json:"exportMode"`
+	MatchingProperties       *MatchingProperties `json:"matchingProperties"`
+	ExportOnDuplicatedUsers  *bool               `json:"exportOnDuplicatedUsers"`
 }
 
 // Language represents a transformation language. Valid values are "JavaScript"
@@ -69,17 +69,17 @@ type Language string
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source        string
-	Language      Language
-	PreserveJSON  bool
-	InProperties  []string
-	OutProperties []string
+	Source        string   `json:"source"`
+	Language      Language `json:"language"`
+	PreserveJSON  bool     `json:"preserveJSON"`
+	InProperties  []string `json:"inProperties"`
+	OutProperties []string `json:"outProperties"`
 }
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Mapping  map[string]string
-	Function *TransformationFunction
+	Mapping  map[string]string       `json:"mapping,format:emitnull"`
+	Function *TransformationFunction `json:"function"`
 }
 
 // ExportMode represents one of the three export modes.
@@ -271,7 +271,7 @@ func (this *Action) Delete(ctx context.Context) error {
 //
 //   - EventNotExist, if the event does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Action) ServeUI(ctx context.Context, event string, values json.Value) ([]byte, error) {
+func (this *Action) ServeUI(ctx context.Context, event string, values json.Value) (json.Value, error) {
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
@@ -658,29 +658,29 @@ type ActionToSet struct {
 
 	// Name must be a non-empty valid UTF-8 encoded string and cannot be longer
 	// than 60 runes.
-	Name string
+	Name string `json:"name"`
 
 	// Enabled indicates whether the action is enabled or not.
 	//
 	// Depending on the type of the action, this flag controls the enabling of
 	// scheduling of action execution - for batch actions - or the enabling of
 	// events receive/dispatching - for event based actions.
-	Enabled bool
+	Enabled bool `json:"enabled"`
 
 	// Filter is the filter of the action, if it has one, otherwise is nil.
-	Filter *Filter
+	Filter *Filter `json:"filter"`
 
 	// InSchema is the input schema of the action.
 	//
 	// Please refer to the 'Actions.csv' file for a complete list of properties
 	// that must be inside this schema, based on the connection and action type.
-	InSchema types.Type
+	InSchema types.Type `json:"inSchema"`
 
 	// OutSchema is the output schema of the action.
 	//
 	// Please refer to the 'Actions.csv' file for a complete list of properties
 	// that must be inside this schema, based on the connection and action type.
-	OutSchema types.Type
+	OutSchema types.Type `json:"outSchema"`
 
 	// Transformation is the mapping or function transformation, if it has one.
 	//
@@ -690,50 +690,50 @@ type ActionToSet struct {
 	// Please refer to the 'Actions.csv' file for details about this
 	// transformation and the properties it eventually operates on, based on the
 	// connection and the action type.
-	Transformation Transformation
+	Transformation Transformation `json:"transformation"`
 
 	// Query is the query of the action, if it has one, otherwise it is the
 	// empty string.
-	Query string
+	Query string `json:"query"`
 
 	// Connector is the connector of the action on file storage connections.
 	// In any other case, must be empty.
-	Connector string
+	Connector string `json:"connector"`
 
 	// Path is the path of the file. It cannot be longer than 1024 runes,
 	// and it is empty for non-file actions.
-	Path string
+	Path string `json:"path"`
 
 	// Sheet is the sheet name for multiple sheets file actions. It must be UTF-8
 	// encoded, have a length in the range [1, 31], should not start or end with
 	// "'", and cannot contain any of "*", "/", ":", "?", "[", "\", and "]". It is
 	// empty for non-file and non-multipart sheets actions. Sheet names are
 	// case-insensitive.
-	Sheet string
+	Sheet string `json:"sheet"`
 
 	// Compression is the compression of the action on file storage connections.
 	// In any other case, must be 0.
-	Compression Compression
+	Compression Compression `json:"compression"`
 
 	// UIValues represents the user-entered values of the connector user interface
 	// in JSON format.
 	// It must be nil if the connector does not have a user interface.
-	UIValues json.Value
+	UIValues json.Value `json:"uiValues"`
 
 	// TableName is the name of the table for the export and it is defined for
 	// destination database-actions; in any other case, it is the empty string.
 	// It cannot be longer than 1024 runes.
-	TableName string
+	TableName string `json:"tableName"`
 
 	// TableKeyProperty is the name of the property used as table key when
 	// exporting users to databases.
 	// It is the empty string for any other type of action.
-	TableKeyProperty string
+	TableKeyProperty string `json:"tableKeyProperty"`
 
 	// IdentityProperty is the property name used as identity when importing
 	// from a file or from a database.
 	// It cannot be longer than 1024 runes.
-	IdentityProperty string
+	IdentityProperty string `json:"identityProperty"`
 
 	// LastChangeTimeProperty is the last change time property when importing
 	// from a file or from a database. May be empty to indicate that no
@@ -741,7 +741,7 @@ type ActionToSet struct {
 	// to the documentation of LastChangeTimeFormat, which is strictly related
 	// to this.
 	// It cannot be longer than 1024 runes.
-	LastChangeTimeProperty string
+	LastChangeTimeProperty string `json:"lastChangeTimeProperty"`
 
 	// LastChangeTimeFormat indicates the last change time value format for
 	// parsing the value read from the last change time property.
@@ -760,25 +760,25 @@ type ActionToSet struct {
 	// "Excel" format is only allowed for file actions.
 	//
 	// It cannot be longer than 64 runes.
-	LastChangeTimeFormat string
+	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
 
 	// FileOrderingPropertyPath is the property path for which to order users
 	// when they are exported to a file, and must therefore refer to a property
 	// of the action's output schema (OutSchema).
 	// It cannot be longer than 1024 runes.
 	// For actions that do not export users to file, this is the empty string.
-	FileOrderingPropertyPath string
+	FileOrderingPropertyPath string `json:"fileOrderingPropertyPath"`
 
 	// ExportMode is the export mode, if it has one.
-	ExportMode *ExportMode
+	ExportMode *ExportMode `json:"exportMode"`
 
 	// MatchingProperties are the internal and external properties used for matching
 	// users during export to apps.
-	MatchingProperties *MatchingProperties
+	MatchingProperties *MatchingProperties `json:"matchingProperties"`
 
 	// ExportOnDuplicatedUsers indicates if the export to app connections should
 	// be executed even in the case of duplicated users on the app.
-	ExportOnDuplicatedUsers *bool
+	ExportOnDuplicatedUsers *bool `json:"exportOnDuplicatedUsers"`
 }
 
 // MatchingProperties contains an internal property (belonging to the Golden
@@ -786,8 +786,8 @@ type ActionToSet struct {
 // match identities of users in the data warehouse with users on the external
 // app, during export.
 type MatchingProperties struct {
-	Internal string // the corresponding property is stored within the action's input schema.
-	External types.Property
+	Internal string         `json:"internal"` // the corresponding property is stored within the action's input schema.
+	External types.Property `json:"external"`
 }
 
 // SchedulePeriod represents a scheduler period in minutes.

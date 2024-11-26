@@ -27,7 +27,7 @@ const ActionWrapper = () => {
 		const instructions = splitted.slice(instructionsStartIndex);
 		const isEditing = instructions[0] === 'edit';
 		if (isEditing) {
-			const action = connection.actions!.find((a) => String(a.ID) === params.action);
+			const action = connection.actions!.find((a) => String(a.id) === params.action);
 			setSelectedAction(action);
 			return;
 		} else {
@@ -36,14 +36,14 @@ const ActionWrapper = () => {
 			if (isEvent) {
 				if (instructions.length === 3) {
 					const eventType = instructions[instructions.length - 1];
-					actionType = connection.actionTypes!.find((a) => a.EventType === eventType);
+					actionType = connection.actionTypes!.find((a) => a.eventType === eventType);
 				} else {
-					actionType = connection.actionTypes!.find((a) => a.Target === 'Events' && a.EventType === null);
+					actionType = connection.actionTypes!.find((a) => a.target === 'Events' && a.eventType === null);
 				}
 			} else {
 				const target = instructions[instructions.length - 1];
 				const capitalized = target.charAt(0).toUpperCase() + target.slice(1);
-				actionType = connection.actionTypes!.find((a) => a.Target === capitalized);
+				actionType = connection.actionTypes!.find((a) => a.target === capitalized);
 			}
 			if (actionType == null) {
 				console.error(`Action type for instructions ${instructions} does not exist anymore`);

@@ -47,32 +47,32 @@ const invitationTokenMaxAge = 3 * 24 * 60 * 60
 type Organization struct {
 	core         *Core
 	organization *state.Organization
-	ID           int
-	Name         string
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
 }
 
 // Member represents a member of an organization.
 type Member struct {
-	ID         int
-	Name       string
-	Email      string
-	Avatar     *Avatar
-	Invitation string // If the member has been invited, it is "Invited or "Expired"
-	CreatedAt  time.Time
+	ID         int       `json:"id"`
+	Name       string    `json:"name"`
+	Email      string    `json:"email"`
+	Avatar     *Avatar   `json:"avatar"`
+	Invitation string    `json:"invitation"` // If the member has been invited, it is "Invited or "Expired"
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 // Avatar represents an avatar of a member.
 type Avatar struct {
-	Image    []byte // Image, in range [1, 200000]
-	MimeType string // Mime type, must be `image/jpeg` or `image/png`
+	Image    []byte `json:"image"`    // Image, in range [1, 200000]
+	MimeType string `json:"mimeType"` // Mime type, must be `image/jpeg` or `image/png`
 }
 
 // MemberToSet represents a member to set with the SetMember method.
 type MemberToSet struct {
-	Name     string // Name, in range [1, 60]
-	Email    string // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
-	Password string // Password, at least 8 characters long
-	Avatar   *Avatar
+	Name     string  `json:"name"`     // Name, in range [1, 60]
+	Email    string  `json:"email"`    // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
+	Password string  `json:"password"` // Password, at least 8 characters long
+	Avatar   *Avatar `json:"avatar"`
 }
 
 // emailToSend represents an email.

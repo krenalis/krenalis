@@ -63,22 +63,22 @@ type Connection struct {
 	core              *Core
 	connection        *state.Connection
 	store             *datastore.Store
-	ID                int
-	Name              string
-	Type              ConnectorType
-	Role              Role
-	Enabled           bool
-	Connector         string
-	Strategy          *Strategy
-	SendingMode       *SendingMode
-	WebsiteHost       string
-	LinkedConnections []int
-	HasUI             bool
-	ActionsCount      int
-	Health            Health
+	ID                int           `json:"id"`
+	Name              string        `json:"name"`
+	Type              ConnectorType `json:"type"`
+	Role              Role          `json:"role"`
+	Enabled           bool          `json:"enabled"`
+	Connector         string        `json:"connector"`
+	Strategy          *Strategy     `json:"strategy"`
+	SendingMode       *SendingMode  `json:"sendingMode"`
+	WebsiteHost       string        `json:"websiteHost"`
+	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
+	HasUI             bool          `json:"hasUI"`
+	ActionsCount      int           `json:"actionsCount"`
+	Health            Health        `json:"health"`
 
 	// Actions is populated only by the (*Workspace).Connection method.
-	Actions *[]Action `json:",omitempty"`
+	Actions *[]Action `json:"actions,omitzero"`
 }
 
 // Action returns the action with identifier id of the connection.
@@ -98,12 +98,14 @@ func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
 }
 
 type ActionSchemas struct {
-	In, Out   types.Type
-	Matchings *ActionSchemasMatchings `json:",omitempty"` // only for destination apps on users.
+	In        types.Type              `json:"in"`
+	Out       types.Type              `json:"out"`
+	Matchings *ActionSchemasMatchings `json:"matchings,omitzero"` // only for destination apps on users.
 }
 
 type ActionSchemasMatchings struct {
-	Internal, External types.Type
+	Internal types.Type `json:"internal"`
+	External types.Type `json:"external"`
 }
 
 // dummyGroupsSchema is a dummy "groups" schema, that is used until the groups
@@ -246,10 +248,10 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 
 // ActionType represents an action type.
 type ActionType struct {
-	Name        string
-	Description string
-	Target      Target
-	EventType   *string
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Target      Target  `json:"target"`
+	EventType   *string `json:"eventType"`
 }
 
 // ActionTypes returns the action types for the connection.
@@ -646,7 +648,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 //
 // It returns an errors.UnprocessableError error with code SchemaNotAligned if
 // the provided schema is not aligned with the app's source schema.
-func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) ([]byte, string, error) {
+func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) (json.Value, string, error) {
 
 	this.core.mustBeOpen()
 
@@ -838,7 +840,7 @@ func (this *Connection) Delete(ctx context.Context) error {
 //
 //   - InvalidPlaceholder, if the query contains an invalid placeholder.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) ([]byte, types.Type, error) {
+func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) (json.Value, types.Type, error) {
 
 	this.core.mustBeOpen()
 
@@ -923,13 +925,13 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 // An Execution describes an action execution as returned by Executions.
 type Execution struct {
-	ID        int
-	Action    int
-	StartTime time.Time
-	EndTime   *time.Time
-	Passed    int
-	Failed    int
-	Error     string
+	ID        int        `json:"id"`
+	Action    int        `json:"action"`
+	StartTime time.Time  `json:"startTime"`
+	EndTime   *time.Time `json:"endTime"`
+	Passed    int        `json:"passed"`
+	Failed    int        `json:"failed"`
+	Error     string     `json:"error"`
 }
 
 // Executions returns the executions of the actions of the connection.
@@ -1150,7 +1152,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues json.Value, limit int) ([]byte, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues json.Value, limit int) (json.Value, types.Type, error) {
 
 	this.core.mustBeOpen()
 
@@ -2048,24 +2050,24 @@ type ConnectionToSet struct {
 
 	// Name is the name of the connection. It cannot be longer than 100 runes.
 	// If empty, the connection name will be the name of its connector.
-	Name string
+	Name string `json:"name"`
 
 	// Enable reports whether the connection is enabled or disabled when added.
-	Enabled bool
+	Enabled bool `json:"enabled"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It must be nil for destination connections and
 	// non-event source connections.
-	Strategy *Strategy
+	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It must be nil for
 	// source connections and connections that does not support events.
-	SendingMode *SendingMode
+	SendingMode *SendingMode `json:"sendingMode"`
 
 	// WebsiteHost is the host, in the form "host:port", of a website
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
-	WebsiteHost string
+	WebsiteHost string `json:"websiteHost"`
 }
 
 // isMetaProperty reports whether the given property name refers to a property

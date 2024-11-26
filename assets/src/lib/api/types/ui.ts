@@ -16,103 +16,103 @@ type InputType =
 	| '';
 
 interface FieldOption {
-	Text: string;
-	Value: any;
+	text: string;
+	value: any;
 }
 
 interface InputField {
-	ComponentType: 'Input';
-	Name: string;
-	Type: InputType;
-	OnlyIntegerPart: boolean;
-	Label: string;
-	Placeholder: string;
-	HelpText: string;
-	Rows: number;
-	MinLength: number;
-	MaxLength: number;
-	Error: string;
+	componentType: 'Input';
+	name: string;
+	type: InputType;
+	onlyIntegerPart: boolean;
+	label: string;
+	placeholder: string;
+	helpText: string;
+	rows: number;
+	minLength: number;
+	maxLength: number;
+	error: string;
 }
 
 interface SelectField {
-	ComponentType: 'Select';
-	Name: string;
-	Label: string;
-	Placeholder: string;
-	HelpText: string;
-	Options: FieldOption[];
-	Error: string;
+	componentType: 'Select';
+	name: string;
+	label: string;
+	placeholder: string;
+	helpText: string;
+	options: FieldOption[];
+	error: string;
 }
 
 interface CheckboxField {
-	ComponentType: 'Checkbox';
-	Name: string;
-	Label: string;
-	Error: string;
+	componentType: 'Checkbox';
+	name: string;
+	label: string;
+	error: string;
 }
 
 interface ColorPickerField {
-	ComponentType: 'ColorPicker';
-	Name: string;
-	Label: string;
-	Error: string;
+	componentType: 'ColorPicker';
+	name: string;
+	label: string;
+	error: string;
 }
 
 interface RadiosField {
-	ComponentType: 'Radios';
-	Name: string;
-	Label: string;
-	Options: FieldOption[];
-	Error: string;
+	componentType: 'Radios';
+	name: string;
+	label: string;
+	options: FieldOption[];
+	error: string;
 }
 
 interface RangeField {
-	ComponentType: 'Range';
-	Name: string;
-	Label: string;
-	HelpText: string;
-	Min: number;
-	Max: number;
-	Step: number;
-	Error: string;
+	componentType: 'Range';
+	name: string;
+	label: string;
+	helpText: string;
+	min: number;
+	max: number;
+	step: number;
+	error: string;
 }
 
 interface SwitchField {
-	ComponentType: 'Switch';
-	Name: string;
-	Label: string;
-	Error: string;
+	componentType: 'Switch';
+	name: string;
+	label: string;
+	error: string;
 }
 
 interface KeyValueField {
-	ComponentType: 'KeyValue';
-	Name: string;
-	Label: string;
-	KeyLabel: string;
-	KeyComponent: ConnectorField;
-	ValueLabel: string;
-	ValueComponent: ConnectorField;
-	Error: string;
+	componentType: 'KeyValue';
+	name: string;
+	label: string;
+	keyLabel: string;
+	keyComponent: ConnectorField;
+	valueLabel: string;
+	valueComponent: ConnectorField;
+	error: string;
 }
 
 interface FieldSetField {
-	ComponentType: 'FieldSet';
-	Name: string;
-	Label: string;
-	Fields: ConnectorField[];
+	componentType: 'FieldSet';
+	name: string;
+	label: string;
+	fields: ConnectorField[];
 }
 
 interface AlternativeFieldSetsField {
-	ComponentType: 'AlternativeFieldSets';
-	Label: string;
-	HelpText: string;
-	Sets: FieldSetField[];
+	componentType: 'AlternativeFieldSets';
+	label: string;
+	helpText: string;
+	sets: FieldSetField[];
 }
 
 interface TextField {
-	ComponentType: 'Text';
-	Label: string;
-	Text: string;
+	componentType: 'Text';
+	label: string;
+	text: string;
 }
 
 type ConnectorField =
@@ -129,16 +129,16 @@ type ConnectorField =
 	| TextField;
 
 interface ConnectorButton {
-	Event: string;
-	Text: string;
-	Variant: Variant;
-	Confirm: boolean;
-	Role: ConnectionRole;
+	event: string;
+	text: string;
+	variant: Variant;
+	confirm: boolean;
+	role: ConnectionRole;
 }
 
 interface ConnectorAlert {
-	Message: string;
-	Variant: Variant;
+	message: string;
+	variant: Variant;
 }
 
 export default ConnectorField;

@@ -8,7 +8,6 @@
 package cmd
 
 import (
-	jsonstd "encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -337,11 +336,11 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Connection core.ConnectionToAdd
-		OAuthToken string
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Connection core.ConnectionToAdd `json:"connection"`
+		OAuthToken string               `json:"oauthToken"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -356,10 +355,10 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 		return nil, err
 	}
 	var body struct {
-		Size   *int
-		Filter *core.Filter
+		Size   *int         `json:"size"`
+		Filter *core.Filter `json:"filter"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -381,10 +380,10 @@ func (workspace workspace) CanChangeWarehouseSettings(_ http.ResponseWriter, r *
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Settings rawJSON
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Settings json.Value `json:"settings"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -399,11 +398,11 @@ func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWrite
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		RunOnBatchImport bool
-		Identifiers      []string
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		RunOnBatchImport bool     `json:"runOnBatchImport"`
+		Identifiers      []string `json:"identifiers"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -417,12 +416,12 @@ func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Schema         types.Type
-		PrimarySources map[string]int
-		RePaths        map[string]any
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Schema         types.Type     `json:"schema"`
+		PrimarySources map[string]int `json:"primarySources"`
+		RePaths        map[string]any `json:"rePaths"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -437,11 +436,11 @@ func (workspace workspace) ChangeUserSchemaQueries(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Schema  types.Type
-		RePaths map[string]any
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Schema  types.Type     `json:"schema"`
+		RePaths map[string]any `json:"rePaths"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -449,7 +448,7 @@ func (workspace workspace) ChangeUserSchemaQueries(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"Queries": queries}, nil
+	return map[string]any{"queries": queries}, nil
 }
 
 // ChangeWarehouseMode changes the mode of the data warehouse for a workspace.
@@ -458,11 +457,11 @@ func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Re
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Mode                         core.WarehouseMode
-		CancelIncompatibleOperations bool
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Mode                         core.WarehouseMode `json:"mode"`
+		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -477,12 +476,12 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Settings                     rawJSON
-		Mode                         core.WarehouseMode
-		CancelIncompatibleOperations bool
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Settings                     json.Value         `json:"settings"`
+		Mode                         core.WarehouseMode `json:"mode"`
+		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -534,14 +533,14 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Properties []string
-		Filter     *core.Filter
-		Order      string
-		OrderDesc  bool
-		First      int
-		Limit      int
+		Properties []string     `json:"properties"`
+		Filter     *core.Filter `json:"filter"`
+		Order      string       `json:"order"`
+		OrderDesc  bool         `json:"orderDesc"`
+		First      int          `json:"first"`
+		Limit      int          `json:"limit"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -642,12 +641,12 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		OAuthCode   string
-		RedirectURI string
-		Connector   string
-	}{}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		OAuthCode   string `json:"oauthCode"`
+		RedirectURI string `json:"redirectURI"`
+		Connector   string `json:"connector"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -693,13 +692,13 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 		return nil, err
 	}
 	var body struct {
-		Connector  string
-		Event      string
-		Values     rawJSON
-		Role       string
-		OAuthToken string
+		Connector  string     `json:"connector"`
+		Event      string     `json:"event"`
+		Values     json.Value `json:"values"`
+		Role       string     `json:"role"`
+		OAuthToken string     `json:"oauthToken"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -733,11 +732,11 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 		return nil, err
 	}
 	var body struct {
-		Name                string
-		PrivacyRegion       core.PrivacyRegion
-		DisplayedProperties core.DisplayedProperties
+		Name                string                   `json:"name"`
+		PrivacyRegion       core.PrivacyRegion       `json:"privacyRegion"`
+		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -756,7 +755,7 @@ func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"traits": rawJSON(traits)}, nil
+	return map[string]any{"traits": traits}, nil
 }
 
 // Users returns the users, the user schema of a workspace, and an estimate of
@@ -767,14 +766,14 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		return nil, err
 	}
 	var body struct {
-		Properties []string
-		Filter     *core.Filter
-		Order      string
-		OrderDesc  bool
-		First      int
-		Limit      int
+		Properties []string     `json:"properties"`
+		Filter     *core.Filter `json:"filter"`
+		Order      string       `json:"order"`
+		OrderDesc  bool         `json:"orderDesc"`
+		First      int          `json:"first"`
+		Limit      int          `json:"limit"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -827,7 +826,7 @@ func (workspace workspace) WarehouseSettings(_ http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 	name, settings := ws.WarehouseSettings()
-	return map[string]any{"name": name, "settings": rawJSON(settings)}, nil
+	return map[string]any{"name": name, "settings": settings}, nil
 }
 
 func (workspace workspace) workspace(r *http.Request) (*core.Workspace, error) {

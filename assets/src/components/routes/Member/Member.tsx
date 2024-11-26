@@ -25,10 +25,10 @@ const Member = () => {
 	const fileInputRef = useRef<any>();
 
 	useEffect(() => {
-		setTitle(member.Name);
-		setAvatar(member.Avatar);
-		setName(member.Name);
-		setEmail(member.Email);
+		setTitle(member.name);
+		setAvatar(member.avatar);
+		setName(member.name);
+		setEmail(member.email);
 	}, []);
 
 	const onUpdateAvatar = async (e) => {
@@ -52,7 +52,7 @@ const Member = () => {
 			return;
 		}
 		const base64: string = await toBase64(f);
-		setAvatar({ Image: base64, MimeType: f.type });
+		setAvatar({ image: base64, mimeType: f.type });
 	};
 
 	const onDeleteAvatar = (e) => {
@@ -86,12 +86,12 @@ const Member = () => {
 		setError('');
 		setIsSaving(true);
 		const memberToSet: MemberToSet = {
-			Name: name,
-			Email: email,
-			Image: avatar ? avatar.Image : null,
+			name: name,
+			email: email,
+			image: avatar ? avatar.image : null,
 		};
 		if (password != null) {
-			memberToSet.Password = password;
+			memberToSet.password = password;
 		}
 		const err = validateMemberToSet(memberToSet, false);
 		if (err !== '') {
@@ -160,7 +160,7 @@ const Member = () => {
 								</div>
 							)}
 						</div>
-						<SlAvatar image={avatar ? `data:${avatar.MimeType};base64, ${avatar.Image}` : ''} />
+						<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
 						<input
 							ref={fileInputRef}
 							type='file'

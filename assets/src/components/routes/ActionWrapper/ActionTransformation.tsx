@@ -92,7 +92,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const hasIdentityAndTimestamp = useMemo(() => {
 		return (
-			connection.isSource && (connection.isDatabase || connection.isFileStorage) && actionType.Target === 'Users'
+			connection.isSource && (connection.isDatabase || connection.isFileStorage) && actionType.target === 'Users'
 		);
 	}, [connection, actionType]);
 
@@ -120,21 +120,21 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (action.Transformation.Function != null) {
+		if (action.transformation.function != null) {
 			setMode('transformation');
-			setSelectedLanguage(action.Transformation.Function.Language);
+			setSelectedLanguage(action.transformation.function.language);
 		} else {
 			setMode('mappings');
 		}
 	}, []);
 
 	useEffect(() => {
-		if (!hasIdentityAndTimestamp || !action.LastChangeTimeProperty) {
+		if (!hasIdentityAndTimestamp || !action.lastChangeTimeProperty) {
 			return;
 		}
 		// check if the last change time format is custom.
 		const formats = Object.values(lastChangeTimeFormats);
-		if (!formats.includes(action.LastChangeTimeFormat)) {
+		if (!formats.includes(action.lastChangeTimeFormat)) {
 			setIsCustomLastChangeTimeFormatSelected(true);
 		}
 	}, []);
@@ -144,17 +144,17 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			// precompile the 'IdentityProperty' and 'lastChangeTimeProperty'
 			// fields, if possible.
 			const a = { ...action };
-			const hasIdColumn = actionType.InputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
+			const hasIdColumn = actionType.inputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 			if (hasIdColumn) {
-				a.IdentityProperty = 'id';
+				a.identityProperty = 'id';
 				isFirstCompilation.current = false;
 			}
 			const hasLastChangeTimeProperty =
-				actionType.InputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
+				actionType.inputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
 			if (hasLastChangeTimeProperty) {
-				a.LastChangeTimeProperty = 'timestamp';
-				if (doesLastChangeTimePropertyNeedFormat(a.LastChangeTimeProperty, actionType.InputSchema)) {
-					a.LastChangeTimeFormat = '';
+				a.lastChangeTimeProperty = 'timestamp';
+				if (doesLastChangeTimePropertyNeedFormat(a.lastChangeTimeProperty, actionType.inputSchema)) {
+					a.lastChangeTimeFormat = '';
 				}
 			}
 			setAction(a);
@@ -178,18 +178,18 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			return;
 		}
 		const a = { ...action };
-		const isTransformationUndefined = a.Transformation.Function == null;
-		const isLanguageChanged = !isTransformationUndefined && a.Transformation.Function.Language !== selectedLanguage;
+		const isTransformationUndefined = a.transformation.function == null;
+		const isLanguageChanged = !isTransformationUndefined && a.transformation.function.language !== selectedLanguage;
 		if (isTransformationUndefined || isLanguageChanged) {
-			a.Transformation.Function = {
-				Source: RAW_TRANSFORMATION_FUNCTIONS[selectedLanguage].replace(
+			a.transformation.function = {
+				source: RAW_TRANSFORMATION_FUNCTIONS[selectedLanguage].replace(
 					'$parameterName',
 					getTransformationFunctionParameterName(connection, actionType),
 				),
-				Language: selectedLanguage,
-				PreserveJSON: false,
-				InProperties: [],
-				OutProperties: [],
+				language: selectedLanguage,
+				preserveJSON: false,
+				inProperties: [],
+				outProperties: [],
 			};
 			setAction(a);
 		}
@@ -198,56 +198,56 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const needFormat: boolean = useMemo(() => {
 		if (
 			(connection.isFileStorage || connection.isDatabase) &&
-			action.LastChangeTimeProperty &&
+			action.lastChangeTimeProperty &&
 			!isTransformationDisabled
 		) {
-			return doesLastChangeTimePropertyNeedFormat(action.LastChangeTimeProperty, actionType.InputSchema);
+			return doesLastChangeTimePropertyNeedFormat(action.lastChangeTimeProperty, actionType.inputSchema);
 		}
 		return false;
 	}, [action, actionType, isTransformationDisabled]);
 
 	const fileConnector: TransformedConnector | null = useMemo(() => {
-		if (action.Connector) {
-			return connectors.find((c) => c.name === action.Connector);
+		if (action.connector) {
+			return connectors.find((c) => c.name === action.connector);
 		}
 		return null;
 	}, [action]);
 
 	const flatSchema = useMemo<TransformedMapping>(() => {
-		return flattenSchema(actionType.InputSchema);
+		return flattenSchema(actionType.inputSchema);
 	}, [actionType]);
 
 	const identityPropertyError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			if (action.IdentityProperty === '' && !isFirstCompilation.current) {
+			if (action.identityProperty === '' && !isFirstCompilation.current) {
 				return 'The user identifier cannot be empty';
 			}
-			return checkIfPropertyExists(action.IdentityProperty, flatSchema);
+			return checkIfPropertyExists(action.identityProperty, flatSchema);
 		}
 	}, [action, flatSchema]);
 
 	const lastChangeTimePropertyError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			return checkIfPropertyExists(action.LastChangeTimeProperty, flatSchema);
+			return checkIfPropertyExists(action.lastChangeTimeProperty, flatSchema);
 		}
 	}, [action, flatSchema]);
 
 	const { identityPropertyList, lastChangeTimeList, mappingList } = useMemo(() => {
 		return {
-			identityPropertyList: getIdentityPropertyComboboxItems(actionType.InputSchema),
-			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.InputSchema),
-			mappingList: getSchemaComboboxItems(actionType.InputSchema),
+			identityPropertyList: getIdentityPropertyComboboxItems(actionType.inputSchema),
+			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.inputSchema),
+			mappingList: getSchemaComboboxItems(actionType.inputSchema),
 		};
 	}, [actionType]);
 
 	const onChangeTransformationFunction = (source: string) => {
 		const a = { ...action };
-		a.Transformation.Function = {
-			Source: source,
-			Language: selectedLanguage,
-			PreserveJSON: a.Transformation.Function.PreserveJSON,
-			InProperties: [],
-			OutProperties: [],
+		a.transformation.function = {
+			source: source,
+			language: selectedLanguage,
+			preserveJSON: a.transformation.function.preserveJSON,
+			inProperties: [],
+			outProperties: [],
 		};
 		setAction(a);
 	};
@@ -258,8 +258,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			try {
 				errorMessage = await api.validateExpression(
 					value,
-					actionType.InputSchema.properties,
-					action.Transformation.Mapping![name].full.type,
+					actionType.inputSchema.properties,
+					action.transformation.mapping![name].full.type,
 					signal,
 				);
 			} catch (err) {
@@ -271,8 +271,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			}
 		}
 		let doesNotExist = errorMessage.endsWith('does not exist');
-		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.Target === 'Users';
-		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.Target === 'Events';
+		const isEventBasedUserImport = connection.isEventBased && connection.isSource && actionType.target === 'Users';
+		const isAppEventsExport = connection.isApp && connection.isDestination && actionType.target === 'Events';
 		if (doesNotExist) {
 			if (isEventBasedUserImport) {
 				errorMessage += `, perhaps you meant "traits.${value}"?`;
@@ -293,7 +293,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const onSelectProperty = async (name: string, value: string) => {
 		if (name === 'identityProperty') {
 			const a = { ...action };
-			a.IdentityProperty = value;
+			a.identityProperty = value;
 			setAction(a);
 			if (isFirstCompilation.current) {
 				isFirstCompilation.current = false;
@@ -301,9 +301,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			return;
 		} else if (name === 'lastChangeTimeProperty') {
 			const a = { ...action };
-			a.LastChangeTimeProperty = value;
-			if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.InputSchema)) {
-				a.LastChangeTimeFormat = '';
+			a.lastChangeTimeProperty = value;
+			if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.inputSchema)) {
+				a.lastChangeTimeFormat = '';
 			}
 			setAction(a);
 			return;
@@ -313,7 +313,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const onUpdateIdentityProperty = async (_: string, value: string) => {
 		const a = { ...action };
-		a.IdentityProperty = value;
+		a.identityProperty = value;
 		setAction(a);
 		if (isFirstCompilation.current) {
 			isFirstCompilation.current = false;
@@ -322,10 +322,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const onUpdateLastChangeTimeProperty = async (_: string, value: string) => {
 		const a = { ...action };
-		a.LastChangeTimeProperty = value;
-		if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.InputSchema)) {
+		a.lastChangeTimeProperty = value;
+		if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.inputSchema)) {
 			setIsCustomLastChangeTimeFormatSelected(false);
-			a.LastChangeTimeFormat = '';
+			a.lastChangeTimeFormat = '';
 		}
 		setAction(a);
 	};
@@ -335,7 +335,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		const v = e.target.value;
 		if (v === 'custom') {
 			setIsCustomLastChangeTimeFormatSelected(true);
-			a.LastChangeTimeFormat = '';
+			a.lastChangeTimeFormat = '';
 			setTimeout(() => {
 				if (lastChangeTimeCustomFormatInputRef.current) {
 					lastChangeTimeCustomFormatInputRef.current.focus();
@@ -343,24 +343,24 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			}, 50);
 		} else {
 			setIsCustomLastChangeTimeFormatSelected(false);
-			a.LastChangeTimeFormat = lastChangeTimeFormats[e.target.value];
+			a.lastChangeTimeFormat = lastChangeTimeFormats[e.target.value];
 		}
 		setAction(a);
 	};
 
 	const onInputLastChangeTimeCustomFormat = (e) => {
 		const a = { ...action };
-		a.LastChangeTimeFormat = e.target.value;
+		a.lastChangeTimeFormat = e.target.value;
 		setAction(a);
 	};
 
 	const onOpenFullscreenTransformation = () => {
-		if (actionType.Fields.includes('MatchingProperties')) {
+		if (actionType.fields.includes('MatchingProperties')) {
 			// If the matching properties are not defined, prevent the opening
 			// of testing mode and show an error. Displaying the same error
 			// during action testing in testing mode would be less clear.
-			const internal = action.MatchingProperties.Internal;
-			const external = action.MatchingProperties.External;
+			const internal = action.matchingProperties.internal;
+			const external = action.matchingProperties.external;
 			if (internal === '' || external === '') {
 				handleError('Matching properties cannot be empty');
 				return;
@@ -418,13 +418,13 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								onInput={onUpdateIdentityProperty}
 								onSelect={onUpdateIdentityProperty}
 								name='identityProperty'
-								initialValue={identityPropertyList.length === 0 ? '' : action.IdentityProperty!}
+								initialValue={identityPropertyList.length === 0 ? '' : action.identityProperty!}
 								disabled={isTransformationDisabled || identityPropertyList.length === 0}
 								className='action__transformation-input-property'
 								isExpression={false}
 								items={identityPropertyList}
 								caret={true}
-								clearable={action.IdentityProperty?.length > 0}
+								clearable={action.identityProperty?.length > 0}
 								error={
 									identityPropertyList.length === 0
 										? `No column ${
@@ -442,14 +442,14 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								<Combobox
 									onInput={onUpdateLastChangeTimeProperty}
 									onSelect={onUpdateLastChangeTimeProperty}
-									initialValue={action.LastChangeTimeProperty!}
+									initialValue={action.lastChangeTimeProperty!}
 									name='lastChangeTimeProperty'
 									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
 									isExpression={false}
 									caret={true}
 									items={lastChangeTimeList}
-									clearable={action.LastChangeTimeProperty?.length > 0}
+									clearable={action.lastChangeTimeProperty?.length > 0}
 									error={lastChangeTimePropertyError}
 									size='small'
 									helpText='A property with the time of the last modification of a user'
@@ -463,11 +463,11 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 										value={
 											isCustomLastChangeTimeFormatSelected
 												? 'custom'
-												: action.LastChangeTimeProperty
+												: action.lastChangeTimeProperty
 													? Object.keys(lastChangeTimeFormats).find(
 															(key) =>
 																lastChangeTimeFormats[key] ===
-																action.LastChangeTimeFormat,
+																action.lastChangeTimeFormat,
 														)
 													: ''
 										}
@@ -484,7 +484,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 									<div className='action__transformation-last-change-custom-format'>
 										<SlInput
 											onSlInput={onInputLastChangeTimeCustomFormat}
-											value={action.LastChangeTimeFormat}
+											value={action.lastChangeTimeFormat}
 											name='lastChangeTimeCustomFormat'
 											placeholder='%Y-%m-%d'
 											helpText='C89 "strftime" format string'
@@ -509,8 +509,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					isFullscreenTransformationOpen={isFullscreenTransformationOpen}
 					selectedLanguage={selectedLanguage}
 					body={box}
-					inputSchema={actionType.InputSchema}
-					outputSchema={actionType.OutputSchema}
+					inputSchema={actionType.inputSchema}
+					outputSchema={actionType.outputSchema}
 				/>
 			</Section>
 		</div>
@@ -554,7 +554,7 @@ const isTransformationChanged = (
 	oldTransformation: TransformationFunction,
 	newTransformation: TransformationFunction,
 ): boolean => {
-	return oldTransformation.Source.trim() !== newTransformation.Source.trim();
+	return oldTransformation.source.trim() !== newTransformation.source.trim();
 };
 
 const isMappingModified = (
@@ -608,9 +608,9 @@ const TransformationBox = ({
 
 	useEffect(() => {
 		if (mode === 'mappings') {
-			firstValue.current = JSON.parse(JSON.stringify(action.Transformation.Mapping));
+			firstValue.current = JSON.parse(JSON.stringify(action.transformation.mapping));
 		} else {
-			firstValue.current = JSON.parse(JSON.stringify(action.Transformation.Function));
+			firstValue.current = JSON.parse(JSON.stringify(action.transformation.function));
 		}
 	}, [mode, selectedLanguage]);
 
@@ -630,27 +630,27 @@ const TransformationBox = ({
 
 	const onChangeMode = (delay: number) => {
 		const a = { ...action };
-		a.InSchema = null;
-		a.OutSchema = null;
+		a.inSchema = null;
+		a.outSchema = null;
 		setIsAlertOpen(false);
 		setTimeout(() => {
 			if (pendingMode.current == 'mappings') {
-				a.Transformation.Mapping = flattenSchema(actionType.OutputSchema);
-				a.Transformation.Function = null;
+				a.transformation.mapping = flattenSchema(actionType.outputSchema);
+				a.transformation.function = null;
 				setSelectedLanguage('');
 				setAction(a);
 				setMode('mappings');
 			} else {
-				a.Transformation.Mapping = null;
-				a.Transformation.Function = {
-					Source: RAW_TRANSFORMATION_FUNCTIONS[pendingMode.current].replace(
+				a.transformation.mapping = null;
+				a.transformation.function = {
+					source: RAW_TRANSFORMATION_FUNCTIONS[pendingMode.current].replace(
 						'$parameterName',
 						getTransformationFunctionParameterName(connection, actionType),
 					),
-					Language: pendingMode.current,
-					PreserveJSON: false,
-					InProperties: [],
-					OutProperties: [],
+					language: pendingMode.current,
+					preserveJSON: false,
+					inProperties: [],
+					outProperties: [],
 				};
 				setSelectedLanguage(pendingMode.current);
 				setAction(a);
@@ -668,7 +668,7 @@ const TransformationBox = ({
 			isMappingModified(
 				mode,
 				firstValue.current,
-				mode === 'mappings' ? action.Transformation.Mapping : action.Transformation.Function,
+				mode === 'mappings' ? action.transformation.mapping : action.transformation.function,
 			)
 		) {
 			setIsAlertOpen(true);
@@ -680,22 +680,22 @@ const TransformationBox = ({
 	const onFunctionPreserveJSONSwitch = (e) => {
 		e.preventDefault();
 		const a = { ...action };
-		a.Transformation.Function.PreserveJSON = !a.Transformation.Function.PreserveJSON;
+		a.transformation.function.preserveJSON = !a.transformation.function.preserveJSON;
 		setAction(a);
 	};
 
 	let body: ReactNode;
 	if (mode === 'mappings') {
-		const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+		const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 		const mappings: ReactNode[] = [];
-		for (const k in action.Transformation.Mapping) {
+		for (const k in action.transformation.mapping) {
 			const isExternalMatchingProperty =
-				action.MatchingProperties?.External && action.MatchingProperties.External === k;
+				action.matchingProperties?.external && action.matchingProperties.external === k;
 			if (isExternalMatchingProperty) {
 				continue;
 			}
 			const isRequired =
-				action.Transformation.Mapping[k].createRequired || action.Transformation.Mapping[k].updateRequired;
+				action.transformation.mapping[k].createRequired || action.transformation.mapping[k].updateRequired;
 			mappings.push(
 				<div
 					key={k}
@@ -703,18 +703,18 @@ const TransformationBox = ({
 					data-key={k}
 					style={
 						{
-							'--mapping-indentation': `${action.Transformation.Mapping![k].indentation! * 30}px`,
+							'--mapping-indentation': `${action.transformation.mapping![k].indentation! * 30}px`,
 						} as React.CSSProperties
 					}
 				>
 					<Combobox
 						onInput={onUpdateMapping}
-						initialValue={action.Transformation.Mapping[k].value}
+						initialValue={action.transformation.mapping[k].value}
 						name={k}
-						disabled={isTransformationDisabled || action.Transformation.Mapping[k].disabled === true}
+						disabled={isTransformationDisabled || action.transformation.mapping[k].disabled === true}
 						className='action__transformation-input-property'
 						size='small'
-						error={action.Transformation.Mapping[k].error}
+						error={action.transformation.mapping[k].error}
 						autocompleteExpressions={true}
 						isExpression={true}
 						items={mappingItems}
@@ -727,7 +727,7 @@ const TransformationBox = ({
 								</SlTooltip>
 							</div>
 						)}
-						{workspace.Identifiers.includes(k) && (
+						{workspace.identifiers.includes(k) && (
 							<div className='action__transformation-property-icon' slot='prefix'>
 								<SlTooltip content='Used as identifier' hoist>
 									<SlIcon
@@ -749,12 +749,12 @@ const TransformationBox = ({
 						type='text'
 						name={k}
 						className={`action__transformation-output-property${
-							action.Transformation.Mapping![k].indentation! > 0
+							action.transformation.mapping![k].indentation! > 0
 								? ' action__transformation-output-property--indented'
 								: ''
 						}`}
 					>
-						<SlIcon slot='suffix' name={typeNameToIconName[action.Transformation.Mapping[k].type]} />
+						<SlIcon slot='suffix' name={typeNameToIconName[action.transformation.mapping[k].type]} />
 					</SlInput>
 				</div>,
 			);
@@ -768,7 +768,7 @@ const TransformationBox = ({
 					language={selectedLanguage}
 					height={400}
 					name='actionTransformationEditor'
-					value={action.Transformation!.Function.Source}
+					value={action.transformation!.function.source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
 					className='action__transformation-function-minimized'
 				/>
@@ -834,14 +834,14 @@ const TransformationBox = ({
 							<SlButton slot='trigger' circle>
 								<SlIcon className='transformation-box__function-settings-icon' name='gear' />
 								<SlIcon
-									className={`transformation-box__function-settings-icon-dot${action.Transformation.Function.PreserveJSON ? ' transformation-box__function-settings-icon-dot--active' : ''}`}
+									className={`transformation-box__function-settings-icon-dot${action.transformation.function.preserveJSON ? ' transformation-box__function-settings-icon-dot--active' : ''}`}
 									name='circle-fill'
 								></SlIcon>
 							</SlButton>
 							<SlMenu className='transformation-box__function-settings-menu'>
 								<SlSwitch
 									size='small'
-									checked={action.Transformation.Function.PreserveJSON}
+									checked={action.transformation.function.preserveJSON}
 									onClick={onFunctionPreserveJSONSwitch}
 								>
 									Preserve JSON
@@ -940,32 +940,32 @@ const FullscreenTransformation = ({
 
 	const { isEventBasedUserImport, isAppEventsExport } = useMemo(() => {
 		return {
-			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.Target === 'Users',
-			isAppEventsExport: connection.isApp && connection.isDestination && actionType.Target === 'Events',
+			isEventBasedUserImport: connection.isEventBased && connection.isSource && actionType.target === 'Users',
+			isAppEventsExport: connection.isApp && connection.isDestination && actionType.target === 'Events',
 		};
 	}, [connection, actionType]);
 
 	let eventListenerFilter = null;
 	if (isEventBasedUserImport || isAppEventsExport) {
 		let filter = {
-			Logical: action.Filter != null ? action.Filter.Logical : 'and',
-			Conditions: action.Filter != null ? [...action.Filter.Conditions] : [],
+			logical: action.filter != null ? action.filter.logical : 'and',
+			conditions: action.filter != null ? [...action.filter.conditions] : [],
 		};
 		if (isAppEventsExport && connection.linkedConnections == null) {
 			filter = null;
 		} else {
-			filter.Conditions.push({
-				Property: 'connection',
-				Operator: 'is one of',
-				Values: isEventBasedUserImport
+			filter.conditions.push({
+				property: 'connection',
+				operator: 'is one of',
+				values: isEventBasedUserImport
 					? [String(connection.id)]
 					: connection.linkedConnections.map((id) => String(id)),
 			});
 			if (isEventBasedUserImport) {
-				filter.Conditions.push({
-					Property: 'traits',
-					Operator: 'is not',
-					Values: ['null'],
+				filter.conditions.push({
+					property: 'traits',
+					operator: 'is not',
+					values: ['null'],
 				});
 			}
 		}
@@ -1006,7 +1006,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		const fetchSamples = async () => {
-			if (actionType.Target !== 'Users') {
+			if (actionType.target !== 'Users') {
 				return;
 			}
 			if (!isFullscreenTransformationOpen || hasAlreadyFetchedSamples.current) {
@@ -1018,10 +1018,10 @@ const FullscreenTransformation = ({
 				try {
 					res = await api.workspaces.connections.records(
 						connection.id,
-						action.Connector,
-						action.Path,
-						action.Sheet,
-						action.Compression,
+						action.connector,
+						action.path,
+						action.sheet,
+						action.compression,
 						values,
 						20,
 					);
@@ -1208,7 +1208,7 @@ const FullscreenTransformation = ({
 		}
 
 		let purpose: TransformationPurpose =
-			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
+			action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
 		let res: TransformDataResponse;
 		try {
 			res = await api.transformData(s, inSchema, actionToSet.outSchema, actionToSet.transformation, purpose);
@@ -1242,8 +1242,8 @@ const FullscreenTransformation = ({
 
 		if (mode === 'mappings') {
 			let hasMappedProperty = false;
-			for (const k in action.Transformation.Mapping) {
-				if (action.Transformation.Mapping[k].value !== '') {
+			for (const k in action.transformation.mapping) {
+				if (action.transformation.mapping[k].value !== '') {
 					hasMappedProperty = true;
 					break;
 				}
@@ -1288,7 +1288,7 @@ const FullscreenTransformation = ({
 		}
 
 		let purpose: TransformationPurpose =
-			action.ExportMode != null && action.ExportMode === 'UpdateOnly' ? 'Update' : 'Create';
+			action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
 		let res: TransformDataResponse;
 		try {
 			const data = event.full;
@@ -1336,7 +1336,7 @@ const FullscreenTransformation = ({
 		try {
 			res = await api.workspaces.connections.eventPreview(
 				connection.id,
-				actionType.EventType,
+				actionType.eventType,
 				event.full,
 				actionToSet.outSchema,
 				actionToSet.transformation,
@@ -1363,19 +1363,19 @@ const FullscreenTransformation = ({
 	const onQuery = async () => {
 		let res: ExecQueryResponse;
 		try {
-			res = await api.workspaces.connections.query(connection.id, action.Query, 20);
+			res = await api.workspaces.connections.query(connection.id, action.query, 20);
 		} catch (err) {
 			handleError(err);
 			return;
 		}
-		const idents = getSampleIdentifiers(res.Rows[0]);
+		const idents = getSampleIdentifiers(res.rows[0]);
 		if (idents != null) {
 			firstNameIdentifier.current = idents.firstNameIdentifier;
 			lastNameIdentifier.current = idents.lastNameIdentifier;
 			emailIdentifier.current = idents.emailIdentifier;
 			idIdentifier.current = idents.idIdentifier;
 		}
-		setSamples(res.Rows);
+		setSamples(res.rows);
 	};
 
 	const onClear = () => {
@@ -1388,7 +1388,7 @@ const FullscreenTransformation = ({
 	let InputPanelTitle = '';
 	let OutputPanelTitle = '';
 	if (connection.isSource) {
-		if (actionType.Target === 'Users') {
+		if (actionType.target === 'Users') {
 			const term = connection.connector.termForUsers;
 			if (isEventBasedUserImport) {
 				InputPanelTitle = 'Events';
@@ -1396,20 +1396,20 @@ const FullscreenTransformation = ({
 				InputPanelTitle = term[0].toUpperCase() + term.slice(1, term.length);
 			}
 			OutputPanelTitle = 'Resulting user';
-		} else if (actionType.Target === 'Groups') {
+		} else if (actionType.target === 'Groups') {
 			const term = connection.connector.termForGroups;
 			InputPanelTitle = term[0].toUpperCase() + term.slice(1, term.length);
 			OutputPanelTitle = 'Resulting group';
 		}
 	} else {
-		if (actionType.Target === 'Events') {
+		if (actionType.target === 'Events') {
 			InputPanelTitle = 'Events';
 			OutputPanelTitle = 'Request';
-		} else if (actionType.Target === 'Users') {
+		} else if (actionType.target === 'Users') {
 			InputPanelTitle = 'Users';
 			const term = removeTrailingS(connection.connector.termForUsers);
 			OutputPanelTitle = 'Resulting ' + term;
-		} else if (actionType.Target === 'Groups') {
+		} else if (actionType.target === 'Groups') {
 			InputPanelTitle = 'Groups';
 			const term = removeTrailingS(connection.connector.termForGroups);
 			OutputPanelTitle = 'Resulting ' + term;
@@ -1461,7 +1461,7 @@ const FullscreenTransformation = ({
 									onClick={(e) => onSampleClick(e, s)}
 								>
 									<div className='fullscreen-transformation__sample-name'>
-										{actionType.Target === 'Users' ? (
+										{actionType.target === 'Users' ? (
 											<>
 												{idIdentifier.current && (
 													<div className='fullscreen-transformation__sample-id'>
@@ -1602,7 +1602,7 @@ const FullscreenTransformation = ({
 				</div>
 			);
 		}
-	} else if (connection.isDestination && actionType.Target === 'Users') {
+	} else if (connection.isDestination && actionType.target === 'Users') {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__no-sample'>
 				<SlIcon name='x-lg' />
@@ -1679,8 +1679,8 @@ const FullscreenTransformation = ({
 									<div className='fullscreen-transformation__panel-schema'>
 										{outputSchema.properties.map((p) => {
 											if (
-												action.MatchingProperties?.External &&
-												action.MatchingProperties.External === p.name
+												action.matchingProperties?.external &&
+												action.matchingProperties.external === p.name
 											) {
 												// Do not show the property used
 												//  as external matching
@@ -1732,7 +1732,7 @@ const FullscreenTransformation = ({
 											<div className='fullscreen-transformation__output-success'>
 												{connection.isApp &&
 												connection.isDestination &&
-												actionType.Target === 'Events' ? (
+												actionType.target === 'Events' ? (
 													output
 												) : (
 													<SyntaxHighlight>{output}</SyntaxHighlight>
@@ -1851,12 +1851,12 @@ interface TransformationPropertyProps {
 const TransformationProperty = ({ property, language, isParent, parentName, side }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
-	const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
+	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 	let isIdentifier = false;
 	if (parentName) {
-		isIdentifier = workspace.Identifiers.includes(parentName + '.' + property.name);
+		isIdentifier = workspace.identifiers.includes(parentName + '.' + property.name);
 	} else {
-		isIdentifier = workspace.Identifiers.includes(property.name);
+		isIdentifier = workspace.identifiers.includes(property.name);
 	}
 
 	return (

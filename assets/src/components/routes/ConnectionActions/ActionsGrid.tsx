@@ -43,8 +43,8 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	useEffect(() => {
 		const running: number[] = [];
 		for (const a of actions) {
-			if (a.Running) {
-				running.push(a.ID);
+			if (a.running) {
+				running.push(a.id);
 			}
 		}
 		setRunningActions(running);
@@ -52,13 +52,13 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 	useEffect(() => {
 		for (const a of actions) {
-			runButtonRefs.current[a.ID] = React.createRef();
+			runButtonRefs.current[a.id] = React.createRef();
 		}
 	}, [actions]);
 
 	const onActionStatusSwitch = async (actionID: number) => {
-		const index = connection.actions!.findIndex((a) => a.ID === actionID);
-		const enabledValue = connection.actions![index].Enabled;
+		const index = connection.actions!.findIndex((a) => a.id === actionID);
+		const enabledValue = connection.actions![index].enabled;
 		try {
 			await api.workspaces.connections.setActionStatus(connection.id, actionID, !enabledValue);
 		} catch (err) {
@@ -112,13 +112,13 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 			const exec = executions
 				.filter((imp) => {
-					return imp.Action === actionID;
+					return imp.action === actionID;
 				})
 				.filter((imp) => {
-					return new Date(imp.StartTime).getTime() >= startTime - TIME_DELTA;
+					return new Date(imp.startTime).getTime() >= startTime - TIME_DELTA;
 				})[0];
 
-			if (!exec || exec.EndTime == null) {
+			if (!exec || exec.endTime == null) {
 				// wait before making a new request.
 				await sleep(500);
 				continue;
@@ -127,10 +127,10 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			execution = exec;
 		}
 
-		if (execution.Error !== '') {
+		if (execution.error !== '') {
 			runButtonRefs.current[actionID].current!.error(
 				<>
-					{execution.Error}
+					{execution.error}
 					<div className='connection-actions__link-to-overview'>
 						Go to{' '}
 						<Link path={`connections/${connection.id}/overview?failed-execution-action=${actionID}`}>
@@ -175,33 +175,33 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	for (const a of actions) {
 		let linkedActionType: ActionType | null = null;
 		for (const t of connection.actionTypes!) {
-			if (a.Target === 'Users' || a.Target === 'Groups') {
-				if (a.Target === t.Target) {
+			if (a.target === 'Users' || a.target === 'Groups') {
+				if (a.target === t.target) {
 					linkedActionType = t;
 				}
 			} else {
-				const eventActionTypes = connection.actionTypes.filter((actionType) => actionType.Target === 'Events');
-				linkedActionType = eventActionTypes.find((actionType) => actionType.EventType === a.EventType);
+				const eventActionTypes = connection.actionTypes.filter((actionType) => actionType.target === 'Events');
+				linkedActionType = eventActionTypes.find((actionType) => actionType.eventType === a.eventType);
 			}
 		}
 		if (linkedActionType == null) {
-			throw new Error(`Event type '${a.EventType}' of action ${a.ID} does not exist anymore`);
+			throw new Error(`Event type '${a.eventType}' of action ${a.id} does not exist anymore`);
 		}
 		const nameCell = (
 			<div className='connection-actions__action-name'>
-				<div className='connection-actions__action-name-name'>{a.Name}</div>
-				<div className='connection-actions__action-name-description'>{linkedActionType.Description}</div>
+				<div className='connection-actions__action-name-name'>{a.name}</div>
+				<div className='connection-actions__action-name-description'>{linkedActionType.description}</div>
 			</div>
 		);
 		let conditionsCell: ReactNode;
-		if (a.Filter != null) {
+		if (a.filter != null) {
 			const cells: ReactNode[] = [];
-			for (const [i, c] of a.Filter.Conditions.entries()) {
+			for (const [i, c] of a.filter.conditions.entries()) {
 				cells.push(
 					<div key={i}>
-						{c.Property} {c.Operator}{' '}
-						{c.Values != null
-							? c.Values.map((val, i) => {
+						{c.property} {c.operator}{' '}
+						{c.values != null
+							? c.values.map((val, i) => {
 									let v = '';
 									if (i > 0) {
 										v += '-';
@@ -217,10 +217,10 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		} else {
 			conditionsCell = '-';
 		}
-		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.ID)} checked={a.Enabled}></SlSwitch>;
+		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.id)} checked={a.enabled}></SlSwitch>;
 		const actionsCell = (
 			<div className='connection-actions__buttons'>
-				{(a.Target === 'Users' || a.Target === 'Groups') && isActionExecutionSupported && (
+				{(a.target === 'Users' || a.target === 'Groups') && isActionExecutionSupported && (
 					<>
 						<SlDropdown>
 							<SlButton
@@ -230,14 +230,14 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								className='connection-actions__scheduler-button'
 							>
 								<SlIcon slot='prefix' name='clock' />
-								Schedule: {a.SchedulePeriod}
+								Schedule: {a.schedulePeriod}
 							</SlButton>
 							<SlMenu className='connection-actions__scheduler-options'>
 								<SlRadioGroup
 									size='small'
-									onSlChange={(e) => onSchedulerPeriodChange(e, a.ID)}
+									onSlChange={(e) => onSchedulerPeriodChange(e, a.id)}
 									value={Object.keys(SCHEDULE_PERIODS).find(
-										(k) => SCHEDULE_PERIODS[k] === a.SchedulePeriod,
+										(k) => SCHEDULE_PERIODS[k] === a.schedulePeriod,
 									)}
 								>
 									{Object.entries(SCHEDULE_PERIODS).map(([value, time]) => (
@@ -249,11 +249,11 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 							</SlMenu>
 						</SlDropdown>
 						<FeedbackButton
-							ref={runButtonRefs.current[a.ID]}
+							ref={runButtonRefs.current[a.id]}
 							className='connection-actions__run-button'
 							size='small'
-							onClick={() => executeAction(a.ID)}
-							loading={runningActions.includes(a.ID)}
+							onClick={() => executeAction(a.id)}
+							loading={runningActions.includes(a.id)}
 							disabled={!connection.enabled}
 						>
 							<SlIcon slot='prefix' name='play' />
@@ -268,14 +268,14 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 					className='connection-actions__delete-action'
 					variant='danger'
 					size='small'
-					onClick={() => onDeleteAction(a.ID)}
+					onClick={() => onDeleteAction(a.id)}
 				>
 					Delete
 				</SlButton>
 			</div>
 		);
-		const row: GridRow = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: String(a.ID) };
-		if (a.ID === newActionID.current && connection.actions!.length > 1) {
+		const row: GridRow = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: String(a.id) };
+		if (a.id === newActionID.current && connection.actions!.length > 1) {
 			row.animation = 'fade-in';
 		}
 		rows.push(row);

@@ -22,7 +22,7 @@ interface UserEventContextCampaign {
 interface UserEventContextDevice {
 	id: string;
 	advertisingId: string;
-	AdTrackingEnabled: boolean;
+	adTrackingEnabled: boolean;
 	manufacturer: string;
 	model: string;
 	name: string;

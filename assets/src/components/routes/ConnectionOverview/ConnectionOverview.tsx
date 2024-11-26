@@ -238,10 +238,10 @@ const ConnectionOverview = () => {
 			let userActionsIds: number[] = [];
 			let eventActionsIds: number[] = [];
 			for (const action of c.actions) {
-				if (action.Target === 'Users') {
-					userActionsIds.push(action.ID);
-				} else if (action.Target === 'Events') {
-					eventActionsIds.push(action.ID);
+				if (action.target === 'Users') {
+					userActionsIds.push(action.id);
+				} else if (action.target === 'Events') {
+					eventActionsIds.push(action.id);
 				}
 			}
 
@@ -584,13 +584,13 @@ const computeActionErrorRows = (connection: TransformedConnection, actionErrors:
 	for (const error of actionErrors) {
 		const row = {
 			cells: [
-				<Link path={`connections/${connection.id}/actions/edit/${error.Action}`}>
-					{connection.actions.find((a) => a.ID == error.Action)?.Name}
+				<Link path={`connections/${connection.id}/actions/edit/${error.action}`}>
+					{connection.actions.find((a) => a.id == error.action)?.name}
 				</Link>,
-				STEP_NAMES[error.Step],
-				error.Count,
-				<SlRelativeTime date={error.LastOccurred.toISOString()} lang='en-US' />,
-				error.Message,
+				STEP_NAMES[error.step],
+				error.count,
+				<SlRelativeTime date={error.lastOccurred.toISOString()} lang='en-US' />,
+				error.message,
 			],
 		};
 		actionErrorRows.push(row);

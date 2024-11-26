@@ -32,9 +32,9 @@ const IdentityResolutionSettings = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			const workspace = workspaces.find((w) => w.ID === selectedWorkspace);
-			setRunOnBatchImport(workspace.ResolveIdentitiesOnBatchImport);
-			setIdentifiers(workspace.Identifiers);
+			const workspace = workspaces.find((w) => w.id === selectedWorkspace);
+			setRunOnBatchImport(workspace.resolveIdentitiesOnBatchImport);
+			setIdentifiers(workspace.identifiers);
 			let identifiersSchema: ObjectType;
 			try {
 				identifiersSchema = await api.workspaces.identifiersSchema();

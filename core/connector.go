@@ -20,22 +20,22 @@ import (
 type Connector struct {
 	core                   *Core
 	connector              *state.Connector
-	Name                   string
-	SourceDescription      string
-	DestinationDescription string
-	TermForUsers           string
-	TermForGroups          string
-	Type                   ConnectorType
-	Targets                Targets
-	SendingMode            *SendingMode
-	HasSheets              bool
-	HasUI                  bool
-	IdentityIDLabel        string
-	Icon                   string
-	FileExtension          string
-	SampleQuery            string
-	WebhooksPer            WebhooksPer
-	OAuth                  bool
+	Name                   string        `json:"name"`
+	SourceDescription      string        `json:"sourceDescription"`
+	DestinationDescription string        `json:"destinationDescription"`
+	TermForUsers           string        `json:"termForUsers"`
+	TermForGroups          string        `json:"termForGroups"`
+	Type                   ConnectorType `json:"type"`
+	Targets                Targets       `json:"targets"`
+	SendingMode            *SendingMode  `json:"sendingMode"`
+	HasSheets              bool          `json:"hasSheets"`
+	HasUI                  bool          `json:"hasUI"`
+	IdentityIDLabel        string        `json:"identityIDLabel"`
+	Icon                   string        `json:"icon"`
+	FileExtension          string        `json:"fileExtension"`
+	SampleQuery            string        `json:"sampleQuery"`
+	WebhooksPer            WebhooksPer   `json:"webhooksPer"`
+	OAuth                  bool          `json:"oauth"`
 }
 
 // ConnectorType represents a connector type.
@@ -123,9 +123,9 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 
 // Targets represents the supported targets by a connector.
 type Targets struct {
-	Users  bool
-	Groups bool
-	Events bool
+	Users  bool `json:"users"`
+	Groups bool `json:"groups"`
+	Events bool `json:"events"`
 }
 
 // SendingMode represents a sending mode.

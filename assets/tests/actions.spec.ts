@@ -80,7 +80,7 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 				]
 			},
 			"transformation": {
-				"Mapping": {
+				"mapping": {
 					"email": "email",
 					"dummy_id": "dummyId",
 					"first_name": "firstName",
@@ -170,20 +170,20 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 			"name": "Export users",
 			"enabled": false,
 			"filter": {
-				"Logical": "or",
-				"Conditions": [
+				"logical": "or",
+				"conditions": [
 					{
-						"Property": "email",
-						"Operator": "is one of",
-						"Values": [
+						"property": "email",
+						"operator": "is one of",
+						"values": [
 							"acme@open2b.com",
 							"test@open2b.com"
 						]
 					},
 					{
-						"Property": "dummy_id",
-						"Operator": "is between",
-						"Values": [
+						"property": "dummy_id",
+						"operator": "is between",
+						"values": [
 							"1200",
 							"1800"
 						]
@@ -264,15 +264,15 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 				]
 			},
 			"transformation": {
-				"Mapping": {
+				"mapping": {
 					"firstName": "first_name",
 					"lastName": "last_name"
 				}
 			},
 			"exportMode": "CreateOnly",
 			"matchingProperties": {
-				"Internal": "email",
-				"External": {
+				"internal": "email",
+				"external": {
 					"name": "email",
 					"label": "",
 					"type": {
@@ -349,7 +349,7 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 				]
 			},
 			"transformation": {
-				"Mapping": {
+				"mapping": {
 					"email": "traits"
 				}
 			}
@@ -484,15 +484,15 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 				]
 			},
 			"transformation": {
-				"Mapping": {
+				"mapping": {
 					"first_name": "first_name",
 					"last_name": "last_name"
 				}
 			},
 			"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
-			"IdentityProperty": "email",
-			"LastChangeTimeProperty": "",
-			"LastChangeTimeFormat": ""
+			"identityProperty": "email",
+			"lastChangeTimeProperty": "",
+			"lastChangeTimeFormat": ""
 		}
 	}
 	`;
@@ -565,20 +565,20 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 			"name": "Export users",
 			"enabled": false,
 			"filter": {
-				"Logical": "or",
-				"Conditions": [
+				"logical": "or",
+				"conditions": [
 					{
-						"Property": "email",
-						"Operator": "is one of",
-						"Values": [
+						"property": "email",
+						"operator": "is one of",
+						"values": [
 							"acme@open2b.com",
 							"test@open2b.com"
 						]
 					},
 					{
-						"Property": "dummy_id",
-						"Operator": "is between",
-						"Values": [
+						"property": "dummy_id",
+						"operator": "is between",
+						"values": [
 							"1200",
 							"1800"
 						]
@@ -668,7 +668,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 				]
 			},
 			"transformation": {
-				"Mapping": {
+				"mapping": {
 					"email": "email",
 					"first_name": "first_name",
 					"last_name": "last_name"
@@ -838,7 +838,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 					]
 				},
 				"transformation": {
-					"Mapping": {
+					"mapping": {
 						"email": "email",
 						"first_name": "first_name",
 						"last_name": "last_name"
@@ -846,12 +846,12 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 				},
 				"path": "test.csv",
 				"sheet": null,
-				"IdentityProperty": "email",
-				"LastChangeTimeProperty": "",
-				"LastChangeTimeFormat": "",
-				"Compression": "",
-				"Connector": "CSV",
-				"UIValues": {
+				"identityProperty": "email",
+				"lastChangeTimeProperty": "",
+				"lastChangeTimeFormat": "",
+				"compression": "",
+				"connector": "CSV",
+				"uiValues": {
 					"Comma": ",",
 					"Comment": "",
 					"FieldsPerRecord": 0,
@@ -927,20 +927,20 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 				"name": "Export users",
 				"enabled": false,
 				"filter": {
-					"Logical": "or",
-					"Conditions": [
+					"logical": "or",
+					"conditions": [
 						{
-							"Property": "email",
-							"Operator": "is one of",
-							"Values": [
+							"property": "email",
+							"operator": "is one of",
+							"values": [
 								"acme@open2b.com",
 								"test@open2b.com"
 							]
 						},
 						{
-							"Property": "dummy_id",
-							"Operator": "is between",
-							"Values": [
+							"property": "dummy_id",
+							"operator": "is between",
+							"values": [
 								"1200",
 								"1800"
 							]
@@ -1209,13 +1209,13 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 				"transformation": {},
 				"path": "test.csv",
 				"sheet": null,
-				"FileOrderingPropertyPath": "email",
-				"IdentityProperty": "",
-				"LastChangeTimeProperty": "",
-				"LastChangeTimeFormat": "",
-				"Compression": "",
-				"Connector": "CSV",
-				"UIValues": {
+				"fileOrderingPropertyPath": "email",
+				"identityProperty": "",
+				"lastChangeTimeProperty": "",
+				"lastChangeTimeFormat": "",
+				"compression": "",
+				"connector": "CSV",
+				"uiValues": {
 					"Comma": ",",
 					"Comment": "",
 					"FieldsPerRecord": 0,
@@ -1284,12 +1284,12 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 			"name": "Import events",
 			"enabled": false,
 			"filter": {
-				"Logical": "and",
-				"Conditions": [
+				"logical": "and",
+				"conditions": [
 					{
-						"Property": "type",
-						"Operator": "is",
-						"Values": [
+						"property": "type",
+						"operator": "is",
+						"values": [
 							"track"
 						]
 					}
@@ -1358,12 +1358,12 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 			"name": "Import users",
 			"enabled": false,
 			"filter": {
-				"Logical": "and",
-				"Conditions": [
+				"logical": "and",
+				"conditions": [
 					{
-						"Property": "type",
-						"Operator": "is",
-						"Values": [
+						"property": "type",
+						"operator": "is",
+						"values": [
 							"identify"
 						]
 					}

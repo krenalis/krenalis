@@ -20,10 +20,10 @@ const Workspaces = () => {
 	};
 
 	workspaces.sort((a: Workspace, b: Workspace) => {
-		if (a.Name < b.Name) {
+		if (a.name < b.name) {
 			return -1;
 		}
-		if (a.Name > b.Name) {
+		if (a.name > b.name) {
 			return 1;
 		}
 		return 0;
@@ -65,13 +65,13 @@ const Workspaces = () => {
 						workspaces.map((workspace) => {
 							return (
 								<ListTile
-									key={workspace.ID}
+									key={workspace.id}
 									className='workspace-list__workspace'
 									icon={<SlIcon name='person-workspace' />}
-									name={workspace.Name}
-									id={String(workspace.ID)}
-									description={workspace.PrivacyRegion}
-									onClick={() => onWorkspaceClick(workspace.ID)}
+									name={workspace.name}
+									id={String(workspace.id)}
+									description={workspace.privacyRegion}
+									onClick={() => onWorkspaceClick(workspace.id)}
 									action={<SlIcon name='chevron-right' />}
 								/>
 							);

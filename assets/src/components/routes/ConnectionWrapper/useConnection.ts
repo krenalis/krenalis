@@ -43,7 +43,7 @@ const useConnection = () => {
 			// fetched data.
 			const connection = Object.assign(providedConnection);
 			connection.actionTypes = actionTypes;
-			connection.actions = fetchedConnection.Actions;
+			connection.actions = fetchedConnection.actions;
 			setConnection(connection);
 			setTimeout(() => {
 				setIsLoading(false);

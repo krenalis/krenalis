@@ -30,7 +30,7 @@ class TransformedConnection {
 	compression: Compression;
 	strategy?: Strategy | null;
 	websiteHost: string;
-	SendingMode: SendingMode | null;
+	sendingMode: SendingMode | null;
 	status: ConnectionStatus;
 	description: string;
 	linkedFiles?: TransformedConnection[];
@@ -52,7 +52,7 @@ class TransformedConnection {
 		compression: Compression,
 		strategy: Strategy | null,
 		websiteHost: string,
-		SendingMode: SendingMode | null,
+		sendingMode: SendingMode | null,
 		status: ConnectionStatus,
 		description: string,
 		linkedFiles?: TransformedConnection[],
@@ -73,7 +73,7 @@ class TransformedConnection {
 		this.compression = compression;
 		this.strategy = strategy;
 		this.websiteHost = websiteHost;
-		this.SendingMode = SendingMode;
+		this.sendingMode = sendingMode;
 		this.status = status;
 		this.description = description;
 		this.linkedFiles = linkedFiles;
@@ -145,19 +145,19 @@ const getActionTypeFromConnection = (
 	let actionType: ActionType | undefined;
 	if (target === 'Events') {
 		if (eventType == null) {
-			actionType = connection.actionTypes!.find((t) => t.Target === 'Events' && t.EventType === null);
+			actionType = connection.actionTypes!.find((t) => t.target === 'Events' && t.eventType === null);
 		} else {
-			actionType = connection.actionTypes!.find((t) => t.EventType === eventType);
+			actionType = connection.actionTypes!.find((t) => t.eventType === eventType);
 		}
 	} else {
-		actionType = connection.actionTypes!.find((t) => t.Target === target);
+		actionType = connection.actionTypes!.find((t) => t.target === target);
 	}
 	return actionType;
 };
 
 const getConnectionDescription = (connection: Connection, connector: TransformedConnector): string => {
 	let description: string;
-	if (connection.Role === 'Source') {
+	if (connection.role === 'Source') {
 		description = connector.sourceDescription;
 	} else {
 		description = connector.destinationDescription;
@@ -173,10 +173,10 @@ const getConnectionFullConnector = (
 };
 
 const getConnectionStatus = (connection: Connection): ConnectionStatus => {
-	if (!connection.Enabled) {
+	if (!connection.enabled) {
 		return { text: 'Disabled', variant: 'neutral' };
 	} else {
-		switch (connection.Health) {
+		switch (connection.health) {
 			case 'Healthy':
 				return { text: 'Working properly', variant: 'success' };
 			case 'NoRecentData':

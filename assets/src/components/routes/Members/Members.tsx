@@ -106,34 +106,34 @@ const Members = () => {
 						{members.map((member) => {
 							return (
 								<ListTile
-									key={member.ID}
+									key={member.id}
 									className='members__member'
 									name={
 										<div className='members__member-name'>
-											{member.Name}
-											{member.Email === loggedMember.Email && (
+											{member.name}
+											{member.email === loggedMember.email && (
 												<SlBadge variant='neutral'>You</SlBadge>
 											)}
-											{member.Invitation !== '' && <SlBadge variant='neutral'>Invited</SlBadge>}
-											{member.Invitation === 'Expired' && (
+											{member.invitation !== '' && <SlBadge variant='neutral'>Invited</SlBadge>}
+											{member.invitation === 'Expired' && (
 												<SlBadge variant='danger'>Invitation expired</SlBadge>
 											)}
 										</div>
 									}
-									description={member.Email}
+									description={member.email}
 									icon={
 										<SlAvatar
-											initials={member.Initials}
+											initials={member.initials}
 											image={
-												member.Avatar
-													? `data:${member.Avatar.MimeType};base64, ${member.Avatar.Image}`
+												member.avatar
+													? `data:${member.avatar.mimeType};base64, ${member.avatar.image}`
 													: ''
 											}
 										/>
 									}
 									action={
 										<div className='members__member-actions'>
-											{member.ID === loggedMember.ID && (
+											{member.id === loggedMember.id && (
 												<Link path={'members/current'}>
 													<SlButton size='small'>Edit</SlButton>
 												</Link>
@@ -141,7 +141,7 @@ const Members = () => {
 											<SlButton
 												size='small'
 												variant='danger'
-												onClick={() => onDeleteMember(member.ID)}
+												onClick={() => onDeleteMember(member.id)}
 											>
 												Delete
 											</SlButton>

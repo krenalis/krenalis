@@ -8,7 +8,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"html"
 	"net/http"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
+	"github.com/meergo/meergo/json"
 )
 
 type organization struct {
@@ -28,16 +28,16 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Name          string
-		PrivacyRegion core.PrivacyRegion
+	var body struct {
+		Name          string             `json:"name"`
+		PrivacyRegion core.PrivacyRegion `json:"privacyRegion"`
 		Warehouse     struct {
-			Name     string
-			Mode     core.WarehouseMode
-			Settings rawJSON
-		}
-	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+			Name     string             `json:"name"`
+			Mode     core.WarehouseMode `json:"mode"`
+			Settings json.Value         `json:"settings"`
+		} `json:"warehouse"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -54,12 +54,12 @@ func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, err
 	}
-	body := struct {
-		Name     string
-		Mode     core.WarehouseMode
-		Settings rawJSON
-	}{}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	var body struct {
+		Name     string             `json:"name"`
+		Mode     core.WarehouseMode `json:"mode"`
+		Settings json.Value         `json:"settings"`
+	}
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -88,9 +88,9 @@ func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		Email string
+		Email string `json:"email"`
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -117,13 +117,13 @@ func (organization organization) SetMember(_ http.ResponseWriter, r *http.Reques
 	}
 	var body struct {
 		MemberToSet struct {
-			Name     string
-			Image    []byte
-			Email    string
-			Password string
-		}
+			Name     string `json:"name"`
+			Image    []byte `json:"image"`
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		} `json:"memberToSet"`
 	}
-	err = json.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}

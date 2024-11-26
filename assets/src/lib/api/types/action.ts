@@ -15,16 +15,16 @@ type Mapping = Record<string, string>;
 type TransformationPurpose = 'Create' | 'Update';
 
 interface Transformation {
-	Mapping: Mapping | null;
-	Function: TransformationFunction | null;
+	mapping: Mapping | null;
+	function: TransformationFunction | null;
 }
 
 interface TransformationFunction {
-	Source: string;
-	Language: string;
-	PreserveJSON: boolean;
-	InProperties: string[];
-	OutProperties: string[];
+	source: string;
+	language: string;
+	preserveJSON: boolean;
+	inProperties: string[];
+	outProperties: string[];
 }
 
 interface ExpressionToBeExtracted {
@@ -33,8 +33,8 @@ interface ExpressionToBeExtracted {
 }
 
 interface MatchingProperties {
-	Internal: string;
-	External: Property | null;
+	internal: string;
+	external: Property | null;
 }
 
 type FilterLogical = 'and' | 'or';
@@ -66,51 +66,51 @@ type FilterOperator =
 	| 'does not exist';
 
 interface FilterCondition {
-	Property: string;
-	Operator: FilterOperator | '';
-	Values: string[] | null;
+	property: string;
+	operator: FilterOperator | '';
+	values: string[] | null;
 }
 
 interface Filter {
-	Logical: FilterLogical;
-	Conditions: FilterCondition[];
+	logical: FilterLogical;
+	conditions: FilterCondition[];
 }
 
 interface Action {
-	ID: number;
-	Connection: number;
-	Target: ActionTarget;
-	Name: string;
-	Enabled: boolean;
-	EventType: string | null;
-	Running: boolean;
-	ScheduleStart: number | null;
-	SchedulePeriod: SchedulePeriod | null;
-	InSchema: ObjectType | null;
-	OutSchema: ObjectType | null;
-	Filter: Filter | null;
-	Transformation: Transformation | null;
-	Query: string | null;
-	Path: string | null;
-	Table: string | null;
-	TableKeyProperty: string | null;
-	Sheet: string | null;
-	IdentityProperty: string | null;
-	LastChangeTimeProperty: string | null;
-	LastChangeTimeFormat: string | null;
-	FileOrderingPropertyPath: string | null;
-	ExportMode: ExportMode | null;
-	MatchingProperties: MatchingProperties | null;
-	ExportOnDuplicatedUsers: boolean | null;
-	Compression: Compression;
-	Connector: string;
+	id: number;
+	connection: number;
+	target: ActionTarget;
+	name: string;
+	enabled: boolean;
+	eventType: string | null;
+	running: boolean;
+	scheduleStart: number | null;
+	schedulePeriod: SchedulePeriod | null;
+	inSchema: ObjectType | null;
+	outSchema: ObjectType | null;
+	filter: Filter | null;
+	transformation: Transformation | null;
+	query: string | null;
+	path: string | null;
+	table: string | null;
+	tableKeyProperty: string | null;
+	sheet: string | null;
+	identityProperty: string | null;
+	lastChangeTimeProperty: string | null;
+	lastChangeTimeFormat: string | null;
+	fileOrderingPropertyPath: string | null;
+	exportMode: ExportMode | null;
+	matchingProperties: MatchingProperties | null;
+	exportOnDuplicatedUsers: boolean | null;
+	compression: Compression;
+	connector: string;
 }
 
 interface ActionType {
-	Name: string;
-	Description: string;
-	Target: ActionTarget;
-	EventType: string;
+	name: string;
+	description: string;
+	target: ActionTarget;
+	eventType: string;
 }
 
 interface ActionToSet {
@@ -125,24 +125,24 @@ interface ActionToSet {
 	tableName?: string | null;
 	tableKeyProperty?: string | null;
 	sheet?: string | null;
-	IdentityProperty?: string | null;
-	LastChangeTimeProperty?: string | null;
-	LastChangeTimeFormat?: string | null;
-	FileOrderingPropertyPath?: string | null;
+	identityProperty?: string | null;
+	lastChangeTimeProperty?: string | null;
+	lastChangeTimeFormat?: string | null;
+	fileOrderingPropertyPath?: string | null;
 	exportMode?: ExportMode | null;
 	matchingProperties?: MatchingProperties | null;
 	exportOnDuplicatedUsers?: boolean | null;
-	Compression: Compression;
-	Connector: string;
-	UIValues?: ConnectorValues;
+	compression: Compression;
+	connector: string;
+	uiValues?: ConnectorValues;
 }
 
 interface ActionError {
-	Action: number;
-	Step: ActionStep;
-	Count: number;
-	Message: string;
-	LastOccurred: Date;
+	action: number;
+	step: ActionStep;
+	count: number;
+	message: string;
+	lastOccurred: Date;
 }
 
 interface ActionMetrics {

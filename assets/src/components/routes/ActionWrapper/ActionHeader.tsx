@@ -30,7 +30,7 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 
 	const onUpdateName = (e) => {
 		const a = { ...action };
-		a.Name = e.currentTarget.value;
+		a.name = e.currentTarget.value;
 		setAction(a);
 	};
 
@@ -52,19 +52,19 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 						<span>
 							<SlInput
 								className='action__header-name-input'
-								value={action != null ? action.Name : actionType.Name}
+								value={action != null ? action.name : actionType.name}
 								onSlInput={onUpdateName}
 							></SlInput>
 							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
 						</span>
 					) : (
 						<span>
-							{action != null ? action.Name : actionType.Name}
+							{action != null ? action.name : actionType.name}
 							<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
 						</span>
 					)}
 				</div>
-				{!isNameEditable && <div className='action__header-description'>{actionType.Description}</div>}
+				{!isNameEditable && <div className='action__header-description'>{actionType.description}</div>}
 			</div>
 			<div className={`action__header-buttons${isSaveHidden ? ' action__header-buttons--hidden' : ''}`}>
 				<SlButton className='action__header-cancel' variant='default' onClick={onClose}>

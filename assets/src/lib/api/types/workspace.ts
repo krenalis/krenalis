@@ -6,21 +6,21 @@ type PrivacyRegion = 'Europe' | '';
 type PrimarySources = Record<string, number>;
 
 interface DisplayedProperties {
-	Image: string;
-	FirstName: string;
-	LastName: string;
-	Information: string;
+	image: string;
+	firstName: string;
+	lastName: string;
+	information: string;
 }
 
 interface Workspace {
-	ID: number;
-	Name: string;
-	ResolveIdentitiesOnBatchImport: boolean;
-	Identifiers: Identifiers;
-	PrivacyRegion: PrivacyRegion;
-	DisplayedProperties: DisplayedProperties;
-	WarehouseMode: WarehouseMode;
-	UserPrimarySources: PrimarySources;
+	id: number;
+	name: string;
+	resolveIdentitiesOnBatchImport: boolean;
+	identifiers: Identifiers;
+	privacyRegion: PrivacyRegion;
+	displayedProperties: DisplayedProperties;
+	warehouseMode: WarehouseMode;
+	userPrimarySources: PrimarySources;
 }
 
 interface AddWorkspaceResponse {

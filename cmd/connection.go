@@ -8,7 +8,6 @@
 package cmd
 
 import (
-	jsonstd "encoding/json"
 	"net/http"
 	"strconv"
 
@@ -64,11 +63,11 @@ func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	var body struct {
-		Target    core.Target
-		EventType string
-		Action    core.ActionToSet
+		Target    core.Target      `json:"target"`
+		EventType string           `json:"eventType"`
+		Action    core.ActionToSet `json:"action"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -82,10 +81,10 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	var body struct {
-		Schema types.Type
-		Cursor string
+		Schema types.Type `json:"schema"`
+		Cursor string     `json:"cursor"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -93,7 +92,7 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"users": rawJSON(users), "cursor": cursor}, nil
+	return map[string]any{"users": users, "cursor": cursor}, nil
 }
 
 // CompletePath returns the complete path of a storage path.
@@ -126,10 +125,10 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	var body struct {
-		Query string
-		Limit int
+		Query string `json:"query"`
+		Limit int    `json:"limit"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -137,7 +136,7 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"Rows": rawJSON(rows), "Schema": schema}, nil
+	return map[string]any{"rows": rows, "schema": schema}, nil
 }
 
 // Executions returns the executions of the actions of a connection.
@@ -156,10 +155,10 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 	var body struct {
-		First int
-		Limit int
+		First int `json:"first"`
+		Limit int `json:"limit"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -212,12 +211,12 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		EventType      string
-		Event          json.Value
-		Transformation core.DataTransformation
-		OutSchema      types.Type
+		EventType      string                  `json:"eventType"`
+		Event          json.Value              `json:"event"`
+		Transformation core.DataTransformation `json:"transformation"`
+		OutSchema      types.Type              `json:"outSchema"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -236,14 +235,14 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	var body struct {
-		FileConnector string
-		Path          string
-		Sheet         string
-		Compression   core.Compression
-		UIValues      rawJSON
-		Limit         int
+		FileConnector string           `json:"fileConnector"`
+		Path          string           `json:"path"`
+		Sheet         string           `json:"sheet"`
+		Compression   core.Compression `json:"compression"`
+		UIValues      json.Value       `json:"uiValues"`
+		Limit         int              `json:"limit"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -251,7 +250,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"records": rawJSON(records), "schema": schema}, nil
+	return map[string]any{"records": records, "schema": schema}, nil
 }
 
 // RevokeKey revokes a write key of a connection.
@@ -271,18 +270,18 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	var body struct {
-		Event  string
-		Values rawJSON
+		Event  string     `json:"event"`
+		Values json.Value `json:"values"`
 	}
 	if r.Method == "GET" {
 		body.Event = "load"
 	} else {
-		err = jsonstd.NewDecoder(r.Body).Decode(&body)
+		err = json.Decode(r.Body, &body)
 		if err != nil {
 			return nil, errors.BadRequest("%s", err)
 		}
 	}
-	ui, err := c.ServeUI(r.Context(), body.Event, json.Value(body.Values))
+	ui, err := c.ServeUI(r.Context(), body.Event, body.Values)
 	if err != nil {
 		return nil, err
 	}
@@ -298,9 +297,9 @@ func (connection connection) Set(_ http.ResponseWriter, r *http.Request) (any, e
 		return nil, err
 	}
 	var body struct {
-		Connection core.ConnectionToSet
+		Connection core.ConnectionToSet `json:"connection"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
@@ -315,16 +314,16 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	var body struct {
-		FileConnector string
-		Path          string
-		Compression   core.Compression
-		UIValues      rawJSON
+		FileConnector string           `json:"fileConnector"`
+		Path          string           `json:"path"`
+		Compression   core.Compression `json:"compression"`
+		UIValues      json.Value       `json:"uiValues"`
 	}
-	err = jsonstd.NewDecoder(r.Body).Decode(&body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, json.Value(body.UIValues), body.Compression)
+	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, body.UIValues, body.Compression)
 	if err != nil {
 		return nil, err
 	}

@@ -107,17 +107,17 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 			<div className='action'>
 				<ActionHeader onClose={onClose} />
 				<div className='action__body'>
-					{actionType!.Fields.includes('Filter') && !isFileStorageImport && <ActionFilters />}
-					{actionType!.Fields.includes('Query') && <ActionQuery />}
-					{actionType!.Fields.includes('File') && <ActionFile />}
-					{actionType!.Fields.includes('Table') && <ActionTable />}
-					{actionType!.Fields.includes('ExportMode') && <ActionExportMode />}
-					{actionType!.Fields.includes('MatchingProperties') && <ActionMatchingProperties />}
-					{actionType!.Fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
-					{actionType!.Fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (
+					{actionType!.fields.includes('Filter') && !isFileStorageImport && <ActionFilters />}
+					{actionType!.fields.includes('Query') && <ActionQuery />}
+					{actionType!.fields.includes('File') && <ActionFile />}
+					{actionType!.fields.includes('Table') && <ActionTable />}
+					{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
+					{actionType!.fields.includes('MatchingProperties') && <ActionMatchingProperties />}
+					{actionType!.fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
+					{actionType!.fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (
 						<ActionFilters ref={transformationSectionRef} />
 					)}
-					{actionType!.Fields.includes('Transformation') && !isTransformationHidden && (
+					{actionType!.fields.includes('Transformation') && !isTransformationHidden && (
 						<ActionTransformation ref={isFileStorageImport ? null : transformationSectionRef} />
 					)}
 				</div>

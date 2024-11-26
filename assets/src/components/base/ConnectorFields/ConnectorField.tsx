@@ -43,19 +43,19 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 	}
 
 	let component: ReactNode;
-	switch (f.ComponentType) {
+	switch (f.componentType) {
 		case 'Input':
-			if (f.Rows === 0 || f.Rows === 1) {
+			if (f.rows === 0 || f.rows === 1) {
 				component = (
 					<ConnectorInput
-						name={f.Name}
-						label={f.Label}
-						placeholder={f.Placeholder}
-						helpText={f.HelpText}
-						type={f.Type === '' ? 'text' : f.Type}
-						minlength={f.MinLength}
-						maxlength={f.MaxLength}
-						error={f.Error}
+						name={f.name}
+						label={f.label}
+						placeholder={f.placeholder}
+						helpText={f.helpText}
+						type={f.type === '' ? 'text' : f.type}
+						minlength={f.minLength}
+						maxlength={f.maxLength}
+						error={f.error}
 						val={value}
 						onChange={onChange}
 					/>
@@ -63,14 +63,14 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 			} else {
 				component = (
 					<ConnectorTextarea
-						name={f.Name}
-						label={f.Label}
-						placeholder={f.Placeholder}
-						helpText={f.HelpText}
-						rows={f.Rows}
-						minlength={f.MinLength}
-						maxlength={f.MaxLength}
-						error={f.Error}
+						name={f.name}
+						label={f.label}
+						placeholder={f.placeholder}
+						helpText={f.helpText}
+						rows={f.rows}
+						minlength={f.minLength}
+						maxlength={f.maxLength}
+						error={f.error}
 						val={value}
 						onChange={onChange}
 					/>
@@ -80,12 +80,12 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 		case 'Select':
 			component = (
 				<ConnectorSelect
-					name={f.Name}
-					label={f.Label}
-					placeholder={f.Placeholder}
-					helpText={f.HelpText}
-					options={f.Options}
-					error={f.Error}
+					name={f.name}
+					label={f.label}
+					placeholder={f.placeholder}
+					helpText={f.helpText}
+					options={f.options}
+					error={f.error}
 					val={value}
 					onChange={onChange}
 				/>
@@ -93,26 +93,26 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 			break;
 		case 'Switch':
 			component = (
-				<ConnectorSwitch name={f.Name} label={f.Label} error={f.Error} val={value} onChange={onChange} />
+				<ConnectorSwitch name={f.name} label={f.label} error={f.error} val={value} onChange={onChange} />
 			);
 			break;
 		case 'Checkbox':
 			component = (
-				<ConnectorCheckbox name={f.Name} label={f.Label} error={f.Error} val={value} onChange={onChange} />
+				<ConnectorCheckbox name={f.name} label={f.label} error={f.error} val={value} onChange={onChange} />
 			);
 			break;
 		case 'ColorPicker':
 			component = (
-				<ConnectorColorPicker name={f.Name} label={f.Label} error={f.Error} val={value} onChange={onChange} />
+				<ConnectorColorPicker name={f.name} label={f.label} error={f.error} val={value} onChange={onChange} />
 			);
 			break;
 		case 'Radios':
 			component = (
 				<ConnectorRadios
-					name={f.Name}
-					label={f.Label}
-					options={f.Options}
-					error={f.Error}
+					name={f.name}
+					label={f.label}
+					options={f.options}
+					error={f.error}
 					val={value}
 					onChange={onChange}
 				/>
@@ -121,13 +121,13 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 		case 'Range':
 			component = (
 				<ConnectorRange
-					name={f.Name}
-					label={f.Label}
-					helpText={f.HelpText}
-					min={f.Min}
-					max={f.Max}
-					step={f.Step}
-					error={f.Error}
+					name={f.name}
+					label={f.label}
+					helpText={f.helpText}
+					min={f.min}
+					max={f.max}
+					step={f.step}
+					error={f.error}
 					val={value}
 					onChange={onChange}
 				/>
@@ -136,13 +136,13 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 		case 'KeyValue':
 			component = (
 				<ConnectorKeyValue
-					name={f.Name}
-					label={f.Label}
-					keyComponent={f.KeyComponent}
-					keyLabel={f.KeyLabel}
-					valueComponent={f.ValueComponent}
-					valueLabel={f.ValueLabel}
-					error={f.Error}
+					name={f.name}
+					label={f.label}
+					keyComponent={f.keyComponent}
+					keyLabel={f.keyLabel}
+					valueComponent={f.valueComponent}
+					valueLabel={f.valueLabel}
+					error={f.error}
 					val={value}
 					onChange={onChange}
 				/>
@@ -151,16 +151,16 @@ const ConnectorField = ({ field: f }: ConnectorFieldProps) => {
 		case 'AlternativeFieldSets':
 			component = (
 				<ConnectorAlternativeFieldSets
-					label={f.Label}
-					helpText={f.HelpText}
-					sets={f.Sets}
+					label={f.label}
+					helpText={f.helpText}
+					sets={f.sets}
 					val={value}
 					onChange={onChange}
 				/>
 			);
 			break;
 		case 'Text':
-			component = <ConnectorText label={f.Label} text={f.Text} />;
+			component = <ConnectorText label={f.label} text={f.text} />;
 			break;
 		default:
 			component = null;
@@ -181,34 +181,34 @@ const getContextValueAndCallback = (
 	valueContext: ValueContextType | undefined,
 	fieldSetContext: FieldSetContextType | undefined,
 ) => {
-	if (f.ComponentType === 'Text') return [null, null];
+	if (f.componentType === 'Text') return [null, null];
 
 	let value: any, onChange: (...args: any) => void;
 	if (fieldSetContext != null) {
-		if (f.ComponentType === 'AlternativeFieldSets') {
-			throw new Error(`[error] cannot render ${f.ComponentType} inside an AlternativeFieldSets component`);
+		if (f.componentType === 'AlternativeFieldSets') {
+			throw new Error(`[error] cannot render ${f.componentType} inside an AlternativeFieldSets component`);
 		}
 		const ctx = fieldSetContext;
-		if (ctx.values == null || ctx.values[f.Name] == null) {
+		if (ctx.values == null || ctx.values[f.name] == null) {
 			value = '';
 		} else {
-			value = ctx.values[f.Name];
+			value = ctx.values[f.name];
 		}
 		onChange = ctx.onChange;
 		return [value, onChange];
 	}
 
 	if (keyContext != null) {
-		if (f.ComponentType === 'KeyValue' || f.ComponentType === 'AlternativeFieldSets') {
-			throw new Error(`[error] cannot render ${f.ComponentType} inside the key cell of a KeyValue component`);
+		if (f.componentType === 'KeyValue' || f.componentType === 'AlternativeFieldSets') {
+			throw new Error(`[error] cannot render ${f.componentType} inside the key cell of a KeyValue component`);
 		}
 		({ value, onChange } = keyContext);
 		return [value, onChange];
 	}
 
 	if (valueContext != null) {
-		if (f.ComponentType === 'KeyValue' || f.ComponentType === 'AlternativeFieldSets') {
-			throw new Error(`[error] cannot render ${f.ComponentType} inside the value cell of a KeyValue component`);
+		if (f.componentType === 'KeyValue' || f.componentType === 'AlternativeFieldSets') {
+			throw new Error(`[error] cannot render ${f.componentType} inside the value cell of a KeyValue component`);
 		}
 		({ value, onChange } = valueContext);
 		return [value, onChange];
@@ -218,12 +218,12 @@ const getContextValueAndCallback = (
 		const ctx = connectorUIContext;
 		if (ctx.values == null) {
 			value = '';
-		} else if (f.ComponentType === 'AlternativeFieldSets') {
+		} else if (f.componentType === 'AlternativeFieldSets') {
 			value = ctx.values;
-		} else if (ctx.values[f.Name] == null) {
+		} else if (ctx.values[f.name] == null) {
 			value = '';
 		} else {
-			value = ctx.values[f.Name];
+			value = ctx.values[f.name];
 		}
 		onChange = ctx.onChange;
 		return [value, onChange];

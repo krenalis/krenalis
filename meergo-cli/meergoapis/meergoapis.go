@@ -8,13 +8,14 @@
 package meergoapis
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
+
+	"github.com/meergo/meergo/json"
 )
 
 var meergoAPIs struct {
@@ -69,7 +70,7 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 		}
 		meergoAPIs.httpClient = httpClient
 		// Log in.
-		err = callAPI("POST", "api/members/login", strings.NewReader(`{"Email":"acme@open2b.com","Password":"foopass2"}`), nil)
+		err = callAPI("POST", "api/members/login", strings.NewReader(`{"email":"acme@open2b.com","password":"foopass2"}`), nil)
 		if err != nil {
 			err = fmt.Errorf("cannot login: %s", err)
 			meergoAPIs.httpClient = nil
@@ -102,7 +103,7 @@ func callAPI(method string, path string, body io.Reader, response any) error {
 	if response != nil {
 		if resp.Header.Get("Content-Type") == "application/json" {
 			// Read a JSON response.
-			err = json.NewDecoder(resp.Body).Decode(&response)
+			err = json.Decode(resp.Body, &response)
 			if err != nil {
 				return fmt.Errorf("cannot decode JSON response from %q: %s", url, err)
 			}

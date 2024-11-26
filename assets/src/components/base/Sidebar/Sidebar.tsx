@@ -207,7 +207,7 @@ const WorkspaceSelector = ({
 
 	const searched: any = [];
 	for (const workspace of workspaces) {
-		const name = workspace.Name;
+		const name = workspace.name;
 		if (
 			name.includes(searchTerm) ||
 			name.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
@@ -218,10 +218,10 @@ const WorkspaceSelector = ({
 		}
 	}
 	searched.sort((a: Workspace, b: Workspace) => {
-		if (a.Name < b.Name) {
+		if (a.name < b.name) {
 			return -1;
 		}
-		if (a.Name > b.Name) {
+		if (a.name > b.name) {
 			return 1;
 		}
 		return 0;
@@ -230,12 +230,12 @@ const WorkspaceSelector = ({
 	for (const s of searched) {
 		options.push(
 			<div
-				key={s.ID}
-				className={`workspace-selector__dialog-option${s.ID === selectedWorkspace ? ' workspace-selector__dialog-option--selected' : ''}`}
-				onClick={() => onWorkspaceChange(s.ID)}
+				key={s.id}
+				className={`workspace-selector__dialog-option${s.id === selectedWorkspace ? ' workspace-selector__dialog-option--selected' : ''}`}
+				onClick={() => onWorkspaceChange(s.id)}
 			>
 				<SlIcon name='check-lg' />
-				<div className='workspace-selector__dialog-option-name'>{s.Name}</div>
+				<div className='workspace-selector__dialog-option-name'>{s.name}</div>
 			</div>,
 		);
 	}
@@ -248,7 +248,7 @@ const WorkspaceSelector = ({
 			<div className='workspace-selector__text'>
 				<div className='workspace-selector__label'>Workspace</div>
 				<div className='workspace-selector__value'>
-					{workspaces.find((w) => w.ID === selectedWorkspace).Name}
+					{workspaces.find((w) => w.id === selectedWorkspace).name}
 				</div>
 			</div>
 			<SlIcon name='chevron-down' className='workspace-selector__arrow' />
