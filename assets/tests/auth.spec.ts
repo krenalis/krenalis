@@ -18,12 +18,16 @@ test('Login', async ({ page }) => {
 	await page.getByRole('textbox', { name: 'email' }).fill('acme@open2b.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('foopass2');
 	await page.click('sl-button');
-	const workspaceList = page.locator('.workspace-list__workspaces');
-	if (workspaceList.isVisible()) {
+	try {
+		await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
+	} catch {
+		// The user must first select a workspace, because the
+		// organization has more then one.
+		const workspaceList = page.locator('.workspace-list__workspaces');
 		const firstWorkspaceTile = workspaceList.locator(`.workspace-list__workspace[data-id="${String(config.workspaceID)}"]`).nth(0);
 		await firstWorkspaceTile.click();
+		await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
 	}
-	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
 	await logout(page);
 });
 
