@@ -10,6 +10,7 @@ package json
 import (
 	"io"
 
+	"github.com/meergo/meergo/json/internal/json"
 	"github.com/meergo/meergo/json/internal/json/jsontext"
 )
 
@@ -33,6 +34,13 @@ func NewDecoder(r io.Reader) *Decoder {
 // underlying [io.Reader] may exceed this offset.
 func (d *Decoder) ByteOffset() int64 {
 	return d.dec.InputOffset()
+}
+
+// Decode reads the next value, unmarshals it into the value pointed to by out,
+// and advancing the read offset. If the read value cannot be stored into out,
+// it returns an error.
+func (d *Decoder) Decode(out any) error {
+	return json.UnmarshalDecode(&d.dec, out)
 }
 
 // IsKey returns true if the last token read is a key in an object.

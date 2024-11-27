@@ -10,11 +10,26 @@ package json
 import (
 	"errors"
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 )
 
 func Test_Decoder(t *testing.T) {
+
+	t.Run("Decode", func(t *testing.T) {
+
+		dec := NewDecoder(strings.NewReader(`{"name":5}`))
+		var got map[string]any
+		err := dec.Decode(&got)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if expected := map[string]any{"name": 5.0}; !reflect.DeepEqual(expected, got) {
+			t.Fatalf("unexpected value.\n\nexpected: %#v\ngot:      %#v\n\n", expected, got)
+		}
+
+	})
 
 	t.Run("SkipOut", func(t *testing.T) {
 		tests := []struct {
