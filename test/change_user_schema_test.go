@@ -39,8 +39,8 @@ func TestChangeUserSchema(t *testing.T) {
 	identifiers := []string{"email", "android.id"}
 	c.ChangeIdentityResolutionSettings(true, identifiers)
 
-	// Read the schema in "tests_user_schema.json".
-	f, err := os.Open("tests_user_schema.json")
+	// Read the schema in "testdata/change_user_schema_test.json".
+	f, err := os.Open("testdata/change_user_schema_test.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,13 +56,12 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The schema of "tests_user_schema.json" has already been applied by the
-	// tests framework.
+	// Change the user schema.
 	queries := c.ChangeUserSchemaQueries(file.Schema, file.RePaths)
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
-	c.ChangeUserSchema(file.Schema, file.PrimarySources, file.RePaths) // this should do nothing.
+	c.ChangeUserSchema(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 10 {

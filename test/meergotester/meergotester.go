@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -331,26 +332,17 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	}
 
 	// Create the workspace and connect the warehouse.
-	//
-	// TODO(Gianluca): here we can simplify the test a bit by directly creating
-	// the workspace with the correct schema, thus avoiding an alter schema and
-	// possibly speeding up the test a bit.
-	initialUserSchema := types.Object([]types.Property{
-		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
-	})
-	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified, initialUserSchema)
+	var userSchema types.Type
+	if populateUserSchema {
+		userSchema = testsUserSchema
+	} else {
+		userSchema = minimalUserSchema
+	}
+	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified, userSchema)
 	if err != nil {
 		t.Fatalf("cannot create workspace: %s", err)
 	}
 	c.ws = id
-
-	// Change the user schema.
-	if populateUserSchema {
-		err = c.changeUserSchema()
-		if err != nil {
-			t.Fatalf("cannot change user schema: %s", err)
-		}
-	}
 
 	// Wait some time for the leader election.
 	time.Sleep(3 * time.Second)
@@ -413,22 +405,20 @@ func (c *Meergo) Stop() {
 	}
 }
 
-func (c *Meergo) changeUserSchema() error {
-	f, err := os.Open("tests_user_schema.json")
+var minimalUserSchema = types.Object([]types.Property{
+	{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+})
+
+//go:embed tests_user_schema.json
+var userSchemaJSON []byte
+
+var testsUserSchema types.Type
+
+func init() {
+	err := json.Unmarshal(userSchemaJSON, &testsUserSchema)
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("invalid user schema in file 'tests_user_schema.json': %s", err))
 	}
-	defer f.Close()
-	var req struct {
-		Schema  types.Type     `json:"schema"`
-		RePaths map[string]any `json:"rePaths"`
-	}
-	err = json.NewDecoder(f).Decode(&req)
-	if err != nil {
-		return err
-	}
-	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
-	return c.call("PUT", method, req, nil)
 }
 
 func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type) (int, error) {
