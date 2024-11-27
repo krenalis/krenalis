@@ -208,13 +208,11 @@ func (e *UnprocessableError) WriteTo(w http.ResponseWriter) error {
 // occurs marshalling data and another error if an error occurs writing to w.
 func writeTo(w http.ResponseWriter, status int, code Code, message, cause string) error {
 	var b json.Buffer
-	b.WriteString(`{"error":{"code":`)
-	_ = b.Encode(code)
-	b.WriteString(`,"message":`)
-	_ = b.Encode(message)
+	b.WriteString(`{"error":{`)
+	_ = b.EncodeKeyValue("code", code)
+	_ = b.EncodeKeyValue("message", message)
 	if cause != "" {
-		b.WriteString(`,"cause":`)
-		_ = b.Encode(cause)
+		_ = b.EncodeKeyValue("cause", cause)
 	}
 	b.WriteString(`}}`)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

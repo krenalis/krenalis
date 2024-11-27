@@ -390,12 +390,9 @@ func (hs *HubSpot) Upsert(ctx context.Context, target meergo.Targets, records me
 		}
 		body.WriteByte('{')
 		if method == "update" {
-			body.WriteString(`"id":`)
-			_ = body.Encode(record.ID)
-			body.WriteByte(',')
+			_ = body.EncodeKeyValue("id", record.ID)
 		}
-		body.WriteString(`"properties":`)
-		_ = body.Encode(record.Properties)
+		_ = body.EncodeKeyValue("properties", record.Properties)
 		body.WriteByte('}')
 		if i+1 == 100 {
 			break

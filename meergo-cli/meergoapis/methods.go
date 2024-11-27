@@ -50,10 +50,9 @@ func CanChangeWarehouseSettings(workspace int, settings json.Value) {
 
 func CanInitializeWarehouse(typ string, settings json.Value) {
 	var b json.Buffer
-	b.WriteString(`{"type":`)
-	_ = b.Encode(typ)
-	b.WriteString(`,"settings":`)
-	b.Write(settings)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("type", typ)
+	_ = b.EncodeKeyValue("settings", settings)
 	b.WriteString(`}`)
 	err := callAPI("POST", "api/can-initialize-warehouse", &b, nil)
 	if err != nil {
@@ -63,10 +62,9 @@ func CanInitializeWarehouse(typ string, settings json.Value) {
 
 func ChangeWarehouseSettings(workspace int, mode string, settings json.Value) {
 	var b json.Buffer
-	b.WriteString(`{"mode":`)
-	_ = b.Encode(mode)
-	b.WriteString(`,"settings":`)
-	b.Write(settings)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("mode", mode)
+	_ = b.EncodeKeyValue("settings", settings)
 	b.WriteString(`}`)
 	err := callAPI("PUT", "api/workspaces/"+strconv.Itoa(workspace)+"/warehouse/settings", &b, nil)
 	if err != nil {
@@ -89,16 +87,13 @@ const (
 
 func CreateWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type, warehouseName string, warehouseSettings json.Value) int {
 	var b json.Buffer
-	b.WriteString(`{"name":`)
-	_ = b.Encode(name)
-	b.WriteString(`,"privacyRegion":`)
-	_ = b.Encode(privacyRegion)
-	b.WriteString(`,"userSchema":`)
-	_ = b.Encode(userSchema)
-	b.WriteString(`,"warehouse":{"name":`)
-	_ = b.Encode(warehouseName)
-	b.WriteString(`,"settings":`)
-	b.Write(warehouseSettings)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("name", name)
+	_ = b.EncodeKeyValue("privacyRegion", privacyRegion)
+	_ = b.EncodeKeyValue("userSchema", userSchema)
+	b.WriteString(`,"warehouse":{`)
+	_ = b.EncodeKeyValue("name", warehouseName)
+	_ = b.EncodeKeyValue("settings", warehouseSettings)
 	b.WriteString(`}}`)
 	var response struct {
 		ID int `json:"id"`
@@ -139,14 +134,11 @@ func ListConnections(workspace int) {
 
 func AddEventListener(workspace, size, source, server, stream int) string {
 	var b json.Buffer
-	b.WriteString(`{"size":`)
-	_ = b.Encode(size)
-	b.WriteString(`,"source":`)
-	_ = b.Encode(source)
-	b.WriteString(`,"server":`)
-	_ = b.Encode(server)
-	b.WriteString(`,"stream":`)
-	_ = b.Encode(stream)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("size", size)
+	_ = b.EncodeKeyValue("source", source)
+	_ = b.EncodeKeyValue("server", server)
+	_ = b.EncodeKeyValue("stream", stream)
 	b.WriteString(`}`)
 	var res struct {
 		ID string `json:"id"`
@@ -179,10 +171,9 @@ func RemoveEventListener(workspace int, listener string) {
 
 func WorkspaceChangeUserSchema(workspace int, schema types.Type, rePaths map[string]any) {
 	var b json.Buffer
-	b.WriteString(`{"schema":`)
-	_ = b.Encode(schema)
-	b.WriteString(`,"rePaths":`)
-	_ = b.Encode(rePaths)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("schema", schema)
+	_ = b.EncodeKeyValue("rePaths", rePaths)
 	b.WriteString(`}`)
 	err := callAPI("PUT", "api/workspaces/"+strconv.Itoa(workspace)+"/user-schema", &b, nil)
 	if err != nil {
@@ -192,10 +183,9 @@ func WorkspaceChangeUserSchema(workspace int, schema types.Type, rePaths map[str
 
 func WorkspaceChangeUserSchemaQueries(workspace int, schema types.Type, rePaths map[string]any) []string {
 	var b json.Buffer
-	b.WriteString(`{"schema":`)
-	_ = b.Encode(schema)
-	b.WriteString(`,"rePaths":`)
-	_ = b.Encode(rePaths)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("schema", schema)
+	_ = b.EncodeKeyValue("rePaths", rePaths)
 	b.WriteString(`}`)
 	var resp struct {
 		Queries []string `json:"queries"`

@@ -242,14 +242,12 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 	// Serialize the alert, if present.
 	if ui.Alert != nil {
-		b.WriteString(`"alert":{"message":`)
-		err := b.Encode(ui.Alert.Message)
+		b.WriteString(`"alert":{`)
+		err := b.EncodeKeyValue("message", ui.Alert.Message)
 		if err != nil {
 			return nil, err
 		}
-		b.WriteString(`,"variant":"`)
-		b.WriteString(ui.Alert.Variant.String())
-		b.WriteString(`"`)
+		_ = b.EncodeKeyValue("variant", ui.Alert.Variant.String())
 		b.WriteString("}")
 	}
 
@@ -281,14 +279,11 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 		}
 		b.WriteString(`],"buttons":[`)
 		for _, button := range ui.Buttons {
-			b.WriteString(`{"event":`)
-			b.Encode(button.Event)
-			b.WriteString(`,"text":`)
-			b.Encode(button.Text)
-			b.WriteString(`,"variant":`)
-			b.Encode(button.Variant)
-			b.WriteString(`,"role":"`)
-			b.WriteString(button.Role.String())
+			b.WriteByte('{')
+			_ = b.EncodeKeyValue("event", button.Event)
+			_ = b.EncodeKeyValue("text", button.Text)
+			_ = b.EncodeKeyValue("variant", button.Variant)
+			_ = b.EncodeKeyValue("role", button.Role.String())
 			b.WriteString(`"}`)
 		}
 		b.WriteString(`]`)
@@ -353,10 +348,9 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 				if i > 0 {
 					b.WriteByte(',')
 				}
-				b.WriteString(`{"text":`)
-				_ = b.Encode(option.Text)
-				b.WriteString(`,"value":`)
-				_ = b.Encode(option.Value)
+				b.WriteByte('{')
+				_ = b.EncodeKeyValue("text", option.Text)
+				_ = b.EncodeKeyValue("value", option.Value)
 				b.WriteString(`}`)
 			}
 			b.WriteByte(']')
@@ -380,10 +374,9 @@ func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Rol
 	if comma {
 		b.WriteByte(',')
 	}
-	b.WriteString(`{"name":`)
-	_ = b.Encode(fieldSet.Name)
-	b.WriteString(`,"label":`)
-	_ = b.Encode(fieldSet.Label)
+	b.WriteByte('{')
+	_ = b.EncodeKeyValue("name", fieldSet.Name)
+	_ = b.EncodeKeyValue("label", fieldSet.Label)
 	b.WriteString(`,"fields":[`)
 	comma = false
 	for _, c := range fieldSet.Fields {
