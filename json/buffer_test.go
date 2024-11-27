@@ -70,6 +70,33 @@ func Test_Buffer(t *testing.T) {
 		}
 	})
 
+	t.Run("EncodeKeyValue", func(t *testing.T) {
+		name := "Bob"
+		age := 36
+		var buf Buffer
+		buf.WriteByte('[')
+		for i := range 2 {
+			if i > 0 {
+				buf.WriteByte(',')
+			}
+			buf.WriteByte('{')
+			err := buf.EncodeKeyValue("name", name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = buf.EncodeKeyValue("age", age)
+			if err != nil {
+				t.Fatal(err)
+			}
+			buf.WriteByte('}')
+		}
+		buf.WriteByte(']')
+		expected := `[{"name":"Bob","age":36},{"name":"Bob","age":36}]`
+		if got := buf.String(); expected != got {
+			t.Fatalf("\nexpected: %q\ngot:      %q\n", expected, got)
+		}
+	})
+
 	t.Run("EncodeSorted", func(t *testing.T) {
 		var buf Buffer
 		err := buf.EncodeSorted(map[string]any{"a": 45, "f": false, "b": 2, "d": "foo", "e": []int{5, 9, 2}, "c": true})

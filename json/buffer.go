@@ -17,15 +17,16 @@ import (
 
 // Buffer embeds a bytes.Buffer, providing all its methods along with
 // additional functionality. It includes [Buffer.Encode], [Buffer.EncodeIndent],
-// [Buffer.EncodeQuoted], and [Buffer.EncodeSorted] for appending JSON-encoded
-// values to the buffer. Additionally, the [Buffer.Value] method allows copying
-// the unread portion of the buffer as a Value.
+// [Buffer.EncodeKeyValue], [Buffer.EncodeQuoted], and [Buffer.EncodeSorted] for
+// appending JSON-encoded values to the buffer. Additionally, the [Buffer.Value]
+// method allows copying the unread portion of the buffer as a Value.
 //
 // The zero value of Buffer represents an empty buffer, ready for use.
 type Buffer struct {
 	buffer
 	enc         jsontext.Encoder
 	text        textMarshaler
+	kvOff       int
 	initialized bool
 	indent      bool
 }
@@ -35,19 +36,19 @@ func NewBuffer() *Buffer {
 	return &Buffer{}
 }
 
-// Encode appends the JSON encoding of in to the buffer.
+// Encode appends the JSON encoding of value to the buffer.
 // It returns an error if the value cannot be encoded as JSON.
-func (b *Buffer) Encode(in any) error {
+func (b *Buffer) Encode(value any) error {
 	if !b.initialized || b.indent {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
 		b.indent = false
 	}
-	err := json.MarshalEncode(&b.enc, in)
+	err := json.MarshalEncode(&b.enc, value)
 	if err != nil {
 		return err
 	}
-	b.Truncate(b.Len() - 1)
+	b.buffer.Truncate(b.Len() - 1)
 	return nil
 }
 
@@ -63,56 +64,115 @@ func (b *Buffer) Encode(in any) error {
 //
 // It panics if the prefix or indent strings contain characters other than
 // spaces or tabs (' ' or '\t').
-func (b *Buffer) EncodeIndent(in any, prefix, indent string) error {
+func (b *Buffer) EncodeIndent(value any, prefix, indent string) error {
 	if !b.initialized || !b.indent {
 		b.enc.Reset(&b.buffer, jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent))
 		b.initialized = true
 		b.indent = true
 	}
-	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
+	err := json.MarshalEncode(&b.enc, value, json.Deterministic(true))
 	if err != nil {
 		return err
 	}
-	b.Truncate(b.Len() - 1)
+	b.buffer.Truncate(b.Len() - 1)
 	return nil
 }
 
+// EncodeKeyValue appends the JSON encoding of a key-value pair to the buffer.
+// If the previous write to the buffer was made by EncodeKeyValue, a comma is
+// appended before the key-value pair.
+//
+// Example usage:
+//
+//	b.WriteByte('{')
+//	_ = b.EncodeKeyValue("name", name)
+//	_ = b.EncodeKeyValue("age", age)
+//	b.WriteByte('}')
+func (b *Buffer) EncodeKeyValue(key string, value any) error {
+	if !b.initialized || b.indent {
+		b.enc.Reset(&b.buffer)
+		b.initialized = true
+		b.indent = false
+	}
+	if b.kvOff == b.Cap()-b.Available() {
+		b.WriteByte(',')
+	}
+	err := json.MarshalEncode(&b.enc, key)
+	if err != nil {
+		return err
+	}
+	b.buffer.Truncate(b.Len() - 1)
+	b.buffer.WriteByte(':')
+	if value == nil {
+		b.WriteString("null")
+	} else {
+		err = json.MarshalEncode(&b.enc, value)
+		if err != nil {
+			return err
+		}
+		b.buffer.Truncate(b.Len() - 1)
+	}
+	b.kvOff = b.Cap() - b.Available()
+	return nil
+}
+
+// EncodeQuoted is like [Encode] but wraps the resulting JSON in quotes as
 // EncodeQuoted is like [Encode] but wraps the resulting JSON in quotes as a
 // JSON string.
-func (b *Buffer) EncodeQuoted(in any) error {
+func (b *Buffer) EncodeQuoted(value any) error {
 	if !b.initialized || b.indent {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
 		b.indent = false
 	}
 	n1 := b.Len()
-	err := json.MarshalEncode(&b.enc, in)
+	err := json.MarshalEncode(&b.enc, value)
 	if err != nil {
 		return err
 	}
 	n2 := b.Len() - 1
-	b.Truncate(n1)
+	b.buffer.Truncate(n1)
 	p := b.AvailableBuffer()
 	b.text = append(b.text, p[:n2-n1]...)
 	_ = json.MarshalEncode(&b.enc, b.text)
-	b.Truncate(b.Len() - 1)
+	b.buffer.Truncate(b.Len() - 1)
 	b.text = b.text[:0]
 	return nil
 }
 
 // EncodeSorted is like [Encode] but sorts object keys.
-func (b *Buffer) EncodeSorted(in any) error {
+func (b *Buffer) EncodeSorted(v any) error {
 	if !b.initialized || b.indent {
 		b.enc.Reset(&b.buffer)
 		b.initialized = true
 		b.indent = false
 	}
-	err := json.MarshalEncode(&b.enc, in, json.Deterministic(true))
+	err := json.MarshalEncode(&b.enc, v, json.Deterministic(true))
 	if err != nil {
 		return err
 	}
-	b.Truncate(b.Len() - 1)
+	b.buffer.Truncate(b.Len() - 1)
 	return nil
+}
+
+// Reset resets the buffer, making it empty, while retaining the underlying
+// storage for future writes.
+// It is functionally equivalent to calling [Buffer.Truncate](0).
+func (b *Buffer) Reset() {
+	b.buffer.Reset()
+	b.enc.Reset(&b.buffer)
+	b.initialized = true
+	b.indent = false
+	b.kvOff = 0
+}
+
+// Truncate truncates the buffer to the first n unread bytes, retaining the
+// underlying allocated storage for future use.
+// It panics if n is negative or greater than the current length of the buffer.
+func (b *Buffer) Truncate(n int) {
+	b.buffer.Truncate(n)
+	b.indent = false
+	b.kvOff = 0
 }
 
 // Value returns a copy of the unread portion of the buffer as a Value.
