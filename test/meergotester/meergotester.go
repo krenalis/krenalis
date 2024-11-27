@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -152,6 +153,13 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		if err != nil {
 			t.Fatal(err)
 		}
+		{
+			// TODO(Gianluca): this is a workaround for
+			// https://github.com/meergo/meergo/issues/1172.
+			if runtime.GOOS == "windows" && postgresHost == "localhost" {
+				postgresHost = "127.0.0.1"
+			}
+		}
 		testsSettings.Database.Host = postgresHost
 		testsSettings.Database.Port = postgresPort.Int()
 	}
@@ -181,6 +189,13 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
 		if err != nil {
 			t.Fatal(err)
+		}
+		{
+			// TODO(Gianluca): this is a workaround for
+			// https://github.com/meergo/meergo/issues/1172.
+			if runtime.GOOS == "windows" && warehouseHost == "localhost" {
+				warehouseHost = "127.0.0.1"
+			}
 		}
 		testsSettings.Warehouse.Host = warehouseHost
 		testsSettings.Warehouse.Port = warehousePort.Int()
