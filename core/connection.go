@@ -483,7 +483,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		SchedulePeriod:           60,
 		InSchema:                 inSchema,
 		OutSchema:                action.OutSchema,
-		Transformation:           toStateTransformation(action.Transformation),
+		Transformation:           toStateTransformation(action.Transformation, inSchema, action.OutSchema),
 		Query:                    action.Query,
 		Connector:                action.Connector,
 		Path:                     action.Path,
@@ -497,11 +497,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
-	}
-	if m := action.Transformation.Mapping; m != nil {
-		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, false, nil)
-		n.Transformation.InProperties = m.InProperties()
-		n.Transformation.OutProperties = m.OutProperties()
 	}
 
 	// Add the filter to the notification.

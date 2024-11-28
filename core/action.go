@@ -388,7 +388,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Enabled:                  action.Enabled,
 		InSchema:                 inSchema,
 		OutSchema:                action.OutSchema,
-		Transformation:           toStateTransformation(action.Transformation),
+		Transformation:           toStateTransformation(action.Transformation, inSchema, action.OutSchema),
 		Query:                    action.Query,
 		Connector:                action.Connector,
 		Path:                     action.Path,
@@ -402,11 +402,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
 		ExportMode:               (*state.ExportMode)(action.ExportMode),
 		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
-	}
-	if m := action.Transformation.Mapping; m != nil {
-		m, _ := mappings.New(n.Transformation.Mapping, n.InSchema, n.OutSchema, false, nil)
-		n.Transformation.InProperties = m.InProperties()
-		n.Transformation.OutProperties = m.OutProperties()
 	}
 
 	// Add the filter to the notification.
@@ -1000,28 +995,33 @@ func shouldReload(a *state.Action, n *state.SetAction) bool {
 }
 
 // toStateTransformation converts a transformation to a state.Transformation
-// value. It does not populate the input and output properties in case of
-// mapping. It does not perform a deep copy and may modify the passed
+// value. It does not perform a deep copy and may modify the passed
 // transformation.
-func toStateTransformation(transformation Transformation) state.Transformation {
+func toStateTransformation(transformation Transformation, inSchema, outSchema types.Type) state.Transformation {
 	var tr state.Transformation
-	if function := transformation.Function; function != nil {
-		slices.Sort(function.InProperties)
-		slices.Sort(function.OutProperties)
-		tr.Function = &state.TransformationFunction{
-			Source: function.Source,
+	if m := transformation.Mapping; m != nil {
+		m, _ := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
+		tr = state.Transformation{
+			Mapping:       transformation.Mapping,
+			InProperties:  m.InProperties(),
+			OutProperties: m.OutProperties(),
 		}
-		switch function.Language {
-		case "JavaScript":
-			tr.Function.Language = state.JavaScript
-		case "Python":
-			tr.Function.Language = state.Python
+	} else if fn := transformation.Function; fn != nil {
+		slices.Sort(fn.InProperties)
+		slices.Sort(fn.OutProperties)
+		language := state.JavaScript
+		if fn.Language == "Python" {
+			language = state.Python
 		}
-		tr.Function.PreserveJSON = function.PreserveJSON
-		tr.InProperties = function.InProperties
-		tr.OutProperties = function.OutProperties
-	} else {
-		tr.Mapping = transformation.Mapping
+		tr = state.Transformation{
+			Function: &state.TransformationFunction{
+				Source:       fn.Source,
+				Language:     language,
+				PreserveJSON: fn.PreserveJSON,
+			},
+			InProperties:  fn.InProperties,
+			OutProperties: fn.OutProperties,
+		}
 	}
 	return tr
 }
