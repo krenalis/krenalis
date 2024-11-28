@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}JavaScript SDK Methods{% end %}
+{% Article %}
+
 # JavaScript SDK Methods
 
 The JavaScript SDK is equipped to handle all essential event calls, including `page`, `screen`, `track`, `identify`, and `group`. Furthermore, it offers functionalities to efficiently manage sessions and user/group information.

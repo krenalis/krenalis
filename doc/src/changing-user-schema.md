@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Changing User Schema{% end %}
+{% Article %}
+
 # Changing User Schema
 
 Once the user model is created, it can be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}OAuth{% end %}
+{% Article %}
+
 # OAuth
 
 For applications that need OAuth authentication to access an account's information, Meergo provides an OAuth implementation for connectors. The connector only needs to provide some information during registration and implement a method to retrieve the app's account that was connected through authentication.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Data Validation{% end %}
+{% Article %}
+
 # Data Validation
 
 Data validation in Meergo occurs in various scenarios, ensuring accuracy and consistency throughout the data lifecycle. Whether collecting user data, transforming it, storing it in a data warehouse, or sending it to a destination location, Meergo validates the data against the relevant schema to maintain data integrity and quality.

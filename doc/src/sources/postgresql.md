@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}PostgreSQL data source{% end %}
+{% Article %}
+
 # PostgreSQL data source
 
 The **PostgreSQL** data source allows you to read users from a PostgreSQL database and unify them as users within Meergo.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Snowflake data source{% end %}
+{% Article %}
+
 # Snowflake data source
 
 The **Snowflake** data source allows you to read users from a Snowflake database and unify them as users within Meergo.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Settings and UI{% end %}
+{% Article %}
+
 # Settings and UI
 
 ## Settings

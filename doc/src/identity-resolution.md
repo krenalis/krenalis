@@ -1,3 +1,6 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}The Identity Resolution{% end %}
+{% Article %}
 
 # The Identity Resolution
 

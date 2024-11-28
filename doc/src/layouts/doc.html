@@ -1,0 +1,171 @@
+{% import "/imports/meta.html" for Meta %}
+{% import highlight "/imports/highlight.html" %}
+<!doctype html>
+<html lang="en" class="article">
+<head>
+    {% title := Title() default "" %}
+    <title>{{ title }}</title>
+    {{ highlight.Style() }}
+    {{ Meta(title) }}
+</head>
+<body>
+{% macro item(path, name string) %}
+<a href="/{{ path }}" {% if path == filepath %} class="selected" {% else if hasPrefix(filepath, path+"/") %} class="expanded"{% end %}>{{ name }}</a>
+{% end %}
+<article>
+    <div class="wrap">
+        <aside>
+            <button onclick="$(this.parentNode).toggleClass('expanded')">In this section<span></span></button>
+            <nav>
+                <ul>
+                    <li>{{ item(`getting-started`, `Getting started`) }}</li>
+                    <li>
+                        {{ item(`connections`, `Connections`) }}
+                        <ul>
+                            <li>{{ item(`importing`, `Import`) }}</li>
+                            <li>{{ item(`exporting`, `Export`) }}</li>
+                        </ul>
+                    </li>
+                    <li>
+                        {{ item(`sources/`, `Sources`) }}
+                        <ul>
+                            <li>{{ item(`sources/dotnet`, `.NET`) }}</li>
+                            <li>{{ item(`sources/android`, `Android`) }}</li>
+                            <li>{{ item(`sources/csv`, `CSV`) }}</li>
+                            <li>{{ item(`sources/clickhouse`, `ClickHouse`) }}</li>
+                            <li>{{ item(`sources/excel`, `Excel`) }}</li>
+                            <li>{{ item(`sources/go`, `Go`) }}</li>
+                            <li>{{ item(`sources/http`, `HTTP`) }}</li>
+                            <li>{{ item(`sources/hubspot`, `HubSpot`) }}</li>
+                            <li>{{ item(`sources/json`, `JSON`) }}</li>
+                            <li>{{ item(`sources/javascript`, `JavaScript`) }}</li>
+                            <li>{{ item(`sources/java`, `Java`) }}</li>
+                            <li>{{ item(`sources/klaviyo`, `Klaviyo`) }}</li>
+                            <li>{{ item(`sources/mailchimp`, `Mailchimp`) }}</li>
+                            <li>{{ item(`sources/mysql`, `MySQL`) }}</li>
+                            <li>{{ item(`sources/nodejs`, `Node.js`) }}</li>
+                            <li>{{ item(`sources/parquet`, `Parquet`) }}</li>
+                            <li>{{ item(`sources/postgresql`, `PostgreSQL`) }}</li>
+                            <li>{{ item(`sources/python`, `Python`) }}</li>
+                            <li>{{ item(`sources/s3`, `S3`) }}</li>
+                            <li>{{ item(`sources/sftp`, `SFTP`) }}</li>
+                            <li>{{ item(`sources/snowflake`, `Snowflake`) }}</li>
+                            <li>{{ item(`sources/stripe`, `Stripe`) }}</li>
+                        </ul>
+                    </li>
+                    <li>
+                        {{ item(`destinations/`, `Destinations`) }}
+                        <ul>
+                            <li>{{ item(`destinations/csv`, `CSV`) }}</li>
+                            <li>{{ item(`destinations/clickhouse`, `ClickHouse`) }}</li>
+                            <li>{{ item(`destinations/excel`, `Excel`) }}</li>
+                            <li>{{ item(`destinations/google-analytics`, `Google Analytics`) }}</li>
+                            <li>{{ item(`destinations/http`, `HTTP`) }}</li>
+                            <li>{{ item(`destinations/hubspot`, `HubSpot`) }}</li>
+                            <li>{{ item(`destinations/json`, `JSON`) }}</li>
+                            <li>{{ item(`destinations/klaviyo`, `Klaviyo`) }}</li>
+                            <li>{{ item(`destinations/mailchimp`, `Mailchimp`) }}</li>
+                            <li>{{ item(`destinations/mysql`, `MySQL`) }}</li>
+                            <li>{{ item(`destinations/parquet`, `Parquet`) }}</li>
+                            <li>{{ item(`destinations/postgresql`, `PostgreSQL`) }}</li>
+                            <li>{{ item(`destinations/s3`, `S3`) }}</li>
+                            <li>{{ item(`destinations/sftp`, `SFTP`) }}</li>
+                            <li>{{ item(`destinations/snowflake`, `Snowflake`) }}</li>
+                            <li>{{ item(`destinations/stripe`, `Stripe`) }}</li>
+                        </ul>
+                    </li>
+                    <li>
+                        {{ item(`events`, `Events`) }}
+                        <ul>
+                            <li>{{ item(`events/page`, `page call`) }}</li>
+                            <li>{{ item(`events/screen`, `screen call`) }}</li>
+                            <li>{{ item(`events/track`, `track call`) }}</li>
+                            <li>{{ item(`events/identify`, `identify call`) }}</li>
+                            <li>{{ item(`events/group`, `group call`) }}</li>
+                            <li>{{ item(`events/session-tracking`, `Session Tracking`) }}</li>
+                        </ul>
+                    </li>
+                    <li>
+                        {{ item(`javascript-sdk`, `JavaScript SDK`) }}
+                        <ul>
+                            <li>{{ item(`javascript-sdk/getting-started`, `Getting Started`) }}</li>
+                            <li>{{ item(`javascript-sdk/options`, `Options`) }}</li>
+                            <li>{{ item(`javascript-sdk/methods`, `Methods`) }}
+                                <ul>
+                                    <li>{{ item(`javascript-sdk/user-class`, `User Class`) }}</li>
+                                    <li>{{ item(`javascript-sdk/group-class`, `Group Class`) }}</li>
+                                </ul>
+                            </li>
+                            <li>{{ item(`javascript-sdk/storage-locations`, `Storage Locations`) }}</li>
+                            <li>{{ item(`javascript-sdk/querystring-api`, `Querystring API`) }}</li>
+                            <li>{{ item(`javascript-sdk/faq`, `FAQ`) }}</li>
+                        </ul>
+                    </li>
+                    <li>
+                        {{ item(`android-sdk`, `Android SDK`) }}
+                        <ul>
+                            <li>{{ item(`android-sdk/getting-started`, `Getting Started`) }}</li>
+                            <li>{{ item(`android-sdk/options`, `Options`) }}</li>
+                            <li>{{ item(`android-sdk/methods`, `Methods`) }}</li>
+                        </ul>
+                    </li>
+                    <li>{{ item(`go-sdk`, `Go SDK`) }}</li>
+                    <li>{{ item(`node-sdk`, `Node SDK`) }}</li>
+                    <li>{{ item(`python-sdk`, `Python SDK`) }}</li>
+                    <li>{{ item(`csharp-sdk`, `C# SDK`) }}</li>
+                    <li>{{ item(`java-sdk`, `Java SDK`) }}</li>
+                    <li>{{ item(`data-validation`, `Data Validation`) }}</li>
+                    <li>{{ item(`filters`, `Filters`) }}</li>
+                    <li>{{ item(`changing-user-schema`, `Changing User Schema`) }}</li>
+                    <li>
+                        {{ item(`transformations`, `Transformations`) }}
+                        <ul>
+                            <li>{{ item(`mapping`, `Mapping`) }}</li>
+                            <li>{{ item(`javascript`, `JavaScript`) }}</li>
+                            <li>{{ item(`python`, `Python`) }}</li>
+                        </ul>
+                    </li>
+                    <li>
+                        {{ item(`identity-resolution`, `Identity Resolution`) }}
+                        <ul>
+                            <li>{{ item(`identity-resolution/allowed-types-for-identifiers`, `Allowed Types For Identifiers`) }}</li>
+                            <li>{{ item(`identity-resolution/anonymous-users-strategies`, `Anonymous Users Strategies`) }}</li>
+                        </ul>
+                    </li>
+                    <li>{{ item(`data-warehouse`, `Data Warehouse`) }}</li>
+                    <li>
+                        {{ item(`developers/`, `Developers`) }}
+                        <ul>
+                            <li>{{ item(`developers/data-types`, `Data Types`) }}</li>
+                            <li>{{ item(`developers/connectors`, `Connectors`) }}
+                                <ul>
+                                    <li>{{ item(`developers/connectors/app`, `App Connectors`) }}
+                                        <ul>
+                                            <li>{{ item(`developers/connectors/app/oauth`, `OAuth`) }}</li>
+                                            <li>{{ item(`developers/connectors/app/backoff`, `Backoff`) }}</li>
+                                            <li>{{ item(`developers/connectors/app/users-and-groups`, `Users and Groups`) }}</li>
+                                            <li>{{ item(`developers/connectors/app/dispatch-events`, `Dispatch Events`) }}</li>
+                                        </ul>
+                                    </li>
+                                    <li>{{ item(`developers/connectors/database`, `Database Connectors`) }}</li>
+                                    <li>{{ item(`developers/connectors/file`, `File Connectors`) }}</li>
+                                    <li>{{ item(`developers/connectors/file-storage`, `File Storage Connectors`) }}</li>
+                                    <li>{{ item(`developers/connectors/settings-and-ui`, `Settings and UI`) }}</li>
+                                    <li>{{ item(`developers/connectors/data-values`, `Data Values`) }}</li>
+                                </ul>
+                            </li>
+                            <li>{{ item(`developers/telemetry`, `Telemetry`) }}</li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="content">
+            {{ Article() }}
+        </div>
+    </div>
+</article>
+{{ render "/partials/footer.html" }}
+{{ highlight.JS() }}
+</body>
+</html>

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Transformations{% end %}
+{% Article %}
+
 # Transformations
 
 The **transformations** allow you to transform values that conform to one scheme (the input one to the transformation) into values that conform to another scheme (the output one).

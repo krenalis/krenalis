@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Users and Groups{% end %}
+{% Article %}
+
 # Users and Groups
 
 An app connector, if the related app allows it, can read, create, and update users and groups within the app, enabling Meergo to import and export users and groups. An app connector may support users only, groups only, or both.

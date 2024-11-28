@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Dispatching Events to Apps{% end %}
+{% Article %}
+
 # Dispatching Events to Apps
 
 Meergo makes it easy to dispatch events to apps that can receive them. This involves implementing the `AppEvents` interface within the connector and adjusting the `Schema` method to also provide schema information for event types.

@@ -1,0 +1,219 @@
+
+*, *:before, *:after { box-sizing: border-box; }
+
+body { background: #0a1922; font-family: muli,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif; line-height: 1.45; margin: 0; }
+
+a { text-decoration: none; }
+p { color: #444; line-height: 1.6; }
+li { color: #444; line-height: 2; }
+td { vertical-align: top; }
+dl { line-height: 1.60; margin: 1.25rem; }
+dd { margin-left: 1.5rem; }
+ol li { line-height: 2; }
+
+nav.top { align-items: center; display: flex; justify-content: flex-start; flex-wrap: wrap; height: 6rem; padding: 2rem 0; width: 100%; }
+nav.top .logo { margin-left: 3rem; }
+nav.top .logo img { vertical-align: bottom; }
+nav.top .version { color: #eee; font-size: .7rem; padding: 6px 0 0 .5rem; }
+nav.top .version:hover { color: #e5a62e; }
+nav.top ul { display: inline-block; list-style-type: none; margin: 0 .5em; vertical-align: middle; }
+nav.top li { display: inline-block; padding: 0 1rem; }
+nav.top ul a { color: #e2e9ee; }
+nav.top ul a:hover, nav.top ul a.selected { color: #f3ad20; }
+nav.top .github-logo { display: block; height: 1.8rem; margin-left: 1rem; width: 1.8rem; }
+nav.top .github-logo svg path { fill: #fff; }
+
+.content { margin: 0 20px; }
+
+.cols-2 { display: flex; flex-wrap: wrap; }
+.cols-2 > div { padding: 2em 5rem; width: 50%; }
+
+.index a { color: #fff; }
+.index footer ul li a { color: #e2e9ee; }
+
+.index nav.top .logo { cursor: default; pointer-events: none; }
+
+.index header { margin: 1.6rem; margin-top: 4.6rem; }
+.index header section { margin: 0 auto; text-align: center; }
+
+.index header .logo { max-width: 80%; width: 450px; height: auto; }
+.index header h2 { color: #fff; font-size: 2.6em; font-weight: 200; line-height: 1.2em; margin: 2.1rem auto; max-width: 850px; }
+.index header h3 { color: #ccc; font-size: 1.4em; font-weight: 200; letter-spacing: .02rem; line-height: 1.5em; margin: .5rem; }
+.index header .button { background: #e6a621; border-radius: 3px; color: #fff; cursor: pointer; display: inline-block; font-size: 1.1em; font-weight: bold; margin-top: 2rem; text-transform: uppercase; padding: .8rem 1.8rem .7em 1.8em; }
+.index header .button:hover { background: #f3ad20; border-radius: 3px; color: #fff6ED; cursor: pointer; display: inline-block; font-size: 1.1em; font-weight: bold; margin-top: 2rem; text-transform: uppercase; padding: .8rem 1.8rem .7em 1.8em; }
+
+.index body > section { background: #fff; margin: 4rem 0; padding: 2rem 4rem; }
+
+.index .why { color: #fff; margin-bottom: 2rem; }
+.index .why h2 { color: #e6a621; font-size: 1.8rem; font-weight: normal; }
+.index .why p { color: #333; font-size: 1.3rem; font-weight: 200; line-height: 1.9rem; }
+
+.index body > section.benchmark { background: #0a1922; color: #FFF; margin: 0; padding: 4.5rem 9rem; }
+.index body > section.benchmark > div:first-child { display: inline-block; margin-bottom: -40px; position: relative; z-index: 2; }
+.index body > section.benchmark > div:first-child h2 { margin-top: 0; }
+.index body > section.benchmark > div:first-child a { color: #ebb951; float: right; font-size: .9em; }
+.index body > section.benchmark > div:first-child a:hover { color: #ffd858; }
+
+.wrap { margin: 0 auto; max-width: 1280px; }
+
+.article article { background: #fff; min-height: 100vh; overflow: hidden; }
+.article article > .wrap { display: flex; font-size: 1rem; padding: 0 1rem; }
+.article aside { margin-right: 3rem; margin-top: 1.80rem; }
+.article aside button { display: none; }
+.article aside ul { list-style-type: none; padding: 0; }
+.article aside > ul { margin-top: 3rem; }
+.article aside li > ul { padding-left: 1rem; }
+.article aside li { line-height: 1.85; white-space: nowrap; }
+.article aside ul a { display: block; font-size: 1rem; margin: 0.1rem 0; padding: 0.3rem 0.6rem; }
+.article aside ul a, .article aside ul a:visited { color: #333; }
+.article aside ul a:hover, .article aside ul a.expanded { background: #f8f6f0; border-radius: 3px; }
+.article aside ul a.selected { background: #4f46e5; border-radius: 3px; color: #fff6ed; }
+.article .content { flex-grow: 1; margin: 0 0 4em 0; min-width: 0; }
+.article .content a, .article .content a:visited { color: #5f943d; }
+.article h1 { color: #0a1922; font-size: 2.6rem; }
+.article p + h1 { font-size: 2.2rem; margin-top: -.7em; }
+.article h2 { color: #0a1922; font-size: 1.8rem; }
+.article h3 { color: #0a1922; margin-top: 40px; }
+.article h4 { color: #666; font-weight: normal; }
+.article pre { background: #f4f4fb; border-radius: 3px; padding: 1rem; overflow-x: auto; }
+.article code { background: #f4f4fb; border-radius: 2px; color: #454567; padding: .2rem .5rem; }
+.article pre code { padding: 0; }
+.article blockquote { background: #f9f9f9; border-left: 5px solid #5954ab; border-radius: 3px; margin: 0; padding: .5rem 1rem; }
+.article blockquote p { color: #424063; }
+.article blockquote > p + div pre { background: transparent; margin: 0; padding-left: 0; padding-top: 0; }
+.article blockquote div + p { margin-top: 0; }
+.article img { max-width: 100%; }
+
+#edit-on-github { font-size: .9rem; font-weight: bold; margin-top: 4rem; text-align: right; }
+#edit-on-github a { color: #777; }
+#edit-on-github a:hover { color: #222; }
+
+.article pre + .result { border-top-left-radius: 0; border-top: 1px solid #dfdad3; border-top-right-radius: 0; margin-top: -17px; padding-top: 16px; }
+
+.article table { border-left: 1px solid #e6e6e6; border-spacing: 0; border-top: 1px solid #E6E6E6; margin: 20px 0; width: 100%; }
+.article table td, .article table th { border-bottom: 1px solid #e6e6e6; border-right: 1px solid #e6e6e6; font-weight: normal; padding: 12px; text-align: left; vertical-align: top; }
+
+.article .operators table td:first-child { text-align: center; width: 3rem; }
+.article .data-type-operators table td:first-child { width: 7rem; }
+.article .data-type-operators table td:last-child { word-spacing: .5rem; }
+.article .data-type-false table td:first-child { width: 6rem; }
+.article .assignments table td:first-child { width: 7rem; }
+
+#what-is-meergo + p { color: #777; font-size: 1.2em; }
+.get-meergo{ background: #f9f6f1; font-family: monospace; font-weight: bold; padding: 1rem; }
+.get-meergo .meergo-path { color: #d18c00; }
+.get-meergo:before { content: '$'; padding-right: .5rem; }
+
+.page-support h1 { margin: 1em auto 1em auto; text-align: center; }
+.page-support .support { display: flex; font-size: 1rem; margin: 0 auto; max-width: 800px;  }
+.page-support .support > div { flex-basis: 0; flex-grow: 1; padding: 0 3rem; text-align: center; }
+.page-support .support > div:first-child { border-right: 1px solid #aaa; }
+.page-support .support h2 { margin-bottom: 0; }
+.page-support .support h2 + p { color: #666; margin-bottom: 1rem; margin-top: 0; }
+.page-support .support .channel { align-items: center; color: #000; display: flex; margin: 1.5rem 0 0 1rem; width: 100%; }
+.page-support .support .channel > :first-child { text-align: center; width: 6rem; }
+.page-support .support .channel a { color: #222; }
+.page-support .support .channel.github-discussions svg { height: 5rem; width: 5rem; }
+
+code.language-jinja {
+    color: rgb(136, 136, 136);
+}
+
+.hljs-attribute, .hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hljs-name, .hljs-selector-tag, hljs-section, .hljs-title { font-weight: normal; }
+pre code { font-size: .9rem; }
+
+footer { border-top: 1px solid #dcdee0; }
+.index footer { border-top: none; }
+footer > div { display: flex; padding-top: .6rem; }
+footer > div > * { align-self: flex-end; }
+footer ul { display: flex; flex: 1; flex-wrap: wrap; list-style: none; }
+footer ul li { padding: 0 1rem; }
+footer ul li a { color: #e2e9ee; }
+footer ul li a:hover { color: #e6a62f; }
+footer .company { flex: 2; text-align: right; }
+
+@media screen and (max-width:1152px) {
+    .index .benchmark .allocations { top: 5rem; }
+}
+
+@media screen and (max-width:1023px) {
+    nav.top { height: auto; padding: 1rem 0; }
+    nav.top ul  { margin-bottom: 0; }
+    nav.top li { padding: .4rem 1rem; }
+    nav.top li.playground { display: none; }
+    nav.top .logo { margin-left: 1rem; font-size: 0; }
+    nav.top .github-logo { position: absolute; right: .8rem; top: 1rem; }
+
+    .index body > section.benchmark { padding: 3rem 5rem 1rem 5rem; }
+    .index body > section.benchmark h2 span { display: block; font-size: 1.5rem; }
+    .page-benchmarks section.benchmark { padding: 10px 30px 20px 30px; }
+    .benchmark h2 { font-size: 1.5rem; }
+    .benchmark .allocations { position: static; margin-top: 1.5rem; font-size: .8em; }
+    .benchmark .bar { max-width: 80%; }
+    .benchmark span.time { font-size: 14px; }
+
+    h1, .article h1 { font-size: 2rem; }
+    .index .why h2 { font-size: 1.5rem; }
+    .index body > section.benchmark > div:first-child    { display: block; margin-bottom: 0; position: static; }
+    .index body > section.benchmark > div:first-child h2 { font-size: 1.8rem; }
+    .index body > section.benchmark > div:first-child a  { float: none; }
+
+    pre code { font-size: .8rem; }
+
+    .page-support .support { display: block; }
+    .page-support .support > div { margin: 2rem 0; }
+    .page-support .support > div:first-child { border: none; }
+    .page-support .support .channel { margin-left: 0; }
+
+}
+
+@media only screen and (max-width: 767px) {
+
+    nav.top ul { margin: 1rem auto; padding: 0; text-align: center; }
+
+    .index header { margin: 1rem; }
+    .index header .logo { display: none; }
+    .index header section { width: auto; }
+    .index header h1 { font-size: 5rem; }
+    .index header h2 { font-size: 1.6em; }
+    .index header h3 { font-size: 1.2em; }
+
+    .index body > section { padding: 0 2rem; }
+
+    .cols-2 > div { width: auto; }
+
+    .index body > section.benchmark { padding: 1rem; }
+    .benchmark, .benchmark + .benchmark { padding: 0; width: auto; }
+
+    .article aside { margin: 1rem 0; }
+    .article aside button { background: #f4f6f8; border: 0; cursor: pointer; display: block; font-size: 14px; font-weight: bold; line-height: 19px; padding-right: 40px; padding: 12px; text-align: left; width: 100%; }
+    .article 
+    .article aside nav { display: none; padding: 0 1rem; }
+    .article aside.expanded nav { display: block; }
+    .article aside ul a { font-size: .9rem; }
+    .article article > .wrap { display: block; padding-top: 1em; }
+
+    .get-meergo { font-size: .9rem; }
+
+    footer { font-size: 0.8rem; text-align: center; }
+    footer ul { padding-left: 0; }
+
+}
+
+span.action {
+    background: #4f46e5;
+    border-radius: 12px;
+    padding: 2px 12px 3px 13px;
+    margin-right: 2px;
+    font-size: 13px;
+}
+
+span.action::after {
+    content: "Action";
+    color: #FFF;
+}
+
+h3 span.action {
+    position: relative;
+    top: -2px;
+}

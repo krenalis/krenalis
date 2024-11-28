@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Google Analytics data destination{% end %}
+{% Article %}
+
 # Google Analytics data destination
 
 The **Google Analytics** data destination allows you to send the received events to Google Analytics.

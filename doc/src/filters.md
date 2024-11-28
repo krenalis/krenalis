@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Filters{% end %}
+{% Article %}
+
 # Filters
 
 Filters allow you to filter users and events processed by an action. For a source action, you can filter the events received or the users read. For a destination action, you can filter the received events to be sent to the destination and the users to be exported.

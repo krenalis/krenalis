@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Meergo Node SDK{% end %}
+{% Article %}
+
 # Meergo Node SDK
 
 The Meergo Node SDK lets you send customer event data from your Node applications to your specified destinations.

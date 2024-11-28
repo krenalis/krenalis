@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}CSV data source{% end %}
+{% Article %}
+
 # CSV data source
 
 The CSV data source allows you to import user data from a CSV (Comma-Separated Values) file, which you can then unify as users within Meergo.

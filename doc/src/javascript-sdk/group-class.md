@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Group Class{% end %}
+{% Article %}
+
 # Group Class
 
 The `Group` class represents a group. An instance representing the current group is returned calling  the [`group`](methods.md#group) method of `Analytics`. For example:

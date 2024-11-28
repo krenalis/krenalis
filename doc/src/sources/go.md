@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Go data source{% end %}
+{% Article %}
+
 # Go data source
 
 The **Go** data source is designed for applications built with the Go language that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Go application, including user information. Once events are received, you can:

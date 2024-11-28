@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Querystring API{% end %}
+{% Article %}
+
 # Querystring API
 
 The Querystring API of the SDK enables the activation of tracking and identification events using the URL query string. This practical feature is particularly valuable for monitoring email click-throughs, social media clicks, and digital advertising engagements.

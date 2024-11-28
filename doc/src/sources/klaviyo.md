@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Klaviyo data source{% end %}
+{% Article %}
+
 # Klaviyo data source
 
 The **Klaviyo** data source allows you to read profiles from Klaviyo and then unify them as users in Meergo.

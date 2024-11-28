@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Data Types{% end %}
+{% Article %}
+
 # Data Types
 
 When defining data types and schemas in a connector, use the functions from the `types` package:

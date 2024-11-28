@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}SFTP Data Destination{% end %}
+{% Article %}
+
 # SFTP Data Destination
 
 The SFTP data destination allows you to export unified users (i.e., users consolidated through identity resolution) in various file formats, such as CSV or Excel, and send them directly to an SFTP server. The files are uploaded securely using the SFTP protocol.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Screen Call{% end %}
+{% Article %}
+
 # Screen Call
 
 The screen call enables you to capture instances when a user views a screen and record associated properties or details about that particular screen.

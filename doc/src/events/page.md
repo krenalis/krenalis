@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Page Call{% end %}
+{% Article %}
+
 # Page Call
 
 The page call allows you to capture when a user views a page on your website, including any extra details about that specific page.

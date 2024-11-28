@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Java data source{% end %}
+{% Article %}
+
 # Java data source
 
 The **Java** data source is designed for applications built on the Java platform that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Java application, including user information. Once events are received, you can:

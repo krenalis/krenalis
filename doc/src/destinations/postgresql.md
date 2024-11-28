@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}PostgreSQL data destination{% end %}
+{% Article %}
+
 # PostgreSQL data destination
 
 The **PostgreSQL** data destination allows you to write the unified users into a PostgreSQL table and keep it synchronized.

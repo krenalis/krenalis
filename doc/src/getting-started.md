@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Getting started{% end %}
+{% Article %}
+
 # Getting started
 
 In this section you will find indications and instructions for getting started with the use of Meergo.

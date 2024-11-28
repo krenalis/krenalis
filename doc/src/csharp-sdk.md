@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Meergo C# SDK{% end %}
+{% Article %}
+
 # Meergo C# SDK
 
 The Meergo C# SDK lets you send customer event data from your .NET applications to your specified destinations.

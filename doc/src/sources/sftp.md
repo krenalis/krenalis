@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}SFTP Data Source{% end %}
+{% Article %}
+
 # SFTP Data Source
 
 The SFTP data source allows you to import users from files stored on an SFTP server. You can unify this data as users within Meergo by importing files in various formats, such as CSV, Excel, and others.

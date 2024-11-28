@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Android data source{% end %}
+{% Article %}
+
 # Android data source
 
 The **Android** data source allows you to receive events, including user information, from an Android app. The received events can be:

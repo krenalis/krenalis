@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Connections{% end %}
+{% Article %}
+
 # Connections
 
 A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.

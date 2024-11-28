@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Parquet data source{% end %}
+{% Article %}
+
 # Parquet data source
 
 The Parquet data source allows you to import user data from Parquet files, which can then be unified as users within Meergo.

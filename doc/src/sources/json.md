@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}JSON data source{% end %}
+{% Article %}
+
 # JSON data source
 
 The JSON data source allows you to import user data from a JSON file, which you can then unify into users within Meergo.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Meergo Python SDK{% end %}
+{% Article %}
+
 # Meergo Python SDK
 
 The Meergo Python SDK lets you send customer event data from your Python applications to your specified destinations.

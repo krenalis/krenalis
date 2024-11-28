@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}CSV data destination{% end %}
+{% Article %}
+
 # CSV data destination
 
 The CSV data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a CSV (Comma-Separated Values) file and save it into a storage, such as S3 and SFTP.

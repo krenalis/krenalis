@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Data Values{% end %}
+{% Article %}
+
 # Data Values
 
 When representing user, group, and event data in a connector, these are mapped to specific Go types based on the data type. For example, in an export, a `DateTime` value is represented in Go as `time.Time`, and a `Text` value is represented as a `string`.

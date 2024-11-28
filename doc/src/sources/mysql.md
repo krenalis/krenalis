@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}MySQL data source{% end %}
+{% Article %}
+
 # MySQL data source
 
 The **MySQL** data source allows you to read users from a MySQL database and unify them as users within Meergo.

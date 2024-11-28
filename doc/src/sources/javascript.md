@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}JavaScript data source{% end %}
+{% Article %}
+
 # JavaScript data source
 
 The **JavaScript** data source allows you to receive real-time events, including user information, from a website to a web application. The received events can be:

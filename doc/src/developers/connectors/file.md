@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}File Connectors{% end %}
+{% Article %}
+
 # File Connectors
 
 File connectors allow to read and write specific types of files such as Excel, CSV, or Parquet files.

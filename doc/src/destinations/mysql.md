@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}MySQL data destination{% end %}
+{% Article %}
+
 # MySQL data destination
 
 The **MySQL** data destination allows you to write the unified users into a MySQL table and keep it synchronized.

@@ -1,3 +1,6 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Options{% end %}
+{% Article %}
 
 # Options
 

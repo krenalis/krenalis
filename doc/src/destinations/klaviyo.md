@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Klaviyo data destination{% end %}
+{% Article %}
+
 # Klaviyo data destination
 
 The **Klaviyo** data destination allows you to add and update unified Meergo users in Klaviyo as profiles and allows to send the received events to Klaviyo.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}ClickHouse data source{% end %}
+{% Article %}
+
 # ClickHouse data source
 
 The **ClickHouse** data source allows you to read users from a ClickHouse database and unify them as users within Meergo.

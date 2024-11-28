@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Storage Locations{% end %}
+{% Article %}
+
 # Storage Locations
 
 The JavaScript SDK is designed to store user data directly within the user's browser. Through the [`storage`](options.md#storage-option) option, you can control which storage locations the data will be saved to, or choose not to save them at all. This capability is particularly important in ensuring compliance with privacy regulations, as selecting the appropriate storage method can significantly impact the level of user data protection and privacy afforded by the application.

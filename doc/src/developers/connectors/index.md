@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Build a Connector{% end %}
+{% Article %}
+
 # Build a Connector
 
 Meergo is easy to add new features to through connectors. Connectors are like plugins that help Meergo work with different kinds of programs and tools. These include:

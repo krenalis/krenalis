@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}.NET data source{% end %}
+{% Article %}
+
 # .NET data source
 
 The **.NET** data source is designed for applications built on the .NET platform that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based .NET application, including user information. Once events are received, you can:

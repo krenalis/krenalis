@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}ClickHouse data destination{% end %}
+{% Article %}
+
 # ClickHouse data destination
 
 The **ClickHouse** data destination allows you to write the unified users into a ClickHouse table and keep it synchronized.

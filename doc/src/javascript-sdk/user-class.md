@@ -1,4 +1,8 @@
- # User Class
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}User Class{% end %}
+{% Article %}
+
+# User Class
 
 The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods.md#user) method of `Analytics`. For example:
 

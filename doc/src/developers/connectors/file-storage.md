@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}File Storage Connectors{% end %}
+{% Article %}
+
 # File Storage Connectors
 
 File storage connectors allow to read and write file content on a file storage such as SFTP, HTTP and S3.

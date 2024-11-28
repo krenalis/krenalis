@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Mailchimp data destination{% end %}
+{% Article %}
+
 # Mailchimp data destination
 
 The **Mailchimp** data destination allows you to add and update unified Meergo users in Mailchimp as contacts.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}HubSpot data destination{% end %}
+{% Article %}
+
 # HubSpot data destination
 
 The **HubSpot** data destination allows you to add and update unified Meergo users in HubSpot as contacts.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Destinations{% end %}
+{% Article %}
+
 # Destinations
 
 **Destinations**, also known as **data destinations**, in Meergo are the tools or platforms where the data collected by Meergo is sent. When a company gathers information about customers and their activities, like visiting a website or making a purchase, this data is automatically sent to different platforms (applications, data warehouses, data lakes) for purposes such as behavior analysis, sending personalized emails, or managing advertising campaigns.

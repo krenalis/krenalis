@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Stripe data source{% end %}
+{% Article %}
+
 # Stripe data source
 
 The **Stripe** data source allows you to read customers from Stripe and then unify them as users in Meergo.

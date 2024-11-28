@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Sources{% end %}
+{% Article %}
+
 # Sources
 
 **Sources**, also known as **data sources**, are where **Meergo** collects information about customers and events. They form the foundation for analyzing your customer data. Sources can include websites, mobile apps, servers, databases, files, and cloud services, such as marketing tools or CRM systems.

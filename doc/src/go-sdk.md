@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Meergo Go SDK{% end %}
+{% Article %}
+
 # Meergo Go SDK
 
 The Meergo Go SDK lets you send customer event data from your Go applications to your specified destinations.

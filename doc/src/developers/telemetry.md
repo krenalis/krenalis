@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Telemetry{% end %}
+{% Article %}
+
 # Telemetry
 
 Meergo supports the transmission of telemetry data to an **OpenTelemetry collector** of your choice. This capability allows developers to send traces, metrics, and logs, which are essential for feature development and performance monitoring. By leveraging telemetry, you can gain insights into the behavior of Meergo, identify bottlenecks, and enhance overall system performance.

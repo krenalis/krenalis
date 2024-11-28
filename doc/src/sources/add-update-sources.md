@@ -1,3 +1,6 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Add and update sources{% end %}
+{% Article %}
 
 # Add and update sources
 

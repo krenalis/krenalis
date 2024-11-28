@@ -1,11 +1,12 @@
 # Documentation
 
-To navigate the documentation, download the latest release of mdBook
+To navigate the documentation, download the latest release of Scriggo
 
-https://github.com/rust-lang/mdBook/releases
+https://github.com/open2b/scriggo/releases
 
-and start the mdbook CLI:
+and start the Scriggo command in the `src` directory:
 
 ```console
-mdbook serve doc --open
+$ cd doc/src 
+$ scriggo serve
 ```

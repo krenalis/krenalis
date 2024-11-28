@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Mailchimp data source{% end %}
+{% Article %}
+
 # Mailchimp data source
 
 The **Mailchimp** data source allows you to read contacts from a Mailchimp list and then unify them as users in Meergo.

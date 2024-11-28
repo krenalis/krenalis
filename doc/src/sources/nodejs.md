@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Node.js data source{% end %}
+{% Article %}
+
 # Node.js data source
 
 The **Node.js** data source is designed for applications built on the Node.js platform that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Node.js application, including user information. Once events are received, you can:

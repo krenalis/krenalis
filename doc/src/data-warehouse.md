@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Data Warehouse{% end %}
+{% Article %}
+
 # Data Warehouse
 
 ## Supported types

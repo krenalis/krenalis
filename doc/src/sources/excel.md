@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Excel data source{% end %}
+{% Article %}
+
 # Excel data source
 
 The Excel data source allows you to import user data from an Excel file, which you can then unify into users within Meergo.

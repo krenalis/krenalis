@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Session Tracking{% end %}
+{% Article %}
+
 # Session Tracking
 
 A user session is a series of interactions that a user has with a website or application within a specific time frame. All events recorded within a session will be associated with the same Session ID. Meergo provides the necessary feature to manage user sessions.

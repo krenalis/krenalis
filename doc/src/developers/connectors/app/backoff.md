@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Backoff{% end %}
+{% Article %}
+
 # Backoff
 
 App connectors can use backoff policies to manage retries of idempotent HTTP requests based on the app's response status code.

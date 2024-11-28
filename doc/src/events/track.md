@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Track Call{% end %}
+{% Article %}
+
 # Track Call
 
 The track call is used to send specific events or actions, and associated properties, that occur when users interact with your application or website.

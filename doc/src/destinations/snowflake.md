@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Snowflake data destination{% end %}
+{% Article %}
+
 # Snowflake data destination
 
 The **Snowflake** data destination allows you to write the unified users into a Snowflake table and keep it synchronized.

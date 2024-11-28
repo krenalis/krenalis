@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}JSON data destination{% end %}
+{% Article %}
+
 # JSON data destination
 
 The JSON data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a JSON file and save it to a storage location, such as S3 or SFTP.

@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Android SDK{% end %}
+{% Article %}
+
 # Android SDK
 
 The Android SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their Android applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.

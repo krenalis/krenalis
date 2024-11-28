@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Python data source{% end %}
+{% Article %}
+
 # Python data source
 
 The **Python** data source is designed for applications built with Python that require integration with Meergo for event tracking and user data management. This data source enables you to receive events from a server-based Python application, including user information. Once events are received, you can:

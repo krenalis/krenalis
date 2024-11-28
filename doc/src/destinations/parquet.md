@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Parquet data destination{% end %}
+{% Article %}
+
 # Parquet data destination
 
 The Parquet data destination allows you to export unified users (i.e., users consolidated through identity resolution) into a Parquet file and save it to a storage location, such as S3 or SFTP.

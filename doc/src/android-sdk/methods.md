@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Android SDK Methods{% end %}
+{% Article %}
+
 # Android SDK Methods
 
 The Android SDK is equipped to handle all essential event calls, including `screen`, `track`, `identify`, and `group`. Furthermore, it offers functionalities to efficiently manage session information.

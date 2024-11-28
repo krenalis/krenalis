@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Stripe data destination{% end %}
+{% Article %}
+
 # Stripe data destination
 
 The **Stripe** data destination allows you to add and update unified Meergo users in Stripe as customers.

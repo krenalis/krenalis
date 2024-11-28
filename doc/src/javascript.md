@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}JavaScript{% end %}
+{% Article %}
+
 # JavaScript
 
 This is how a JavaScript transform function looks like:

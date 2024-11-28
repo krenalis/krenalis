@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Meergo Java SDK{% end %}
+{% Article %}
+
 # Meergo Java SDK
 
 The Meergo Java SDK lets you send customer event data from your Java server applications to your specified destinations.

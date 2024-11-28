@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Excel data destination{% end %}
+{% Article %}
+
 # Excel data destination
 
 The Excel data destination allows you to export unified users (i.e., users consolidated through identity resolution) into an Excel file and save it to a storage location, such as S3 or SFTP.

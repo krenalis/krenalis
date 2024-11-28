@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}JavaScript SDK{% end %}
+{% Article %}
+
 # JavaScript SDK
 
 The JavaScript SDK empowers developers to effortlessly integrate robust event tracking and advanced data analytics directly into their web applications. Developers can seamlessly transmit tracking data to both the data warehouse and a multiple analytics tools, all without the hassle of individual integrations.

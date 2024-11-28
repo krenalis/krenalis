@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Events{% end %}
+{% Article %}
+
 # Events
 
 ## API calls

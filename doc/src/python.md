@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Python{% end %}
+{% Article %}
+
 # Python
 
 This is how a Python transform function looks like:
