@@ -41,9 +41,15 @@ func CheckAlignment(t1, t2 types.Type, exportMode *state.ExportMode) error {
 		if t2.Kind() == types.InvalidKind {
 			return nil
 		}
+		if exportMode == nil {
+			return nil
+		}
 		for path, p := range types.Walk(t2) {
-			if p.CreateRequired {
+			if *exportMode != state.UpdateOnly && p.CreateRequired {
 				return &Error{Msg: fmt.Sprintf("%q property is required for creation", path)}
+			}
+			if *exportMode != state.CreateOnly && p.UpdateRequired {
+				return &Error{Msg: fmt.Sprintf("%q property is required for update", path)}
 			}
 		}
 		return nil
@@ -74,19 +80,21 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			if !ok {
 				return &Error{Msg: fmt.Sprintf("%q property no longer exists", path)}
 			}
-			if p1.CreateRequired != p2.CreateRequired {
-				if p1.CreateRequired {
-					return &Error{Msg: fmt.Sprintf("%q property was previously required for creation but is no longer", path)}
+			if exportMode != nil {
+				if p1.CreateRequired != p2.CreateRequired && *exportMode != state.UpdateOnly {
+					if p1.CreateRequired {
+						return &Error{Msg: fmt.Sprintf("%q property was previously required for creation but is no longer", path)}
+					}
+					return &Error{Msg: fmt.Sprintf("%q property was not previously required for creation but it is now required", path)}
 				}
-				return &Error{Msg: fmt.Sprintf("%q property was not previously required for creation but it is now required", path)}
-			}
-			if p1.UpdateRequired != p2.UpdateRequired {
-				if p1.UpdateRequired {
-					return &Error{Msg: fmt.Sprintf("%q property was previously required for the update but is no longer", path)}
+				if p1.UpdateRequired != p2.UpdateRequired && *exportMode != state.CreateOnly {
+					if p1.UpdateRequired {
+						return &Error{Msg: fmt.Sprintf("%q property was previously required for the update but is no longer", path)}
+					}
+					return &Error{Msg: fmt.Sprintf("%q property was not previously required for the update but it is now required", path)}
 				}
-				return &Error{Msg: fmt.Sprintf("%q property was not previously required for the update but it is now required", path)}
 			}
-			if p1.ReadOptional != p2.ReadOptional {
+			if exportMode == nil && p1.ReadOptional != p2.ReadOptional {
 				if p1.ReadOptional {
 					return &Error{Msg: fmt.Sprintf("%q property was previously optional but it is now non-optional", path)}
 				}
