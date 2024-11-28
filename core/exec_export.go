@@ -11,9 +11,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/datastore"
@@ -21,7 +23,6 @@ import (
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
-	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/types"
 )
 
@@ -34,7 +35,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	connector := action.Connection().Connector()
 
 	var matching *datastore.Matching
-	var internalMatchingProperty types.Property
+	var in types.Property
 	if connector.Type == state.App {
 		// Synchronize destinations users with the app users.
 		err := this.syncDestinationUsers(ctx)
@@ -44,10 +45,10 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			}
 			return newActionError(metrics.OutputValidationStep, err)
 		}
-		internalMatchingProperty, _ = action.InSchema.Property(action.MatchingProperties.Internal)
+		in, _ = action.InSchema.Property(action.MatchingProperties.Internal)
 		matching = &datastore.Matching{
 			Action:          action.ID,
-			Property:        internalMatchingProperty.Name,
+			Property:        in.Name,
 			ExportMode:      *this.action.ExportMode,
 			AllowDuplicates: *action.ExportOnDuplicatedUsers,
 		}
@@ -158,15 +159,16 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		}
 
 		this.core.metrics.ReceivePassed(action.ID, 1)
-		this.core.metrics.InputValidationPassed(action.ID, 1)
 
 		if connector.Type == state.App {
 			if record.MatchingID == "" {
 				// Create the user.
 				value := record.Properties[action.MatchingProperties.Internal]
-				value, err = internalToExternalMatchingProperty(value, internalMatchingProperty, action.MatchingProperties.External)
+				ex := action.MatchingProperties.External
+				value, err = convertToExternal(value, in.Type, ex.Type, in.Name, ex.Name)
 				if err != nil {
-					return err
+					this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
+					goto Next
 				}
 				// The matching property and its value will be added to the properties after the transformation.
 				users = append(users, User{Record: record, MatchingValue: value})
@@ -178,6 +180,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			// Create the user.
 			users = append(users, User{Record: record})
 		}
+
+		this.core.metrics.InputValidationPassed(action.ID, 1)
 
 	Next:
 
@@ -371,31 +375,114 @@ func matchingPropertyToString(v any) string {
 	}
 }
 
-// internalToExternalMatchingProperty returns the value to be written to the
-// external matching property of an app during users export, in case of
-// creation.
+func errMatchingPropertyConversion(in, ex string) error {
+	return fmt.Errorf("%s property value cannot be converted to the app's %s property", in, ex)
+}
+
+// convertToExternal converts the value of an internal property to a type
+// conforming to the external property. v is the value to convert, and in and ex
+// are the types of the internal and external properties, respectively.
 //
-// internal is the value of the internal matching property, while internalProp
-// and externalProp are, respectively, the properties of the internal and the
-// external matching property.
+// Supported conversions are:
+//   - Int to Int, Uint, and Text
+//   - Uint to Int, Uint, and Text
+//   - Text to Int, Uint, UUID, and Text
+//   - UUID to UUID and Text
 //
-// Any returned error is an internal error.
-func internalToExternalMatchingProperty(internal any, internalProp, externalProp types.Property) (any, error) {
-	// TODO(Gianluca): this implementation requires to instantiate every time a
-	// new 'mappings.Mapping', this is because we preferred to implement a
-	// solution that requires less changes, at the moment, since the issue
-	// https://github.com/meergo/meergo/issues/935 will require a deeper review
-	// of the code structure of the export to app.
-	expressions := map[string]string{externalProp.Name: internalProp.Name}
-	inSchema := types.Object([]types.Property{internalProp})
-	outSchema := types.Object([]types.Property{externalProp})
-	m, err := mappings.New(expressions, inSchema, outSchema, false, nil)
-	if err != nil {
-		return nil, err
+// It panics if v is nil or the types in and ex are not conforming to these
+// supported conversions. It returns an error if the converted value does not
+// satisfy the constraints of the ex type.
+func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, error) {
+	if v == nil {
+		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s ", in.Kind()))
 	}
-	out, err := m.Transform(map[string]any{internalProp.Name: internal}, mappings.Create)
-	if err != nil {
-		return nil, err
+	switch ex.Kind() {
+	case types.IntKind:
+		var i int64
+		switch v := v.(type) {
+		case int:
+			i = int64(v)
+		case uint:
+			i = int64(v)
+			if i < 0 {
+				return nil, errMatchingPropertyConversion(inName, exName)
+			}
+		case string:
+			var err error
+			i, err = strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return nil, errMatchingPropertyConversion(inName, exName)
+			}
+		default:
+			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+		}
+		min, max := ex.IntRange()
+		if i < min || i > max {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		return int(i), nil
+	case types.UintKind:
+		var i uint64
+		switch v := v.(type) {
+		case int:
+			if v < 0 {
+				return nil, errMatchingPropertyConversion(inName, exName)
+			}
+			i = uint64(v)
+		case uint:
+			i = uint64(v)
+		case string:
+			var err error
+			i, err = strconv.ParseUint(v, 10, 64)
+			if err != nil {
+				return nil, errMatchingPropertyConversion(inName, exName)
+			}
+		default:
+			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+		}
+		min, max := ex.UintRange()
+		if i < min || i > max {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		return uint(i), nil
+	case types.TextKind:
+		var s string
+		switch v := v.(type) {
+		case int:
+			s = strconv.FormatInt(int64(v), 10)
+		case uint:
+			s = strconv.FormatUint(uint64(v), 10)
+		case string:
+			s = v
+		default:
+			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+		}
+		if byteLen, ok := ex.ByteLen(); ok && len(s) > byteLen {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		if charLen, ok := ex.CharLen(); ok && utf8.RuneCountInString(s) > charLen {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		if re := ex.Regexp(); re != nil && !re.MatchString(s) {
+			return nil, errMatchingPropertyConversion(inName, exName)
+		}
+		return s, nil
+	case types.UUIDKind:
+		switch in.Kind() {
+		case types.UUIDKind:
+			return v, nil
+		case types.TextKind:
+			u, ok := parseUUID(v.(string))
+			if !ok {
+				return nil, errMatchingPropertyConversion(inName, exName)
+			}
+			return u, nil
+		default:
+			panic(fmt.Sprintf("core: unexpected value %#v (type %T) for internal kind %s ", v, v, in.Kind()))
+		}
 	}
-	return out[externalProp.Name], nil
+	panic(fmt.Sprintf("core: unexpected external kind %s", ex.Kind()))
 }
