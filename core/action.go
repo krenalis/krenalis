@@ -919,17 +919,15 @@ func onlyForMatching(schema types.Type) types.Type {
 // shouldReload determines if the next execution of the action requires
 // reloading, based on whether the notification n is used to modify the action.
 func shouldReload(a *state.Action, n *state.SetAction) bool {
-	if a.Target != state.Users {
+	if a.Target != state.Users && a.Target != state.Groups {
 		return false
 	}
-	c := a.Connection()
-	if c.Role == state.Destination {
-		if c.Connector().Type != state.App {
-			return false
-		}
+	if a.MatchingProperties != nil {
 		p1 := a.MatchingProperties.External
 		p2 := n.MatchingProperties.External
-		return p1.Name != p2.Name || !types.Equal(p1.Type, p2.Type)
+		if p1.Name != p2.Name || !types.Equal(p1.Type, p2.Type) {
+			return true
+		}
 	}
 	if a.Query != n.Query {
 		return true
