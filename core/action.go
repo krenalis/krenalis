@@ -118,12 +118,7 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	if action.Filter != nil {
 		this.Filter = convertWhereToFilter(action.Filter, action.InSchema)
 	}
-	if mapping := action.Transformation.Mapping; mapping != nil {
-		this.Transformation.Mapping = make(map[string]string, len(mapping))
-		for out, in := range mapping {
-			this.Transformation.Mapping[out] = in
-		}
-	}
+	this.Transformation.Mapping = maps.Clone(action.Transformation.Mapping)
 	if function := action.Transformation.Function; function != nil {
 		this.Transformation.Function = &TransformationFunction{
 			Source:        function.Source,
