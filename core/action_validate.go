@@ -641,7 +641,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 				return errors.BadRequest("the external matching property cannot be transformed by the transformation function")
 			}
 		}
-		if mode := action.ExportMode; mode != nil && *mode == CreateOnly || *mode == CreateOrUpdate {
+		if mode := action.ExportMode; mode != nil && (*mode == CreateOnly || *mode == CreateOrUpdate) {
 			ext := action.MatchingProperties.External
 			p, ok := outSchema.Property(ext.Name)
 			if !ok {
