@@ -284,7 +284,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 			_ = b.EncodeKeyValue("text", button.Text)
 			_ = b.EncodeKeyValue("variant", button.Variant)
 			_ = b.EncodeKeyValue("role", button.Role.String())
-			b.WriteString(`"}`)
+			b.WriteString(`}`)
 		}
 		b.WriteString(`]`)
 		if len(ui.Values) > 0 {
