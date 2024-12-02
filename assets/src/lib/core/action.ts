@@ -631,6 +631,13 @@ const transformInActionToSet = async (
 	const flattenedInputSchema = flattenSchema(actionType.inputSchema);
 	const flattenedOutputSchema = flattenSchema(actionType.outputSchema);
 
+	// Remove the placeholders from the output schema.
+	for (const p in flattenedOutputSchema) {
+		if (flattenedOutputSchema[p].full.placeholder) {
+			delete flattenedOutputSchema[p].full.placeholder;
+		}
+	}
+
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
