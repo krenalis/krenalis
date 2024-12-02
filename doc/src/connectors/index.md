@@ -1,0 +1,50 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Connectors{% end %}
+{% Article %}
+
+<h2>Sources</h2>
+
+<ul class="grid-list">
+  <li><a href="sources/mailchimp.md">{{ render "icons/mailchimp.md" }} Mailchimp</a></li>
+  <li><a href="sources/hubspot">{{ render "icons/hubspot.md" }} HubSpot</a></li>
+  <li><a href="sources/klaviyo.md">{{ render "icons/klaviyo.md" }} Klaviyo</a></li>
+  <li><a href="sources/stripe.md">{{ render "icons/stripe.md" }} Stripe</a></li>
+  <li><a href="sources/excel">{{ render "icons/excel.md" }} Excel</a></li>
+  <li><a href="sources/csv">{{ render "icons/csv.md" }} CSV</a></li>
+  <li><a href="sources/json">{{ render "icons/json.md" }} JSON</a></li>
+  <li><a href="sources/parquet.md">{{ render "icons/parquet.md" }} Parquet</a></li>
+  <li><a href="sources/s3.md">{{ render "icons/s3.md" }} S3</a></li>
+  <li><a href="sources/http">{{ render "icons/http.md" }} HTTP</a></li>
+  <li><a href="sources/sftp.md">{{ render "icons/sftp.md" }} SFTP</a></li>
+  <li><a href="sources/clickhouse">{{ render "icons/clickhouse.md" }} ClickHouse</a></li>
+  <li><a href="sources/postgresql.md">{{ render "icons/postgresql.md" }} PostgreSQL</a></li>
+  <li><a href="sources/snowflake.md">{{ render "icons/snowflake.md" }} Snowflake</a></li>
+  <li><a href="sources/mysql.md">{{ render "icons/mysql.md" }} MySQL</a></li>
+  <li><a href="sources/javascript">{{ render "icons/javascript.md" }} JavaScript</a></li>
+  <li><a href="sources/dotnet">{{ render "icons/dotnet.md" }} .Net</a></li>
+  <li><a href="sources/android">{{ render "icons/android.md" }} Android</a></li>
+  <li><a href="sources/go">{{ render "icons/go.md" }} Go</a></li>
+  <li><a href="sources/java">{{ render "icons/java.md" }} Java</a></li>
+  <li><a href="sources/nodejs.md">{{ render "icons/nodejs.md" }} Node.js</a></li>
+  <li><a href="sources/python.md">{{ render "icons/python.md" }} Python</a></li>
+</ul>
+
+<h2>Destinations</h2>
+
+<ul class="grid-list">
+  <li><a href="destinations/mailchimp.md">{{ render "icons/mailchimp.md" }} Mailchimp</a></li>
+  <li><a href="destinations/hubspot">{{ render "icons/hubspot.md" }} HubSpot</a></li>
+  <li><a href="destinations/klaviyo.md">{{ render "icons/klaviyo.md" }} Klaviyo</a></li>
+  <li><a href="destinations/stripe.md">{{ render "icons/stripe.md" }} Stripe</a></li>
+  <li><a href="destinations/excel">{{ render "icons/excel.md" }} Excel</a></li>
+  <li><a href="destinations/csv">{{ render "icons/csv.md" }} CSV</a></li>
+  <li><a href="destinations/json">{{ render "icons/json.md" }} JSON</a></li>
+  <li><a href="destinations/parquet.md">{{ render "icons/parquet.md" }} Parquet</a></li>
+  <li><a href="destinations/s3.md">{{ render "icons/s3.md" }} S3</a></li>
+  <li><a href="destinations/http.md">{{ render "icons/http.md" }} HTTP</a></li>
+  <li><a href="destinations/sftp.md">{{ render "icons/sftp.md" }} SFTP</a></li>
+  <li><a href="destinations/clickhouse">{{ render "icons/clickhouse.md" }} ClickHouse</a></li>
+  <li><a href="destinations/postgresql.md">{{ render "icons/postgresql.md" }} PostgreSQL</a></li>
+  <li><a href="destinations/snowflake.md">{{ render "icons/snowflake.md" }} Snowflake</a></li>
+  <li><a href="destinations/mysql.md">{{ render "icons/mysql.md" }} MySQL</a></li>
+</ul>

@@ -23,6 +23,11 @@ nav.top ul a:hover, nav.top ul a.selected { color: #f3ad20; }
 nav.top .github-logo { display: block; height: 1.8rem; margin-left: 1rem; width: 1.8rem; }
 nav.top .github-logo svg path { fill: #fff; }
 
+nav.sections { display: inline-flex; margin: 0 auto; padding: 10px; width: auto; }
+nav.sections a { color: #4f46e5!important; margin: 2px; padding: 6px 14px; text-decoration: none; }
+nav.sections a:hover { border-bottom: 2px solid #eee; }
+nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
+
 .content { margin: 0 20px; }
 
 .cols-2 { display: flex; flex-wrap: wrap; }
@@ -58,13 +63,14 @@ nav.top .github-logo svg path { fill: #fff; }
 
 .article article { background: #fff; min-height: 100vh; overflow: hidden; }
 .article article > .wrap { display: flex; font-size: 1rem; padding: 0 1rem; }
-.article aside { margin-right: 3rem; margin-top: 1.80rem; }
+.article aside { margin-right: 3rem; margin-top: 1.80rem; width: 250px }
 .article aside button { display: none; }
 .article aside ul { list-style-type: none; padding: 0; }
 .article aside > ul { margin-top: 3rem; }
 .article aside li > ul { padding-left: 1rem; }
 .article aside li { line-height: 1.85; white-space: nowrap; }
-.article aside ul a { display: block; font-size: 1rem; margin: 0.1rem 0; padding: 0.3rem 0.6rem; }
+.article aside li h4 { color: #333; font-weight: bold }
+.article aside ul a { display: block; font-size: 15px; margin: 0.1rem 0; padding: 0.3rem 0.6rem; }
 .article aside ul a, .article aside ul a:visited { color: #333; }
 .article aside ul a:hover, .article aside ul a.expanded { background: #f8f6f0; border-radius: 3px; }
 .article aside ul a.selected { background: #4f46e5; border-radius: 3px; color: #fff6ed; }
@@ -98,6 +104,12 @@ nav.top .github-logo svg path { fill: #fff; }
 .article .data-type-operators table td:last-child { word-spacing: .5rem; }
 .article .data-type-false table td:first-child { width: 6rem; }
 .article .assignments table td:first-child { width: 7rem; }
+
+.grid-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; list-style: none; padding: 0; margin: 0; }
+.grid-list li { background-color: #fefefe; border: 1px solid #e6e6e6; border-radius: 12px; display: flex; align-items: center; overflow: hidden; }
+.grid-list li a { align-items: center; color: #333!important; display: flex; font-weight: bold; height: 100%; justify-content: start; padding: 20px;  text-decoration: none; width: 100%; }
+.grid-list li a svg { margin-right: 16px; width: 24px; height: 24px; flex-shrink: 0; }
+.grid-list li:hover { border-color: #5f943d; }
 
 #what-is-meergo + p { color: #777; font-size: 1.2em; }
 .get-meergo{ background: #f9f6f1; font-family: monospace; font-weight: bold; padding: 1rem; }
