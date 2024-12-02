@@ -36,6 +36,7 @@
   <li><a href="destinations/hubspot">{{ render "icons/hubspot.md" }} HubSpot</a></li>
   <li><a href="destinations/klaviyo.md">{{ render "icons/klaviyo.md" }} Klaviyo</a></li>
   <li><a href="destinations/stripe.md">{{ render "icons/stripe.md" }} Stripe</a></li>
+  <li><a href="destinations/mixpanel.md">{{ render "icons/mixpanel.md" }} Mixpanel</a></li>
   <li><a href="destinations/excel">{{ render "icons/excel.md" }} Excel</a></li>
   <li><a href="destinations/csv">{{ render "icons/csv.md" }} CSV</a></li>
   <li><a href="destinations/json">{{ render "icons/json.md" }} JSON</a></li>
