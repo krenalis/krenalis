@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Importing User Identities{% end %}
+{% Article %}
+
 # Importing User Identities
 
 When importing users from a connection, be it an app, file, database or a connection that sends events, these users are imported into Meergo in the form of "user identities" and are associated with that connection.

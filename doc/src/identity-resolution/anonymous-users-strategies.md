@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Anonymous Users Strategies{% end %}
+{% Article %}
+
 # Anonymous Users Strategies
 
 The strategies for anonymous users determine how they are unified with each other and with non-anonymous users.

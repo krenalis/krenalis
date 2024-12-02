@@ -1,3 +1,7 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}Allowed Types For Identifiers{% end %}
+{% Article %}
+
 # Allowed Types For Identifiers
 
 Here is a list of allowed types for the [identifiers](../identity-resolution.md#identifiers) used in the [Identity Resolution](../identity-resolution.md):

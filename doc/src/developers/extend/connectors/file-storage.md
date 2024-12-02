@@ -1,0 +1,148 @@
+{% extends "/layouts/doc.html" %}
+{% macro Title string %}File Storage Connectors{% end %}
+{% Article %}
+
+<span>Extend Meergo</span>
+# File Storage connectors
+
+File storage connectors allow to read and write file content on a file storage such as SFTP, HTTP and S3.
+
+File storage connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and interfaces.
+
+## Quick start
+
+In the creation of a new Go module, for your file storage connector, you can utilize the following template by pasting it into a Go file. Customize the template with your desired package name, type name, and pertinent connector information:
+
+```go
+// Package s3 implements the S3 file storage connector.
+package s3
+
+import (
+	"context"
+	"io"
+	"time"
+
+	"github.com/meergo/meergo"
+)
+
+func init() {
+	meergo.RegisterFileStorage(meergo.FileStorageInfo{
+		Name: "S3",
+	}, New)
+}
+
+type S3 struct {
+	// Your connector fields.
+}
+
+// New returns a new S3 connector instance.
+func New(conf *meergo.FileStorageConfig) (*S3, error) {
+	// ...
+}
+
+// CompletePath returns the complete representation of the given path name.
+func (s3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
+	// ...
+}
+
+// Reader opens the file at the given path name and returns a ReadCloser from
+// which to read the file and its last update time.
+func (s3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	// ...
+}
+
+// Write writes the data read from r into the file with the given path name.
+func (s3 *S3) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+	// ...
+}
+```
+
+## Implementation
+
+Let's explore how to implement a file storage connector, for example for the S3 file format.
+
+First create a Go module:
+
+```sh
+$ mkdir s3
+$ cd s3
+$ go mod init s3
+```
+
+Then add a Go file to the new directory. For example copy the previous template file.
+
+Later on, you can [build an executable with your connector](../../getting-started.md#build-with-your-custom-connectors).
+
+### About the connector
+
+The `FileStorageInfo` type describes information about the file storage connector:
+
+- `Name`: short name, typically the name of the storage. For example, "S3", "HTTP", "SFTP", etc.
+- `Icon`: icon in SVG format representing the file storage. Since it's embedded in HTML pages, it's best to be minimized.
+
+This information is passed to the `RegisterFileStorage` function that, executed during package initialization, registers the file storage connector:
+
+```go
+func init() {
+    meergo.RegisterFileStorage(meergo.FileStorageInfo{
+        Name: "S3",
+        Icon: icon,
+    }, New)
+}
+```
+
+### Constructor
+
+The second argument supplied to the `RegisterFileStorage` function is the function utilized for creating a connector instance:
+
+```go
+func New(conf *meergo.FileStorageConfig) (*S3, error)
+```
+
+This function accepts a file storage configuration and yields a value representing your custom type.
+
+The structure of `FileStorageConfig` is outlined as follows:
+
+```go
+type FileStorageConfig struct {
+    Settings    []byte
+    SetSettings meergo.SetSettingsFunc
+}
+```
+
+- `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
+- `SetSetting`: A function that enables the connector to update its settings as necessary.
+
+### CompletePath method
+
+```go
+CompletePath(ctx context.Context, name string) (string, error)
+```
+
+The `CompletePath` method is invoked by Meergo to present the user with the full path of a file in the given storage, based on the path specified by the user.
+
+The `name` parameter is always a UTF-8 encoded string with a length in runes ranging from 1 to 1024. It is the responsibility of the `CompletePath` method to validate the path based on its specific rules. If the path is invalid, it should return an `InvalidPathError` error; otherwise, it should return a UTF-8 encoded string representing the complete path. The returned path is intended solely for display to the user.
+
+If the connector accepts paths with a slash (“/”) separator, the method should accommodate both paths with and without a leading slash.
+
+### Reader method
+
+```go
+Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
+```
+
+The `Reader` method is used by Meergo to read files, such as during previews or exports.
+
+The `name` parameter represents the file path entered by the user, which has been validated with the `CompletePath` method. It also gives the last time the file was changed, if known; otherwise, it returns zero time.
+
+### Write method
+
+```go
+Write(ctx context.Context, r io.Reader, name, contentType string) error
+```
+
+The `Write` method is used by Meergo to save a file to the storage when exporting.
+
+`Write` reads the content from the provided `Reader`. The `name` parameter represents the file path specified by the user, which has been validated with the `CompletePath` method. The `contentType` parameter indicates the type of content in the file, obtained from the `ContentType` method of the file connector.
+
+The connector should ensure, as much as possible, that the write operation is both atomic and durable. If `Write` returns an error, no file should be created. Conversely, if it returns a nil error, the file has been successfully written. 
