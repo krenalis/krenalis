@@ -26,7 +26,7 @@ type Connector struct {
 	TermForUsers           string        `json:"termForUsers"`
 	TermForGroups          string        `json:"termForGroups"`
 	Type                   ConnectorType `json:"type"`
-	Targets                Targets       `json:"targets"`
+	Targets                []Target      `json:"targets"`
 	SendingMode            *SendingMode  `json:"sendingMode"`
 	HasSheets              bool          `json:"hasSheets"`
 	HasUI                  bool          `json:"hasUI"`
@@ -119,13 +119,6 @@ func (typ *ConnectorType) UnmarshalJSON(data []byte) error {
 	}
 	*typ = t
 	return nil
-}
-
-// Targets represents the supported targets by a connector.
-type Targets struct {
-	Users  bool `json:"users"`
-	Groups bool `json:"groups"`
-	Events bool `json:"events"`
 }
 
 // SendingMode represents a sending mode.

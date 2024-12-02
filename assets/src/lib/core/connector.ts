@@ -1,5 +1,4 @@
-import { ConnectorType, SendingMode, WebhooksPer } from '../api/types/connector';
-import { ActionTarget } from '../api/types/action';
+import { ConnectorTarget, ConnectorType, SendingMode, WebhooksPer } from '../api/types/connector';
 import * as icons from '../../constants/icons';
 
 class TransformedConnector {
@@ -17,7 +16,7 @@ class TransformedConnector {
 	termForUsers: string;
 	termForGroups: string;
 	sendingMode: SendingMode | null;
-	targets: Record<ActionTarget, boolean>;
+	targets: ConnectorTarget[];
 	identityIDLabel: string;
 
 	constructor(
@@ -35,7 +34,7 @@ class TransformedConnector {
 		termForUsers: string,
 		termForGroups: string,
 		sendingMode: SendingMode,
-		targets: Record<ActionTarget, boolean>,
+		targets: ConnectorTarget[],
 		identityIDLabel: string,
 	) {
 		this.name = name;

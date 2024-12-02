@@ -10,6 +10,7 @@ import {
 import { Action, ActionTarget, ActionType } from '../api/types/action';
 import TransformedConnector from './connector';
 import { Variant } from '../../components/routes/App/App.types';
+import { ConnectorTarget } from '../api/types/connector';
 
 interface ConnectionStatus {
 	text: string;
@@ -193,14 +194,10 @@ const isSourceEventConnection = (role: ConnectionRole, type: ConnectorType): boo
 	return role === 'Source' && (type === 'Website' || type === 'Server' || type === 'Mobile');
 };
 
-const isEventConnection = (
-	role: ConnectionRole,
-	type: ConnectorType,
-	targets: Record<ActionTarget, boolean>,
-): boolean => {
+const isEventConnection = (role: ConnectionRole, type: ConnectorType, targets: ConnectorTarget[]): boolean => {
 	return (
 		(role === 'Source' && (type === 'Website' || type === 'Server' || type === 'Mobile')) ||
-		(role === 'Destination' && type === 'App' && targets.Events)
+		(role === 'Destination' && type === 'App' && targets.includes('Events'))
 	);
 };
 

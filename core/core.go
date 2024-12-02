@@ -346,9 +346,17 @@ func (core *Core) Connector(ctx context.Context, name string) (*Connector, error
 	if connector.TermForGroups == "" {
 		connector.TermForGroups = "groups"
 	}
-	connector.Targets.Users = c.Targets.Contains(state.Users)
-	connector.Targets.Groups = c.Targets.Contains(state.Groups)
-	connector.Targets.Events = c.Targets.Contains(state.Events)
+	targets := []Target{}
+	if c.Targets.Contains(state.Users) {
+		targets = append(targets, Users)
+	}
+	if c.Targets.Contains(state.Groups) {
+		targets = append(targets, Groups)
+	}
+	if c.Targets.Contains(state.Events) {
+		targets = append(targets, Events)
+	}
+	connector.Targets = targets
 	return &connector, nil
 }
 
@@ -383,9 +391,17 @@ func (core *Core) Connectors(ctx context.Context) []*Connector {
 		if connector.TermForGroups == "" {
 			connector.TermForGroups = "groups"
 		}
-		connector.Targets.Users = c.Targets.Contains(state.Users)
-		connector.Targets.Groups = c.Targets.Contains(state.Groups)
-		connector.Targets.Events = c.Targets.Contains(state.Events)
+		targets := []Target{}
+		if c.Targets.Contains(state.Users) {
+			targets = append(targets, Users)
+		}
+		if c.Targets.Contains(state.Groups) {
+			targets = append(targets, Groups)
+		}
+		if c.Targets.Contains(state.Events) {
+			targets = append(targets, Events)
+		}
+		connector.Targets = targets
 		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {
