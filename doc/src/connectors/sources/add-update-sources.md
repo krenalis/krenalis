@@ -27,7 +27,7 @@ Choose the source you want to add:
     * [PostgreSQL](postgreSQL)
     * [Snowflake](snowflake)
 * **Storage**
-    * [HTTP](http)
+    * [HTTP Files](http-files)
     * [S3](s3)
     * [SFTP](sftp)
 * **File**

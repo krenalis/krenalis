@@ -5,7 +5,7 @@
 // Copyright (c) 2023 Open2b
 //
 
-package http
+package httpfiles
 
 import (
 	"testing"
@@ -14,8 +14,8 @@ import (
 )
 
 func TestCompletePath(t *testing.T) {
-	http := &HTTP{settings: &Settings{Host: "example.com", Port: 443}}
-	http2 := &HTTP{settings: &Settings{Host: "example.com", Port: 8080}}
+	httpFiles := &HTTPFiles{settings: &Settings{Host: "example.com", Port: 443}}
+	httpFiles2 := &HTTPFiles{settings: &Settings{Host: "example.com", Port: 8080}}
 	tests := []meergo.CompletePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},
@@ -27,10 +27,10 @@ func TestCompletePath(t *testing.T) {
 		{Name: "%5z"},
 		{Name: "/\x00"},
 		{Name: "/a/b?x=y#"},
-		{Name: "/a", Expected: "https://example.com:8080/a", Storage: http2},
+		{Name: "/a", Expected: "https://example.com:8080/a", Storage: httpFiles2},
 	}
-	err := meergo.TestCompletePath(http, tests)
+	err := meergo.TestCompletePath(httpFiles, tests)
 	if err != nil {
-		t.Errorf("HTTP connector: %s", err)
+		t.Errorf("HTTP Files connector: %s", err)
 	}
 }

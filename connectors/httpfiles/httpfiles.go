@@ -5,9 +5,9 @@
 // Copyright (c) 2022 Open2b
 //
 
-// Package http implements the HTTP connector.
+// Package httpfiles implements the HTTP Files connector.
 // (https://datatracker.ietf.org/doc/html/rfc7540)
-package http
+package httpfiles
 
 import (
 	"context"
@@ -33,28 +33,28 @@ var icon = "<svg></svg>"
 var _ interface {
 	meergo.FileStorage
 	meergo.UIHandler
-} = (*HTTP)(nil)
+} = (*HTTPFiles)(nil)
 
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name: "HTTP",
+		Name: "HTTP Files",
 		Icon: icon,
 	}, New)
 }
 
-// New returns a new HTTP connection.
-func New(conf *meergo.FileStorageConfig) (*HTTP, error) {
-	c := HTTP{conf: conf}
+// New returns a new HTTP Files connection.
+func New(conf *meergo.FileStorageConfig) (*HTTPFiles, error) {
+	c := HTTPFiles{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
-			return nil, errors.New("cannot unmarshal settings of HTTP connector")
+			return nil, errors.New("cannot unmarshal settings of HTTP Files connector")
 		}
 	}
 	return &c, nil
 }
 
-type HTTP struct {
+type HTTPFiles struct {
 	conf     *meergo.FileStorageConfig
 	settings *Settings
 }
@@ -66,7 +66,7 @@ type Settings struct {
 }
 
 // CompletePath returns the complete representation of the given path name.
-func (h *HTTP) CompletePath(ctx context.Context, name string) (string, error) {
+func (h *HTTPFiles) CompletePath(ctx context.Context, name string) (string, error) {
 	if name[0] != '/' {
 		name = "/" + name
 	}
@@ -99,7 +99,7 @@ func (h *HTTP) CompletePath(ctx context.Context, name string) (string, error) {
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
-func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+func (h *HTTPFiles) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	u, err := h.CompletePath(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -122,7 +122,7 @@ func (h *HTTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTP) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (h *HTTPFiles) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -155,7 +155,7 @@ func (h *HTTP) ServeUI(ctx context.Context, event string, values json.Value, rol
 }
 
 // Write writes the data read from r into the file with the given path name.
-func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+func (h *HTTPFiles) Write(ctx context.Context, r io.Reader, name, contentType string) error {
 	u, err := h.CompletePath(ctx, name)
 	if err != nil {
 		return err
@@ -181,7 +181,7 @@ func (h *HTTP) Write(ctx context.Context, r io.Reader, name, contentType string)
 }
 
 // saveValues saves the user-entered values as settings.
-func (h *HTTP) saveValues(ctx context.Context, values json.Value) error {
+func (h *HTTPFiles) saveValues(ctx context.Context, values json.Value) error {
 	var s Settings
 	err := values.Unmarshal(&s)
 	if err != nil {
