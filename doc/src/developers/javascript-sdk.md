@@ -20,11 +20,11 @@ This streamlined approach simplifies the development process, enabling teams to 
 
 ## Guides
 
-| Guide                                                     | What will you learn?                                                      |
-|-----------------------------------------------------------|---------------------------------------------------------------------------|
-| [Getting&nbsp;started](javascript/getting-started.md)     | How to install the SDK in browsers and import it into applications.       |
-| [Options](javascript/options.md)                          | The available options when installing the SDK.                            |
-| [Methods&nbsp;of&nbsp;SDK](javascript/methods.md)         | The methods of the SDK, including the methods to send events.             |
-| [Storage&nbsp;locations](javascript/storage-locations.md) | Where the users' data is stored and how to manage its storage location.   |
-| [Querystring&nbsp;API](javascript/querystring-api.md)     | How to activate `identify` and `track` events using the URL query string. | 
-| [FAQ](javascript/faq.md)                                  | How to activate `identify` and `track` events using the URL query string. |
+| Guide                                                      | What will you learn?                                                      |
+|------------------------------------------------------------|---------------------------------------------------------------------------|
+| [Getting&nbsp;started](javascript-sdk/getting-started)     | How to install the SDK in browsers and import it into applications.       |
+| [Options](javascript-sdk/options)                          | The available options when installing the SDK.                            |
+| [Methods&nbsp;of&nbsp;SDK](javascript-sdk/methods)         | The methods of the SDK, including the methods to send events.             |
+| [Storage&nbsp;locations](javascript-sdk/storage-locations) | Where the users' data is stored and how to manage its storage location.   |
+| [Querystring&nbsp;API](javascript-sdk/querystring-api)     | How to activate `identify` and `track` events using the URL query string. | 
+| [FAQ](javascript-sdk/faq)                                  | How to activate `identify` and `track` events using the URL query string. |

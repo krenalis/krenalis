@@ -10,15 +10,15 @@ The **Java** data source is designed for applications built on the Java platform
 - **Store events in the workspace's data warehouse**: Ideal for data analysis and reporting purposes.
 - **Extract user data for identification**: Helps in identifying both authenticated and anonymous users, facilitating unification within the workspace's data warehouse.
 
-To use the Java data source, you will need the [Java SDK](../java-sdk.md) from Meergo. The SDK provides the necessary functionality for sending different types of events, ensuring a smooth integration with the Meergo platform.
+To use the Java data source, you will need the [Java SDK](../../developers/java-sdk) from Meergo. The SDK provides the necessary functionality for sending different types of events, ensuring a smooth integration with the Meergo platform.
 
-> The [Java SDK](../java-sdk.md) is an open-source Java library licensed under the MIT License.
+> The [Java SDK](../../developers/java-sdk) is an open-source Java library licensed under the MIT License.
 
 ### On this page
 
 * [Add a Java data source](#add-a-java-data-source)
-* <span class="action"></span> [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
-* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+* [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
+* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add a Java data source
 
@@ -32,7 +32,7 @@ To use the Java data source, you will need the [Java SDK](../java-sdk.md) from M
 
 Once the Java data source is added, you will be directed to the **Actions** page, where you can view the specific actions that will be performed with the events received from this source.
 
-### <span class="action"></span> Import events into the workspace's data warehouse
+### Import events into the workspace's data warehouse
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. Click on the Java data source from which you want to import the events.
@@ -40,7 +40,7 @@ Once the Java data source is added, you will be directed to the **Actions** page
 4. Click **Import events**.
 5. Click **Add** to add the action.
 
-### <span class="action"></span> Import users into the workspace's data warehouse
+### Import users into the workspace's data warehouse
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. Click on the Java data source from which you want to import the users.

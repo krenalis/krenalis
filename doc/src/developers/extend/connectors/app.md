@@ -90,7 +90,7 @@ $ go mod init klaviyo
 
 Then add a Go file to the new directory. For example copy the previous template file.
 
-Later on, you can [build an executable with your connector](../../getting-started.md#build-with-your-custom-connectors).
+Later on, you can [build an executable with your connector](../../getting-started#build-with-your-custom-connectors).
 
 ### About the connector
 
@@ -104,10 +104,10 @@ The `AppInfo` type describes information about the app connector:
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 - `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
-- `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth.md).
-- `BackoffPolicy`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff.md).
+- `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
+- `BackoffPolicy`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff).
 - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
-- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values.md#time-layouts) in [Data Values](data-values.md) for more details.
+- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterApp` function that, executed during package initialization, registers the app connector:
@@ -158,7 +158,7 @@ type AppConfig struct {
 
 ### Continue reading
 
-- [OAuth](app/oauth.md)
-- [Backoff](app/backoff.md)
-- [Users and groups](app/users-and-groups.md)
-- [Dispatch events](app/dispatch-events.md)
+- [OAuth](app/oauth)
+- [Backoff](app/backoff)
+- [Users and groups](app/users-and-groups)
+- [Dispatch events](app/dispatch-events)

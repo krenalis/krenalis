@@ -41,7 +41,7 @@ To integrate the Android SDK inside your application:
     }
     ```
 
-2. Initialize and configure the client. You can find the write key in Meergo inside the Android connection in **Settings > Write Keys**. See [Options](options.md) for the list of configuration options.
+2. Initialize and configure the client. You can find the write key in Meergo inside the Android connection in **Settings > Write Keys**. See [Options](options) for the list of configuration options.
 
     #### Kotlin
     ```kotlin

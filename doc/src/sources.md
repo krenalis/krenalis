@@ -22,4 +22,4 @@ Customer and event data collected from various sources can be stored in real-tim
 
 ## In this section
 
-* [Add and update sources](add-update-sources.md)
+* [Add and update sources](add-update-sources)

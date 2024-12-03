@@ -28,12 +28,12 @@ The AC-B strategy unifies the anonymous user data before login and after logout,
 
 ## Implement a Strategy
 
-To implement a specific strategy, you need to set the strategy option when loading a Meergo SDK. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser:
+To implement a specific strategy, you need to set the strategy option when loading a Meergo SDK. For example, with the [JavaScript SDK](../javascript-sdk) in the browser:
 
 ```javascript
 meergoAnalytics.load(writeKey, endpoint, { strategy: 'AB-C' });
 ```
 
-Then, use the [`identify`](../events/identify.md) call when the user logs in and the [`reset`](../javascript-sdk/methods.md#reset) method when the user logs out. You can customize different strategies for various devices or situations based on your requirements. Refer to the SDK documentation for more details on how to implement these strategies in your application.
+Then, use the [`identify`](../events/identify) call when the user logs in and the [`reset`](../javascript-sdk/methods#reset) method when the user logs out. You can customize different strategies for various devices or situations based on your requirements. Refer to the SDK documentation for more details on how to implement these strategies in your application.
 
 The default strategy, if the strategy option is not specified, is the "AB-C" strategy.

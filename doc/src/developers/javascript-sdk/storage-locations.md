@@ -4,7 +4,7 @@
 
 # Storage locations
 
-The JavaScript SDK is designed to store user data directly within the user's browser. Through the [`storage`](options.md#storage-option) option, you can control which storage locations the data will be saved to, or choose not to save them at all. This capability is particularly important in ensuring compliance with privacy regulations, as selecting the appropriate storage method can significantly impact the level of user data protection and privacy afforded by the application.
+The JavaScript SDK is designed to store user data directly within the user's browser. Through the [`storage`](options#storage-option) option, you can control which storage locations the data will be saved to, or choose not to save them at all. This capability is particularly important in ensuring compliance with privacy regulations, as selecting the appropriate storage method can significantly impact the level of user data protection and privacy afforded by the application.
 
 Below are the browser storage locations that the JavaScript SDK can use to store data:
 
@@ -45,7 +45,7 @@ All cookie names are prefixed with "`meergo.<writeKey>.`" where `<writeKey>` rep
 
 Using the Write Key in the cookie names lets you use two different Write Keys at the same time on one page. For instance, if the Write Key is "`z43tavAOsBB8RY50nAtItXMMIipGKEOC`", the cookie names would be "`meergo.z43tavA.anonymousId`", "`meergo.z43tavA.groupId`", and so on.
 
-When the SDK persists user data in cookies, you can use the [`cookie`](options.md#cookie-option) option to control some specific settings.
+When the SDK persists user data in cookies, you can use the [`cookie`](options#cookie-option) option to control some specific settings.
 
 ## localStorage
 

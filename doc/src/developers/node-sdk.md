@@ -79,7 +79,7 @@ Now you can choose to collect only the events, or import the users, or both:
 2. Execute your application to send some events.
 3. Click on a received event in **Live events** to view its details.
 
-Refer to the [Meergo events documentation](./events.md) for more information on the supported event types.
+Refer to the [Meergo events documentation](./events) for more information on the supported event types.
 
 ### License
 

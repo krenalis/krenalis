@@ -20,9 +20,9 @@ That's all you need to get started with Meergo!
 
 ## Connector types
 
-   - [App connectors](./app.md)
-   - [Database connectors](./database.md)
-   - [File connectors](./file.md)
-   - [File Storage connectors](./file-storage.md)
-   - [Settings and UI](./settings-and-ui.md)
-   - [Data values](./data-values.md)
+   - [App connectors](./app)
+   - [Database connectors](./database)
+   - [File connectors](./file)
+   - [File Storage connectors](./file-storage)
+   - [Settings and UI](./settings-and-ui)
+   - [Data values](./data-values)

@@ -83,7 +83,7 @@ $ go mod init postgresql
 
 Then add a Go file to the new directory. For example copy the previous template file.
 
-Later on, you can [build an executable with your connector](../../getting-started.md#build-with-your-custom-connectors).
+Later on, you can [build an executable with your connector](../../getting-started#build-with-your-custom-connectors).
 
 ### About the connector
 
@@ -91,7 +91,7 @@ The `DatabaseInfo` type describes information about the database connector:
 
 - `Name`: short name, typically the name of the DBMS. For example, "PostgreSQL", "MySQL", "Snowflake", etc.
 - `SampleQuery`: sample query displayed in the query editor when creating a new database source action.
-- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values.md#time-layouts) in [Data Values](data-values.md) for more details.
+- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the DBMS. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterDatabase` function that, executed during package initialization, registers the database connector:

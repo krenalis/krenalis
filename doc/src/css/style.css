@@ -84,8 +84,9 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article h4 { color: #666; font-weight: normal; }
 .article pre { background: #f4f4fb; border-radius: 3px; padding: 1rem; overflow-x: auto; }
 .article code { background: #f4f4fb; border-radius: 2px; color: #454567; padding: .2rem .5rem; }
+.article a code { color: #5f943d; }
 .article pre code { padding: 0; }
-.article blockquote { background: #f9f9f9; border-left: 5px solid #5954ab; border-radius: 3px; margin: 0; padding: .5rem 1rem; }
+.article blockquote { background: #edecff; border-left: 5px solid #5954ab; border-radius: 3px; margin: 0; padding: .5rem 1rem; }
 .article blockquote p { color: #424063; }
 .article blockquote > p + div pre { background: transparent; margin: 0; padding-left: 0; padding-top: 0; }
 .article blockquote div + p { margin-top: 0; }
@@ -211,22 +212,4 @@ footer .company { flex: 2; text-align: right; }
     footer { font-size: 0.8rem; text-align: center; }
     footer ul { padding-left: 0; }
 
-}
-
-span.action {
-    background: #4f46e5;
-    border-radius: 12px;
-    padding: 2px 12px 3px 13px;
-    margin-right: 2px;
-    font-size: 13px;
-}
-
-span.action::after {
-    content: "Action";
-    color: #FFF;
-}
-
-h3 span.action {
-    position: relative;
-    top: -2px;
 }

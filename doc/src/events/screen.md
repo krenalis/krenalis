@@ -6,7 +6,7 @@
 
 The screen call enables you to capture instances when a user views a screen and record associated properties or details about that particular screen.
 
-For tracking website page views, it's recommended to utilize the specific [page](page.md) call.
+For tracking website page views, it's recommended to utilize the specific [page](page) call.
 
 ## When to Use the Screen Call
 

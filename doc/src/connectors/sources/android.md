@@ -10,15 +10,15 @@ The **Android** data source allows you to receive events, including user informa
 * Stored in the workspace's data warehouse.
 * Extracted to identify users, both recognized and anonymous, for unification in the workspace's data warehouse.
 
-The Android data source requires the [Android SDK](../android-sdk.md) from Meergo, which provides functionalities for sending various types of events and ensures seamless integration with the Meergo platform.
+The Android data source requires the [Android SDK](../../developers/android-sdk) from Meergo, which provides functionalities for sending various types of events and ensures seamless integration with the Meergo platform.
 
-> The [Android SDK](../android-sdk.md) is an open-source Android library licensed under MIT, compatible with the Segment's Analytics-Kotlin SDK.
+> The [Android SDK](../../developers/android-sdk) is an open-source Android library licensed under MIT, compatible with the Segment's Analytics-Kotlin SDK.
 
 ### On this page
 
 * [Add an Android data source](#add-an-android-data-source)
-* <span class="action"></span> [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
-* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+* [Import events into the workspace's data warehouse](#import-events-into-the-workspaces-data-warehouse)
+* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add an Android data source
 
@@ -32,7 +32,7 @@ The Android data source requires the [Android SDK](../android-sdk.md) from Meerg
 
 Once the Android data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the events received from this source.
 
-### <span class="action"></span> Import events into the workspace's data warehouse
+### Import events into the workspace's data warehouse
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. Click on the Android data source from which you want to import the events.
@@ -40,7 +40,7 @@ Once the Android data source is added, the **Actions** page will be displayed. T
 4. Click **Import events**.
 5. Click **Add** to add the action.
 
-### <span class="action"></span> Import users into the workspace's data warehouse
+### Import users into the workspace's data warehouse
 
 1. From the Meergo admin, go to **Connections > Sources**.
 2. Click on the Android data source from which you want to import the users.

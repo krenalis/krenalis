@@ -4,7 +4,7 @@
 
 # Group class
 
-The `Group` class represents a group. An instance representing the current group is returned calling  the [`group`](methods.md#group) method of `Analytics`. For example:
+The `Group` class represents a group. An instance representing the current group is returned calling  the [`group`](methods#group) method of `Analytics`. For example:
 
 ```javascript
 const groupId = meergoAnalytics.group().id();

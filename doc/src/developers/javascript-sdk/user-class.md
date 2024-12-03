@@ -4,7 +4,7 @@
 
 # User class
 
-The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods.md#user) method of `Analytics`. For example:
+The `User` class represents a user. An instance representing the current user is returned calling the [`user`](methods#user) method of `Analytics`. For example:
 
 ```javascript
 const userId = meergoAnalytics.user().id();

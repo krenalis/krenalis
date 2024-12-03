@@ -25,11 +25,11 @@ Below the JavaScript SDK methods:
 - [debug](#debug)
 - [close](#close)
 
-> The JavaScript SDK also supports the `getAnonymousId` method of the RudderStack SDK that can be used as an alternative to the [`user().anonymousId`](user-class.html#anonymousid).
+> The JavaScript SDK also supports the `getAnonymousId` method of the RudderStack SDK that can be used as an alternative to the [`user().anonymousId`](user-class#anonymousid).
 
 ## page
 
-The page method implements the [page call](../events/page.md).
+The page method implements the [page call](../../events/page).
 
 The page call allows you to capture when a user views a page on your website, including any extra details about that specific page.
 
@@ -90,7 +90,7 @@ meergoAnalytics.page('Shirt', {
 
 ## screen
 
-The screen method implements the [screen call](../events/screen.md).
+The screen method implements the [screen call](../../events/screen).
 
 The screen call enables you to capture instances when a user views a screen and record associated properties or details about that particular screen.
 
@@ -154,7 +154,7 @@ meergoAnalytics.screen('Order Completed', {
 
 ## track
 
-The track method implements the [track call](../events/track.md).
+The track method implements the [track call](../../events/track).
 
 The track call is used to send specific events or actions, and associated properties, that occur when users interact with your application or website.
 
@@ -202,7 +202,7 @@ meergoAnalytics.screen('Order Completed', {
 
 ## identify
 
-The identify method implements the [identify call](../events/identify.md).
+The identify method implements the [identify call](../../events/identify).
 
 Through an identify call, you can connect previous and upcoming events to a recognized user and save details about them along with their events, such as name and email. The user information can also be utilized to update and enhance unified data from other sources.
 
@@ -268,13 +268,13 @@ For the previous example, we can have three scenarios:
 * If the user is currently non-anonymous but has a different User ID, their User ID is changed, and all traits are replaced with the provided ones.
 * If the user is currently non-anonymous and has the same User ID as the provided one, the provided traits are added to the current traits. If a provided trait has the value `undefined`, the corresponding trait is removed.
 
-> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](../events/identify.md) call, use the [`user().traits`](user-class.md#traits) method.  
+> To completely replace the current user's traits, regardless of whether the user is anonymous or non-anonymous, and without making an [`identify`](../../events/identify) call, use the [`user().traits`](user-class#traits) method.  
 
 ## group
 
-The `group` method, when called without arguments, returns an instance of the [Group class](group-class.md) representing the group.
+The `group` method, when called without arguments, returns an instance of the [Group class](group-class) representing the group.
 
-When called with arguments, implements the [group call](../events/group.md). The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
+When called with arguments, implements the [group call](../../events/group). The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
 
 #### Syntax
 
@@ -322,7 +322,7 @@ All parameters are optional. A single `Object` parameter signifies `traits`.
 | `options`  | `Object`   |          | Options of the event.                             |
 | `callback` | `Function` |          | A function called when the event has been queued. |
 
-If no arguments are provided, it returns an instance of the [Group class](group-class.md). Otherwise, it returns a `Promise` that resolve when the event has queued. If the browser does not support promises and a polyfill has not been installed, it returns `undefined`.
+If no arguments are provided, it returns an instance of the [Group class](group-class). Otherwise, it returns a `Promise` that resolve when the event has queued. If the browser does not support promises and a polyfill has not been installed, it returns `undefined`.
 
 #### Example
 
@@ -340,7 +340,7 @@ meergoAnalytics.group('84s76y49tb28v1jxq', {
 
 ## user
 
-The `user` method returns an instance of the [`User class`](user-class.md) to read and set the identifier, Anonymous ID, and traits of the user.
+The `user` method returns an instance of the [`User class`](user-class) to read and set the identifier, Anonymous ID, and traits of the user.
 
 #### Syntax
 
@@ -361,7 +361,7 @@ user(): User
 
 There are no parameters.
 
-Returns an instance of the [`User class`](user-class.md) representing the user.
+Returns an instance of the [`User class`](user-class) representing the user.
 
 #### Example
 

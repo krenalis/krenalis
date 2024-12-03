@@ -6,7 +6,7 @@
 
 The track call is used to send specific events or actions, and associated properties, that occur when users interact with your application or website.
 
-For more effective tracking of page and screen views, it's recommended to utilize the specific [page](page.md) and [screen](screen.md) calls.
+For more effective tracking of page and screen views, it's recommended to utilize the specific [page](page) and [screen](screen) calls.
 
 ## When to Use the Track Call
 
@@ -22,7 +22,7 @@ Here are some common scenarios when you might want to use a track call:
 
 ## How to Make a Track Call
 
-To make a track call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a track call in the following way:
+To make a track call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make a track call in the following way:
 
 ```javascript
 meergoAnalytics.track('Product Viewed', {

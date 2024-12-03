@@ -11,7 +11,7 @@ SFTP (Secure File Transfer Protocol) is a secure network protocol used for trans
 ### On this page
 
 * [Add an SFTP data source](#add-an-sftp-data-source)
-* <span class="action"></span> [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
+* [Import users into the workspace's data warehouse](#import-users-into-the-workspaces-data-warehouse)
 
 ### Add an SFTP Data Source
 
@@ -28,7 +28,7 @@ SFTP (Secure File Transfer Protocol) is a secure network protocol used for trans
 
 Once the SFTP data source is added, the **Actions** page will be displayed. Here, you can add an action for each file to be read using the newly added SFTP data source. Configure each action with the desired settings for file format, filters for user data, and any additional processing requirements.
 
-### <span class="action"></span> Import users into the workspace's data warehouse
+### Import users into the workspace's data warehouse
 
 1. In the Meergo admin panel, navigate to **Connections > Sources**.
 2. Click on the SFTP source from which you wish to import users.
@@ -36,7 +36,7 @@ Once the SFTP data source is added, the **Actions** page will be displayed. Here
 4. From the **Type** menu, choose the file format from which you want to import users.
 
 Continue with step 5 based on the selected file type:
-* [CSV](csv.md#import-users-into-the-workspaces-data-warehouse)
-* [Excel](excel.md#import-users-into-the-workspaces-data-warehouse)
-* [JSON](json.md#import-users-into-the-workspaces-data-warehouse)
-* [Parquet](parquet.md#import-users-into-the-workspaces-data-warehouse)
+* [CSV](csv#import-users-into-the-workspaces-data-warehouse)
+* [Excel](excel#import-users-into-the-workspaces-data-warehouse)
+* [JSON](json#import-users-into-the-workspaces-data-warehouse)
+* [Parquet](parquet#import-users-into-the-workspaces-data-warehouse)

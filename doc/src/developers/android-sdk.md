@@ -20,8 +20,8 @@ This streamlined approach simplifies the development process, enabling teams to 
 
 ## Guides
 
-| Guide                                              | What will you learn?                                                      |
-|----------------------------------------------------|---------------------------------------------------------------------------|
-| [Getting&nbsp;started](android/getting-started.md) | How to install the SDK and import it into Android applications.           |
-| [Options](android/options.md)                      | The available options when installing the SDK.                            |
-| [Methods&nbsp;of&nbsp;SDK](android/methods.md)     | The methods of the SDK, including the methods to send events.             |
+| Guide                                               | What will you learn?                                            |
+|-----------------------------------------------------|-----------------------------------------------------------------|
+| [Getting&nbsp;started](android-sdk/getting-started) | How to install the SDK and import it into Android applications. |
+| [Options](android-sdk/options)                      | The available options when installing the SDK.                  |
+| [Methods&nbsp;of&nbsp;SDK](android-sdk/methods)     | The methods of the SDK, including the methods to send events.   |

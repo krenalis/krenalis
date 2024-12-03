@@ -18,4 +18,4 @@ In summary, Meergo not only collects and sends data but also unifies it, providi
 
 ## In this section
 
-* [Add and update destinations](add-update-destinations.md)
+* [Add and update destinations](add-update-destinations)

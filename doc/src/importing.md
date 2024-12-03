@@ -26,11 +26,11 @@ Identifying a user identity and understanding how this identification occurs is 
 * when importing from a **file** or **database**, the [user identifier](#user-identifier) specified in the action's editing page is compared;
 * when importing from an **event**, the `userId` (for non-anonymous user identities) or the `anonymousId` (for anonymous user identities) is compared
 
-> The behavior for the users imported from events allows the implementation of [strategies](identity-resolution/anonymous-users-strategies.md) by controlling how `userId` and `anonymousId` are sent by the client (eg. the [JavaScript SDK](javascript-sdk.md) in the browser).
+> The behavior for the users imported from events allows the implementation of [strategies](identity-resolution/anonymous-users-strategies) by controlling how `userId` and `anonymousId` are sent by the client (eg. the [JavaScript SDK](javascript-sdk) in the browser).
 
 ### User Identifier
 
-Actions on **file storage** and **database** source connections **must** indicate an user identifier which identifies an user. It must be a column with one of the following [types](data-validation.html#data-types): `Int(n)`, `Uint(n)`, `UUID`, `JSON` or `Text`.
+Actions on **file storage** and **database** source connections **must** indicate an user identifier which identifies an user. It must be a column with one of the following [types](data-validation#data-types): `Int(n)`, `Uint(n)`, `UUID`, `JSON` or `Text`.
 
 ### Choosing the User Identifier
 
@@ -48,7 +48,7 @@ it is recommended to use the "SSN" property as User Identifier, since it uniquel
 
 ### Choosing the User Identifier - Multiple Actions Per Connection
 
-It is important to note that **identities with the same User Identifier value, if they come from distinct actions from the same connection, are put together during the [Identity Resolution](./identity-resolution.md#same-user-criterion) process**.
+It is important to note that **identities with the same User Identifier value, if they come from distinct actions from the same connection, are put together during the [Identity Resolution](./identity-resolution#same-user-criterion) process**.
 
 This means that, if you have **multiple actions for the same connection**, there may be two distinct scenarios:
 
@@ -58,7 +58,7 @@ This means that, if you have **multiple actions for the same connection**, there
 
 ## Last Change Time Column
 
-Actions on **file storage** and **database** source connections **may** indicate a column containing a timestamp indicating the last change time of the user. It must be a column with one of the following [types](data-validation.html#data-types): `DateTime`, `Date`, `JSON` or `Text`.
+Actions on **file storage** and **database** source connections **may** indicate a column containing a timestamp indicating the last change time of the user. It must be a column with one of the following [types](data-validation#data-types): `DateTime`, `Date`, `JSON` or `Text`.
 
 If a last change time column is provided and its type is JSON or Text, a timestamp format must be provided for parsing its value.
 

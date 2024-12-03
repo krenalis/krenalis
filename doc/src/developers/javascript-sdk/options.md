@@ -36,15 +36,15 @@ Where `<options>` represent one or more of the options shown below.
 
 Below are the options that control various aspects of the JavaScript SDK.
 
-| Option                                     | Type                                 | Default | Description                                                                                                                                                         |
-|--------------------------------------------|--------------------------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                             |
-| `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the [`debug`](methods.md#debug) method. |
-| [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                                      |
-| [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../events/session-tracking.md) is automatic or not, and sets its timeout.                                                   |
-| [`storage`](#storage-option)               | `Object`                             |         | Customize the global storage priority.                                                                                                                              |
-| [`useQueryString`](#usequerystring-option) | `Boolean`<center>or</center>`Object` | `true`  | Indicates whether to process query parameters using the [Querystring API](querystring-api.md), and if enforce validation rules.                                     |
-| [`user`](#user-option)                     | `Object`                             |         | Customize the storage priority for user data.                                                                                                                       |
+| Option                                     | Type                                 | Default | Description                                                                                                                                                      |
+|--------------------------------------------|--------------------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`cookie`](#cookie-option)                 | `Object`                             |         | Controls specific cookie settings when used as storage.                                                                                                          |
+| `debug`                                    | `Boolean`                            | `false` | **debug mode**: when enabled status messages will appear on the console. You can also enable/disable debug mode later using the [`debug`](methods#debug) method. |
+| [`group`](#group-option)                   | `Object`                             |         | Customize the storage priority for group data.                                                                                                                   |
+| [`session`](#session-option)               | `Object`                             |         | Controls whether the [session tracking](../../events/session-tracking) is automatic or not, and sets its timeout.                                                   |
+| [`storage`](#storage-option)               | `Object`                             |         | Customize the global storage priority.                                                                                                                           |
+| [`useQueryString`](#usequerystring-option) | `Boolean`<center>or</center>`Object` | `true`  | Indicates whether to process query parameters using the [Querystring API](querystring-api), and if enforce validation rules.                                     |
+| [`user`](#user-option)                     | `Object`                             |         | Customize the storage priority for user data.                                                                                                                    |
 
 > The JavaScript SDK also supports the following options from the RudderStack SDK: `secureCookie`, `sameDomainCookiesOnly`, `sameSiteCookie`, `setCookieDomain`, `storage.cookie`, and `storage.type`.
 
@@ -104,10 +104,10 @@ meergoAnalytics.load('<write key>', '<endpoint>', {
 
 The `session` option has the following sub-options:
 
-| Option      | Type      | Default    | Description                                                                                       |
-|-------------|-----------|------------|---------------------------------------------------------------------------------------------------|
-| `autoTrack` | `Boolean` | `true`     | Indicates if the auto tracking is enabled. See [session tracking](../events/session-tracking.md). |
-| `timeout`   | `Number`  | 30 minutes | Timeout in milliseconds for session expiration due to inactivity.                                 |
+| Option      | Type      | Default    | Description                                                                                    |
+|-------------|-----------|------------|------------------------------------------------------------------------------------------------|
+| `autoTrack` | `Boolean` | `true`     | Indicates if the auto tracking is enabled. See [session tracking](../../events/session-tracking). |
+| `timeout`   | `Number`  | 30 minutes | Timeout in milliseconds for session expiration due to inactivity.                              |
 
 #### Example:
 
@@ -122,7 +122,7 @@ meergoAnalytics.load('<write key>', '<endpoint>', {
 
 ### useQueryString option
 
-The `useQueryString` option provides control over how query parameters are handled, as defined in the [Querystring API](querystring-api.md). You can deactivate query string processing entirely by setting `useQueryString` to `false`.
+The `useQueryString` option provides control over how query parameters are handled, as defined in the [Querystring API](querystring-api). You can deactivate query string processing entirely by setting `useQueryString` to `false`.
 
 Alternatively, you can keep it active but validate the Anonymous ID and User ID using regular expressions. To do this, set `useQueryString` to an object, instead of a boolean, with the following properties:
 
@@ -174,7 +174,7 @@ The `storage` option has the following sub-option:
 
 The `storage.stores` option specifies the preferred storage locations in order of priority: localStorage, sessionStorage, cookie, and memory. If `storage.stores` is empty, no data will be stored. 
 
-See also [Storage&nbsp;Locations](storage-locations.md).
+See also [Storage&nbsp;Locations](storage-locations).
 
 #### Example:
 

@@ -18,7 +18,7 @@ For optimal use, Meergo suggests making an identify call in the following situat
 
 ## How to Make an Identify Call
 
-To make an identify call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make an identify call in the following way:
+To make an identify call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make an identify call in the following way:
 
 ```javascript
 meergoAnalytics.identify('59a20n37ec82', {

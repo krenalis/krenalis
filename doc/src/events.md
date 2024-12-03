@@ -6,12 +6,12 @@
 
 ## API calls
 
-- [page call](./events/page.md)
-- [screen call](./events/screen.md)
-- [track call](./events/track.md)
-- [identify call](./events/identify.md)
-- [group call](./events/group.md)
+- [page call](./events/page)
+- [screen call](./events/screen)
+- [track call](./events/track)
+- [identify call](./events/identify)
+- [group call](./events/group)
 
 ## Sessions
 
-- [Session Tracking](./events/session-tracking.md)
+- [Session Tracking](./events/session-tracking)

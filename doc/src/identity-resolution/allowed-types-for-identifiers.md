@@ -4,7 +4,7 @@
 
 # Allowed Types For Identifiers
 
-Here is a list of allowed types for the [identifiers](../identity-resolution.md#identifiers) used in the [Identity Resolution](../identity-resolution.md):
+Here is a list of allowed types for the [identifiers](../identity-resolution#identifiers) used in the [Identity Resolution](../identity-resolution):
 
 * `Int(n)`       
 * `UInt(n)`      

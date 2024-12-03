@@ -6,7 +6,7 @@
 
 The page call allows you to capture when a user views a page on your website, including any extra details about that specific page.
 
-For tracking app screen views, it's recommended to utilize the specific [screen](screen.md) call.
+For tracking app screen views, it's recommended to utilize the specific [screen](screen) call.
 
 ## When to Use the Page Call
 
@@ -16,7 +16,7 @@ The page call is used when loading a new page. In Single Page Applications (SPAs
 
 To make a page call, you can use a Meergo SDK. Refer to its documentation for more details.
 
-For example, with the [JavaScript SDK](../javascript-sdk.md) in the browser, you can make a page call (apart from the automatic page call triggered by the snippet on page load) in the following way:
+For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make a page call (apart from the automatic page call triggered by the snippet on page load) in the following way:
 
 ```javascript
 meergoAnalytics.page('Product View', {

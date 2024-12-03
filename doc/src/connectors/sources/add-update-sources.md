@@ -15,32 +15,32 @@ You can add sources or update existing ones from the **Sources** page of your ad
 Choose the source you want to add:  
 
 * **Website**
-    * [JavaScript](javascript.md)
+    * [JavaScript](javascript)
 * **Application**
-    * [HubSpot](hubspot.md)
-    * [Klaviyo](klaviyo.md)
-    * [Mailchimp](mailchimp.md)
-    * [Stripe](stripe.md)
+    * [HubSpot](hubspot)
+    * [Klaviyo](klaviyo)
+    * [Mailchimp](mailchimp)
+    * [Stripe](stripe)
 * **Database**
-    * [ClickHouse](clickhouse.md)
-    * [MySQL](mysql.md)
-    * [PostgreSQL](postgreSQL.md)
-    * [Snowflake](snowflake.md)
+    * [ClickHouse](clickhouse)
+    * [MySQL](mysql)
+    * [PostgreSQL](postgreSQL)
+    * [Snowflake](snowflake)
 * **Storage**
-    * [HTTP](http.md)
-    * [S3](s3.md)
-    * [SFTP](sftp.md)
+    * [HTTP](http)
+    * [S3](s3)
+    * [SFTP](sftp)
 * **File**
-    * [CSV](csv.md)
-    * [Excel](excel.md)
-    * [JSON](json.md)
-    * [Parquet](parquet.md)
+    * [CSV](csv)
+    * [Excel](excel)
+    * [JSON](json)
+    * [Parquet](parquet)
 * **Mobile**
-    * [Android](android.md)
+    * [Android](android)
     * Apple
 * **Server**
-    * [.NET](dotnet.md)
-    * [Go](go.md)
-    * [Java](java.md)
-    * [Node.js](nodejs.md)
-    * [Python](python.md)
+    * [.NET](dotnet)
+    * [Go](go)
+    * [Java](java)
+    * [Node.js](nodejs)
+    * [Python](python)
