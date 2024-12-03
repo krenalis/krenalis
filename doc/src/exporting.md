@@ -4,7 +4,7 @@
 
 # Export
 
-## Exporting Users to Apps
+## Exporting users to apps
 
 Exporting users to an app occurs by determining, through the matching of values of **a property of Meergo users** and **a property of users in the app**, which Meergo users correspond to the users of the app.
 
@@ -26,7 +26,7 @@ When exporting to an app, **two different types of conflicts** can occur, which 
 | **Multiple users within Meergo** have the same value for the specified property. | **These users are not exported** and an error is shown.                                                      |
 | **Multiple users on the app** have the same value for the specified property.    | Whether to proceed with the export of these users or not **depends on the configuration** set in the action. |
 
-### How Matching Occurs
+### How matching occurs
 
 The comparison is done by comparing the string representations of the user property values in Meergo with the string representations of the user property values in the app.
 
@@ -44,7 +44,7 @@ Even if the types of the two properties are different, the two values represente
 
 And this determines the fact that, in the example, the Meergo user matches with the user on the app.
 
-## Exporting Users To Databases
+## Exporting users to databases
 
 When exporting users to a database, both a **table name** and a **table key property** must be specified.
 
@@ -59,7 +59,7 @@ A value for the table key property must be returned by the transformation, as, o
 
 > Note that for some database connectors, for example, MySQL, it is the user's responsibility to choose the primary key of the table as the table key property, otherwise the export won't behave consistently. In this regard, refer to the specific documentation for each database.
 
-## Exporting Users To Files
+## Exporting users to files
 
 ### Ordering
 

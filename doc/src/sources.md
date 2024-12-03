@@ -10,13 +10,13 @@ When you add a source to Meergo, the system automatically starts gathering data 
 
 The way data is collected varies depending on the type of source: websites, mobile apps, and servers send data in real-time, allowing Meergo to access user events and information immediately. In contrast, sources like cloud apps, databases, and file storage are read periodically, ensuring that the data is updated, even if not in real-time.
 
-### **Unifying Sources**
+### **Unifying sources**
 
 One of the main benefits of Meergo is its ability to **unify** data from different sources. When multiple sources (like a website, a mobile app, and a CRM system) are connected, Meergo can combine the information collected from each, creating a complete and consistent view of customers.
 
 This means that events tracked across different platforms, like a purchase made on a website and a visit from a mobile device, can be combined into a single customer profile. Unifying data helps create a 360-degree view of customer interactions with your business, improving analysis and personalizing experiences.
 
-### **Integration with Data Warehouse and Destinations**
+### **Integration with data warehouse and destinations**
 
 Customer and event data collected from various sources can be stored in real-time in the **data warehouse** of Meergo's workspace, making the information available for advanced analysis and reporting, as well as accessible on Meergo’s dashboard. Additionally, events can be sent immediately to a **destination**, like a cloud application, to be processed and used in real-time.
 

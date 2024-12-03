@@ -2,17 +2,17 @@
 {% macro Title string %}Screen Call{% end %}
 {% Article %}
 
-# Screen Call
+# Screen call
 
 The screen call enables you to capture instances when a user views a screen and record associated properties or details about that particular screen.
 
 For tracking website page views, it's recommended to utilize the specific [page](page) call.
 
-## When to Use the Screen Call
+## When to use the screen call
 
 Use the screen call when there is a change in the displayed content or when a user transitions from one screen to another within your application.
 
-## How to Make a Screen Call
+## How to make a screen call
 
 To make a screen call, you can use a Meergo SDK. Refer to its documentation for more details.
 
@@ -51,14 +51,14 @@ Properties are like extra details that tell you more about the screen. You can i
 
 They are accessible in Meergo within a property of the event called `properties` as a JSON value.
 
-### Prefilled Properties
+### Prefilled properties
 
 Meergo doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
 However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following properties when applicable:
 
-| Property   | JSON&nbsp;Type      | Description                                      |
-|------------|---------------------|--------------------------------------------------|
-| `name`     | `String`            | Page name designated as reserved for future use. |
+| Property   | JSON&nbsp;Type | Description                                      |
+|------------|----------------|--------------------------------------------------|
+| `name`     | `String`       | Page name designated as reserved for future use. |
 
 

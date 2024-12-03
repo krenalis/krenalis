@@ -97,7 +97,7 @@ will become:
 full_name: "Emma Johnson"
 ```
 
-### Sub-properties, Map Keys, and JSON Object Keys
+### Sub-properties, map keys, and JSON object keys
 
 You can reference sub-properties, map keys, and JSON object keys in expressions using either dot notation or square brackets:
 

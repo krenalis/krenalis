@@ -2,17 +2,17 @@
 {% macro Title string %}Page Call{% end %}
 {% Article %}
 
-# Page Call
+# Page call
 
 The page call allows you to capture when a user views a page on your website, including any extra details about that specific page.
 
 For tracking app screen views, it's recommended to utilize the specific [screen](screen) call.
 
-## When to Use the Page Call
+## When to use the page call
 
 The page call is used when loading a new page. In Single Page Applications (SPAs), it's also used for logical changes in the page content or transitions, like moving to a different view or route.
 
-## How to Make a Page Call
+## How to make a page call
 
 To make a page call, you can use a Meergo SDK. Refer to its documentation for more details.
 
@@ -57,7 +57,7 @@ Properties are like extra details that tell you more about the page. You can inc
 
 They are accessible in Meergo within a property of the event called `properties` as a JSON value.
 
-### Prefilled Properties
+### Prefilled properties
 
 Meergo doesn't automatically forward an event's properties to a destination. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
@@ -67,7 +67,7 @@ However, when you set up a mapping, Meergo automatically fills in the mapping ex
 |------------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `keywords` | `Array` of `String` | List of keywords that outlines the content of the page, similar to those used in HTML meta tags for SEO. This feature is mainly used by content publishers who heavily depend on tracking pageviews, and it is not gathered automatically. |
 | `name`     | `String`            | Page name designated as reserved for future use.                                                                                                                                                                                           |
-| `path`     | `String`            | Path segment in the page's URL corresponds to the canonical path, which is derived from the default `location.pathname` in JavaScript.                                                                                                       |
+| `path`     | `String`            | Path segment in the page's URL corresponds to the canonical path, which is derived from the default `location.pathname` in JavaScript.                                                                                                     |
 | `referrer` | `String`            | complete url of the page the user visited before the current one; corresponding to `document.referrer` in JavaScript.                                                                                                                      |
 | `search`   | `String`            | Query string of the URL; corresponding to `location.search` in JavaScript.                                                                                                                                                                 |
 | `title`    | `String`            | Title; corresponding to `document.title` in JavaScript.                                                                                                                                                                                    |

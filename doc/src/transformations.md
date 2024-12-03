@@ -8,7 +8,7 @@ The **transformations** allow you to transform values that conform to one scheme
 
 They therefore allow, for example, to adapt the data read from a source to the data warehouse, or to adapt the data read from the data warehouse before exporting it to a destination.
 
-## Types of Transformations
+## Types of transformations
 
 There are two types of transformations:
 

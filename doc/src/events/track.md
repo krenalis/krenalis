@@ -2,13 +2,13 @@
 {% macro Title string %}Track Call{% end %}
 {% Article %}
 
-# Track Call
+# Track call
 
 The track call is used to send specific events or actions, and associated properties, that occur when users interact with your application or website.
 
 For more effective tracking of page and screen views, it's recommended to utilize the specific [page](page) and [screen](screen) calls.
 
-## When to Use the Track Call
+## When to use the track call
 
 Here are some common scenarios when you might want to use a track call:
 
@@ -20,7 +20,7 @@ Here are some common scenarios when you might want to use a track call:
 
 * **User Segmentation:** Use track calls to record specific events and create user segments based on their behavior. This helps customize marketing strategies or provide personalized experiences based on user actions.
 
-## How to Make a Track Call
+## How to make a track call
 
 To make a track call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make a track call in the following way:
 
@@ -65,16 +65,16 @@ As seen earlier, properties are pieces of information about the user's action th
 
 They are accessible in Meergo within a property of the event called `properties` as a JSON value.
 
-### Prefilled Properties
+### Prefilled properties
 
 Meergo doesn't automatically forward the properties of an event to a destination location. Instead, the control lies in your hands to choose and specify the properties you want to send when configuring the mapping.
 
 However, when you set up a mapping, Meergo automatically fills in the mapping expressions with the following properties when applicable:
 
-| Property      | JSON&nbsp;Type | Description                                                                                                                                                            |
-|---------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `currency`    | `String`       | Currency for the event's resulting revenue, specified in ISO 4127 format, must be set; otherwise, the revenue is assumed to be in US dollars.                          |
-| `revenue`     | `Number`       | Income generated from the event. For instance, a $24.99 shirt would bring in a revenue of `24.99` dollars.                                                             |
-| `value`       | `String`       | Abstract value of the event, emphasized when it doesn't directly generate income but is important for marketing goals, like boosting brand visibility on social media. |
+| Property   | JSON&nbsp;Type | Description                                                                                                                                                            |
+|------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `currency` | `String`       | Currency for the event's resulting revenue, specified in ISO 4127 format, must be set; otherwise, the revenue is assumed to be in US dollars.                          |
+| `revenue`  | `Number`       | Income generated from the event. For instance, a $24.99 shirt would bring in a revenue of `24.99` dollars.                                                             |
+| `value`    | `String`       | Abstract value of the event, emphasized when it doesn't directly generate income but is important for marketing goals, like boosting brand visibility on social media. |
 
 

@@ -22,24 +22,24 @@ In a filter, select the boolean operator `any` if you want an event or user to m
 
 Here are all the operators you can use in filters. The operators you can use for a property depend on the type of property and whether it can be null or not. Texts are compared in a case-sensitive manner.
 
-| Operators                     |                               |
-|-------------------------------|-------------------------------|
-| `is`                          | `is not`                      |
-| `is less than`                | `is greater than`             |
-| `is less than or equal to`    | `is greater than or equal to` |
-| `is between`                  | `is not between`              |
-| `contains`                    | `does not contain`            |
-| `is one of`                   | `is not one of`               |
-| `starts with`                 | `ends with`                   |
-| `is before`                   | `is after`                    |
-| `is on or before`             | `is on or after`              |
-| `is true`                     | `is false`                    |
-| `is null`                     | `is not null`                 |
-| `exists`                      | `does not exist`              |
+| Operators                  |                               |
+|----------------------------|-------------------------------|
+| `is`                       | `is not`                      |
+| `is less than`             | `is greater than`             |
+| `is less than or equal to` | `is greater than or equal to` |
+| `is between`               | `is not between`              |
+| `contains`                 | `does not contain`            |
+| `is one of`                | `is not one of`               |
+| `starts with`              | `ends with`                   |
+| `is before`                | `is after`                    |
+| `is on or before`          | `is on or after`              |
+| `is true`                  | `is false`                    |
+| `is null`                  | `is not null`                 |
+| `exists`                   | `does not exist`              |
 
 ## Best Practices
 
-#### Quoted Values
+#### Quoted values
 
 It is not necessary to quote values. However, if a value starts or ends with a space, `"` or `'`, you should quote it with `"` or `'`. Use a backslash (`\`) to escape `"` or `'` within a quoted value.
 
@@ -65,7 +65,7 @@ To check if a JSON property exists, use the `exists` operator instead of `is nul
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘
 ```
 
-#### Check If True
+#### Check If true
 
 Use the `is true` operator if you want a JSON property to be the boolean `true`:
 
@@ -78,7 +78,7 @@ Use the `is true` operator if you want a JSON property to be the boolean `true`:
 └───────────────────────────┘ └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
-#### Dates and Times
+#### Dates and times
 
 Write values representing date and time (`DateTime` property type) using one of the following ISO8601 formats:
 

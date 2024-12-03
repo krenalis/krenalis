@@ -2,7 +2,7 @@
 {% macro Title string %}Allowed Types For Identifiers{% end %}
 {% Article %}
 
-# Allowed Types For Identifiers
+# Allowed types for identifiers
 
 Here is a list of allowed types for the [identifiers](../identity-resolution#identifiers) used in the [Identity Resolution](../identity-resolution):
 

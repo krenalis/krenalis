@@ -2,7 +2,7 @@
 {% macro Title string %}Data Validation{% end %}
 {% Article %}
 
-# Data Validation
+# Data validation
 
 Data validation in Meergo occurs in various scenarios, ensuring accuracy and consistency throughout the data lifecycle. Whether collecting user data, transforming it, storing it in a data warehouse, or sending it to a destination location, Meergo validates the data against the relevant schema to maintain data integrity and quality.
 
@@ -17,7 +17,7 @@ Meergo validates data in the following scenarios:
 | **During storage in the data warehouse**, data is validated against the destination table's schema.                         |
 | **Sending data and events to a destination location**, validation is conducted against the connection's destination schema. |
 
-## Data Types
+## Data types
 
 The table below provides the types that can appears in a schema:
 

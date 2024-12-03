@@ -2,11 +2,11 @@
 {% macro Title string %}Identify Call{% end %}
 {% Article %}
 
-# Identify Call
+# Identify call
 
 Through an identify call, you can connect previous and upcoming events to a recognized user and save details about them along with their events, such as name and email. The user information can also be utilized to update and enhance unified data from other sources.  
 
-## When to Use the Identify Call
+## When to use the identify call
 
 For optimal use, Meergo suggests making an identify call in the following situations:
 
@@ -16,7 +16,7 @@ For optimal use, Meergo suggests making an identify call in the following situat
 
 * When there's an update to the user's information, such as a change in address or the addition of a new one.
 
-## How to Make an Identify Call
+## How to make an identify call
 
 To make an identify call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make an identify call in the following way:
 
@@ -77,7 +77,7 @@ As seen earlier, traits are pieces of information about the event's user that yo
 
 The traits can be passed to Meergo through the identify and track calls. They are accessible in Meergo within a property of the event called `traits` as a JSON value.
 
-### Prefilled Traits
+### Prefilled traits
 
 Meergo doesn't automatically forward a user's traits to a destination. Instead, the control lies in your hands to choose and specify the traits you want to send when configuring the mapping.
 
@@ -99,6 +99,6 @@ However, when you set up a mapping, Meergo automatically fills in the mapping ex
 | `lastName`    | `String`       | Last name.                                                                                                                                                                                     |
 | `name`        | `String`       | Full name. It is automatically filled from `firstName` and `lastName` if they are present.                                                                                                     |
 | `phone`       | `String`       | Phone number.                                                                                                                                                                                  |
-| `title`       | `String`       | Title. For example, concerning her role within the company.                                                                                                                             |
-| `username`    | `String`       | Username. Unique for each user.
-| `website`     | `String`       | URL of the user's website.
+| `title`       | `String`       | Title. For example, concerning her role within the company.                                                                                                                                    |
+| `username`    | `String`       | Username. Unique for each user.                                                                                                                                                                |
+| `website`     | `String`       | URL of the user's website.                                                                                                                                                                     |

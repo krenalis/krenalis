@@ -2,13 +2,13 @@
 {% macro Title string %}Group Call{% end %}
 {% Article %}
 
-# Group Call
+# Group call
 
 The group call provides a way to associate individual users with groups, such as a company, organization, team, association, or initiative. A user who has been identified can be associated with several groups.
 
 It also provides the ability to store custom traits related to that group, such as organization name and industry sector, or account type and annual revenue.
 
-## When to Use the Group Call
+## When to use the group call
 
 For best results, it is recommended to make a group call in the following scenarios:
 
@@ -18,7 +18,7 @@ For best results, it is recommended to make a group call in the following scenar
  
 * In situations where users can dynamically switch between different groups during their session.
 
-## How to Make a Group Call
+## How to make a group call
 
 To make a group call, you can use a Meergo SDK. Refer to its documentation for more details. For example, with the [JavaScript SDK](../javascript-sdk) in the browser, you can make a group call in the following way:
 
@@ -64,7 +64,7 @@ As seen earlier, traits are pieces of information about the event's group that y
 
 They are accessible in Meergo within a property of the event called `traits` as a JSON value.
 
-### Prefilled Traits
+### Prefilled traits
 
 Meergo doesn't automatically forward a group's traits to a destination. Instead, the control lies in your hands to choose and specify the traits you want to send when configuring the mapping.
 
