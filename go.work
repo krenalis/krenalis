@@ -1,6 +1,0 @@
-// Keep in sync with the version within ".github/workflows/main.yml".
-// Keep in sync with the version within "Dockerfile".
-// Keep in sync with the version within "go.mod".
-go 1.23
-
-use .

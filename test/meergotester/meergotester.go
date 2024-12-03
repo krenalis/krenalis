@@ -258,10 +258,10 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = os.Stat(filepath.Join(repo, "go.work"))
+		_, err = os.Stat(filepath.Join(repo, "go.mod"))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				t.Fatal("file 'go.work' not found, cannot determine root directory where to build Meergo")
+				t.Fatal("file 'go.mod' not found, cannot determine root directory where to build Meergo")
 			}
 			t.Fatal(err)
 		}

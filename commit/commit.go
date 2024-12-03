@@ -130,9 +130,8 @@ func main() {
 		}
 	}
 
-	// Sync and vendor the workspace.
-	NewCmd("go", "work", "sync").InDir(repo).Run()
-	NewCmd("go", "work", "vendor").InDir(repo).Run()
+	// Update the vendor.
+	NewCmd("go", "mod", "vendor").InDir(repo).Run()
 
 	// Run 'npm install' in the 'assets' directory.
 	NewCmd("npm", "install").InDir(repo, "assets").Run()
