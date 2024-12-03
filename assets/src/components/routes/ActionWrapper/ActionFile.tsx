@@ -4,7 +4,7 @@ import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ActionContext from '../../../context/ActionContext';
-import { UnprocessableError, NotFoundError, BadRequestError } from '../../../lib/api/errors';
+import { UnprocessableError, NotFoundError } from '../../../lib/api/errors';
 import { CONFIRM_ANIMATION_DURATION } from './Action.constants';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -368,7 +368,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					values,
 				);
 			} catch (err) {
-				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
+				if (err instanceof UnprocessableError) {
 					handleError(err.message);
 				} else {
 					handleError(err);
@@ -480,7 +480,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			);
 		} catch (err) {
 			setTimeout(() => {
-				if (err instanceof UnprocessableError || err instanceof BadRequestError) {
+				if (err instanceof UnprocessableError) {
 					handleError(err.message);
 				} else {
 					handleError(err);

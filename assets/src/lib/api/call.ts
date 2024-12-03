@@ -1,4 +1,4 @@
-import { NotFoundError, BadRequestError, UnavailableError, UnprocessableError, LoginRequiredError } from './errors';
+import { NotFoundError, UnavailableError, UnprocessableError, LoginRequiredError } from './errors';
 import JSONbig from 'json-bigint';
 
 const call = async (url: string, method: string, body?: any, opt?: any) => {
@@ -36,7 +36,11 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 				let parsed = await res.json();
 				let { code, message, cause } = parsed.error;
 				if (res.status === 400) {
-					throw new BadRequestError(message, cause);
+					console.error(
+						`%c meergo: ${message}${cause ? ' | Cause: ' + cause : ''}`,
+						'background:#dc362e;color:#dcdcdc',
+					);
+					throw new Error('An internal error occurred');
 				} else if (res.status === 404) {
 					throw new NotFoundError(message);
 				} else if (res.status === 422) {
