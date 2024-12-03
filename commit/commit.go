@@ -74,7 +74,7 @@ func main() {
 
 	// Check if the command has been executed correctly basing on modules which
 	// certainly should be found.
-	for _, mod := range []string{".", "meergo-cli"} {
+	for _, mod := range []string{"."} {
 		if !slices.Contains(modules, mod) {
 			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
 		}
@@ -82,7 +82,7 @@ func main() {
 
 	// Check if the command has been executed correctly basing on packages which
 	// certainly should be found.
-	for _, pkg := range []string{".", "core", "meergo-cli"} {
+	for _, pkg := range []string{".", "core", "connectors", "warehouses"} {
 		if !slices.Contains(packages, pkg) {
 			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
 		}

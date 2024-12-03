@@ -6,10 +6,7 @@
 
 Once the user model is created, it can be modified with operations such as adding, removing, and modifying properties to reflect the model that best represents the users you want to manage in Meergo.
 
-The user schema can be modified both: 
-
-* through the UI
-* by using the "meergo-cli" tool from the command line.
+The user schema can be modified with the UI.
 
 ## Supported operations
 

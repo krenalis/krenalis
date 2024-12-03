@@ -15,12 +15,9 @@
   - [3. Build the assets](#3-build-the-assets)
   - [4. Compile the server command in dev mode](#4-compile-the-server-command-in-dev-mode)
   - [5. Populate the database](#5-populate-the-database)
-  - [6. Create the workspace, connect a warehouse and initialize it](#6-create-the-workspace-connect-a-warehouse-and-initialize-it)
   - [7. Run and open the browser](#7-run-and-open-the-browser)
-  - [8. Add properties to the user schema](#8-add-properties-to-the-user-schema)
 - [Expose on the Internet (optional)](#expose-on-the-internet-optional)
 - [How to test events (and eventually import user identities)](#how-to-test-events-and-eventually-import-user-identities)
-- [Interact with Meergo using `meergo-cli`](#interact-with-meergo-using-meergo-cli)
 - [Docker](#docker)
   - [Building Meergo Image](#building-meergo-image)
   - [Running Meergo within a Container](#running-meergo-within-a-container)
@@ -87,16 +84,9 @@ The tests inside `/test/` are already configured by default when the repository 
 
 1. Start Meergo.
 
-2. Create a new workspace.
+2. Create a new workspace with the schema specified in the file `test/example_user_schema.json` of this repository.
 
-3. Apply the test schema to the warehouse of the new workspace, replacing the placeholder `<YOUR_WORKSPACE_ID>` with the id of the newly created workspace:
-    ```
-    cd meergo-cli
-    go build
-    meergo-cli change-user-schema --yes ../test/example_user_schema.json -w <YOUR_WORKSPACE_ID>
-    ```
-
-5. In the directory `assets/tests`, add a file `test-config.json` and copy inside it the contents of the file `test-config-example.json`. Then, fill the various keys of the config file based on your local environment. For instance:
+3. In the directory `assets/tests`, add a file `test-config.json` and copy inside it the contents of the file `test-config-example.json`. Then, fill the various keys of the config file based on your local environment. For instance:
 
     ```json
     {
@@ -123,7 +113,7 @@ The tests inside `/test/` are already configured by default when the repository 
     );
     ```
 
-5. Navigate to the `assets` directory and install all the dependencies:
+4. Navigate to the `assets` directory and install all the dependencies:
 
     ```
     cd assets
@@ -131,7 +121,7 @@ The tests inside `/test/` are already configured by default when the repository 
     npx playwright install chromium
     ```
   
-6. From the same `assets` directory, run the tests directly from the command line:
+5. From the same `assets` directory, run the tests directly from the command line:
 
     ```
     npx playwright test
@@ -199,51 +189,9 @@ go build -tags dev,osusergo,netgo -trimpath ./cmd/meergo
 
 Populate the Meergo's database with the queries in [database/PostgreSQL.sql](database/PostgreSQL.sql).
 
-### 6. Create the workspace, connect a warehouse and initialize it
-
-(note that these steps requires [the meergo-cli executable](#interact-with-meergo-using-meergo-cli) installed and available on your system)
-
-Create the workspace, connect a PostgreSQL warehouse and initialize it with:
-
-```
-meergo-cli create-workspace ./myschema.json PostgreSQL ./postgresql.json
-```
-
-where `./myschema.json` is a JSON file containing the definition of a user schema, for example:
-
-```json
-{
-    "name": "Object",
-    "properties": [ { "name": "email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true } ]
-}
-```
-
-and `./postgresql.json` is a JSON file containing the information to access the PostgreSQL data warehouse, like:
-
-```json
-{
-    "Host": "localhost",
-    "Port": 5432,
-    "Username": "user",
-    "Password": "***********",
-    "Database": "warehouse",
-    "Schema": "public"
-}
-```
-
-> NOTE: It is possible to specify other data warehouses besides PostgreSQL. For more details, see `meergo-cli create-workspace --help`.
-
 ### 7. Run and open the browser
 
 Launch the server command executing `./meergo` (or `./meergo.exe` on Windows) and visit https://localhost:9090/ui/.
-
-### 8. Add properties to the user schema
-
-Within the root of the repository, run:
-
-```
-meergo-cli change-user-schema ./test/example_user_schema.json -w <workspace ID>
-```
 
 ## Expose on the Internet (optional)
 
@@ -285,10 +233,6 @@ meergo-cli change-user-schema ./test/example_user_schema.json -w <workspace ID>
     deno task build
     ```
 6. Visit the URL pointing to the HTML file, for example https://localhost:9090/javascript-sdk/mywebsite/.
-
-## Interact with Meergo using `meergo-cli`
-
-Refer to the [documentation of the meergo-cli tool](meergo-cli/README.md).
 
 ## Docker
 
