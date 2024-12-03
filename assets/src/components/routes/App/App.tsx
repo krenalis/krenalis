@@ -15,7 +15,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
 import { LoginRequiredError } from '../../../lib/api/errors';
 
-setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.18.0/dist/');
+setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.0/dist/');
 
 const App = () => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
