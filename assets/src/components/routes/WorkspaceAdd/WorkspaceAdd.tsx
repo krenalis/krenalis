@@ -10,6 +10,7 @@ import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
+import InitialSchema from './InitialSchema.json';
 import * as icons from '../../../constants/icons';
 
 const WorkspaceAdd = () => {
@@ -64,18 +65,12 @@ const WorkspaceAdd = () => {
 			return;
 		}
 		setIsAddingWorkspace(true);
-		let initialSchema = {
-			name: 'Object',
-			properties: [
-				{ name: 'email', note: '', type: { name: 'Text', charLen: 300 }, label: '', readOptional: true },
-			],
-		} as ObjectType;
 		let id: number;
 		try {
 			const res = await api.workspaces.add(
 				name,
 				privacyRegion,
-				initialSchema,
+				InitialSchema as ObjectType,
 				selectedWarehouse,
 				'Normal',
 				warehouseSettings,

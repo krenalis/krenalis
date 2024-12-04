@@ -1,0 +1,144 @@
+{
+	"name": "Object",
+	"properties": [
+		{
+			"label": "First name",
+			"name": "first_name",
+			"readOptional": true,
+			"type": {
+				"charLen": 100,
+				"name": "Text"
+			}
+		},
+		{
+			"label": "Last name",
+			"name": "last_name",
+			"readOptional": true,
+			"type": {
+				"charLen": 100,
+				"name": "Text"
+			}
+		},
+		{
+			"label": "Email",
+			"name": "email",
+			"readOptional": true,
+			"type": {
+				"charLen": 300,
+				"name": "Text"
+			}
+		},
+		{
+			"label": "Phone number",
+			"name": "phone_number",
+			"readOptional": true,
+			"type": {
+				"charLen": 15,
+				"name": "Text"
+			}
+		},
+		{
+			"label": "Date of Birth",
+			"name": "date_of_birth",
+			"readOptional": true,
+			"type": {
+				"name": "Date"
+			}
+		},
+		{
+			"label": "Address",
+			"name": "address",
+			"readOptional": true,
+			"type": {
+				"name": "Object",
+				"properties": [
+					{
+						"label": "Street",
+						"name": "street",
+						"readOptional": true,
+						"type": {
+							"charLen": 200,
+							"name": "Text"
+						}
+					},
+					{
+						"label": "City",
+						"name": "city",
+						"readOptional": true,
+						"type": {
+							"charLen": 100,
+							"name": "Text"
+						}
+					},
+					{
+						"label": "State",
+						"name": "state",
+						"readOptional": true,
+						"type": {
+							"charLen": 100,
+							"name": "Text"
+						}
+					},
+					{
+						"label": "Zip Code",
+						"name": "zip_code",
+						"readOptional": true,
+						"type": {
+							"charLen": 10,
+							"name": "Text"
+						}
+					},
+					{
+						"label": "Country",
+						"name": "country",
+						"readOptional": true,
+						"type": {
+							"charLen": 100,
+							"name": "Text"
+						}
+					}
+				]
+			}
+		},
+		{
+			"label": "Gender",
+			"name": "gender",
+			"readOptional": true,
+			"type": {
+				"name": "Text"
+			}
+		},
+		{
+			"label": "Loyalty Program Member",
+			"name": "loyalty_program_member",
+			"readOptional": true,
+			"type": {
+				"name": "Boolean"
+			}
+		},
+		{
+			"label": "Preferred Contact Method",
+			"name": "preferred_contact_method",
+			"readOptional": true,
+			"type": {
+				"name": "Text"
+			}
+		},
+		{
+			"label": "Account Creation Date",
+			"name": "account_creation_date",
+			"readOptional": true,
+			"type": {
+				"name": "DateTime"
+			}
+		},
+		{
+			"label": "Last Purchase Date",
+			"name": "last_purchase_date",
+			"readOptional": true,
+			"type": {
+				"name": "DateTime"
+			}
+		}
+	]
+}

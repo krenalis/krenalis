@@ -84,7 +84,7 @@ The tests inside `/test/` are already configured by default when the repository 
 
 1. Start Meergo.
 
-2. Create a new workspace with the schema specified in the file `test/example_user_schema.json` of this repository.
+2. Create a new workspace with the schema specified in the file `assets/src/components/routes/WorkspaceAdd/InitialSchema.json` of this repository.
 
 3. In the directory `assets/tests`, add a file `test-config.json` and copy inside it the contents of the file `test-config-example.json`. Then, fill the various keys of the config file based on your local environment. For instance:
 
