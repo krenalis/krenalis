@@ -16,6 +16,7 @@ interface GridProps {
 	showRowBorder?: boolean;
 	isLoading?: boolean;
 	noRowsMessage?: string;
+	className?: string;
 
 	// used to recompute the table if at first rendering it wasn't in the
 	// viewport (for instance, because it was inside a tab panel group).
@@ -30,7 +31,10 @@ interface gridMethods {
 type GridRef = gridMethods & any;
 
 const Grid = forwardRef<GridRef, GridProps>(
-	({ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, isShown }: GridProps, ref) => {
+	(
+		{ columns, rows, showColumnBorder, showRowBorder, isLoading, noRowsMessage, className, isShown }: GridProps,
+		ref,
+	) => {
 		const gridRef = useRef<any>();
 
 		const { columnsWidths, reloadColumnsWidths } = useGrid(gridRef, rows, columns, isLoading, isShown);
@@ -104,7 +108,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${columnsWidths == null ? ' grid--hide-content' : ''}`}
+				className={`grid${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${columnsWidths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': columnsWidths } as React.CSSProperties}
 			>
 				{isLoading ? (

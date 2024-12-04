@@ -283,7 +283,12 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 	return (
 		<>
-			<Grid rows={rows} columns={GRID_COLUMNS} noRowsMessage='No actions to show'></Grid>
+			<Grid
+				className='connection-actions__grid'
+				rows={rows}
+				columns={GRID_COLUMNS}
+				noRowsMessage='No actions to show'
+			></Grid>
 			<AlertDialog
 				variant='danger'
 				isOpen={actionToDelete != null}

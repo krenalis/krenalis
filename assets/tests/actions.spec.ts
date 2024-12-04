@@ -103,12 +103,12 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
 test(`Add "Export users" action on Dummy`, async ({ page }) => {
@@ -298,12 +298,12 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
 test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
@@ -369,12 +369,12 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
 test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
@@ -509,12 +509,12 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
 test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
@@ -692,12 +692,12 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
 test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => {
@@ -875,12 +875,12 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		let saveButton = page.locator('.action__header-save >> button');
 		await saveButton.click();
 
-		await expect(page.locator('.connection-actions .grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeVisible();
 		expect(isRequestDone).toBe(true);
 
 		await page.reload();
 
-		await expect(page.locator('.connection-actions .grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	});
 });
 
@@ -1239,12 +1239,12 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 		let saveButton = page.locator('.action__header-save >> button');
 		await saveButton.click();
 
-		await expect(page.locator('.connection-actions .grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeVisible();
 		expect(isRequestDone).toBe(true);
 
 		await page.reload();
 
-		await expect(page.locator('.connection-actions .grid')).toBeVisible();
+		await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	});
 });
 
@@ -1314,12 +1314,12 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
 
 test(`Add "Import users" action on Javascript`, async ({ page }) => {
@@ -1388,10 +1388,10 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	let saveButton = page.locator('.action__header-save >> button');
 	await saveButton.click();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 	expect(isRequestDone).toBe(true);
 
 	await page.reload();
 
-	await expect(page.locator('.connection-actions .grid')).toBeVisible();
+	await expect(page.locator('.connection-actions__grid')).toBeVisible();
 });
