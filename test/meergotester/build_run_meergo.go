@@ -21,6 +21,9 @@ import (
 )
 
 // buildMeergo builds Meergo.
+//
+// Meergo is compiled in production mode, so the asset files must already be
+// generated in the directory where Meergo is compiled.
 func buildMeergo(ctx context.Context, repo, meergoDir string) error {
 	cmd := exec.CommandContext(ctx, "go", "build", "-tags", "osusergo,netgo", "-o", filepath.Join(meergoDir, meergoExecFilename()), "./cmd/meergo")
 	cmd.Stdout = os.Stdout
@@ -29,6 +32,20 @@ func buildMeergo(ctx context.Context, repo, meergoDir string) error {
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("cannot build Meergo: %s", err)
+	}
+	return nil
+}
+
+// generateAssets generates the assets necessary for the compilation and
+// execution of Meergo in production mode, which is the mode used by the tests.
+func generateAssets(ctx context.Context, repo string) error {
+	cmd := exec.CommandContext(ctx, "go", "generate")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = filepath.Join(repo, "cmd", "meergo")
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("command 'go generate' executed in directory '%s' failed: %s", cmd.Dir, err)
 	}
 	return nil
 }

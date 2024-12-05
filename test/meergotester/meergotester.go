@@ -71,8 +71,9 @@ type Meergo struct {
 	stopWarehouseContainer func() error
 }
 
-var meergoAlreadyLaunched bool
+var assetsAlreadyGenerated bool
 var meergoAlreadyBuilt bool
+var meergoAlreadyLaunched bool
 
 type TestingOption int
 
@@ -246,6 +247,33 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	setts.Transformer.Local.PythonExecutable = testsSettings.PythonExecutable
 	setts.Transformer.Local.FunctionsDir = transformationsTempDir
 
+	// Determine the root of the repository.
+	repo, err := filepath.Abs("../")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = os.Stat(filepath.Join(repo, "go.mod"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			t.Fatal("file 'go.mod' not found, cannot determine root directory where to build Meergo")
+		}
+		t.Fatal(err)
+	}
+
+	// The assets are generated both when Meergo is launched externally, as it
+	// runs in production mode, and when Meergo is executed "embedded", since in
+	// that case a filesystem is passed to the execution of Meergo that reads
+	// from the "cmd/meergo/meergo-assets" directory.
+	if !assetsAlreadyGenerated {
+		t.Log("generating Meergo assets...")
+		err = generateAssets(ctx, repo)
+		if err != nil {
+			t.Fatalf("cannot generate meergo assets: %s", err)
+		}
+		t.Log("assets generated")
+		assetsAlreadyGenerated = true
+	}
+
 	// Launch Meergo.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	c.cancel = cancel
@@ -254,17 +282,6 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		// Create, if necessary, the directory that will hold the Meergo
 		// executable (as well as the other files, eg. config.yaml, needed for
 		// the execution).
-		repo, err := filepath.Abs("../")
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = os.Stat(filepath.Join(repo, "go.mod"))
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				t.Fatal("file 'go.mod' not found, cannot determine root directory where to build Meergo")
-			}
-			t.Fatal(err)
-		}
 		meergoDir := filepath.Join(repo, "test", "meergo-executable-for-tests")
 		err = os.Mkdir(meergoDir, 0755)
 		if err != nil && !errors.Is(err, os.ErrExist) {
@@ -306,7 +323,18 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			defer func() {
 				close(c.meergoRunning)
 			}()
-			err := cmd.Run(ctxWithCancel, &setts, nil)
+			assets := os.DirFS(filepath.Join(repo, "cmd", "meergo", "meergo-assets"))
+			{
+				// A random file, 'index.js.br', is opened just to verify if the
+				// filesystem has been created correctly.
+				f, err := assets.Open("index.js.br")
+				if err != nil {
+					log.Printf("cannot find file 'index.js.br' withing filesystem passed to Meergo, so maybe there is a problem with the tests and/or with the assets generation")
+					return
+				}
+				_ = f.Close()
+			}
+			err = cmd.Run(ctxWithCancel, &setts, assets)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return
