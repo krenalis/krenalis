@@ -6,7 +6,6 @@
 - [Local Testing Cookbook](#local-testing-cookbook)
   - [Testing Snowflake](#testing-snowflake)
   - [Altering the tests configuration](#altering-the-tests-configuration)
-  - [Testing the UI with Playwright](#testing-the-ui-with-playwright)
   - [Partially run the tests](#partially-run-the-tests)
   - [Troubleshooting Tests](#troubleshooting-tests)
 - [How to execute Meergo for development](#how-to-execute-meergo-for-development)
@@ -79,57 +78,6 @@ The tests inside `/test/` are already configured by default when the repository 
 |----------------------------|----------------------------------------------------------------------------|------------------|
 | `MEERGO_TESTS_HOST`        | The host on which Meergo is started                                        | `127.0.0.1:9091` |
 | `MEERGO_TESTS_PYTHON_PATH` | The path to the Python executable for running the transformation functions | `python3`        |
-
-### Testing the UI with Playwright
-
-1. Start Meergo.
-
-2. Create a new workspace with the schema specified in the file `assets/src/components/routes/WorkspaceAdd/InitialSchema.json` of this repository.
-
-3. In the directory `assets/tests`, add a file `test-config.json` and copy inside it the contents of the file `test-config-example.json`. Then, fill the various keys of the config file based on your local environment. For instance:
-
-    ```json
-    {
-        "baseURL": "https://localhost:9090",
-        "workspaceID": 1234567890,
-        "dbHost": "127.0.0.1",
-        "dbPort": 5432,
-        "dbUsername": "postgres",
-        "dbPassword": "foopass",
-        "dbName": "foodb"
-    }
-    ```
-    **NOTE**: the database credentials in the config file are used to test the creation of a "PostgreSQL" connection and the creation of actions associated with it. For this reason, any PostgreSQL database credentials can be provided, as long as: 
-    - the database can be modified by the tests without causing loss of relevant information
-    - the database is capable of satisfying the query `SELECT email, first_name, last_name FROM users WHERE ${last_change_time} LIMIT ${limit}` used in the test that adds the "Import Users" action 
-    - the database allows the use of `users` as the table in the test that adds the "Export Users" action
-    
-    For this purpose, you can create a new database and execute the following query to populate it so that it is compatible with the tests:
-    ```sql
-    CREATE TABLE users (
-        email VARCHAR(300),
-        first_name VARCHAR(300),
-        last_name VARCHAR(300)
-    );
-    ```
-
-4. Navigate to the `assets` directory and install all the dependencies:
-
-    ```
-    cd assets
-    npm install
-    npx playwright install chromium
-    ```
-  
-5. From the same `assets` directory, run the tests directly from the command line:
-
-    ```
-    npx playwright test
-    ```
-    or launch the Playwright UI to run and debug the tests visually:
-    ```
-    npx playwright test --ui
-    ```
 
 ### Partially run the tests
 
