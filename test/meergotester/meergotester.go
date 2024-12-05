@@ -418,6 +418,12 @@ func (c *Meergo) CountEventsInWarehouse(ctx context.Context) int {
 	return count
 }
 
+// Host returns the host (along with the port) on which the Meergo instance
+// runs.
+func (c *Meergo) Host() string {
+	return testsSettings.MeergoHost
+}
+
 // Stop stops the execution of Meergo.
 func (c *Meergo) Stop() {
 	if c.cancel != nil {
