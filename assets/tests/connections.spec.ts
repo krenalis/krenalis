@@ -50,6 +50,7 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.click('a[href="/ui/connectors/PostgreSQL?role=Source"]');
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
+	await page.locator('sl-input >> input[name="Port"]').fill(String(config.dbPort));
 	await page.locator('sl-input >> input[name="Username"]').fill(config.dbUsername);
 	await page.locator('sl-input >> input[name="Password"]').fill(config.dbPassword);
 	await page.locator('sl-input >> input[name="Database"]').fill(config.dbName);
@@ -81,6 +82,7 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.click('a[href="/ui/connectors/PostgreSQL?role=Destination"]');
 
 	await page.locator('sl-input >> input[name="Host"]').fill(config.dbHost);
+	await page.locator('sl-input >> input[name="Port"]').fill(String(config.dbPort));
 	await page.locator('sl-input >> input[name="Username"]').fill(config.dbUsername);
 	await page.locator('sl-input >> input[name="Password"]').fill(config.dbPassword);
 	await page.locator('sl-input >> input[name="Database"]').fill(config.dbName);
