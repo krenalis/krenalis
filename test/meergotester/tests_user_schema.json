@@ -3,6 +3,7 @@
     "properties": [
         {
             "name": "email",
+            "label": "Email",
             "type": {
                 "name": "Text",
                 "charLen": 300
@@ -11,6 +12,7 @@
         },
         {
             "name": "dummy_id",
+            "label": "Dummy ID",
             "type": {
                 "name": "Text"
             },
@@ -18,11 +20,13 @@
         },
         {
             "name": "android",
+            "label": "Android",
             "type": {
                 "name": "Object",
                 "properties": [
                     {
                         "name": "id",
+                        "label": "ID",
                         "type": {
                             "name": "Text"
                         },
@@ -30,6 +34,7 @@
                     },
                     {
                         "name": "idfa",
+                        "label": "IDFA",
                         "type": {
                             "name": "Text"
                         },
@@ -37,6 +42,7 @@
                     },
                     {
                         "name": "push_token",
+                        "label": "Push Token",
                         "type": {
                             "name": "Text"
                         },
@@ -48,11 +54,13 @@
         },
         {
             "name": "ios",
+            "label": "IOS",
             "type": {
                 "name": "Object",
                 "properties": [
                     {
                         "name": "id",
+                        "label": "ID",
                         "type": {
                             "name": "Text"
                         },
@@ -60,6 +68,7 @@
                     },
                     {
                         "name": "idfa",
+                        "label": "IDFA",
                         "type": {
                             "name": "Text"
                         },
@@ -67,6 +76,7 @@
                     },
                     {
                         "name": "push_token",
+                        "label": "Push Token",
                         "type": {
                             "name": "Text"
                         },
@@ -78,6 +88,7 @@
         },
         {
             "name": "first_name",
+            "label": "First Name",
             "type": {
                 "name": "Text",
                 "charLen": 300
@@ -86,6 +97,7 @@
         },
         {
             "name": "last_name",
+            "label": "Last Name",
             "type": {
                 "name": "Text",
                 "charLen": 300
@@ -94,6 +106,7 @@
         },
         {
             "name": "gender",
+            "label": "Gender",
             "type": {
                 "name": "Text"
             },
@@ -101,11 +114,13 @@
         },
         {
             "name": "food_preferences",
+            "label": "Food Preferences",
             "type": {
                 "name": "Object",
                 "properties": [
                     {
                         "name": "drink",
+                        "label": "Drink",
                         "type": {
                             "name": "Text"
                         },
@@ -113,6 +128,7 @@
                     },
                     {
                         "name": "fruit",
+                        "label": "Fruit",
                         "type": {
                             "name": "Text"
                         },
@@ -124,6 +140,7 @@
         },
         {
             "name": "phone_numbers",
+            "label": "Phone Numbers",
             "type": {
                 "name": "Array",
                 "elementType": {
@@ -135,11 +152,13 @@
         },
         {
             "name": "favorite_movie",
+            "label": "Favourite Movie",
             "type": {
                 "name": "Object",
                 "properties": [
                     {
                         "name": "title",
+                        "label": "Title",
                         "type": {
                             "name": "Text"
                         },
@@ -147,6 +166,7 @@
                     },
                     {
                         "name": "length",
+                        "label": "Length",
                         "type": {
                             "name": "Float",
                             "bitSize": 64
@@ -155,11 +175,13 @@
                     },
                     {
                         "name": "soundtrack",
+                        "label": "Soundtrack",
                         "type": {
                             "name": "Object",
                             "properties": [
                                 {
                                     "name": "title",
+                                    "label": "Title",
                                     "type": {
                                         "name": "Text"
                                     },
@@ -167,6 +189,7 @@
                                 },
                                 {
                                     "name": "author",
+                                    "label": "Author",
                                     "type": {
                                         "name": "Text"
                                     },
@@ -174,6 +197,7 @@
                                 },
                                 {
                                     "name": "length",
+                                    "label": "Length",
                                     "type": {
                                         "name": "Float",
                                         "bitSize": 64
@@ -182,6 +206,7 @@
                                 },
                                 {
                                     "name": "genre",
+                                    "label": "Genre",
                                     "type": {
                                         "name": "Text"
                                     },
