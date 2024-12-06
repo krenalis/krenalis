@@ -910,8 +910,8 @@ const FullscreenTransformation = ({
 	inputSchema,
 	outputSchema,
 }: FullscreenTransformationProps) => {
-	const [isInputSchemaSelected, setIsInputSchemaSelected] = useState<boolean>(false);
-	const [isOutputSchemaSelected, setIsOutputSchemaSelected] = useState<boolean>(false);
+	const [isInputSchemaSelected, setIsInputSchemaSelected] = useState<boolean>(true);
+	const [isOutputSchemaSelected, setIsOutputSchemaSelected] = useState<boolean>(true);
 	const [samples, setSamples] = useState<Sample[]>(null);
 	const [selectedSample, setSelectedSample] = useState<Sample>(null);
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
@@ -1636,17 +1636,17 @@ const FullscreenTransformation = ({
 								<SlButtonGroup>
 									<SlButton
 										size='small'
-										variant={isInputSchemaSelected ? 'default' : 'primary'}
-										onClick={onSelectInputSamples}
-									>
-										Samples
-									</SlButton>
-									<SlButton
-										size='small'
 										variant={isInputSchemaSelected ? 'primary' : 'default'}
 										onClick={onSelectInputSchema}
 									>
 										Schema
+									</SlButton>
+									<SlButton
+										size='small'
+										variant={isInputSchemaSelected ? 'default' : 'primary'}
+										onClick={onSelectInputSamples}
+									>
+										Samples
 									</SlButton>
 								</SlButtonGroup>
 							</div>
@@ -1658,19 +1658,19 @@ const FullscreenTransformation = ({
 								<SlButtonGroup>
 									<SlButton
 										size='small'
-										variant={isOutputSchemaSelected ? 'default' : 'primary'}
-										onClick={onSelectOutputResult}
-										disabled={isExecuting}
-									>
-										{OutputPanelTitle === 'Request' ? 'Preview' : 'Result'}
-									</SlButton>
-									<SlButton
-										size='small'
 										variant={isOutputSchemaSelected ? 'primary' : 'default'}
 										onClick={onSelectOutputSchema}
 										disabled={isExecuting}
 									>
 										Schema
+									</SlButton>
+									<SlButton
+										size='small'
+										variant={isOutputSchemaSelected ? 'default' : 'primary'}
+										onClick={onSelectOutputResult}
+										disabled={isExecuting}
+									>
+										{OutputPanelTitle === 'Request' ? 'Preview' : 'Result'}
 									</SlButton>
 								</SlButtonGroup>
 							</div>
