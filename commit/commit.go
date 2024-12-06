@@ -28,25 +28,152 @@ const expectedDenoVersion = "2.1.0"
 
 func main() {
 
+	// Command line arguments.
 	var short bool
-	var verbose bool
-	var testPackages bool
-	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test'")
-	flag.BoolVar(&verbose, "v", false, "verbose output")
-	flag.BoolVar(&testPackages, "pkg", false, "run tests on every single package"+
-		" instead of every module (used in conjunction with option '-v', may"+
-		" help spotting problems in tests)")
+	var explicit bool
+	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set")
+	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
+		" each package separately and prints verbose output; may take a little longer;"+
+		" the tests set is unaltered by this option")
 	flag.Parse()
 
 	start := time.Now()
 
 	// Check if the locally installed Deno version is correct.
-	checkDenoVersion()
+	checkDenoVersion(explicit)
 
-	// Find modules and packages in this repository.
-	var modules []string
-	var packages []string
-	err := filepath.Walk(".", func(path string, fi fs.FileInfo, err error) error {
+	// Find modules and packages in the current working directory, then ensure
+	// that the script has been launched with the correct working directory.
+	modules, packages := findModulesPackages(".")
+	for _, mod := range []string{"."} { // just some random modules in the repository (currently we have just one).
+		if !slices.Contains(modules, mod) {
+			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
+		}
+	}
+	for _, pkg := range []string{".", "core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
+		if !slices.Contains(packages, pkg) {
+			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
+		}
+	}
+
+	// Get the current working directory.
+	repo, err := os.Getwd()
+	if err != nil {
+		fatal("cannot read the current working directory: %s", err)
+	}
+
+	// Tidy modules.
+	if explicit {
+		fmt.Println("Tidy modules")
+	}
+	for _, module := range modules {
+		removeGoSum(repo, module, explicit)
+		NewCmd("go", "mod", "tidy").InDir(repo, module).Run(explicit)
+	}
+
+	// Format modules.
+	if explicit {
+		fmt.Println("Format modules")
+	}
+	for _, module := range modules {
+		NewCmd("go", "fmt", "./...").InDir(repo, module).Run(explicit)
+	}
+
+	// Running 'go vet' on every module.
+	if explicit {
+		fmt.Println("Running 'go vet' on every module")
+	}
+	for _, module := range modules {
+		NewCmd("go", "vet", "./...").InDir(repo, module).Run(explicit)
+	}
+
+	// Run Go tests.
+	if explicit {
+		fmt.Println("Run Go tests")
+	}
+	args := []string{"test", "-count", "1", "-failfast"}
+	if short {
+		args = append(args, "-short")
+	}
+	if explicit {
+		args = append(args, "-v")
+	} else {
+		// Just to avoid the command running indefinitely without even printing
+		// output.
+		args = append(args, "-timeout=18m")
+	}
+	if explicit {
+		for _, pkg := range packages {
+			NewCmd("go", args...).InDir(repo, pkg).Run(explicit)
+		}
+	} else {
+		args = append(args, "./...")
+		for _, module := range modules {
+			NewCmd("go", args...).InDir(repo, module).Run(explicit)
+		}
+	}
+
+	// Update the Go vendor.
+	NewCmd("go", "mod", "vendor").InDir(repo).Run(explicit)
+
+	// Run checks and do operations on the UI assets.
+	if explicit {
+		fmt.Println("Run checks and do operations on the UI assets")
+	}
+	NewCmd("npm", "install").InDir(repo, "assets").Run(explicit)
+	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run(explicit)
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run(explicit)
+	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run(explicit)
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run(explicit)
+
+	// Run checks and do operations on the JavaScript SDK.
+	if explicit {
+		fmt.Println("Run checks and do operations on the JavaScript SDK")
+	}
+	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run(explicit)
+	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run(explicit)
+	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run(explicit)
+
+	if explicit {
+		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
+	}
+}
+
+func checkDenoVersion(explicit bool) {
+	if explicit {
+		fmt.Println("Checking the Deno version")
+	}
+	cmd := exec.Command("deno", "--version")
+	var stdout bytes.Buffer
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = &stdout
+	err := cmd.Run()
+	if err != nil {
+		fatal("cannot execute the command 'deno --version': %s", err)
+	}
+	firstLine := strings.Split(stdout.String(), "\n")[0]
+	parts := strings.Split(firstLine, " ")
+	if len(parts) < 2 {
+		fatal("unexpected output from 'deno --version': %q", stdout.String())
+	}
+	version := parts[1]
+	if version != expectedDenoVersion {
+		fatal(fmt.Sprintf("it is not possible to run the tests because they require Deno %s, but the installed version is Deno %s.\n"+
+			"To proceed with the tests, please update the Deno version:\n"+
+			"\n\tdeno upgrade --version %s\n\n"+
+			"If your intention is to update the tests to use Deno %s instead, please modify the specified version in the 'commit/commit.go' script.\n",
+			expectedDenoVersion, version, expectedDenoVersion, version))
+	}
+	if explicit {
+		fmt.Printf("Locally installed Deno version is correct: %s\n", version)
+	}
+}
+
+// findModulesPackages finds the Go modules and packages within the given dir.
+// Both the modules and packages are sorted in alphabetical order.
+// This function skips directories named "vendor".
+func findModulesPackages(dir string) (modules, packages []string) {
+	err := filepath.Walk(dir, func(path string, fi fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -71,115 +198,7 @@ func main() {
 	}
 	slices.Sort(modules)
 	slices.Sort(packages)
-
-	// Check if the command has been executed correctly basing on modules which
-	// certainly should be found.
-	for _, mod := range []string{"."} {
-		if !slices.Contains(modules, mod) {
-			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
-		}
-	}
-
-	// Check if the command has been executed correctly basing on packages which
-	// certainly should be found.
-	for _, pkg := range []string{".", "core", "connectors", "warehouses"} {
-		if !slices.Contains(packages, pkg) {
-			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
-		}
-	}
-
-	// Get the cwd.
-	repo, err := os.Getwd()
-	if err != nil {
-		fatal("cannot read the cwd: %s", err)
-	}
-
-	fmt.Println("Tidying modules")
-	for _, module := range modules {
-		removeGoSum(repo, module, verbose)
-		NewCmd("go", "mod", "tidy").InDir(repo, module).Run()
-	}
-
-	fmt.Println("Formatting modules")
-	for _, module := range modules {
-		NewCmd("go", "fmt", "./...").InDir(repo, module).Run()
-	}
-
-	fmt.Println("Running 'go vet' on every module")
-	for _, module := range modules {
-		NewCmd("go", "vet", "./...").InDir(repo, module).Run()
-	}
-
-	// Test single packages or modules.
-	fmt.Println("Running Go tests")
-	args := []string{"test", "-count", "1"}
-	if short {
-		args = append(args, "-short")
-	}
-	if verbose {
-		args = append(args, "-v")
-	}
-	if testPackages {
-		for _, pkg := range packages {
-			NewCmd("go", args...).InDir(repo, pkg).Run()
-		}
-	} else {
-		args = append(args, "./...")
-		for _, module := range modules {
-			NewCmd("go", args...).InDir(repo, module).Run()
-		}
-	}
-
-	// Update the vendor.
-	NewCmd("go", "mod", "vendor").InDir(repo).Run()
-
-	// Run 'npm install' in the 'assets' directory.
-	NewCmd("npm", "install").InDir(repo, "assets").Run()
-
-	// Format the files in the 'assets' directory.
-	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run()
-
-	// Minify the JavaScript snippet in the 'assets' directory.
-	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run()
-
-	// Typecheck the Typescript code in the 'assets' directory.
-	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run()
-
-	// Make the vendor of assets' 'node_modules' directory.
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run()
-
-	// Format, test and build the files in the 'javascript-sdk' directory.
-	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run()
-	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run()
-	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run()
-
-	fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
-}
-
-func checkDenoVersion() {
-	fmt.Println("Checking the Deno version")
-	cmd := exec.Command("deno", "--version")
-	var stdout bytes.Buffer
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = &stdout
-	err := cmd.Run()
-	if err != nil {
-		fatal("cannot execute the command 'deno --version': %s", err)
-	}
-	firstLine := strings.Split(stdout.String(), "\n")[0]
-	parts := strings.Split(firstLine, " ")
-	if len(parts) < 2 {
-		fatal("unexpected output from 'deno --version': %q", stdout.String())
-	}
-	version := parts[1]
-	if version != expectedDenoVersion {
-		fatal(fmt.Sprintf("it is not possible to run the tests because they require Deno %s, but the installed version is Deno %s.\n"+
-			"To proceed with the tests, please update the Deno version:\n"+
-			"\n\tdeno upgrade --version %s\n\n"+
-			"If your intention is to update the tests to use Deno %s instead, please modify the specified version in the 'commit/commit.go' script.\n",
-			expectedDenoVersion, version, expectedDenoVersion, version))
-	}
-	fmt.Printf("Locally installed Deno version is correct: %s\n", version)
+	return modules, packages
 }
 
 func logCmd(dir, cmd string) {
@@ -193,18 +212,12 @@ func logCmd(dir, cmd string) {
 type Cmd struct {
 	Name          string
 	Args          []string
-	Echo          bool
 	Dir           string
 	AdditionalEnv []string
 }
 
 func NewCmd(name string, args ...string) *Cmd {
-	return &Cmd{Name: name, Args: args, Echo: true}
-}
-
-func (cmd *Cmd) Silent() *Cmd {
-	cmd.Echo = false
-	return cmd
+	return &Cmd{Name: name, Args: args}
 }
 
 func (cmd *Cmd) WithEnv(name, value string) *Cmd {
@@ -217,17 +230,28 @@ func (cmd *Cmd) InDir(elem ...string) *Cmd {
 	return cmd
 }
 
-func (cmd *Cmd) Run() {
+func (cmd *Cmd) Run(explicit bool) {
 	goCmd := exec.Command(cmd.Name, cmd.Args...)
-	goCmd.Stdout = os.Stdout
-	goCmd.Stderr = os.Stderr
-	if cmd.Echo {
-		logCmd(cmd.Dir, strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
+	var output bytes.Buffer
+	if explicit {
+		goCmd.Stdout = os.Stdout
+		goCmd.Stderr = os.Stderr
+	} else {
+		goCmd.Stdout = &output
+		goCmd.Stderr = &output
 	}
 	goCmd.Env = append(os.Environ(), cmd.AdditionalEnv...)
 	goCmd.Dir = cmd.Dir
+	if explicit {
+		logCmd(cmd.Dir, strings.Join(append([]string{cmd.Name}, cmd.Args...), " "))
+	}
 	err := goCmd.Run()
 	if err != nil {
+		if explicit {
+			// Stdout and Stderr have already been printed.
+		} else {
+			fmt.Print(output.String())
+		}
 		fatal("command %q failed (%s)", cmd.Name, err)
 	}
 }
@@ -237,8 +261,8 @@ func fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
-func removeGoSum(repo, module string, verbose bool) {
-	if verbose {
+func removeGoSum(repo, module string, explicit bool) {
+	if explicit {
 		logCmd(module, "rm go.sum")
 	}
 	err := os.Remove(filepath.Join(repo, module, "go.sum"))

@@ -7,7 +7,6 @@
   - [Testing Snowflake](#testing-snowflake)
   - [Altering the tests configuration](#altering-the-tests-configuration)
   - [Partially run the tests](#partially-run-the-tests)
-  - [Troubleshooting Tests](#troubleshooting-tests)
 - [How to execute Meergo for development](#how-to-execute-meergo-for-development)
   - [1. Install React and other dependencies](#1-install-react-and-other-dependencies)
   - [2. Configure and add certificates](#2-configure-and-add-certificates)
@@ -29,7 +28,15 @@ Before pushing commits to the `main` branch of Meergo, from the root of this rep
 go run ./commit
 ```
 
-Refer to the file [.github/workflows/main.yml](.github/workflows/main.yml) for the list of dependencies required to run the tests and their respective supported versions.
+Note that this command does not print anything and may take 10 to 15 minutes to execute.
+
+As an alternative which prints explicit output (may take a bit time more, but the tests are equivalent):
+
+```
+go run ./commit -x
+```
+
+**Tests Dependencies**. Refer to the file [.github/workflows/main.yml](.github/workflows/main.yml) for the list of dependencies required to run the tests and their respective supported versions.
 
 ## How to run tests using GitHub Action
 
@@ -89,17 +96,6 @@ go run ./commit -short
 
 Note: don't use the option `-short` before committing because it runs only a
 subset of the tests.
-
-### Troubleshooting Tests
-
-In case the tests get stuck or you encounter an error that is not easy to understand, you can try running the tests with this command:
-
-```
-go run ./commit -pkg -v
-```
-
-to execute tests on every package, printing verbose output. This should help
-locating the problem.
 
 ## How to execute Meergo for development
 
