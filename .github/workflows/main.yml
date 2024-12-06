@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: go run ./commit
-        run: go run ./commit
+      - name: go run ./commit -x
+        run: go run ./commit -x
 
       - uses: numtide/clean-git-action@v2
