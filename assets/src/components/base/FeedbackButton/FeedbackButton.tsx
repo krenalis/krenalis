@@ -11,6 +11,7 @@ interface FeedbackButtonProps {
 	loading?: boolean;
 	className?: string;
 	size?: Size;
+	hoist?: boolean;
 	animationDuration?: number;
 	variant?: Variant;
 	onClick?: () => void;
@@ -27,7 +28,18 @@ interface FeedbackButtonRef {
 
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 	(
-		{ children, loading, className, animationDuration, variant, onClick, size = 'medium', disabled, ...delegated },
+		{
+			children,
+			loading,
+			className,
+			animationDuration,
+			variant,
+			onClick,
+			size = 'medium',
+			hoist = false,
+			disabled,
+			...delegated
+		},
 		ref,
 	) => {
 		const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -137,6 +149,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				trigger='manual'
 				style={{ '--max-width': '400px' } as React.CSSProperties}
 				placement='bottom'
+				hoist={hoist}
 			>
 				{error !== null && (
 					<div slot='content' className='feedback-button__tooltip-content'>
