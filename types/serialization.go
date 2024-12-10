@@ -280,8 +280,8 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	if p.Nullable {
 		b.WriteString(`,"nullable":true`)
 	}
-	b.WriteString(`,"note":`)
-	_ = marshalString(b, p.Note)
+	b.WriteString(`,"description":`)
+	_ = marshalString(b, p.Description)
 	b.WriteByte('}')
 	return nil
 }
@@ -914,7 +914,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasLabel, hasPlaceholder, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasNote bool
+	var hasLabel, hasPlaceholder, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
 
 	// Read property keys and values.
 	for {
@@ -1017,15 +1017,15 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 				return Property{}, errors.New("unexpected value for 'nullable' key of property")
 			}
 			hasNullable = true
-		case "note":
-			if hasNote {
-				return Property{}, errors.New("repeated 'note' key")
+		case "description":
+			if hasDescription {
+				return Property{}, errors.New("repeated 'description' key")
 			}
-			p.Note, ok = tok.(string)
+			p.Description, ok = tok.(string)
 			if !ok {
-				return Property{}, errors.New("unexpected value for property note")
+				return Property{}, errors.New("unexpected value for property description")
 			}
-			hasNote = true
+			hasDescription = true
 		default:
 			return Property{}, fmt.Errorf("unknown property '%s'", key)
 		}

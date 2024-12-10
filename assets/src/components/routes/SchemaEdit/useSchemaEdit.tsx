@@ -35,7 +35,7 @@ interface PropertyToEdit {
 	createRequired?: boolean;
 	updateRequired?: boolean;
 	nullable?: boolean;
-	note?: string;
+	description?: string;
 	isEditable?: boolean;
 }
 
@@ -152,7 +152,7 @@ const useSchemaEdit = (
 			readOptional: true,
 			createRequired: false,
 			updateRequired: false,
-			note: property.note,
+			description: property.description,
 			isEditable: true,
 		};
 		setEditableSchema(s);
@@ -258,7 +258,7 @@ const useSchemaEdit = (
 			readOptional: current.readOptional,
 			createRequired: current.createRequired,
 			updateRequired: current.updateRequired,
-			note: property.note,
+			description: property.description,
 			isEditable: current.isEditable ? current.isEditable : false,
 		};
 		s[key] = editedProperty;

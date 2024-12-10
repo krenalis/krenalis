@@ -51,7 +51,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`)).WithByteLen(10)}, p2: types.Property{Type: types.Text().WithRegexp(regexp.MustCompile(`^\d+`)).WithByteLen(10)}},
 		{p1: types.Property{Type: types.Array(types.Int(8))}, p2: types.Property{Type: types.Array(types.Int(8))}},
 		{
-			p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Label: "A", Type: types.Boolean(), Nullable: true, Note: "a property"}})},
+			p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Label: "A", Type: types.Boolean(), Nullable: true, Description: "a property"}})},
 			p2: types.Property{Type: types.Object([]types.Property{{Name: "a", Label: "a", Type: types.Boolean(), Nullable: true}})},
 		},
 		{

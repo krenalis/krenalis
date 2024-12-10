@@ -82,7 +82,7 @@ func Equal(t1, t2 Type) bool {
 				p1.UpdateRequired != p2.UpdateRequired ||
 				p1.ReadOptional != p2.ReadOptional ||
 				p1.Nullable != p2.Nullable ||
-				p1.Note != p2.Note ||
+				p1.Description != p2.Description ||
 				!Equal(p1.Type, p2.Type) {
 				return false
 			}

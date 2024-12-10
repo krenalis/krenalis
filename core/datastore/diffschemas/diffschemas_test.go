@@ -103,10 +103,10 @@ func TestDiff(t *testing.T) {
 		{
 			name: "Changes in descriptions are not influent",
 			fromSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Nullable: true, Note: "old note"},
+				{Name: "a", Type: types.Text(), Nullable: true, Description: "old description"},
 			}),
 			toSchema: types.Object([]types.Property{
-				{Name: "a", Type: types.Text(), Nullable: true, Note: "new note"},
+				{Name: "a", Type: types.Text(), Nullable: true, Description: "new description"},
 			}),
 			expectedOps: []meergo.AlterOperation{},
 		},

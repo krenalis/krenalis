@@ -380,9 +380,9 @@ const PropertyDialog = ({
 		setProperty(p);
 	};
 
-	const onInputNote = (e) => {
+	const onInputDescription = (e) => {
 		const p = { ...property };
-		p.note = e.target.value;
+		p.description = e.target.value;
 		setProperty(p);
 	};
 
@@ -758,10 +758,10 @@ const PropertyDialog = ({
 					<SlTextarea
 						className='property-dialog__control'
 						size='small'
-						value={property.note}
-						label='Note'
-						name='note'
-						onSlInput={onInputNote}
+						value={property.description}
+						label='Description'
+						name='description'
+						onSlInput={onInputDescription}
 					/>
 					{property.type?.name !== 'Object' &&
 						property.type?.name !== 'Array' &&

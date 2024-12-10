@@ -13,7 +13,7 @@ interface EditableProperty {
 	createRequired: boolean;
 	updateRequired: boolean;
 	nullable: boolean;
-	note: string;
+	description: string;
 	isEditable?: boolean;
 }
 
@@ -79,7 +79,7 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 				label: property.label,
 				type: typ,
 				nullable: property.nullable,
-				note: property.note,
+				description: property.description,
 				readOptional: property.readOptional,
 			};
 			if (!property.isEditable) {
@@ -109,7 +109,7 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 				label: property.label,
 				type: typ,
 				nullable: property.nullable,
-				note: property.note,
+				description: property.description,
 				readOptional: property.readOptional,
 			};
 			if (!property.isEditable) {
@@ -133,7 +133,7 @@ const newPropertyToEdit = (parentKey: string, indentation: number, root: string)
 		nullable: false,
 		type: null,
 		label: '',
-		note: '',
+		description: '',
 		isEditable: true,
 	};
 };

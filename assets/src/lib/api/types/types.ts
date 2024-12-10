@@ -32,7 +32,7 @@ interface Property {
 	updateRequired: boolean;
 	readOptional: boolean;
 	nullable: boolean;
-	note: string;
+	description: string;
 }
 
 type Type =

@@ -64,19 +64,19 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 			"inSchema": {
 				"name": "Object",
 				"properties": [
-					{ "name": "email", "label": "", "type": { "name": "Text" }, "note": "" },
-					{ "name": "dummyId", "label": "", "type": { "name": "Text" }, "note": "" },
-					{ "name": "firstName", "label": "", "type": { "name": "Text" }, "note": "" },
-					{ "name": "lastName", "label": "", "type": { "name": "Text" }, "note": "" }
+					{ "name": "email", "label": "", "type": { "name": "Text" }, "description": "" },
+					{ "name": "dummyId", "label": "", "type": { "name": "Text" }, "description": "" },
+					{ "name": "firstName", "label": "", "type": { "name": "Text" }, "description": "" },
+					{ "name": "lastName", "label": "", "type": { "name": "Text" }, "description": "" }
 				]
 			},
 			"outSchema": {
 				"name": "Object",
 				"properties": [
-					{ "name": "email", "label": "Email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "note": "" },
-					{ "name": "dummy_id", "label": "Dummy ID", "type": { "name": "Text" }, "readOptional": true, "note": "" },
-					{ "name": "first_name", "label": "First Name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "note": "" },
-					{ "name": "last_name", "label": "Last Name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "note": "" }
+					{ "name": "email", "label": "Email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
+					{ "name": "dummy_id", "label": "Dummy ID", "type": { "name": "Text" }, "readOptional": true, "description": "" },
+					{ "name": "first_name", "label": "First Name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
+					{ "name": "last_name", "label": "Last Name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" }
 				]
 			},
 			"transformation": {
@@ -201,7 +201,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "last_name",
@@ -211,7 +211,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "email",
@@ -221,7 +221,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "dummy_id",
@@ -230,7 +230,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 							"name": "Text"
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					}
 				]
 			},
@@ -243,7 +243,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 						"type": {
 							"name": "Text"
 						},
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "lastName",
@@ -251,7 +251,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 						"type": {
 							"name": "Text"
 						},
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "email",
@@ -259,7 +259,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 						"type": {
 							"name": "Text"
 						},
-						"note": ""
+						"description": ""
 					}
 				]
 			},
@@ -278,7 +278,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					"type": {
 						"name": "Text"
 					},
-					"note": ""
+					"description": ""
 				}
 			},
 			"exportOnDuplicatedUsers": true
@@ -344,7 +344,7 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 							"name": "Text"
 						},
 						"createRequired": true,
-						"note": ""
+						"description": ""
 					}
 				]
 			},
@@ -434,7 +434,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"nullable": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "last_name",
@@ -444,7 +444,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"nullable": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "email",
@@ -454,7 +454,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"nullable": true,
-						"note": ""
+						"description": ""
 					}
 				]
 			},
@@ -469,7 +469,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "last_name",
@@ -479,7 +479,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					}
 				]
 			},
@@ -596,7 +596,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "first_name",
@@ -606,7 +606,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "last_name",
@@ -616,7 +616,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					},
 					{
 						"name": "dummy_id",
@@ -625,7 +625,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"name": "Text"
 						},
 						"readOptional": true,
-						"note": ""
+						"description": ""
 					}
 				]
 			},
@@ -640,7 +640,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"nullable": false,
-						"note": "",
+						"description": "",
 						"updateRequired": true
 					},
 					{
@@ -651,7 +651,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"nullable": true,
-						"note": "",
+						"description": "",
 						"updateRequired": true
 					},
 					{
@@ -662,7 +662,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"charLen": 300
 						},
 						"nullable": true,
-						"note": "",
+						"description": "",
 						"updateRequired": true
 					}
 				]
@@ -782,7 +782,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 							"type": {
 								"name": "Text"
 							},
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "first_name",
@@ -790,7 +790,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 							"type": {
 								"name": "Text"
 							},
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "last_name",
@@ -798,7 +798,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 							"type": {
 								"name": "Text"
 							},
-							"note": ""
+							"description": ""
 						}
 					]
 				},
@@ -813,7 +813,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 								"charLen": 300
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "first_name",
@@ -823,7 +823,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 								"charLen": 300
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "last_name",
@@ -833,7 +833,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 								"charLen": 300
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						}
 					]
 				},
@@ -958,7 +958,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 								"charLen": 300
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "dummy_id",
@@ -967,7 +967,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 								"name": "Text"
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "android",
@@ -982,7 +982,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "idfa",
@@ -991,7 +991,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "push_token",
@@ -1000,12 +1000,12 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									}
 								]
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "ios",
@@ -1020,7 +1020,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "idfa",
@@ -1029,7 +1029,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "push_token",
@@ -1038,12 +1038,12 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									}
 								]
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "first_name",
@@ -1053,7 +1053,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 								"charLen": 300
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "last_name",
@@ -1063,7 +1063,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 								"charLen": 300
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "gender",
@@ -1072,7 +1072,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 								"name": "Text"
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "food_preferences",
@@ -1087,7 +1087,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "fruit",
@@ -1096,12 +1096,12 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									}
 								]
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "phone_numbers",
@@ -1114,7 +1114,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 								}
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						},
 						{
 							"name": "favorite_movie",
@@ -1129,7 +1129,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"name": "Text"
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "length",
@@ -1139,7 +1139,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 											"bitSize": 64
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									},
 									{
 										"name": "soundtrack",
@@ -1154,7 +1154,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 														"name": "Text"
 													},
 													"readOptional": true,
-													"note": ""
+													"description": ""
 												},
 												{
 													"name": "author",
@@ -1163,7 +1163,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 														"name": "Text"
 													},
 													"readOptional": true,
-													"note": ""
+													"description": ""
 												},
 												{
 													"name": "length",
@@ -1173,7 +1173,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 														"bitSize": 64
 													},
 													"readOptional": true,
-													"note": ""
+													"description": ""
 												},
 												{
 													"name": "genre",
@@ -1182,17 +1182,17 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 														"name": "Text"
 													},
 													"readOptional": true,
-													"note": ""
+													"description": ""
 												}
 											]
 										},
 										"readOptional": true,
-										"note": ""
+										"description": ""
 									}
 								]
 							},
 							"readOptional": true,
-							"note": ""
+							"description": ""
 						}
 					]
 				},

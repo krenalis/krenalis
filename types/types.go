@@ -176,7 +176,7 @@ type Property struct {
 	UpdateRequired bool
 	ReadOptional   bool
 	Nullable       bool
-	Note           string
+	Description    string
 }
 
 var _ interface {
@@ -422,7 +422,7 @@ func ObjectOf(properties []Property) (Type, error) {
 		if property.ReadOptional && property.Role == DestinationRole {
 			return Type{}, errors.New("property cannot have ReadOptional if its role is Destination")
 		}
-		note, err := normalizedUTF8(property.Note)
+		description, err := normalizedUTF8(property.Description)
 		if err != nil {
 			return Type{}, err
 		}
@@ -436,7 +436,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			UpdateRequired: property.UpdateRequired,
 			ReadOptional:   property.ReadOptional,
 			Nullable:       property.Nullable,
-			Note:           note,
+			Description:    description,
 		}
 	}
 	return Type{kind: ObjectKind, vl: ps}, nil
