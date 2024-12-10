@@ -1756,8 +1756,8 @@ type ConnectionToAdd struct {
 	Connector string `json:"connector"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
-	// non-anonymous users. It must be nil for destination connections and
-	// non-event source connections.
+	// non-anonymous users. It can only be provided for source Mobile and Website
+	// connections.
 	Strategy *Strategy `json:"strategy"`
 
 	// SendingMode is the mode used for sending events. It must be nil for
