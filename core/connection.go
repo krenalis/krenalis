@@ -2055,8 +2055,9 @@ type ConnectionToSet struct {
 	// connections.
 	Strategy *Strategy `json:"strategy"`
 
-	// SendingMode is the mode used for sending events. It must be nil for
-	// source connections and connections that does not support events.
+	// SendingMode is the mode used for sending events. It can only be provided for
+	// destination app connections that support it. In this case, it must be one of
+	// the sending modes supported by the app.
 	SendingMode *SendingMode `json:"sendingMode"`
 
 	// WebsiteHost is the host, in the form "host:port", of a website
