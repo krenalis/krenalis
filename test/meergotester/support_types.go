@@ -21,57 +21,57 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type Action struct {
-	ID                       int                 `json:"id"`
-	Connection               int                 `json:"connection"`
-	Target                   *Target             `json:"target"`
-	Name                     string              `json:"name"`
-	Enabled                  bool                `json:"enabled"`
-	EventType                *string             `json:"eventType"`
-	Running                  bool                `json:"running"`
-	ScheduleStart            *int                `json:"scheduleStart"`
-	SchedulePeriod           *SchedulePeriod     `json:"schedulePeriod"`
-	InSchema                 types.Type          `json:"inSchema"`
-	OutSchema                types.Type          `json:"outSchema"`
-	Filter                   *Filter             `json:"filter"`
-	Transformation           Transformation      `json:"transformation"`
-	Query                    *string             `json:"query"`
-	Connector                int                 `json:"connector"`
-	Path                     *string             `json:"path"`
-	Sheet                    *string             `json:"sheet"`
-	Compression              Compression         `json:"compression"`
-	Table                    *string             `json:"table"`
-	TableKeyProperty         *string             `json:"tableKeyProperty"`
-	IdentityProperty         *string             `json:"identityProperty"`
-	LastChangeTimeProperty   *string             `json:"lastChangeTimeProperty"`
-	LastChangeTimeFormat     *string             `json:"lastChangeTimeFormat"`
-	FileOrderingPropertyPath string              `json:"fileOrderingPropertyPath"`
-	ExportMode               *ExportMode         `json:"exportMode"`
-	MatchingProperties       *MatchingProperties `json:"matchingProperties"`
-	ExportOnDuplicatedUsers  *bool               `json:"exportOnDuplicatedUsers"`
+	ID                       int             `json:"id"`
+	Connection               int             `json:"connection"`
+	Target                   *Target         `json:"target"`
+	Name                     string          `json:"name"`
+	Enabled                  bool            `json:"enabled"`
+	EventType                *string         `json:"eventType"`
+	Running                  bool            `json:"running"`
+	ScheduleStart            *int            `json:"scheduleStart"`
+	SchedulePeriod           *SchedulePeriod `json:"schedulePeriod"`
+	InSchema                 types.Type      `json:"inSchema"`
+	OutSchema                types.Type      `json:"outSchema"`
+	Filter                   *Filter         `json:"filter"`
+	Transformation           Transformation  `json:"transformation"`
+	Query                    *string         `json:"query"`
+	Connector                int             `json:"connector"`
+	Path                     *string         `json:"path"`
+	Sheet                    *string         `json:"sheet"`
+	Compression              Compression     `json:"compression"`
+	ExportMode               *ExportMode     `json:"exportMode"`
+	Matching                 *Matching       `json:"matching"`
+	ExportOnDuplicates       *bool           `json:"exportOnDuplicates"`
+	Table                    *string         `json:"table"`
+	TableKeyProperty         *string         `json:"tableKeyProperty"`
+	IdentityProperty         *string         `json:"identityProperty"`
+	LastChangeTimeProperty   *string         `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat     *string         `json:"lastChangeTimeFormat"`
+	FileOrderingPropertyPath string          `json:"fileOrderingPropertyPath"`
 }
 
 type ActionToSet struct {
-	Name                     string              `json:"name"`
-	Enabled                  bool                `json:"enabled"`
-	Filter                   *Filter             `json:"filter"`
-	InSchema                 types.Type          `json:"inSchema"`
-	OutSchema                types.Type          `json:"outSchema"`
-	Transformation           Transformation      `json:"transformation"`
-	Connector                string              `json:"connector"`
-	Query                    string              `json:"query"`
-	Path                     string              `json:"path"`
-	Sheet                    string              `json:"sheet"`
-	Compression              Compression         `json:"compression"`
-	UIValues                 json.RawMessage     `json:"uiValues,omitempty"`
-	TableName                string              `json:"tableName"`
-	TableKeyProperty         string              `json:"tableKeyProperty"`
-	IdentityProperty         string              `json:"identityProperty"`
-	LastChangeTimeProperty   string              `json:"lastChangeTimeProperty"`
-	LastChangeTimeFormat     string              `json:"lastChangeTimeFormat"`
-	FileOrderingPropertyPath string              `json:"fileOrderingPropertyPath"`
-	ExportMode               *ExportMode         `json:"exportMode"`
-	MatchingProperties       *MatchingProperties `json:"matchingProperties"`
-	ExportOnDuplicatedUsers  *bool               `json:"exportOnDuplicatedUsers"`
+	Name                     string          `json:"name"`
+	Enabled                  bool            `json:"enabled"`
+	Filter                   *Filter         `json:"filter"`
+	InSchema                 types.Type      `json:"inSchema"`
+	OutSchema                types.Type      `json:"outSchema"`
+	Transformation           Transformation  `json:"transformation"`
+	Connector                string          `json:"connector"`
+	Query                    string          `json:"query"`
+	Path                     string          `json:"path"`
+	Sheet                    string          `json:"sheet"`
+	Compression              Compression     `json:"compression"`
+	UIValues                 json.RawMessage `json:"uiValues,omitempty"`
+	ExportMode               ExportMode      `json:"exportMode,omitempty"`
+	Matching                 Matching        `json:"matching"`
+	ExportOnDuplicates       bool            `json:"exportOnDuplicates"`
+	TableName                string          `json:"tableName"`
+	TableKeyProperty         string          `json:"tableKeyProperty"`
+	IdentityProperty         string          `json:"identityProperty"`
+	LastChangeTimeProperty   string          `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat     string          `json:"lastChangeTimeFormat"`
+	FileOrderingPropertyPath string          `json:"fileOrderingPropertyPath"`
 }
 
 type Compression string
@@ -119,13 +119,6 @@ type Execution struct {
 }
 
 type ExportMode string
-
-// These variables have been introduced to simplify the writing of tests.
-var (
-	ExportModeCreateOnly     = &[]ExportMode{CreateOnly}[0]
-	ExportModeUpdateOnly     = &[]ExportMode{UpdateOnly}[0]
-	ExportModeCreateOrUpdate = &[]ExportMode{CreateOrUpdate}[0]
-)
 
 const (
 	CreateOnly     ExportMode = "CreateOnly"
@@ -206,9 +199,9 @@ type LabelValue struct { // copy-pasted from the not-exported type 'labelValue' 
 
 type Language string
 
-type MatchingProperties struct {
-	Internal string         `json:"internal"`
-	External types.Property `json:"external"`
+type Matching struct {
+	In  string `json:"in"`
+	Out string `json:"out"`
 }
 
 type PrivacyRegion string

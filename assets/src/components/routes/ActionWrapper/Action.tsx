@@ -6,8 +6,8 @@ import ActionFile from './ActionFile';
 import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
-import ActionExportOnDuplicatedUsers from './ActionExportOnDuplicatedUsers';
-import ActionMatchingProperties from './ActionMatchingProperties';
+import ActionExportOnDuplicates from './ActionExportOnDuplicates';
+import ActionMatching from './ActionMatching';
 import ActionTable from './ActionTable';
 import { useAction } from './useAction';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -112,8 +112,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.fields.includes('File') && <ActionFile />}
 					{actionType!.fields.includes('Table') && <ActionTable />}
 					{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
-					{actionType!.fields.includes('MatchingProperties') && <ActionMatchingProperties />}
-					{actionType!.fields.includes('ExportOnDuplicatedUsers') && <ActionExportOnDuplicatedUsers />}
+					{actionType!.fields.includes('Matching') && <ActionMatching />}
+					{actionType!.fields.includes('ExportOnDuplicates') && <ActionExportOnDuplicates />}
 					{actionType!.fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (
 						<ActionFilters ref={transformationSectionRef} />
 					)}

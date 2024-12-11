@@ -1,6 +1,6 @@
 import { ConnectorValues } from './responses';
 import { Compression } from './connection';
-import Type, { ObjectType, Property } from './types';
+import Type, { ObjectType } from './types';
 
 type ActionTarget = 'Events' | 'Users' | 'Groups';
 
@@ -32,9 +32,9 @@ interface ExpressionToBeExtracted {
 	type: Type;
 }
 
-interface MatchingProperties {
-	internal: string;
-	external: Property | null;
+interface Matching {
+	in: string;
+	out: string;
 }
 
 type FilterLogical = 'and' | 'or';
@@ -100,8 +100,8 @@ interface Action {
 	lastChangeTimeFormat: string | null;
 	fileOrderingPropertyPath: string | null;
 	exportMode: ExportMode | null;
-	matchingProperties: MatchingProperties | null;
-	exportOnDuplicatedUsers: boolean | null;
+	matching: Matching | null;
+	exportOnDuplicates: boolean | null;
 	compression: Compression;
 	connector: string;
 }
@@ -129,9 +129,9 @@ interface ActionToSet {
 	lastChangeTimeProperty?: string | null;
 	lastChangeTimeFormat?: string | null;
 	fileOrderingPropertyPath?: string | null;
-	exportMode?: ExportMode | null;
-	matchingProperties?: MatchingProperties | null;
-	exportOnDuplicatedUsers?: boolean | null;
+	exportMode?: ExportMode;
+	matching?: Matching;
+	exportOnDuplicates?: boolean;
 	compression: Compression;
 	connector: string;
 	uiValues?: ConnectorValues;
@@ -157,7 +157,7 @@ export type {
 	Transformation,
 	TransformationFunction,
 	ExportMode,
-	MatchingProperties,
+	Matching,
 	SchedulePeriod,
 	Filter,
 	FilterOperator,

@@ -35,8 +35,18 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	connector := action.Connection().Connector()
 
 	var matching *datastore.Matching
-	var in types.Property
+	var matchingIn types.Property
+	var matchingOut types.Property
 	if connector.Type == state.App {
+		// Get the matching properties.
+		matchingIn, _ = action.InSchema.Property(action.Matching.In)
+		matchingOut, _ = action.OutSchema.Property(action.Matching.Out)
+		matching = &datastore.Matching{
+			Action:             action.ID,
+			InProperty:         matchingIn.Name,
+			ExportMode:         this.action.ExportMode,
+			ExportOnDuplicates: action.ExportOnDuplicates,
+		}
 		// Synchronize destinations users with the app users.
 		err := this.syncDestinationUsers(ctx)
 		if err != nil {
@@ -44,13 +54,6 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				err.Msg = "in the app matching property, " + err.Msg + ". Please review and update the action before attempting to export the users."
 			}
 			return newActionError(metrics.OutputValidationStep, err)
-		}
-		in, _ = action.InSchema.Property(action.MatchingProperties.Internal)
-		matching = &datastore.Matching{
-			Action:          action.ID,
-			Property:        in.Name,
-			ExportMode:      *this.action.ExportMode,
-			AllowDuplicates: *action.ExportOnDuplicatedUsers,
 		}
 	}
 
@@ -163,9 +166,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		if connector.Type == state.App {
 			if record.MatchingID == "" {
 				// Create the user.
-				value := record.Properties[action.MatchingProperties.Internal]
-				ex := action.MatchingProperties.External
-				value, err = convertToExternal(value, in.Type, ex.Type, in.Name, ex.Name)
+				value := record.Properties[matchingIn.Name]
+				value, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, matchingIn.Name, matchingOut.Name)
 				if err != nil {
 					this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
 					goto Next
@@ -231,7 +233,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				this.core.metrics.TransformationPassed(action.ID, 1)
 				this.core.metrics.OutputValidationPassed(action.ID, 1)
 				if user.MatchingValue != nil {
-					record.Properties[action.MatchingProperties.External.Name] = user.MatchingValue
+					record.Properties[matchingOut.Name] = user.MatchingValue
 				}
 				if connector.Type == state.App && len(record.Properties) == 0 {
 					this.core.metrics.FinalizePassed(action.ID, 1)
@@ -285,8 +287,8 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	}
 
 	// Create a schema with only the matching property.
-	externalProp := this.action.MatchingProperties.External
-	schema := types.Object([]types.Property{externalProp})
+	matchingOut, _ := this.action.OutSchema.Property(this.action.Matching.Out)
+	schema := types.Object([]types.Property{matchingOut})
 
 	records, err := this.app().Users(ctx, schema, cursor)
 	if err != nil {
@@ -304,7 +306,7 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 		}
 
 		// Store the user only if it has a matching external property, and it is not nil.
-		v, ok := user.Properties[externalProp.Name]
+		v, ok := user.Properties[matchingOut.Name]
 		if ok && v != nil {
 			users = append(users, datastore.DestinationUser{
 				User:     user.ID,

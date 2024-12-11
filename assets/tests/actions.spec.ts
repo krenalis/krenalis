@@ -132,25 +132,22 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 	await exportMode.locator('sl-select').click();
 	await exportMode.locator('sl-option[value="CreateOnly"]').click();
 
-	// Matching properties.
-	let matchingProperties = page.locator('.action__matching-properties');
-	await matchingProperties.locator('[data-id="internal"] sl-input >> input').click();
-	await matchingProperties
-		.locator('[data-id="internal"] sl-menu-item .schema-combobox-item__name', { hasText: 'email' })
-		.click();
-	await matchingProperties.locator('[data-id="external"] sl-input >> input').click();
-	await matchingProperties
-		.locator('[data-id="external"] sl-menu-item .schema-combobox-item__text', { hasText: 'email' })
-		.click();
-	// Selected external matching property should not be visible in the mapping.
+	// Matching.
+	let matching = page.locator('.action__matching-properties');
+	await matching.locator('[data-id="in"] sl-input >> input').click();
+	await matching.locator('[data-id="in"] sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await matching.locator('[data-id="out"] sl-input >> input').click();
+	await matching.locator('[data-id="out"] sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	// Selected out matching property should not be visible in the
+	// mapping.
 	await expect(
 		page.locator('.action__transformation-mappings .action__transformation-output-property >> input', {
 			hasText: 'email',
 		}),
 	).not.toBeVisible();
 
-	// Export on duplicated users.
-	await page.locator('.action__export-on-duplicated sl-checkbox').click();
+	// Export on duplicates.
+	await page.locator('.action__export-on-duplicates sl-checkbox').click();
 
 	// Mappings.
 	let mappings = page.locator('.action__transformation');
@@ -270,18 +267,11 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 				}
 			},
 			"exportMode": "CreateOnly",
-			"matchingProperties": {
-				"internal": "email",
-				"external": {
-					"name": "email",
-					"label": "",
-					"type": {
-						"name": "Text"
-					},
-					"description": ""
-				}
+			"matching": {
+				"in": "email",
+				"out": "email"
 			},
-			"exportOnDuplicatedUsers": true
+			"exportOnDuplicates": true
 		}
 	}
 	`;

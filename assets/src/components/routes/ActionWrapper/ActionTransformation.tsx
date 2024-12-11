@@ -355,13 +355,13 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	};
 
 	const onOpenFullscreenTransformation = () => {
-		if (actionType.fields.includes('MatchingProperties')) {
+		if (actionType.fields.includes('Matching')) {
 			// If the matching properties are not defined, prevent the opening
 			// of testing mode and show an error. Displaying the same error
 			// during action testing in testing mode would be less clear.
-			const internal = action.matchingProperties.internal;
-			const external = action.matchingProperties.external;
-			if (internal === '' || external === '') {
+			const inMatching = action.matching.in;
+			const outMatching = action.matching.out;
+			if (inMatching === '' || outMatching === '') {
 				handleError('Matching properties cannot be empty');
 				return;
 			}
@@ -689,9 +689,8 @@ const TransformationBox = ({
 		const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.transformation.mapping) {
-			const isExternalMatchingProperty =
-				action.matchingProperties?.external && action.matchingProperties.external === k;
-			if (isExternalMatchingProperty) {
+			const isOutMatchingProperty = action.matching?.out && action.matching.out === k;
+			if (isOutMatchingProperty) {
 				continue;
 			}
 			const isRequired =
@@ -1678,13 +1677,11 @@ const FullscreenTransformation = ({
 								{isOutputSchemaSelected ? (
 									<div className='fullscreen-transformation__panel-schema'>
 										{outputSchema.properties.map((p) => {
-											if (
-												action.matchingProperties?.external &&
-												action.matchingProperties.external === p.name
-											) {
-												// Do not show the property used
-												//  as external matching
-												//  property as it must not be
+											if (action.matching?.out && action.matching.out === p.name) {
+												// Do not show the
+												//  property used as out
+												//  matching property as
+												//  it must not be
 												//  transformed.
 												return null;
 											} else if (p.type.name === 'Object') {

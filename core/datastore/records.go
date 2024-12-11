@@ -32,10 +32,10 @@ type Record struct {
 // to an app. It filters users based on whether they have or do not have a match
 // with the app users.
 type Matching struct {
-	Action          int
-	Property        string
-	ExportMode      state.ExportMode
-	AllowDuplicates bool
+	Action             int
+	InProperty         string
+	ExportMode         state.ExportMode
+	ExportOnDuplicates bool
 }
 
 // SchemaError represents an error with a schema.
@@ -52,6 +52,11 @@ func (err *SchemaError) Error() string {
 // value is returned as ID, columnByProperty is the mapping from the path of a
 // property to the relative column, and omitNil indicates whether properties
 // with a nil value should be omitted from each record.
+//
+// action and appExport parameters (if specified) represent the action
+// identifier and the export options for an app action, respectively. When
+// provided, the resulting records are compared against the destination users
+// table.
 //
 // It returns, in Record.MatchingID, the matching ID if matching is not nil.
 func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
@@ -70,9 +75,9 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 	var joins []meergo.Join
 
 	if matching != nil {
-		c, ok := columnByProperty[matching.Property]
+		c, ok := columnByProperty[matching.InProperty]
 		if !ok {
-			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.Property)
+			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.InProperty)
 		}
 		columns = append(columns, meergo.Column{Name: "__user__", Type: types.Text(), Nullable: true})
 		joins = []meergo.Join{
@@ -107,7 +112,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 				}
 			}
 		}
-		query.OrderBy = matching.Property
+		query.OrderBy = matching.InProperty
 		query.OrderDesc = false
 	}
 
@@ -203,9 +208,9 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			if v := row[last-1]; v != nil {
 				record.MatchingID = v.(string)
 				if id == previous.ID {
-					record.Err = fmt.Errorf("duplicates found for the matching property %q in the exported users", r.matching.Property)
-				} else if i > 0 && !r.matching.AllowDuplicates && record.MatchingID == previous.MatchingID {
-					record.Err = fmt.Errorf("duplicates found for the matching property %q in the app users", r.matching.Property)
+					record.Err = fmt.Errorf("duplicates found for the matching property %q in the exported users", r.matching.InProperty)
+				} else if i > 0 && !r.matching.ExportOnDuplicates && record.MatchingID == previous.MatchingID {
+					record.Err = fmt.Errorf("duplicates found for the matching property %q in the app users", r.matching.InProperty)
 				}
 			}
 			if record.Err == nil {

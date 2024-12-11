@@ -236,23 +236,39 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 }
 
 // Writer returns a Writer to create and update app of the provided action.
+// action must be a destination app action on users or groups, and ack cannot be
+// nil.
+//
 // If the action's output schema does not align with the app's destination
 // schema, it returns a *schemas.Error error.
 func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (Writer, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	appSchema, err := app.SchemaAsRole(ctx, state.Destination, state.Users, "")
-	if err != nil {
-		return nil, err
-	}
-	// Check that the action's output schema is aligned with the app destination schema.
-	err = schemas.CheckAlignment(action.OutSchema, appSchema, action.ExportMode)
-	if err != nil {
-		return nil, err
-	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
+	}
+	if action.ExportMode == "" {
+		return nil, errors.New("action is not a valid destination app action")
+	}
+	// Get the destination schema.
+	destinationSchema, err := app.SchemaAsRole(ctx, state.Destination, state.Users, "")
+	if err != nil {
+		return nil, err
+	}
+	// Get the output schema.
+	outSchema := action.OutSchema
+	if action.ExportMode == state.UpdateOnly {
+		// Remove the output matching property from the output schema.
+		outName := action.Matching.Out
+		outSchema = types.SubsetFunc(outSchema, func(p types.Property) bool {
+			return p.Name != outName
+		})
+	}
+	// Check that the output schema is aligned with the destination schema.
+	err = schemas.CheckAlignment(outSchema, destinationSchema, &action.ExportMode)
+	if err != nil {
+		return nil, err
 	}
 	writer := appwriter.New(
 		appwriter.AckFunc(ack),
@@ -260,7 +276,6 @@ func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (
 		app.inner.(meergo.AppRecords),
 		app.name)
 	return writer, nil
-
 }
 
 // userSchema returns the user schema with the provided role.

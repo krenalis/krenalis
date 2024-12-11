@@ -48,7 +48,6 @@ func TestActionsCreation(t *testing.T) {
 	dstFsID := c.AddDestinationFilesystem(storageDir)
 	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
 	postgreSQLConnection := c.AddSourcePostgreSQL()
-	dummyExportConnection := c.AddDummy("Dummy (destination)", meergotester.Destination)
 
 	tests := []struct {
 		conn   int
@@ -415,50 +414,6 @@ func TestActionsCreation(t *testing.T) {
 				},
 			},
 			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"input schema must be invalid for actions that import user identities from events"}}`,
-		},
-		{
-			conn: dummyExportConnection,
-			action: meergotester.ActionToSet{
-				Name: "Export users to Dummy",
-				InSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
-				}),
-				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text()},
-				}),
-				Transformation: meergotester.Transformation{
-					Mapping: map[string]string{
-						"email": "email",
-					},
-				},
-				ExportMode: meergotester.ExportModeCreateOrUpdate,
-				MatchingProperties: &meergotester.MatchingProperties{
-					Internal: "email",
-					External: types.Property{
-						Name: "email",
-						Type: types.Text(),
-					},
-				},
-			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"export on duplicated users setting cannot be nil"}}`,
-		},
-		{
-			conn: javaScriptConnection,
-			action: meergotester.ActionToSet{
-				Name:     "Import user identities from events",
-				Enabled:  true,
-				InSchema: types.Type{},
-				OutSchema: types.Object([]types.Property{
-					{Name: "email", Type: types.Text(), ReadOptional: true},
-				}),
-				Transformation: meergotester.Transformation{
-					Mapping: map[string]string{
-						"email": "traits.email",
-					},
-				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
-			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"export on duplicated users setting must be nil"}}`,
 		},
 	}
 	for _, test := range tests {

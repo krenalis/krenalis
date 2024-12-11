@@ -338,10 +338,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
 			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_properties,\n"+
-			"transformation_out_properties, query, connector, path, sheet, compression::TEXT, settings, table_name,\n"+
-			"table_key_property, identity_property, last_change_time_property, last_change_time_format, health,\n"+
-			"file_ordering_property_path, export_mode, matching_properties_internal, matching_properties_external,\n"+
-			"export_on_duplicated_users\n"+
+			"transformation_out_properties, query, connector, path, sheet, compression::TEXT, settings, export_mode,\n"+
+			"matching_in, matching_out, allow_duplicates, table_name, table_key_property, identity_property,\n"+
+			"last_change_time_property, last_change_time_format, health, file_ordering_property_path\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
@@ -349,17 +348,16 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					var eventType string
 					var rawInSchema, rawOutSchema, filter, mapping []byte
 					var function TransformationFunction
-					var matchPropInternal, matchPropExternal []byte
 					var connector *string
 					action := Action{}
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
 						&filter, &mapping, &function.Source, &function.Language, &function.Version, &function.PreserveJSON,
 						&action.Transformation.InProperties, &action.Transformation.OutProperties, &action.Query, &connector,
-						&action.Path, &action.Sheet, &action.Compression, &action.Settings, &action.TableName,
+						&action.Path, &action.Sheet, &action.Compression, &action.Settings, &action.ExportMode,
+						&action.Matching.In, &action.Matching.Out, &action.ExportOnDuplicates, &action.TableName,
 						&action.TableKeyProperty, &action.IdentityProperty, &action.LastChangeTimeProperty,
-						&action.LastChangeTimeFormat, &action.Health, &action.FileOrderingPropertyPath, &action.ExportMode,
-						&matchPropInternal, &matchPropExternal, &action.ExportOnDuplicatedUsers)
+						&action.LastChangeTimeFormat, &action.Health, &action.FileOrderingPropertyPath)
 					if err != nil {
 						return err
 					}
@@ -397,17 +395,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					}
 					if function.Source != "" {
 						action.Transformation.Function = &function
-					}
-					if len(matchPropInternal) > 0 {
-						action.MatchingProperties = &MatchingProperties{}
-						err = json.Unmarshal(matchPropInternal, &action.MatchingProperties.Internal)
-						if err != nil {
-							return err
-						}
-						err = json.Unmarshal(matchPropExternal, &action.MatchingProperties.External)
-						if err != nil {
-							return err
-						}
 					}
 					state.actions[action.ID] = &action
 					c.actions[action.ID] = &action

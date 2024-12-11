@@ -489,14 +489,15 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		Path:                     action.Path,
 		Sheet:                    action.Sheet,
 		Compression:              state.Compression(action.Compression),
+		ExportMode:               state.ExportMode(action.ExportMode),
+		Matching:                 state.Matching(action.Matching),
+		ExportOnDuplicates:       action.ExportOnDuplicates,
 		TableName:                action.TableName,
 		TableKeyProperty:         action.TableKeyProperty,
 		IdentityProperty:         action.IdentityProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
-		ExportMode:               (*state.ExportMode)(action.ExportMode),
-		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
 
 	// Add the filter to the notification.
@@ -536,13 +537,6 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		}
 	}
 
-	// Handle the matching properties.
-	if props := action.MatchingProperties; props != nil {
-		n.MatchingProperties = &state.MatchingProperties{
-			Internal: props.Internal,
-			External: props.External,
-		}
-	}
 	var function state.TransformationFunction
 	if n.Transformation.Function != nil {
 		name := transformationFunctionName(n.ID, n.Transformation.Function.Language)
@@ -595,34 +589,21 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 				return err
 			}
 		}
-		var matchPropInternal, matchPropExternal []byte
-		if n.MatchingProperties != nil {
-			var err error
-			matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
-			if err != nil {
-				return err
-			}
-			matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
-			if err != nil {
-				return err
-			}
-		}
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
 			"transformation_in_properties, transformation_out_properties, query, connector, path, sheet, compression,\n" +
-			"settings, table_name, table_key_property, identity_property, last_change_time_property,\n" +
-			"last_change_time_format, file_ordering_property_path, export_mode, matching_properties_internal,\n" +
-			"matching_properties_external, export_on_duplicated_users)\n" +
-			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,\n" +
-			"$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"
+			"settings, export_mode, matching_in, matching_out, allow_duplicates, table_name, table_key_property,\n" +
+			"identity_property, last_change_time_property, last_change_time_format, file_ordering_property_path)\n" +
+			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
+			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
 			n.Transformation.InProperties, n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet,
-			n.Compression, string(n.Settings), n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty,
-			n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal),
-			string(matchPropExternal), n.ExportOnDuplicatedUsers)
+			n.Compression, string(n.Settings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates,
+			n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
+			n.FileOrderingPropertyPath)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)

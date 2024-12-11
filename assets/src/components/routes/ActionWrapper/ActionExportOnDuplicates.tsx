@@ -3,26 +3,28 @@ import Section from '../../base/Section/Section';
 import ActionContext from '../../../context/ActionContext';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 
-const ActionExportOnDuplicatedUsers = () => {
+const ActionExportOnDuplicates = () => {
 	const { action, setAction } = useContext(ActionContext);
-	const onChangeExportOnDuplicatedUsers = (e) => {
+
+	const onChangeExportOnDuplicates = (e) => {
 		const a = { ...action };
-		a.exportOnDuplicatedUsers = e.currentTarget.checked;
+		a.exportOnDuplicates = e.currentTarget.checked;
 		setAction(a);
 	};
+
 	return (
 		<Section
-			title='Export on duplicated users'
-			className='action__export-on-duplicated'
+			title='Export on duplicates'
+			className='action__export-on-duplicates'
 			description='Determine the behavior in case of duplicated users on the app, which are users which have the same value for the specified property'
 			padded={true}
 			annotated={true}
 		>
-			<SlCheckbox checked={action.exportOnDuplicatedUsers!} onSlChange={onChangeExportOnDuplicatedUsers}>
+			<SlCheckbox checked={action.exportOnDuplicates!} onSlChange={onChangeExportOnDuplicates}>
 				Run the export even in case of duplicated users on the app, instead of not starting the export
 			</SlCheckbox>
 		</Section>
 	);
 };
 
-export default ActionExportOnDuplicatedUsers;
+export default ActionExportOnDuplicates;

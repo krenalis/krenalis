@@ -1056,6 +1056,9 @@ type Action struct {
 	Sheet                    string
 	Compression              Compression
 	Settings                 []byte
+	ExportMode               ExportMode
+	Matching                 Matching
+	ExportOnDuplicates       bool
 	TableName                string
 	TableKeyProperty         string
 	IdentityProperty         string
@@ -1064,9 +1067,11 @@ type Action struct {
 	Reload                   bool
 	Health                   Health
 	FileOrderingPropertyPath string
-	ExportMode               *ExportMode
-	MatchingProperties       *MatchingProperties
-	ExportOnDuplicatedUsers  *bool
+}
+
+type Matching struct {
+	In  string
+	Out string
 }
 
 // Language represents a transformation language.
@@ -1128,15 +1133,6 @@ const (
 	UpdateOnly     ExportMode = "UpdateOnly"
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
-
-// MatchingProperties contains an internal property (belonging to the Golden
-// Record) and an external property (belonging to the app) which are used to
-// match identities of users in the data warehouse with users on the external
-// app, during export.
-type MatchingProperties struct {
-	Internal string // the corresponding property is stored within the action's input schema.
-	External types.Property
-}
 
 // ActionExecution represents an action execution.
 type ActionExecution struct {

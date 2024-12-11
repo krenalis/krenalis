@@ -64,7 +64,7 @@ CREATE TABLE connections (
     PRIMARY KEY (id)
 );
 
-CREATE TYPE export_mode AS ENUM ('CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
+CREATE TYPE export_mode AS ENUM ('', 'CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');
 
 CREATE TABLE actions (
@@ -92,6 +92,10 @@ CREATE TABLE actions (
     sheet varchar(31) NOT NULL DEFAULT '',
     compression compression NOT NULL DEFAULT '',
     settings varchar(65535),
+    export_mode export_mode NOT NULL DEFAULT '',
+    matching_in text NOT NULL,
+    matching_out text NOT NULL,
+    allow_duplicates boolean NOT NULL,
     table_name varchar(1024) NOT NULL DEFAULT '',
     table_key_property text NOT NULL,
     identity_property varchar(1024) NOT NULL DEFAULT '',
@@ -100,10 +104,6 @@ CREATE TABLE actions (
     reload boolean NOT NULL DEFAULT FALSE,
     health health NOT NULL DEFAULT 'Healthy',
     file_ordering_property_path varchar(1024) NOT NULL DEFAULT '',
-    export_mode export_mode DEFAULT NULL,
-    matching_properties_internal text NOT NULL,
-    matching_properties_external text NOT NULL,
-    export_on_duplicated_users boolean DEFAULT NULL,
     PRIMARY KEY (id)
 );
 

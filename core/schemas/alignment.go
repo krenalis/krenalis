@@ -121,8 +121,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 			if !checkCreate && !checkUpdate {
 				continue
 			}
-			exists := types.PropertyExists(t1, p.Name)
-			if exists {
+			if types.PropertyExists(t1, p.Name) {
 				continue
 			}
 			if checkCreate {

@@ -34,33 +34,62 @@ type Action struct {
 	core                     *Core
 	action                   *state.Action
 	connection               *Connection
-	ID                       int                 `json:"id"`
-	Connection               int                 `json:"connection"`
-	Target                   Target              `json:"target"`
-	Name                     string              `json:"name"`
-	Enabled                  bool                `json:"enabled"`
-	EventType                *string             `json:"eventType"`
-	Running                  bool                `json:"running"`
-	ScheduleStart            *int                `json:"scheduleStart"`
-	SchedulePeriod           *SchedulePeriod     `json:"schedulePeriod"`
-	InSchema                 types.Type          `json:"inSchema"`
-	OutSchema                types.Type          `json:"outSchema"`
-	Filter                   *Filter             `json:"filter"`
-	Transformation           Transformation      `json:"transformation"`
-	Query                    *string             `json:"query"`
-	Connector                string              `json:"connector"`
-	Path                     *string             `json:"path"`
-	Sheet                    *string             `json:"sheet"`
-	Compression              Compression         `json:"compression"`
-	Table                    *string             `json:"table"`
-	TableKeyProperty         *string             `json:"tableKeyProperty"`
-	IdentityProperty         *string             `json:"identityProperty"`
-	LastChangeTimeProperty   *string             `json:"lastChangeTimeProperty"`
-	LastChangeTimeFormat     *string             `json:"lastChangeTimeFormat"`
-	FileOrderingPropertyPath *string             `json:"fileOrderingPropertyPath"`
-	ExportMode               *ExportMode         `json:"exportMode"`
-	MatchingProperties       *MatchingProperties `json:"matchingProperties"`
-	ExportOnDuplicatedUsers  *bool               `json:"exportOnDuplicatedUsers"`
+	ID                       int             `json:"id"`
+	Connection               int             `json:"connection"`
+	Target                   Target          `json:"target"`
+	Name                     string          `json:"name"`
+	Enabled                  bool            `json:"enabled"`
+	EventType                *string         `json:"eventType"`
+	Running                  bool            `json:"running"`
+	ScheduleStart            *int            `json:"scheduleStart"`
+	SchedulePeriod           *SchedulePeriod `json:"schedulePeriod"`
+	InSchema                 types.Type      `json:"inSchema"`
+	OutSchema                types.Type      `json:"outSchema"`
+	Filter                   *Filter         `json:"filter"`
+	Transformation           Transformation  `json:"transformation"`
+	Query                    *string         `json:"query"`
+	Connector                string          `json:"connector"`
+	Path                     *string         `json:"path"`
+	Sheet                    *string         `json:"sheet"`
+	Compression              Compression     `json:"compression"`
+	ExportMode               *ExportMode     `json:"exportMode"`
+	Matching                 *Matching       `json:"matching"`
+	ExportOnDuplicates       *bool           `json:"exportOnDuplicates"`
+	Table                    *string         `json:"table"`
+	TableKeyProperty         *string         `json:"tableKeyProperty"`
+	IdentityProperty         *string         `json:"identityProperty"`
+	LastChangeTimeProperty   *string         `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat     *string         `json:"lastChangeTimeFormat"`
+	FileOrderingPropertyPath *string         `json:"fileOrderingPropertyPath"`
+}
+
+// Matching establishes a relationship between a property in Meergo (input
+// property) and a corresponding property in the app (output property) used
+// during an export. This relationship determines whether a user or group in
+// Meergo exists in the app and identifies the corresponding user or group in
+// the app.
+//
+// The input property should be a property in the user schema, while the output
+// property should be a property in the source schema of the connection.
+// If the export mode includes "Create," the output property should also exist
+// in the destination schema with the same type. However, the API does not
+// check these conditions. It only requires that the input property is present
+// in the input schema and the output property is present in the output schema.
+//
+// Note: The output property cannot be directly utilized in the action's
+// transformation. During the export process, an implicit transformation maps
+// the value of the input property to the output property. Only specific type
+// conversions are permitted, which restrict the compatible types for these
+// properties.
+//
+// Supported conversions:
+//   - Int to Int, Uint, Text
+//   - Uint to Int, Uint, Text
+//   - Text to Int, Uint, UUID, Text
+//   - UUID to UUID, Text
+type Matching struct {
+	In  string `json:"in"`  // name of the property in the input schema
+	Out string `json:"out"` // name of the property in the output schema
 }
 
 // Language represents a transformation language. Valid values are "JavaScript"
@@ -148,6 +177,14 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		table := action.TableName
 		this.Table = &table
 	}
+	if action.ExportMode != "" {
+		mode := action.ExportMode
+		matching := action.Matching
+		exportOnDuplicates := action.ExportOnDuplicates
+		this.ExportMode = (*ExportMode)(&mode)
+		this.Matching = (*Matching)(&matching)
+		this.ExportOnDuplicates = &exportOnDuplicates
+	}
 	if action.TableKeyProperty != "" {
 		key := action.TableKeyProperty
 		this.TableKeyProperty = &key
@@ -168,14 +205,6 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		p := action.FileOrderingPropertyPath
 		this.FileOrderingPropertyPath = &p
 	}
-	this.ExportMode = (*ExportMode)(action.ExportMode)
-	if props := action.MatchingProperties; props != nil {
-		this.MatchingProperties = &MatchingProperties{
-			Internal: props.Internal,
-			External: props.External,
-		}
-	}
-	this.ExportOnDuplicatedUsers = action.ExportOnDuplicatedUsers
 }
 
 // Target represents a target.
@@ -389,14 +418,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		Path:                     action.Path,
 		Sheet:                    action.Sheet,
 		Compression:              state.Compression(action.Compression),
+		ExportMode:               state.ExportMode(action.ExportMode),
+		Matching:                 state.Matching(action.Matching),
+		ExportOnDuplicates:       action.ExportOnDuplicates,
 		TableName:                action.TableName,
 		TableKeyProperty:         action.TableKeyProperty,
 		IdentityProperty:         action.IdentityProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
 		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
-		ExportMode:               (*state.ExportMode)(action.ExportMode),
-		ExportOnDuplicatedUsers:  action.ExportOnDuplicatedUsers,
 	}
 
 	// Add the filter to the notification.
@@ -409,13 +439,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	if fileConnector != nil {
 		name := fileConnector.Name
 		connectorName = &name
-	}
-
-	if props := action.MatchingProperties; props != nil {
-		n.MatchingProperties = &state.MatchingProperties{
-			Internal: props.Internal,
-			External: props.External,
-		}
 	}
 
 	// Marshal the input and the output schemas.
@@ -432,20 +455,6 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	var mapping []byte
 	if action.Transformation.Mapping != nil {
 		mapping, err = json.Marshal(action.Transformation.Mapping)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Matching properties.
-	var matchPropInternal, matchPropExternal []byte
-	if n.MatchingProperties != nil {
-		var err error
-		matchPropInternal, err = json.Marshal(n.MatchingProperties.Internal)
-		if err != nil {
-			return err
-		}
-		matchPropExternal, err = json.Marshal(n.MatchingProperties.External)
 		if err != nil {
 			return err
 		}
@@ -523,16 +532,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_properties = $11, "+
 			"transformation_out_properties = $12, query = $13, connector = $14, path = $15, sheet = $16, "+
-			"compression = $17, settings = $18, table_name = $19, table_key_property = $20, identity_property = $21, "+
-			"reload = reload OR $22, last_change_time_property = $23, last_change_time_format = $24, "+
-			"file_ordering_property_path = $25, export_mode = $26, matching_properties_internal = $27, "+
-			"matching_properties_external = $28, export_on_duplicated_users = $29\nWHERE id = $30",
+			"compression = $17, settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
+			"allow_duplicates = $22, table_name = $23, table_key_property = $24, identity_property = $25, "+
+			"reload = reload OR $26, last_change_time_property = $27, last_change_time_format = $28, "+
+			"file_ordering_property_path = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InProperties,
-			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings), n.TableName,
-			n.TableKeyProperty, n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
-			n.FileOrderingPropertyPath, n.ExportMode, string(matchPropInternal), string(matchPropExternal),
-			n.ExportOnDuplicatedUsers, n.ID,
+			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
+			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKeyProperty,
+			n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ID,
 		)
 		if err != nil {
 			return err
@@ -710,6 +718,18 @@ type ActionToSet struct {
 	// It must be nil if the connector does not have a user interface.
 	UIValues json.Value `json:"uiValues"`
 
+	// Mode specifies, for apps, whether the export should create users or groups,
+	// update them, or do both.
+	ExportMode ExportMode `json:"exportMode"`
+
+	// Matching defines a relationship between a property in Meergo ("in") and
+	// a corresponding property in the app ("out") used during an export.
+	Matching Matching `json:"matching"`
+
+	// ExportOnDuplicates indicates whether to proceed with the export even if
+	// duplicate users or groups are found in the app.
+	ExportOnDuplicates bool `json:"exportOnDuplicates"`
+
 	// TableName is the name of the table for the export and it is defined for
 	// destination database-actions; in any other case, it is the empty string.
 	// It cannot be longer than 1024 runes.
@@ -758,26 +778,6 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	// For actions that do not export users to file, this is the empty string.
 	FileOrderingPropertyPath string `json:"fileOrderingPropertyPath"`
-
-	// ExportMode is the export mode, if it has one.
-	ExportMode *ExportMode `json:"exportMode"`
-
-	// MatchingProperties are the internal and external properties used for matching
-	// users during export to apps.
-	MatchingProperties *MatchingProperties `json:"matchingProperties"`
-
-	// ExportOnDuplicatedUsers indicates if the export to app connections should
-	// be executed even in the case of duplicated users on the app.
-	ExportOnDuplicatedUsers *bool `json:"exportOnDuplicatedUsers"`
-}
-
-// MatchingProperties contains an internal property (belonging to the Golden
-// Record) and an external property (belonging to the app) which are used to
-// match identities of users in the data warehouse with users on the external
-// app, during export.
-type MatchingProperties struct {
-	Internal string         `json:"internal"` // the corresponding property is stored within the action's input schema.
-	External types.Property `json:"external"`
 }
 
 // SchedulePeriod represents a scheduler period in minutes.
@@ -917,12 +917,14 @@ func shouldReload(a *state.Action, n *state.SetAction) bool {
 	if a.Target != state.Users && a.Target != state.Groups {
 		return false
 	}
-	if a.MatchingProperties != nil {
-		p1 := a.MatchingProperties.External
-		p2 := n.MatchingProperties.External
-		if p1.Name != p2.Name || !types.Equal(p1.Type, p2.Type) {
-			return true
-		}
+	if a.ExportMode != n.ExportMode {
+		return true
+	}
+	if a.Matching.In != n.Matching.In {
+		return true
+	}
+	if a.Matching.Out != n.Matching.Out {
+		return true
 	}
 	if a.Query != n.Query {
 		return true

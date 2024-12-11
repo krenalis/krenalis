@@ -253,15 +253,15 @@ type AddAction struct {
 	Sheet                    string
 	Compression              Compression
 	Settings                 []byte
+	ExportMode               ExportMode
+	Matching                 Matching
+	ExportOnDuplicates       bool
 	TableName                string
 	TableKeyProperty         string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	FileOrderingPropertyPath string
-	ExportMode               *ExportMode
-	MatchingProperties       *MatchingProperties
-	ExportOnDuplicatedUsers  *bool
 }
 
 // addAction adds a new action.
@@ -291,15 +291,15 @@ func (state *State) addAction(n notification) {
 		Sheet:                    e.Sheet,
 		Compression:              e.Compression,
 		Settings:                 e.Settings,
+		ExportMode:               e.ExportMode,
+		Matching:                 e.Matching,
+		ExportOnDuplicates:       e.ExportOnDuplicates,
 		TableName:                e.TableName,
 		TableKeyProperty:         e.TableKeyProperty,
 		IdentityProperty:         e.IdentityProperty,
 		LastChangeTimeProperty:   e.LastChangeTimeProperty,
 		LastChangeTimeFormat:     e.LastChangeTimeFormat,
 		FileOrderingPropertyPath: e.FileOrderingPropertyPath,
-		ExportMode:               e.ExportMode,
-		MatchingProperties:       e.MatchingProperties,
-		ExportOnDuplicatedUsers:  e.ExportOnDuplicatedUsers,
 	}
 	if e.Filter != nil {
 		action.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
@@ -895,15 +895,15 @@ type SetAction struct {
 	Sheet                    string
 	Compression              Compression
 	Settings                 []byte
+	ExportMode               ExportMode
+	Matching                 Matching
+	ExportOnDuplicates       bool
 	TableName                string
 	TableKeyProperty         string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
 	FileOrderingPropertyPath string
-	ExportMode               *ExportMode
-	MatchingProperties       *MatchingProperties
-	ExportOnDuplicatedUsers  *bool
 }
 
 // setAction sets an action.
@@ -930,15 +930,15 @@ func (state *State) setAction(n notification) {
 		a.Sheet = e.Sheet
 		a.Compression = e.Compression
 		a.Settings = e.Settings
+		a.ExportMode = e.ExportMode
+		a.Matching = e.Matching
+		a.ExportOnDuplicates = e.ExportOnDuplicates
 		a.TableName = e.TableName
 		a.TableKeyProperty = e.TableKeyProperty
 		a.IdentityProperty = e.IdentityProperty
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
 		a.FileOrderingPropertyPath = e.FileOrderingPropertyPath
-		a.ExportMode = e.ExportMode
-		a.MatchingProperties = e.MatchingProperties
-		a.ExportOnDuplicatedUsers = e.ExportOnDuplicatedUsers
 	})
 	dispatchNotification(state, e)
 }

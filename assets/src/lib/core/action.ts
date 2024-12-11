@@ -9,14 +9,14 @@ import {
 	FilterCondition,
 	FilterOperator,
 	Mapping,
-	MatchingProperties,
+	Matching,
 	SchedulePeriod,
 	TransformationFunction,
 	TransformationPurpose,
 } from '../api/types/action';
 import { ConnectorValues } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
-import Type, { ArrayType, FloatType, IntType, ObjectType, Property, UintType } from '../api/types/types';
+import Type, { ArrayType, FloatType, IntType, ObjectType, Property, TextType, UintType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection, { isSourceEventConnection } from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
@@ -166,16 +166,11 @@ interface TransformedTransformation {
 	function: TransformationFunction | null;
 }
 
-interface TransformedMatchingProperties {
-	internal: string;
-	external: string;
-}
-
 type ActionTypeField =
 	| 'Filter'
 	| 'Transformation'
-	| 'MatchingProperties'
-	| 'ExportOnDuplicatedUsers'
+	| 'Matching'
+	| 'ExportOnDuplicates'
 	| 'ExportMode'
 	| 'Query'
 	| 'File'
@@ -218,8 +213,8 @@ interface TransformedAction {
 	lastChangeTimeFormat?: string | null;
 	fileOrderingPropertyPath?: string | null;
 	exportMode?: ExportMode | null;
-	matchingProperties?: TransformedMatchingProperties | null;
-	exportOnDuplicatedUsers?: boolean | null;
+	matching?: Matching | null;
+	exportOnDuplicates?: boolean | null;
 	compression?: Compression;
 	connector?: string;
 }
@@ -550,14 +545,6 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		action.lastChangeTimeFormat = action.lastChangeTimeFormat.substring(1, action.lastChangeTimeFormat.length - 1);
 	}
 
-	let transformedMatchingProperties: TransformedMatchingProperties;
-	if (action.matchingProperties) {
-		transformedMatchingProperties = {
-			internal: action.matchingProperties.internal,
-			external: action.matchingProperties.external.name,
-		};
-	}
-
 	if (action.filter) {
 		const conditions: FilterCondition[] = [];
 		for (const condition of action.filter.conditions) {
@@ -604,8 +591,8 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
 		exportMode: action.exportMode,
-		matchingProperties: transformedMatchingProperties,
-		exportOnDuplicatedUsers: action.exportOnDuplicatedUsers,
+		matching: action.matching,
+		exportOnDuplicates: action.exportOnDuplicates,
 		connector: action.connector,
 		compression: action.compression,
 	};
@@ -697,12 +684,12 @@ const transformInActionToSet = async (
 	} else if (action.transformation.function != null) {
 		inSchema = actionType.inputSchema;
 		outSchema = actionType.outputSchema;
-		if (action.matchingProperties?.external) {
+		if (action.matching?.out) {
 			// recompute the out schema to prevent updates in place on the
 			// version used by the UI.
 			const s = { name: 'Object', properties: [] };
 			for (const p of outSchema.properties) {
-				if (p.name !== action.matchingProperties.external) {
+				if (p.name !== action.matching.out) {
 					s.properties.push(p);
 				}
 			}
@@ -724,58 +711,75 @@ const transformInActionToSet = async (
 		outSchema = null; // TODO(Gianluca): it this necessary?
 	}
 
-	let matchingProperties: MatchingProperties;
-	if (action.matchingProperties != null) {
-		const internal = action.matchingProperties.internal;
-		const external = action.matchingProperties.external;
-		if (internal === '' || external === '') {
+	if (action.matching != null) {
+		const inMatching = action.matching.in;
+		const outMatching = action.matching.out;
+		if (inMatching === '' || outMatching === '') {
 			throw new Error('Matching properties cannot be empty');
 		}
 
 		const flattenedInputMatchingSchema = flattenSchema(actionType.inputMatchingSchema);
 		const flattenedOutputMatchingSchema = flattenSchema(actionType.outputMatchingSchema);
 
-		const doesInternalExist = flattenedInputMatchingSchema[internal] != null;
-		if (!doesInternalExist) {
-			throw new Error(`Matching property "${internal}" does not exist`);
-		}
-		const doesExternalExist = flattenedOutputMatchingSchema[external] != null;
-		if (!doesExternalExist) {
-			throw new Error(`Matching property "${external}" does not exist`);
-		}
-
-		const fullExternalProperty = flattenedOutputMatchingSchema[external].full;
-		matchingProperties = {
-			internal: internal,
-			external: fullExternalProperty,
-		};
-
-		// Add the internal matching property to the in schema of the action.
-		const isInternalAlreadyInActionSchema = inSchema.properties!.findIndex((p) => p.name === internal) !== -1;
-		if (!isInternalAlreadyInActionSchema) {
-			inSchema.properties.push(flattenedInputMatchingSchema[internal].full);
+		// Check that the properties used for matching actually exist in
+		// the corresponding schemas.
+		const inMatchingProperty = flattenedInputMatchingSchema[inMatching];
+		const doesInExist = inMatchingProperty != null;
+		if (!doesInExist) {
+			throw new Error(`Matching property "${inMatching}" does not exist`);
 		}
 
-		if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
-			// add the external matching property (not directly the one from the
-			// output matching schema, but instead the corresponding "writable"
-			// one in the output schema of the transformation) to the out schema
-			// of the action.
-			let externalPropertyToAdd: Property;
-			const p = flattenSchema(actionType.outputSchema)[external]?.full;
-			if (p?.type.name === fullExternalProperty.type.name) {
-				externalPropertyToAdd = p;
+		const outMatchingProperty = flattenedOutputMatchingSchema[outMatching];
+		const doesOutExist = outMatchingProperty != null;
+		if (!doesOutExist) {
+			throw new Error(`Matching property "${outMatching}" does not exist`);
+		}
+
+		// Check that properties have types supported for matching and
+		// that the in matching property is convertible to the out
+		// matching property.
+		try {
+			validateMatching(inMatchingProperty.full, outMatchingProperty.full);
+		} catch (err) {
+			throw err;
+		}
+
+		// Add the in matching property to the input schema of the
+		// action, if it does not already exist.
+		const exists = inSchema.properties!.findIndex((p) => p.name === inMatching) !== -1;
+		if (!exists) {
+			inSchema.properties.push(flattenedInputMatchingSchema[inMatching].full);
+		}
+
+		// Add the out matching property to the output schema of the action.
+		{
+			// The out matching property must necessarily also be
+			// contained in the output schema of the connection in the
+			// case where the mode is "CreateOnly" or "CreateOrUpdate",
+			// whereas it may not be there in the case of ‘UpdateOnly’.
+			const a = outMatchingProperty.full;
+			const b = flattenedOutputSchema[outMatching]?.full;
+			const existsInOutputSchema =
+				b != null && outPropertiesTypesAreEqual(a.type, b.type) && a.nullable === b.nullable;
+			let p: Property;
+			if (existsInOutputSchema) {
+				p = {
+					...b,
+					readOptional: a.readOptional,
+					label: a.label,
+				};
+			} else {
+				if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
+					throw new Error(`External matching property "${outMatching}" does not exist`);
+				} else {
+					p = a;
+				}
 			}
-			if (externalPropertyToAdd == null) {
-				throw new Error(`External matching property "${external}" does not exist in the output schema`);
-			}
-			const isAlreadyInSchema = outSchema.properties!.findIndex((p) => p.name === external) !== -1;
+			const isAlreadyInSchema = outSchema.properties!.findIndex((p) => p.name === outMatching) !== -1;
 			if (isAlreadyInSchema) {
 				throw new Error(`External matching property cannot be used in the transformation`);
 			}
-			if (!isAlreadyInSchema) {
-				outSchema.properties.push(externalPropertyToAdd);
-			}
+			outSchema.properties.push(p);
 		}
 	}
 
@@ -1005,16 +1009,25 @@ const transformInActionToSet = async (
 		tableKeyProperty: action.tableKeyProperty,
 		sheet: action.sheet,
 		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
-		exportMode: action.exportMode,
 		identityProperty: action.identityProperty,
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
-		matchingProperties: matchingProperties,
-		exportOnDuplicatedUsers: action.exportOnDuplicatedUsers,
 		compression: action.compression,
 		connector: action.connector,
 		uiValues: uiValues,
 	};
+
+	if (action.matching != null) {
+		actionToSet.matching = action.matching;
+	}
+
+	if (action.exportOnDuplicates != null) {
+		actionToSet.exportOnDuplicates = action.exportOnDuplicates;
+	}
+
+	if (action.exportMode != null) {
+		actionToSet.exportMode = action.exportMode;
+	}
 
 	try {
 		validateTransformation(connection, actionType, actionToSet);
@@ -1067,11 +1080,11 @@ const computeDefaultAction = (
 	if (fields.includes('ExportMode')) {
 		action.exportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
 	}
-	if (fields.includes('MatchingProperties')) {
-		action.matchingProperties = { internal: '', external: '' };
+	if (fields.includes('Matching')) {
+		action.matching = { in: '', out: '' };
 	}
-	if (fields.includes('ExportOnDuplicatedUsers')) {
-		action.exportOnDuplicatedUsers = false;
+	if (fields.includes('ExportOnDuplicates')) {
+		action.exportOnDuplicates = false;
 	}
 	return action;
 };
@@ -1098,8 +1111,8 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		connection.role === 'Destination' &&
 		(actionType.target === 'Users' || actionType.target === 'Groups')
 	) {
-		fields.push('MatchingProperties');
-		fields.push('ExportOnDuplicatedUsers');
+		fields.push('Matching');
+		fields.push('ExportOnDuplicates');
 		fields.push('ExportMode');
 		fields.push('Filter');
 	}
@@ -1200,6 +1213,61 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 	}
 };
 
+const validateMatching = (inMatching: Property, outMatching: Property) => {
+	const inTyp = inMatching.type.name;
+	if (inTyp !== 'Int' && inTyp !== 'Uint' && inTyp !== 'Text' && inTyp !== 'UUID') {
+		throw new Error(`Matching property cannot be of type "${inTyp}"`);
+	}
+
+	// Check that the in property can be converted to the type of the
+	// out property.
+	const exTyp = outMatching.type.name;
+	const conversionError = new Error(`Matching property of type "${inTyp}" cannot be converted to type "${exTyp}"`);
+
+	if (inTyp === 'Int') {
+		if (exTyp !== 'Int' && exTyp !== 'Uint' && exTyp !== 'Text') {
+			throw conversionError;
+		}
+	} else if (inTyp === 'Uint') {
+		if (exTyp !== 'Int' && exTyp !== 'Uint' && exTyp !== 'Text') {
+			throw conversionError;
+		}
+	} else if (inTyp === 'Text') {
+		if (exTyp !== 'Int' && exTyp !== 'Uint' && exTyp !== 'UUID' && exTyp !== 'Text') {
+			throw conversionError;
+		}
+	} else if (inTyp === 'UUID') {
+		if (exTyp !== 'UUID' && exTyp !== 'Text') {
+			throw conversionError;
+		}
+	}
+};
+
+const outPropertiesTypesAreEqual = (externalTyp: Type, outTyp: Type): boolean => {
+	if (externalTyp.name !== outTyp.name) {
+		return false;
+	}
+
+	if (externalTyp.name === 'Int' || externalTyp.name === 'Uint') {
+		const outT = outTyp as IntType | UintType;
+		return (
+			externalTyp.bitSize === outT.bitSize &&
+			externalTyp.minimum === outT.minimum &&
+			externalTyp.maximum === outT.maximum
+		);
+	} else if (externalTyp.name === 'Text') {
+		const outT = outTyp as TextType;
+		return (
+			externalTyp.byteLen === outT.byteLen &&
+			externalTyp.charLen === outT.charLen &&
+			externalTyp.regexp === outT.regexp &&
+			JSON.stringify(externalTyp.values) === JSON.stringify(outT.values)
+		);
+	}
+
+	return true;
+};
+
 export {
 	SCHEDULE_PERIODS,
 	FILTER_OPERATORS,
@@ -1217,6 +1285,8 @@ export {
 	splitPropertyAndPath,
 	doesLastChangeTimePropertyNeedFormat,
 	getTransformationFunctionParameterName,
+	validateMatching,
+	outPropertiesTypesAreEqual,
 };
 
 export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };

@@ -50,15 +50,12 @@ func TestExportZeroUsers(t *testing.T) {
 					"lastName": "last_name",
 				},
 			},
-			ExportMode: meergotester.ExportModeCreateOrUpdate,
-			MatchingProperties: &meergotester.MatchingProperties{
-				Internal: "email",
-				External: types.Property{
-					Name: "email",
-					Type: types.Text(),
-				},
+			ExportMode: meergotester.CreateOrUpdate,
+			Matching: meergotester.Matching{
+				In:  "email",
+				Out: "email",
 			},
-			ExportOnDuplicatedUsers: &[]bool{false}[0],
+			ExportOnDuplicates: false,
 		})
 		exec := c.ExecuteAction(dummyDest, exportUsersActionID, true)
 		c.WaitForExecutionsCompletion(dummyDest, exec)

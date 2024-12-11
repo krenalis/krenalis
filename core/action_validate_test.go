@@ -295,12 +295,12 @@ func Test_validateAction(t *testing.T) {
 						"first_name": "first_name",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email_out", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -330,12 +330,12 @@ func Test_validateAction(t *testing.T) {
 						OutProperties: []string{"email_out"},
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "id",
-					External: types.Property{Name: "id", Type: types.Int(32)},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "id",
+					Out: "id",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -369,12 +369,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "id",
-					External: types.Property{Name: "id", Type: types.Int(32)},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "id",
+					Out: "id",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -1367,6 +1367,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text(), ReadOptional: true, Nullable: true},
 				}),
 				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
 					{Name: "email_out", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -1374,12 +1375,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -1394,6 +1395,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text(), CreateRequired: true, ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
 					{Name: "email_out", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -1401,12 +1403,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -1495,6 +1497,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "__id__", Type: types.Int(32), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
 					{Name: "email_out", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -1502,12 +1505,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in __id__",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -2036,6 +2039,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text()},
 				}),
 				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
 					{Name: "email_out", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -2043,12 +2047,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -2074,6 +2078,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
 					{Name: "email_out", Type: types.Text()},
 				}),
 				Transformation: Transformation{
@@ -2081,12 +2086,12 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
@@ -2111,7 +2116,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "input schema must be valid when exporting users to file",
 		},
 		{
-			name: "BAD: Destination/App/Users - external matching property mapped",
+			name: "BAD: Destination/App/Users - output matching property transformed with mapping",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2128,20 +2133,20 @@ func Test_validateAction(t *testing.T) {
 						"email_out":  "email_in",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email_out", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "the external matching property cannot be mapped by the mapping",
+			err:                     "output matching property cannot be transformed",
 		},
 		{
-			name: "BAD: Destination/App/Users - with transformation",
+			name: "BAD: Destination/App/Users - output matching property transformed with mapping with function",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2165,21 +2170,21 @@ func Test_validateAction(t *testing.T) {
 						OutProperties: []string{"email_out", "id"},
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "id",
-					External: types.Property{Name: "id", Type: types.Int(32)},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "id",
+					Out: "id",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "the external matching property cannot be transformed by the transformation function",
+			err:                     "output matching property cannot be transformed",
 		},
 		{
-			name: "BAD: Destination/App/Users - external matching property not in out schema",
+			name: "BAD: Destination/App/Users - output matching property not in out schema",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2194,46 +2199,17 @@ func Test_validateAction(t *testing.T) {
 						"first_name": "first_name",
 					},
 				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email_out", Type: types.Text()},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
 				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
+				ExportOnDuplicates: false,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "external matching property must appear in the out schema when mode is CreateOnly or CreateOrUpdate",
-		},
-		{
-			name: "BAD: Destination/App/Users - external matching property has different kind",
-			action: ActionToSet{
-				Name: "Export users",
-				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), ReadOptional: true},
-					{Name: "first_name", Type: types.Text(), ReadOptional: true},
-				}),
-				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Int(32)},
-					{Name: "first_name", Type: types.Text()},
-				}),
-				Transformation: Transformation{
-					Mapping: map[string]string{
-						"first_name": "first_name",
-					},
-				},
-				ExportMode: &[]ExportMode{CreateOrUpdate}[0],
-				MatchingProperties: &MatchingProperties{
-					Internal: "email_in",
-					External: types.Property{Name: "email_out", Type: types.Text()},
-				},
-				ExportOnDuplicatedUsers: &[]bool{false}[0],
-			},
-			target:                  state.Users,
-			connectionRole:          state.Destination,
-			connectionConnectorType: state.App,
-			err:                     "the external matching property must have the same kind of the property with the same name within out schema",
+			err:                     "output matching property \"email_out\" not found within the output schema",
 		},
 		{
 			name: "BAD: Source/Database/Users - filters are not allowed",
