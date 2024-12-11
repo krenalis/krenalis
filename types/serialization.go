@@ -172,16 +172,15 @@ func marshalType(b *bytes.Buffer, t Type) {
 		}
 		switch vl := t.vl.(type) {
 		case *regexp.Regexp:
-			b.WriteString(`,"regexp":"`)
-			b.WriteString(vl.String())
-			b.WriteString(`"`)
+			b.WriteString(`,"regexp":`)
+			_ = marshalString(b, vl.String())
 		case []string:
 			b.WriteString(`,"values":[`)
 			for i, v := range vl {
 				if i > 0 {
 					b.WriteByte(',')
 				}
-				marshalString(b, v)
+				_ = marshalString(b, v)
 			}
 			b.WriteByte(']')
 		}
