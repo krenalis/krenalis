@@ -9,6 +9,7 @@ package schemas
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
@@ -212,13 +213,17 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		if vs1 == nil && vs2 != nil {
 			return &Error{Msg: fmt.Sprintf("%q property was previously unrestricted but is now limited to specific values", name)}
 		}
-		for i, v1 := range vs1 {
-			if len(vs2) <= i || v1 != vs2[i] {
+		for _, v1 := range vs1 {
+			if !slices.Contains(vs2, v1) {
 				return &Error{Msg: fmt.Sprintf("%q property allowed value %q but it is no longer allowed", name, v1)}
 			}
 		}
 		if len(vs1) < len(vs2) {
-			return &Error{Msg: fmt.Sprintf("%q property previously disallowed value %q but it now allows it", name, vs2[len(vs1)])}
+			for _, v2 := range vs2 {
+				if !slices.Contains(vs1, v2) {
+					return &Error{Msg: fmt.Sprintf("%q property previously disallowed value %q but it now allows it", name, v2)}
+				}
+			}
 		}
 		re1 := t1.Regexp()
 		re2 := t2.Regexp()

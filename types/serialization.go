@@ -15,7 +15,6 @@ import (
 	"io"
 	"math"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -435,7 +434,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if len(values) == 0 {
 				return Type{}, errors.New("invalid empty values")
 			}
-			slices.Sort(values)
 		case "precision":
 			if precision > 0 {
 				return Type{}, errors.New("repeated 'precision' key")

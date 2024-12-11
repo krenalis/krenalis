@@ -174,8 +174,8 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 		},
 		{
 			`{"name":"Apple","label":"A label","type":{"name":"Text","values":["g","c"]},"description":"Some description..."}`,
-			Property{Name: "Apple", Label: "A label", Type: Text().WithValues("c", "g"), Description: "Some description..."},
-			`{"name":"Apple","label":"A label","type":{"name":"Text","values":["c","g"]},"description":"Some description..."}`,
+			Property{Name: "Apple", Label: "A label", Type: Text().WithValues("g", "c"), Description: "Some description..."},
+			`{"name":"Apple","label":"A label","type":{"name":"Text","values":["g","c"]},"description":"Some description..."}`,
 		},
 	}
 	for _, test := range tests {
@@ -257,7 +257,7 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"name":"Date"}`,
 			Type: Date(),
 		}, {
-			Data: `{"name":"Text","values":["a","b","c"]}`,
+			Data: `{"name":"Text","values":["b","a","c"]}`,
 			Type: Text().WithValues("b", "a", "c"),
 		}, {
 			Data: `{"name":"Array","elementType":{"name":"Text"}}`,
