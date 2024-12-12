@@ -18,7 +18,7 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI /* Fail the build on CI if you accidentally left test.only in the source code. */,
 	retries: process.env.CI ? 2 : 0,
 	workers: 1,
-	reporter: 'html',
+	reporter: [['list'], ['html', { open: 'on-failure' }]],
 
 	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 	use: {
