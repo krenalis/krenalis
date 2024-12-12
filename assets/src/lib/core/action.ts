@@ -635,11 +635,12 @@ const transformInActionToSet = async (
 		for (const k in action.transformation.mapping) {
 			const v = action.transformation.mapping[k];
 			if (v.value === '') {
-				if (purpose === 'Update' && v.updateRequired) {
+				const isInMatching = action.matching != null && action.matching.out === k;
+				if (purpose === 'Update' && v.updateRequired && !isInMatching) {
 					throw new Error(
 						`Property "${k}" is required for the update. Indicate an expression for this property.`,
 					);
-				} else if (purpose === 'Create' && v.createRequired) {
+				} else if (purpose === 'Create' && v.createRequired && !isInMatching) {
 					throw new Error(
 						`Property "${k}" is required for creation. Indicate an expression for this property.`,
 					);
