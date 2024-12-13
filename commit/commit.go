@@ -30,6 +30,11 @@ func main() {
 
 	cliOptions := parseCli()
 
+	if cliOptions.justTestUI {
+		runGoTestUI(cliOptions.explicit)
+		os.Exit(0)
+	}
+
 	start := time.Now()
 
 	// Check if the locally installed Deno version is correct.
@@ -133,13 +138,15 @@ func main() {
 }
 
 type cliOptions struct {
-	explicit bool
-	short    bool
+	explicit   bool
+	short      bool
+	justTestUI bool
 }
 
 func parseCli() cliOptions {
 
 	var explicit bool
+	var justTestUI bool
 	var printHelp bool
 	var short bool
 
@@ -149,19 +156,20 @@ func parseCli() cliOptions {
 	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
 		" each package separately and prints verbose output; may take a little longer;"+
 		" the tests set is unaltered by this option")
+	flag.BoolVar(&justTestUI, "just-test-ui", false, "just run the go tests on the UI."+
+		" Cannot be used in conjuction with flag '-short'. "+reducedTestSetWarning)
 	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
 	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of the 'commit' command:\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(flag.CommandLine.Output(), "\nThis command must always be run inside the root of the Meergo repository.\n")
 	}
 
 	flag.Parse()
 
 	if len(flag.Args()) > 0 {
-		fmt.Fprintf(flag.CommandLine.Output(), "unexpected command line parameters: %s\n", strings.Join(flag.Args(), " "))
+		fmt.Fprintf(flag.CommandLine.Output(), "Unexpected command line parameters: %s\n", strings.Join(flag.Args(), " "))
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -171,7 +179,14 @@ func parseCli() cliOptions {
 		os.Exit(0)
 	}
 
-	return cliOptions{explicit: explicit, short: short}
+	// Incompatible flags.
+	if justTestUI && short {
+		fmt.Fprintf(flag.CommandLine.Output(), "Flag '-just-test-ui' cannot be used in conjuction with flag '-short'\n")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	return cliOptions{explicit: explicit, justTestUI: justTestUI, short: short}
 }
 
 func checkDenoVersion(explicit bool) {
@@ -303,5 +318,21 @@ func removeGoSum(repo, module string, explicit bool) {
 	err := os.Remove(filepath.Join(repo, module, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		fatal("cannot remove 'go.sum': %s", err)
+	}
+}
+
+// runGoTestUI runs UI tests via go test.
+func runGoTestUI(explicit bool) {
+	start := time.Now()
+	args := []string{"test", "-run", "^TestUI$", "github.com/meergo/meergo/test", "-count", "1"}
+	if explicit {
+		args = append(args, "-v")
+	}
+	NewCmd("go", args...).Run(explicit)
+	elapsed := time.Since(start)
+	if elapsed < 2*time.Second {
+		fatal("UI test took too little time (< 2 seconds). There is probably a problem" +
+			" with its execution, try running it with the '-x' option or check" +
+			" the implementation of the commit command")
 	}
 }
