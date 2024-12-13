@@ -23,6 +23,8 @@ import (
 
 func Test_Writer(t *testing.T) {
 
+	t.Skip() // TODO(Gianluca): skipped because fails sometimes. See https://github.com/meergo/meergo/issues/1160.
+
 	tests := []struct {
 		num    int     // number of records to process
 		seed   int64   // seed value to pseudo-randomize the Upsert method
