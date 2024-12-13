@@ -160,7 +160,7 @@ func parseCli() cliOptions {
 	flag.Parse()
 
 	if len(flag.Args()) > 0 {
-		fmt.Fprintf(os.Stderr, "unexpected command line parameters: %s\n", strings.Join(flag.Args(), " "))
+		fmt.Fprintf(flag.CommandLine.Output(), "unexpected command line parameters: %s\n", strings.Join(flag.Args(), " "))
 		flag.Usage()
 		os.Exit(1)
 	}
