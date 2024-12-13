@@ -28,19 +28,12 @@ const expectedDenoVersion = "2.1.0"
 
 func main() {
 
-	// Command line arguments.
-	var short bool
-	var explicit bool
-	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set")
-	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
-		" each package separately and prints verbose output; may take a little longer;"+
-		" the tests set is unaltered by this option")
-	flag.Parse()
+	cliOptions := parseCli()
 
 	start := time.Now()
 
 	// Check if the locally installed Deno version is correct.
-	checkDenoVersion(explicit)
+	checkDenoVersion(cliOptions.explicit)
 
 	// Find modules and packages in the current working directory, then ensure
 	// that the script has been launched with the correct working directory.
@@ -63,80 +56,121 @@ func main() {
 	}
 
 	// Tidy modules.
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Println("Tidy modules")
 	}
 	for _, module := range modules {
-		removeGoSum(repo, module, explicit)
-		NewCmd("go", "mod", "tidy").InDir(repo, module).Run(explicit)
+		removeGoSum(repo, module, cliOptions.explicit)
+		NewCmd("go", "mod", "tidy").InDir(repo, module).Run(cliOptions.explicit)
 	}
 
 	// Format modules.
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Println("Format modules")
 	}
 	for _, module := range modules {
-		NewCmd("go", "fmt", "./...").InDir(repo, module).Run(explicit)
+		NewCmd("go", "fmt", "./...").InDir(repo, module).Run(cliOptions.explicit)
 	}
 
 	// Running 'go vet' on every module.
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Println("Running 'go vet' on every module")
 	}
 	for _, module := range modules {
-		NewCmd("go", "vet", "./...").InDir(repo, module).Run(explicit)
+		NewCmd("go", "vet", "./...").InDir(repo, module).Run(cliOptions.explicit)
 	}
 
 	// Run Go tests.
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Println("Run Go tests")
 	}
 	args := []string{"test", "-count", "1", "-failfast"}
-	if short {
+	if cliOptions.short {
 		args = append(args, "-short")
 	}
-	if explicit {
+	if cliOptions.explicit {
 		args = append(args, "-v")
 	} else {
 		// Just to avoid the command running indefinitely without even printing
 		// output.
 		args = append(args, "-timeout=18m")
 	}
-	if explicit {
+	if cliOptions.explicit {
 		for _, pkg := range packages {
-			NewCmd("go", args...).InDir(repo, pkg).Run(explicit)
+			NewCmd("go", args...).InDir(repo, pkg).Run(cliOptions.explicit)
 		}
 	} else {
 		args = append(args, "./...")
 		for _, module := range modules {
-			NewCmd("go", args...).InDir(repo, module).Run(explicit)
+			NewCmd("go", args...).InDir(repo, module).Run(cliOptions.explicit)
 		}
 	}
 
 	// Update the Go vendor.
-	NewCmd("go", "mod", "vendor").InDir(repo).Run(explicit)
+	NewCmd("go", "mod", "vendor").InDir(repo).Run(cliOptions.explicit)
 
 	// Run checks and do operations on the UI assets.
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Println("Run checks and do operations on the UI assets")
 	}
-	NewCmd("npm", "install").InDir(repo, "assets").Run(explicit)
-	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run(explicit)
-	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run(explicit)
-	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run(explicit)
-	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run(explicit)
+	NewCmd("npm", "install").InDir(repo, "assets").Run(cliOptions.explicit)
+	NewCmd("npm", "run", "prettier").InDir(repo, "assets").Run(cliOptions.explicit)
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "assets").Run(cliOptions.explicit)
+	NewCmd("npm", "run", "typecheck").InDir(repo, "assets").Run(cliOptions.explicit)
+	NewCmd("npm", "run", "make-vendor").InDir(repo, "assets").Run(cliOptions.explicit)
 
 	// Run checks and do operations on the JavaScript SDK.
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Println("Run checks and do operations on the JavaScript SDK")
 	}
-	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run(explicit)
-	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run(explicit)
-	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run(explicit)
+	NewCmd("npm", "install").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
+	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
+	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
 
-	if explicit {
+	if cliOptions.explicit {
 		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 	}
+}
+
+type cliOptions struct {
+	explicit bool
+	short    bool
+}
+
+func parseCli() cliOptions {
+
+	var short bool
+	var explicit bool
+	var printHelp bool
+
+	const reducedTestSetWarning = "WARNING: This option reduces the set of tests performed," +
+		" so it cannot be used to validate the repository before a commit"
+
+	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
+	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
+	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
+		" each package separately and prints verbose output; may take a little longer;"+
+		" the tests set is unaltered by this option")
+
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage:\n")
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+
+	if len(flag.Args()) > 0 {
+		fmt.Fprintf(os.Stderr, "unexpected command line parameters: %s\n", strings.Join(flag.Args(), " "))
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if printHelp {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	return cliOptions{explicit: explicit, short: short}
 }
 
 func checkDenoVersion(explicit bool) {
@@ -263,7 +297,7 @@ func fatal(msg string, args ...any) {
 
 func removeGoSum(repo, module string, explicit bool) {
 	if explicit {
-		logCmd(module, "rm go.sum")
+		logCmd(filepath.Join(repo, module), "rm go.sum")
 	}
 	err := os.Remove(filepath.Join(repo, module, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
