@@ -603,8 +603,10 @@ const TransformationBox = ({
 
 	const pendingMode = useRef<string>();
 	const firstValue = useRef<TransformedMapping | TransformationFunction>();
+	const hasNeverChangedMode = useRef<boolean>(true);
 
 	const { connection } = useContext(ConnectionContext);
+	const { isEditing } = useContext(ActionContext);
 
 	useEffect(() => {
 		if (mode === 'mappings') {
@@ -629,6 +631,7 @@ const TransformationBox = ({
 	}, [isFullscreenTransformationOpen]);
 
 	const onChangeMode = (delay: number) => {
+		hasNeverChangedMode.current = false;
 		const a = { ...action };
 		a.inSchema = null;
 		a.outSchema = null;
@@ -669,7 +672,8 @@ const TransformationBox = ({
 				mode,
 				firstValue.current,
 				mode === 'mappings' ? action.transformation.mapping : action.transformation.function,
-			)
+			) ||
+			(isEditing && hasNeverChangedMode.current)
 		) {
 			setIsAlertOpen(true);
 		} else {
