@@ -153,8 +153,9 @@ func parseCli() cliOptions {
 	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage:\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of the 'commit' command:\n")
 		flag.PrintDefaults()
+		fmt.Fprintf(flag.CommandLine.Output(), "\nThis command must always be run inside the root of the Meergo repository.\n")
 	}
 
 	flag.Parse()
