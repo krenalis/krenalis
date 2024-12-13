@@ -139,18 +139,18 @@ type cliOptions struct {
 
 func parseCli() cliOptions {
 
-	var short bool
 	var explicit bool
 	var printHelp bool
+	var short bool
 
 	const reducedTestSetWarning = "WARNING: This option reduces the set of tests performed," +
 		" so it cannot be used to validate the repository before a commit"
 
-	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
-	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
 	flag.BoolVar(&explicit, "x", false, "explicit mode, which runs the tests for"+
 		" each package separately and prints verbose output; may take a little longer;"+
 		" the tests set is unaltered by this option")
+	flag.BoolVar(&printHelp, "help", false, "print help message and exit")
+	flag.BoolVar(&short, "short", false, "pass the '-short' flag to 'go test', reducing the tests set. "+reducedTestSetWarning)
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage:\n")
