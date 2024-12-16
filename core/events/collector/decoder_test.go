@@ -314,7 +314,7 @@ func Test_Decoder(t *testing.T) {
 			maxReceivedAt := time.Now().UTC()
 			dec, err := newDecoder(r, test.skip)
 			if !reflect.DeepEqual(test.err, err) {
-				t.Fatalf("unexpected error %#v, got error %#v", test.err, err)
+				t.Fatalf("expected error %#v, got error %#v", test.err, err)
 			}
 			if err != nil {
 				if dec != nil {
