@@ -1417,17 +1417,8 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 	default:
 		return errors.BadRequest("invalid privacy region %q", string(region))
 	}
-	if !isValidDisplayedPropertyName(displayedProperties.Image) {
-		return errors.BadRequest("invalid displayed image %q", displayedProperties.Image)
-	}
-	if !isValidDisplayedPropertyName(displayedProperties.FirstName) {
-		return errors.BadRequest("invalid displayed first name %q", displayedProperties.FirstName)
-	}
-	if !isValidDisplayedPropertyName(displayedProperties.LastName) {
-		return errors.BadRequest("invalid displayed last name %q", displayedProperties.LastName)
-	}
-	if !isValidDisplayedPropertyName(displayedProperties.Information) {
-		return errors.BadRequest("invalid displayed information %q", displayedProperties.Information)
+	if err := validateDisplayedProperties(displayedProperties); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	ws := this.workspace
 	n := state.SetWorkspace{
@@ -1953,4 +1944,22 @@ func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
 		return ok
 	})
 	return actions
+}
+
+// validateDisplayedProperties validates whether the given displayedProperties
+// are valid or not, returning an error if they are not.
+func validateDisplayedProperties(displayedProperties DisplayedProperties) error {
+	if !isValidDisplayedPropertyName(displayedProperties.Image) {
+		return fmt.Errorf("invalid displayed image %q", displayedProperties.Image)
+	}
+	if !isValidDisplayedPropertyName(displayedProperties.FirstName) {
+		return fmt.Errorf("invalid displayed first name %q", displayedProperties.FirstName)
+	}
+	if !isValidDisplayedPropertyName(displayedProperties.LastName) {
+		return fmt.Errorf("invalid displayed last name %q", displayedProperties.LastName)
+	}
+	if !isValidDisplayedPropertyName(displayedProperties.Information) {
+		return fmt.Errorf("invalid displayed information %q", displayedProperties.Information)
+	}
+	return nil
 }

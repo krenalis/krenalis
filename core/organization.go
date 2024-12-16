@@ -181,10 +181,10 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 	return err
 }
 
-// AddWorkspace adds a workspace with the given name, privacy region and user
-// schema, and connects to a data warehouse of the provided name and settings.
-// Returns the identifier of the workspace that has been created. name must be
-// between 1 and 100 runes long.
+// AddWorkspace adds a workspace with the given name, privacy region, user
+// schema and displayed properties, and connects to a data warehouse of the
+// provided name and settings. Returns the identifier of the workspace that has
+// been created. name must be between 1 and 100 runes long.
 //
 // whMode specifies the initial mode of the workspace's data warehouse.
 //
@@ -198,7 +198,9 @@ func (this *Organization) InviteMember(ctx context.Context, email string, emailT
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseNotExist, if a data warehouse with the provided name does not
 //     exist.
-func (this *Organization) AddWorkspace(ctx context.Context, name string, region PrivacyRegion, userSchema types.Type, whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
+func (this *Organization) AddWorkspace(ctx context.Context, name string,
+	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
+	whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
 
@@ -213,6 +215,9 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	case PrivacyRegionNotSpecified, PrivacyRegionEurope:
 	default:
 		return 0, errors.BadRequest("privacy region is not valid")
+	}
+	if err := validateDisplayedProperties(displayedProperties); err != nil {
+		return 0, errors.BadRequest("%s", err)
 	}
 	if whName == "" {
 		return 0, errors.BadRequest("warehouse name is empty")
@@ -265,6 +270,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 		UserSchema:                     userSchema,
 		ResolveIdentitiesOnBatchImport: true,
 		PrivacyRegion:                  state.PrivacyRegion(region),
+		DisplayedProperties:            state.DisplayedProperties(displayedProperties),
 	}
 	n.Warehouse.Name = whName
 	n.Warehouse.Mode = state.WarehouseMode(whMode)
@@ -285,10 +291,13 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string, region 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 			" user_schema, resolve_identities_on_batch_import, privacy_region,"+
+			" displayed_image, displayed_first_name, displayed_last_name, displayed_information,"+
 			" warehouse_name, warehouse_mode, warehouse_settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,
-			n.PrivacyRegion, n.Warehouse.Name, n.Warehouse.Mode, n.Warehouse.Settings)
+			n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
+			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Warehouse.Name,
+			n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {

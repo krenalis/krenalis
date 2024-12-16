@@ -30,10 +30,11 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		Name          string             `json:"name"`
-		UserSchema    types.Type         `json:"userSchema"`
-		PrivacyRegion core.PrivacyRegion `json:"privacyRegion"`
-		Warehouse     struct {
+		Name                string                   `json:"name"`
+		UserSchema          types.Type               `json:"userSchema"`
+		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
+		PrivacyRegion       core.PrivacyRegion       `json:"privacyRegion"`
+		Warehouse           struct {
 			Name     string             `json:"name"`
 			Mode     core.WarehouseMode `json:"mode"`
 			Settings json.Value         `json:"settings"`
@@ -43,7 +44,8 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
+	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
+		body.DisplayedProperties, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
 	}

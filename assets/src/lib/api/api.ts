@@ -567,6 +567,7 @@ class Workspaces {
 		name: string,
 		privacyRegion: PrivacyRegion,
 		userSchema: ObjectType,
+		displayedProperties: DisplayedProperties,
 		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
@@ -575,6 +576,7 @@ class Workspaces {
 			name: name,
 			privacyRegion: privacyRegion,
 			userSchema: userSchema,
+			displayedProperties: displayedProperties,
 			warehouse: {
 				name: warehouseName,
 				mode: warehouseMode,

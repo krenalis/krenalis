@@ -376,12 +376,18 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 
 	// Create the workspace and connect the warehouse.
 	var userSchema types.Type
+	var displayedProperties DisplayedProperties
 	if populateUserSchema {
 		userSchema = testsUserSchema
+		displayedProperties = DisplayedProperties{
+			FirstName:   "first_name",
+			LastName:    "last_name",
+			Information: "email",
+		}
 	} else {
 		userSchema = minimalUserSchema
 	}
-	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified, userSchema)
+	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified, userSchema, displayedProperties)
 	if err != nil {
 		t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -470,11 +476,12 @@ func init() {
 	}
 }
 
-func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type) (int, error) {
+func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties) (int, error) {
 	req := map[string]any{
-		"name":          name,
-		"privacyRegion": privacyRegion,
-		"userSchema":    userSchema,
+		"name":                name,
+		"privacyRegion":       privacyRegion,
+		"userSchema":          userSchema,
+		"displayedProperties": displayedProperties,
 		"warehouse": map[string]any{
 			"name":     testsSettings.WarehouseName,
 			"settings": testsSettings.Warehouse,

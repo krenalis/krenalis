@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import './WorkspaceAdd.css';
 import { ObjectType } from '../../../lib/api/types/types';
+import { DisplayedProperties } from '../../../lib/api/types/workspace';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
@@ -66,11 +67,18 @@ const WorkspaceAdd = () => {
 		}
 		setIsAddingWorkspace(true);
 		let id: number;
+		let displayedProperties: DisplayedProperties = {
+			firstName: 'first_name',
+			lastName: 'last_name',
+			information: 'email',
+			image: '',
+		};
 		try {
 			const res = await api.workspaces.add(
 				name,
 				privacyRegion,
 				InitialSchema as ObjectType,
+				displayedProperties,
 				selectedWarehouse,
 				'Normal',
 				warehouseSettings,
