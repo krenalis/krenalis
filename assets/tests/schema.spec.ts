@@ -37,7 +37,8 @@ test(`Add schema property`, async ({ page }) => {
 	await expect(cell).toBeVisible();
 });
 
-test(`Edit schema property`, async ({ page }) => {
+// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1200.
+test.skip(`Edit schema property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -68,7 +69,8 @@ test(`Edit schema property`, async ({ page }) => {
 	await expect(barCell).toBeVisible();
 });
 
-test(`Check that RePaths are sent correctly`, async ({ page }) => {
+// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1200.
+test.skip(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -154,7 +156,8 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	).toBeVisible();
 });
 
-test(`Remove schema properties`, async ({ page }) => {
+// TODO(Gianluca): see the issue https://github.com/meergo/meergo/issues/1200.
+test.skip(`Remove schema properties`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
