@@ -97,7 +97,7 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `AppInfo` type describes information about the app connector:
 
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
-- `Targets`: targets supported by the app connector. Can contain `Events`, `Users`, and `Groups.
+- `Targets`: targets supported by the app connector. Can contain `Events`, `Users`, and `Groups`.
 - `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
 - `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
