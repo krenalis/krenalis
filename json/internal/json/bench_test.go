@@ -8,7 +8,6 @@ package json
 
 import (
 	"bytes"
-	jsonv1 "encoding/json"
 	"fmt"
 	"io"
 	"os"

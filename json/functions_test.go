@@ -169,7 +169,7 @@ func Test_Validate(t *testing.T) {
 		{data: `{"a":@}`, err: "invalid character '@' at start of token", offset: 5},
 		{data: `[1,2,3]4`, err: "invalid token '4' after top-level value", offset: 7},
 		{data: `true false`, err: "invalid token 'false' after top-level value", offset: 4},
-		{data: "\"\xFF\"", err: "invalid UTF-8 within string", offset: 1},
+		{data: "\"\xFF\"", err: "invalid UTF-8", offset: 1},
 		{data: ` { "foo": "boo" } `},
 	}
 	for _, test := range tests {

@@ -515,8 +515,8 @@ func TestAlloc(t *testing.T) {
 			for _, _ = range value.Elements() {
 			}
 		})
-		if a != 5 {
-			t.Fatalf("expected 5 allocations, got %.0f", a)
+		if a != 7 {
+			t.Fatalf("expected 7 allocations, got %.0f", a)
 		}
 	})
 

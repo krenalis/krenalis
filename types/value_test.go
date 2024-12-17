@@ -234,7 +234,7 @@ func Test_Decode(t *testing.T) {
 		},
 		{
 			data: `{"Boolean":true`,
-			err:  json.NewSyntaxError(errors.New("invalid JSON"), 0),
+			err:  json.NewSyntaxError(errors.New("unexpected EOF"), 0),
 		},
 		{
 			data: `{"Object":{"a.b":true}}`,

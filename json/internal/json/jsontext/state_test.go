@@ -6,29 +6,53 @@ package jsontext
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
 )
 
-func TestPointerTokens(t *testing.T) {
+func TestPointer(t *testing.T) {
 	tests := []struct {
-		in   Pointer
-		want []string
+		in         Pointer
+		wantParent Pointer
+		wantLast   string
+		wantTokens []string
 	}{
-		{in: "", want: nil},
-		{in: "a", want: []string{"a"}},
-		{in: "~", want: []string{"~"}},
-		{in: "/a", want: []string{"a"}},
-		{in: "/foo/bar", want: []string{"foo", "bar"}},
-		{in: "///", want: []string{"", "", ""}},
-		{in: "/~0~1", want: []string{"~/"}},
+		{"", "", "", nil},
+		{"a", "", "a", []string{"a"}},
+		{"~", "", "~", []string{"~"}},
+		{"/a", "", "a", []string{"a"}},
+		{"/foo/bar", "/foo", "bar", []string{"foo", "bar"}},
+		{"///", "//", "", []string{"", "", ""}},
+		{"/~0~1", "", "~/", []string{"~/"}},
 	}
 	for _, tt := range tests {
-		got := slices.Collect(tt.in.Tokens())
-		if !slices.Equal(got, tt.want) {
-			t.Errorf("Pointer(%q).Tokens = %q, want %q", tt.in, got, tt.want)
+		if got := tt.in.Parent(); got != tt.wantParent {
+			t.Errorf("Pointer(%q).Parent = %q, want %q", tt.in, got, tt.wantParent)
+		}
+		if got := tt.in.LastToken(); got != tt.wantLast {
+			t.Errorf("Pointer(%q).Last = %q, want %q", tt.in, got, tt.wantLast)
+		}
+		if strings.HasPrefix(string(tt.in), "/") {
+			if got := tt.in.Parent().AppendToken(tt.in.LastToken()); got != tt.in {
+				t.Errorf("Pointer(%q).Parent().AppendToken(LastToken()) = %q, want %q", tt.in, got, tt.in)
+			}
+			in := tt.in
+			for {
+				if (in + "x").Contains(tt.in) {
+					t.Errorf("Pointer(%q).Contains(%q) = true, want false", in+"x", tt.in)
+				}
+				if !in.Contains(tt.in) {
+					t.Errorf("Pointer(%q).Contains(%q) = false, want true", in, tt.in)
+				}
+				if in == in.Parent() {
+					break
+				}
+				in = in.Parent()
+			}
+		}
+		if got := slices.Collect(tt.in.Tokens()); !slices.Equal(got, tt.wantTokens) {
+			t.Errorf("Pointer(%q).Tokens = %q, want %q", tt.in, got, tt.wantTokens)
 		}
 	}
 }
@@ -130,12 +154,12 @@ func TestStateMachine(t *testing.T) {
 			appendTokens(`{`),
 
 			// Appending any kind other than string for object name is an error.
-			appendToken{'n', errMissingName},
-			appendToken{'f', errMissingName},
-			appendToken{'t', errMissingName},
-			appendToken{'0', errMissingName},
-			appendToken{'{', errMissingName},
-			appendToken{'[', errMissingName},
+			appendToken{'n', ErrNonStringName},
+			appendToken{'f', ErrNonStringName},
+			appendToken{'t', ErrNonStringName},
+			appendToken{'0', ErrNonStringName},
+			appendToken{'{', ErrNonStringName},
+			appendToken{'[', ErrNonStringName},
 			appendTokens(`"`),
 
 			// Appending '}' without first appending any value is an error.
@@ -184,12 +208,12 @@ func TestStateMachine(t *testing.T) {
 						got = append(got, e.Length())
 					}
 					want := []int64(op)
-					if !reflect.DeepEqual(got, want) {
+					if !slices.Equal(got, want) {
 						t.Fatalf("%s: stack lengths mismatch:\ngot  %v\nwant %v", sequence, got, want)
 					}
 				case appendToken:
 					got := state.append(op.kind)
-					if !reflect.DeepEqual(got, op.want) {
+					if !equalError(got, op.want) {
 						t.Fatalf("%s: append('%c') = %v, want %v", sequence, op.kind, got, op.want)
 					}
 					if got == nil {
@@ -336,7 +360,7 @@ func TestObjectNamespace(t *testing.T) {
 			for i := range ns.length() {
 				gotNames = append(gotNames, string(ns.getUnquoted(i)))
 			}
-			if !reflect.DeepEqual(gotNames, wantNames) {
+			if !slices.Equal(gotNames, wantNames) {
 				t.Fatalf("%d: objectNamespace = {%v}, want {%v}", i, strings.Join(gotNames, " "), strings.Join(wantNames, " "))
 			}
 		}

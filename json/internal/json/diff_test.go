@@ -5,6 +5,7 @@
 package json_test
 
 import (
+	jsonv1 "encoding/json"
 	"errors"
 	"math"
 	"path"
@@ -12,8 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	jsonv1 "encoding/json"
 
 	jsonv2 "github.com/meergo/meergo/json/internal/json"
 )

@@ -62,7 +62,7 @@ func Decode[T any](r io.Reader, t Type) (T, error) {
 	v, err := decode(r, t)
 	vt, ok := v.(T)
 	if err == nil && !ok {
-		err = fmt.Errorf("json: DecodeByType[%T] called with type kind %s", vt, t.Kind())
+		err = fmt.Errorf("json: Decode[%T] called with type kind %s", vt, t.Kind())
 	}
 	return vt, err
 }
@@ -136,11 +136,7 @@ func (d decoder) peek() json.Kind {
 // readToken reads a token.
 // It returns the ErrSyntaxInvalid error if the JSON source is not valid.
 func (d decoder) readToken() (json.Token, error) {
-	tok, err := d.dec.ReadToken()
-	if err == io.ErrUnexpectedEOF {
-		err = json.NewSyntaxError(errors.New("invalid JSON"), 0)
-	}
-	return tok, err
+	return d.dec.ReadToken()
 }
 
 // readValue reads a value.

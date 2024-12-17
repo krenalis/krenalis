@@ -74,7 +74,7 @@ func Test_Decoder(t *testing.T) {
 		err            error               // Expected error from the newDecoder function.
 	}{
 		{body: ``, err: newBadRequestError("request's body is empty")},
-		{body: `{`, err: newBadRequestError("error parsing the request body as JSON: it is not terminated")},
+		{body: `{`, err: newBadRequestError("error parsing the request body as JSON: unexpected EOF")},
 		{body: `{}`, err: newBadRequestError("property 'batch' is missing")},
 		{body: `{"batch":null}`, err: newBadRequestError("property 'batch' is not a valid array")},
 		{body: `{"batch":{}}`, err: newBadRequestError("property 'batch' is not a valid array")},

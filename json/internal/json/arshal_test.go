@@ -30,6 +30,50 @@ import (
 	"github.com/meergo/meergo/json/internal/json/jsontext"
 )
 
+func newNonStringNameError(offset int64, pointer jsontext.Pointer) error {
+	return &jsontext.SyntacticError{ByteOffset: offset, JSONPointer: pointer, Err: jsontext.ErrNonStringName}
+}
+
+func newInvalidCharacterError(prefix, where string, offset int64, pointer jsontext.Pointer) error {
+	return &jsontext.SyntacticError{ByteOffset: offset, JSONPointer: pointer, Err: jsonwire.NewInvalidCharacterError(prefix, where)}
+}
+
+func newInvalidUTF8Error(offset int64, pointer jsontext.Pointer) error {
+	return &jsontext.SyntacticError{ByteOffset: offset, JSONPointer: pointer, Err: jsonwire.ErrInvalidUTF8}
+}
+
+func newParseTimeError(layout, value, layoutElem, valueElem, message string) error {
+	return &time.ParseError{Layout: layout, Value: value, LayoutElem: layoutElem, ValueElem: valueElem, Message: message}
+}
+
+func EM(err error) *SemanticError {
+	return &SemanticError{action: "marshal", Err: err}
+}
+
+func EU(err error) *SemanticError {
+	return &SemanticError{action: "unmarshal", Err: err}
+}
+
+func (e *SemanticError) withPos(prefix string, pointer jsontext.Pointer) *SemanticError {
+	e.ByteOffset = int64(len(prefix))
+	e.JSONPointer = pointer
+	return e
+}
+
+func (e *SemanticError) withType(k jsontext.Kind, t reflect.Type) *SemanticError {
+	e.JSONKind = k
+	e.GoType = t
+	return e
+}
+
+var (
+	errInvalidFormatFlag = errors.New(`invalid format flag "invalid"`)
+	errSomeError         = errors.New("some error")
+	errMustNotCall       = errors.New("must not call")
+)
+
+func T[T any]() reflect.Type { return reflect.TypeFor[T]() }
+
 type (
 	jsonObject = map[string]any
 	jsonArray  = []any
@@ -528,7 +572,7 @@ func (s *structMethodJSONv2) UnmarshalJSONV2(dec *jsontext.Decoder, opts Options
 		return err
 	}
 	if k := tok.Kind(); k != '"' {
-		return &SemanticError{action: "unmarshal", JSONKind: k, GoType: structMethodJSONv2Type}
+		return EU(nil).withType(k, T[structMethodJSONv2]())
 	}
 	s.value = tok.String()
 	return nil
@@ -539,7 +583,7 @@ func (s structMethodJSONv1) MarshalJSON() ([]byte, error) {
 }
 func (s *structMethodJSONv1) UnmarshalJSON(b []byte) error {
 	if k := jsontext.Value(b).Kind(); k != '"' {
-		return &SemanticError{action: "unmarshal", JSONKind: k, GoType: structMethodJSONv1Type}
+		return EU(nil).withType(k, T[structMethodJSONv1]())
 	}
 	b, _ = jsontext.AppendUnquote(nil, b)
 	s.value = string(b)
@@ -601,57 +645,6 @@ func (*pointerNeverZero) IsZero() bool  { return false }
 func (valueStringer) String() string    { return "" }
 func (*pointerStringer) String() string { return "" }
 
-var (
-	namedBoolType                = reflect.TypeFor[namedBool]()
-	intType                      = reflect.TypeFor[int]()
-	int8Type                     = reflect.TypeFor[int8]()
-	int16Type                    = reflect.TypeFor[int16]()
-	int32Type                    = reflect.TypeFor[int32]()
-	int64Type                    = reflect.TypeFor[int64]()
-	uintType                     = reflect.TypeFor[uint]()
-	uint8Type                    = reflect.TypeFor[uint8]()
-	uint16Type                   = reflect.TypeFor[uint16]()
-	uint32Type                   = reflect.TypeFor[uint32]()
-	uint64Type                   = reflect.TypeFor[uint64]()
-	float32Type                  = reflect.TypeFor[float32]()
-	sliceStringType              = reflect.TypeFor[[]string]()
-	array1StringType             = reflect.TypeFor[[1]string]()
-	array0ByteType               = reflect.TypeFor[[0]byte]()
-	array1ByteType               = reflect.TypeFor[[1]byte]()
-	array2ByteType               = reflect.TypeFor[[2]byte]()
-	array3ByteType               = reflect.TypeFor[[3]byte]()
-	array4ByteType               = reflect.TypeFor[[4]byte]()
-	mapStringStringType          = reflect.TypeFor[map[string]string]()
-	structAllType                = reflect.TypeFor[structAll]()
-	structConflictingType        = reflect.TypeFor[structConflicting]()
-	structNoneExportedType       = reflect.TypeFor[structNoneExported]()
-	structMalformedTagType       = reflect.TypeFor[structMalformedTag]()
-	structUnexportedTagType      = reflect.TypeFor[structUnexportedTag]()
-	structUnexportedEmbeddedType = reflect.TypeFor[structUnexportedEmbedded]()
-	structUnknownTextValueType   = reflect.TypeFor[structUnknownTextValue]()
-	allMethodsType               = reflect.TypeFor[allMethods]()
-	allMethodsExceptJSONv2Type   = reflect.TypeFor[allMethodsExceptJSONv2]()
-	allMethodsExceptJSONv1Type   = reflect.TypeFor[allMethodsExceptJSONv1]()
-	allMethodsExceptTextType     = reflect.TypeFor[allMethodsExceptText]()
-	onlyMethodJSONv2Type         = reflect.TypeFor[onlyMethodJSONv2]()
-	onlyMethodJSONv1Type         = reflect.TypeFor[onlyMethodJSONv1]()
-	onlyMethodTextType           = reflect.TypeFor[onlyMethodText]()
-	structMethodJSONv2Type       = reflect.TypeFor[structMethodJSONv2]()
-	structMethodJSONv1Type       = reflect.TypeFor[structMethodJSONv1]()
-	structMethodTextType         = reflect.TypeFor[structMethodText]()
-	marshalJSONv2FuncType        = reflect.TypeFor[marshalJSONv2Func]()
-	marshalJSONv1FuncType        = reflect.TypeFor[marshalJSONv1Func]()
-	appendTextFuncType           = reflect.TypeFor[appendTextFunc]()
-	marshalTextFuncType          = reflect.TypeFor[marshalTextFunc]()
-	unmarshalJSONv2FuncType      = reflect.TypeFor[unmarshalJSONv2Func]()
-	unmarshalJSONv1FuncType      = reflect.TypeFor[unmarshalJSONv1Func]()
-	unmarshalTextFuncType        = reflect.TypeFor[unmarshalTextFunc]()
-	nocaseStringType             = reflect.TypeFor[nocaseString]()
-	ioReaderType                 = reflect.TypeFor[io.Reader]()
-	fmtStringerType              = reflect.TypeFor[fmt.Stringer]()
-	chanStringType               = reflect.TypeFor[chan string]()
-)
-
 func addr[T any](v T) *T {
 	return &v
 }
@@ -696,6 +689,11 @@ func TestMarshal(t *testing.T) {
 		in:   []bool{false, true},
 		want: `[false,true]`,
 	}, {
+		name: jsontest.Name("Bools/StringifiedBool"),
+		opts: []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		in:   []bool{false, true},
+		want: `["false","true"]`,
+	}, {
 		name: jsontest.Name("Bools/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
 		in:   true,
@@ -708,6 +706,11 @@ func TestMarshal(t *testing.T) {
 		name: jsontest.Name("Strings/Named"),
 		in:   []namedString{"", "hello", "世界"},
 		want: `["","hello","世界"]`,
+	}, {
+		name: jsontest.Name("Strings/StringifiedBool"),
+		opts: []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		in:   []string{"", "hello", "世界"},
+		want: `["\"\"","\"hello\"","\"世界\""]`,
 	}, {
 		name: jsontest.Name("Strings/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -811,15 +814,15 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Floats/Invalid/NaN"),
 		opts:    []Options{StringifyNumbers(true)},
 		in:      math.NaN(),
-		wantErr: &SemanticError{action: "marshal", GoType: float64Type, Err: fmt.Errorf("invalid value: %v", math.NaN())},
+		wantErr: EM(fmt.Errorf("invalid value: %v", math.NaN())).withType(0, float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/PositiveInfinity"),
 		in:      math.Inf(+1),
-		wantErr: &SemanticError{action: "marshal", GoType: float64Type, Err: fmt.Errorf("invalid value: %v", math.Inf(+1))},
+		wantErr: EM(fmt.Errorf("invalid value: %v", math.Inf(+1))).withType(0, float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/NegativeInfinity"),
 		in:      math.Inf(-1),
-		wantErr: &SemanticError{action: "marshal", GoType: float64Type, Err: fmt.Errorf("invalid value: %v", math.Inf(-1))},
+		wantErr: EM(fmt.Errorf("invalid value: %v", math.Inf(-1))).withType(0, float64Type),
 	}, {
 		name: jsontest.Name("Floats/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -829,22 +832,22 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Maps/InvalidKey/Bool"),
 		in:      map[bool]string{false: "value"},
 		want:    `{`,
-		wantErr: export.NewMissingNameError(len64(`{`)),
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, boolType),
 	}, {
 		name:    jsontest.Name("Maps/InvalidKey/NamedBool"),
 		in:      map[namedBool]string{false: "value"},
 		want:    `{`,
-		wantErr: export.NewMissingNameError(len64(`{`)),
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[namedBool]()),
 	}, {
 		name:    jsontest.Name("Maps/InvalidKey/Array"),
 		in:      map[[1]string]string{{"key"}: "value"},
 		want:    `{`,
-		wantErr: export.NewMissingNameError(len64(`{`)),
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Maps/InvalidKey/Channel"),
 		in:      map[chan string]string{make(chan string): "value"},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: chanStringType},
+		wantErr: EM(nil).withPos(`{`, "").withType(0, T[chan string]()),
 	}, {
 		name:         jsontest.Name("Maps/ValidKey/Int"),
 		in:           map[int64]string{math.MinInt64: "MinInt64", 0: "Zero", math.MaxInt64: "MaxInt64"},
@@ -860,7 +863,7 @@ func TestMarshal(t *testing.T) {
 		in:           map[*int64]string{addr(int64(0)): "0", addr(int64(0)): "0"},
 		canonicalize: true,
 		want:         `{"0":"0"`,
-		wantErr:      export.NewDuplicateNameError([]byte(`"0"`), len64(`{"0":"0",`)),
+		wantErr:      newDuplicateNameError("", []byte(`"0"`), len64(`{"0":"0",`)),
 	}, {
 		name:         jsontest.Name("Maps/ValidKey/NamedInt"),
 		in:           map[namedInt64]string{math.MinInt64: "MinInt64", 0: "Zero", math.MaxInt64: "MaxInt64"},
@@ -884,7 +887,7 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Maps/InvalidKey/Float/NaN"),
 		in:      map[float64]string{math.NaN(): "NaN", math.NaN(): "NaN"},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: float64Type, Err: errors.New("invalid value: NaN")},
+		wantErr: EM(errors.New("invalid value: NaN")).withPos(`{`, "").withType(0, float64Type),
 	}, {
 		name: jsontest.Name("Maps/ValidKey/Interface"),
 		in: map[any]any{
@@ -905,7 +908,7 @@ func TestMarshal(t *testing.T) {
 		opts:    []Options{jsontext.AllowInvalidUTF8(true)},
 		in:      map[string]string{"\x80": "", "\x81": ""},
 		want:    `{"�":""`,
-		wantErr: export.NewDuplicateNameError([]byte(`"�"`), len64(`{"�":"",`)),
+		wantErr: newDuplicateNameError("", []byte(`"�"`), len64(`{"�":"",`)),
 	}, {
 		name: jsontest.Name("Maps/DuplicateName/NoCaseString/AllowDuplicateNames"),
 		opts: []Options{jsontext.AllowDuplicateNames(true)},
@@ -915,7 +918,7 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Maps/DuplicateName/NoCaseString"),
 		in:      map[nocaseString]string{"hello": "", "HELLO": ""},
 		want:    `{"hello":""`,
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: reflect.TypeFor[nocaseString](), Err: export.NewDuplicateNameError([]byte(`"hello"`), len64(`{"hello":"",`))},
+		wantErr: EM(newDuplicateNameError("", []byte(`"hello"`), len64(`{"hello":"",`))).withPos(`{"hello":"",`, "").withType(0, T[nocaseString]()),
 	}, {
 		name: jsontest.Name("Maps/DuplicateName/NaNs/Deterministic+AllowDuplicateNames"),
 		opts: []Options{
@@ -933,7 +936,7 @@ func TestMarshal(t *testing.T) {
 			"key": nil,
 		},
 		want:    `{"key"`,
-		wantErr: &SemanticError{action: "marshal", GoType: chanStringType},
+		wantErr: EM(nil).withPos(`{"key":`, "/key").withType(0, T[chan string]()),
 	}, {
 		name: jsontest.Name("Maps/String/Deterministic"),
 		opts: []Options{Deterministic(true)},
@@ -948,7 +951,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      map[string]int{"\xff": 0, "\xfe": 1},
 		want:    `{"�":1`,
-		wantErr: export.NewDuplicateNameError([]byte(`"�"`), len64(`{"�":1,`)),
+		wantErr: newDuplicateNameError("", []byte(`"�"`), len64(`{"�":1,`)),
 	}, {
 		name: jsontest.Name("Maps/String/Deterministic+AllowInvalidUTF8+AllowDuplicateNames"),
 		opts: []Options{
@@ -997,13 +1000,13 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      map[namedString]map[string]int{"X": {"a": 1, "b": 1}},
 		want:    `{"X":{"x":1`,
-		wantErr: export.NewDuplicateNameError([]byte(`"x"`), len64(`{"X":{"x":1,`)),
+		wantErr: newDuplicateNameError("/X/x", nil, len64(`{"X":{"x":1,`)),
 	}, {
 		name: jsontest.Name("Maps/String/Deterministic+MarshalFuncs+AllowDuplicateNames"),
 		opts: []Options{
 			Deterministic(true),
 			WithMarshalers(MarshalFuncV2(func(enc *jsontext.Encoder, v string, opts Options) error {
-				if p := enc.StackPointer(); p != "/0" {
+				if p := enc.StackPointer(); p != "/X" {
 					return fmt.Errorf("invalid stack pointer: got %s, want /0", p)
 				}
 				switch v {
@@ -1038,7 +1041,7 @@ func TestMarshal(t *testing.T) {
 			return m
 		}(),
 		want:    strings.Repeat(`{"k":`, startDetectingCyclesAfter) + `{"k"`,
-		wantErr: &SemanticError{action: "marshal", GoType: reflect.TypeFor[recursiveMap](), Err: errors.New("encountered a cycle")},
+		wantErr: EM(errCycle).withPos(strings.Repeat(`{"k":`, startDetectingCyclesAfter+1), jsontext.Pointer(strings.Repeat("/k", startDetectingCyclesAfter+1))).withType(0, T[recursiveMap]()),
 	}, {
 		name: jsontest.Name("Maps/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -1368,6 +1371,152 @@ func TestMarshal(t *testing.T) {
 			"Int": "0",
 			"Uint": "0",
 			"Float": "0"
+		},
+		"StructMaps": {
+			"MapBool": {},
+			"MapString": {},
+			"MapBytes": {},
+			"MapInt": {},
+			"MapUint": {},
+			"MapFloat": {}
+		},
+		"StructSlices": {
+			"SliceBool": [],
+			"SliceString": [],
+			"SliceBytes": [],
+			"SliceInt": [],
+			"SliceUint": [],
+			"SliceFloat": []
+		},
+		"Slice": [],
+		"Array": [
+			""
+		],
+		"Pointer": null,
+		"Interface": null
+	},
+	"Interface": null
+}`,
+	}, {
+		name: jsontest.Name("Structs/LegacyStringified"),
+		opts: []Options{jsontext.Multiline(true), jsonflags.StringifyWithLegacySemantics | 1},
+		in: structStringifiedAll{
+			Bool:   true,    // should be stringified
+			String: "hello", // should be stringified
+			Bytes:  []byte{1, 2, 3},
+			Int:    -64,     // should be stringified
+			Uint:   +64,     // should be stringified
+			Float:  3.14159, // should be stringified
+			Map:    map[string]string{"key": "value"},
+			StructScalars: structScalars{
+				Bool:   true,
+				String: "hello",
+				Bytes:  []byte{1, 2, 3},
+				Int:    -64,
+				Uint:   +64,
+				Float:  3.14159,
+			},
+			StructMaps: structMaps{
+				MapBool:   map[string]bool{"": true},
+				MapString: map[string]string{"": "hello"},
+				MapBytes:  map[string][]byte{"": {1, 2, 3}},
+				MapInt:    map[string]int64{"": -64},
+				MapUint:   map[string]uint64{"": +64},
+				MapFloat:  map[string]float64{"": 3.14159},
+			},
+			StructSlices: structSlices{
+				SliceBool:   []bool{true},
+				SliceString: []string{"hello"},
+				SliceBytes:  [][]byte{{1, 2, 3}},
+				SliceInt:    []int64{-64},
+				SliceUint:   []uint64{+64},
+				SliceFloat:  []float64{3.14159},
+			},
+			Slice:     []string{"fizz", "buzz"},
+			Array:     [1]string{"goodbye"},
+			Pointer:   new(structStringifiedAll), // should be stringified
+			Interface: (*structStringifiedAll)(nil),
+		},
+		want: `{
+	"Bool": "true",
+	"String": "\"hello\"",
+	"Bytes": "AQID",
+	"Int": "-64",
+	"Uint": "64",
+	"Float": "3.14159",
+	"Map": {
+		"key": "value"
+	},
+	"StructScalars": {
+		"Bool": true,
+		"String": "hello",
+		"Bytes": "AQID",
+		"Int": -64,
+		"Uint": 64,
+		"Float": 3.14159
+	},
+	"StructMaps": {
+		"MapBool": {
+			"": true
+		},
+		"MapString": {
+			"": "hello"
+		},
+		"MapBytes": {
+			"": "AQID"
+		},
+		"MapInt": {
+			"": -64
+		},
+		"MapUint": {
+			"": 64
+		},
+		"MapFloat": {
+			"": 3.14159
+		}
+	},
+	"StructSlices": {
+		"SliceBool": [
+			true
+		],
+		"SliceString": [
+			"hello"
+		],
+		"SliceBytes": [
+			"AQID"
+		],
+		"SliceInt": [
+			-64
+		],
+		"SliceUint": [
+			64
+		],
+		"SliceFloat": [
+			3.14159
+		]
+	},
+	"Slice": [
+		"fizz",
+		"buzz"
+	],
+	"Array": [
+		"goodbye"
+	],
+	"Pointer": {
+		"Bool": "false",
+		"String": "\"\"",
+		"Bytes": "",
+		"Int": "0",
+		"Uint": "0",
+		"Float": "0",
+		"Map": {},
+		"StructScalars": {
+			"Bool": false,
+			"String": "",
+			"Bytes": "",
+			"Int": 0,
+			"Uint": 0,
+			"Float": 0
 		},
 		"StructMaps": {
 			"MapBool": {},
@@ -1859,7 +2008,7 @@ func TestMarshal(t *testing.T) {
 			for i := range 100 {
 				fields = append(fields, reflect.StructField{
 					Name: fmt.Sprintf("X%d", i),
-					Type: reflect.TypeFor[stringMarshalEmpty](),
+					Type: T[stringMarshalEmpty](),
 					Tag:  `json:",omitempty"`,
 				})
 			}
@@ -2185,57 +2334,57 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Structs/Format/Invalid/Bool"),
 		in:      structFormatInvalid{Bool: true},
 		want:    `{"Bool"`,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Bool":`, "/Bool").withType(0, boolType),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/String"),
 		in:      structFormatInvalid{String: "string"},
 		want:    `{"String"`,
-		wantErr: &SemanticError{action: "marshal", GoType: stringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"String":`, "/String").withType(0, stringType),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Bytes"),
 		in:      structFormatInvalid{Bytes: []byte("bytes")},
 		want:    `{"Bytes"`,
-		wantErr: &SemanticError{action: "marshal", GoType: bytesType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Bytes":`, "/Bytes").withType(0, bytesType),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Int"),
 		in:      structFormatInvalid{Int: 1},
 		want:    `{"Int"`,
-		wantErr: &SemanticError{action: "marshal", GoType: int64Type, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Int":`, "/Int").withType(0, T[int64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Uint"),
 		in:      structFormatInvalid{Uint: 1},
 		want:    `{"Uint"`,
-		wantErr: &SemanticError{action: "marshal", GoType: uint64Type, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Uint":`, "/Uint").withType(0, T[uint64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Float"),
 		in:      structFormatInvalid{Float: 1},
 		want:    `{"Float"`,
-		wantErr: &SemanticError{action: "marshal", GoType: float64Type, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Float":`, "/Float").withType(0, T[float64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Map"),
 		in:      structFormatInvalid{Map: map[string]string{}},
 		want:    `{"Map"`,
-		wantErr: &SemanticError{action: "marshal", GoType: mapStringStringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Map":`, "/Map").withType(0, T[map[string]string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Struct"),
 		in:      structFormatInvalid{Struct: structAll{Bool: true}},
 		want:    `{"Struct"`,
-		wantErr: &SemanticError{action: "marshal", GoType: structAllType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Struct":`, "/Struct").withType(0, T[structAll]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Slice"),
 		in:      structFormatInvalid{Slice: []string{}},
 		want:    `{"Slice"`,
-		wantErr: &SemanticError{action: "marshal", GoType: sliceStringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Slice":`, "/Slice").withType(0, T[[]string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Array"),
 		in:      structFormatInvalid{Array: [1]string{"string"}},
 		want:    `{"Array"`,
-		wantErr: &SemanticError{action: "marshal", GoType: array1StringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Array":`, "/Array").withType(0, T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Interface"),
 		in:      structFormatInvalid{Interface: "anything"},
 		want:    `{"Interface"`,
-		wantErr: &SemanticError{action: "marshal", GoType: anyType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"Interface":`, "/Interface").withType(0, T[any]()),
 	}, {
 		name: jsontest.Name("Structs/Inline/Zero"),
 		in:   structInlined{},
@@ -2297,7 +2446,7 @@ func TestMarshal(t *testing.T) {
 		opts:    []Options{jsontext.AllowDuplicateNames(false)},
 		in:      structInlineTextValue{X: jsontext.Value(` { "fizz" : "buzz" , "fizz" : "buzz" } `)},
 		want:    `{"fizz":"buzz"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"fizz"`), 0),
+		wantErr: newDuplicateNameError("/fizz", nil, len64(`{"fizz":"buzz"`)),
 	}, {
 		name: jsontest.Name("Structs/InlinedFallback/TextValue/AllowDuplicateNames"),
 		opts: []Options{jsontext.AllowDuplicateNames(true)},
@@ -2308,7 +2457,7 @@ func TestMarshal(t *testing.T) {
 		opts:    []Options{jsontext.AllowInvalidUTF8(false)},
 		in:      structInlineTextValue{X: jsontext.Value(`{"` + "\xde\xad\xbe\xef" + `":"value"}`)},
 		want:    `{`,
-		wantErr: export.NewInvalidUTF8Error(len64(`{"` + "\xde\xad")),
+		wantErr: newInvalidUTF8Error(len64(`{"`+"\xde\xad"), ""),
 	}, {
 		name: jsontest.Name("Structs/InlinedFallback/TextValue/AllowInvalidUTF8"),
 		opts: []Options{jsontext.AllowInvalidUTF8(true)},
@@ -2318,27 +2467,27 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Structs/InlinedFallback/TextValue/InvalidWhitespace"),
 		in:      structInlineTextValue{X: jsontext.Value("\n\r\t ")},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: jsontextValueType, Err: io.ErrUnexpectedEOF},
+		wantErr: EM(io.ErrUnexpectedEOF).withPos(`{`, "").withType(0, T[jsontext.Value]()),
 	}, {
 		name:    jsontest.Name("Structs/InlinedFallback/TextValue/InvalidObject"),
 		in:      structInlineTextValue{X: jsontext.Value(` true `)},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", JSONKind: 't', GoType: jsontextValueType, Err: errors.New("inlined raw value must be a JSON object")},
+		wantErr: EM(errRawInlinedNotObject).withPos(`{`, "").withType(0, T[jsontext.Value]()),
 	}, {
 		name:    jsontest.Name("Structs/InlinedFallback/TextValue/InvalidObjectName"),
 		in:      structInlineTextValue{X: jsontext.Value(` { true : false } `)},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: jsontextValueType, Err: export.NewMissingNameError(len64(" { "))},
+		wantErr: EM(newNonStringNameError(len64(" { "), "")).withPos(`{`, "").withType(0, T[jsontext.Value]()),
 	}, {
 		name:    jsontest.Name("Structs/InlinedFallback/TextValue/InvalidObjectEnd"),
 		in:      structInlineTextValue{X: jsontext.Value(` { "name" : false , } `)},
 		want:    `{"name":false`,
-		wantErr: &SemanticError{action: "marshal", GoType: jsontextValueType, Err: export.NewInvalidCharacterError(",", "before next token", len64(` { "name" : false `))},
+		wantErr: EM(newInvalidCharacterError(",", "before next token", len64(` { "name" : false `), "")).withPos(`{"name":false,`, "").withType(0, T[jsontext.Value]()),
 	}, {
 		name:    jsontest.Name("Structs/InlinedFallback/TextValue/InvalidDualObject"),
 		in:      structInlineTextValue{X: jsontext.Value(`{}{}`)},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: jsontextValueType, Err: export.NewInvalidCharacterError("{", "after top-level value", len64(`{}`))},
+		wantErr: EM(newInvalidCharacterError("{", "after top-level value", len64(`{}`), "")).withPos(`{`, "").withType(0, T[jsontext.Value]()),
 	}, {
 		name: jsontest.Name("Structs/InlinedFallback/TextValue/Nested/Nil"),
 		in:   structInlinePointerInlineTextValue{},
@@ -2386,7 +2535,7 @@ func TestMarshal(t *testing.T) {
 		opts:    []Options{jsontext.AllowInvalidUTF8(false)},
 		in:      structInlineMapStringAny{X: jsonObject{"\xde\xad\xbe\xef": nil}},
 		want:    `{`,
-		wantErr: export.NewInvalidUTF8Error(0),
+		wantErr: EM(jsonwire.ErrInvalidUTF8).withPos(`{`, "").withType(0, stringType),
 	}, {
 		name: jsontest.Name("Structs/InlinedFallback/MapStringAny/AllowInvalidUTF8"),
 		opts: []Options{jsontext.AllowInvalidUTF8(true)},
@@ -2397,7 +2546,7 @@ func TestMarshal(t *testing.T) {
 		opts:    []Options{jsontext.AllowInvalidUTF8(true)},
 		in:      structInlineMapStringAny{X: jsonObject{"name": make(chan string)}},
 		want:    `{"name"`,
-		wantErr: &SemanticError{action: "marshal", GoType: chanStringType},
+		wantErr: EM(nil).withPos(`{"name":`, "/name").withType(0, T[chan string]()),
 	}, {
 		name: jsontest.Name("Structs/InlinedFallback/MapStringAny/Nested/Nil"),
 		in:   structInlinePointerInlineMapStringAny{},
@@ -2444,7 +2593,7 @@ func TestMarshal(t *testing.T) {
 			X: map[string]int{"\xff": 0, "\xfe": 1},
 		},
 		want:    `{"�":1`,
-		wantErr: export.NewDuplicateNameError([]byte(`"�"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"�"`), len64(`{"�":1`)),
 	}, {
 		name: jsontest.Name("Structs/InlinedFallback/MapStringInt/Deterministic+AllowInvalidUTF8+AllowDuplicateNames"),
 		opts: []Options{Deterministic(true), jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true)},
@@ -2511,7 +2660,7 @@ func TestMarshal(t *testing.T) {
 			X: jsontext.Value(`{"dupe":"","dupe":""}`),
 		},
 		want:    `{"dupe":""`,
-		wantErr: export.NewDuplicateNameError([]byte(`"dupe"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"dupe"`), len64(`{"dupe":""`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/NoCaseInlineTextValue/Other/AllowDuplicateNames"),
 		opts: []Options{jsontext.AllowDuplicateNames(true)},
@@ -2531,7 +2680,7 @@ func TestMarshal(t *testing.T) {
 			X: jsontext.Value(`{"Aaa": "", "Aaa": ""}`),
 		},
 		want:    `{"Aaa":""`,
-		wantErr: export.NewDuplicateNameError([]byte(`"Aaa"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"Aaa"`), len64(`{"Aaa":""`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/NoCaseInlineTextValue/ExactConflict/AllowDuplicateNames"),
 		opts: []Options{jsontext.AllowDuplicateNames(true)},
@@ -2545,7 +2694,7 @@ func TestMarshal(t *testing.T) {
 			X: jsontext.Value(`{"Aaa": "", "AaA": "", "aaa": ""}`),
 		},
 		want:    `{"Aaa":"","AaA":""`,
-		wantErr: export.NewDuplicateNameError([]byte(`"aaa"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"aaa"`), len64(`{"Aaa":"","AaA":""`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/NoCaseInlineTextValue/NoCaseConflict/AllowDuplicateNames"),
 		opts: []Options{jsontext.AllowDuplicateNames(true)},
@@ -2569,7 +2718,7 @@ func TestMarshal(t *testing.T) {
 			X:   jsontext.Value(`{"AAA": ""}`),
 		},
 		want:    `{"AAA":"x","AaA":"x"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"AAA"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"AAA"`), len64(`{"AAA":"x","AaA":"x"`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/NoCaseInlineTextValue/NoCaseConflictWithField"),
 		in: structNoCaseInlineTextValue{
@@ -2578,7 +2727,7 @@ func TestMarshal(t *testing.T) {
 			X:   jsontext.Value(`{"aaa": ""}`),
 		},
 		want:    `{"AAA":"x","AaA":"x"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"aaa"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"aaa"`), len64(`{"AAA":"x","AaA":"x"`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/MatchCaseInsensitiveDelimiter"),
 		in: structNoCaseInlineTextValue{
@@ -2586,7 +2735,7 @@ func TestMarshal(t *testing.T) {
 			X:   jsontext.Value(`{"aa_a": ""}`),
 		},
 		want:    `{"AaA":"x"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"aa_a"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"aa_a"`), len64(`{"AaA":"x"`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/MatchCaseSensitiveDelimiter"),
 		opts: []Options{jsonflags.MatchCaseSensitiveDelimiter | 1},
@@ -2611,7 +2760,7 @@ func TestMarshal(t *testing.T) {
 			X:    jsontext.Value(`{"aa_b": ""}`),
 		},
 		want:    `{"AA_b":"x"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"aa_b"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"aa_b"`), len64(`{"AA_b":"x"`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/NoCaseInlineMapStringAny/ExactDifferent"),
 		in: structNoCaseInlineMapStringAny{
@@ -2635,7 +2784,7 @@ func TestMarshal(t *testing.T) {
 			X:   jsonObject{"AAA": ""},
 		},
 		want:    `{"AAA":"x","AaA":"x"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"AAA"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"AAA"`), len64(`{"AAA":"x","AaA":"x"`)),
 	}, {
 		name: jsontest.Name("Structs/DuplicateName/NoCaseInlineMapStringAny/NoCaseConflictWithField"),
 		in: structNoCaseInlineMapStringAny{
@@ -2644,32 +2793,32 @@ func TestMarshal(t *testing.T) {
 			X:   jsonObject{"aaa": ""},
 		},
 		want:    `{"AAA":"x","AaA":"x"`,
-		wantErr: export.NewDuplicateNameError([]byte(`"aaa"`), 0),
+		wantErr: newDuplicateNameError("", []byte(`"aaa"`), len64(`{"AAA":"x","AaA":"x"`)),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/Conflicting"),
 		in:      structConflicting{},
 		want:    ``,
-		wantErr: &SemanticError{action: "marshal", GoType: structConflictingType, Err: errors.New("Go struct fields A and B conflict over JSON object name \"conflict\"")},
+		wantErr: EM(errors.New("Go struct fields A and B conflict over JSON object name \"conflict\"")).withType(0, T[structConflicting]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/NoneExported"),
 		in:      structNoneExported{},
 		want:    ``,
-		wantErr: &SemanticError{action: "marshal", GoType: structNoneExportedType, Err: errors.New("Go struct has no exported fields")},
+		wantErr: EM(errNoExportedFields).withType(0, T[structNoneExported]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/MalformedTag"),
 		in:      structMalformedTag{},
 		want:    ``,
-		wantErr: &SemanticError{action: "marshal", GoType: structMalformedTagType, Err: errors.New("Go struct field Malformed has malformed `json` tag: invalid character '\"' at start of option (expecting Unicode letter or single quote)")},
+		wantErr: EM(errors.New("Go struct field Malformed has malformed `json` tag: invalid character '\"' at start of option (expecting Unicode letter or single quote)")).withType(0, T[structMalformedTag]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/UnexportedTag"),
 		in:      structUnexportedTag{},
 		want:    ``,
-		wantErr: &SemanticError{action: "marshal", GoType: structUnexportedTagType, Err: errors.New("unexported Go struct field unexported cannot have non-ignored `json:\"name\"` tag")},
+		wantErr: EM(errors.New("unexported Go struct field unexported cannot have non-ignored `json:\"name\"` tag")).withType(0, T[structUnexportedTag]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/UnexportedEmbedded"),
 		in:      structUnexportedEmbedded{},
 		want:    ``,
-		wantErr: &SemanticError{action: "marshal", GoType: structUnexportedEmbeddedType, Err: errors.New("embedded Go struct field namedString of an unexported type must be explicitly ignored with a `json:\"-\"` tag")},
+		wantErr: EM(errors.New("embedded Go struct field namedString of an unexported type must be explicitly ignored with a `json:\"-\"` tag")).withType(0, T[structUnexportedEmbedded]()),
 	}, {
 		name: jsontest.Name("Structs/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -2689,7 +2838,7 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Slices/Invalid/Channel"),
 		in:      [](chan string){nil},
 		want:    `[`,
-		wantErr: &SemanticError{action: "marshal", GoType: chanStringType},
+		wantErr: EM(nil).withPos(`[`, "/0").withType(0, T[chan string]()),
 	}, {
 		name: jsontest.Name("Slices/RecursiveSlice"),
 		in: recursiveSlice{
@@ -2707,7 +2856,7 @@ func TestMarshal(t *testing.T) {
 			return s
 		}(),
 		want:    strings.Repeat(`[`, startDetectingCyclesAfter) + `[`,
-		wantErr: &SemanticError{action: "marshal", GoType: reflect.TypeFor[recursiveSlice](), Err: errors.New("encountered a cycle")},
+		wantErr: EM(errCycle).withPos(strings.Repeat("[", startDetectingCyclesAfter+1), jsontext.Pointer(strings.Repeat("/0", startDetectingCyclesAfter+1))).withType(0, T[recursiveSlice]()),
 	}, {
 		name: jsontest.Name("Slices/NonCyclicSlice"),
 		in: func() []any {
@@ -2756,7 +2905,7 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Arrays/Invalid/Channel"),
 		in:      new([1]chan string),
 		want:    `[`,
-		wantErr: &SemanticError{action: "marshal", GoType: chanStringType},
+		wantErr: EM(nil).withPos(`[`, "/0").withType(0, T[chan string]()),
 	}, {
 		name: jsontest.Name("Arrays/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -2802,7 +2951,7 @@ func TestMarshal(t *testing.T) {
 			return p
 		}(),
 		want:    strings.Repeat(`{"P":`, startDetectingCyclesAfter) + `{"P"`,
-		wantErr: &SemanticError{action: "marshal", GoType: reflect.TypeFor[*recursivePointer](), Err: errors.New("encountered a cycle")},
+		wantErr: EM(errCycle).withPos(strings.Repeat(`{"P":`, startDetectingCyclesAfter+1), jsontext.Pointer(strings.Repeat("/P", startDetectingCyclesAfter+1))).withType(0, T[*recursivePointer]()),
 	}, {
 		name: jsontest.Name("Pointers/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -2929,7 +3078,7 @@ func TestMarshal(t *testing.T) {
 		opts:    []Options{Deterministic(true), jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(false)},
 		in:      struct{ X any }{map[string]any{"\xff": "", "\xfe": ""}},
 		want:    `{"X":{"�":""`,
-		wantErr: export.NewDuplicateNameError([]byte(`"�"`), len64(`{"X":{"�":"",`)),
+		wantErr: newDuplicateNameError("/X", []byte(`"�"`), len64(`{"X":{"�":"",`)),
 	}, {
 		name: jsontest.Name("Interfaces/Any/Maps/Deterministic+AllowInvalidUTF8+AllowDuplicateNames"),
 		opts: []Options{Deterministic(true), jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true)},
@@ -2939,13 +3088,13 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Interfaces/Any/Maps/RejectInvalidUTF8"),
 		in:      struct{ X any }{map[string]any{"\xff": "", "\xfe": ""}},
 		want:    `{"X":{`,
-		wantErr: export.NewInvalidUTF8Error(len64(`{"X":{`)),
+		wantErr: newInvalidUTF8Error(len64(`{"X":{`), "/X"),
 	}, {
 		name:    jsontest.Name("Interfaces/Any/Maps/AllowInvalidUTF8+RejectDuplicateNames"),
 		opts:    []Options{jsontext.AllowInvalidUTF8(true)},
 		in:      struct{ X any }{map[string]any{"\xff": "", "\xfe": ""}},
 		want:    `{"X":{"�":""`,
-		wantErr: export.NewDuplicateNameError([]byte(`"�"`), len64(`{"X":{"�":"",`)),
+		wantErr: newDuplicateNameError("/X", []byte(`"�"`), len64(`{"X":{"�":"",`)),
 	}, {
 		name: jsontest.Name("Interfaces/Any/Maps/AllowInvalidUTF8+AllowDuplicateNames"),
 		opts: []Options{jsontext.AllowInvalidUTF8(true), jsontext.AllowDuplicateNames(true)},
@@ -2959,7 +3108,7 @@ func TestMarshal(t *testing.T) {
 			return struct{ X any }{m}
 		}(),
 		want:    `{"X"` + strings.Repeat(`:{""`, startDetectingCyclesAfter),
-		wantErr: &SemanticError{action: "marshal", GoType: mapStringAnyType, Err: errors.New("encountered a cycle")},
+		wantErr: EM(errCycle).withPos(`{"X":`+strings.Repeat(`{"":`, startDetectingCyclesAfter), "/X"+jsontext.Pointer(strings.Repeat("/", startDetectingCyclesAfter))).withType(0, T[any]()),
 	}, {
 		name: jsontest.Name("Interfaces/Any/Slices/Nil"),
 		in:   struct{ X any }{[]any(nil)},
@@ -2990,7 +3139,7 @@ func TestMarshal(t *testing.T) {
 			return struct{ X any }{s}
 		}(),
 		want:    `{"X":` + strings.Repeat(`[`, startDetectingCyclesAfter),
-		wantErr: &SemanticError{action: "marshal", GoType: sliceAnyType, Err: errors.New("encountered a cycle")},
+		wantErr: EM(errCycle).withPos(`{"X":`+strings.Repeat(`[`, startDetectingCyclesAfter), "/X"+jsontext.Pointer(strings.Repeat("/0", startDetectingCyclesAfter))).withType(0, T[[]any]()),
 	}, {
 		name: jsontest.Name("Methods/NilPointer"),
 		in:   struct{ X *allMethods }{X: (*allMethods)(nil)}, // method should not be called
@@ -3082,15 +3231,15 @@ func TestMarshal(t *testing.T) {
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv2/Error"),
 		in: marshalJSONv2Func(func(*jsontext.Encoder, Options) error {
-			return errors.New("some error")
+			return errSomeError
 		}),
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv2FuncType, Err: errors.New("some error")},
+		wantErr: EM(errSomeError).withType(0, T[marshalJSONv2Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv2/TooFew"),
 		in: marshalJSONv2Func(func(*jsontext.Encoder, Options) error {
 			return nil // do nothing
 		}),
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv2FuncType, Err: errors.New("must write exactly one JSON value")},
+		wantErr: EM(errNonSingularValue).withType(0, T[marshalJSONv2Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv2/TooMany"),
 		in: marshalJSONv2Func(func(enc *jsontext.Encoder, opts Options) error {
@@ -3099,39 +3248,39 @@ func TestMarshal(t *testing.T) {
 			return nil
 		}),
 		want:    `nullnull`,
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv2FuncType, Err: errors.New("must write exactly one JSON value")},
+		wantErr: EM(errNonSingularValue).withPos(`nullnull`, "").withType(0, T[marshalJSONv2Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv2/SkipFunc"),
 		in: marshalJSONv2Func(func(enc *jsontext.Encoder, opts Options) error {
 			return SkipFunc
 		}),
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv2FuncType, Err: errors.New("marshal method cannot be skipped")},
+		wantErr: EM(errors.New("marshal method cannot be skipped")).withType(0, T[marshalJSONv2Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv1/Error"),
 		in: marshalJSONv1Func(func() ([]byte, error) {
-			return nil, errors.New("some error")
+			return nil, errSomeError
 		}),
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv1FuncType, Err: errors.New("some error")},
+		wantErr: EM(errSomeError).withType(0, T[marshalJSONv1Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv1/Syntax"),
 		in: marshalJSONv1Func(func() ([]byte, error) {
 			return []byte("invalid"), nil
 		}),
-		wantErr: &SemanticError{action: "marshal", JSONKind: 'i', GoType: marshalJSONv1FuncType, Err: export.NewInvalidCharacterError("i", "at start of value", 0)},
+		wantErr: EM(newInvalidCharacterError("i", "at start of value", 0, "")).withType(0, T[marshalJSONv1Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv1/SkipFunc"),
 		in: marshalJSONv1Func(func() ([]byte, error) {
 			return nil, SkipFunc
 		}),
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv1FuncType, Err: errors.New("marshal method cannot be skipped")},
+		wantErr: EM(errors.New("marshal method cannot be skipped")).withType(0, T[marshalJSONv1Func]()),
 	}, {
 		name: jsontest.Name("Methods/AppendText"),
 		in:   appendTextFunc(func(b []byte) ([]byte, error) { return append(b, "hello"...), nil }),
 		want: `"hello"`,
 	}, {
 		name:    jsontest.Name("Methods/AppendText/Error"),
-		in:      appendTextFunc(func(b []byte) ([]byte, error) { return append(b, "hello"...), errors.New("some error") }),
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: appendTextFuncType, Err: errors.New("some error")},
+		in:      appendTextFunc(func(b []byte) ([]byte, error) { return append(b, "hello"...), errSomeError }),
+		wantErr: EM(errSomeError).withType(0, T[appendTextFunc]()),
 	}, {
 		name: jsontest.Name("Methods/AppendText/NeedEscape"),
 		in:   appendTextFunc(func(b []byte) ([]byte, error) { return append(b, `"`...), nil }),
@@ -3139,7 +3288,7 @@ func TestMarshal(t *testing.T) {
 	}, {
 		name:    jsontest.Name("Methods/AppendText/RejectInvalidUTF8"),
 		in:      appendTextFunc(func(b []byte) ([]byte, error) { return append(b, "\xde\xad\xbe\xef"...), nil }),
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: appendTextFuncType, Err: export.NewInvalidUTF8Error(0)},
+		wantErr: EM(newInvalidUTF8Error(0, "")).withType(0, T[appendTextFunc]()),
 	}, {
 		name: jsontest.Name("Methods/AppendText/AllowInvalidUTF8"),
 		opts: []Options{jsontext.AllowInvalidUTF8(true)},
@@ -3148,15 +3297,15 @@ func TestMarshal(t *testing.T) {
 	}, {
 		name: jsontest.Name("Methods/Invalid/Text/Error"),
 		in: marshalTextFunc(func() ([]byte, error) {
-			return nil, errors.New("some error")
+			return nil, errSomeError
 		}),
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: marshalTextFuncType, Err: errors.New("some error")},
+		wantErr: EM(errSomeError).withType(0, T[marshalTextFunc]()),
 	}, {
 		name: jsontest.Name("Methods/Text/RejectInvalidUTF8"),
 		in: marshalTextFunc(func() ([]byte, error) {
 			return []byte("\xde\xad\xbe\xef"), nil
 		}),
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: marshalTextFuncType, Err: export.NewInvalidUTF8Error(0)},
+		wantErr: EM(newInvalidUTF8Error(0, "")).withType(0, T[marshalTextFunc]()),
 	}, {
 		name: jsontest.Name("Methods/Text/AllowInvalidUTF8"),
 		opts: []Options{jsontext.AllowInvalidUTF8(true)},
@@ -3169,7 +3318,7 @@ func TestMarshal(t *testing.T) {
 		in: marshalTextFunc(func() ([]byte, error) {
 			return nil, SkipFunc
 		}),
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: marshalTextFuncType, Err: errors.New("marshal method cannot be skipped")},
+		wantErr: EM(wrapSkipFunc(SkipFunc, "marshal method")).withType(0, T[marshalTextFunc]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/MapKey/JSONv2/Syntax"),
 		in: map[any]string{
@@ -3178,7 +3327,7 @@ func TestMarshal(t *testing.T) {
 			})): "invalid",
 		},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: marshalJSONv2FuncType, Err: export.NewMissingNameError(len64(`{`))},
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[marshalJSONv2Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/MapKey/JSONv1/Syntax"),
 		in: map[any]string{
@@ -3187,7 +3336,7 @@ func TestMarshal(t *testing.T) {
 			})): "invalid",
 		},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", JSONKind: 'n', GoType: marshalJSONv1FuncType, Err: export.NewMissingNameError(len64(`{`))},
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[marshalJSONv1Func]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V1"),
 		opts: []Options{
@@ -3206,7 +3355,7 @@ func TestMarshal(t *testing.T) {
 		name: jsontest.Name("Functions/NamedBool/V1/NoMatch"),
 		opts: []Options{
 			WithMarshalers(MarshalFuncV1(func(namedBool) ([]byte, error) {
-				return nil, errors.New("must not be called")
+				return nil, errMustNotCall
 			})),
 		},
 		in:   true,
@@ -3243,7 +3392,7 @@ func TestMarshal(t *testing.T) {
 		name: jsontest.Name("Functions/NamedBool/V2/NoMatch"),
 		opts: []Options{
 			WithMarshalers(MarshalFuncV2(func(enc *jsontext.Encoder, v namedBool, opts Options) error {
-				return errors.New("must not be called")
+				return errMustNotCall
 			})),
 		},
 		in:   true,
@@ -3285,11 +3434,11 @@ func TestMarshal(t *testing.T) {
 		name: jsontest.Name("Functions/Bool/V1/DirectError"),
 		opts: []Options{
 			WithMarshalers(MarshalFuncV1(func(bool) ([]byte, error) {
-				return nil, errors.New("some error")
+				return nil, errSomeError
 			})),
 		},
 		in:      true,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New("some error")},
+		wantErr: EM(errSomeError).withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V1/SkipError"),
 		opts: []Options{
@@ -3298,7 +3447,7 @@ func TestMarshal(t *testing.T) {
 			})),
 		},
 		in:      true,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New("marshal function of type func(T) ([]byte, error) cannot be skipped")},
+		wantErr: EM(wrapSkipFunc(SkipFunc, "marshal function of type func(T) ([]byte, error)")).withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V1/InvalidValue"),
 		opts: []Options{
@@ -3307,16 +3456,16 @@ func TestMarshal(t *testing.T) {
 			})),
 		},
 		in:      true,
-		wantErr: &SemanticError{action: "marshal", JSONKind: 'i', GoType: boolType, Err: export.NewInvalidCharacterError("i", "at start of value", 0)},
+		wantErr: EM(newInvalidCharacterError("i", "at start of value", 0, "")).withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V2/DirectError"),
 		opts: []Options{
 			WithMarshalers(MarshalFuncV2(func(enc *jsontext.Encoder, v bool, opts Options) error {
-				return errors.New("some error")
+				return errSomeError
 			})),
 		},
 		in:      true,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New("some error")},
+		wantErr: EM(errSomeError).withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V2/TooFew"),
 		opts: []Options{
@@ -3325,7 +3474,7 @@ func TestMarshal(t *testing.T) {
 			})),
 		},
 		in:      true,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New("must write exactly one JSON value")},
+		wantErr: EM(errNonSingularValue).withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V2/TooMany"),
 		opts: []Options{
@@ -3337,7 +3486,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      true,
 		want:    `"hello""world"`,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New("must write exactly one JSON value")},
+		wantErr: EM(errNonSingularValue).withPos(`"hello""world"`, "").withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V2/Skipped"),
 		opts: []Options{
@@ -3357,7 +3506,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      true,
 		want:    `"hello"`,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: errors.New("must not write any JSON tokens when skipping")},
+		wantErr: EM(errSkipMutation).withPos(`"hello"`, "").withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Bool/V2/WrappedSkipError"),
 		opts: []Options{
@@ -3366,7 +3515,7 @@ func TestMarshal(t *testing.T) {
 			})),
 		},
 		in:      true,
-		wantErr: &SemanticError{action: "marshal", GoType: boolType, Err: fmt.Errorf("wrap: %w", SkipFunc)},
+		wantErr: EM(fmt.Errorf("wrap: %w", SkipFunc)).withType(0, T[bool]()),
 	}, {
 		name: jsontest.Name("Functions/Map/Key/NoCaseString/V1"),
 		opts: []Options{
@@ -3405,7 +3554,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      map[nocaseString]string{"hello": "world"},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", JSONKind: 'n', GoType: nocaseStringType, Err: export.NewMissingNameError(len64(`{`))},
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[nocaseString]()),
 	}, {
 		name: jsontest.Name("Functions/Map/Key/NoCaseString/V2/InvalidKind"),
 		opts: []Options{
@@ -3415,7 +3564,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      map[nocaseString]string{"hello": "world"},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", JSONKind: 'n', GoType: nocaseStringType, Err: export.NewMissingNameError(len64(`{`))},
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[nocaseString]()),
 	}, {
 		name: jsontest.Name("Functions/Map/Key/String/V1/DuplicateName"),
 		opts: []Options{
@@ -3423,9 +3572,10 @@ func TestMarshal(t *testing.T) {
 				return []byte(`"name"`), nil
 			})),
 		},
-		in:      map[string]string{"name1": "value", "name2": "value"},
-		want:    `{"name":"name"`,
-		wantErr: &SemanticError{action: "marshal", JSONKind: '"', GoType: stringType, Err: export.NewDuplicateNameError([]byte(`"name"`), len64(`{"name":"name",`))},
+		in:   map[string]string{"name1": "value", "name2": "value"},
+		want: `{"name":"name"`,
+		wantErr: EM(newDuplicateNameError("", []byte(`"name"`), len64(`{"name":"name",`))).
+			withPos(`{"name":"name",`, "").withType(0, T[string]()),
 	}, {
 		name: jsontest.Name("Functions/Map/Key/NoCaseString/V2"),
 		opts: []Options{
@@ -3464,7 +3614,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      map[nocaseString]string{"hello": "world"},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: nocaseStringType, Err: export.NewMissingNameError(len64(`{`))},
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[nocaseString]()),
 	}, {
 		name: jsontest.Name("Functions/Map/Key/NoCaseString/V2/InvalidValue"),
 		opts: []Options{
@@ -3474,7 +3624,7 @@ func TestMarshal(t *testing.T) {
 		},
 		in:      map[nocaseString]string{"hello": "world"},
 		want:    `{`,
-		wantErr: &SemanticError{action: "marshal", GoType: nocaseStringType, Err: export.NewMissingNameError(len64(`{`))},
+		wantErr: EM(newNonStringNameError(len64(`{`), "")).withPos(`{`, "").withType(0, T[nocaseString]()),
 	}, {
 		name: jsontest.Name("Functions/Map/Value/NoCaseString/V1"),
 		opts: []Options{
@@ -4035,7 +4185,7 @@ func TestMarshal(t *testing.T) {
 			D time.Duration `json:",format:invalid"`
 		}{},
 		want:    `{"D"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeDurationType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EM(errInvalidFormatFlag).withPos(`{"D":`, "/D").withType(0, T[time.Duration]()),
 	}, {
 		name: jsontest.Name("Duration/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -4167,7 +4317,7 @@ func TestMarshal(t *testing.T) {
 			T time.Time `json:",format:UndefinedConstant"`
 		}{},
 		want:    `{"T"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeTimeType, Err: errors.New(`invalid format flag: "UndefinedConstant"`)},
+		wantErr: EM(errors.New(`invalid format flag "UndefinedConstant"`)).withPos(`{"T":`, "/T").withType(0, timeTimeType),
 	}, {
 		name: jsontest.Name("Time/Format/YearOverflow"),
 		in: struct {
@@ -4178,7 +4328,7 @@ func TestMarshal(t *testing.T) {
 			time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC),
 		},
 		want:    `{"T1":"9999-12-31T23:59:59Z","T2"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeTimeType, Err: errors.New(`year outside of range [0,9999]`)},
+		wantErr: EM(errors.New(`year outside of range [0,9999]`)).withPos(`{"T1":"9999-12-31T23:59:59Z","T2":`, "/T2").withType(0, timeTimeType),
 	}, {
 		name: jsontest.Name("Time/Format/YearUnderflow"),
 		in: struct {
@@ -4189,12 +4339,12 @@ func TestMarshal(t *testing.T) {
 			time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC).Add(-time.Second),
 		},
 		want:    `{"T1":"0000-01-01T00:00:00Z","T2"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeTimeType, Err: errors.New(`year outside of range [0,9999]`)},
+		wantErr: EM(errors.New(`year outside of range [0,9999]`)).withPos(`{"T1":"0000-01-01T00:00:00Z","T2":`, "/T2").withType(0, timeTimeType),
 	}, {
 		name:    jsontest.Name("Time/Format/YearUnderflow"),
 		in:      struct{ T time.Time }{time.Date(-998, 1, 1, 0, 0, 0, 0, time.UTC).Add(-time.Second)},
 		want:    `{"T"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeTimeType, Err: errors.New(`year outside of range [0,9999]`)},
+		wantErr: EM(errors.New(`year outside of range [0,9999]`)).withPos(`{"T":`, "/T").withType(0, timeTimeType),
 	}, {
 		name: jsontest.Name("Time/Format/ZoneExact"),
 		in:   struct{ T time.Time }{time.Date(2020, 1, 1, 0, 0, 0, 0, time.FixedZone("", 23*60*60+59*60))},
@@ -4203,12 +4353,12 @@ func TestMarshal(t *testing.T) {
 		name:    jsontest.Name("Time/Format/ZoneHourOverflow"),
 		in:      struct{ T time.Time }{time.Date(2020, 1, 1, 0, 0, 0, 0, time.FixedZone("", 24*60*60))},
 		want:    `{"T"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeTimeType, Err: errors.New(`timezone hour outside of range [0,23]`)},
+		wantErr: EM(errors.New(`timezone hour outside of range [0,23]`)).withPos(`{"T":`, "/T").withType(0, timeTimeType),
 	}, {
 		name:    jsontest.Name("Time/Format/ZoneHourOverflow"),
 		in:      struct{ T time.Time }{time.Date(2020, 1, 1, 0, 0, 0, 0, time.FixedZone("", 123*60*60))},
 		want:    `{"T"`,
-		wantErr: &SemanticError{action: "marshal", GoType: timeTimeType, Err: errors.New(`timezone hour outside of range [0,23]`)},
+		wantErr: EM(errors.New(`timezone hour outside of range [0,23]`)).withPos(`{"T":`, "/T").withType(0, timeTimeType),
 	}, {
 		name: jsontest.Name("Time/IgnoreInvalidFormat"),
 		opts: []Options{invalidFormatOption},
@@ -4251,25 +4401,25 @@ func TestUnmarshal(t *testing.T) {
 	}{{
 		name:    jsontest.Name("Nil"),
 		inBuf:   `null`,
-		wantErr: &SemanticError{action: "unmarshal", Err: errors.New("value must be passed as a non-nil pointer reference")},
+		wantErr: EU(errNonNilReference),
 	}, {
 		name:    jsontest.Name("NilPointer"),
 		inBuf:   `null`,
 		inVal:   (*string)(nil),
 		want:    (*string)(nil),
-		wantErr: &SemanticError{action: "unmarshal", GoType: stringType, Err: errors.New("value must be passed as a non-nil pointer reference")},
+		wantErr: EU(errNonNilReference).withType(0, stringType),
 	}, {
 		name:    jsontest.Name("NonPointer"),
 		inBuf:   `null`,
 		inVal:   "unchanged",
 		want:    "unchanged",
-		wantErr: &SemanticError{action: "unmarshal", GoType: stringType, Err: errors.New("value must be passed as a non-nil pointer reference")},
+		wantErr: EU(errNonNilReference).withType(0, stringType),
 	}, {
 		name:    jsontest.Name("Bools/TrailingJunk"),
 		inBuf:   `falsetrue`,
 		inVal:   addr(true),
 		want:    addr(false),
-		wantErr: export.NewInvalidCharacterError("t", "after top-level value", len64(`false`)),
+		wantErr: newInvalidCharacterError("t", "after top-level value", len64(`false`), ""),
 	}, {
 		name:  jsontest.Name("Bools/Null"),
 		inBuf: `null`,
@@ -4291,38 +4441,64 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `"false"`,
 		inVal:   addr(true),
 		want:    addr(true),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: boolType},
+		wantErr: EU(nil).withType('"', boolType),
 	}, {
 		name:    jsontest.Name("Bools/Invalid/StringifiedTrue"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"true"`,
 		inVal:   addr(true),
 		want:    addr(true),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: boolType},
+		wantErr: EU(nil).withType('"', boolType),
+	}, {
+		name:  jsontest.Name("Bools/StringifiedBool/True"),
+		opts:  []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf: `"true"`,
+		inVal: addr(false),
+		want:  addr(true),
+	}, {
+		name:  jsontest.Name("Bools/StringifiedBool/False"),
+		opts:  []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf: `"false"`,
+		inVal: addr(true),
+		want:  addr(false),
+	}, {
+		name:    jsontest.Name("Bools/StringifiedBool/InvalidWhitespace"),
+		opts:    []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf:   `"false "`,
+		inVal:   addr(true),
+		want:    addr(true),
+		wantErr: EU(errors.New("cannot parse \"false \" as bool")).withType('"', boolType),
+	}, {
+		name:    jsontest.Name("Bools/StringifiedBool/InvalidBool"),
+		opts:    []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf:   `false`,
+		inVal:   addr(true),
+		want:    addr(true),
+		wantErr: EU(nil).withType('f', boolType),
 	}, {
 		name:    jsontest.Name("Bools/Invalid/Number"),
 		inBuf:   `0`,
 		inVal:   addr(true),
 		want:    addr(true),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: boolType},
+		wantErr: EU(nil).withType('0', boolType),
 	}, {
 		name:    jsontest.Name("Bools/Invalid/String"),
 		inBuf:   `""`,
 		inVal:   addr(true),
 		want:    addr(true),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: boolType},
+		wantErr: EU(nil).withType('"', boolType),
 	}, {
 		name:    jsontest.Name("Bools/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr(true),
 		want:    addr(true),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: boolType},
+		wantErr: EU(nil).withType('{', boolType),
 	}, {
 		name:    jsontest.Name("Bools/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr(true),
 		want:    addr(true),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: boolType},
+		wantErr: EU(nil).withType('[', boolType),
 	}, {
 		name:  jsontest.Name("Bools/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -4354,31 +4530,51 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `false`,
 		inVal:   addr("nochange"),
 		want:    addr("nochange"),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 'f', GoType: stringType},
+		wantErr: EU(nil).withType('f', stringType),
 	}, {
 		name:    jsontest.Name("Strings/Invalid/True"),
 		inBuf:   `true`,
 		inVal:   addr("nochange"),
 		want:    addr("nochange"),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: stringType},
+		wantErr: EU(nil).withType('t', stringType),
 	}, {
 		name:    jsontest.Name("Strings/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr("nochange"),
 		want:    addr("nochange"),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: stringType},
+		wantErr: EU(nil).withType('{', stringType),
 	}, {
 		name:    jsontest.Name("Strings/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr("nochange"),
 		want:    addr("nochange"),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: stringType},
+		wantErr: EU(nil).withType('[', stringType),
 	}, {
 		name:  jsontest.Name("Strings/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
 		inBuf: `"hello"`,
 		inVal: addr("goodbye"),
 		want:  addr("hello"),
+	}, {
+		name:  jsontest.Name("Strings/StringifiedString"),
+		opts:  []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf: `"\"foo\""`,
+		inVal: new(string),
+		want:  addr("foo"),
+	}, {
+		name:    jsontest.Name("Strings/StringifiedString/InvalidWhitespace"),
+		opts:    []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf:   `"\"foo\" "`,
+		inVal:   new(string),
+		want:    new(string),
+		wantErr: EU(newInvalidCharacterError(" ", "after string value", 0, "")).withType('"', stringType),
+	}, {
+		name:    jsontest.Name("Strings/StringifiedString/InvalidString"),
+		opts:    []Options{jsonflags.StringifyBoolsAndStrings | 1},
+		inBuf:   `""`,
+		inVal:   new(string),
+		want:    new(string),
+		wantErr: EU(&jsontext.SyntacticError{Err: io.ErrUnexpectedEOF}).withType('"', stringType),
 	}, {
 		name:  jsontest.Name("Bytes/Null"),
 		inBuf: `null`,
@@ -4439,16 +4635,16 @@ func TestUnmarshal(t *testing.T) {
 		inBuf: `"A"`,
 		inVal: new([0]byte),
 		want:  addr([0]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array0ByteType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 0), []byte("A"))
 			return err
-		}()},
+		}()).withType('"', T[[0]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray0/Overflow"),
 		inBuf:   `"AA=="`,
 		inVal:   new([0]byte),
 		want:    addr([0]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array0ByteType, Err: errors.New("decoded base64 length of 1 mismatches array length of 0")},
+		wantErr: EU(errors.New("decoded base64 length of 1 mismatches array length of 0")).withType('"', T[[0]byte]()),
 	}, {
 		name:  jsontest.Name("Bytes/ByteArray1/Valid"),
 		inBuf: `"AQ=="`,
@@ -4459,22 +4655,22 @@ func TestUnmarshal(t *testing.T) {
 		inBuf: `"$$=="`,
 		inVal: new([1]byte),
 		want:  addr([1]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array1ByteType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 1), []byte("$$=="))
 			return err
-		}()},
+		}()).withType('"', T[[1]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray1/Underflow"),
 		inBuf:   `""`,
 		inVal:   new([1]byte),
 		want:    addr([1]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array1ByteType, Err: errors.New("decoded base64 length of 0 mismatches array length of 1")},
+		wantErr: EU(errors.New("decoded base64 length of 0 mismatches array length of 1")).withType('"', T[[1]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray1/Overflow"),
 		inBuf:   `"AQI="`,
 		inVal:   new([1]byte),
 		want:    addr([1]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array1ByteType, Err: errors.New("decoded base64 length of 2 mismatches array length of 1")},
+		wantErr: EU(errors.New("decoded base64 length of 2 mismatches array length of 1")).withType('"', T[[1]byte]()),
 	}, {
 		name:  jsontest.Name("Bytes/ByteArray2/Valid"),
 		inBuf: `"AQI="`,
@@ -4485,22 +4681,22 @@ func TestUnmarshal(t *testing.T) {
 		inBuf: `"$$$="`,
 		inVal: new([2]byte),
 		want:  addr([2]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array2ByteType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 2), []byte("$$$="))
 			return err
-		}()},
+		}()).withType('"', T[[2]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray2/Underflow"),
 		inBuf:   `"AQ=="`,
 		inVal:   new([2]byte),
 		want:    addr([2]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array2ByteType, Err: errors.New("decoded base64 length of 1 mismatches array length of 2")},
+		wantErr: EU(errors.New("decoded base64 length of 1 mismatches array length of 2")).withType('"', T[[2]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray2/Overflow"),
 		inBuf:   `"AQID"`,
 		inVal:   new([2]byte),
 		want:    addr([2]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array2ByteType, Err: errors.New("decoded base64 length of 3 mismatches array length of 2")},
+		wantErr: EU(errors.New("decoded base64 length of 3 mismatches array length of 2")).withType('"', T[[2]byte]()),
 	}, {
 		name:  jsontest.Name("Bytes/ByteArray3/Valid"),
 		inBuf: `"AQID"`,
@@ -4511,22 +4707,22 @@ func TestUnmarshal(t *testing.T) {
 		inBuf: `"$$$$"`,
 		inVal: new([3]byte),
 		want:  addr([3]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array3ByteType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 3), []byte("$$$$"))
 			return err
-		}()},
+		}()).withType('"', T[[3]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray3/Underflow"),
 		inBuf:   `"AQI="`,
 		inVal:   new([3]byte),
 		want:    addr([3]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array3ByteType, Err: errors.New("decoded base64 length of 2 mismatches array length of 3")},
+		wantErr: EU(errors.New("decoded base64 length of 2 mismatches array length of 3")).withType('"', T[[3]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray3/Overflow"),
 		inBuf:   `"AQIDAQ=="`,
 		inVal:   new([3]byte),
 		want:    addr([3]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array3ByteType, Err: errors.New("decoded base64 length of 4 mismatches array length of 3")},
+		wantErr: EU(errors.New("decoded base64 length of 4 mismatches array length of 3")).withType('"', T[[3]byte]()),
 	}, {
 		name:  jsontest.Name("Bytes/ByteArray4/Valid"),
 		inBuf: `"AQIDBA=="`,
@@ -4537,22 +4733,22 @@ func TestUnmarshal(t *testing.T) {
 		inBuf: `"$$$$$$=="`,
 		inVal: new([4]byte),
 		want:  addr([4]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array4ByteType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 4), []byte("$$$$$$=="))
 			return err
-		}()},
+		}()).withType('"', T[[4]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray4/Underflow"),
 		inBuf:   `"AQID"`,
 		inVal:   new([4]byte),
 		want:    addr([4]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array4ByteType, Err: errors.New("decoded base64 length of 3 mismatches array length of 4")},
+		wantErr: EU(errors.New("decoded base64 length of 3 mismatches array length of 4")).withType('"', T[[4]byte]()),
 	}, {
 		name:    jsontest.Name("Bytes/ByteArray4/Overflow"),
 		inBuf:   `"AQIDBAU="`,
 		inVal:   new([4]byte),
 		want:    addr([4]byte{}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array4ByteType, Err: errors.New("decoded base64 length of 5 mismatches array length of 4")},
+		wantErr: EU(errors.New("decoded base64 length of 5 mismatches array length of 4")).withType('"', T[[4]byte]()),
 	}, {
 		// NOTE: []namedByte is not assignable to []byte,
 		// so the following should be treated as a array of uints.
@@ -4570,52 +4766,52 @@ func TestUnmarshal(t *testing.T) {
 		inBuf: `"AQ="`,
 		inVal: addr([]byte("nochange")),
 		want:  addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 0), []byte("AQ="))
 			return err
-		}()},
+		}()).withType('"', bytesType),
 	}, {
 		name:  jsontest.Name("Bytes/Invalid/Unpadded2"),
 		inBuf: `"AQ"`,
 		inVal: addr([]byte("nochange")),
 		want:  addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 0), []byte("AQ"))
 			return err
-		}()},
+		}()).withType('"', bytesType),
 	}, {
 		name:  jsontest.Name("Bytes/Invalid/Character"),
 		inBuf: `"@@@@"`,
 		inVal: addr([]byte("nochange")),
 		want:  addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 3), []byte("@@@@"))
 			return err
-		}()},
+		}()).withType('"', bytesType),
 	}, {
 		name:    jsontest.Name("Bytes/Invalid/Bool"),
 		inBuf:   `true`,
 		inVal:   addr([]byte("nochange")),
 		want:    addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: bytesType},
+		wantErr: EU(nil).withType('t', bytesType),
 	}, {
 		name:    jsontest.Name("Bytes/Invalid/Number"),
 		inBuf:   `0`,
 		inVal:   addr([]byte("nochange")),
 		want:    addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: bytesType},
+		wantErr: EU(nil).withType('0', bytesType),
 	}, {
 		name:    jsontest.Name("Bytes/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr([]byte("nochange")),
 		want:    addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: bytesType},
+		wantErr: EU(nil).withType('{', bytesType),
 	}, {
 		name:    jsontest.Name("Bytes/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr([]byte("nochange")),
 		want:    addr([]byte("nochange")),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: bytesType},
+		wantErr: EU(nil).withType('[', bytesType),
 	}, {
 		name:  jsontest.Name("Bytes/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -4637,7 +4833,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `-129`,
 		inVal:   addr(int8(-1)),
 		want:    addr(int8(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int8Type, Err: fmt.Errorf(`cannot parse "-129" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "-129" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int8]()),
 	}, {
 		name:  jsontest.Name("Ints/Int8/Min"),
 		inBuf: `-128`,
@@ -4653,13 +4849,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `128`,
 		inVal:   addr(int8(-1)),
 		want:    addr(int8(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int8Type, Err: fmt.Errorf(`cannot parse "128" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "128" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int8]()),
 	}, {
 		name:    jsontest.Name("Ints/Int16/MinOverflow"),
 		inBuf:   `-32769`,
 		inVal:   addr(int16(-1)),
 		want:    addr(int16(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int16Type, Err: fmt.Errorf(`cannot parse "-32769" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "-32769" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int16]()),
 	}, {
 		name:  jsontest.Name("Ints/Int16/Min"),
 		inBuf: `-32768`,
@@ -4675,13 +4871,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `32768`,
 		inVal:   addr(int16(-1)),
 		want:    addr(int16(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int16Type, Err: fmt.Errorf(`cannot parse "32768" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "32768" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int16]()),
 	}, {
 		name:    jsontest.Name("Ints/Int32/MinOverflow"),
 		inBuf:   `-2147483649`,
 		inVal:   addr(int32(-1)),
 		want:    addr(int32(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int32Type, Err: fmt.Errorf(`cannot parse "-2147483649" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "-2147483649" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int32]()),
 	}, {
 		name:  jsontest.Name("Ints/Int32/Min"),
 		inBuf: `-2147483648`,
@@ -4697,13 +4893,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `2147483648`,
 		inVal:   addr(int32(-1)),
 		want:    addr(int32(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int32Type, Err: fmt.Errorf(`cannot parse "2147483648" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "2147483648" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int32]()),
 	}, {
 		name:    jsontest.Name("Ints/Int64/MinOverflow"),
 		inBuf:   `-9223372036854775809`,
 		inVal:   addr(int64(-1)),
 		want:    addr(int64(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int64Type, Err: fmt.Errorf(`cannot parse "-9223372036854775809" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "-9223372036854775809" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int64]()),
 	}, {
 		name:  jsontest.Name("Ints/Int64/Min"),
 		inBuf: `-9223372036854775808`,
@@ -4719,7 +4915,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `9223372036854775808`,
 		inVal:   addr(int64(-1)),
 		want:    addr(int64(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: int64Type, Err: fmt.Errorf(`cannot parse "9223372036854775808" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "9223372036854775808" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int64]()),
 	}, {
 		name:  jsontest.Name("Ints/Named"),
 		inBuf: `-6464`,
@@ -4732,12 +4928,19 @@ func TestUnmarshal(t *testing.T) {
 		inVal: new(int),
 		want:  addr(int(-6464)),
 	}, {
+		name:    jsontest.Name("Ints/Stringified/Invalid"),
+		opts:    []Options{StringifyNumbers(true)},
+		inBuf:   `-6464`,
+		inVal:   new(int),
+		want:    new(int),
+		wantErr: EU(nil).withType('0', T[int]()),
+	}, {
 		name:    jsontest.Name("Ints/Stringified/LeadingZero"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"00"`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: intType, Err: fmt.Errorf(`cannot parse "00" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "00" as signed integer: %w`, strconv.ErrSyntax)).withType('"', T[int]()),
 	}, {
 		name:  jsontest.Name("Ints/Escaped"),
 		opts:  []Options{StringifyNumbers(true)},
@@ -4754,71 +4957,71 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `1.0`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: intType, Err: fmt.Errorf(`cannot parse "1.0" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1.0" as signed integer: %w`, strconv.ErrSyntax)).withType('0', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/Exponent"),
 		inBuf:   `1e0`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: intType, Err: fmt.Errorf(`cannot parse "1e0" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1e0" as signed integer: %w`, strconv.ErrSyntax)).withType('0', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/StringifiedFraction"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"1.0"`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: intType, Err: fmt.Errorf(`cannot parse "1.0" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1.0" as signed integer: %w`, strconv.ErrSyntax)).withType('"', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/StringifiedExponent"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"1e0"`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: intType, Err: fmt.Errorf(`cannot parse "1e0" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1e0" as signed integer: %w`, strconv.ErrSyntax)).withType('"', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/Overflow"),
 		inBuf:   `100000000000000000000000000000`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: intType, Err: fmt.Errorf(`cannot parse "100000000000000000000000000000" as signed integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "100000000000000000000000000000" as signed integer: %w`, strconv.ErrRange)).withType('0', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/OverflowSyntax"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"100000000000000000000000000000x"`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: intType, Err: fmt.Errorf(`cannot parse "100000000000000000000000000000x" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "100000000000000000000000000000x" as signed integer: %w`, strconv.ErrSyntax)).withType('"', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/Whitespace"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"0 "`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: intType, Err: fmt.Errorf(`cannot parse "0 " as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "0 " as signed integer: %w`, strconv.ErrSyntax)).withType('"', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/Bool"),
 		inBuf:   `true`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: intType},
+		wantErr: EU(nil).withType('t', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/String"),
 		inBuf:   `"0"`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: intType},
+		wantErr: EU(nil).withType('"', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: intType},
+		wantErr: EU(nil).withType('{', T[int]()),
 	}, {
 		name:    jsontest.Name("Ints/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr(int(-1)),
 		want:    addr(int(-1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: intType},
+		wantErr: EU(nil).withType('[', T[int]()),
 	}, {
 		name:  jsontest.Name("Ints/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -4850,7 +5053,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `256`,
 		inVal:   addr(uint8(1)),
 		want:    addr(uint8(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uint8Type, Err: fmt.Errorf(`cannot parse "256" as unsigned integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "256" as unsigned integer: %w`, strconv.ErrRange)).withType('0', T[uint8]()),
 	}, {
 		name:  jsontest.Name("Uints/Uint16/Min"),
 		inBuf: `0`,
@@ -4866,7 +5069,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `65536`,
 		inVal:   addr(uint16(1)),
 		want:    addr(uint16(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uint16Type, Err: fmt.Errorf(`cannot parse "65536" as unsigned integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "65536" as unsigned integer: %w`, strconv.ErrRange)).withType('0', T[uint16]()),
 	}, {
 		name:  jsontest.Name("Uints/Uint32/Min"),
 		inBuf: `0`,
@@ -4882,7 +5085,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `4294967296`,
 		inVal:   addr(uint32(1)),
 		want:    addr(uint32(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uint32Type, Err: fmt.Errorf(`cannot parse "4294967296" as unsigned integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "4294967296" as unsigned integer: %w`, strconv.ErrRange)).withType('0', T[uint32]()),
 	}, {
 		name:  jsontest.Name("Uints/Uint64/Min"),
 		inBuf: `0`,
@@ -4898,7 +5101,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `18446744073709551616`,
 		inVal:   addr(uint64(1)),
 		want:    addr(uint64(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uint64Type, Err: fmt.Errorf(`cannot parse "18446744073709551616" as unsigned integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "18446744073709551616" as unsigned integer: %w`, strconv.ErrRange)).withType('0', T[uint64]()),
 	}, {
 		name:  jsontest.Name("Uints/Uintptr"),
 		inBuf: `1`,
@@ -4916,12 +5119,19 @@ func TestUnmarshal(t *testing.T) {
 		inVal: new(uint),
 		want:  addr(uint(6464)),
 	}, {
+		name:    jsontest.Name("Uints/Stringified/Invalid"),
+		opts:    []Options{StringifyNumbers(true)},
+		inBuf:   `6464`,
+		inVal:   new(uint),
+		want:    new(uint),
+		wantErr: EU(nil).withType('0', T[uint]()),
+	}, {
 		name:    jsontest.Name("Uints/Stringified/LeadingZero"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"00"`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: uintType, Err: fmt.Errorf(`cannot parse "00" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "00" as unsigned integer: %w`, strconv.ErrSyntax)).withType('"', T[uint]()),
 	}, {
 		name:  jsontest.Name("Uints/Escaped"),
 		opts:  []Options{StringifyNumbers(true)},
@@ -4933,83 +5143,83 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `-1`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uintType, Err: fmt.Errorf(`cannot parse "-1" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "-1" as unsigned integer: %w`, strconv.ErrSyntax)).withType('0', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/NegativeZero"),
 		inBuf:   `-0`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uintType, Err: fmt.Errorf(`cannot parse "-0" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "-0" as unsigned integer: %w`, strconv.ErrSyntax)).withType('0', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Fraction"),
 		inBuf:   `1.0`,
 		inVal:   addr(uint(10)),
 		want:    addr(uint(10)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uintType, Err: fmt.Errorf(`cannot parse "1.0" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1.0" as unsigned integer: %w`, strconv.ErrSyntax)).withType('0', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Exponent"),
 		inBuf:   `1e0`,
 		inVal:   addr(uint(10)),
 		want:    addr(uint(10)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uintType, Err: fmt.Errorf(`cannot parse "1e0" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1e0" as unsigned integer: %w`, strconv.ErrSyntax)).withType('0', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/StringifiedFraction"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"1.0"`,
 		inVal:   addr(uint(10)),
 		want:    addr(uint(10)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: uintType, Err: fmt.Errorf(`cannot parse "1.0" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1.0" as unsigned integer: %w`, strconv.ErrSyntax)).withType('"', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/StringifiedExponent"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"1e0"`,
 		inVal:   addr(uint(10)),
 		want:    addr(uint(10)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: uintType, Err: fmt.Errorf(`cannot parse "1e0" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1e0" as unsigned integer: %w`, strconv.ErrSyntax)).withType('"', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Overflow"),
 		inBuf:   `100000000000000000000000000000`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: uintType, Err: fmt.Errorf(`cannot parse "100000000000000000000000000000" as unsigned integer: %w`, strconv.ErrRange)},
+		wantErr: EU(fmt.Errorf(`cannot parse "100000000000000000000000000000" as unsigned integer: %w`, strconv.ErrRange)).withType('0', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/OverflowSyntax"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"100000000000000000000000000000x"`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: uintType, Err: fmt.Errorf(`cannot parse "100000000000000000000000000000x" as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "100000000000000000000000000000x" as unsigned integer: %w`, strconv.ErrSyntax)).withType('"', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Whitespace"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"0 "`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: uintType, Err: fmt.Errorf(`cannot parse "0 " as unsigned integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "0 " as unsigned integer: %w`, strconv.ErrSyntax)).withType('"', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Bool"),
 		inBuf:   `true`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: uintType},
+		wantErr: EU(nil).withType('t', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/String"),
 		inBuf:   `"0"`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: uintType},
+		wantErr: EU(nil).withType('"', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: uintType},
+		wantErr: EU(nil).withType('{', T[uint]()),
 	}, {
 		name:    jsontest.Name("Uints/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr(uint(1)),
 		want:    addr(uint(1)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: uintType},
+		wantErr: EU(nil).withType('[', T[uint]()),
 	}, {
 		name:  jsontest.Name("Uints/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -5042,7 +5252,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `1e1000`,
 		inVal:   addr(float32(32.32)),
 		want:    addr(float32(32.32)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: float32Type, Err: strconv.ErrRange},
+		wantErr: EU(strconv.ErrRange).withType('0', T[float32]()),
 	}, {
 		name:  jsontest.Name("Floats/Float64/Pi"),
 		inBuf: `3.14159265358979323846264338327950288419716939937510582097494459`,
@@ -5064,7 +5274,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `1e1000`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: float64Type, Err: strconv.ErrRange},
+		wantErr: EU(strconv.ErrRange).withType('0', T[float64]()),
 	}, {
 		name:  jsontest.Name("Floats/Any/Overflow"),
 		inBuf: `1e1000`,
@@ -5076,7 +5286,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `1e1000`,
 		inVal:   new(any),
 		want:    new(any),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: float64Type, Err: strconv.ErrRange},
+		wantErr: EU(strconv.ErrRange).withType('0', T[float64]()),
 	}, {
 		name:  jsontest.Name("Floats/Named"),
 		inBuf: `64.64`,
@@ -5089,6 +5299,13 @@ func TestUnmarshal(t *testing.T) {
 		inVal: new(float64),
 		want:  addr(float64(64.64)),
 	}, {
+		name:    jsontest.Name("Floats/Stringified/Invalid"),
+		opts:    []Options{StringifyNumbers(true)},
+		inBuf:   `64.64`,
+		inVal:   new(float64),
+		want:    new(float64),
+		wantErr: EU(nil).withType('0', T[float64]()),
+	}, {
 		name:  jsontest.Name("Floats/Escaped"),
 		opts:  []Options{StringifyNumbers(true)},
 		inBuf: `"\u0036\u0034\u002e\u0036\u0034"`,
@@ -5100,52 +5317,52 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `"NaN"`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type, Err: fmt.Errorf(`cannot parse "NaN" as JSON number: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "NaN" as JSON number: %w`, strconv.ErrSyntax)).withType('"', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/Infinity"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"Infinity"`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type, Err: fmt.Errorf(`cannot parse "Infinity" as JSON number: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "Infinity" as JSON number: %w`, strconv.ErrSyntax)).withType('"', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/Whitespace"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"1 "`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type, Err: fmt.Errorf(`cannot parse "1 " as JSON number: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1 " as JSON number: %w`, strconv.ErrSyntax)).withType('"', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/GoSyntax"),
 		opts:    []Options{StringifyNumbers(true)},
 		inBuf:   `"1p-2"`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type, Err: fmt.Errorf(`cannot parse "1p-2" as JSON number: %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`cannot parse "1p-2" as JSON number: %w`, strconv.ErrSyntax)).withType('"', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/Bool"),
 		inBuf:   `true`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: float64Type},
+		wantErr: EU(nil).withType('t', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/String"),
 		inBuf:   `"0"`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type},
+		wantErr: EU(nil).withType('"', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: float64Type},
+		wantErr: EU(nil).withType('{', float64Type),
 	}, {
 		name:    jsontest.Name("Floats/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr(float64(64.64)),
 		want:    addr(float64(64.64)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: float64Type},
+		wantErr: EU(nil).withType('[', float64Type),
 	}, {
 		name:  jsontest.Name("Floats/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -5162,25 +5379,25 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"true":"false"}`,
 		inVal:   new(map[bool]bool),
 		want:    addr(make(map[bool]bool)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: boolType},
+		wantErr: EU(nil).withPos(`{`, "/true").withType('"', boolType),
 	}, {
 		name:    jsontest.Name("Maps/InvalidKey/NamedBool"),
 		inBuf:   `{"true":"false"}`,
 		inVal:   new(map[namedBool]bool),
 		want:    addr(make(map[namedBool]bool)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: namedBoolType},
+		wantErr: EU(nil).withPos(`{`, "/true").withType('"', T[namedBool]()),
 	}, {
 		name:    jsontest.Name("Maps/InvalidKey/Array"),
 		inBuf:   `{"key":"value"}`,
 		inVal:   new(map[[1]string]string),
 		want:    addr(make(map[[1]string]string)),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array1StringType},
+		wantErr: EU(nil).withPos(`{`, "/key").withType('"', T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Maps/InvalidKey/Channel"),
 		inBuf:   `{"key":"value"}`,
 		inVal:   new(map[chan string]string),
 		want:    addr(make(map[chan string]string)),
-		wantErr: &SemanticError{action: "unmarshal", GoType: chanStringType},
+		wantErr: EU(nil).withPos(`{`, "").withType('"', T[chan string]()),
 	}, {
 		name:  jsontest.Name("Maps/ValidKey/Int"),
 		inBuf: `{"0":0,"-1":1,"2":2,"-3":3}`,
@@ -5211,7 +5428,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"0":1,"-0":-1}`,
 		inVal:   new(map[int]int),
 		want:    addr(map[int]int{0: 1}),
-		wantErr: export.NewDuplicateNameError([]byte(`"-0"`), len64(`{"0":1,`)),
+		wantErr: newDuplicateNameError("", []byte(`"-0"`), len64(`{"0":1,`)),
 	}, {
 		name:  jsontest.Name("Maps/DuplicateName/Int/AllowDuplicateNames"),
 		opts:  []Options{jsontext.AllowDuplicateNames(true)},
@@ -5228,7 +5445,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"1.0":"1.0","1":"1","1e0":"1e0"}`,
 		inVal:   new(map[float64]string),
 		want:    addr(map[float64]string{1: "1.0"}),
-		wantErr: export.NewDuplicateNameError([]byte(`"1"`), len64(`{"1.0":"1.0",`)),
+		wantErr: newDuplicateNameError("", []byte(`"1"`), len64(`{"1.0":"1.0",`)),
 	}, {
 		name:  jsontest.Name("Maps/DuplicateName/Float/AllowDuplicateNames"),
 		opts:  []Options{jsontext.AllowDuplicateNames(true)},
@@ -5245,7 +5462,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"hello":"hello","HELLO":"HELLO"}`,
 		inVal:   new(map[nocaseString]string),
 		want:    addr(map[nocaseString]string{"hello": "hello"}),
-		wantErr: export.NewDuplicateNameError([]byte(`"HELLO"`), len64(`{"hello":"hello",`)),
+		wantErr: newDuplicateNameError("", []byte(`"HELLO"`), len64(`{"hello":"hello",`)),
 	}, {
 		name:  jsontest.Name("Maps/DuplicateName/NoCaseString/AllowDuplicateNames"),
 		opts:  []Options{jsontext.AllowDuplicateNames(true)},
@@ -5277,7 +5494,7 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(map[string]chan string{
 			"key": nil,
 		}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: chanStringType},
+		wantErr: EU(nil).withPos(`{"key":`, "/key").withType('"', T[chan string]()),
 	}, {
 		name:  jsontest.Name("Maps/RecursiveMap"),
 		inBuf: `{"buzz":{},"fizz":{"bar":{},"foo":{}}}`,
@@ -5308,25 +5525,25 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `true`,
 		inVal:   addr(map[string]string{"key": "value"}),
 		want:    addr(map[string]string{"key": "value"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: mapStringStringType},
+		wantErr: EU(nil).withType('t', T[map[string]string]()),
 	}, {
 		name:    jsontest.Name("Maps/Invalid/String"),
 		inBuf:   `""`,
 		inVal:   addr(map[string]string{"key": "value"}),
 		want:    addr(map[string]string{"key": "value"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: mapStringStringType},
+		wantErr: EU(nil).withType('"', T[map[string]string]()),
 	}, {
 		name:    jsontest.Name("Maps/Invalid/Number"),
 		inBuf:   `0`,
 		inVal:   addr(map[string]string{"key": "value"}),
 		want:    addr(map[string]string{"key": "value"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: mapStringStringType},
+		wantErr: EU(nil).withType('0', T[map[string]string]()),
 	}, {
 		name:    jsontest.Name("Maps/Invalid/Array"),
 		inBuf:   `[]`,
 		inVal:   addr(map[string]string{"key": "value"}),
 		want:    addr(map[string]string{"key": "value"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: mapStringStringType},
+		wantErr: EU(nil).withType('[', T[map[string]string]()),
 	}, {
 		name:  jsontest.Name("Maps/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -5534,33 +5751,33 @@ func TestUnmarshal(t *testing.T) {
 	"Bool": true,
 	"String": "hello",
 	"Bytes": "AQID",
-	"Int": -64,
-	"Uint": 64,
-	"Float": 3.14159,
+	"Int": "-64",
+	"Uint": "64",
+	"Float": "3.14159",
 	"Map": {"key": "value"},
 	"StructScalars": {
 		"Bool": true,
 		"String": "hello",
 		"Bytes": "AQID",
-		"Int": -64,
-		"Uint": 64,
-		"Float": 3.14159
+		"Int": "-64",
+		"Uint": "64",
+		"Float": "3.14159"
 	},
 	"StructMaps": {
 		"MapBool": {"": true},
 		"MapString": {"": "hello"},
 		"MapBytes": {"": "AQID"},
-		"MapInt": {"": -64},
-		"MapUint": {"": 64},
-		"MapFloat": {"": 3.14159}
+		"MapInt": {"": "-64"},
+		"MapUint": {"": "64"},
+		"MapFloat": {"": "3.14159"}
 	},
 	"StructSlices": {
 		"SliceBool": [true],
 		"SliceString": ["hello"],
 		"SliceBytes": ["AQID"],
-		"SliceInt": [-64],
-		"SliceUint": [64],
-		"SliceFloat": [3.14159]
+		"SliceInt": ["-64"],
+		"SliceUint": ["64"],
+		"SliceFloat": ["3.14159"]
 	},
 	"Slice": ["fizz","buzz"],
 	"Array": ["goodbye"],
@@ -5681,11 +5898,99 @@ func TestUnmarshal(t *testing.T) {
 			Pointer: new(structStringifiedAll), // may be stringified
 		}),
 	}, {
-		name:    jsontest.Name("Structs/Stringified/InvalidEmpty"),
-		inBuf:   `{"Int":""}`,
+		name:  jsontest.Name("Structs/Stringified/InvalidEmpty"),
+		inBuf: `{"Int":""}`,
+		inVal: new(structStringifiedAll),
+		want:  new(structStringifiedAll),
+		wantErr: EU(fmt.Errorf(`cannot parse "" as signed integer: %w`, strconv.ErrSyntax)).
+			withPos(`{"Int":`, "/Int").withType('"', T[int64]()),
+	}, {
+		name: jsontest.Name("Structs/LegacyStringified"),
+		opts: []Options{jsonflags.StringifyWithLegacySemantics | 1},
+		inBuf: `{
+	"Bool": "true",
+	"String": "\"hello\"",
+	"Bytes": "AQID",
+	"Int": "-64",
+	"Uint": "64",
+	"Float": "3.14159",
+	"Map": {"key": "value"},
+	"StructScalars": {
+		"Bool": true,
+		"String": "hello",
+		"Bytes": "AQID",
+		"Int": -64,
+		"Uint": 64,
+		"Float": 3.14159
+	},
+	"StructMaps": {
+		"MapBool": {"": true},
+		"MapString": {"": "hello"},
+		"MapBytes": {"": "AQID"},
+		"MapInt": {"": -64},
+		"MapUint": {"": 64},
+		"MapFloat": {"": 3.14159}
+	},
+	"StructSlices": {
+		"SliceBool": [true],
+		"SliceString": ["hello"],
+		"SliceBytes": ["AQID"],
+		"SliceInt": [-64],
+		"SliceUint": [64],
+		"SliceFloat": [3.14159]
+	},
+	"Slice": ["fizz", "buzz"],
+	"Array": ["goodbye"]
+}`,
+		inVal: new(structStringifiedAll),
+		want: addr(structStringifiedAll{
+			Bool:   true,
+			String: "hello",
+			Bytes:  []byte{1, 2, 3},
+			Int:    -64,
+			Uint:   +64,
+			Float:  3.14159,
+			Map:    map[string]string{"key": "value"},
+			StructScalars: structScalars{
+				Bool:   true,
+				String: "hello",
+				Bytes:  []byte{1, 2, 3},
+				Int:    -64,
+				Uint:   +64,
+				Float:  3.14159,
+			},
+			StructMaps: structMaps{
+				MapBool:   map[string]bool{"": true},
+				MapString: map[string]string{"": "hello"},
+				MapBytes:  map[string][]byte{"": {1, 2, 3}},
+				MapInt:    map[string]int64{"": -64},
+				MapUint:   map[string]uint64{"": +64},
+				MapFloat:  map[string]float64{"": 3.14159},
+			},
+			StructSlices: structSlices{
+				SliceBool:   []bool{true},
+				SliceString: []string{"hello"},
+				SliceBytes:  [][]byte{{1, 2, 3}},
+				SliceInt:    []int64{-64},
+				SliceUint:   []uint64{+64},
+				SliceFloat:  []float64{3.14159},
+			},
+			Slice: []string{"fizz", "buzz"},
+			Array: [1]string{"goodbye"},
+		}),
+	}, {
+		name:    jsontest.Name("Structs/LegacyStringified/InvalidBool"),
+		opts:    []Options{jsonflags.StringifyWithLegacySemantics | 1},
+		inBuf:   `{"Bool": true}`,
 		inVal:   new(structStringifiedAll),
-		want:    new(structStringifiedAll),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: int64Type, Err: fmt.Errorf(`cannot parse "" as signed integer: %w`, strconv.ErrSyntax)},
+		wantErr: EU(nil).withPos(`{"Bool": `, "/Bool").withType('t', T[bool]()),
+	}, {
+		name:  jsontest.Name("Structs/LegacyStringified/InvalidString"),
+		opts:  []Options{jsonflags.StringifyWithLegacySemantics | 1},
+		inBuf: `{"String": "string"}`,
+		inVal: new(structStringifiedAll),
+		wantErr: EU(newInvalidCharacterError("s", "at start of string (expecting '\"')", 0, "")).
+			withPos(`{"String": `, "/String").withType('"', T[string]()),
 	}, {
 		name: jsontest.Name("Structs/Format/Bytes"),
 		inBuf: `{
@@ -5773,55 +6078,55 @@ func TestUnmarshal(t *testing.T) {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base16/WrongKind"),
 		inBuf:   `{"Base16": [1,2,3,4]}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '[', GoType: bytesType},
+		wantErr: EU(nil).withPos(`{"Base16": `, "/Base16").withType('[', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base16/AllPadding"),
 		inBuf: `{"Base16": "===="}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := hex.Decode(make([]byte, 2), []byte("====="))
 			return err
-		}()},
+		}()).withPos(`{"Base16": `, "/Base16").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base16/EvenPadding"),
 		inBuf: `{"Base16": "0123456789abcdef="}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := hex.Decode(make([]byte, 8), []byte("0123456789abcdef="))
 			return err
-		}()},
+		}()).withPos(`{"Base16": `, "/Base16").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base16/OddPadding"),
 		inBuf: `{"Base16": "0123456789abcdef0="}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := hex.Decode(make([]byte, 9), []byte("0123456789abcdef0="))
 			return err
-		}()},
+		}()).withPos(`{"Base16": `, "/Base16").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base16/NonAlphabet/LineFeed"),
 		inBuf: `{"Base16": "aa\naa"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := hex.Decode(make([]byte, 9), []byte("aa\naa"))
 			return err
-		}()},
+		}()).withPos(`{"Base16": `, "/Base16").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base16/NonAlphabet/CarriageReturn"),
 		inBuf: `{"Base16": "aa\raa"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := hex.Decode(make([]byte, 9), []byte("aa\raa"))
 			return err
-		}()},
+		}()).withPos(`{"Base16": `, "/Base16").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base16/NonAlphabet/Space"),
 		inBuf: `{"Base16": "aa aa"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := hex.Decode(make([]byte, 9), []byte("aa aa"))
 			return err
-		}()},
+		}()).withPos(`{"Base16": `, "/Base16").withType('"', T[[]byte]()),
 	}, {
 		name: jsontest.Name("Structs/Format/Bytes/Invalid/Base32/Padding"),
 		inBuf: `[
@@ -5849,72 +6154,72 @@ func TestUnmarshal(t *testing.T) {
 				{"Base32": "NBSWY3DP"}
 			]`,
 		inVal: new([]structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base32.StdEncoding.Decode(make([]byte, 1), []byte("NA"))
 			return err
-		}()},
+		}()).withPos(`[`+"\n\t\t\t\t"+`{"Base32": `, "/0/Base32").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base32/WrongAlphabet"),
 		inBuf: `{"Base32": "0123456789ABCDEFGHIJKLMNOPQRSTUV"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base32.StdEncoding.Decode(make([]byte, 20), []byte("0123456789ABCDEFGHIJKLMNOPQRSTUV"))
 			return err
-		}()},
+		}()).withPos(`{"Base32": `, "/Base32").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base32Hex/WrongAlphabet"),
 		inBuf: `{"Base32Hex": "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base32.HexEncoding.Decode(make([]byte, 20), []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"))
 			return err
-		}()},
+		}()).withPos(`{"Base32Hex": `, "/Base32Hex").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base32/NonAlphabet/LineFeed"),
 		inBuf:   `{"Base32": "AAAA\nAAAA"}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: errors.New("illegal data at input byte 4")},
+		wantErr: EU(errors.New("illegal data at input byte 4")).withPos(`{"Base32": `, "/Base32").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base32/NonAlphabet/CarriageReturn"),
 		inBuf:   `{"Base32": "AAAA\rAAAA"}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: errors.New("illegal data at input byte 4")},
+		wantErr: EU(errors.New("illegal data at input byte 4")).withPos(`{"Base32": `, "/Base32").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base32/NonAlphabet/Space"),
 		inBuf:   `{"Base32": "AAAA AAAA"}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: base32.CorruptInputError(4)},
+		wantErr: EU(base32.CorruptInputError(4)).withPos(`{"Base32": `, "/Base32").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base64/WrongAlphabet"),
 		inBuf: `{"Base64": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.StdEncoding.Decode(make([]byte, 48), []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"))
 			return err
-		}()},
+		}()).withPos(`{"Base64": `, "/Base64").withType('"', T[[]byte]()),
 	}, {
 		name:  jsontest.Name("Structs/Format/Bytes/Invalid/Base64URL/WrongAlphabet"),
 		inBuf: `{"Base64URL": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"}`,
 		inVal: new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := base64.URLEncoding.Decode(make([]byte, 48), []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
 			return err
-		}()},
+		}()).withPos(`{"Base64URL": `, "/Base64URL").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base64/NonAlphabet/LineFeed"),
 		inBuf:   `{"Base64": "aa=\n="}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: errors.New("illegal data at input byte 3")},
+		wantErr: EU(errors.New("illegal data at input byte 3")).withPos(`{"Base64": `, "/Base64").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base64/NonAlphabet/CarriageReturn"),
 		inBuf:   `{"Base64": "aa=\r="}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: errors.New("illegal data at input byte 3")},
+		wantErr: EU(errors.New("illegal data at input byte 3")).withPos(`{"Base64": `, "/Base64").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Bytes/Invalid/Base64/NonAlphabet/Space"),
 		inBuf:   `{"Base64": "aa= ="}`,
 		inVal:   new(structFormatBytes),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: bytesType, Err: base64.CorruptInputError(2)},
+		wantErr: EU(base64.CorruptInputError(2)).withPos(`{"Base64": `, "/Base64").withType('"', T[[]byte]()),
 	}, {
 		name: jsontest.Name("Structs/Format/Floats"),
 		inBuf: `[
@@ -5937,17 +6242,17 @@ func TestUnmarshal(t *testing.T) {
 		name:    jsontest.Name("Structs/Format/Floats/Invalid/NaN"),
 		inBuf:   `{"NonFinite": "nan"}`,
 		inVal:   new(structFormatFloats),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type},
+		wantErr: EU(nil).withPos(`{"NonFinite": `, "/NonFinite").withType('"', T[float64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Floats/Invalid/PositiveInfinity"),
 		inBuf:   `{"NonFinite": "+Infinity"}`,
 		inVal:   new(structFormatFloats),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type},
+		wantErr: EU(nil).withPos(`{"NonFinite": `, "/NonFinite").withType('"', T[float64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Floats/Invalid/NegativeInfinitySpace"),
 		inBuf:   `{"NonFinite": "-Infinity "}`,
 		inVal:   new(structFormatFloats),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: float64Type},
+		wantErr: EU(nil).withPos(`{"NonFinite": `, "/NonFinite").withType('"', T[float64]()),
 	}, {
 		name: jsontest.Name("Structs/Format/Maps"),
 		inBuf: `[
@@ -5994,57 +6299,57 @@ func TestUnmarshal(t *testing.T) {
 		name:    jsontest.Name("Structs/Format/Invalid/Bool"),
 		inBuf:   `{"Bool":true}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: boolType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Bool":`, "/Bool").withType('t', T[bool]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/String"),
 		inBuf:   `{"String": "string"}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: stringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"String": `, "/String").withType('"', T[string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Bytes"),
 		inBuf:   `{"Bytes": "bytes"}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: bytesType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Bytes": `, "/Bytes").withType('"', T[[]byte]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Int"),
-		inBuf:   `{"Int": 1}`,
+		inBuf:   `{"Int":   1}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: int64Type, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Int":   `, "/Int").withType('0', T[int64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Uint"),
 		inBuf:   `{"Uint": 1}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: uint64Type, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Uint": `, "/Uint").withType('0', T[uint64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Float"),
-		inBuf:   `{"Float": 1}`,
+		inBuf:   `{"Float" : 1}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: float64Type, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Float" : `, "/Float").withType('0', T[float64]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Map"),
 		inBuf:   `{"Map":{}}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: mapStringStringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Map":`, "/Map").withType('{', T[map[string]string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Struct"),
 		inBuf:   `{"Struct": {}}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structAllType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Struct": `, "/Struct").withType('{', T[structAll]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Slice"),
 		inBuf:   `{"Slice": {}}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: sliceStringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Slice": `, "/Slice").withType('{', T[[]string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Array"),
 		inBuf:   `{"Array": []}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: array1StringType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Array": `, "/Array").withType('[', T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Structs/Format/Invalid/Interface"),
 		inBuf:   `{"Interface": "anything"}`,
 		inVal:   new(structFormatInvalid),
-		wantErr: &SemanticError{action: "unmarshal", GoType: anyType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"Interface": `, "/Interface").withType('"', T[any]()),
 	}, {
 		name:  jsontest.Name("Structs/Inline/Zero"),
 		inBuf: `{"D":""}`,
@@ -6109,13 +6414,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"A":1,"fizz":"buzz","B":2}`,
 		inVal:   addr(structInlineTextValue{X: jsontext.Value("\n\r\t ")}),
 		want:    addr(structInlineTextValue{A: 1, X: jsontext.Value("")}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: jsontextValueType, Err: errors.New("inlined raw value must be a JSON object")},
+		wantErr: EU(errRawInlinedNotObject).withPos(`{"A":1,`, "/fizz").withType('"', T[jsontext.Value]()),
 	}, {
 		name:    jsontest.Name("Structs/InlinedFallback/TextValue/MergeN1/Null"),
 		inBuf:   `{"A":1,"fizz":"buzz","B":2}`,
 		inVal:   addr(structInlineTextValue{X: jsontext.Value("null")}),
 		want:    addr(structInlineTextValue{A: 1, X: jsontext.Value("null")}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: jsontextValueType, Err: errors.New("inlined raw value must be a JSON object")},
+		wantErr: EU(errRawInlinedNotObject).withPos(`{"A":1,`, "/fizz").withType('"', T[jsontext.Value]()),
 	}, {
 		name:  jsontest.Name("Structs/InlinedFallback/TextValue/MergeN1/ObjectN0"),
 		inBuf: `{"A":1,"fizz":"buzz","B":2}`,
@@ -6138,7 +6443,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"A":1,"fizz":nil,"B":2}`,
 		inVal:   new(structInlineTextValue),
 		want:    addr(structInlineTextValue{A: 1, X: jsontext.Value(`{"fizz":`)}),
-		wantErr: export.NewInvalidCharacterError("i", "within literal null (expecting 'u')", len64(`{"A":1,"fizz":n`)),
+		wantErr: newInvalidCharacterError("i", "within literal null (expecting 'u')", len64(`{"A":1,"fizz":n`), "/fizz"),
 	}, {
 		name:  jsontest.Name("Structs/InlinedFallback/TextValue/CaseSensitive"),
 		inBuf: `{"A":1,"fizz":"buzz","B":2,"a":3}`,
@@ -6150,7 +6455,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"A":1,"fizz":"buzz","B":2,"fizz":"buzz"}`,
 		inVal:   new(structInlineTextValue),
 		want:    addr(structInlineTextValue{A: 1, X: jsontext.Value(`{"fizz":"buzz"}`), B: 2}),
-		wantErr: export.NewDuplicateNameError([]byte(`"fizz"`), len64(`{"A":1,"fizz":"buzz","B":2,`)),
+		wantErr: newDuplicateNameError("", []byte(`"fizz"`), len64(`{"A":1,"fizz":"buzz","B":2,`)),
 	}, {
 		name:  jsontest.Name("Structs/InlinedFallback/TextValue/AllowDuplicateNames"),
 		opts:  []Options{jsontext.AllowDuplicateNames(true)},
@@ -6248,13 +6553,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"A":1,"fizz":nil,"B":2}`,
 		inVal:   new(structInlineMapStringAny),
 		want:    addr(structInlineMapStringAny{A: 1, X: jsonObject{"fizz": nil}}),
-		wantErr: export.NewInvalidCharacterError("i", "within literal null (expecting 'u')", len64(`{"A":1,"fizz":n`)),
+		wantErr: newInvalidCharacterError("i", "within literal null (expecting 'u')", len64(`{"A":1,"fizz":n`), "/fizz"),
 	}, {
 		name:    jsontest.Name("Structs/InlinedFallback/MapStringAny/MergeInvalidValue/Existing"),
 		inBuf:   `{"A":1,"fizz":nil,"B":2}`,
 		inVal:   addr(structInlineMapStringAny{A: 1, X: jsonObject{"fizz": true}}),
 		want:    addr(structInlineMapStringAny{A: 1, X: jsonObject{"fizz": true}}),
-		wantErr: export.NewInvalidCharacterError("i", "within literal null (expecting 'u')", len64(`{"A":1,"fizz":n`)),
+		wantErr: newInvalidCharacterError("i", "within literal null (expecting 'u')", len64(`{"A":1,"fizz":n`), "/fizz"),
 	}, {
 		name:  jsontest.Name("Structs/InlinedFallback/MapStringAny/CaseSensitive"),
 		inBuf: `{"A":1,"fizz":"buzz","B":2,"a":3}`,
@@ -6266,7 +6571,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"A":1,"fizz":"buzz","B":2,"fizz":"buzz"}`,
 		inVal:   new(structInlineMapStringAny),
 		want:    addr(structInlineMapStringAny{A: 1, X: jsonObject{"fizz": "buzz"}, B: 2}),
-		wantErr: export.NewDuplicateNameError([]byte(`"fizz"`), len64(`{"A":1,"fizz":"buzz","B":2,`)),
+		wantErr: newDuplicateNameError("", []byte(`"fizz"`), len64(`{"A":1,"fizz":"buzz","B":2,`)),
 	}, {
 		name:  jsontest.Name("Structs/InlinedFallback/MapStringAny/AllowDuplicateNames"),
 		opts:  []Options{jsontext.AllowDuplicateNames(true)},
@@ -6360,11 +6665,11 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(structInlineMapStringInt{
 			X: map[string]int{"zero": 0, "one": 0},
 		}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: intType},
+		wantErr: EU(nil).withPos(`{"zero": 0, "one": `, "/one").withType('{', T[int]()),
 	}, {
 		name:  jsontest.Name("Structs/InlinedFallback/MapStringInt/StringifiedNumbers"),
 		opts:  []Options{StringifyNumbers(true)},
-		inBuf: `{"zero": 0, "one": "1", "two": 2}`,
+		inBuf: `{"zero": "0", "one": "1", "two": "2"}`,
 		inVal: new(structInlineMapStringInt),
 		want: addr(structInlineMapStringInt{
 			X: map[string]int{"zero": 0, "one": 1, "two": 2},
@@ -6403,7 +6708,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"A":1,"fizz":"buzz","B":2}`,
 		inVal:   new(structUnknownTextValue),
 		want:    addr(structUnknownTextValue{A: 1}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structUnknownTextValueType, Err: errors.New(`unknown name "fizz"`)},
+		wantErr: EU(ErrUnknownName).withPos(`{"A":1,`, "/fizz").withType('"', T[structUnknownTextValue]()),
 	}, {
 		name:  jsontest.Name("Structs/UnknownFallback"),
 		inBuf: `{"A":1,"fizz":"buzz","B":2}`,
@@ -6425,7 +6730,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"unknown":"fizzbuzz"}`,
 		inVal:   new(structAll),
 		want:    new(structAll),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structAllType, Err: errors.New(`unknown name "unknown"`)},
+		wantErr: EU(ErrUnknownName).withPos(`{`, "/unknown").withType('"', T[structAll]()),
 	}, {
 		name:  jsontest.Name("Structs/UnexportedIgnored"),
 		inBuf: `{"ignored":"unused"}`,
@@ -6475,7 +6780,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"AaA":"AaA","aaa":"aaa"}`,
 		inVal:   new(structNoCase),
 		want:    addr(structNoCase{AaA: "AaA"}),
-		wantErr: export.NewDuplicateNameError([]byte(`"aaa"`), len64(`{"AaA":"AaA",`)),
+		wantErr: newDuplicateNameError("", []byte(`"aaa"`), len64(`{"AaA":"AaA",`)),
 	}, {
 		name:  jsontest.Name("Structs/CaseSensitive"),
 		inBuf: `{"BOOL": true, "STRING": "hello", "BYTES": "AQID", "INT": -64, "UINT": 64, "FLOAT": 3.14159}`,
@@ -6491,7 +6796,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"AAA":"AAA","AAA":"AAA"}`,
 		inVal:   addr(structNoCaseInlineTextValue{}),
 		want:    addr(structNoCaseInlineTextValue{AAA: "AAA"}),
-		wantErr: export.NewDuplicateNameError([]byte(`"AAA"`), len64(`{"AAA":"AAA",`)),
+		wantErr: newDuplicateNameError("", []byte(`"AAA"`), len64(`{"AAA":"AAA",`)),
 	}, {
 		name:  jsontest.Name("Structs/DuplicateName/NoCase/OverwriteExact"),
 		inBuf: `{"AAA":"after"}`,
@@ -6502,13 +6807,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"aaa":"aaa","aaA":"aaA"}`,
 		inVal:   addr(structNoCaseInlineTextValue{}),
 		want:    addr(structNoCaseInlineTextValue{AaA: "aaa"}),
-		wantErr: export.NewDuplicateNameError([]byte(`"aaA"`), len64(`{"aaa":"aaa",`)),
+		wantErr: newDuplicateNameError("", []byte(`"aaA"`), len64(`{"aaa":"aaa",`)),
 	}, {
 		name:    jsontest.Name("Structs/DuplicateName/NoCase/OverwriteNoCase"),
 		inBuf:   `{"aaa":"aaa","aaA":"aaA"}`,
 		inVal:   addr(structNoCaseInlineTextValue{}),
 		want:    addr(structNoCaseInlineTextValue{AaA: "aaa"}),
-		wantErr: export.NewDuplicateNameError([]byte(`"aaA"`), len64(`{"aaa":"aaa",`)),
+		wantErr: newDuplicateNameError("", []byte(`"aaA"`), len64(`{"aaa":"aaa",`)),
 	}, {
 		name:  jsontest.Name("Structs/DuplicateName/Inline/Unknown"),
 		inBuf: `{"unknown":""}`,
@@ -6529,7 +6834,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"b":"","b":""}`,
 		inVal:   addr(structNoCaseInlineTextValue{}),
 		want:    addr(structNoCaseInlineTextValue{X: jsontext.Value(`{"b":""}`)}),
-		wantErr: export.NewDuplicateNameError([]byte(`"b"`), len64(`{"b":"",`)),
+		wantErr: newDuplicateNameError("", []byte(`"b"`), len64(`{"b":"",`)),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/ErrUnexpectedEOF"),
 		inBuf:   ``,
@@ -6541,37 +6846,37 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"Pointer":`,
 		inVal:   addr(structAll{}),
 		want:    addr(structAll{Pointer: new(structAll)}),
-		wantErr: io.ErrUnexpectedEOF,
+		wantErr: &jsontext.SyntacticError{ByteOffset: len64(`{"Pointer":`), JSONPointer: "/Pointer", Err: io.ErrUnexpectedEOF},
 	}, {
 		name:    jsontest.Name("Structs/Invalid/Conflicting"),
 		inBuf:   `{}`,
 		inVal:   addr(structConflicting{}),
 		want:    addr(structConflicting{}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structConflictingType, Err: errors.New("Go struct fields A and B conflict over JSON object name \"conflict\"")},
+		wantErr: EU(errors.New(`Go struct fields A and B conflict over JSON object name "conflict"`)).withType('{', T[structConflicting]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/NoneExported"),
-		inBuf:   `{}`,
+		inBuf:   ` {}`,
 		inVal:   addr(structNoneExported{}),
 		want:    addr(structNoneExported{}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structNoneExportedType, Err: errors.New("Go struct has no exported fields")},
+		wantErr: EU(errNoExportedFields).withPos(` `, "").withType('{', T[structNoneExported]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/MalformedTag"),
 		inBuf:   `{}`,
 		inVal:   addr(structMalformedTag{}),
 		want:    addr(structMalformedTag{}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structMalformedTagType, Err: errors.New("Go struct field Malformed has malformed `json` tag: invalid character '\"' at start of option (expecting Unicode letter or single quote)")},
+		wantErr: EU(errors.New("Go struct field Malformed has malformed `json` tag: invalid character '\"' at start of option (expecting Unicode letter or single quote)")).withType('{', T[structMalformedTag]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/UnexportedTag"),
 		inBuf:   `{}`,
 		inVal:   addr(structUnexportedTag{}),
 		want:    addr(structUnexportedTag{}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structUnexportedTagType, Err: errors.New("unexported Go struct field unexported cannot have non-ignored `json:\"name\"` tag")},
+		wantErr: EU(errors.New("unexported Go struct field unexported cannot have non-ignored `json:\"name\"` tag")).withType('{', T[structUnexportedTag]()),
 	}, {
 		name:    jsontest.Name("Structs/Invalid/UnexportedEmbedded"),
 		inBuf:   `{}`,
 		inVal:   addr(structUnexportedEmbedded{}),
 		want:    addr(structUnexportedEmbedded{}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: structUnexportedEmbeddedType, Err: errors.New("embedded Go struct field namedString of an unexported type must be explicitly ignored with a `json:\"-\"` tag")},
+		wantErr: EU(errors.New("embedded Go struct field namedString of an unexported type must be explicitly ignored with a `json:\"-\"` tag")).withType('{', T[structUnexportedEmbedded]()),
 	}, {
 		name: jsontest.Name("Structs/Unknown"),
 		inBuf: `{
@@ -6641,7 +6946,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `["hello"]`,
 		inVal:   new([]chan string),
 		want:    addr([]chan string{nil}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: chanStringType},
+		wantErr: EU(nil).withPos(`[`, "/0").withType('"', T[chan string]()),
 	}, {
 		name:  jsontest.Name("Slices/RecursiveSlice"),
 		inBuf: `[[],[],[[]],[[],[]]]`,
@@ -6657,25 +6962,25 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `true`,
 		inVal:   addr([]string{"nochange"}),
 		want:    addr([]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: sliceStringType},
+		wantErr: EU(nil).withType('t', T[[]string]()),
 	}, {
 		name:    jsontest.Name("Slices/Invalid/String"),
 		inBuf:   `""`,
 		inVal:   addr([]string{"nochange"}),
 		want:    addr([]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: sliceStringType},
+		wantErr: EU(nil).withType('"', T[[]string]()),
 	}, {
 		name:    jsontest.Name("Slices/Invalid/Number"),
 		inBuf:   `0`,
 		inVal:   addr([]string{"nochange"}),
 		want:    addr([]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: sliceStringType},
+		wantErr: EU(nil).withType('0', T[[]string]()),
 	}, {
 		name:    jsontest.Name("Slices/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr([]string{"nochange"}),
 		want:    addr([]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: sliceStringType},
+		wantErr: EU(nil).withType('{', T[[]string]()),
 	}, {
 		name:  jsontest.Name("Slices/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -6729,13 +7034,13 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `["hello"]`,
 		inVal:   new([1]chan string),
 		want:    new([1]chan string),
-		wantErr: &SemanticError{action: "unmarshal", GoType: chanStringType},
+		wantErr: EU(nil).withPos(`[`, "/0").withType('"', T[chan string]()),
 	}, {
 		name:    jsontest.Name("Arrays/Invalid/Underflow"),
-		inBuf:   `[]`,
-		inVal:   new([1]string),
-		want:    addr([1]string{}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: array1StringType, Err: errors.New("too few array elements")},
+		inBuf:   `{"F":[   ]}`,
+		inVal:   new(struct{ F [1]string }),
+		want:    addr(struct{ F [1]string }{}),
+		wantErr: EU(errArrayUnderflow).withPos(`{"F":[   `, "/F").withType(']', T[[1]string]()),
 	}, {
 		name:  jsontest.Name("Arrays/Invalid/Underflow/UnmarshalArrayFromAnyLength"),
 		opts:  []Options{jsonflags.UnmarshalArrayFromAnyLength | 1},
@@ -6747,7 +7052,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `["1","2"]`,
 		inVal:   new([1]string),
 		want:    addr([1]string{"1"}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: array1StringType, Err: errors.New("too many array elements")},
+		wantErr: EU(errArrayOverflow).withPos(`["1","2"`, "").withType(']', T[[1]string]()),
 	}, {
 		name:  jsontest.Name("Arrays/Invalid/Overflow/UnmarshalArrayFromAnyLength"),
 		opts:  []Options{jsonflags.UnmarshalArrayFromAnyLength | 1},
@@ -6759,25 +7064,25 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `true`,
 		inVal:   addr([1]string{"nochange"}),
 		want:    addr([1]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: array1StringType},
+		wantErr: EU(nil).withType('t', T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Arrays/Invalid/String"),
 		inBuf:   `""`,
 		inVal:   addr([1]string{"nochange"}),
 		want:    addr([1]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: array1StringType},
+		wantErr: EU(nil).withType('"', T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Arrays/Invalid/Number"),
 		inBuf:   `0`,
 		inVal:   addr([1]string{"nochange"}),
 		want:    addr([1]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: array1StringType},
+		wantErr: EU(nil).withType('0', T[[1]string]()),
 	}, {
 		name:    jsontest.Name("Arrays/Invalid/Object"),
 		inBuf:   `{}`,
 		inVal:   addr([1]string{"nochange"}),
 		want:    addr([1]string{"nochange"}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: array1StringType},
+		wantErr: EU(nil).withType('{', T[[1]string]()),
 	}, {
 		name:  jsontest.Name("Arrays/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},
@@ -6850,7 +7155,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `"hello"`,
 		inVal:   new(io.Reader),
 		want:    new(io.Reader),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: ioReaderType, Err: errors.New("cannot derive concrete type for non-empty interface")},
+		wantErr: EU(errNilInterface).withType('"', T[io.Reader]()),
 	}, {
 		name:  jsontest.Name("Interfaces/Empty/False"),
 		inBuf: `false`,
@@ -6912,7 +7217,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `]`,
 		inVal:   new(any),
 		want:    new(any),
-		wantErr: export.NewInvalidCharacterError("]", "at start of value", 0),
+		wantErr: newInvalidCharacterError("]", "at start of value", 0, ""),
 	}, {
 		// NOTE: The semantics differs from v1,
 		// where existing map entries were not merged into.
@@ -7051,14 +7356,14 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"X":{"fizz":"buzz","fizz":true}}`,
 		inVal:   new(struct{ X any }),
 		want:    addr(struct{ X any }{map[string]any{"fizz": "buzz"}}),
-		wantErr: export.NewDuplicateNameError([]byte(`"fizz"`), len64(`{"X":{"fizz":"buzz",`)),
+		wantErr: newDuplicateNameError("/X", []byte(`"fizz"`), len64(`{"X":{"fizz":"buzz",`)),
 	}, {
 		name:    jsontest.Name("Interfaces/Any/Maps/AllowDuplicateNames"),
 		opts:    []Options{jsontext.AllowDuplicateNames(true)},
 		inBuf:   `{"X":{"fizz":"buzz","fizz":true}}`,
 		inVal:   new(struct{ X any }),
 		want:    addr(struct{ X any }{map[string]any{"fizz": "buzz"}}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: 't', GoType: stringType},
+		wantErr: EU(nil).withPos(`{"X":{"fizz":"buzz","fizz":`, "/X/fizz").withType('t', T[string]()),
 	}, {
 		name:  jsontest.Name("Interfaces/Any/Slices/NonEmpty"),
 		inBuf: `{"X":["fizz","buzz"]}`,
@@ -7171,15 +7476,15 @@ func TestUnmarshal(t *testing.T) {
 		name:  jsontest.Name("Methods/Invalid/JSONv2/Error"),
 		inBuf: `{}`,
 		inVal: addr(unmarshalJSONv2Func(func(*jsontext.Decoder, Options) error {
-			return errors.New("some error")
+			return errSomeError
 		})),
-		wantErr: &SemanticError{action: "unmarshal", GoType: unmarshalJSONv2FuncType, Err: errors.New("some error")},
+		wantErr: EU(errSomeError).withType(0, T[unmarshalJSONv2Func]()),
 	}, {
 		name: jsontest.Name("Methods/Invalid/JSONv2/TooFew"),
 		inVal: addr(unmarshalJSONv2Func(func(*jsontext.Decoder, Options) error {
 			return nil // do nothing
 		})),
-		wantErr: &SemanticError{action: "unmarshal", GoType: unmarshalJSONv2FuncType, Err: errors.New("must read exactly one JSON value")},
+		wantErr: EU(errNonSingularValue).withType(0, T[unmarshalJSONv2Func]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/JSONv2/TooMany"),
 		inBuf: `{}{}`,
@@ -7188,49 +7493,49 @@ func TestUnmarshal(t *testing.T) {
 			dec.ReadValue()
 			return nil
 		})),
-		wantErr: &SemanticError{action: "unmarshal", GoType: unmarshalJSONv2FuncType, Err: errors.New("must read exactly one JSON value")},
+		wantErr: EU(errNonSingularValue).withPos(`{}`, "").withType(0, T[unmarshalJSONv2Func]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/JSONv2/SkipFunc"),
 		inBuf: `{}`,
 		inVal: addr(unmarshalJSONv2Func(func(*jsontext.Decoder, Options) error {
 			return SkipFunc
 		})),
-		wantErr: &SemanticError{action: "unmarshal", GoType: unmarshalJSONv2FuncType, Err: errors.New("unmarshal method cannot be skipped")},
+		wantErr: EU(wrapSkipFunc(SkipFunc, "unmarshal method")).withType(0, T[unmarshalJSONv2Func]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/JSONv1/Error"),
 		inBuf: `{}`,
 		inVal: addr(unmarshalJSONv1Func(func([]byte) error {
-			return errors.New("some error")
+			return errSomeError
 		})),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: unmarshalJSONv1FuncType, Err: errors.New("some error")},
+		wantErr: EU(errSomeError).withType('{', T[unmarshalJSONv1Func]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/JSONv1/SkipFunc"),
 		inBuf: `{}`,
 		inVal: addr(unmarshalJSONv1Func(func([]byte) error {
 			return SkipFunc
 		})),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: unmarshalJSONv1FuncType, Err: errors.New("unmarshal method cannot be skipped")},
+		wantErr: EU(wrapSkipFunc(SkipFunc, "unmarshal method")).withType('{', T[unmarshalJSONv1Func]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/Text/Error"),
 		inBuf: `"value"`,
 		inVal: addr(unmarshalTextFunc(func([]byte) error {
-			return errors.New("some error")
+			return errSomeError
 		})),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: unmarshalTextFuncType, Err: errors.New("some error")},
+		wantErr: EU(errSomeError).withType('"', T[unmarshalTextFunc]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/Text/Syntax"),
 		inBuf: `{}`,
 		inVal: addr(unmarshalTextFunc(func([]byte) error {
 			panic("should not be called")
 		})),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '{', GoType: unmarshalTextFuncType, Err: errors.New("JSON value must be string type")},
+		wantErr: EU(errNonStringValue).withType('{', T[unmarshalTextFunc]()),
 	}, {
 		name:  jsontest.Name("Methods/Invalid/Text/SkipFunc"),
 		inBuf: `"value"`,
 		inVal: addr(unmarshalTextFunc(func([]byte) error {
 			return SkipFunc
 		})),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: unmarshalTextFuncType, Err: errors.New("unmarshal method cannot be skipped")},
+		wantErr: EU(wrapSkipFunc(SkipFunc, "unmarshal method")).withType('"', T[unmarshalTextFunc]()),
 	}, {
 		name: jsontest.Name("Functions/String/V1"),
 		opts: []Options{
@@ -7339,13 +7644,13 @@ func TestUnmarshal(t *testing.T) {
 		name: jsontest.Name("Functions/String/V1/DirectError"),
 		opts: []Options{
 			WithUnmarshalers(UnmarshalFuncV1(func([]byte, *string) error {
-				return errors.New("some error")
+				return errSomeError
 			})),
 		},
 		inBuf:   `""`,
 		inVal:   addr(""),
 		want:    addr(""),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: reflect.PointerTo(stringType), Err: errors.New("some error")},
+		wantErr: EU(errSomeError).withType('"', reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/String/V1/SkipError"),
 		opts: []Options{
@@ -7356,18 +7661,18 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `""`,
 		inVal:   addr(""),
 		want:    addr(""),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: reflect.PointerTo(stringType), Err: errors.New("unmarshal function of type func([]byte, T) error cannot be skipped")},
+		wantErr: EU(wrapSkipFunc(SkipFunc, "unmarshal function of type func([]byte, T) error")).withType('"', reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/String/V2/DirectError"),
 		opts: []Options{
 			WithUnmarshalers(UnmarshalFuncV2(func(dec *jsontext.Decoder, v *string, opts Options) error {
-				return errors.New("some error")
+				return errSomeError
 			})),
 		},
 		inBuf:   `""`,
 		inVal:   addr(""),
 		want:    addr(""),
-		wantErr: &SemanticError{action: "unmarshal", GoType: reflect.PointerTo(stringType), Err: errors.New("some error")},
+		wantErr: EU(errSomeError).withType(0, reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/String/V2/TooFew"),
 		opts: []Options{
@@ -7378,7 +7683,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `""`,
 		inVal:   addr(""),
 		want:    addr(""),
-		wantErr: &SemanticError{action: "unmarshal", GoType: reflect.PointerTo(stringType), Err: errors.New("must read exactly one JSON value")},
+		wantErr: EU(errNonSingularValue).withType(0, reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/String/V2/TooMany"),
 		opts: []Options{
@@ -7392,10 +7697,10 @@ func TestUnmarshal(t *testing.T) {
 				return nil
 			})),
 		},
-		inBuf:   `["",""]`,
-		inVal:   addr([]string{}),
-		want:    addr([]string{""}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: reflect.PointerTo(stringType), Err: errors.New("must read exactly one JSON value")},
+		inBuf:   `{"X":["",""]}`,
+		inVal:   addr(struct{ X []string }{}),
+		want:    addr(struct{ X []string }{[]string{""}}),
+		wantErr: EU(errNonSingularValue).withPos(`{"X":["",`, "/X").withType(0, reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/String/V2/Skipped"),
 		opts: []Options{
@@ -7419,7 +7724,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `""`,
 		inVal:   addr(""),
 		want:    addr(""),
-		wantErr: &SemanticError{action: "unmarshal", GoType: reflect.PointerTo(stringType), Err: errors.New("must not read any JSON tokens when skipping")},
+		wantErr: EU(errSkipMutation).withType(0, reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/String/V2/WrappedSkipError"),
 		opts: []Options{
@@ -7430,7 +7735,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `""`,
 		inVal:   addr(""),
 		want:    addr(""),
-		wantErr: &SemanticError{action: "unmarshal", GoType: reflect.PointerTo(stringType), Err: fmt.Errorf("wrap: %w", SkipFunc)},
+		wantErr: EU(fmt.Errorf("wrap: %w", SkipFunc)).withType(0, reflect.PointerTo(stringType)),
 	}, {
 		name: jsontest.Name("Functions/Map/Key/NoCaseString/V1"),
 		opts: []Options{
@@ -7508,7 +7813,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"name":"value","name":"value"}`,
 		inVal:   addr(map[string]string{}),
 		want:    addr(map[string]string{"1-1": "1-2"}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: reflect.PointerTo(stringType), Err: export.NewDuplicateNameError([]byte(`"name"`), len64(`{"name":"value",`))},
+		wantErr: newDuplicateNameError("", []byte(`"name"`), len64(`{"name":"value",`)),
 	}, {
 		name: jsontest.Name("Functions/Map/Value/NoCaseString/V1"),
 		opts: []Options{
@@ -7691,7 +7996,7 @@ func TestUnmarshal(t *testing.T) {
 		inBuf:   `{"X":"hello"}`,
 		inVal:   addr(struct{ X fmt.Stringer }{nil}),
 		want:    addr(struct{ X fmt.Stringer }{nil}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: fmtStringerType, Err: errors.New("cannot derive concrete type for non-empty interface")},
+		wantErr: EU(errNilInterface).withPos(`{"X":`, "/X").withType('"', T[fmt.Stringer]()),
 	}, {
 		name: jsontest.Name("Functions/Interface/NetIP"),
 		opts: []Options{
@@ -8136,7 +8441,7 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(struct {
 			D time.Duration `json:",string,format:nano"`
 		}{1}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeDurationType, Err: fmt.Errorf(`invalid duration "+12345": %w`, strconv.ErrSyntax)},
+		wantErr: EU(fmt.Errorf(`invalid duration "+12345": %w`, strconv.ErrSyntax)).withPos(`{"D":`, "/D").withType('"', timeDurationType),
 	}, {
 		name:  jsontest.Name("Duration/Nanos/Mismatch"),
 		inBuf: `{"D":"34293h33m9.123456789s"}`,
@@ -8146,7 +8451,7 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(struct {
 			D time.Duration `json:",format:nano"`
 		}{1}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeDurationType},
+		wantErr: EU(nil).withPos(`{"D":`, "/D").withType('"', timeDurationType),
 	}, {
 		name:  jsontest.Name("Duration/Nanos"),
 		inBuf: `{"D":1.324}`,
@@ -8165,7 +8470,7 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(struct {
 			D time.Duration
 		}{1}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: timeDurationType},
+		wantErr: EU(nil).withPos(`{"D":`, "/D").withType('0', timeDurationType),
 	}, {
 		name:  jsontest.Name("Duration/String/Invalid"),
 		inBuf: `{"D":"5minkutes"}`,
@@ -8175,10 +8480,10 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(struct {
 			D time.Duration
 		}{1}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeDurationType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := time.ParseDuration("5minkutes")
 			return err
-		}()},
+		}()).withPos(`{"D":`, "/D").withType('"', timeDurationType),
 	}, {
 		name:  jsontest.Name("Duration/Syntax/Invalid"),
 		inBuf: `{"D":x}`,
@@ -8188,7 +8493,7 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(struct {
 			D time.Duration
 		}{1}),
-		wantErr: export.NewInvalidCharacterError("x", "at start of value", len64(`{"D":`)),
+		wantErr: newInvalidCharacterError("x", "at start of value", len64(`{"D":`), "/D"),
 	}, {
 		name:  jsontest.Name("Duration/Format/Invalid"),
 		inBuf: `{"D":"0s"}`,
@@ -8198,7 +8503,7 @@ func TestUnmarshal(t *testing.T) {
 		want: addr(struct {
 			D time.Duration `json:",format:invalid"`
 		}{1}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: timeDurationType, Err: errors.New(`invalid format flag: "invalid"`)},
+		wantErr: EU(errInvalidFormatFlag).withPos(`{"D":`, "/D").withType('"', timeDurationType),
 	}, {
 		name:  jsontest.Name("Duration/Format/Legacy"),
 		inBuf: `{"D1":45296078090012,"D2":"12h34m56.078090012s"}`,
@@ -8327,7 +8632,7 @@ func TestUnmarshal(t *testing.T) {
 		}`,
 		inVal:   new(structTimeFormat),
 		want:    new(structTimeFormat),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeTimeType},
+		wantErr: EU(nil).withPos(`{`+"\n\t\t\t"+`"T22": `, "/T22").withType('"', timeTimeType),
 	}, {
 		name:  jsontest.Name("Time/Format/Null"),
 		inBuf: `{"T1":null,"T2":null,"T3":null,"T4":null,"T5":null,"T6":null,"T7":null,"T8":null,"T9":null,"T10":null,"T11":null,"T12":null,"T13":null,"T14":null,"T15":null,"T16":null,"T17":null,"T18":null,"T19":null,"T20":null,"T21":null,"T22":null,"T23":null,"T24":null,"T25":null,"T26":null,"T27":null,"T28":null,"T29":null}`,
@@ -8369,51 +8674,51 @@ func TestUnmarshal(t *testing.T) {
 		inVal: new(struct {
 			T time.Time
 		}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '0', GoType: timeTimeType},
+		wantErr: EU(nil).withPos(`{"T":`, "/T").withType('0', timeTimeType),
 	}, {
 		name:  jsontest.Name("Time/RFC3339/ParseError"),
 		inBuf: `{"T":"2021-09-29T12:44:52"}`,
 		inVal: new(struct {
 			T time.Time
 		}),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeTimeType, Err: func() error {
+		wantErr: EU(func() error {
 			_, err := time.Parse(time.RFC3339, "2021-09-29T12:44:52")
 			return err
-		}()},
+		}()).withPos(`{"T":`, "/T").withType('"', timeTimeType),
 	}, {
 		name:  jsontest.Name("Time/Format/Invalid"),
 		inBuf: `{"T":""}`,
 		inVal: new(struct {
 			T time.Time `json:",format:UndefinedConstant"`
 		}),
-		wantErr: &SemanticError{action: "unmarshal", GoType: timeTimeType, Err: errors.New(`invalid format flag: "UndefinedConstant"`)},
+		wantErr: EU(errors.New(`invalid format flag "UndefinedConstant"`)).withPos(`{"T":`, "/T").withType('"', timeTimeType),
 	}, {
 		name:    jsontest.Name("Time/Format/SingleDigitHour"),
 		inBuf:   `{"T":"2000-01-01T1:12:34Z"}`,
 		inVal:   new(struct{ T time.Time }),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeTimeType, Err: &time.ParseError{time.RFC3339, "2000-01-01T1:12:34Z", "15", "1", ""}},
+		wantErr: EU(newParseTimeError(time.RFC3339, "2000-01-01T1:12:34Z", "15", "1", "")).withPos(`{"T":`, "/T").withType('"', timeTimeType),
 	}, {
 		name:    jsontest.Name("Time/Format/SubsecondComma"),
 		inBuf:   `{"T":"2000-01-01T00:00:00,000Z"}`,
 		inVal:   new(struct{ T time.Time }),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeTimeType, Err: &time.ParseError{time.RFC3339, "2000-01-01T00:00:00,000Z", ".", ",", ""}},
+		wantErr: EU(newParseTimeError(time.RFC3339, "2000-01-01T00:00:00,000Z", ".", ",", "")).withPos(`{"T":`, "/T").withType('"', timeTimeType),
 	}, {
 		name:    jsontest.Name("Time/Format/TimezoneHourOverflow"),
 		inBuf:   `{"T":"2000-01-01T00:00:00+24:00"}`,
 		inVal:   new(struct{ T time.Time }),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeTimeType, Err: &time.ParseError{time.RFC3339, "2000-01-01T00:00:00+24:00", "Z07:00", "+24:00", ": timezone hour out of range"}},
+		wantErr: EU(newParseTimeError(time.RFC3339, "2000-01-01T00:00:00+24:00", "Z07:00", "+24:00", ": timezone hour out of range")).withPos(`{"T":`, "/T").withType('"', timeTimeType),
 	}, {
 		name:    jsontest.Name("Time/Format/TimezoneMinuteOverflow"),
 		inBuf:   `{"T":"2000-01-01T00:00:00+00:60"}`,
 		inVal:   new(struct{ T time.Time }),
-		wantErr: &SemanticError{action: "unmarshal", JSONKind: '"', GoType: timeTimeType, Err: &time.ParseError{time.RFC3339, "2000-01-01T00:00:00+00:60", "Z07:00", "+00:60", ": timezone minute out of range"}},
+		wantErr: EU(newParseTimeError(time.RFC3339, "2000-01-01T00:00:00+00:60", "Z07:00", "+00:60", ": timezone minute out of range")).withPos(`{"T":`, "/T").withType('"', timeTimeType),
 	}, {
 		name:  jsontest.Name("Time/Syntax/Invalid"),
 		inBuf: `{"T":x}`,
 		inVal: new(struct {
 			T time.Time
 		}),
-		wantErr: export.NewInvalidCharacterError("x", "at start of value", len64(`{"D":`)),
+		wantErr: newInvalidCharacterError("x", "at start of value", len64(`{"T":`), "/T"),
 	}, {
 		name:  jsontest.Name("Time/IgnoreInvalidFormat"),
 		opts:  []Options{invalidFormatOption},

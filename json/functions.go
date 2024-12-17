@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"slices"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/json/internal/json"
@@ -47,11 +46,10 @@ func (err *SyntaxError) ByteOffset() int64 {
 }
 
 func (err *SyntaxError) Error() string {
-	str := err.err.Error()
-	if _, ok := err.err.(*jsontext.SyntacticError); ok {
-		str = strings.TrimPrefix(str, "jsontext: ")
+	if err, ok := err.err.(*jsontext.SyntacticError); ok {
+		return err.Err.Error()
 	}
-	return str
+	return err.err.Error()
 }
 
 // Compact returns a copy of data with all insignificant whitespace removed. If
