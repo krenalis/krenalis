@@ -166,8 +166,6 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 // schemaSubset returns a subset of schema containing only the properties
 // specified in properties, preserving their original order in schema.
-// The parameter io specifies whether the operation relates to "input" or
-// "output" and is used solely for error messages.
 // This function panics if schema is not an object type.
 func schemaSubset(schema types.Type, properties []string) types.Type {
 	has := make(map[string]struct{}, len(properties))
