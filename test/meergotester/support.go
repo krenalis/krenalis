@@ -374,14 +374,14 @@ func (c *Meergo) IdentifiersSchema() types.Type {
 	return schema
 }
 
-func (c *Meergo) Records(storage int, fileConnector string, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
+func (c *Meergo) Records(storage int, format string, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	req := map[string]any{
-		"fileConnector": fileConnector,
-		"path":          path,
-		"sheet":         sheet,
-		"compression":   compression,
-		"uiValues":      uiValues,
-		"limit":         limit,
+		"format":      format,
+		"path":        path,
+		"sheet":       sheet,
+		"compression": compression,
+		"uiValues":    uiValues,
+		"limit":       limit,
 	}
 	var response struct {
 		Records []map[string]any `json:"records"`
@@ -442,12 +442,12 @@ func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
 	c.MustCall("PUT", method, action, nil)
 }
 
-func (c *Meergo) Sheets(storage int, fileConnector string, path string, compression Compression, uiValues json.RawMessage) []string {
+func (c *Meergo) Sheets(storage int, format string, path string, compression Compression, uiValues json.RawMessage) []string {
 	request := map[string]any{
-		"fileConnector": fileConnector,
-		"path":          path,
-		"compression":   compression,
-		"uiValues":      uiValues,
+		"format":      format,
+		"path":        path,
+		"compression": compression,
+		"uiValues":    uiValues,
 	}
 	var response struct {
 		Sheets []string `json:"sheets"`

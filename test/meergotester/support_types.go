@@ -57,7 +57,7 @@ type ActionToSet struct {
 	InSchema                 types.Type      `json:"inSchema"`
 	OutSchema                types.Type      `json:"outSchema"`
 	Transformation           Transformation  `json:"transformation"`
-	Connector                string          `json:"connector"`
+	Format                   string          `json:"format"`
 	Query                    string          `json:"query"`
 	Path                     string          `json:"path"`
 	Sheet                    string          `json:"sheet"`

@@ -51,7 +51,7 @@ func Test_UserIdentities(t *testing.T) {
 			},
 		},
 		IdentityProperty: "identity",
-		Connector:        "CSV",
+		Format:           "CSV",
 		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,
@@ -74,7 +74,7 @@ func Test_UserIdentities(t *testing.T) {
 			},
 		},
 		IdentityProperty: "identity",
-		Connector:        "CSV",
+		Format:           "CSV",
 		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,

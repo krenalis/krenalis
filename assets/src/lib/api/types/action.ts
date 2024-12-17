@@ -103,7 +103,7 @@ interface Action {
 	matching: Matching | null;
 	exportOnDuplicates: boolean | null;
 	compression: Compression;
-	connector: string;
+	format: string;
 }
 
 interface ActionType {
@@ -133,7 +133,7 @@ interface ActionToSet {
 	matching?: Matching;
 	exportOnDuplicates?: boolean;
 	compression: Compression;
-	connector: string;
+	format: string;
 	uiValues?: ConnectorValues;
 }
 

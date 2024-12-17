@@ -63,7 +63,7 @@ func TestImportUsersFromFile(t *testing.T) {
 			},
 		},
 		IdentityProperty: "identity",
-		Connector:        "CSV",
+		Format:           "CSV",
 		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 			"Comma":          ",",
 			"HasColumnNames": true,

@@ -91,7 +91,7 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
-			Connector: "CSV",
+			Format: "CSV",
 			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 				"Comma": ",",
 			}),

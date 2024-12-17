@@ -433,7 +433,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 // anymore, and returns an errors.UnprocessableError error with code
 //
 //   - ConnectionNotExist, if the connection does not exist.
-//   - ConnectorNotExist, if the file connector of the action does not exist.
+//   - FormatNotExist, if the format of the action does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
 //   - TargetExist, if an action already exists for a target for the connection.
 //   - UnsupportedLanguage, if the transformation language is not supported.
@@ -441,20 +441,20 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 
 	this.core.mustBeOpen()
 
-	// Retrieve the file connector, if specified in the action.
-	var fileConnector *state.Connector
-	if action.Connector != "" {
-		fileConnector, _ = this.core.state.Connector(action.Connector)
+	// Retrieve the format, if specified in the action.
+	var format *state.Connector
+	if action.Format != "" {
+		format, _ = this.core.state.Connector(action.Format)
 	}
 
 	// Validate the action.
 	v := validationState{}
 	v.connection.role = this.connection.Role
 	v.connection.connector.typ = this.connection.Connector().Type
-	if fileConnector != nil {
-		v.connector.typ = fileConnector.Type
-		v.connector.hasSheets = fileConnector.HasSheets
-		v.connector.hasUI = fileConnector.HasUI
+	if format != nil {
+		v.format.typ = format.Type
+		v.format.hasSheets = format.HasSheets
+		v.format.hasUI = format.HasUI
 	}
 	v.provider = this.core.transformerProvider
 	err := validateAction(action, state.Target(target), v)
@@ -485,7 +485,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		OutSchema:                action.OutSchema,
 		Transformation:           toStateTransformation(action.Transformation, inSchema, action.OutSchema),
 		Query:                    action.Query,
-		Connector:                action.Connector,
+		Format:                   action.Format,
 		Path:                     action.Path,
 		Sheet:                    action.Sheet,
 		Compression:              state.Compression(action.Compression),
@@ -506,10 +506,10 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Determine the connector name, for file actions.
-	var connectorName *string
-	if fileConnector != nil {
-		name := fileConnector.Name
-		connectorName = &name
+	var formatName *string
+	if format != nil {
+		name := format.Name
+		formatName = &name
 	}
 
 	// Generate a random identifier.
@@ -549,12 +549,12 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	}
 
 	// Settings.
-	if fileConnector != nil && fileConnector.HasUI {
+	if format != nil && format.HasUI {
 		conf := &connectors.ConnectorConfig{
 			Role:   this.connection.Role,
 			Region: this.connection.Workspace().PrivacyRegion,
 		}
-		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
+		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.UIValues)
 		if err != nil {
 			switch err.(type) {
 			case *meergo.InvalidUIValuesError:
@@ -592,7 +592,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		query := "INSERT INTO actions (id, connection, target, event_type, name, enabled,\n" +
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
-			"transformation_in_properties, transformation_out_properties, query, connector, path, sheet, compression,\n" +
+			"transformation_in_properties, transformation_out_properties, query, format, path, sheet, compression,\n" +
 			"settings, export_mode, matching_in, matching_out, allow_duplicates, table_name, table_key_property,\n" +
 			"identity_property, last_change_time_property, last_change_time_format, file_ordering_property_path)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
@@ -600,7 +600,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
-			n.Transformation.InProperties, n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet,
+			n.Transformation.InProperties, n.Transformation.OutProperties, n.Query, formatName, n.Path, n.Sheet,
 			n.Compression, string(n.Settings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates,
 			n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath)
@@ -1123,12 +1123,12 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //
 // It returns an errors.UnprocessableError error with code
 //
-//   - ConnectorNotExist, if the connector does not exist.
+//   - FormatNotExist, if the format does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) Records(ctx context.Context, fileConnector string, path, sheet string, compression Compression, uiValues json.Value, limit int) (json.Value, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, format string, path, sheet string, compression Compression, uiValues json.Value, limit int) (json.Value, types.Type, error) {
 
 	this.core.mustBeOpen()
 
@@ -1152,17 +1152,17 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
 	}
 
-	// Validate the connector.
-	file, ok := this.core.state.Connector(fileConnector)
+	// Validate the format.
+	formatConnector, ok := this.core.state.Connector(format)
 	if !ok {
-		return nil, types.Type{}, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", fileConnector)
+		return nil, types.Type{}, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
 	}
-	if file.Type != state.File {
-		return nil, types.Type{}, errors.BadRequest("connector %s is not a file connector", file.Name)
+	if formatConnector.Type != state.File {
+		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
 	}
 
 	// Validate the sheet.
-	if file.HasSheets {
+	if formatConnector.HasSheets {
 		if sheet == "" {
 			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
 		}
@@ -1176,15 +1176,15 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 	}
 
 	// Validate the UI values.
-	if file.HasUI {
+	if formatConnector.HasUI {
 		if uiValues == nil {
-			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
+			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", formatConnector.Name)
 		}
 		if !json.Valid(uiValues) || !uiValues.IsObject() {
 			return nil, types.Type{}, errors.BadRequest("UI values are not a valid JSON Object")
 		}
 	} else if uiValues != nil {
-		return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
+		return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", formatConnector.Name)
 	}
 
 	// Validate the limit.
@@ -1192,7 +1192,7 @@ func (this *Connection) Records(ctx context.Context, fileConnector string, path,
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.storage().Read(ctx, file, path, sheet, uiValues, state.Compression(compression), limit)
+	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, uiValues, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrNoColumnsFound:
@@ -1667,14 +1667,14 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values json.V
 // that must be a file connection. path must be UTF-8 encoded with a length in
 // range [1, 1024].
 //
-// fileConnector refers to the file connector with multi sheets to use.
-// compression indicates if the file is compressed and how. uiValues are the
-// user-entered values.
+// format is the file format and refers to the file connector with multi sheets
+// to use. compression indicates if the file is compressed and how. uiValues are
+// the user-entered values.
 //
 // It returns an errors.UnprocessableError error with code
-//   - ConnectorNotExist, if the file connector does not exist.
+//   - FormatNotExist, if the format does not exist.
 //   - InvalidUIValues, if the UI values are not valid.
-func (this *Connection) Sheets(ctx context.Context, fileConnector string, path string, uiValues json.Value, compression Compression) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, format string, path string, uiValues json.Value, compression Compression) ([]string, error) {
 
 	this.core.mustBeOpen()
 
@@ -1693,32 +1693,32 @@ func (this *Connection) Sheets(ctx context.Context, fileConnector string, path s
 		return nil, errors.BadRequest("path is not UTF-8 encoded")
 	}
 
-	// Validate the file connector.
-	file, ok := this.core.state.Connector(fileConnector)
+	// Validate the file format.
+	formatConnector, ok := this.core.state.Connector(format)
 	if !ok {
-		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", fileConnector)
+		return nil, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
 	}
-	if file.Type != state.File {
-		return nil, errors.BadRequest("connector %s is not a file connector", file.Name)
+	if formatConnector.Type != state.File {
+		return nil, errors.BadRequest("format %q does not refer to a file connector", format)
 	}
 
 	// Validate the UI values.
-	if file.HasUI {
+	if formatConnector.HasUI {
 		if uiValues == nil {
-			return nil, errors.BadRequest("UI values must be provided because connector %s has a UI", file.Name)
+			return nil, errors.BadRequest("UI values must be provided because format %s has a UI", formatConnector.Name)
 		}
 		if !json.Valid(uiValues) || !uiValues.IsObject() {
 			return nil, errors.BadRequest("UI values are not a valid JSON Object")
 		}
 	} else if uiValues != nil {
-		return nil, errors.BadRequest("UI values cannot be provided because connector %s has no UI", file.Name)
+		return nil, errors.BadRequest("UI values cannot be provided because format %s has no UI", formatConnector.Name)
 	}
 
-	if !file.HasSheets {
-		return nil, errors.BadRequest("connector %s does not have sheets", file.Name)
+	if !formatConnector.HasSheets {
+		return nil, errors.BadRequest("format %s does not have sheets", formatConnector.Name)
 	}
 
-	sheets, err := this.storage().Sheets(ctx, file, path, uiValues, state.Compression(compression))
+	sheets, err := this.storage().Sheets(ctx, formatConnector, path, uiValues, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
 		case *meergo.InvalidUIValuesError:

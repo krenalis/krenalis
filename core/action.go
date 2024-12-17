@@ -48,7 +48,7 @@ type Action struct {
 	Filter                   *Filter         `json:"filter"`
 	Transformation           Transformation  `json:"transformation"`
 	Query                    *string         `json:"query"`
-	Connector                string          `json:"connector"`
+	Format                   string          `json:"format"`
 	Path                     *string         `json:"path"`
 	Sheet                    *string         `json:"sheet"`
 	Compression              Compression     `json:"compression"`
@@ -161,8 +161,8 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		query := action.Query
 		this.Query = &query
 	}
-	if c := action.Connector(); c != nil {
-		this.Connector = c.Name
+	if f := action.Format(); f != nil {
+		this.Format = f.Name
 	}
 	if action.Path != "" {
 		path := action.Path
@@ -367,17 +367,17 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - ConnectorNotExist, if the connector does not exist.
+//   - FormatNotExist, if the format does not exist.
 //   - InvalidUIValues, if the user-entered values are not valid.
 //   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
 	this.core.mustBeOpen()
 
-	// Retrieve the file connector, if specified in the action.
-	var fileConnector *state.Connector
-	if action.Connector != "" {
-		fileConnector, _ = this.core.state.Connector(action.Connector)
+	// Retrieve the file format, if specified in the action.
+	var format *state.Connector
+	if action.Format != "" {
+		format, _ = this.core.state.Connector(action.Format)
 	}
 
 	c := this.action.Connection()
@@ -386,10 +386,10 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	v := validationState{}
 	v.connection.role = c.Role
 	v.connection.connector.typ = c.Connector().Type
-	if fileConnector != nil {
-		v.connector.typ = fileConnector.Type
-		v.connector.hasSheets = fileConnector.HasSheets
-		v.connector.hasUI = fileConnector.HasUI
+	if format != nil {
+		v.format.typ = format.Type
+		v.format.hasSheets = format.HasSheets
+		v.format.hasUI = format.HasUI
 	}
 	v.provider = this.core.transformerProvider
 	err := validateAction(action, this.action.Target, v)
@@ -414,7 +414,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		OutSchema:                action.OutSchema,
 		Transformation:           toStateTransformation(action.Transformation, inSchema, action.OutSchema),
 		Query:                    action.Query,
-		Connector:                action.Connector,
+		Format:                   action.Format,
 		Path:                     action.Path,
 		Sheet:                    action.Sheet,
 		Compression:              state.Compression(action.Compression),
@@ -434,11 +434,11 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		n.Filter, _ = convertFilterToWhere(action.Filter, inSchema).MarshalJSON()
 	}
 
-	// Determine the connector name, for file actions.
-	var connectorName *string
-	if fileConnector != nil {
-		name := fileConnector.Name
-		connectorName = &name
+	// Determine the format name, for file actions.
+	var formatName *string
+	if format != nil {
+		name := format.Name
+		formatName = &name
 	}
 
 	// Marshal the input and the output schemas.
@@ -461,12 +461,12 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	}
 
 	// Settings.
-	if fileConnector != nil && fileConnector.HasUI {
+	if format != nil && format.HasUI {
 		conf := &connectors.ConnectorConfig{
 			Role:   this.action.Connection().Role,
 			Region: this.action.Connection().Workspace().PrivacyRegion,
 		}
-		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, fileConnector, conf, action.UIValues)
+		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.UIValues)
 		if err != nil {
 			switch err.(type) {
 			case *meergo.InvalidUIValuesError:
@@ -531,14 +531,14 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_properties = $11, "+
-			"transformation_out_properties = $12, query = $13, connector = $14, path = $15, sheet = $16, "+
+			"transformation_out_properties = $12, query = $13, format = $14, path = $15, sheet = $16, "+
 			"compression = $17, settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
 			"allow_duplicates = $22, table_name = $23, table_key_property = $24, identity_property = $25, "+
 			"reload = reload OR $26, last_change_time_property = $27, last_change_time_format = $28, "+
 			"file_ordering_property_path = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InProperties,
-			n.Transformation.OutProperties, n.Query, connectorName, n.Path, n.Sheet, n.Compression, string(n.Settings),
+			n.Transformation.OutProperties, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.Settings),
 			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKeyProperty,
 			n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ID,
 		)
@@ -694,9 +694,9 @@ type ActionToSet struct {
 	// empty string.
 	Query string `json:"query"`
 
-	// Connector is the connector of the action on file storage connections.
-	// In any other case, must be empty.
-	Connector string `json:"connector"`
+	// Format is the file format and corresponds to the name of a file connector.
+	// For non-file actions, this must be empty.
+	Format string `json:"format"`
 
 	// Path is the path of the file. It cannot be longer than 1024 runes,
 	// and it is empty for non-file actions.
@@ -929,7 +929,7 @@ func shouldReload(a *state.Action, n *state.SetAction) bool {
 	if a.Query != n.Query {
 		return true
 	}
-	if c := a.Connector(); c != nil && c.Name != n.Connector {
+	if f := a.Format(); f != nil && f.Name != n.Format {
 		return true
 	}
 	if a.Path != n.Path || a.Sheet != n.Sheet {

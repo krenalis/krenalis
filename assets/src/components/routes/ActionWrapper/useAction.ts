@@ -114,7 +114,7 @@ const useAction = (
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
 					let values: ConnectorValues = null;
-					const connector = connectors.find((c) => c.name === providedAction.connector);
+					const connector = connectors.find((c) => c.name === providedAction.format);
 					if (connector.hasUI) {
 						// get the values of the file settings.
 						let ui = await api.workspaces.connections.actionUiEvent(
@@ -130,7 +130,7 @@ const useAction = (
 					try {
 						res = await api.workspaces.connections.records(
 							connection.id,
-							providedAction.connector,
+							providedAction.format,
 							providedAction.path!,
 							providedAction.sheet,
 							providedAction.compression,

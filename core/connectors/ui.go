@@ -30,8 +30,8 @@ import (
 // It panics if the connector has no UI.
 func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values json.Value) (json.Value, error) {
 	role := meergo.Role(action.Connection().Role)
-	c := action.Connector()
-	inner, err := meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{
+	format := action.Format()
+	inner, err := meergo.RegisteredFile(format.Name).New(&meergo.FileConfig{
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})

@@ -218,7 +218,7 @@ class Connections {
 
 	records = async (
 		connection: number,
-		fileConnector: string,
+		format: string,
 		path: string,
 		sheet: string | null,
 		compression: string,
@@ -226,7 +226,7 @@ class Connections {
 		limit: number,
 	): Promise<RecordsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/records`, http.POST, {
-			fileConnector,
+			format,
 			path,
 			sheet,
 			compression,
@@ -237,13 +237,13 @@ class Connections {
 
 	sheets = async (
 		connection: number,
-		fileConnector: string,
+		format: string,
 		path: string,
 		compression: string,
 		uiValues: ConnectorValues,
 	): Promise<SheetsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets`, http.POST, {
-			fileConnector,
+			format,
 			path,
 			compression,
 			uiValues,

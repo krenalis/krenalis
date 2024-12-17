@@ -235,18 +235,18 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	var body struct {
-		FileConnector string           `json:"fileConnector"`
-		Path          string           `json:"path"`
-		Sheet         string           `json:"sheet"`
-		Compression   core.Compression `json:"compression"`
-		UIValues      json.Value       `json:"uiValues"`
-		Limit         int              `json:"limit"`
+		Format      string           `json:"format"`
+		Path        string           `json:"path"`
+		Sheet       string           `json:"sheet"`
+		Compression core.Compression `json:"compression"`
+		UIValues    json.Value       `json:"uiValues"`
+		Limit       int              `json:"limit"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	records, schema, err := c.Records(r.Context(), body.FileConnector, body.Path, body.Sheet, body.Compression, json.Value(body.UIValues), body.Limit)
+	records, schema, err := c.Records(r.Context(), body.Format, body.Path, body.Sheet, body.Compression, json.Value(body.UIValues), body.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -314,16 +314,16 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	var body struct {
-		FileConnector string           `json:"fileConnector"`
-		Path          string           `json:"path"`
-		Compression   core.Compression `json:"compression"`
-		UIValues      json.Value       `json:"uiValues"`
+		Format      string           `json:"format"`
+		Path        string           `json:"path"`
+		Compression core.Compression `json:"compression"`
+		UIValues    json.Value       `json:"uiValues"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	sheets, err := c.Sheets(r.Context(), body.FileConnector, body.Path, body.UIValues, body.Compression)
+	sheets, err := c.Sheets(r.Context(), body.Format, body.Path, body.UIValues, body.Compression)
 	if err != nil {
 		return nil, err
 	}

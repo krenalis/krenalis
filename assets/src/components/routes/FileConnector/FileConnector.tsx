@@ -59,7 +59,7 @@ const FileConnector = () => {
 
 	const onAddActionType = (target: String) => {
 		const id = storages.find((s) => s.id === selectedStorage).id;
-		redirect(`connections/${id}/actions/add/${target}?fileConnector=${encodeURIComponent(file.name)}`);
+		redirect(`connections/${id}/actions/add/${target}?format=${encodeURIComponent(file.name)}`);
 	};
 
 	return (

@@ -840,7 +840,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 				"lastChangeTimeProperty": "",
 				"lastChangeTimeFormat": "",
 				"compression": "",
-				"connector": "CSV",
+				"format": "CSV",
 				"uiValues": {
 					"Comma": ",",
 					"Comment": "",
@@ -904,8 +904,8 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 		await fillUserActionFilters(page);
 
 		// File
-		await page.locator('.action__file-connector').click();
-		await page.locator('.action__file-connector sl-option[value="CSV"]').click();
+		await page.locator('.action__file-format').click();
+		await page.locator('.action__file-format sl-option[value="CSV"]').click();
 
 		await page.locator('.action__file-path >> input').fill(fileName);
 
@@ -1195,7 +1195,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 				"lastChangeTimeProperty": "",
 				"lastChangeTimeFormat": "",
 				"compression": "",
-				"connector": "CSV",
+				"format": "CSV",
 				"uiValues": {
 					"Comma": ",",
 					"Comment": "",

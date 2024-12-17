@@ -176,7 +176,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "CSV",
+				Format:                 "CSV",
 				Path:                   "my_file.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -220,7 +220,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "CSV",
+				Format:                 "CSV",
 				Path:                   "my_file.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -489,7 +489,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "last_name", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema:                types.Type{},
-				Connector:                "CSV",
+				Format:                   "CSV",
 				Path:                     "my_output_users.csv",
 				FileOrderingPropertyPath: "email",
 			},
@@ -510,7 +510,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "last_name", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema:                types.Type{},
-				Connector:                "CSV",
+				Format:                   "CSV",
 				Path:                     "my_output_users - ${now}.csv",
 				FileOrderingPropertyPath: "email",
 			},
@@ -537,7 +537,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "last_name", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema:                types.Type{},
-				Connector:                "CSV",
+				Format:                   "CSV",
 				Path:                     "my_output_users.csv",
 				FileOrderingPropertyPath: "email",
 			},
@@ -825,7 +825,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     `transformation language "SomeWeirdLanguage" is not valid`,
 		},
 		{
-			name: "BAD: Source/FileStorage/Users - no file connector is specified",
+			name: "BAD: Source/FileStorage/Users - no format is specified",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -848,7 +848,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			err:                     "actions on file storage connections must have a connector",
+			err:                     "actions on file storage connections must have a format",
 		},
 		{
 			name: "BAD: Source/App/Users - cannot specify a connector",
@@ -865,7 +865,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector: "CSV",
+				Format: "CSV",
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
@@ -873,7 +873,7 @@ func Test_validateAction(t *testing.T) {
 			connectorType:           state.File,
 			connectorHasUI:          false,
 			connectorHasSheets:      false,
-			err:                     "actions on App connections cannot have a connector",
+			err:                     "actions on App connections cannot have a format",
 		},
 		{
 			name: "BAD: Source/FileStorage/Users - connector does not exist",
@@ -892,7 +892,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "NotExistentConnector",
+				Format:                 "NotExistentFormat",
 				Path:                   "my_file.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -900,7 +900,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			err:                     `connector "NotExistentConnector" does not exist`,
+			err:                     `format "NotExistentFormat" does not exist`,
 		},
 		{
 			name: "BAD: Source/FileStorage/Users - connector has wrong type",
@@ -919,7 +919,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "Dummy",
+				Format:                 "Dummy",
 				Path:                   "my_file.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -928,7 +928,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
 			connectorType:           state.App,
-			err:                     "type of the action's connector must be File, got App",
+			err:                     "format does not refer to a file connector",
 		},
 		{
 			name: "BAD: Source/Database/Users - no identity property specified",
@@ -1076,7 +1076,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "CSV",
+				Format:                 "CSV",
 				Path:                   strings.Repeat("a", 1025),
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -1107,7 +1107,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "CSV",
+				Format:                 "CSV",
 				Path:                   "my_file-${now}.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -1176,7 +1176,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				Connector:              "CSV",
+				Format:                 "CSV",
 				Path:                   "my_file.csv",
 				IdentityProperty:       "id",
 				LastChangeTimeProperty: "timestamp",
@@ -1243,7 +1243,7 @@ func Test_validateAction(t *testing.T) {
 					{Name: "first_name", Type: types.Text()},
 					{Name: "last_name", Type: types.Text()},
 				}),
-				Connector:                "CSV",
+				Format:                   "CSV",
 				Path:                     "my_output_users.csv",
 				Compression:              "BadCompression",
 				FileOrderingPropertyPath: "email",
@@ -2103,7 +2103,7 @@ func Test_validateAction(t *testing.T) {
 			action: ActionToSet{
 				Name:                     "Export users",
 				OutSchema:                types.Type{},
-				Connector:                "CSV",
+				Format:                   "CSV",
 				Path:                     "my_output_users.csv",
 				FileOrderingPropertyPath: "email",
 			},
@@ -2298,9 +2298,9 @@ func Test_validateAction(t *testing.T) {
 			v := validationState{}
 			v.connection.role = test.connectionRole
 			v.connection.connector.typ = test.connectionConnectorType
-			v.connector.typ = test.connectorType
-			v.connector.hasSheets = test.connectorHasSheets
-			v.connector.hasUI = test.connectorHasUI
+			v.format.typ = test.connectorType
+			v.format.hasSheets = test.connectorHasSheets
+			v.format.hasUI = test.connectorHasUI
 			v.provider = test.provider
 			err := validateAction(test.action, test.target, v)
 			var gotErr string

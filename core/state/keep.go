@@ -248,7 +248,7 @@ type AddAction struct {
 	Filter                   json.RawMessage `json:",omitempty"`
 	Transformation           Transformation
 	Query                    string
-	Connector                string
+	Format                   string
 	Path                     string
 	Sheet                    string
 	Compression              Compression
@@ -271,12 +271,12 @@ func (state *State) addAction(n notification) {
 		return
 	}
 	c := state.connections[e.Connection]
-	connector := state.connectors[e.Connector]
+	format := state.connectors[e.Format]
 	action := &Action{
 		mu:                       new(sync.Mutex),
 		ID:                       e.ID,
 		connection:               c,
-		connector:                connector,
+		format:                   format,
 		Target:                   e.Target,
 		Name:                     e.Name,
 		Enabled:                  e.Enabled,
@@ -890,7 +890,7 @@ type SetAction struct {
 	Filter                   json.RawMessage `json:",omitempty"`
 	Transformation           Transformation
 	Query                    string
-	Connector                string
+	Format                   string
 	Path                     string
 	Sheet                    string
 	Compression              Compression
@@ -912,13 +912,13 @@ func (state *State) setAction(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	connector := state.connectors[e.Connector]
+	format := state.connectors[e.Format]
 	var filter *Where
 	if e.Filter != nil {
 		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
 	state.replaceAction(e.ID, func(a *Action) {
-		a.connector = connector
+		a.format = format
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.InSchema = e.InSchema

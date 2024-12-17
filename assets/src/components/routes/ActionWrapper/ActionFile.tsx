@@ -45,62 +45,61 @@ const ActionFile = () => {
 		action,
 		setAction,
 		setValues,
-		isFileConnectorLoading,
-		setIsFileConnectorLoading,
-		setIsFileConnectorChanged,
+		isFormatLoading,
+		setIsFormatLoading,
+		setIsFormatChanged,
 		setIsFileChanged,
-		isFileConnectorChanged,
+		isFormatChanged,
 		actionType,
 		isEditing,
 	} = useContext(actionContext);
 
-	const fileConnectorRef = useRef<string>(action.connector);
+	const formatRef = useRef<string>(action.format);
 	const pathInputRef = useRef<any>();
 
 	useEffect(() => {
-		if (isFileConnectorChanged && !isFileConnectorLoading) {
+		if (isFormatChanged && !isFormatLoading) {
 			if (pathInputRef.current) {
 				setTimeout(() => {
 					pathInputRef.current.focus();
 				}, 50);
 			}
 		}
-	}, [isFileConnectorChanged, isFileConnectorLoading]);
+	}, [isFormatChanged, isFormatLoading]);
 
 	useEffect(() => {
-		// check if the file connector id has been passed in the query
-		// parameters.
-		const f = new URL(document.location.href).searchParams.get('fileConnector');
+		// check if the format has been passed in the query parameters.
+		const f = new URL(document.location.href).searchParams.get('format');
 		if (f != null) {
 			const name = decodeURIComponent(f);
-			fileConnectorRef.current = name;
-			const connector = connectors.find((c) => c.name === name);
+			formatRef.current = name;
+			const format = connectors.find((c) => c.name === name);
 			const a = { ...action };
-			a.connector = name;
-			a.sheet = connector.hasSheets ? '' : null;
-			setIsFileConnectorLoading(true);
+			a.format = name;
+			a.sheet = format.hasSheets ? '' : null;
+			setIsFormatLoading(true);
 			setAction(a);
 		}
 	}, []);
 
 	useEffect(() => {
 		const fetchFields = async () => {
-			const connector = connectors.find((c) => c.name === action.connector);
-			if (connector.hasUI === false) {
+			const format = connectors.find((c) => c.name === action.format);
+			if (format.hasUI === false) {
 				setFileFields([]);
-				setTimeout(() => setIsFileConnectorLoading(false), 300);
+				setTimeout(() => setIsFormatLoading(false), 300);
 				return;
 			}
 
 			let ui: ConnectorUIResponse;
-			if (isEditing && !isFileConnectorChanged) {
+			if (isEditing && !isFormatChanged) {
 				try {
 					ui = await api.workspaces.connections.actionUiEvent(connection.id, action.id, 'load', null);
 				} catch (err) {
-					setTimeout(() => setIsFileConnectorLoading(false), 300);
+					setTimeout(() => setIsFormatLoading(false), 300);
 					if (err instanceof NotFoundError) {
 						redirect('connectors');
-						handleError('The connector does not exist anymore');
+						handleError('The format does not exist anymore');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -116,12 +115,12 @@ const ActionFile = () => {
 				}
 			} else {
 				try {
-					ui = await api.connectors.ui(selectedWorkspace, connector.name, connection.role, null);
+					ui = await api.connectors.ui(selectedWorkspace, format.name, connection.role, null);
 				} catch (err) {
-					setTimeout(() => setIsFileConnectorLoading(false), 300);
+					setTimeout(() => setIsFormatLoading(false), 300);
 					if (err instanceof NotFoundError) {
 						redirect('connectors');
-						handleError('The connector does not exist anymore');
+						handleError('The format does not exist anymore');
 						return;
 					}
 					if (err instanceof UnprocessableError) {
@@ -141,29 +140,29 @@ const ActionFile = () => {
 			}
 			setFileFields(ui.fields);
 			setValues(ui.values);
-			setTimeout(() => setIsFileConnectorLoading(false), 300);
+			setTimeout(() => setIsFormatLoading(false), 300);
 		};
 
-		if (action.connector == '') {
+		if (action.format == '') {
 			return;
 		}
 		fetchFields();
-	}, [fileConnectorRef.current]);
+	}, [formatRef.current]);
 
 	const { hasSheets, icon, fileExtension } = useMemo(() => {
-		const connector = connectors.find((c) => c.name === action.connector);
-		return { hasSheets: connector?.hasSheets, icon: connector?.icon, fileExtension: connector?.fileExtension };
+		const format = connectors.find((c) => c.name === action.format);
+		return { hasSheets: format?.hasSheets, icon: format?.icon, fileExtension: format?.fileExtension };
 	}, [action]);
 
-	const onFileConnectorChange = (e) => {
+	const onFormatChange = (e) => {
 		const name = e.target.value;
-		fileConnectorRef.current = name;
-		const connector = connectors.find((c) => c.name === name);
+		formatRef.current = name;
+		const format = connectors.find((c) => c.name === name);
 		const a = { ...action };
 		// reset the action.
-		a.connector = name;
+		a.format = name;
 		a.compression = '';
-		a.sheet = connector.hasSheets ? '' : null;
+		a.sheet = format.hasSheets ? '' : null;
 		a.path = '';
 		a.identityProperty = '';
 		a.lastChangeTimeProperty = '';
@@ -171,16 +170,16 @@ const ActionFile = () => {
 		a.transformation.mapping = flattenSchema(actionType.outputSchema);
 		a.transformation.function = null;
 		setValues(null);
-		setIsFileConnectorLoading(true);
-		setIsFileConnectorChanged(true);
+		setIsFormatLoading(true);
+		setIsFormatChanged(true);
 		setIsFileChanged(false);
 		setAction(a);
 	};
 
-	const fileConnectors: TransformedConnector[] = [];
+	const formats: TransformedConnector[] = [];
 	for (const c of connectors) {
 		if (c.isFile) {
-			fileConnectors.push(c);
+			formats.push(c);
 		}
 	}
 
@@ -193,17 +192,17 @@ const ActionFile = () => {
 			annotated={true}
 		>
 			<SlSelect
-				label='Type'
-				className='action__file-connector'
-				value={String(action.connector)}
-				onSlChange={onFileConnectorChange}
+				label='Format'
+				className='action__file-format'
+				value={String(action.format)}
+				onSlChange={onFormatChange}
 			>
-				{action.connector !== '' && (
-					<div className='action__file-connector-logo' slot='prefix'>
+				{action.format !== '' && (
+					<div className='action__file-format-logo' slot='prefix'>
 						<LittleLogo icon={icon} />
 					</div>
 				)}
-				{fileConnectors.map((f) => (
+				{formats.map((f) => (
 					<SlOption key={f.name} value={f.name}>
 						<div slot='prefix'>
 							<LittleLogo icon={f.icon} />
@@ -212,7 +211,7 @@ const ActionFile = () => {
 					</SlOption>
 				))}
 			</SlSelect>
-			{isFileConnectorLoading ? (
+			{isFormatLoading ? (
 				<SlSpinner
 					style={
 						{
@@ -226,7 +225,7 @@ const ActionFile = () => {
 					}
 				></SlSpinner>
 			) : (
-				action.connector !== '' && (
+				action.format !== '' && (
 					<div className='action__file-settings'>
 						<FileSettings
 							hasSheets={hasSheets}
@@ -270,8 +269,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		isImport,
 		transformationSectionRef,
 		setIsFileChanged,
-		setIsFileConnectorChanged,
-		isFileConnectorChanged,
+		setIsFormatChanged,
+		isFormatChanged,
 		isTransformationDisabled,
 		isEditing,
 	} = useContext(ActionContext);
@@ -362,7 +361,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			try {
 				res = await api.workspaces.connections.sheets(
 					connection.id,
-					action.connector,
+					action.format,
 					action.path!,
 					action.compression,
 					values,
@@ -393,7 +392,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	}, []);
 
 	const checkIsFileChanged = () => {
-		if (isFileConnectorChanged) {
+		if (isFormatChanged) {
 			return;
 		}
 		const isPathChanged = pathRef.current.lastUpdate !== pathRef.current.lastConfirmation;
@@ -473,7 +472,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.sheets(
 				connection.id,
-				action.connector,
+				action.format,
 				action.path!,
 				action.compression,
 				values,
@@ -612,7 +611,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			const actionTyp = { ...actionType };
 			actionTyp.inputSchema = res.schema;
 			setActionType(actionTyp);
-			setIsFileConnectorChanged(false);
+			setIsFormatChanged(false);
 			setTimeout(() => {
 				const top = transformationSectionRef.current!.getBoundingClientRect().top;
 				transformationSectionRef.current!.closest('.fullscreen').scrollBy({
@@ -629,7 +628,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.records(
 				connection.id,
-				action.connector,
+				action.format,
 				action.path,
 				action.sheet === undefined ? null : action.sheet,
 				action.compression,

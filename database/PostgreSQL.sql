@@ -87,7 +87,7 @@ CREATE TABLE actions (
     transformation_in_properties varchar[] DEFAULT NULL,
     transformation_out_properties varchar[] DEFAULT NULL,
     query text NOT NULL DEFAULT '',
-    connector varchar DEFAULT NULL,
+    format varchar DEFAULT NULL,
     path varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(31) NOT NULL DEFAULT '',
     compression compression NOT NULL DEFAULT '',

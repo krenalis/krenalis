@@ -216,7 +216,7 @@ interface TransformedAction {
 	matching?: Matching | null;
 	exportOnDuplicates?: boolean | null;
 	compression?: Compression;
-	connector?: string;
+	format?: string;
 }
 
 const getCompatibleFilterOperators = (property: TransformedProperty): number[] => {
@@ -593,7 +593,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		exportMode: action.exportMode,
 		matching: action.matching,
 		exportOnDuplicates: action.exportOnDuplicates,
-		connector: action.connector,
+		format: action.format,
 		compression: action.compression,
 	};
 };
@@ -1014,7 +1014,7 @@ const transformInActionToSet = async (
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		compression: action.compression,
-		connector: action.connector,
+		format: action.format,
 		uiValues: uiValues,
 	};
 
@@ -1069,7 +1069,7 @@ const computeDefaultAction = (
 		action.lastChangeTimeFormat = '';
 		action.sheet = null;
 		action.compression = '';
-		action.connector = '';
+		action.format = '';
 	}
 	if (fields.includes('FileOrderingProperty')) {
 		action.fileOrderingPropertyPath = '';

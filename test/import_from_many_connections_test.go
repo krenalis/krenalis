@@ -108,7 +108,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 			IdentityProperty:       "csv_id",
 			LastChangeTimeProperty: "timestamp",
 			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
-			Connector:              "CSV",
+			Format:                 "CSV",
 			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
 				"Comma":          ",",
 				"HasColumnNames": true,

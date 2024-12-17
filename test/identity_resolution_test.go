@@ -75,7 +75,7 @@ func TestIdentityResolution(t *testing.T) {
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
-		Connector:        "JSON",
+		Format:           "JSON",
 		UIValues:         meergotester.UIJSONProperties(properties),
 	})
 
@@ -89,7 +89,7 @@ func TestIdentityResolution(t *testing.T) {
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
-		Connector:        "JSON",
+		Format:           "JSON",
 		UIValues:         meergotester.UIJSONProperties(properties),
 	})
 

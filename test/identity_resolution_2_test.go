@@ -133,7 +133,7 @@ func TestIdentityResolution2(t *testing.T) {
 			IdentityProperty:       "email",
 			LastChangeTimeProperty: "last_change_time",
 			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
-			Connector:              "JSON",
+			Format:                 "JSON",
 			UIValues:               meergotester.UIJSONProperties(properties),
 		})
 	}

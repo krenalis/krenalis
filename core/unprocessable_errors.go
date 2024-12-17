@@ -23,6 +23,7 @@ const (
 	EventNotExist                errors.Code = "EventNotExist"
 	EventTypeNotExist            errors.Code = "EventTypeNotExist"
 	ExecutionInProgress          errors.Code = "ExecutionInProgress"
+	FormatNotExist               errors.Code = "FormatNotExist"
 	IdentityResolutionInProgress errors.Code = "IdentityResolutionInProgress"
 	InspectionMode               errors.Code = "InspectionMode"
 	InvalidPath                  errors.Code = "InvalidPath"

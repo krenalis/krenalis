@@ -1039,7 +1039,7 @@ type Action struct {
 	mu                       *sync.Mutex
 	ID                       int
 	connection               *Connection
-	connector                *Connector
+	format                   *Connector
 	execution                *ActionExecution
 	Target                   Target
 	Name                     string
@@ -1170,14 +1170,6 @@ func (action *Action) Connection() *Connection {
 	return c
 }
 
-// Connector returns the connector of the action.
-func (action *Action) Connector() *Connector {
-	action.mu.Lock()
-	c := action.connector
-	action.mu.Unlock()
-	return c
-}
-
 // Execution returns the execution of the action.
 // The boolean return value reports whether the action is running.
 func (action *Action) Execution() (*ActionExecution, bool) {
@@ -1185,4 +1177,12 @@ func (action *Action) Execution() (*ActionExecution, bool) {
 	ex := action.execution
 	action.mu.Unlock()
 	return ex, ex != nil
+}
+
+// Format returns the format connector of the action.
+func (action *Action) Format() *Connector {
+	action.mu.Lock()
+	c := action.format
+	action.mu.Unlock()
+	return c
 }

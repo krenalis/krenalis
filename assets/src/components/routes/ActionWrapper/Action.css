@@ -1114,24 +1114,24 @@ inherit the disabled style */
 	gap: 15px;
 }
 
-.action__file-connector,
+.action__file-format,
 .action__file-compression,
 .action__file-ordering {
 	margin-bottom: 30px;
 }
 
-.action__file-connector-logo {
+.action__file-format-logo {
 	margin-right: 8px;
 }
 
-.action__file-connector sl-option::part(label) {
+.action__file-format sl-option::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
-.action__file-connector-logo .little-logo svg,
-.action__file-connector sl-option .little-logo svg {
+.action__file-format-logo .little-logo svg,
+.action__file-format sl-option .little-logo svg {
 	height: 18px;
 }
 

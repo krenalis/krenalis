@@ -83,7 +83,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		mode,
 		setMode,
 		setIsSaveHidden,
-		isFileConnectorChanged,
+		isFormatChanged,
 		isEditing,
 	} = useContext(ActionContext);
 
@@ -99,10 +99,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	useEffect(() => {
 		// when a new file is confirmed the UI should behave as if it is
 		// the first the user is compiling the action's transformation.
-		if (!isFileConnectorChanged) {
+		if (!isFormatChanged) {
 			isFirstCompilation.current = true;
 		}
-	}, [isFileConnectorChanged]);
+	}, [isFormatChanged]);
 
 	useEffect(() => {
 		const fetchTransformationLanguages = async () => {
@@ -206,9 +206,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		return false;
 	}, [action, actionType, isTransformationDisabled]);
 
-	const fileConnector: TransformedConnector | null = useMemo(() => {
-		if (action.connector) {
-			return connectors.find((c) => c.name === action.connector);
+	const format: TransformedConnector | null = useMemo(() => {
+		if (action.format) {
+			return connectors.find((c) => c.name === action.format);
 		}
 		return null;
 	}, [action]);
@@ -476,7 +476,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 										size='small'
 									>
 										<SlOption value='iso8601'>ISO 8601</SlOption>
-										{fileConnector?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
+										{format?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
 										<SlOption value='custom'>Custom...</SlOption>
 									</SlSelect>
 								</div>
@@ -1021,7 +1021,7 @@ const FullscreenTransformation = ({
 				try {
 					res = await api.workspaces.connections.records(
 						connection.id,
-						action.connector,
+						action.format,
 						action.path,
 						action.sheet,
 						action.compression,

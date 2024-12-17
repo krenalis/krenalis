@@ -38,12 +38,12 @@ type validationState struct {
 		}
 	}
 
-	// connector represents the action's connector.
+	// format represents the action file format.
 	//
-	// If the actions specifies a connector name, then this must be populated
-	// according to that connector, if exists, otherwise must be the empty
+	// If the action specify a format name, then this must be populated
+	// according to that format, if exists, otherwise must be the empty
 	// struct.
-	connector struct {
+	format struct {
 		typ       state.ConnectorType
 		hasUI     bool
 		hasSheets bool
@@ -58,8 +58,8 @@ type validationState struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - ConnectorNotExist, if the action is on file and the specified file
-//     connector does not exist.
+//   - FormatNotExist, if the action is on file and the specified format does
+//     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
 func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
@@ -123,18 +123,18 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Validate the action's connector.
 	actionOnFile := v.connection.connector.typ == state.FileStorage
-	if actionOnFile && action.Connector == "" {
-		return errors.BadRequest("actions on file storage connections must have a connector")
+	if actionOnFile && action.Format == "" {
+		return errors.BadRequest("actions on file storage connections must have a format")
 	}
-	if !actionOnFile && action.Connector != "" {
-		return errors.BadRequest("actions on %v connections cannot have a connector", v.connection.connector.typ)
+	if !actionOnFile && action.Format != "" {
+		return errors.BadRequest("actions on %v connections cannot have a format", v.connection.connector.typ)
 	}
-	if action.Connector != "" {
-		if v.connector.typ == 0 {
-			return errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", action.Connector)
+	if action.Format != "" {
+		if v.format.typ == 0 {
+			return errors.Unprocessable(FormatNotExist, "format %q does not exist", action.Format)
 		}
-		if v.connector.typ != state.File {
-			return errors.BadRequest("type of the action's connector must be File, got %v", v.connector.typ)
+		if v.format.typ != state.File {
+			return errors.BadRequest("format does not refer to a file connector")
 		}
 	}
 
@@ -417,12 +417,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// Check if the UI values are allowed and are a JSON Object.
 	if v.connection.connector.typ == state.FileStorage {
 		if action.UIValues == nil {
-			if v.connector.hasUI {
-				return errors.BadRequest("UI values must be provided because connector %s has a UI", action.Connector)
+			if v.format.hasUI {
+				return errors.BadRequest("UI values must be provided because format %s has a UI", action.Format)
 			}
 		} else {
-			if !v.connector.hasUI {
-				return errors.BadRequest("UI values cannot be provided because connector %s has no UI", action.Connector)
+			if !v.format.hasUI {
+				return errors.BadRequest("UI values cannot be provided because format %s has no UI", action.Format)
 			}
 			if !json.Valid(action.UIValues) || !action.UIValues.IsObject() {
 				return errors.BadRequest("UI values are not a valid JSON Object")
@@ -465,11 +465,11 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if action.Path == "" {
 			return errors.BadRequest("path cannot be empty for actions on storage connections")
 		}
-		if v.connector.hasSheets && action.Sheet == "" {
-			return errors.BadRequest("sheet cannot be empty because connector %s has sheets", action.Connector)
+		if v.format.hasSheets && action.Sheet == "" {
+			return errors.BadRequest("sheet cannot be empty because format %s has sheets", action.Format)
 		}
-		if !v.connector.hasSheets && action.Sheet != "" {
-			return errors.BadRequest("connector %s does not have sheets", action.Connector)
+		if !v.format.hasSheets && action.Sheet != "" {
+			return errors.BadRequest("format %s does not have sheets", action.Format)
 		}
 	} else {
 		if action.Path != "" {

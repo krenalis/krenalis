@@ -46,13 +46,13 @@ type File struct {
 // File returns a file for the provided action, on a connection with the given
 // role. Errors are deferred until a file's method is called.
 func (connectors *Connectors) File(action *state.Action, role state.Role) *File {
-	connector := action.Connector()
+	format := action.Format()
 	file := &File{
 		state:       connectors.state,
 		action:      action,
-		timeLayouts: &connector.TimeLayouts,
+		timeLayouts: &format.TimeLayouts,
 	}
-	file.inner, file.err = meergo.RegisteredFile(connector.Name).New(&meergo.FileConfig{
+	file.inner, file.err = meergo.RegisteredFile(format.Name).New(&meergo.FileConfig{
 		Settings:    action.Settings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
@@ -108,7 +108,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 	if err = validateLastChangeTime(storageLastChangeTime); err != nil {
 		return nil, fmt.Errorf("invalid last change time returned by the storage: %s", err)
 	}
-	rw := newRecordWriter(file.action.Connector().Name, file.action,
+	rw := newRecordWriter(file.action.Format().Name, file.action,
 		storageLastChangeTime, file.timeLayouts, startTime, math.MaxInt)
 	records := &fileRecords{
 		rw:    rw,
@@ -140,7 +140,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 		return nil, err
 	}
 	s := newCompressedStorage(storage, file.action.Compression)
-	extension := file.action.Connector().FileExtension
+	extension := file.action.Format().FileExtension
 	path := file.action.Path
 	if pathReplacer != nil {
 		var err error
@@ -589,9 +589,9 @@ func (rr *recordReader) Record(ctx context.Context) (string, map[string]any, err
 // property.
 //
 // The close method should be called when there are no more records to write.
-func newRecordWriter(connector string, action *state.Action, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
+func newRecordWriter(format string, action *state.Action, storageLastChangeTime time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
 	rw := recordWriter{
-		connector:             connector,
+		format:                format,
 		action:                action,
 		storageLastChangeTime: storageLastChangeTime,
 		timeLayouts:           layout,
@@ -605,7 +605,7 @@ func newRecordWriter(connector string, action *state.Action, storageLastChangeTi
 
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
-	connector              string
+	format                 string
 	action                 *state.Action
 	storageLastChangeTime  time.Time
 	timeLayouts            *state.TimeLayouts
@@ -624,10 +624,10 @@ type recordWriter struct {
 // Columns must be called before Record, RecordSlice and RecordStrings.
 func (rw *recordWriter) Columns(columns []types.Property) error {
 	if rw.properties != nil {
-		return fmt.Errorf("connector %s has called Columns twice", rw.connector)
+		return fmt.Errorf("connector %s has called Columns twice", rw.format)
 	}
 	if len(columns) == 0 {
-		return fmt.Errorf("connector %s has called Columns with an empty columns", rw.connector)
+		return fmt.Errorf("connector %s has called Columns with an empty columns", rw.format)
 	}
 	fileSchema, err := types.ObjectOf(columns)
 	if err != nil {
@@ -672,7 +672,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 // Record writes a record as a map.
 func (rw *recordWriter) Record(record map[string]any) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling RecordMap", rw.format)
 	}
 	// Get the last change time.
 	var err error
@@ -742,10 +742,10 @@ func (rw *recordWriter) Record(record map[string]any) error {
 // RecordSlice writes a record.
 func (rw *recordWriter) RecordSlice(record []any) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %s did not call the Columns method before calling Record", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling Record", rw.format)
 	}
 	if len(record) != len(rw.properties) {
-		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
+		return fmt.Errorf("connector %s has returned records with different lengths", rw.format)
 	}
 	// Get the last change time.
 	var err error
@@ -807,10 +807,10 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 // RecordStrings writes a record as a string slice.
 func (rw *recordWriter) RecordStrings(record []string) error {
 	if rw.properties == nil {
-		return fmt.Errorf("connector %s did not call the Columns method before calling RecordStrings", rw.connector)
+		return fmt.Errorf("connector %s did not call the Columns method before calling RecordStrings", rw.format)
 	}
 	if len(record) != len(rw.properties) {
-		return fmt.Errorf("connector %s has returned records with different lengths", rw.connector)
+		return fmt.Errorf("connector %s has returned records with different lengths", rw.format)
 	}
 	// Get the last change time.
 	var err error
