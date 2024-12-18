@@ -715,7 +715,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
-	ui, err := ws.ServeUI(r.Context(), body.Event, json.Value(body.Values), body.Connector, role, body.OAuthToken)
+	ui, err := ws.ServeUI(r.Context(), body.Event, body.Values, body.Connector, role, body.OAuthToken)
 	if err != nil {
 		return nil, err
 	}

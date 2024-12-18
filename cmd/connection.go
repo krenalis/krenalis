@@ -246,7 +246,7 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	records, schema, err := c.Records(r.Context(), body.Format, body.Path, body.Sheet, body.Compression, json.Value(body.UIValues), body.Limit)
+	records, schema, err := c.Records(r.Context(), body.Format, body.Path, body.Sheet, body.Compression, body.UIValues, body.Limit)
 	if err != nil {
 		return nil, err
 	}
