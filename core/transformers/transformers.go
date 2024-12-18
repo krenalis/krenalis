@@ -48,7 +48,7 @@ type Transformer struct {
 }
 
 // New returns a new transformer that transforms values for the provided action.
-// provider is the transformer provider used for function transformations and
+// provider is the transformer provider used for transformation functions and
 // should be nil for mappings. layouts, if not nil, represents the layouts used
 // to format DateTime, Date, and Time values as strings.
 //

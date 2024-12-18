@@ -21,7 +21,7 @@ var (
 )
 
 // FunctionExecutionError represents an error resulting from the execution of a
-// function transformation such as a syntax error in the function.
+// transformation function such as a syntax error in the function.
 type FunctionExecutionError string
 
 func (err FunctionExecutionError) Error() string { return string(err) }

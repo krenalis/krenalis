@@ -211,10 +211,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			return errors.BadRequest("output schema is required by the transformation")
 		}
 		if function.Source == "" {
-			return errors.BadRequest("function transformation source is empty")
+			return errors.BadRequest("source of transformation function cannot be empty")
 		}
 		if containsNUL(function.Source) {
-			return errors.BadRequest("function transformation source contains NUL rune")
+			return errors.BadRequest("source of transformation function contains NUL rune")
 		}
 		switch function.Language {
 		case "JavaScript":

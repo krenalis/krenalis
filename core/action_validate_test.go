@@ -765,7 +765,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "function transformation source is empty",
+			err:                     "source of transformation function cannot be empty",
 		},
 		{
 			name: "BAD: Source/App/Users - transformation language is empty",
