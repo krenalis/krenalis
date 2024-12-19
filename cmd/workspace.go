@@ -195,7 +195,7 @@ func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Re
 	q := r.URL.Query()
 
 	// Parse days.
-	days := 48
+	days := 30
 	if s, ok := q["days"]; ok {
 		if len(s) > 1 {
 			return nil, errors.BadRequest("only one 'days' parameter is allowed")

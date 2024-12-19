@@ -228,10 +228,10 @@ const (
 )
 
 // ActionMetricsPerDate returns metrics aggregated by day for the time interval
-// between the specified start and end dates. The years in the dates must be
-// no earlier than 1970 and no later than the next year. The day of the start
-// date must be at least one day before the day of the end date. actions
-// specifies the actions for which metrics are returned and must not be empty.
+// between the specified start and end dates. The dates must be no earlier than
+// 1970-01-01 and no later than 2262-04-10. The day of the start date must be at
+// least one day before the day of the end date. actions specifies the actions
+// for which metrics are returned and must not be empty.
 func (this *Workspace) ActionMetricsPerDate(ctx context.Context, start, end time.Time, actions []int) (ActionMetrics, error) {
 
 	this.core.mustBeOpen()
