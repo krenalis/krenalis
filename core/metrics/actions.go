@@ -24,18 +24,19 @@ const (
 
 // Error represents an error that occurred while executing an action.
 type Error struct {
-	Action       int
-	Step         Step
-	Count        int
-	Message      string
-	LastOccurred time.Time
+	Action       int       `json:"action"`
+	Step         Step      `json:"step"`
+	Count        int       `json:"count"`
+	Message      string    `json:"message"`
+	LastOccurred time.Time `json:"lastOccurred"`
 }
 
 // Metrics represents the metrics for a time period.
 type Metrics struct {
-	Start, End time.Time
-	Passed     [][6]int
-	Failed     [][6]int
+	Start  time.Time `json:"start"`
+	End    time.Time `json:"end"`
+	Passed [][6]int  `json:"passed"`
+	Failed [][6]int  `json:"failed"`
 }
 
 // Errors returns the errors for the provided actions within the time range
