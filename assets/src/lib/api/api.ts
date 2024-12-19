@@ -701,15 +701,15 @@ class Workspaces {
 		limit: number,
 		step?: ActionStep,
 	): Promise<ActionErrorsResponse> => {
-		let actionQueryString = '';
+		let actionsQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
-				actionQueryString += '&';
+				actionsQueryString += '&';
 			}
-			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r: ActionErrorsResponse = await call(
-			`${this.apiURL}/action-errors?start=${encodeURIComponent(start.toISOString())}${end ? `&end=${encodeURIComponent(end.toISOString())}` : ''}&${actionQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
+			`${this.apiURL}/action-errors?start=${encodeURIComponent(start.toISOString())}${end ? `&end=${encodeURIComponent(end.toISOString())}` : ''}&${actionsQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
 			http.GET,
 		);
 		for (let i = 0; i < r.errors.length; i++) {
@@ -719,17 +719,17 @@ class Workspaces {
 	};
 
 	actionMetricsPerDate = async (start: Date, end: Date, actions: number[]): Promise<ActionMetrics> => {
-		let actionQueryString = '';
+		let actionsQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
-				actionQueryString += '&';
+				actionsQueryString += '&';
 			}
-			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
-			`${this.apiURL}/action-metrics/dates?start=${encodeURIComponent(sd)}&end=${encodeURIComponent(ed)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/dates?start=${encodeURIComponent(sd)}&end=${encodeURIComponent(ed)}&${actionsQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);
@@ -738,15 +738,15 @@ class Workspaces {
 	};
 
 	actionMetricsPerDay = async (days: number, actions: number[]): Promise<ActionMetrics> => {
-		let actionQueryString = '';
+		let actionsQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
-				actionQueryString += '&';
+				actionsQueryString += '&';
 			}
-			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-metrics/days?days=${encodeURIComponent(days)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/days?days=${encodeURIComponent(days)}&${actionsQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);
@@ -755,15 +755,15 @@ class Workspaces {
 	};
 
 	actionMetricsPerHour = async (hours: number, actions: number[]): Promise<ActionMetrics> => {
-		let actionQueryString = '';
+		let actionsQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
-				actionQueryString += '&';
+				actionsQueryString += '&';
 			}
-			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-metrics/hours?hours=${encodeURIComponent(hours)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/hours?hours=${encodeURIComponent(hours)}&${actionsQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);
@@ -772,15 +772,15 @@ class Workspaces {
 	};
 
 	actionMetricsPerMinute = async (minutes: number, actions: number[]): Promise<ActionMetrics> => {
-		let actionQueryString = '';
+		let actionsQueryString = '';
 		for (let i = 0; i < actions.length; i++) {
 			if (i > 0) {
-				actionQueryString += '&';
+				actionsQueryString += '&';
 			}
-			actionQueryString += `action=${encodeURIComponent(actions[i])}`;
+			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-metrics/minutes?minutes=${encodeURIComponent(minutes)}&${actionQueryString}`,
+			`${this.apiURL}/action-metrics/minutes?minutes=${encodeURIComponent(minutes)}&${actionsQueryString}`,
 			http.GET,
 		);
 		r.start = new Date(r.start);

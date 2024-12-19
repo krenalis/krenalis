@@ -68,16 +68,16 @@ func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) 
 
 	// Parse actions.
 	var actions []int
-	if ids, ok := q["action"]; ok {
+	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
 			actions[i], err = strconv.Atoi(id)
 			if err != nil {
-				return nil, errors.BadRequest("an 'action' parameter is not valid")
+				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
 	} else {
-		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+		return nil, errors.BadRequest("at least an action must be provided")
 	}
 
 	// Parse step.
@@ -159,16 +159,16 @@ func (workspace workspace) ActionMetricsPerDate(_ http.ResponseWriter, r *http.R
 
 	// Parse actions.
 	var actions []int
-	if ids, ok := q["action"]; ok {
+	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
 			actions[i], err = strconv.Atoi(id)
 			if err != nil {
-				return nil, errors.BadRequest("an 'action' parameter is not valid")
+				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
 	} else {
-		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+		return nil, errors.BadRequest("at least an action must be provided")
 	}
 
 	metrics, err := ws.ActionMetricsPerDate(r.Context(), start, end, actions)
@@ -208,7 +208,7 @@ func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Re
 
 	// Parse actions.
 	var actions []int
-	if ids, ok := q["action"]; ok {
+	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
 			actions[i], err = strconv.Atoi(id)
@@ -217,7 +217,7 @@ func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Re
 			}
 		}
 	} else {
-		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+		return nil, errors.BadRequest("at least an action must be provided")
 	}
 
 	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), days, core.Day, actions)
@@ -257,16 +257,16 @@ func (workspace workspace) ActionMetricsPerHour(_ http.ResponseWriter, r *http.R
 
 	// Parse actions.
 	var actions []int
-	if ids, ok := q["action"]; ok {
+	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
 			actions[i], err = strconv.Atoi(id)
 			if err != nil {
-				return nil, errors.BadRequest("an 'action' parameter is not valid")
+				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
 	} else {
-		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+		return nil, errors.BadRequest("at least an action must be provided")
 	}
 
 	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), hours, core.Hour, actions)
@@ -306,16 +306,16 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 
 	// Parse actions.
 	var actions []int
-	if ids, ok := q["action"]; ok {
+	if ids, ok := q["actions"]; ok {
 		actions = make([]int, len(ids))
 		for i, id := range ids {
 			actions[i], err = strconv.Atoi(id)
 			if err != nil {
-				return nil, errors.BadRequest("an 'action' parameter is not valid")
+				return nil, errors.BadRequest("an action is not valid")
 			}
 		}
 	} else {
-		return nil, errors.BadRequest("at least an 'action' parameter must be provided")
+		return nil, errors.BadRequest("at least an action must be provided")
 	}
 
 	metrics, err := ws.ActionMetricsPerTimeUnit(r.Context(), minutes, core.Minute, actions)
