@@ -296,7 +296,7 @@ func TestChangeUserSchema(t *testing.T) {
 // checkSchemaProperties is used internally by the tests and checks that the
 // users schema does not contain 'nullable' or 'required' properties.
 func checkSchemaProperties(schema types.Type) error {
-	for path, p := range types.Walk(schema) {
+	for path, p := range types.WalkAll(schema) {
 		if p.Nullable {
 			return fmt.Errorf("unexpected nullable property %q", path)
 		}

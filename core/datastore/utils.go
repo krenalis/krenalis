@@ -169,7 +169,7 @@ func unflatRowRec(pk *propertyKey, row []any, omitNil bool) any {
 // the corresponding column is named "a_b_c".
 func userColumnByProperty(schema types.Type) map[string]meergo.Column {
 	columnByProperty := map[string]meergo.Column{}
-	for path, p := range types.Walk(schema) {
+	for path, p := range types.WalkAll(schema) {
 		if p.Type.Kind() == types.ObjectKind {
 			continue
 		}

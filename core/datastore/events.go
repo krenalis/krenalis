@@ -104,7 +104,7 @@ func init() {
 	eventsColumnsForMerge = make([]meergo.Column, len(eventColumnNameFromPropertyPath)-1)
 
 	i := 0
-	for path, p := range types.Walk(events.Schema) {
+	for path, p := range types.WalkAll(events.Schema) {
 		if p.Type.Kind() == types.ObjectKind || path == "originalTimestamp" {
 			continue
 		}

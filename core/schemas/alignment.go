@@ -45,7 +45,7 @@ func CheckAlignment(t1, t2 types.Type, exportMode *state.ExportMode) error {
 		if exportMode == nil {
 			return nil
 		}
-		for path, p := range types.Walk(t2) {
+		for path, p := range types.WalkAll(t2) {
 			if *exportMode != state.UpdateOnly && p.CreateRequired {
 				return &Error{Msg: fmt.Sprintf("%q property is required for creation", path)}
 			}

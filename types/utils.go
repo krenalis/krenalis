@@ -328,52 +328,39 @@ func SubsetFunc(t Type, f func(p Property) bool) Type {
 	return Type{kind: ObjectKind, vl: ps}
 }
 
-// Walk returns an iterator over all the properties in t in a depth-first order.
+// WalkAll returns an iterator over all the properties in t in a depth-first
+// order.
 //
 // For example:
 //
-//	for path, property := range Walk(t) {
+//	for path, property := range WalkAll(t) {
 //	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
 //	}
 //
-// If a property "x" has type Array(T) or Map(T) and T has the property "y", its
-// path is "x.y".
+// WalkAll - unlike WalkObjects - navigates into Array and Maps, so if a
+// property "x" has type Array(T) or Map(T) and T has the property "y", its path
+// is "x.y".
 //
 // It panics if t is not an Object.
-func Walk(t Type) iter.Seq2[string, Property] {
-	if t.kind != ObjectKind {
-		panic("cannot iterate over a non-Object type")
-	}
-	return func(yield func(path string, property Property) bool) {
-		type entry struct {
-			base string
-			prop *Property
-		}
-		properties := t.vl.([]Property)
-		n := len(properties)
-		pp := make([]entry, n)
-		for i := 0; i < n; i++ {
-			pp[i].prop = &properties[n-1-i]
-		}
-		for len(pp) > 0 {
-			var e entry
-			n := len(pp)
-			e, pp = pp[n-1], pp[:n-1]
-			t := e.prop.Type
-			for t.kind == MapKind || t.kind == ArrayKind {
-				t = t.Elem()
-			}
-			if t.kind == ObjectKind {
-				properties := t.vl.([]Property)
-				for i := len(properties) - 1; i >= 0; i-- {
-					pp = append(pp, entry{base: e.base + e.prop.Name + ".", prop: &properties[i]})
-				}
-			}
-			if !yield(e.base+e.prop.Name, *e.prop) {
-				return
-			}
-		}
-	}
+func WalkAll(t Type) iter.Seq2[string, Property] {
+	return walk(t, true)
+}
+
+// WalkObjects returns an iterator over all the Object properties in t in a
+// depth-first order.
+//
+// For example:
+//
+//	for path, property := range WalkObjects(t) {
+//	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
+//	}
+//
+// WalkObjects - unlike WalkAll - does not navigate through Array or Map
+// properties, navigating only through Object properties.
+//
+// It panics if t is not an Object.
+func WalkObjects(t Type) iter.Seq2[string, Property] {
+	return walk(t, false)
 }
 
 // asRole is a recursive function called by the Type.AsRole method. t must be an
@@ -420,4 +407,46 @@ func asRole(t Type, role Role) (Type, bool) {
 		return Type{}, true
 	}
 	return Type{kind: ObjectKind, vl: roleProperties}, true
+}
+
+// walk is the internal function underlying the exported functions WalkAll and
+// WalkObjects. descendIntoArrayMap determines whether navigation should descend
+// inside the Array and Map properties, thus navigating inside them, or not do
+// so and limit navigation to Objects only.
+func walk(t Type, descendIntoArrayMap bool) iter.Seq2[string, Property] {
+	if t.kind != ObjectKind {
+		panic("cannot iterate over a non-Object type")
+	}
+	return func(yield func(path string, property Property) bool) {
+		type entry struct {
+			base string
+			prop *Property
+		}
+		properties := t.vl.([]Property)
+		n := len(properties)
+		pp := make([]entry, n)
+		for i := 0; i < n; i++ {
+			pp[i].prop = &properties[n-1-i]
+		}
+		for len(pp) > 0 {
+			var e entry
+			n := len(pp)
+			e, pp = pp[n-1], pp[:n-1]
+			t := e.prop.Type
+			if descendIntoArrayMap {
+				for t.kind == MapKind || t.kind == ArrayKind {
+					t = t.Elem()
+				}
+			}
+			if t.kind == ObjectKind {
+				properties := t.vl.([]Property)
+				for i := len(properties) - 1; i >= 0; i-- {
+					pp = append(pp, entry{base: e.base + e.prop.Name + ".", prop: &properties[i]})
+				}
+			}
+			if !yield(e.base+e.prop.Name, *e.prop) {
+				return
+			}
+		}
+	}
 }

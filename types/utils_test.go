@@ -666,7 +666,7 @@ func Test_SubsetFunc(t *testing.T) {
 	}
 }
 
-func Test_Walk(t *testing.T) {
+func Test_WalkAll(t *testing.T) {
 	properties := []Property{
 		{Name: "a", Type: Text()},
 		{Name: "b", Type: Object([]Property{
@@ -710,7 +710,79 @@ func Test_Walk(t *testing.T) {
 		{"d.y.b", Property{Name: "b", Type: Int(32)}},
 		{"d.z", Property{Name: "z", Type: Text()}},
 	}
-	walk := Walk(Object(properties))
+	walk := WalkAll(Object(properties))
+	var i = 0
+	walk(func(path string, p Property) bool {
+		if i > len(iterations) {
+			t.Fatalf("expected %d iterations, got %d", len(iterations), i)
+		}
+		if path != iterations[i].path {
+			t.Fatalf("expected path %q, got %q", iterations[i].path, path)
+		}
+		if err := sameProperty(p, iterations[i].property); err != nil {
+			t.Fatal(err)
+		}
+		i++
+		return true
+	})
+	if i != len(iterations) {
+		t.Fatalf("expected a total of %d iterations, got %d", len(iterations), i)
+	}
+}
+
+func Test_WalkObjects(t *testing.T) {
+	properties := []Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})},
+		{Name: "c", Type: Array(Text())},
+		{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))},
+		{Name: "e", Type: Map(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))},
+	}
+	type entry struct {
+		path     string
+		property Property
+	}
+	iterations := []entry{
+		{"a", Property{Name: "a", Type: Text()}},
+		{"b", Property{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+		})}},
+		{"b.x", Property{Name: "x", Type: Text()}},
+		{"c", Property{Name: "c", Type: Array(Text())}},
+		{"d", Property{Name: "d", Type: Array(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))}},
+		{"e", Property{Name: "e", Type: Map(Object([]Property{
+			{Name: "x", Type: Map(Boolean())},
+			{Name: "y", Type: Map(Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Int(32)},
+			}))},
+			{Name: "z", Type: Text()},
+		}))}},
+	}
+	walk := WalkObjects(Object(properties))
 	var i = 0
 	walk(func(path string, p Property) bool {
 		if i > len(iterations) {

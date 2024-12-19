@@ -29,7 +29,7 @@ func newFlatter(schema types.Type, columnByProperty map[string]meergo.Column) *f
 	flatters := map[string]*flatter{
 		"": {properties: []*flatter{}},
 	}
-	for path, property := range types.Walk(schema) {
+	for path, property := range types.WalkAll(schema) {
 		base := ""
 		if i := strings.LastIndex(path, "."); i > 0 {
 			base = path[:i]
