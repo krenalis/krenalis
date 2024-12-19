@@ -616,6 +616,128 @@ func Test_PropertyExists(t *testing.T) {
 	}
 }
 
+func Test_SubsetByPathFunc(t *testing.T) {
+	testObject := Object([]Property{
+		{Name: "a", Type: Text()},
+		{Name: "b", Type: Object([]Property{
+			{Name: "x", Type: Text()},
+			{Name: "with_description", Type: Text(), Description: "Some description"},
+		})},
+		{Name: "c", Type: Array(Text())},
+		{Name: "d", Type: Object([]Property{
+			{Name: "b", Type: Object([]Property{
+				{Name: "x", Type: Text(), Description: "Description of 'x'"},
+				{Name: "with_description", Type: Text()},
+			}), Description: "Description of 'b'"},
+		}), Description: "Description of 'd'"},
+		{Name: "e", Type: Array(Object([]Property{
+			{Name: "a", Type: Text()},
+			{Name: "b", Type: Text()},
+		}))},
+		{Name: "f", Type: Object([]Property{
+			{Name: "f1", Type: Text(), Label: "Label of f1", Placeholder: "Placeholder of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+		})},
+	})
+	tests := []struct {
+		name     string
+		f        func(path string) bool
+		expected Type
+	}{
+		{
+			name:     "Just a top-level property",
+			f:        func(path string) bool { return path == "a" },
+			expected: Object([]Property{{Name: "a", Type: Text()}}),
+		},
+		{
+			name: "Two top level properties, one have descendants",
+			f:    func(path string) bool { return path == "a" || path == "b" },
+			expected: Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "b", Type: Object([]Property{
+					{Name: "x", Type: Text()},
+					{Name: "with_description", Type: Text(), Description: "Some description"},
+				})},
+			}),
+		},
+		{
+			name: "Two top level properties, one is an Array(Text)",
+			f:    func(path string) bool { return path == "a" || path == "c" },
+			expected: Object([]Property{
+				{Name: "a", Type: Text()},
+				{Name: "c", Type: Array(Text())},
+			}),
+		},
+		{
+			name: "A second level property",
+			f:    func(path string) bool { return path == "b.x" },
+			expected: Object([]Property{
+				{Name: "b", Type: Object([]Property{
+					{Name: "x", Type: Text()},
+				})},
+			}),
+		},
+		{
+			name:     "Not existent properties, returning invalid schema",
+			f:        func(path string) bool { return path == "not_existent_property" },
+			expected: Type{},
+		},
+		{
+			name: "Second level property, for which the description must be kept",
+			f:    func(path string) bool { return path == "b" },
+			expected: Object([]Property{
+				{Name: "b", Type: Object([]Property{
+					{Name: "x", Type: Text()},
+					{Name: "with_description", Type: Text(), Description: "Some description"},
+				})},
+			}),
+		},
+		{
+			name: "Top level property and third level property (with description)",
+			f:    func(path string) bool { return path == "c" || path == "d.b.x" },
+			expected: Object([]Property{
+				{Name: "c", Type: Array(Text())},
+				{Name: "d", Type: Object([]Property{
+					{Name: "b", Type: Object([]Property{
+						{Name: "x", Type: Text(), Description: "Description of 'x'"},
+					}), Description: "Description of 'b'"},
+				}), Description: "Description of 'd'"},
+			}),
+		},
+		{
+			name: "Top level property of type Array(Object)",
+			f:    func(path string) bool { return path == "e" },
+			expected: Object([]Property{
+				{Name: "e", Type: Array(Object([]Property{
+					{Name: "a", Type: Text()},
+					{Name: "b", Type: Text()},
+				}))},
+			}),
+		},
+		{
+			name:     "Referencing an internal Array(Object) property is considered a not found",
+			f:        func(path string) bool { return path == "e.a" },
+			expected: Type{},
+		},
+		{
+			name: "Referencing a top-level Object and its children, which has Label, Placeholder, etc...",
+			f:    func(path string) bool { return strings.HasPrefix(path, "f") },
+			expected: Object([]Property{
+				{Name: "f", Type: Object([]Property{
+					{Name: "f1", Type: Text(), Label: "Label of f1", Placeholder: "Placeholder of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+				})},
+			}),
+		},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			got := SubsetByPathFunc(testObject, test.f)
+			if err := sameType(got, test.expected); err != nil {
+				t.Fatalf("\nexpected: %#v\ngot:      %#v", test.expected, got)
+			}
+		})
+	}
+}
+
 func Test_SubsetFunc(t *testing.T) {
 	o := Object([]Property{
 		{Name: "a", Type: Text()},

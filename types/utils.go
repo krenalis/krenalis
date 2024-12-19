@@ -296,6 +296,104 @@ func PropertyNames(t Type) []string {
 	return names
 }
 
+// SubsetByPathFunc returns a subset of the object t, including the properties
+// for which f returns true and their upper hierarchy, maintaining their
+// original order in type t. The properties of t are navigated recursively by
+// traversing inside the object properties.
+// If the function f does not return true for any property, an invalid Type is
+// returned.
+// It panics if t is not an object, or f is nil.
+func SubsetByPathFunc(t Type, f func(path string) bool) Type {
+	if t.kind != ObjectKind {
+		panic("cannot get a subset of a non-Object type")
+	}
+
+	// depthOf returns the depth of path, starting at 1 (for top-level property
+	// paths, such as "a"). So, for example, the path "x.y.z" has a depth of 3.
+	depthOf := func(path string) int {
+		return strings.Count(path, ".") + 1
+	}
+
+	// Creates a list of all property paths that must actually result in the
+	// returned Object, which are ordered by position (for properties with the
+	// same depth). The list also includes properties from the upper hierarchy,
+	// for which the f function did not return true, since they must also be
+	// returned, having to maintain the structure.
+	toAdd := []string{}
+	propByPath := map[string]Property{} // every property in t.
+	var maxDepth int                    // 1 means: top level property, such as "a".
+	fReturnedTrue := map[string]struct{}{}
+	for path, property := range WalkObjects(t) {
+		propByPath[path] = property
+		if !f(path) {
+			continue
+		}
+		fReturnedTrue[path] = struct{}{}
+		maxDepth = max(maxDepth, depthOf(path))
+		components := strings.Split(path, ".")
+		// In addition to adding the property for which f returned true, also
+		// add its upper hierarchy.
+		for i := range components {
+			hierarchy := strings.Join(components[:i+1], ".")
+			if !slices.Contains(toAdd, hierarchy) {
+				toAdd = append(toAdd, hierarchy)
+			}
+		}
+	}
+
+	// Populate the hierarchy of properties that will be returned, starting with
+	// the deepest level properties and gradually moving up the surface, up to
+	// the top-level ones.
+	for depth := maxDepth; depth >= 1; depth-- {
+		for _, path := range toAdd {
+			// Only take the properties of this level, ignoring the others.
+			if depthOf(path) != depth {
+				continue
+			}
+			property := propByPath[path]
+			// Properties that are not Objects do not need to be managed, as
+			// they have no descendants to populate.
+			if property.Type.kind != ObjectKind {
+				continue
+			}
+			// If the function f returned true for this path, then such property
+			// is taken as is from the initial schema, and its descendants are
+			// preserved, so there is no need to do anything.
+			if _, ok := fReturnedTrue[path]; ok {
+				continue
+			}
+			// This is the case to handle, that is a property of type Object,
+			// with no children, that must be populated with descendants
+			// according to the order indicated in orderedToAdd.
+			var vl []Property
+			for _, p := range toAdd {
+				isDescendant := strings.HasPrefix(p, path+".")
+				if isSon := isDescendant && depthOf(p) == depth+1; isSon {
+					vl = append(vl, propByPath[p])
+				}
+			}
+			property.Type.vl = vl
+			propByPath[path] = property
+		}
+	}
+
+	// Of all the properties to be returned, set aside the top-level ones, which
+	// will then be returned in an Object.
+	var topLevelProps []Property
+	for _, path := range toAdd {
+		if depthOf(path) == 1 {
+			topLevelProps = append(topLevelProps, propByPath[path])
+		}
+	}
+
+	// No properties to return, so return the invalid Type.
+	if len(topLevelProps) == 0 {
+		return Type{}
+	}
+
+	return Object(topLevelProps)
+}
+
 // SubsetFunc returns a subset of the object t, including only the properties
 // for which f returns true, maintaining their original order in type t.
 // If f returns false for all properties, it returns an invalid schema.
