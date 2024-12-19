@@ -725,4 +725,7 @@ func Test_Walk(t *testing.T) {
 		i++
 		return true
 	})
+	if i != len(iterations) {
+		t.Fatalf("expected a total of %d iterations, got %d", len(iterations), i)
+	}
 }
