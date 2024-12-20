@@ -675,7 +675,7 @@ inherit the disabled style */
 }
 
 .action__transformation-function-minimized .monaco-editor-overlaymessage {
-	display: none!important; /* Hide the default read-only message */
+	display: none !important; /* Hide the default read-only message */
 }
 
 .fullscreen-transformation sl-split-panel {
@@ -697,7 +697,7 @@ inherit the disabled style */
 	gap: 10px;
 }
 
-.fullscreen-transformation__panel-title-wrapper sl-button[variant="default"]::part(base) {
+.fullscreen-transformation__panel-title-wrapper sl-button[variant='default']::part(base) {
 	background-color: var(--bg-primary);
 }
 
@@ -727,17 +727,17 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__panel-schema-show-only-selected::part(label) {
-	color: var(--text-primary)
+	color: var(--text-primary);
 }
 
 .fullscreen-transformation__property-wrapper {
 	display: flex;
 	align-items: center;
 	gap: 2px;
-    padding: 8px 20px;
-    width: 100%;
-    border-bottom: 1px solid var(--border-primary);
-    background-color: var(--bg-gray);
+	padding: 8px 20px;
+	width: 100%;
+	border-bottom: 1px solid var(--border-primary);
+	background-color: var(--bg-gray);
 }
 
 .fullscreen-transformation__property {
@@ -791,11 +791,11 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-identifier-icon {
-    color: var(--sl-color-neutral-500);
-    font-size: 17px;
-    position: relative;
-    top: 3px;
-    margin-right: 1px;
+	color: var(--sl-color-neutral-500);
+	font-size: 17px;
+	position: relative;
+	top: 3px;
+	margin-right: 1px;
 }
 
 .fullscreen-transformation__nested--expand > .fullscreen-transformation__property-wrapper--parent > sl-icon {
@@ -803,14 +803,14 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-nested-icon {
-    position: absolute;
-    left: calc(var(--property-indentation) - 20px);
-    width: 12px;
-    height: 12px;
-    border-left: 2px solid var(--sl-color-neutral-400);
-    border-bottom: 2px solid var(--sl-color-neutral-400);
-    border-bottom-left-radius: 2px;
-    top: 2px;
+	position: absolute;
+	left: calc(var(--property-indentation) - 20px);
+	width: 12px;
+	height: 12px;
+	border-left: 2px solid var(--sl-color-neutral-400);
+	border-bottom: 2px solid var(--sl-color-neutral-400);
+	border-bottom-left-radius: 2px;
+	top: 2px;
 }
 
 .fullscreen-transformation__property-copy {
