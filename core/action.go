@@ -98,11 +98,11 @@ type Language string
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source        string   `json:"source"`
-	Language      Language `json:"language"`
-	PreserveJSON  bool     `json:"preserveJSON"`
-	InProperties  []string `json:"inProperties"`
-	OutProperties []string `json:"outProperties"`
+	Source       string   `json:"source"`
+	Language     Language `json:"language"`
+	PreserveJSON bool     `json:"preserveJSON"`
+	InPaths      []string `json:"inPaths"`
+	OutPaths     []string `json:"outPaths"`
 }
 
 // Transformation represents a transformation.
@@ -150,11 +150,11 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	this.Transformation.Mapping = maps.Clone(action.Transformation.Mapping)
 	if function := action.Transformation.Function; function != nil {
 		this.Transformation.Function = &TransformationFunction{
-			Source:        function.Source,
-			Language:      Language(function.Language.String()),
-			PreserveJSON:  function.PreserveJSON,
-			InProperties:  slices.Clone(action.Transformation.InProperties),
-			OutProperties: slices.Clone(action.Transformation.OutProperties),
+			Source:       function.Source,
+			Language:     Language(function.Language.String()),
+			PreserveJSON: function.PreserveJSON,
+			InPaths:      slices.Clone(action.Transformation.InPaths),
+			OutPaths:     slices.Clone(action.Transformation.OutPaths),
 		}
 	}
 	if action.Query != "" {
@@ -530,15 +530,15 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
 			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
-			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_properties = $11, "+
-			"transformation_out_properties = $12, query = $13, format = $14, path = $15, sheet = $16, "+
+			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
+			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
 			"compression = $17, settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
 			"allow_duplicates = $22, table_name = $23, table_key_property = $24, identity_property = $25, "+
 			"reload = reload OR $26, last_change_time_property = $27, last_change_time_format = $28, "+
 			"file_ordering_property_path = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
-			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InProperties,
-			n.Transformation.OutProperties, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.Settings),
+			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
+			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.Settings),
 			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKeyProperty,
 			n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ID,
 		)
@@ -973,10 +973,10 @@ func shouldReload(a *state.Action, n *state.SetAction) bool {
 			return true
 		}
 	}
-	if !slices.Equal(t1.InProperties, t2.InProperties) {
+	if !slices.Equal(t1.InPaths, t2.InPaths) {
 		return true
 	}
-	if !slices.Equal(t1.OutProperties, t2.OutProperties) {
+	if !slices.Equal(t1.OutPaths, t2.OutPaths) {
 		return true
 	}
 	// Check the schemas.
@@ -997,13 +997,13 @@ func toStateTransformation(transformation Transformation, inSchema, outSchema ty
 	if m := transformation.Mapping; m != nil {
 		m, _ := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
 		tr = state.Transformation{
-			Mapping:       transformation.Mapping,
-			InProperties:  m.InProperties(),
-			OutProperties: m.OutProperties(),
+			Mapping:  transformation.Mapping,
+			InPaths:  m.InPaths(),
+			OutPaths: m.OutPaths(),
 		}
 	} else if fn := transformation.Function; fn != nil {
-		slices.Sort(fn.InProperties)
-		slices.Sort(fn.OutProperties)
+		slices.Sort(fn.InPaths)
+		slices.Sort(fn.OutPaths)
 		language := state.JavaScript
 		if fn.Language == "Python" {
 			language = state.Python
@@ -1014,8 +1014,8 @@ func toStateTransformation(transformation Transformation, inSchema, outSchema ty
 				Language:     language,
 				PreserveJSON: fn.PreserveJSON,
 			},
-			InProperties:  fn.InProperties,
-			OutProperties: fn.OutProperties,
+			InPaths:  fn.InPaths,
+			OutPaths: fn.OutPaths,
 		}
 	}
 	return tr

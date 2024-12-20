@@ -621,8 +621,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
-		action.Transformation.InProperties = mapping.InProperties()
-		action.Transformation.OutProperties = mapping.OutProperties()
+		action.Transformation.InPaths = mapping.InPaths()
+		action.Transformation.OutPaths = mapping.OutPaths()
 	case transformation.Function != nil:
 		if transformation.Function.Source == "" {
 			return nil, errors.BadRequest("transformation source is empty")
@@ -655,8 +655,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 			action.Transformation.Function.Language = state.Python
 		}
 		action.Transformation.Function.PreserveJSON = transformation.Function.PreserveJSON
-		action.Transformation.InProperties = types.PropertyNames(action.InSchema)
-		action.Transformation.OutProperties = types.PropertyNames(action.OutSchema)
+		action.Transformation.InPaths = types.PropertyNames(action.InSchema)
+		action.Transformation.OutPaths = types.PropertyNames(action.OutSchema)
 		provider = newTempTransformerProvider(name, transformation.Function.Source, core.transformerProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or transformation) is required")

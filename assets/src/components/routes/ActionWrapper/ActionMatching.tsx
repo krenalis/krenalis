@@ -2,17 +2,12 @@ import React, { useContext, useMemo } from 'react';
 import Section from '../../base/Section/Section';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
-import {
-	flattenSchema,
-	outPropertiesTypesAreEqual,
-	TransformedMapping,
-	validateMatching,
-} from '../../../lib/core/action';
+import { flattenSchema, outPathsTypesAreEqual, TransformedMapping, validateMatching } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionMatching = () => {
-	const { connection, action, setAction, actionType, mode, selectedOutProperties, setSelectedOutProperties } =
+	const { connection, action, setAction, actionType, mode, selectedOutPaths, setSelectedOutPaths } =
 		useContext(ActionContext);
 
 	const flatInMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
@@ -26,7 +21,7 @@ const ActionMatching = () => {
 			for (const [k, v] of Object.entries(flatExternalMatchingSchema)) {
 				const a = v.full;
 				const b = flatOutputSchema[k]?.full;
-				if (b != null && outPropertiesTypesAreEqual(a.type, b.type) && a.nullable === b.nullable) {
+				if (b != null && outPathsTypesAreEqual(a.type, b.type) && a.nullable === b.nullable) {
 					filteredSchema[k] = v;
 				}
 			}
@@ -73,8 +68,8 @@ const ActionMatching = () => {
 					a.transformation.mapping[v].value = '';
 				}
 			} else {
-				const s = selectedOutProperties.filter((p) => p !== v && !p.startsWith(`${v}.`));
-				setSelectedOutProperties(s);
+				const s = selectedOutPaths.filter((p) => p !== v && !p.startsWith(`${v}.`));
+				setSelectedOutPaths(s);
 			}
 		}
 		setAction(a);
@@ -92,8 +87,8 @@ const ActionMatching = () => {
 					a.transformation.mapping[v].value = '';
 				}
 			} else {
-				const s = selectedOutProperties.filter((p) => p !== v && !p.startsWith(`${v}.`));
-				setSelectedOutProperties(s);
+				const s = selectedOutPaths.filter((p) => p !== v && !p.startsWith(`${v}.`));
+				setSelectedOutPaths(s);
 			}
 		}
 		setAction(a);

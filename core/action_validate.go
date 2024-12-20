@@ -12,6 +12,7 @@ package core
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -180,7 +181,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 	// Validate the mapping.
 	var usedOutPaths []string
-	var mappingInProperties int
+	var mappingInPaths int
 	if mapping := action.Transformation.Mapping; mapping != nil {
 		if len(mapping) == 0 {
 			return errors.BadRequest("transformation mapping must have mapped properties")
@@ -196,11 +197,11 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			return errors.BadRequest("invalid mapping: %s", err)
 		}
 		// Input property paths.
-		inProps := transformer.InProperties()
-		mappingInProperties = len(inProps)
+		inProps := transformer.InPaths()
+		mappingInPaths = len(inProps)
 		usedInPaths = append(usedInPaths, inProps...)
 		// Output property paths.
-		usedOutPaths = transformer.OutProperties()
+		usedOutPaths = transformer.OutPaths()
 	}
 	// Validate the transformation.
 	if function := action.Transformation.Function; function != nil {
@@ -230,16 +231,16 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		default:
 			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
 		}
-		err := validateTransformationFunctionProperties("input", inSchema, function.InProperties, dispatchEventsToApps)
+		err := validateTransformationFunctionPaths("input", inSchema, function.InPaths, dispatchEventsToApps)
 		if err != nil {
 			return errors.BadRequest("%s", err.Error())
 		}
-		err = validateTransformationFunctionProperties("output", outSchema, function.OutProperties, dispatchEventsToApps)
+		err = validateTransformationFunctionPaths("output", outSchema, function.OutPaths, dispatchEventsToApps)
 		if err != nil {
 			return errors.BadRequest("%s", err.Error())
 		}
-		usedInPaths = append(usedInPaths, function.InProperties...)
-		usedOutPaths = function.OutProperties
+		usedInPaths = append(usedInPaths, function.InPaths...)
+		usedOutPaths = function.OutPaths
 	}
 	// Validate the path.
 	if action.Path != "" {
@@ -351,7 +352,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 				return errors.BadRequest("output matching property cannot be transformed")
 			}
 		} else if fn := action.Transformation.Function; fn != nil {
-			if slices.Contains(fn.OutProperties, action.Matching.Out) {
+			if slices.Contains(fn.OutPaths, action.Matching.Out) {
 				return errors.BadRequest("output matching property cannot be transformed")
 			}
 		}
@@ -608,7 +609,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 				return errors.BadRequest("an expression must be mapped to the table key property")
 			}
 		} else if t := action.Transformation.Function; t != nil {
-			if !slices.Contains(t.OutProperties, action.TableKeyProperty) {
+			if !slices.Contains(t.OutPaths, action.TableKeyProperty) {
 				return errors.BadRequest("the out properties of the transformation function must contain the table key property")
 			}
 		}
@@ -666,10 +667,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// except when importing identities from events and when dispatching events
 	// to apps, where "constant" transformation functions are supported.
 	if !importUserIdentitiesFromEvents && !dispatchEventsToApps {
-		if action.Transformation.Mapping != nil && mappingInProperties == 0 {
+		if action.Transformation.Mapping != nil && mappingInPaths == 0 {
 			return errors.BadRequest("transformation must map at least one property")
 		}
-		if action.Transformation.Function != nil && len(action.Transformation.Function.InProperties) == 0 {
+		if action.Transformation.Function != nil && len(action.Transformation.Function.InPaths) == 0 {
 			return errors.BadRequest("transformation function must have at least one input property")
 		}
 	}
@@ -845,44 +846,64 @@ func validateLastChangeTimeFormat(format string) error {
 	return nil
 }
 
-// validateTransformationFunctionProperties validates the transformation
-// function properties of an action.
+// validateTransformationFunctionPaths validates the transformation function
+// paths of an action.
 //
 // io specifies whether the validation relates to "input" or "output", schema is
-// the schema of the input or output action, properties are the function
-// properties for input or output, and dispatchEventsToApps indicates if the
-// action dispatches events to apps.
+// the schema of the input or output action, paths are the function paths for
+// input or output, and dispatchEventsToApps indicates if the action dispatches
+// events to apps.
 //
-// It panics if the schema is valid and is not an Object
-func validateTransformationFunctionProperties(io string, schema types.Type, properties []string, dispatchEventsToApps bool) error {
-	if len(properties) == 0 {
-		if properties == nil {
-			return fmt.Errorf("function transformation %s properties cannot be null", io)
+// In more detail:
+//
+//   - paths can never be nil;
+//   - paths can be empty only in the case of the input transformation function
+//     when dispatching events to apps;
+//   - each path must exist in the schema;
+//   - there can be no repeated paths, nor paths that are sub-paths of others
+//     (such as "x.a" and "x");
+//   - paths cannot "cross" Array and Map elements, but only Object, so it is
+//     possible to refer to Array and Map properties only as a whole, not to
+//     their specific elements.
+//
+// It panics if the schema is valid and is not an Object.
+func validateTransformationFunctionPaths(io string, schema types.Type, paths []string, dispatchEventsToApps bool) error {
+	if len(paths) == 0 {
+		if paths == nil {
+			return fmt.Errorf("%s properties of transformation function cannot be null", io)
 		}
 		if dispatchEventsToApps && io == "input" {
 			return nil
 		}
-		return fmt.Errorf("there are no function transformation %s properties", io)
+		return fmt.Errorf("there are no %s properties in transformation function", io)
 	}
-	has := make(map[string]struct{}, len(properties))
-	for _, name := range properties {
-		if _, ok := has[name]; ok {
-			return fmt.Errorf("function transformation %s property %q is repeated", io, name)
+	has := make(map[string]struct{}, len(paths))
+	for _, path := range paths {
+		if !types.IsValidPropertyPath(path) {
+			return fmt.Errorf("transformation function %s property path %q is not valid", io, path)
 		}
-		has[name] = struct{}{}
+		if _, ok := has[path]; ok {
+			return fmt.Errorf("transformation function %s property path %q is repeated", io, path)
+		}
+		for _, path2 := range slices.Sorted(maps.Keys(has)) {
+			if strings.HasPrefix(path, path2) || strings.HasPrefix(path2, path) {
+				if len(path2) < len(path) {
+					path, path2 = path2, path
+				}
+				return fmt.Errorf("transformation function %s paths cannot contain both %q and its sub-property path %q", io, path, path2)
+			}
+		}
+		has[path] = struct{}{}
 	}
 	if schema.Valid() {
-		for _, p := range schema.Properties() {
-			delete(has, p.Name)
+		for path := range types.WalkObjects(schema) {
+			delete(has, path)
 		}
 	}
 	if len(has) > 0 {
-		for _, name := range properties {
-			if _, ok := has[name]; ok {
-				if !types.IsValidPropertyName(name) {
-					return fmt.Errorf("function transformation %s property name %q is not valid", io, name)
-				}
-				return fmt.Errorf("function transformation %s property %q does not exist in schema", io, name)
+		for _, path := range paths {
+			if _, ok := has[path]; ok {
+				return fmt.Errorf("%s property %q of transformation function does not exist in schema", io, path)
 			}
 		}
 	}

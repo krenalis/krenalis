@@ -130,9 +130,9 @@ def transform(event: dict) -> dict:
 	return {
 		"email": event["userId"],
 	}`,
-				Language:      "Python",
-				InProperties:  []string{"userId"},
-				OutProperties: []string{"email"},
+				Language: "Python",
+				InPaths:  []string{"userId"},
+				OutPaths: []string{"email"},
 			},
 		},
 	})

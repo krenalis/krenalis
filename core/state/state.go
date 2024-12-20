@@ -1111,10 +1111,10 @@ func (lang Language) String() string {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Mapping       map[string]string
-	Function      *TransformationFunction
-	InProperties  []string
-	OutProperties []string
+	Mapping  map[string]string
+	Function *TransformationFunction
+	InPaths  []string
+	OutPaths []string
 }
 
 // TransformationFunction represents a transformation function.

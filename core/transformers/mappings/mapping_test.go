@@ -20,7 +20,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func Test_InOutProperties(t *testing.T) {
+func Test_InOutPaths(t *testing.T) {
 
 	inSchema := types.Object([]types.Property{
 		{Name: "a", Type: types.Text()},
@@ -43,40 +43,40 @@ func Test_InOutProperties(t *testing.T) {
 	})
 
 	tests := []struct {
-		expressions   map[string]string
-		inProperties  []string
-		outProperties []string
+		expressions map[string]string
+		inPaths     []string
+		outPaths    []string
 	}{
 		{
 			expressions: map[string]string{
 				"foo": "'a'",
 				"boo": "5",
 			},
-			inProperties:  []string{},
-			outProperties: []string{"boo", "foo"},
+			inPaths:  []string{},
+			outPaths: []string{"boo", "foo"},
 		},
 		{
 			expressions: map[string]string{
 				"foo": "'a'",
 				"boo": "b.k.y",
 			},
-			inProperties:  []string{"b.y"},
-			outProperties: []string{"boo", "foo"},
+			inPaths:  []string{"b.y"},
+			outPaths: []string{"boo", "foo"},
 		},
 		{
 			expressions: map[string]string{
 				"foo": "b.k.x a b.k.x",
 				"boo": "a b.k.x a",
 			},
-			inProperties:  []string{"a", "b.x"},
-			outProperties: []string{"boo", "foo"},
+			inPaths:  []string{"a", "b.x"},
+			outPaths: []string{"boo", "foo"},
 		},
 		{
 			expressions: map[string]string{
 				"foo": "a '-' d.p.s? ' ' b['k'].z '*' c.z c.x",
 			},
-			inProperties:  []string{"a", "b.z", "c.x", "c.z", "d"},
-			outProperties: []string{"foo"},
+			inPaths:  []string{"a", "b.z", "c.x", "c.z", "d"},
+			outPaths: []string{"foo"},
 		},
 	}
 
@@ -86,13 +86,13 @@ func Test_InOutProperties(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			got := mapping.InProperties()
-			if got == nil || !slices.Equal(test.inProperties, got) {
-				t.Fatalf("expected input properties %#v, got %#v", test.inProperties, got)
+			got := mapping.InPaths()
+			if got == nil || !slices.Equal(test.inPaths, got) {
+				t.Fatalf("expected input properties %#v, got %#v", test.inPaths, got)
 			}
-			got = mapping.OutProperties()
-			if got == nil || !slices.Equal(test.outProperties, got) {
-				t.Fatalf("expected output properties %#v, got %#v", test.outProperties, got)
+			got = mapping.OutPaths()
+			if got == nil || !slices.Equal(test.outPaths, got) {
+				t.Fatalf("expected output properties %#v, got %#v", test.outPaths, got)
 			}
 		})
 	}

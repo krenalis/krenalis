@@ -37,14 +37,14 @@ type Record struct {
 
 // Transformer represents a transformer.
 type Transformer struct {
-	action        int
-	provider      Provider
-	inSchema      types.Type
-	outSchema     types.Type
-	mapping       *mappings.Mapping
-	function      *state.TransformationFunction
-	inProperties  []string
-	outProperties []string
+	action    int
+	provider  Provider
+	inSchema  types.Type
+	outSchema types.Type
+	mapping   *mappings.Mapping
+	function  *state.TransformationFunction
+	inPaths   []string
+	outPaths  []string
 }
 
 // New returns a new transformer that transforms values for the provided action.
@@ -66,27 +66,27 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 			return nil, err
 		}
 		t := Transformer{
-			action:        action.ID,
-			inSchema:      action.InSchema,
-			outSchema:     action.OutSchema,
-			mapping:       mapping,
-			inProperties:  action.Transformation.InProperties,
-			outProperties: action.Transformation.OutProperties,
+			action:    action.ID,
+			inSchema:  action.InSchema,
+			outSchema: action.OutSchema,
+			mapping:   mapping,
+			inPaths:   action.Transformation.InPaths,
+			outPaths:  action.Transformation.OutPaths,
 		}
 		return &t, nil
 	}
 
 	if f := action.Transformation.Function; f != nil {
 		t := Transformer{
-			action:        action.ID,
-			provider:      provider,
-			outSchema:     schemaSubset(action.OutSchema, action.Transformation.OutProperties),
-			function:      f,
-			inProperties:  action.Transformation.InProperties,
-			outProperties: action.Transformation.OutProperties,
+			action:    action.ID,
+			provider:  provider,
+			outSchema: schemaSubset(action.OutSchema, action.Transformation.OutPaths),
+			function:  f,
+			inPaths:   action.Transformation.InPaths,
+			outPaths:  action.Transformation.OutPaths,
 		}
-		if len(t.inProperties) > 0 {
-			t.inSchema = schemaSubset(action.InSchema, t.inProperties)
+		if len(t.inPaths) > 0 {
+			t.inSchema = schemaSubset(action.InSchema, t.inPaths)
 		}
 		return &t, nil
 	}
@@ -94,27 +94,26 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 	return nil, errors.New("there is no transformation")
 }
 
-// InProperties returns the input properties of the transformer.
+// InPaths returns the input property paths of the transformer.
 //
-// For functions, it returns the property paths. If the transformation involves
-// dispatching events to apps, the returned slice may be empty. In all other
-// cases, it is never empty.
+// For functions, if the transformation involves dispatching events to apps, the
+// returned slice may be empty. In all other cases, it is never empty.
 //
-// For mappings, it returns the properties found in the expression, sorted
+// For mappings, it returns the property paths found in the expression, sorted
 // alphabetically. The returned properties are guaranteed to be unique. If no
 // property are present, it returns an empty slice.
 //
-// If the expressions contain a map or JSON indexing, Properties does not return
+// If the expressions contain a map or JSON indexing, InPaths does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
-func (t *Transformer) InProperties() []string {
-	return slices.Clone(t.inProperties)
+func (t *Transformer) InPaths() []string {
+	return slices.Clone(t.inPaths)
 }
 
-// OutProperties returns the output properties of the transformer.
-// The properties are sorted by their path, and there is at least one property.
-func (t *Transformer) OutProperties() []string {
-	return slices.Clone(t.outProperties)
+// OutPaths returns the output property paths of the transformer. The properties
+// are sorted by their path, and there is at least one property.
+func (t *Transformer) OutPaths() []string {
+	return slices.Clone(t.outPaths)
 }
 
 // Transform transforms the provided records and updates their properties.
@@ -164,16 +163,16 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 	return nil
 }
 
-// schemaSubset returns a subset of schema containing only the properties
-// specified in properties, preserving their original order in schema.
-// This function panics if schema is not an object type.
-func schemaSubset(schema types.Type, properties []string) types.Type {
-	has := make(map[string]struct{}, len(properties))
-	for _, name := range properties {
-		has[name] = struct{}{}
+// schemaSubset returns a subset of schema containing only the property paths
+// specified in properties, preserving their original order and upper hierarchy
+// in schema. This function panics if schema is not an object type.
+func schemaSubset(schema types.Type, paths []string) types.Type {
+	has := make(map[string]struct{}, len(paths))
+	for _, path := range paths {
+		has[path] = struct{}{}
 	}
-	return types.SubsetFunc(schema, func(p types.Property) bool {
-		_, ok := has[p.Name]
+	return types.SubsetByPathFunc(schema, func(path string) bool {
+		_, ok := has[path]
 		return ok
 	})
 }

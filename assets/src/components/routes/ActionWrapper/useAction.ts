@@ -41,8 +41,8 @@ const useAction = (
 	);
 	const [isFileConnectorChanged, setIsFileConnectorChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
-	const [selectedInProperties, setSelectedInProperties] = useState<string[]>([]);
-	const [selectedOutProperties, setSelectedOutProperties] = useState<string[]>([]);
+	const [selectedInPaths, setSelectedInPaths] = useState<string[]>([]);
+	const [selectedOutPaths, setSelectedOutPaths] = useState<string[]>([]);
 
 	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -58,23 +58,23 @@ const useAction = (
 		}
 		if (actionType.inputSchema) {
 			const flatIn = flattenSchema(actionType.inputSchema);
-			const inProperties = [];
-			for (const p of selectedInProperties) {
+			const inPaths = [];
+			for (const p of selectedInPaths) {
 				if (flatIn[p]) {
-					inProperties.push(p);
+					inPaths.push(p);
 				}
 			}
-			setSelectedInProperties(inProperties);
+			setSelectedInPaths(inPaths);
 		}
 		if (actionType.outputSchema) {
 			const flatOut = flattenSchema(actionType.inputSchema);
-			const outProperties = [];
-			for (const p of selectedOutProperties) {
+			const outPaths = [];
+			for (const p of selectedOutPaths) {
 				if (flatOut[p]) {
-					outProperties.push(p);
+					outPaths.push(p);
 				}
 			}
-			setSelectedOutProperties(outProperties);
+			setSelectedOutPaths(outPaths);
 		}
 	}, [actionType]);
 
@@ -229,8 +229,8 @@ const useAction = (
 				if (transformedAction.transformation.function != null) {
 					// Set the initial value of the selected properties.
 					const func = transformedAction.transformation.function;
-					setSelectedInProperties(func.inProperties);
-					setSelectedOutProperties(func.outProperties);
+					setSelectedInPaths(func.inPaths);
+					setSelectedOutPaths(func.outPaths);
 				}
 			} else {
 				transformedAction = computeDefaultAction(actionType, connection, outputSchema, fields);
@@ -255,8 +255,8 @@ const useAction = (
 				api,
 				connection,
 				true,
-				selectedInProperties,
-				selectedOutProperties,
+				selectedInPaths,
+				selectedOutPaths,
 			);
 		} catch (err) {
 			return err;
@@ -389,10 +389,10 @@ const useAction = (
 		setIsQueryChanged,
 		isTransformationHidden,
 		isTransformationDisabled,
-		selectedInProperties,
-		setSelectedInProperties,
-		selectedOutProperties,
-		setSelectedOutProperties,
+		selectedInPaths,
+		setSelectedInPaths,
+		selectedOutPaths,
+		setSelectedOutPaths,
 	};
 };
 

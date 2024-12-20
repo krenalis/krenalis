@@ -51,10 +51,10 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setIsQueryChanged,
 		isTransformationHidden,
 		isTransformationDisabled,
-		selectedInProperties,
-		setSelectedInProperties,
-		selectedOutProperties,
-		setSelectedOutProperties,
+		selectedInPaths,
+		setSelectedInPaths,
+		selectedOutPaths,
+		setSelectedOutPaths,
 	} = useAction(connection, providedActionType, providedAction, setIsSaveButtonLoading);
 
 	if (isLoading) {
@@ -106,10 +106,10 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				setIsTableChanged,
 				isSaveHidden,
 				setIsSaveHidden,
-				selectedInProperties,
-				setSelectedInProperties,
-				selectedOutProperties,
-				setSelectedOutProperties,
+				selectedInPaths,
+				setSelectedInPaths,
+				selectedOutPaths,
+				setSelectedOutPaths,
 			}}
 		>
 			<div className='action'>

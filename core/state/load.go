@@ -337,8 +337,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		// Read all actions.
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
-			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_properties,\n"+
-			"transformation_out_properties, query, format, path, sheet, compression::TEXT, settings, export_mode,\n"+
+			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_paths,\n"+
+			"transformation_out_paths, query, format, path, sheet, compression::TEXT, settings, export_mode,\n"+
 			"matching_in, matching_out, allow_duplicates, table_name, table_key_property, identity_property,\n"+
 			"last_change_time_property, last_change_time_format, health, file_ordering_property_path\n"+
 			"FROM actions",
@@ -353,7 +353,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					err := rows.Scan(&action.ID, &connectionID, &action.Target, &eventType, &action.Name,
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
 						&filter, &mapping, &function.Source, &function.Language, &function.Version, &function.PreserveJSON,
-						&action.Transformation.InProperties, &action.Transformation.OutProperties, &action.Query, &format,
+						&action.Transformation.InPaths, &action.Transformation.OutPaths, &action.Query, &format,
 						&action.Path, &action.Sheet, &action.Compression, &action.Settings, &action.ExportMode,
 						&action.Matching.In, &action.Matching.Out, &action.ExportOnDuplicates, &action.TableName,
 						&action.TableKeyProperty, &action.IdentityProperty, &action.LastChangeTimeProperty,

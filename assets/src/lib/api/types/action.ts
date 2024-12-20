@@ -23,8 +23,8 @@ interface TransformationFunction {
 	source: string;
 	language: string;
 	preserveJSON: boolean;
-	inProperties: string[];
-	outProperties: string[];
+	inPaths: string[];
+	outPaths: string[];
 }
 
 interface ExpressionToBeExtracted {

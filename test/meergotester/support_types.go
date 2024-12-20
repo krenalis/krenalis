@@ -371,11 +371,11 @@ type Transformation struct {
 }
 
 type TransformationFunction struct {
-	Source        string   `json:"source"`
-	Language      Language `json:"language"`
-	PreserveJSON  bool     `json:"preserveJSON"`
-	InProperties  []string `json:"inProperties"`
-	OutProperties []string `json:"outProperties"`
+	Source       string   `json:"source"`
+	Language     Language `json:"language"`
+	PreserveJSON bool     `json:"preserveJSON"`
+	InPaths      []string `json:"inPaths"`
+	OutPaths     []string `json:"outPaths"`
 }
 
 type Workspace struct {

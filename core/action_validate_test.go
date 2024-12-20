@@ -123,9 +123,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -325,9 +325,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 				ExportMode: CreateOrUpdate,
@@ -413,9 +413,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": event["traits"]["email"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"traits"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"traits"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -466,9 +466,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 				TableName:        "my_users_table",
@@ -568,6 +568,44 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
+		},
+		{
+			name: "GOOD: Source/App/Users - InPaths refers to second-level property of input schema",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "additional_properties", Type: types.Object([]types.Property{
+						{Name: "a", Type: types.Text()},
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths: []string{
+							"email_in",
+							"additional_properties.a",
+							"additional_properties.b",
+							"additional_properties.c",
+						},
+						OutPaths: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
 		},
 
 		// Actions that are invalid.
@@ -705,9 +743,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -731,9 +769,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -755,9 +793,9 @@ func Test_validateAction(t *testing.T) {
 				}),
 				Transformation: Transformation{
 					Function: &TransformationFunction{
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -784,8 +822,8 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -812,9 +850,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "SomeWeirdLanguage",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "SomeWeirdLanguage",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -1048,9 +1086,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -1788,9 +1826,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 				TableName:        "my_users_table",
@@ -1842,9 +1880,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -1872,9 +1910,9 @@ func Test_validateAction(t *testing.T) {
 							`    return {`,
 							`        "email_out": user["email_in"],`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in"},
-						OutProperties: []string{"email_out"},
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
 					},
 				},
 			},
@@ -2165,9 +2203,9 @@ func Test_validateAction(t *testing.T) {
 							`        "email_out": user["email_in"],`,
 							`        "in": user["in"]`,
 							`    }`}, "\n"),
-						Language:      "Python",
-						InProperties:  []string{"email_in", "id"},
-						OutProperties: []string{"email_out", "id"},
+						Language: "Python",
+						InPaths:  []string{"email_in", "id"},
+						OutPaths: []string{"email_out", "id"},
 					},
 				},
 				ExportMode: CreateOrUpdate,
@@ -2287,6 +2325,46 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Website,
 			err:                     "output schema must be invalid when importing events into data warehouse",
+		},
+		{
+			name: "BAD: Source/App/Users - InPaths refers to a not-existent second-level property of input schema",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+					{Name: "additional_properties", Type: types.Object([]types.Property{
+						{Name: "a", Type: types.Text()},
+						{Name: "b", Type: types.Text()},
+						{Name: "c", Type: types.Text()},
+					})},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths: []string{
+							"email_in",
+							"additional_properties.a",
+							"additional_properties.b",
+							"additional_properties.zzzz",
+							"additional_properties.c",
+						},
+						OutPaths: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+			err:                     "input property \"additional_properties.zzzz\" of transformation function does not exist in schema",
 		},
 	}
 
@@ -2467,4 +2545,227 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_validateTransformationFunctionPaths(t *testing.T) {
+
+	tests := []struct {
+		name                 string
+		io                   string
+		schema               types.Type
+		paths                []string
+		dispatchEventsToApps bool
+		expectedError        string
+	}{
+		{
+			name: "Referencing a top-level property",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Text()},
+			}),
+			paths: []string{"x"},
+		},
+		{
+			name: "Paths cannot be nil",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Text()},
+			}),
+			paths:         nil,
+			expectedError: "input properties of transformation function cannot be null",
+		},
+		{
+			name: "Paths cannot be empty",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Text()},
+			}),
+			paths:         []string{},
+			expectedError: "there are no input properties in transformation function",
+		},
+		{
+			name: "Paths can be empty when dispatching events",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Text()},
+			}),
+			paths:                []string{},
+			dispatchEventsToApps: true,
+		},
+		{
+			name: "Referencing a second-level property",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			paths: []string{"x.a"},
+		},
+		{
+			name: "Duplicated property path",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			paths:         []string{"x.a", "x.a"},
+			expectedError: "transformation function input property path \"x.a\" is repeated",
+		},
+		{
+			name: "Two identical paths (first level)",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Text()},
+			}),
+			paths:         []string{"x", "x"},
+			expectedError: "transformation function input property path \"x\" is repeated",
+		},
+		{
+			name: "Two identical paths (second level)",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			paths:         []string{"x.a", "x.a"},
+			expectedError: "transformation function input property path \"x.a\" is repeated",
+		},
+		{
+			name: "Sub path error #1",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Text()},
+				})},
+			}),
+			paths:         []string{"x.a", "x"},
+			expectedError: "transformation function input paths cannot contain both \"x\" and its sub-property path \"x.a\"",
+		},
+		{
+			name: "Sub path error #2",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text()},
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					})},
+				})},
+			}),
+			paths:         []string{"a.b", "a.c", "a.e.f", "a.e.g", "a.e"},
+			expectedError: "transformation function input paths cannot contain both \"a.e\" and its sub-property path \"a.e.f\"",
+		},
+		{
+			name: "Sub path error #3",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text()},
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					})},
+				})},
+			}),
+			paths:         []string{"a.b", "a.c", "a.e", "a.e.f", "a.e.g"},
+			expectedError: "transformation function input paths cannot contain both \"a.e\" and its sub-property path \"a.e.f\"",
+		},
+		{
+			name: "Property path not in schema",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text()},
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					})},
+				})},
+			}),
+			paths:         []string{"a.b", "a.c", "a.e.f", "a.e.z", "a.e.g"},
+			expectedError: "input property \"a.e.z\" of transformation function does not exist in schema",
+		},
+		{
+			name: "Property path refers to an Array sub-property",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text()},
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					})},
+					{Name: "array", Type: types.Array(types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					}))},
+				})},
+			}),
+			paths:         []string{"a.b", "a.c", "a.e.f", "a.array.g", "a.e.g"},
+			expectedError: "input property \"a.array.g\" of transformation function does not exist in schema",
+		},
+		{
+			name: "Property path refers to an Array sub-property",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "a", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.Text()},
+					{Name: "c", Type: types.Text()},
+					{Name: "d", Type: types.Text()},
+					{Name: "e", Type: types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					})},
+					{Name: "map", Type: types.Map(types.Object([]types.Property{
+						{Name: "f", Type: types.Text()},
+						{Name: "g", Type: types.Text()},
+						{Name: "h", Type: types.Text()},
+					}))},
+				})},
+			}),
+			paths:         []string{"a.b", "a.c", "a.e.f", "a.array.g", "a.e.g"},
+			expectedError: "input property \"a.array.g\" of transformation function does not exist in schema",
+		},
+		{
+			name: "Invalid property path",
+			io:   "input",
+			schema: types.Object([]types.Property{
+				{Name: "x", Type: types.Text()},
+			}),
+			paths:         []string{"x", "x.invalid-path.z"},
+			expectedError: "transformation function input property path \"x.invalid-path.z\" is not valid",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotErr := validateTransformationFunctionPaths(test.io, test.schema, test.paths, test.dispatchEventsToApps)
+			var gotErrStr string
+			if gotErr != nil {
+				gotErrStr = gotErr.Error()
+			}
+			if gotErrStr != test.expectedError {
+				t.Fatalf("expected error %q, got %q", test.expectedError, gotErrStr)
+			}
+		})
+	}
+
 }

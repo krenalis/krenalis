@@ -605,8 +605,8 @@ const transformInActionToSet = async (
 	api: API,
 	connection: TransformedConnection,
 	trimFunction: boolean,
-	selectedInProperties: string[],
-	selectedOutProperties: string[],
+	selectedInPaths: string[],
+	selectedOutPaths: string[],
 ): Promise<ActionToSet> => {
 	let mapping: Mapping;
 	let inSchema: ObjectType;
@@ -690,8 +690,8 @@ const transformInActionToSet = async (
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 
-		const inProperties: string[] = [];
-		for (const p of selectedInProperties) {
+		const inPaths: string[] = [];
+		for (const p of selectedInPaths) {
 			// Add the property to the input schema of the action.
 			const property = flattenedInputSchema![p];
 			const parentProperty = flattenedInputSchema![property.root!].full;
@@ -701,19 +701,19 @@ const transformInActionToSet = async (
 			}
 			// Add the property to the input properties of the
 			// transformation function.
-			const isParentSelected = selectedInProperties.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
+			const isParentSelected = selectedInPaths.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
 			if (isParentSelected) {
 				continue;
 			}
-			inProperties.push(p);
+			inPaths.push(p);
 		}
 
-		if (inProperties.length === 0) {
+		if (inPaths.length === 0) {
 			throw new Error('You must select at least one input property');
 		}
 
-		const outProperties: string[] = [];
-		for (const p of selectedOutProperties) {
+		const outPaths: string[] = [];
+		for (const p of selectedOutPaths) {
 			// Add the property to the output schema of the action.
 			const property = flattenedOutputSchema![p];
 			const parentProperty = flattenedOutputSchema![property.root!].full;
@@ -723,14 +723,14 @@ const transformInActionToSet = async (
 			}
 			// Add the property to the output properties of the
 			// transformation function.
-			const isParentSelected = selectedOutProperties.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
+			const isParentSelected = selectedOutPaths.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
 			if (isParentSelected) {
 				continue;
 			}
-			outProperties.push(p);
+			outPaths.push(p);
 		}
 
-		if (outProperties.length === 0) {
+		if (outPaths.length === 0) {
 			throw new Error('You must select at least one output property');
 		}
 
@@ -740,9 +740,9 @@ const transformInActionToSet = async (
 			if (!p.updateRequired && !p.createRequired) {
 				continue;
 			}
-			const isSelected = selectedOutProperties.findIndex((prop) => prop === k) !== -1;
+			const isSelected = selectedOutPaths.findIndex((prop) => prop === k) !== -1;
 			const isParentSelected =
-				selectedOutProperties.findIndex((prop) => {
+				selectedOutPaths.findIndex((prop) => {
 					k.startsWith(`${prop}.`);
 				}) !== -1;
 			const isInMatching = action.matching != null && action.matching.out === k;
@@ -767,8 +767,8 @@ const transformInActionToSet = async (
 			source: source,
 			language: action.transformation.function.language,
 			preserveJSON: action.transformation.function.preserveJSON,
-			inProperties: inProperties,
-			outProperties: outProperties,
+			inPaths: inPaths,
+			outPaths: outPaths,
 		};
 
 		inSchema = inputSchema;
@@ -827,7 +827,7 @@ const transformInActionToSet = async (
 			const a = outMatchingProperty.full;
 			const b = flattenedOutputSchema[outMatching]?.full;
 			const existsInOutputSchema =
-				b != null && outPropertiesTypesAreEqual(a.type, b.type) && a.nullable === b.nullable;
+				b != null && outPathsTypesAreEqual(a.type, b.type) && a.nullable === b.nullable;
 			let p: Property;
 			if (existsInOutputSchema) {
 				p = {
@@ -1024,7 +1024,7 @@ const transformInActionToSet = async (
 				throw new Error('Table key property must be transformed');
 			}
 		} else if (func != null) {
-			if (!func.outProperties.includes(action.tableKeyProperty)) {
+			if (!func.outPaths.includes(action.tableKeyProperty)) {
 				throw new Error('Table key property must be transformed');
 			}
 		}
@@ -1310,7 +1310,7 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 	}
 };
 
-const outPropertiesTypesAreEqual = (externalTyp: Type, outTyp: Type): boolean => {
+const outPathsTypesAreEqual = (externalTyp: Type, outTyp: Type): boolean => {
 	if (externalTyp.name !== outTyp.name) {
 		return false;
 	}
@@ -1353,7 +1353,7 @@ export {
 	doesLastChangeTimePropertyNeedFormat,
 	getTransformationFunctionParameterName,
 	validateMatching,
-	outPropertiesTypesAreEqual,
+	outPathsTypesAreEqual,
 };
 
 export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };

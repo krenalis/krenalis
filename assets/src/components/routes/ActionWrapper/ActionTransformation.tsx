@@ -190,8 +190,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				),
 				language: selectedLanguage,
 				preserveJSON: false,
-				inProperties: [],
-				outProperties: [],
+				inPaths: [],
+				outPaths: [],
 			};
 			setAction(a);
 		}
@@ -248,8 +248,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			source: source,
 			language: selectedLanguage,
 			preserveJSON: a.transformation.function.preserveJSON,
-			inProperties: [],
-			outProperties: [],
+			inPaths: [],
+			outPaths: [],
 		};
 		setAction(a);
 	};
@@ -609,7 +609,7 @@ const TransformationBox = ({
 	const hasNeverChangedMode = useRef<boolean>(true);
 
 	const { connection } = useContext(ConnectionContext);
-	const { setSelectedInProperties, setSelectedOutProperties, isEditing } = useContext(actionContext);
+	const { setSelectedInPaths, setSelectedOutPaths, isEditing } = useContext(actionContext);
 
 	useEffect(() => {
 		if (mode === 'mappings') {
@@ -650,8 +650,8 @@ const TransformationBox = ({
 				a.transformation.mapping = flattenSchema(actionType.outputSchema);
 				a.transformation.function = null;
 				setSelectedLanguage('');
-				setSelectedInProperties([]);
-				setSelectedOutProperties([]);
+				setSelectedInPaths([]);
+				setSelectedOutPaths([]);
 				setAction(a);
 				setMode('mappings');
 			} else {
@@ -663,8 +663,8 @@ const TransformationBox = ({
 					),
 					language: pendingMode.current,
 					preserveJSON: false,
-					inProperties: [],
-					outProperties: [],
+					inPaths: [],
+					outPaths: [],
 				};
 				setSelectedLanguage(pendingMode.current);
 				setAction(a);
@@ -963,10 +963,10 @@ const FullscreenTransformation = ({
 		actionType,
 		connection,
 		mode,
-		selectedInProperties,
-		setSelectedInProperties,
-		selectedOutProperties,
-		setSelectedOutProperties,
+		selectedInPaths,
+		setSelectedInPaths,
+		selectedOutPaths,
+		setSelectedOutPaths,
 	} = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
@@ -1227,10 +1227,10 @@ const FullscreenTransformation = ({
 		let properties;
 		let schema;
 		if (side === 'in') {
-			properties = selectedInProperties;
+			properties = selectedInPaths;
 			schema = flatInputSchema;
 		} else {
-			properties = selectedOutProperties;
+			properties = selectedOutPaths;
 			schema = flatOutputSchema;
 		}
 
@@ -1261,9 +1261,9 @@ const FullscreenTransformation = ({
 		}
 
 		if (side == 'in') {
-			setSelectedInProperties(props);
+			setSelectedInPaths(props);
 		} else {
-			setSelectedOutProperties(props);
+			setSelectedOutPaths(props);
 		}
 	};
 
@@ -1311,8 +1311,8 @@ const FullscreenTransformation = ({
 				api,
 				connection,
 				false,
-				selectedInProperties,
-				selectedOutProperties,
+				selectedInPaths,
+				selectedOutPaths,
 			);
 		} catch (err) {
 			setTimeout(() => {
@@ -1396,8 +1396,8 @@ const FullscreenTransformation = ({
 				api,
 				connection,
 				false,
-				selectedInProperties,
-				selectedOutProperties,
+				selectedInPaths,
+				selectedOutPaths,
 			);
 		} catch (err) {
 			setTimeout(() => {
@@ -1466,8 +1466,8 @@ const FullscreenTransformation = ({
 				api,
 				connection,
 				false,
-				selectedInProperties,
-				selectedOutProperties,
+				selectedInPaths,
+				selectedOutPaths,
 			);
 		} catch (err) {
 			setTimeout(() => {
@@ -1594,9 +1594,9 @@ const FullscreenTransformation = ({
 					}
 
 					if (mode === 'transformation') {
-						const isSelected = selectedInProperties.includes(p.name);
+						const isSelected = selectedInPaths.includes(p.name);
 						const hasSelectedChildren =
-							selectedInProperties.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
+							selectedInPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
 						if (showOnlyInSelected && !isSelected && !hasSelectedChildren) {
 							return null;
 						}
@@ -1612,7 +1612,7 @@ const FullscreenTransformation = ({
 								side='input'
 								mode={mode}
 								exportMode={action.exportMode}
-								selectedProperties={selectedInProperties}
+								selectedProperties={selectedInPaths}
 								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
 							/>
 						);
@@ -1625,7 +1625,7 @@ const FullscreenTransformation = ({
 								side='input'
 								mode={mode}
 								exportMode={action.exportMode}
-								selectedProperties={selectedInProperties}
+								selectedProperties={selectedInPaths}
 								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
 							/>
 						);
@@ -1645,7 +1645,7 @@ const FullscreenTransformation = ({
 						// Show only the checked properties.
 						const filtered = {};
 						for (const k in s) {
-							if (selectedInProperties.includes(k)) {
+							if (selectedInPaths.includes(k)) {
 								filtered[k] = s[k];
 							}
 						}
@@ -1916,9 +1916,9 @@ const FullscreenTransformation = ({
 											}
 
 											if (mode === 'transformation') {
-												const isSelected = selectedOutProperties.includes(p.name);
+												const isSelected = selectedOutPaths.includes(p.name);
 												const hasSelectedChildren =
-													selectedOutProperties.findIndex((prop) =>
+													selectedOutPaths.findIndex((prop) =>
 														prop.startsWith(`${p.name}.`),
 													) !== -1;
 												if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
@@ -1936,7 +1936,7 @@ const FullscreenTransformation = ({
 														side='output'
 														mode={mode}
 														exportMode={action.exportMode}
-														selectedProperties={selectedOutProperties}
+														selectedProperties={selectedOutPaths}
 														onChangeSelectedProperty={(key) =>
 															onChangeSelectedProperty('out', key)
 														}
@@ -1951,7 +1951,7 @@ const FullscreenTransformation = ({
 														side='output'
 														mode={mode}
 														exportMode={action.exportMode}
-														selectedProperties={selectedOutProperties}
+														selectedProperties={selectedOutPaths}
 														onChangeSelectedProperty={(key) =>
 															onChangeSelectedProperty('out', key)
 														}

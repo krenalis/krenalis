@@ -111,14 +111,15 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 	return &Mapping{expressions: mappingExpressions, inPlace: inPlace}, nil
 }
 
-// InProperties returns the input properties, i.e., the properties found in the
-// expressions, sorted alphabetically. The returned properties are guaranteed to
-// be unique. If no property are present, it returns an empty slice.
+// InPaths returns the input property paths, i.e., the property paths found in
+// the expressions, sorted alphabetically. The returned properties are
+// guaranteed to be unique. If no property are present, it returns an empty
+// slice.
 //
 // If the expressions contain a map or JSON indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
-func (mapping *Mapping) InProperties() []string {
+func (mapping *Mapping) InPaths() []string {
 	p := map[string]struct{}{}
 	for _, expr := range mapping.expressions {
 		for _, name := range expr.expr.properties {
@@ -128,24 +129,24 @@ func (mapping *Mapping) InProperties() []string {
 	if len(p) == 0 {
 		return []string{}
 	}
-	properties := make([]string, len(p))
+	paths := make([]string, len(p))
 	i := 0
-	for name := range p {
-		properties[i] = name
+	for path := range p {
+		paths[i] = path
 		i++
 	}
-	slices.Sort(properties)
-	return properties
+	slices.Sort(paths)
+	return paths
 }
 
-// OutProperties returns the output properties sorted by path.
-func (mapping *Mapping) OutProperties() []string {
-	properties := make([]string, 0, len(mapping.expressions))
+// OutPaths returns the output property paths sorted by path.
+func (mapping *Mapping) OutPaths() []string {
+	paths := make([]string, 0, len(mapping.expressions))
 	for _, expr := range mapping.expressions {
-		properties = append(properties, expr.path)
+		paths = append(paths, expr.path)
 	}
-	slices.Sort(properties)
-	return properties
+	slices.Sort(paths)
+	return paths
 }
 
 // Transform transforms properties, that must conform to the expression's source
