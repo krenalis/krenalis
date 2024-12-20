@@ -604,7 +604,9 @@ const transformInActionToSet = async (
 	actionType: TransformedActionType,
 	api: API,
 	connection: TransformedConnection,
-	trimFunction: boolean = false,
+	trimFunction: boolean,
+	selectedInProperties: string[],
+	selectedOutProperties: string[],
 ): Promise<ActionToSet> => {
 	let mapping: Mapping;
 	let inSchema: ObjectType;
@@ -625,13 +627,15 @@ const transformInActionToSet = async (
 		}
 	}
 
+	const purpose: TransformationPurpose =
+		action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
+
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 		const mappingToSave = {};
 		const expressions: ExpressionToBeExtracted[] = [];
-		const purpose: TransformationPurpose =
-			action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
+
 		for (const k in action.transformation.mapping) {
 			const v = action.transformation.mapping[k];
 			if (v.value === '') {
@@ -683,30 +687,92 @@ const transformInActionToSet = async (
 		inSchema = inputSchema;
 		outSchema = outputSchema;
 	} else if (action.transformation.function != null) {
-		inSchema = actionType.inputSchema;
-		outSchema = actionType.outputSchema;
-		if (action.matching?.out) {
-			// recompute the out schema to prevent updates in place on the
-			// version used by the UI.
-			const s = { name: 'Object', properties: [] };
-			for (const p of outSchema.properties) {
-				if (p.name !== action.matching.out) {
-					s.properties.push(p);
-				}
+		const inputSchema: ObjectType = { name: 'Object', properties: [] };
+		const outputSchema: ObjectType = { name: 'Object', properties: [] };
+
+		const inProperties: string[] = [];
+		for (const p of selectedInProperties) {
+			// Add the property to the input schema of the action.
+			const property = flattenedInputSchema![p];
+			const parentProperty = flattenedInputSchema![property.root!].full;
+			const alreadyInSchema = inputSchema.properties!.find((p) => p.name === parentProperty!.name);
+			if (!alreadyInSchema) {
+				inputSchema.properties!.push(parentProperty);
 			}
-			outSchema = s as ObjectType;
+			// Add the property to the input properties of the
+			// transformation function.
+			const isParentSelected = selectedInProperties.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
+			if (isParentSelected) {
+				continue;
+			}
+			inProperties.push(p);
 		}
+
+		if (inProperties.length === 0) {
+			throw new Error('You must select at least one input property');
+		}
+
+		const outProperties: string[] = [];
+		for (const p of selectedOutProperties) {
+			// Add the property to the output schema of the action.
+			const property = flattenedOutputSchema![p];
+			const parentProperty = flattenedOutputSchema![property.root!].full;
+			const alreadyInSchema = outputSchema.properties!.find((p) => p.name === parentProperty!.name);
+			if (!alreadyInSchema) {
+				outputSchema.properties!.push(parentProperty);
+			}
+			// Add the property to the output properties of the
+			// transformation function.
+			const isParentSelected = selectedOutProperties.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
+			if (isParentSelected) {
+				continue;
+			}
+			outProperties.push(p);
+		}
+
+		if (outProperties.length === 0) {
+			throw new Error('You must select at least one output property');
+		}
+
+		for (const k in flattenedOutputSchema) {
+			// Check that each required output property has been passed.
+			const p = flattenedOutputSchema[k];
+			if (!p.updateRequired && !p.createRequired) {
+				continue;
+			}
+			const isSelected = selectedOutProperties.findIndex((prop) => prop === k) !== -1;
+			const isParentSelected =
+				selectedOutProperties.findIndex((prop) => {
+					k.startsWith(`${prop}.`);
+				}) !== -1;
+			const isInMatching = action.matching != null && action.matching.out === k;
+			if (purpose === 'Update' && p.updateRequired && !isSelected && !isParentSelected && !isInMatching) {
+				throw new Error(
+					`Property "${k}" is required for the update and you must pass it in the transformation function`,
+				);
+			} else if (purpose === 'Create' && p.createRequired && !isSelected && !isParentSelected && !isInMatching) {
+				throw new Error(
+					`Property "${k}" is required for creation and you must pass it in the transformation function`,
+				);
+			}
+			continue;
+		}
+
 		let source = action.transformation.function.source;
 		if (trimFunction) {
 			source = source.trim();
 		}
+
 		func = {
 			source: source,
 			language: action.transformation.function.language,
 			preserveJSON: action.transformation.function.preserveJSON,
-			inProperties: inSchema.properties === null ? [] : inSchema.properties.map((p) => p.name),
-			outProperties: outSchema.properties!.map((p) => p.name),
+			inProperties: inProperties,
+			outProperties: outProperties,
 		};
+
+		inSchema = inputSchema;
+		outSchema = outputSchema;
 	} else if (isDestinationFileOnUsers) {
 		inSchema = actionType.inputSchema;
 		outSchema = null; // TODO(Gianluca): it this necessary?

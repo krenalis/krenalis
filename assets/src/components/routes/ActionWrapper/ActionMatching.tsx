@@ -12,7 +12,8 @@ import { checkIfPropertyExists } from './Action.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionMatching = () => {
-	const { connection, action, setAction, actionType, mode } = useContext(ActionContext);
+	const { connection, action, setAction, actionType, mode, selectedOutProperties, setSelectedOutProperties } =
+		useContext(ActionContext);
 
 	const flatInMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
 
@@ -71,10 +72,10 @@ const ActionMatching = () => {
 				if (a.transformation.mapping[v] != null) {
 					a.transformation.mapping[v].value = '';
 				}
+			} else {
+				const s = selectedOutProperties.filter((p) => p !== v && !p.startsWith(`${v}.`));
+				setSelectedOutProperties(s);
 			}
-			// TODO(@Andrea): remove the property from the transformation even
-			// in case of transformation function (this must be addressed after
-			// fixing issue https://github.com/meergo/meergo/issues/507)
 		}
 		setAction(a);
 	};
@@ -90,10 +91,10 @@ const ActionMatching = () => {
 				if (a.transformation.mapping[v] != null) {
 					a.transformation.mapping[v].value = '';
 				}
+			} else {
+				const s = selectedOutProperties.filter((p) => p !== v && !p.startsWith(`${v}.`));
+				setSelectedOutProperties(s);
 			}
-			// TODO(@Andrea): remove the property from the transformation even
-			// in case of transformation function (this must be addressed after
-			// fixing issue https://github.com/meergo/meergo/issues/507)
 		}
 		setAction(a);
 	};

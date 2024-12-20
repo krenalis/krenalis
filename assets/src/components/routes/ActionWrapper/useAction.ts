@@ -7,6 +7,7 @@ import {
 	transformActionType,
 	transformAction,
 	transformInActionToSet,
+	flattenSchema,
 } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/core/connection';
@@ -40,12 +41,42 @@ const useAction = (
 	);
 	const [isFileConnectorChanged, setIsFileConnectorChanged] = useState<boolean>(false);
 	const [isTableChanged, setIsTableChanged] = useState<boolean>(false);
+	const [selectedInProperties, setSelectedInProperties] = useState<string[]>([]);
+	const [selectedOutProperties, setSelectedOutProperties] = useState<string[]>([]);
 
 	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
 
 	const isEditing = providedAction != null;
 	const isImport = connection.role === 'Source';
+
+	useEffect(() => {
+		// Filter out the selected properties that are no longer in the
+		// schemas.
+		if (actionType == null) {
+			return;
+		}
+		if (actionType.inputSchema) {
+			const flatIn = flattenSchema(actionType.inputSchema);
+			const inProperties = [];
+			for (const p of selectedInProperties) {
+				if (flatIn[p]) {
+					inProperties.push(p);
+				}
+			}
+			setSelectedInProperties(inProperties);
+		}
+		if (actionType.outputSchema) {
+			const flatOut = flattenSchema(actionType.inputSchema);
+			const outProperties = [];
+			for (const p of selectedOutProperties) {
+				if (flatOut[p]) {
+					outProperties.push(p);
+				}
+			}
+			setSelectedOutProperties(outProperties);
+		}
+	}, [actionType]);
 
 	useEffect(() => {
 		const setupAction = async () => {
@@ -195,6 +226,12 @@ const useAction = (
 			let transformedAction: TransformedAction;
 			if (isEditing) {
 				transformedAction = transformAction(providedAction, outputSchema);
+				if (transformedAction.transformation.function != null) {
+					// Set the initial value of the selected properties.
+					const func = transformedAction.transformation.function;
+					setSelectedInProperties(func.inProperties);
+					setSelectedOutProperties(func.outProperties);
+				}
 			} else {
 				transformedAction = computeDefaultAction(actionType, connection, outputSchema, fields);
 			}
@@ -211,7 +248,16 @@ const useAction = (
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, values, actionType, api, connection, true);
+			actionToSet = await transformInActionToSet(
+				action,
+				values,
+				actionType,
+				api,
+				connection,
+				true,
+				selectedInProperties,
+				selectedOutProperties,
+			);
 		} catch (err) {
 			return err;
 		}
@@ -343,6 +389,10 @@ const useAction = (
 		setIsQueryChanged,
 		isTransformationHidden,
 		isTransformationDisabled,
+		selectedInProperties,
+		setSelectedInProperties,
+		selectedOutProperties,
+		setSelectedOutProperties,
 	};
 };
 

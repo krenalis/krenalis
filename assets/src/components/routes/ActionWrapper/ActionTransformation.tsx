@@ -36,6 +36,7 @@ import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
+import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import {
@@ -54,12 +55,13 @@ import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import { ActionToSet, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
+import { ActionToSet, ExportMode, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/action';
 import { debounceWithAbort } from '../../../utils/debounce';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
 import JSONbig from 'json-bigint';
+import actionContext from '../../../context/ActionContext';
 
 const lastChangeTimeFormats = {
 	iso8601: 'ISO8601',
@@ -600,13 +602,14 @@ const TransformationBox = ({
 	const [isAlertOpen, setIsAlertOpen] = useState<boolean>(false);
 	const [isCompletelyOpen, setIsCompletelyOpen] = useState<boolean>(false);
 	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
+	const [isEditTooltipOpen, setIsEditTooltipOpen] = useState<boolean>();
 
 	const pendingMode = useRef<string>();
 	const firstValue = useRef<TransformedMapping | TransformationFunction>();
 	const hasNeverChangedMode = useRef<boolean>(true);
 
 	const { connection } = useContext(ConnectionContext);
-	const { isEditing } = useContext(ActionContext);
+	const { setSelectedInProperties, setSelectedOutProperties, isEditing } = useContext(actionContext);
 
 	useEffect(() => {
 		if (mode === 'mappings') {
@@ -630,6 +633,12 @@ const TransformationBox = ({
 		}
 	}, [isFullscreenTransformationOpen]);
 
+	const onEditorMount = (editor) => {
+		editor.onDidAttemptReadOnlyEdit(() => {
+			setIsEditTooltipOpen(true);
+		});
+	};
+
 	const onChangeMode = (delay: number) => {
 		hasNeverChangedMode.current = false;
 		const a = { ...action };
@@ -641,6 +650,8 @@ const TransformationBox = ({
 				a.transformation.mapping = flattenSchema(actionType.outputSchema);
 				a.transformation.function = null;
 				setSelectedLanguage('');
+				setSelectedInProperties([]);
+				setSelectedOutProperties([]);
 				setAction(a);
 				setMode('mappings');
 			} else {
@@ -666,6 +677,7 @@ const TransformationBox = ({
 		if (newMode === mode) {
 			return;
 		}
+		setIsEditTooltipOpen(false);
 		pendingMode.current = newMode;
 		if (
 			isMappingModified(
@@ -686,6 +698,11 @@ const TransformationBox = ({
 		const a = { ...action };
 		a.transformation.function.preserveJSON = !a.transformation.function.preserveJSON;
 		setAction(a);
+	};
+
+	const onOpenTransformation = () => {
+		setIsEditTooltipOpen(false);
+		onOpenFullscreenTransformation();
 	};
 
 	let body: ReactNode;
@@ -773,7 +790,9 @@ const TransformationBox = ({
 					name='actionTransformationEditor'
 					value={action.transformation!.function.source}
 					onChange={(source) => onChangeTransformationFunction(source!)}
-					className='action__transformation-function-minimized'
+					className={!isFullscreenTransformationOpen ? 'action__transformation-function-minimized' : ''}
+					isReadOnly={isFullscreenTransformationOpen ? false : true}
+					onMount={onEditorMount}
 				/>
 				{isTransformationLanguageDeprecated && (
 					<SlAlert variant='danger' className='action__transformation-language-deprecated' open>
@@ -856,23 +875,31 @@ const TransformationBox = ({
 							</SlMenu>
 						</SlDropdown>
 					)}
-					<SlButton
-						className='transformation-box__fullscreen-button'
-						variant='primary'
-						onClick={
-							isFullscreenTransformationOpen
-								? onCloseFullscreenTransformation
-								: onOpenFullscreenTransformation
-						}
-						disabled={isTransformationDisabled}
+					<SlTooltip
+						className='transformation-box__edit-tooltip'
+						trigger='manual'
+						open={isEditTooltipOpen}
+						placement='bottom'
 					>
-						{isCompletelyOpen ? (
-							<SlIcon name='arrows-angle-contract' />
-						) : (
-							<SlIcon name='arrows-angle-expand' />
-						)}
-						{isCompletelyOpen ? 'Exit testing mode' : 'Testing mode'}
-					</SlButton>
+						<div className='transformation-box__fullscreen-tooltip' slot='content'>
+							<span>Open the testing mode to edit the function</span>
+						</div>
+						<SlButton
+							className='transformation-box__fullscreen-button'
+							variant='primary'
+							onClick={
+								isFullscreenTransformationOpen ? onCloseFullscreenTransformation : onOpenTransformation
+							}
+							disabled={isTransformationDisabled}
+						>
+							{isCompletelyOpen ? (
+								<SlIcon name='arrows-angle-contract' />
+							) : (
+								<SlIcon name='arrows-angle-expand' />
+							)}
+							{isCompletelyOpen ? 'Exit testing mode' : 'Testing mode'}
+						</SlButton>
+					</SlTooltip>
 				</div>
 			</div>
 			<div className='transformation-box__body'>{body}</div>
@@ -914,7 +941,11 @@ const FullscreenTransformation = ({
 	outputSchema,
 }: FullscreenTransformationProps) => {
 	const [isInputSchemaSelected, setIsInputSchemaSelected] = useState<boolean>(true);
+	const [inSearchTerm, setInSearchTerm] = useState<string>('');
+	const [showOnlyInSelected, setShowOnlyInSelected] = useState<boolean>();
 	const [isOutputSchemaSelected, setIsOutputSchemaSelected] = useState<boolean>(true);
+	const [outSearchTerm, setOutSearchTerm] = useState<string>('');
+	const [showOnlyOutSelected, setShowOnlyOutSelected] = useState<boolean>();
 	const [samples, setSamples] = useState<Sample[]>(null);
 	const [selectedSample, setSelectedSample] = useState<Sample>(null);
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
@@ -926,7 +957,17 @@ const FullscreenTransformation = ({
 	const [isBodyShown, setIsBodyShown] = useState<boolean>(false);
 
 	const { handleError, api } = useContext(AppContext);
-	const { action, values, actionType, connection, mode } = useContext(ActionContext);
+	const {
+		action,
+		values,
+		actionType,
+		connection,
+		mode,
+		selectedInProperties,
+		setSelectedInProperties,
+		selectedOutProperties,
+		setSelectedOutProperties,
+	} = useContext(ActionContext);
 
 	const firstNameIdentifier = useRef<string>('');
 	const lastNameIdentifier = useRef<string>('');
@@ -947,6 +988,13 @@ const FullscreenTransformation = ({
 			isAppEventsExport: connection.isApp && connection.isDestination && actionType.target === 'Events',
 		};
 	}, [connection, actionType]);
+
+	const { flatInputSchema, flatOutputSchema } = useMemo(() => {
+		return {
+			flatInputSchema: flattenSchema(inputSchema),
+			flatOutputSchema: flattenSchema(outputSchema),
+		};
+	}, [inputSchema, outputSchema]);
 
 	let eventListenerFilter = null;
 	if (isEventBasedUserImport || isAppEventsExport) {
@@ -988,6 +1036,13 @@ const FullscreenTransformation = ({
 		setOutput('');
 		setOutputError('');
 	}, [mode, selectedLanguage]);
+
+	useEffect(() => {
+		setShowOnlyInSelected(false);
+		setShowOnlyOutSelected(false);
+		setInSearchTerm('');
+		setOutSearchTerm('');
+	}, [mode]);
 
 	useEffect(() => {
 		if (isFullscreenTransformationOpen) {
@@ -1152,6 +1207,66 @@ const FullscreenTransformation = ({
 		setIsOutputSchemaSelected(true);
 	};
 
+	const onInputInSearchTerm = (e) => {
+		setInSearchTerm(e.target.value);
+	};
+
+	const onInputOutSearchTerm = (e) => {
+		setOutSearchTerm(e.target.value);
+	};
+
+	const onChangeShowOnlyInSelected = () => {
+		setShowOnlyInSelected(!showOnlyInSelected);
+	};
+
+	const onChangeShowOnlyOutSelected = () => {
+		setShowOnlyOutSelected(!showOnlyOutSelected);
+	};
+
+	const onChangeSelectedProperty = (side: 'in' | 'out', key: string) => {
+		let properties;
+		let schema;
+		if (side === 'in') {
+			properties = selectedInProperties;
+			schema = flatInputSchema;
+		} else {
+			properties = selectedOutProperties;
+			schema = flatOutputSchema;
+		}
+
+		const keys = Object.keys(schema);
+		const children = keys.filter((k) => k.startsWith(`${key}.`));
+
+		const isSelected = properties.includes(key);
+		let props: string[] = [];
+		if (isSelected) {
+			// Remove the property from the selected list.
+			for (const s of properties) {
+				if (s !== key) {
+					props.push(s);
+				}
+			}
+		} else {
+			props = [];
+			props.push(key);
+
+			// Remove any child properties that were previously selected
+			// since only the parent property will be sent to the
+			// server.
+			for (const s of properties) {
+				if (!children.includes(s)) {
+					props.push(s);
+				}
+			}
+		}
+
+		if (side == 'in') {
+			setSelectedInProperties(props);
+		} else {
+			setSelectedOutProperties(props);
+		}
+	};
+
 	const onSampleClick = (e: any, sample: Sample) => {
 		const isOnExecuteButton = e.target === 'SL-ICON-BUTTON';
 		if (isOnExecuteButton) {
@@ -1189,7 +1304,16 @@ const FullscreenTransformation = ({
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
+			actionToSet = await transformInActionToSet(
+				action,
+				values,
+				actionType,
+				api,
+				connection,
+				false,
+				selectedInProperties,
+				selectedOutProperties,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				setOutputError(err.message);
@@ -1265,7 +1389,16 @@ const FullscreenTransformation = ({
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
+			actionToSet = await transformInActionToSet(
+				action,
+				values,
+				actionType,
+				api,
+				connection,
+				false,
+				selectedInProperties,
+				selectedOutProperties,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				setOutputError(err.message);
@@ -1326,7 +1459,16 @@ const FullscreenTransformation = ({
 
 		let actionToSet: ActionToSet;
 		try {
-			actionToSet = await transformInActionToSet(action, values, actionType, api, connection);
+			actionToSet = await transformInActionToSet(
+				action,
+				values,
+				actionType,
+				api,
+				connection,
+				false,
+				selectedInProperties,
+				selectedOutProperties,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				setOutputError(err.message);
@@ -1423,15 +1565,55 @@ const FullscreenTransformation = ({
 	if (isInputSchemaSelected) {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__panel-schema'>
+				<SlInput
+					className='fullscreen-transformation__panel-schema-search'
+					onSlInput={onInputInSearchTerm}
+					value={inSearchTerm}
+					placeholder='Search a property...'
+					size='small'
+					clearable
+				>
+					<SlIcon name='search' slot='prefix' />
+				</SlInput>
+				{mode === 'transformation' && (
+					<SlSwitch
+						className='fullscreen-transformation__panel-schema-show-only-selected'
+						size='small'
+						onSlChange={onChangeShowOnlyInSelected}
+					>
+						Show only selected properties
+					</SlSwitch>
+				)}
 				{inputSchema.properties.map((p) => {
+					if (inSearchTerm !== '') {
+						const name = p.name;
+						const isSearched = name.toLowerCase().includes(inSearchTerm.toLowerCase());
+						if (!isSearched) {
+							return null;
+						}
+					}
+
+					if (mode === 'transformation') {
+						const isSelected = selectedInProperties.includes(p.name);
+						const hasSelectedChildren =
+							selectedInProperties.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
+						if (showOnlyInSelected && !isSelected && !hasSelectedChildren) {
+							return null;
+						}
+					}
+
 					if (p.type.name === 'Object') {
 						return (
 							<TransformationNestedProperties
 								key={p.name}
 								property={p}
 								language={selectedLanguage}
-								nesting={0}
+								nesting={1}
 								side='input'
+								mode={mode}
+								exportMode={action.exportMode}
+								selectedProperties={selectedInProperties}
+								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
 							/>
 						);
 					} else {
@@ -1441,6 +1623,10 @@ const FullscreenTransformation = ({
 								language={selectedLanguage}
 								property={p}
 								side='input'
+								mode={mode}
+								exportMode={action.exportMode}
+								selectedProperties={selectedInProperties}
+								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
 							/>
 						);
 					}
@@ -1454,6 +1640,17 @@ const FullscreenTransformation = ({
 					const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
 					const isLastExecuted =
 						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
+					let sampleToShow = s;
+					if (mode === 'transformation') {
+						// Show only the checked properties.
+						const filtered = {};
+						for (const k in s) {
+							if (selectedInProperties.includes(k)) {
+								filtered[k] = s[k];
+							}
+						}
+						sampleToShow = filtered;
+					}
 					return (
 						<Accordion
 							key={i}
@@ -1504,7 +1701,7 @@ const FullscreenTransformation = ({
 							}
 							details={
 								<div className='fullscreen-transformation__sample-source'>
-									<SyntaxHighlight>{JSONbig.stringify(s, null, 4)}</SyntaxHighlight>
+									<SyntaxHighlight>{JSONbig.stringify(sampleToShow, null, 4)}</SyntaxHighlight>
 								</div>
 							}
 						/>
@@ -1680,22 +1877,69 @@ const FullscreenTransformation = ({
 							<div className='fullscreen-transformation__panel-content'>
 								{isOutputSchemaSelected ? (
 									<div className='fullscreen-transformation__panel-schema'>
+										<SlInput
+											className='fullscreen-transformation__panel-schema-search'
+											onSlInput={onInputOutSearchTerm}
+											value={outSearchTerm}
+											placeholder='Search a property...'
+											size='small'
+											clearable
+										>
+											<SlIcon name='search' slot='prefix' />
+										</SlInput>
+										{mode === 'transformation' && (
+											<SlSwitch
+												className='fullscreen-transformation__panel-schema-show-only-selected'
+												size='small'
+												onSlChange={onChangeShowOnlyOutSelected}
+											>
+												Show only selected properties
+											</SlSwitch>
+										)}
 										{outputSchema.properties.map((p) => {
+											if (outSearchTerm !== '') {
+												const name = p.name;
+												const isSearched = name
+													.toLowerCase()
+													.includes(outSearchTerm.toLowerCase());
+												if (!isSearched) {
+													return null;
+												}
+											}
+
 											if (action.matching?.out && action.matching.out === p.name) {
-												// Do not show the
-												//  property used as out
-												//  matching property as
-												//  it must not be
+												// Do not show the property used
+												//  as external matching
+												//  property as it must not be
 												//  transformed.
 												return null;
-											} else if (p.type.name === 'Object') {
+											}
+
+											if (mode === 'transformation') {
+												const isSelected = selectedOutProperties.includes(p.name);
+												const hasSelectedChildren =
+													selectedOutProperties.findIndex((prop) =>
+														prop.startsWith(`${p.name}.`),
+													) !== -1;
+												if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
+													return null;
+												}
+											}
+
+											if (p.type.name === 'Object') {
 												return (
 													<TransformationNestedProperties
 														key={p.name}
 														property={p}
 														language={selectedLanguage}
-														nesting={0}
+														nesting={1}
 														side='output'
+														mode={mode}
+														exportMode={action.exportMode}
+														selectedProperties={selectedOutProperties}
+														onChangeSelectedProperty={(key) =>
+															onChangeSelectedProperty('out', key)
+														}
 													/>
 												);
 											} else {
@@ -1705,6 +1949,12 @@ const FullscreenTransformation = ({
 														property={p}
 														language={selectedLanguage}
 														side='output'
+														mode={mode}
+														exportMode={action.exportMode}
+														selectedProperties={selectedOutProperties}
+														onChangeSelectedProperty={(key) =>
+															onChangeSelectedProperty('out', key)
+														}
 													/>
 												);
 											}
@@ -1783,6 +2033,10 @@ interface TransformationNestedPropertiesProps {
 	nesting: number;
 	parentName?: string;
 	side: 'input' | 'output';
+	mode: 'mappings' | 'transformation' | '';
+	exportMode: ExportMode;
+	selectedProperties: string[];
+	onChangeSelectedProperty: (key: string) => void;
 }
 
 const TransformationNestedProperties = ({
@@ -1791,26 +2045,36 @@ const TransformationNestedProperties = ({
 	nesting,
 	parentName,
 	side,
+	mode,
+	exportMode,
+	selectedProperties,
+	onChangeSelectedProperty,
 }: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
 	const typ = property.type as ObjectType;
+
 	return (
 		<div
-			className={`fullscreen-transformation__property${isExpanded ? ' fullscreen-transformation__property--expand' : ''}${
-				property.label != null && property.label !== '' ? ' fullscreen-transformation__property--has-label' : ''
-			}`}
+			className={`fullscreen-transformation__nested${isExpanded ? ' fullscreen-transformation__nested--expand' : ''}`}
 		>
-			<div className='fullscreen-transformation__parent-property'>
-				<SlIcon
-					name='caret-right-fill'
-					onClick={() => {
-						setIsExpanded(!isExpanded);
-					}}
-				/>
-				<TransformationProperty property={property} language={language} isParent={true} side={side} />
-			</div>
-			<div className='fullscreen-transformation__sub-properties'>
+			<TransformationProperty
+				property={property}
+				language={language}
+				isParent={true}
+				parentName={parentName}
+				side={side}
+				mode={mode}
+				exportMode={exportMode}
+				selectedProperties={selectedProperties}
+				onChangeSelectedProperty={onChangeSelectedProperty}
+				isExpanded={isExpanded}
+				setIsExpanded={setIsExpanded}
+			/>
+			<div
+				className='fullscreen-transformation__sub-properties'
+				style={{ '--property-indentation': `${nesting * 20}px` } as React.CSSProperties}
+			>
 				{isExpanded &&
 					typ.properties.map((p) => {
 						if (p.type.name === 'Object') {
@@ -1822,6 +2086,10 @@ const TransformationNestedProperties = ({
 									nesting={nesting + 1}
 									parentName={parentName ? parentName + '.' + property.name : property.name}
 									side={side}
+									mode={mode}
+									exportMode={exportMode}
+									selectedProperties={selectedProperties}
+									onChangeSelectedProperty={onChangeSelectedProperty}
 								/>
 							);
 						} else {
@@ -1832,6 +2100,10 @@ const TransformationNestedProperties = ({
 									language={language}
 									parentName={parentName ? parentName + '.' + property.name : property.name}
 									side={side}
+									mode={mode}
+									exportMode={exportMode}
+									selectedProperties={selectedProperties}
+									onChangeSelectedProperty={onChangeSelectedProperty}
 								/>
 							);
 						}
@@ -1847,57 +2119,100 @@ interface TransformationPropertyProps {
 	isParent?: boolean;
 	parentName?: string;
 	side: 'input' | 'output';
+	mode: 'mappings' | 'transformation' | '';
+	exportMode: ExportMode;
+	selectedProperties: string[];
+	onChangeSelectedProperty: (key: string) => void;
+	isExpanded?: boolean;
+	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const TransformationProperty = ({ property, language, isParent, parentName, side }: TransformationPropertyProps) => {
+const TransformationProperty = ({
+	property,
+	language,
+	isParent,
+	parentName,
+	side,
+	mode,
+	exportMode,
+	selectedProperties,
+	onChangeSelectedProperty,
+	isExpanded,
+	setIsExpanded,
+}: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
-	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
-	let isIdentifier = false;
+	let key = property.name;
 	if (parentName) {
-		isIdentifier = workspace.identifiers.includes(parentName + '.' + property.name);
-	} else {
-		isIdentifier = workspace.identifiers.includes(property.name);
+		key = parentName + '.' + property.name;
 	}
 
+	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
+	const isIdentifier = workspace.identifiers.includes(key);
+	const isSelected = selectedProperties.includes(key);
+	const hasSelectedChildren = selectedProperties.findIndex((p) => p.startsWith(`${key}.`)) !== -1;
+	const hasSelectedParent = selectedProperties.findIndex((p) => key.startsWith(`${p}.`)) !== -1;
+
 	return (
-		<div className={isParent ? '' : 'fullscreen-transformation__property'}>
-			<div className='fullscreen-transformation__property-name'>
-				{isIdentifier && (
-					<SlTooltip content='Used as identifier'>
-						<SlIcon className='fullscreen-transformation__property-identifier-icon' name='person-check' />
-					</SlTooltip>
-				)}
-				{property.name}
-				{!isParent && (
-					<SlCopyButton
-						className='fullscreen-transformation__property-copy'
-						value={parentName ? `${parentName}.${property.name}` : property.name}
-						copyLabel='Click to copy'
-						successLabel='✓ Copied'
-						errorLabel='Copying to clipboard is not supported by your browser'
-					/>
-				)}
-			</div>
-			{property.label != null && property.label !== '' && (
-				<span className='fullscreen-transformation__property-label'>{property.label}</span>
+		<div
+			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}`}
+		>
+			{mode === 'transformation' && (
+				<SlCheckbox
+					className='fullscreen-transformation__property-check'
+					checked={isSelected || hasSelectedParent}
+					indeterminate={hasSelectedChildren && !isSelected}
+					disabled={hasSelectedParent}
+					onSlChange={() => onChangeSelectedProperty(key)}
+					size='small'
+				/>
 			)}
-			<div className='fullscreen-transformation__property-type-and-required'>
-				<span>
-					{language === ''
-						? property.type.name
-						: language === 'Python'
-							? fromKindToPythonType(property.type)
-							: fromKindToJavascriptType(property.type)}
-				</span>
-				{side === 'input' ? (
-					property.readOptional && <span>- Optional</span>
-				) : property.createRequired ? (
-					<span>- Required for creation</span>
-				) : property.updateRequired ? (
-					<span>- Required for the update</span>
-				) : null}
+			<div className='fullscreen-transformation__property'>
+				<div className='fullscreen-transformation__property-name'>
+					{parentName != null && <span className='fullscreen-transformation__property-nested-icon' />}
+					{isIdentifier && (
+						<SlTooltip content='Used as identifier'>
+							<SlIcon
+								className='fullscreen-transformation__property-identifier-icon'
+								name='person-check'
+							/>
+						</SlTooltip>
+					)}
+					<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+					<span className='fullscreen-transformation__property-type'>
+						{side === 'input' && property.readOptional && <span>optional</span>}
+						{side === 'output' &&
+							exportMode != null &&
+							((property.createRequired && exportMode.includes('Create')) ||
+								(property.updateRequired && exportMode.includes('Update'))) && <span>required</span>}
+						<span>
+							{language === ''
+								? property.type.name
+								: language === 'Python'
+									? fromKindToPythonType(property.type)
+									: fromKindToJavascriptType(property.type)}
+						</span>
+					</span>
+					{!isParent && (
+						<SlCopyButton
+							className='fullscreen-transformation__property-copy'
+							value={parentName ? `${parentName}.${property.name}` : property.name}
+							copyLabel='Click to copy'
+							successLabel='✓ Copied'
+							errorLabel='Copying to clipboard is not supported by your browser'
+						/>
+					)}
+				</div>
 			</div>
+			{isParent && (
+				<SlIcon
+					className='fullscreen-transformation__property-caret'
+					name='caret-right-fill'
+					onClick={() => {
+						setIsExpanded(!isExpanded);
+					}}
+				/>
+			)}
 		</div>
 	);
 };

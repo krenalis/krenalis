@@ -31,6 +31,10 @@ interface ActionContext {
 	setIsTableChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	isSaveHidden: boolean;
 	setIsSaveHidden: React.Dispatch<React.SetStateAction<boolean>>;
+	selectedInProperties: string[];
+	setSelectedInProperties: React.Dispatch<React.SetStateAction<string[]>>;
+	selectedOutProperties: string[];
+	setSelectedOutProperties: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const actionContext = createContext<ActionContext>({} as ActionContext);
