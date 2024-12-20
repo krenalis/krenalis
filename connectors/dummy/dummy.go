@@ -206,6 +206,11 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
 			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
 			{Name: "additionalProperties", Type: types.Map(types.Text()), Role: types.DestinationRole},
+			{Name: "address", Type: types.Object([]types.Property{
+				{Name: "street", Type: types.Text()},
+				{Name: "postal_code", Type: types.Text()},
+				{Name: "city", Type: types.Text()},
+			})},
 		}), nil
 	}
 	switch eventType {
