@@ -616,7 +616,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	}
 	if !valid {
-		return nil, newNormalizationErrorf(name, "has value %#v that cannot be represented as the %s type", src, typ)
+		return nil, newNormalizationErrorf(name, "has value %#v and type %T that cannot be represented as the %s type", src, src, typ)
 	}
 	return value, nil
 }
