@@ -746,7 +746,8 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 }
 
 type list struct {
-	ID, Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // lists returns the lists.
@@ -763,7 +764,7 @@ func (mc *MailChimp) lists(ctx context.Context) ([]list, error) {
 			params.Set("offset", strconv.Itoa(len(lists)))
 		}
 		var response struct {
-			Lists []list
+			Lists []list `json:"lists"`
 		}
 		err := mc.call(ctx, "GET", "/lists", params, nil, 200, &response)
 		if err != nil {
