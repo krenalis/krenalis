@@ -67,7 +67,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "b", Type: types.Text(), ReadOptional: true},
 				})), ReadOptional: true},
 			}),
-			err: "user schema properties cannot have type 'Array(Object)'",
+			err: `user schema properties cannot have type Array(Object)`,
 		},
 		{
 			name: "Property with a placeholder",
@@ -130,7 +130,7 @@ func Test_checkAllowedTypesUserSchema(t *testing.T) {
 					{Name: "a", Type: types.Text(), ReadOptional: true},
 				})), ReadOptional: true},
 			}),
-			err: "user schema properties cannot have type 'Map(Object)'",
+			err: "user schema properties cannot have type Map(Object)",
 		},
 		{
 			name: "Text with values",

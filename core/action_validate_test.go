@@ -1313,7 +1313,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "properties of destination database must be required for the update",
+			err:                     `output action schema property "email_out" must have UpdateRequired to true`,
 		},
 		{
 			name: "BAD: Source/App/Users - output schema is not an Object",
@@ -1374,7 +1374,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "source actions with Users target cannot have nullable properties in the output schema",
+			err:                     `output action schema property "x.email" cannot be nullable`,
 		},
 		{
 			name: "BAD: Source/App/Users - output schema contains a required property",
@@ -1395,7 +1395,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "only the output properties of destination app actions can be required for creation",
+			err:                     `output action schema property "email_out" cannot have CreateRequire set to true`,
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema contains a nullable property",
@@ -1423,7 +1423,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "destination actions with Users target cannot have nullable properties in the input schema",
+			err:                     `input action schema property "email_in" cannot be nullable`,
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema contains a required property",
@@ -1451,7 +1451,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "only the output properties of destination app actions can be required for creation",
+			err:                     `input action schema property "email_in" cannot have CreateRequire set to true`,
 		},
 		{
 			name: "BAD: Source/App/Events - bad target for connection",
@@ -1524,7 +1524,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "source actions with Users target cannot have meta properties in the output schema",
+			err:                     `output action schema property "__id__" is a meta property`,
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema cannot contain meta properties",
@@ -1553,7 +1553,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "destination actions with Users target cannot have meta properties in the input schema",
+			err:                     `input action schema property "__id__" is a meta property`,
 		},
 		{
 			name: "BAD: Destination/App/Events - input schema must be invalid",
@@ -1663,7 +1663,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "properties of destination database must be required for the update",
+			err:                     `output action schema property "email_out" must have UpdateRequired to true`,
 		},
 		{
 			name: "BAD: Destination/Database/Users - table key property is nullable",
@@ -1686,7 +1686,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "table key property cannot be nullable",
+			err:                     `output action schema property "email_out" cannot be nullable because it is the table key`,
 		},
 		{
 			name: "BAD: Destination/Database/Users - table key property has wrong type",
@@ -1962,7 +1962,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "properties of an action schema cannot have placeholders",
+			err:                     `input action schema property "email_in" has a placeholder, but action schema properties cannot have placeholders`,
 		},
 		{
 			name: "BAD: Source/App/Users - output schema cannot contain a property with a placeholder",
@@ -1983,7 +1983,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "properties of an action schema cannot have placeholders",
+			err:                     `output action schema property "email_out" has a placeholder, but action schema properties cannot have placeholders`,
 		},
 		{
 			name: "BAD: Source/App/Users - output schema - which refers to users - cannot contain conflicting properties",
@@ -2008,7 +2008,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "two properties in the output schema would have the same column name \"email_out\" in the data warehouse, case-insensitively",
+			err:                     `two output action schema properties would have the same column name "email_out" in the data warehouse, case-insensitively`,
 		},
 		{
 			name: "BAD: Source/App/Users - schema properties cannot specify a role",
@@ -2029,7 +2029,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "properties of an action schema can only have the Both role",
+			err:                     `input action schema property "email_in" has the Source role, but action schema properties can only have the Both role`,
 		},
 		{
 			name: "BAD: Source/App/Users - output schema - which refers to users - cannot have a property with type Array(Object)",
@@ -2057,7 +2057,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "source actions with Users target cannot have properties of type 'Array(Object)' in the output schema",
+			err:                     `output action schema property "many_values_out" cannot have type Array(Object)`,
 		},
 		{
 			name: "BAD: Destination/App/Users - filter refers to a property not in input schema",
@@ -2134,7 +2134,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "destination actions with Users target cannot have meta properties in the input schema",
+			err:                     `input action schema property "__id__" is a meta property`,
 		},
 		{
 			name: "BAD: Destination/FileStorage/Users - no input schema",

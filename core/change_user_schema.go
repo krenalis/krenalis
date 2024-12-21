@@ -289,7 +289,7 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		case types.ArrayKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("user schema properties cannot have type '%s(%s)'", p.Type.Kind(), k)
+				return fmt.Errorf("user schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 			if p.Type.Unique() {
 				return fmt.Errorf("user schema properties with type Array cannot specify unique elements")
@@ -308,7 +308,7 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		case types.MapKind:
 			k := p.Type.Elem().Kind()
 			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("user schema properties cannot have type '%s(%s)'", p.Type.Kind(), k)
+				return fmt.Errorf("user schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 		}
 	}

@@ -753,51 +753,47 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 	for path, p := range types.WalkAll(schema) {
 		isTableKey := isOutputDatabaseUserDestination && path == tableKey
 		if p.Placeholder != "" {
-			return errors.New("properties of an action schema cannot have placeholders")
+			return fmt.Errorf("%s action schema property %q has a placeholder, but action schema properties cannot have placeholders", io, path)
 		}
 		if p.Role != types.BothRole {
-			return errors.New("properties of an action schema can only have the Both role")
+			return fmt.Errorf("%s action schema property %q has the %s role, but action schema properties can only have the Both role", io, path, role)
 		}
 		if p.CreateRequired {
 			if role != state.Destination || typ != state.App || io != "output" {
-				return errors.New("only the output properties of destination app actions can be required for creation")
+				return fmt.Errorf("%s action schema property %q cannot have CreateRequire set to true", io, path)
 			}
 		}
 		if isOutputDatabaseUserDestination {
 			if !p.UpdateRequired {
-				return errors.New("properties of destination database must be required for the update")
+				return fmt.Errorf("%s action schema property %q must have UpdateRequired to true", io, path)
 			}
 			if isTableKey && p.Nullable {
-				return errors.New("table key property cannot be nullable")
+				return fmt.Errorf("%s action schema property %q cannot be nullable because it is the table key", io, path)
 			}
 		} else {
 			if p.UpdateRequired && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
-				return fmt.Errorf("%s properties of %s %s with %s target cannot be required for the update",
-					io, strings.ToLower(typ.String()), strings.ToLower(role.String()), target)
+				return fmt.Errorf("%s action schema property %q cannot have UpdateRequired set to true", io, path)
 			}
 		}
 		if isUserSchema {
 			if isMetaProperty(path) {
-				return fmt.Errorf("%s actions with Users target cannot have meta properties in the %s schema",
-					strings.ToLower(role.String()), io)
+				return fmt.Errorf("%s action schema property %q is a meta property", io, path)
 			}
 			if !p.ReadOptional {
-				return errors.New("properties of schemas that refer to the user schema must be optional for reading")
+				return fmt.Errorf("%s action schema property %q must have ReadOptional set to true", io, path)
 			}
 			if p.Nullable {
-				return fmt.Errorf("%s actions with Users target cannot have nullable properties in the %s schema",
-					strings.ToLower(role.String()), io)
+				return fmt.Errorf("%s action schema property %q cannot be nullable", io, path)
 			}
 			if k := p.Type.Kind(); k == types.ArrayKind || k == types.MapKind {
 				elemK := p.Type.Elem().Kind()
 				if elemK == types.ArrayKind || elemK == types.ObjectKind || elemK == types.MapKind {
-					return fmt.Errorf("%s actions with Users target cannot have properties of type '%s(%s)' in the %s schema",
-						strings.ToLower(role.String()), k, elemK, io)
+					return fmt.Errorf("%s action schema property %q cannot have type %s(%s)", io, path, k, elemK)
 				}
 			}
 		} else {
 			if p.ReadOptional && io == "output" {
-				return errors.New("properties in the output schema cannot be optional for reading")
+				return fmt.Errorf("output action schema property %q cannot have ReadOptional set to true", path)
 			}
 		}
 	}

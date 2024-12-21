@@ -278,7 +278,7 @@ func CheckConflictingProperties(io string, schema types.Type) error {
 	for _, c := range columns {
 		name := strings.ToLower(c.Name)
 		if _, ok := names[name]; ok {
-			return fmt.Errorf("two properties in the %s schema would have the same column name %q in the data warehouse, case-insensitively", io, name)
+			return fmt.Errorf("two %s action schema properties would have the same column name %q in the data warehouse, case-insensitively", io, name)
 		}
 		names[name] = struct{}{}
 	}

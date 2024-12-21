@@ -113,7 +113,7 @@ func TestActionsCreation(t *testing.T) {
 					"HasColumnNames": true,
 				}),
 			},
-			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"source actions with Users target cannot have meta properties in the output schema"}}`,
+			err: `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"output action schema property \"__email__\" is a meta property"}}`,
 		},
 		{
 			conn: dstFsID,
