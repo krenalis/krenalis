@@ -31,7 +31,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pkg/sftp v1.13.7
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/relvacode/iso8601 v1.5.0
+	github.com/relvacode/iso8601 v1.6.0
 	github.com/segmentio/backo-go v1.1.0
 	github.com/snowflakedb/gosnowflake v1.12.0
 	github.com/testcontainers/testcontainers-go v0.34.0
