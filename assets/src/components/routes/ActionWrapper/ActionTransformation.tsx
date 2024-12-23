@@ -714,8 +714,11 @@ const TransformationBox = ({
 			if (isOutMatchingProperty) {
 				continue;
 			}
+			const property = action.transformation.mapping[k];
 			const isRequired =
-				action.transformation.mapping[k].createRequired || action.transformation.mapping[k].updateRequired;
+				action.exportMode != null &&
+				((property.createRequired && action.exportMode.includes('Create')) ||
+					(property.updateRequired && action.exportMode.includes('Update')));
 			mappings.push(
 				<div
 					key={k}
@@ -729,12 +732,12 @@ const TransformationBox = ({
 				>
 					<Combobox
 						onInput={onUpdateMapping}
-						initialValue={action.transformation.mapping[k].value}
+						initialValue={property.value}
 						name={k}
-						disabled={isTransformationDisabled || action.transformation.mapping[k].disabled === true}
+						disabled={isTransformationDisabled || property.disabled === true}
 						className='action__transformation-input-property'
 						size='small'
-						error={action.transformation.mapping[k].error}
+						error={property.error}
 						autocompleteExpressions={true}
 						isExpression={true}
 						items={mappingItems}
@@ -774,7 +777,7 @@ const TransformationBox = ({
 								: ''
 						}`}
 					>
-						<SlIcon slot='suffix' name={typeNameToIconName[action.transformation.mapping[k].type]} />
+						<SlIcon slot='suffix' name={typeNameToIconName[property.type]} />
 					</SlInput>
 				</div>,
 			);
