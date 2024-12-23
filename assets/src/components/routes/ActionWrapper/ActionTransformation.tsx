@@ -962,7 +962,7 @@ const FullscreenTransformation = ({
 	const { handleError, api } = useContext(AppContext);
 	const {
 		action,
-		values,
+		settings,
 		actionType,
 		connection,
 		mode,
@@ -1083,7 +1083,7 @@ const FullscreenTransformation = ({
 						action.path,
 						action.sheet,
 						action.compression,
-						values,
+						settings,
 						20,
 					);
 				} catch (err) {
@@ -1309,7 +1309,7 @@ const FullscreenTransformation = ({
 		try {
 			actionToSet = await transformInActionToSet(
 				action,
-				values,
+				settings,
 				actionType,
 				api,
 				connection,
@@ -1394,7 +1394,7 @@ const FullscreenTransformation = ({
 		try {
 			actionToSet = await transformInActionToSet(
 				action,
-				values,
+				settings,
 				actionType,
 				api,
 				connection,
@@ -1464,7 +1464,7 @@ const FullscreenTransformation = ({
 		try {
 			actionToSet = await transformInActionToSet(
 				action,
-				values,
+				settings,
 				actionType,
 				api,
 				connection,

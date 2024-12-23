@@ -12,7 +12,7 @@ interface Connector {
 	destinationDescription: string;
 	type: ConnectorType;
 	hasSheets: boolean;
-	hasUI: boolean;
+	hasSettings: boolean;
 	icon: string;
 	fileExtension: string;
 	sampleQuery: string;

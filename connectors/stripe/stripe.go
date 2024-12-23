@@ -50,14 +50,14 @@ type webhookSettings struct {
 	secret string
 }
 
-type Settings struct {
+type innerSettings struct {
 	APIKey  string
 	webhook webhookSettings
 }
 
 type Stripe struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
 func init() {
@@ -248,17 +248,17 @@ func (stripe *Stripe) Schema(ctx context.Context, target meergo.Targets, role me
 }
 
 // ServeUI serves the connector's user interface.
-func (stripe *Stripe) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (stripe *Stripe) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if stripe.settings != nil {
 			s = *stripe.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, stripe.saveValues(ctx, values)
+		return nil, stripe.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -267,7 +267,7 @@ func (stripe *Stripe) ServeUI(ctx context.Context, event string, values json.Val
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "APIKey", Label: "API Key", HelpText: "Your Stripe API key, which can be a live/test secret key or a restricted API key (see https://stripe.com/docs/keys)."},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -323,15 +323,15 @@ func (stripe *Stripe) call(ctx context.Context, method, path string, body io.Rea
 	return nil
 }
 
-// saveValues saves the user-entered values as settings.
-func (stripe *Stripe) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings.
+func (stripe *Stripe) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	if s.APIKey == "" {
-		return meergo.NewInvalidUIValuesError("API key cannot be empty")
+		return meergo.NewInvalidsettingsError("API key cannot be empty")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -365,7 +365,7 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 		return err
 	}
 
-	settings := Settings{
+	settings := innerSettings{
 		APIKey: stripe.settings.APIKey,
 		webhook: webhookSettings{
 			id:     response.ID,
@@ -378,7 +378,7 @@ func (stripe *Stripe) setupWebhooksEndpoint() error {
 		return err
 	}
 
-	return stripe.saveValues(context.TODO(), values)
+	return stripe.saveSettings(context.TODO(), values)
 }
 
 type stripeErrorResponse struct {
@@ -770,7 +770,7 @@ var schema = types.Object([]types.Property{
 	},
 	{
 		Name:  "invoice_settings",
-		Label: "Invoice Settings",
+		Label: "Invoice innerSettings",
 		Type: types.Object([]types.Property{
 			{
 				Name:  "custom_fields",
@@ -805,7 +805,7 @@ var schema = types.Object([]types.Property{
 			},
 			{
 				Name:  "rendering_options",
-				Label: "Rendering Options",
+				Label: "Rendering Settings",
 				Type: types.Object([]types.Property{
 					{
 						Name:     "amount_tax_display",

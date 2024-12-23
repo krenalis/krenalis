@@ -7,7 +7,7 @@ import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import TransformedConnection from '../../../lib/core/connection';
-import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';
+import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 
@@ -18,7 +18,7 @@ interface FormProps {
 const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
-	const [values, setValues] = useState<ConnectorValues>({});
+	const [settings, setSettings] = useState<ConnectorSettings>({});
 
 	const { api, handleError, showStatus, redirect } = useContext(AppContext);
 
@@ -51,7 +51,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			}
 			setFields(ui.fields);
 			setButtons(ui.buttons);
-			setValues(ui.values);
+			setSettings(ui.settings);
 		};
 		fetchUI();
 	}, []);
@@ -78,7 +78,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 			confirmationButton!.load();
 		}
 		try {
-			validateConnectorSettings(values, fields);
+			validateConnectorSettings(settings, fields);
 		} catch (err) {
 			handleError(err);
 			if (hasConfirmationButton) {
@@ -88,7 +88,7 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		}
 		let ui: ConnectorUIResponse;
 		try {
-			ui = await api.workspaces.connections.uiEvent(c.id, eventName, values);
+			ui = await api.workspaces.connections.uiEvent(c.id, eventName, settings);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -131,12 +131,12 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		if (ui.fields != null) {
 			setFields(ui.fields);
 			setButtons(ui.buttons);
-			setValues(ui.values);
+			setSettings(ui.settings);
 		}
 	};
 
 	const onFieldChange = (name: string, value: any) => {
-		setValues((prevValues) => ({ ...prevValues, [name]: value }));
+		setSettings((prevSettings) => ({ ...prevSettings, [name]: value }));
 	};
 
 	const fieldsToRender: ReactNode[] = [];
@@ -169,7 +169,9 @@ const ConnectionConnectorSettings = ({ connection: c }: FormProps) => {
 		</SlButton>,
 	);
 
-	return <ConnectorUI fields={fieldsToRender} buttons={buttonsToRender} values={values} onChange={onFieldChange} />;
+	return (
+		<ConnectorUI fields={fieldsToRender} buttons={buttonsToRender} settings={settings} onChange={onFieldChange} />
+	);
 };
 
 export default ConnectionConnectorSettings;

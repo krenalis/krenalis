@@ -44,7 +44,7 @@ const ActionFile = () => {
 	const {
 		action,
 		setAction,
-		setValues,
+		setSettings,
 		isFormatLoading,
 		setIsFormatLoading,
 		setIsFormatChanged,
@@ -85,7 +85,7 @@ const ActionFile = () => {
 	useEffect(() => {
 		const fetchFields = async () => {
 			const format = connectors.find((c) => c.name === action.format);
-			if (format.hasUI === false) {
+			if (format.hasSettings === false) {
 				setFileFields([]);
 				setTimeout(() => setIsFormatLoading(false), 300);
 				return;
@@ -139,7 +139,7 @@ const ActionFile = () => {
 				}
 			}
 			setFileFields(ui.fields);
-			setValues(ui.values);
+			setSettings(ui.settings);
 			setTimeout(() => setIsFormatLoading(false), 300);
 		};
 
@@ -169,7 +169,7 @@ const ActionFile = () => {
 		a.lastChangeTimeFormat = '';
 		a.transformation.mapping = flattenSchema(actionType.outputSchema);
 		a.transformation.function = null;
-		setValues(null);
+		setSettings(null);
 		setIsFormatLoading(true);
 		setIsFormatChanged(true);
 		setIsFileChanged(false);
@@ -262,8 +262,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		connection,
 		action,
 		setAction,
-		values,
-		setValues,
+		settings,
+		setSettings,
 		actionType,
 		setActionType,
 		isImport,
@@ -337,8 +337,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			lastUpdate: action.compression,
 		};
 		settingsRef.current = {
-			lastConfirmation: { ...values },
-			lastUpdate: { ...values },
+			lastConfirmation: { ...settings },
+			lastUpdate: { ...settings },
 		};
 	}, []);
 
@@ -364,7 +364,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					action.format,
 					action.path!,
 					action.compression,
-					values,
+					settings,
 				);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
@@ -475,7 +475,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				action.format,
 				action.path!,
 				action.compression,
-				values,
+				settings,
 			);
 		} catch (err) {
 			setTimeout(() => {
@@ -542,7 +542,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const onFieldChange = (name: string, value: any) => {
 		settingsRef.current.lastUpdate[name] = value;
 		checkIsFileChanged();
-		setValues({ ...values, [name]: value });
+		setSettings({ ...settings, [name]: value });
 	};
 
 	const onFilePreview = async () => {
@@ -632,7 +632,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				action.path,
 				action.sheet === undefined ? null : action.sheet,
 				action.compression,
-				values,
+				settings,
 				limit,
 			);
 		} catch (err) {
@@ -647,7 +647,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		if (isConfirmation) {
 			pathRef.current.lastConfirmation = action.path;
 			compressionRef.current.lastConfirmation = action.compression;
-			settingsRef.current.lastConfirmation = { ...values };
+			settingsRef.current.lastConfirmation = { ...settings };
 			if (action.sheet != null) {
 				sheetRef.current.lastConfirmation = action.sheet;
 			}
@@ -768,7 +768,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				</div>
 			)}
 			{fieldsToRender.length > 0 && (
-				<ConnectorUI fields={fieldsToRender} values={values} onChange={onFieldChange} />
+				<ConnectorUI fields={fieldsToRender} settings={settings} onChange={onFieldChange} />
 			)}
 			{isImport && (
 				<div className='action__file-buttons'>

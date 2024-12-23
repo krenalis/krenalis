@@ -60,10 +60,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	// Test the "/records" method.
-	excelUIValues := meergotester.JSONEncodeUIValues(map[string]any{
+	excelSettings := meergotester.JSONEncodeSettings(map[string]any{
 		"HasColumnNames": true,
 	})
-	records, schema := c.Records(storage, "Excel", "storage_users.xlsx", "Sheet1", meergotester.NoCompression, excelUIValues, 100)
+	records, schema := c.Records(storage, "Excel", "storage_users.xlsx", "Sheet1", meergotester.NoCompression, excelSettings, 100)
 
 	expectedRecords := []map[string]any{
 		{"customer_id": "1234", "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith"},

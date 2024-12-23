@@ -53,10 +53,10 @@ func New(conf *meergo.FileStorageConfig) (*Filesystem, error) {
 
 type Filesystem struct {
 	conf     *meergo.FileStorageConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	Root string
 }
 
@@ -94,17 +94,17 @@ func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadC
 }
 
 // ServeUI serves the connector's user interface.
-func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if filesystem.settings != nil {
 			s = *filesystem.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, filesystem.saveValues(ctx, values)
+		return nil, filesystem.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -114,7 +114,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, values 
 			&meergo.Text{Label: "Warning", Text: "The Filesystem connector exposes you local filesystem to Meergo for read and write operations. Use this with caution."},
 			&meergo.Input{Name: "Root", Label: "Root Path", HelpText: "Path to an existent directory of the local filesystem which will be used as the root for the Filesystem storage.", Placeholder: "/home/user/my/dir", Type: "text", MinLength: 1, MaxLength: 253},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -147,27 +147,27 @@ func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, cont
 	return err
 }
 
-// saveValues saves the user-entered values as settings.
-func (filesystem *Filesystem) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (filesystem *Filesystem) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Root.
 	root := s.Root
 	if n := len(root); n == 0 || n > 253 {
-		return meergo.NewInvalidUIValuesError("root path length in bytes must be in range [1,253]")
+		return meergo.NewInvalidsettingsError("root path length in bytes must be in range [1,253]")
 	}
 	if !filepath.IsAbs(root) {
-		return meergo.NewInvalidUIValuesError(`root path must be absolute`)
+		return meergo.NewInvalidsettingsError(`root path must be absolute`)
 	}
 	st, err := os.Stat(root)
 	if os.IsNotExist(err) {
-		return meergo.NewInvalidUIValuesError("root path does not exist")
+		return meergo.NewInvalidsettingsError("root path does not exist")
 	}
 	if !st.IsDir() {
-		return meergo.NewInvalidUIValuesError("root path is not a directory")
+		return meergo.NewInvalidsettingsError("root path is not a directory")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

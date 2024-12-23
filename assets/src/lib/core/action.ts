@@ -14,7 +14,7 @@ import {
 	TransformationFunction,
 	TransformationPurpose,
 } from '../api/types/action';
-import { ConnectorValues } from '../api/types/responses';
+import { ConnectorSettings } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
 import Type, { ArrayType, FloatType, IntType, ObjectType, Property, TextType, UintType } from '../api/types/types';
 import API from '../api/api';
@@ -600,7 +600,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 
 const transformInActionToSet = async (
 	action: TransformedAction,
-	uiValues: ConnectorValues,
+	formatSettings: ConnectorSettings,
 	actionType: TransformedActionType,
 	api: API,
 	connection: TransformedConnection,
@@ -1082,7 +1082,7 @@ const transformInActionToSet = async (
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		compression: action.compression,
 		format: action.format,
-		uiValues: uiValues,
+		formatSettings: formatSettings,
 	};
 
 	if (action.matching != null) {

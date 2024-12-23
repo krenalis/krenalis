@@ -53,7 +53,7 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 		timeLayouts: &format.TimeLayouts,
 	}
 	file.inner, file.err = meergo.RegisteredFile(format.Name).New(&meergo.FileConfig{
-		Settings:    action.Settings,
+		Settings:    action.FormatSettings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	return file

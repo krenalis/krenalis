@@ -76,7 +76,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 		IdentityProperty: "dummyId",
 		Format:           "JSON",
-		UIValues:         meergotester.UIJSONProperties(properties),
+		FormatSettings:   meergotester.SettingsProperties(properties),
 	})
 
 	// Add the action B.
@@ -90,7 +90,7 @@ func TestIdentityResolution(t *testing.T) {
 		},
 		IdentityProperty: "dummyId",
 		Format:           "JSON",
-		UIValues:         meergotester.UIJSONProperties(properties),
+		FormatSettings:   meergotester.SettingsProperties(properties),
 	})
 
 	// Define a function "expectUsers" which checks if the expected user

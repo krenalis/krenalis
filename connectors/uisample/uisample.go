@@ -45,7 +45,7 @@ func New(conf *meergo.AppConfig) (*UISample, error) {
 
 type UISample struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
 // Schema returns the schema of the specified target.
@@ -54,17 +54,17 @@ func (uiSample *UISample) Schema(ctx context.Context, target meergo.Targets, rol
 }
 
 // ServeUI serves the connector's user interface.
-func (uiSample *UISample) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (uiSample *UISample) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if uiSample.settings != nil {
 			s = *uiSample.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, uiSample.saveValues(ctx, values)
+		return nil, uiSample.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -122,16 +122,16 @@ func (uiSample *UISample) ServeUI(ctx context.Context, event string, values json
 				},
 			},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
 }
 
-// saveValues saves the user-entered values as settings.
-func (uiSample *UISample) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (uiSample *UISample) saveSettings(ctx context.Context, options json.Value) error {
+	var s innerSettings
+	err := options.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (uiSample *UISample) saveValues(ctx context.Context, values json.Value) err
 	return nil
 }
 
-type Settings struct {
+type innerSettings struct {
 	MyInput       string
 	MyTextarea    string
 	MySelect      string

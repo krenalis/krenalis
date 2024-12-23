@@ -57,7 +57,7 @@ func New(conf *meergo.DatabaseConfig) (*MySQL, error) {
 
 type MySQL struct {
 	conf     *meergo.DatabaseConfig
-	settings *Settings
+	settings *innerSettings
 	db       *sql.DB
 }
 
@@ -128,21 +128,21 @@ func (my *MySQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo
 }
 
 // ServeUI serves the connector's user interface.
-func (my *MySQL) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if my.settings == nil {
 			s.Port = 3306
 		} else {
 			s = *my.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, my.saveValues(ctx, values, false)
+		return nil, my.saveSettings(ctx, settings, false)
 	case "test":
-		return nil, my.saveValues(ctx, values, true)
+		return nil, my.saveSettings(ctx, settings, true)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -155,7 +155,7 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, values json.Value, r
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
 			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
-		Values: values,
+		Settings: settings,
 		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
@@ -212,33 +212,33 @@ func (my *MySQL) query(ctx context.Context, query string) (meergo.Rows, []meergo
 	return rows, columns, nil
 }
 
-// saveValues saves the user-entered values as settings. If test is true, it
-// validates only the values without saving it.
-func (my *MySQL) saveValues(ctx context.Context, values json.Value, test bool) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings. If test is true, it validates
+// only the settings without saving it.
+func (my *MySQL) saveSettings(ctx context.Context, settings json.Value, test bool) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 16 {
-		return meergo.NewInvalidUIValuesError("username length must be in range [1,16]")
+		return meergo.NewInvalidsettingsError("username length must be in range [1,16]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return meergo.NewInvalidUIValuesError("password length must be in range [1,200]")
+		return meergo.NewInvalidsettingsError("password length must be in range [1,200]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 64 {
-		return meergo.NewInvalidUIValuesError("database length must be in range [1,64]")
+		return meergo.NewInvalidsettingsError("database length must be in range [1,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -256,7 +256,7 @@ func (my *MySQL) saveValues(ctx context.Context, values json.Value, test bool) e
 	return nil
 }
 
-type Settings struct {
+type innerSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -264,7 +264,7 @@ type Settings struct {
 	Database string
 }
 
-func (s *Settings) config() *mysql.Config {
+func (s *innerSettings) config() *mysql.Config {
 	c := mysql.NewConfig()
 	c.User = s.Username
 	c.Passwd = s.Password
@@ -277,7 +277,7 @@ func (s *Settings) config() *mysql.Config {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *Settings) error {
+func testConnection(ctx context.Context, settings *innerSettings) error {
 	mysqlConnector, err := mysql.NewConnector(settings.config())
 	if err != nil {
 		return err

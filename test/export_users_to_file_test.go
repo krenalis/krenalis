@@ -74,7 +74,7 @@ func TestExportUsersToFile(t *testing.T) {
 		Role:      meergotester.Destination,
 		Enabled:   true,
 		Connector: "Filesystem",
-		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+		Settings: meergotester.JSONEncodeSettings(map[string]any{
 			"Root": storage.Root(),
 		}),
 	})
@@ -93,7 +93,7 @@ func TestExportUsersToFile(t *testing.T) {
 			{Name: "gender", Type: types.Text(), ReadOptional: true},
 		}),
 		Format: "CSV",
-		UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"Comma": ",",
 		}),
 		FileOrderingPropertyPath: "email",
@@ -137,7 +137,7 @@ func TestExportUsersToFile(t *testing.T) {
 				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
 			Format: "CSV",
-			UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 				"Comma": ",",
 			}),
 			Compression:              meergotester.Compression(compression),

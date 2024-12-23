@@ -17,7 +17,7 @@ import {
 	ActionSchemasResponse,
 	ExecQueryResponse,
 	RecordsResponse,
-	ConnectorValues,
+	ConnectorSettings,
 } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
 import { sleep } from '../../../utils/sleep';
@@ -31,7 +31,7 @@ const useAction = (
 ) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
-	const [values, setValues] = useState<ConnectorValues>();
+	const [settings, setSettings] = useState<ConnectorSettings>();
 	const [actionType, setActionType] = useState<TransformedActionType>();
 	const [isSaveHidden, setIsSaveHidden] = useState<boolean>(false);
 	const [isQueryChanged, setIsQueryChanged] = useState<boolean>(false);
@@ -144,18 +144,18 @@ const useAction = (
 				// If the action type is an import from a file source,
 				// the input schema is the schema of the file itself.
 				if (fields.includes('File') && isEditing && isImport) {
-					let values: ConnectorValues = null;
+					let s: ConnectorSettings = null;
 					const connector = connectors.find((c) => c.name === providedAction.format);
-					if (connector.hasUI) {
-						// get the values of the file settings.
+					if (connector.hasSettings) {
+						// get the settings of the file.
 						let ui = await api.workspaces.connections.actionUiEvent(
 							connection.id,
 							providedAction.id,
 							'load',
 							null,
 						);
-						values = ui.values;
-						setValues(ui.values);
+						s = ui.settings;
+						setSettings(ui.settings);
 					}
 					let res: RecordsResponse;
 					try {
@@ -165,7 +165,7 @@ const useAction = (
 							providedAction.path!,
 							providedAction.sheet,
 							providedAction.compression,
-							values,
+							s,
 							0,
 						);
 						inputSchema = res.schema;
@@ -250,7 +250,7 @@ const useAction = (
 		try {
 			actionToSet = await transformInActionToSet(
 				action,
-				values,
+				settings,
 				actionType,
 				api,
 				connection,
@@ -371,8 +371,8 @@ const useAction = (
 		isImport,
 		isTransformationFunctionSupported,
 		action,
-		values,
-		setValues,
+		settings,
+		setSettings,
 		isLoading,
 		actionType,
 		setActionType,

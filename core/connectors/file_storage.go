@@ -79,18 +79,18 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 // start or end with "'", and does not contain any of "*", "/", ":", "?", "[",
 // "\", and "]". Sheet names are case-insensitive.
 //
-// uiValues, if the file connector has a UI, represents the user-entered values
-// as a JSON object. compression indicates if the file is compressed and how,
-// and limit restricts the number of records to return. If limit is negative,
-// there is no upper limit on the number of records returned.
+// settings, if the file connector has settings, represents its settings.
+// compression indicates if the file is compressed and how, and limit restricts
+// the number of records to return. If limit is negative, there is no upper
+// limit on the number of records returned.
 //
-// If the UI values are not valid, it returns a *meergo.InvalidUIValuesError
+// If the settings are not valid, it returns a *meergo.InvalidSettingsError
 // error. If the file has no columns, it returns the ErrNoColumnsFound error. If
 // the file does not have the provided sheet, it returns the
 // meergo.ErrSheetNotExist error. If a column type is not supported, it returns
 // a *meergo.UnsupportedColumnTypeError error. If the connector returns an
 // error, it returns a *UnavailableError error.
-func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, uiValues json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
+func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, name, sheet string, settings json.Value, compression state.Compression, limit int) (columns []types.Property, rows []map[string]any, err error) {
 	if storage.err != nil {
 		return nil, nil, storage.err
 	}
@@ -108,13 +108,13 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	}
 
 	_file, err := meergo.RegisteredFile(file.Name).New(&meergo.FileConfig{
-		SetSettings: func(ctx context.Context, settings []byte) error { return nil },
+		SetSettings: func(ctx context.Context, innerSettings []byte) error { return nil },
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
 	}
-	if file.HasUI {
-		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(storage.storage.Role))
+	if file.HasSettings {
+		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -151,13 +151,13 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // Sheets returns the sheets of the file with the provided name. Sheet names
 // are case-insensitive.
 //
-// uiValues, if the file connector has a UI, represents the user-entered values
-// as a JSON object. compression indicates if the file is compressed and how.
+// settings, if the file connector has settings, represents its settings.
+// compression indicates if the file is compressed and how.
 //
-// If the UI values are not valid, it returns a *meergo.InvalidUIValuesError
+// If the settings are not valid, it returns a *meergo.InvalidSettingsError
 // error. If the connector returns an error, it returns a *UnavailableError
 // error. It panics if the file connector does not support sheets.
-func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, uiValues json.Value, compression state.Compression) ([]string, error) {
+func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, name string, settings json.Value, compression state.Compression) ([]string, error) {
 	if storage.err != nil {
 		return nil, storage.err
 	}
@@ -168,8 +168,8 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	if err != nil {
 		return nil, fmt.Errorf("failed to register the file: %s", err)
 	}
-	if file.HasUI {
-		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(storage.storage.Role))
+	if file.HasSettings {
+		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
 			return nil, err
 		}

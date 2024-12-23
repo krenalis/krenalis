@@ -1,11 +1,11 @@
-import { ConnectorValues } from '../api/types/responses';
+import { ConnectorSettings } from '../api/types/responses';
 import ConnectorField, { InputField } from '../api/types/ui';
 
-const validateConnectorSettings = (values: ConnectorValues, fields: ConnectorField[]) => {
-	for (const key in values) {
+const validateConnectorSettings = (settings: ConnectorSettings, fields: ConnectorField[]) => {
+	for (const key in settings) {
 		if (hasOnlyIntegerPart(key, fields)) {
-			const value = values[key];
-			const n = Number(value);
+			const s = settings[key];
+			const n = Number(s);
 			if (isNaN(n)) {
 				throw new Error(`${key} must be a valid number`);
 			}
@@ -14,7 +14,7 @@ const validateConnectorSettings = (values: ConnectorValues, fields: ConnectorFie
 			}
 		}
 	}
-	return values;
+	return settings;
 };
 
 const hasOnlyIntegerPart = (key: string, fields: ConnectorField[]): boolean => {

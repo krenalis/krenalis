@@ -348,7 +348,7 @@ func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int,
 //
 //   - ConnectorNotExist, if the connector does not exist.
 //   - LinkedConnectionNotExist, if a linked connection does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
+//   - InvalidSettings, if the settings are not valid.
 func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
 	this.core.mustBeOpen()
@@ -498,11 +498,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		}
 	}
 
-	// Validate the UI values.
-	if c.HasUI {
-		values := connection.UIValues
-		if values == nil {
-			values = json.Value("{}")
+	// Validate the settings.
+	if c.HasSettings {
+		settings := connection.Settings
+		if settings == nil {
+			settings = json.Value("{}")
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -515,11 +515,11 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
 		conf.OAuth.AccessToken = n.Account.AccessToken
-		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, c, conf, values)
+		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, c, conf, settings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
@@ -939,7 +939,7 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		WebsiteHost:       c.WebsiteHost,
 		LinkedConnections: slices.Clone(c.LinkedConnections),
-		HasUI:             conn.HasUI,
+		HasSettings:       conn.HasSettings,
 		ActionsCount:      len(c.Actions()),
 		Health:            Health(c.Health),
 	}
@@ -975,7 +975,7 @@ func (this *Workspace) Connections() []*Connection {
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			WebsiteHost:       c.WebsiteHost,
 			LinkedConnections: slices.Clone(c.LinkedConnections),
-			HasUI:             conn.HasUI,
+			HasSettings:       conn.HasSettings,
 			ActionsCount:      len(c.Actions()),
 			Health:            Health(c.Health),
 		}
@@ -1321,16 +1321,16 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 }
 
 // ServeUI serves the user interface for the given connector, with the given
-// role. event is the event and values are the user-entered values in JSON
-// format. oAuth is the OAuth token returned by the (*Workspace).OAuth method,
-// it is required if the connector requires OAuth.
+// role. event is the event and settings are connector's settings. oAuth is the
+// OAuth token returned by the (*Workspace).OAuth method, it is required if the
+// connector requires OAuth.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventNotExist, if the event does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Workspace) ServeUI(ctx context.Context, event string, values json.Value, connector string, role Role, oAuth string) ([]byte, error) {
+//   - InvalidSettings, if the settings are not valid.
+func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, oAuth string) ([]byte, error) {
 
 	this.core.mustBeOpen()
 
@@ -1345,8 +1345,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values json.Va
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
 
-	if !c.HasUI {
-		return nil, errors.BadRequest("connector %s does not have a UI", connector)
+	if !c.HasSettings {
+		return nil, errors.BadRequest("connector %s does not have settings", connector)
 	}
 
 	if (oAuth == "") != (c.OAuth == nil) {
@@ -1383,14 +1383,14 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, values json.Va
 
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	ui, err := this.core.connectors.ServeConnectorUI(ctx, c, conf, event, values)
+	ui, err := this.core.connectors.ServeConnectorUI(ctx, c, conf, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
@@ -1766,10 +1766,9 @@ type ConnectionToAdd struct {
 	// are no linked connections or if the connection do not support events.
 	LinkedConnections []int `json:"linkedConnections"`
 
-	// UIValues represents the user-entered values of the connector user interface
-	// in JSON format.
-	// It must be nil if the connector does not have a user interface.
-	UIValues json.Value `json:"uiValues"`
+	// Settings represents the settings of the connector.
+	// It must be nil if the connector does not have settings.
+	Settings json.Value `json:"settings"`
 }
 
 // WarehouseType represents a data warehouse type.

@@ -78,7 +78,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -108,7 +108,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -125,7 +125,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
 				Format: "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -155,7 +155,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "identity",
 				LastChangeTimeProperty: "timestamp",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -184,7 +184,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -212,7 +212,7 @@ func TestActionsCreation(t *testing.T) {
 				},
 				IdentityProperty: "- - invalid - -",
 				Format:           "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -239,7 +239,7 @@ func TestActionsCreation(t *testing.T) {
 				IdentityProperty:       "email",
 				LastChangeTimeProperty: "timestamp",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -254,7 +254,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
@@ -282,7 +282,7 @@ func TestActionsCreation(t *testing.T) {
 				LastChangeTimeProperty: "timestamp",
 				LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 				Format:                 "CSV",
-				UIValues: meergotester.JSONEncodeUIValues(map[string]any{
+				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),

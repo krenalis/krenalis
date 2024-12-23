@@ -1,4 +1,4 @@
-import { ConnectorValues } from './responses';
+import { ConnectorSettings } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType } from './types';
 
@@ -134,7 +134,7 @@ interface ActionToSet {
 	exportOnDuplicates?: boolean;
 	compression: Compression;
 	format: string;
-	uiValues?: ConnectorValues;
+	formatSettings?: ConnectorSettings;
 }
 
 interface ActionError {

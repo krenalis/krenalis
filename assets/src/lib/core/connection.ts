@@ -23,7 +23,7 @@ class TransformedConnection {
 	type: ConnectorType;
 	role: ConnectionRole;
 	connector: TransformedConnector;
-	hasUI: boolean;
+	hasSettings: boolean;
 	enabled: boolean;
 	actionsCount: number;
 	health: Health;
@@ -45,7 +45,7 @@ class TransformedConnection {
 		type: ConnectorType,
 		role: ConnectionRole,
 		connector: TransformedConnector,
-		hasUI: boolean,
+		hasSettings: boolean,
 		enabled: boolean,
 		actionsCount: number,
 		health: Health,
@@ -66,7 +66,7 @@ class TransformedConnection {
 		this.type = type;
 		this.role = role;
 		this.connector = connector;
-		this.hasUI = hasUI;
+		this.hasSettings = hasSettings;
 		this.enabled = enabled;
 		this.actionsCount = actionsCount;
 		this.health = health;

@@ -55,7 +55,7 @@ const addDummySource = async (page: Page): Promise<number> => {
 					strategy: null,
 					websiteHost: '',
 					sendingMode: null,
-					uiValues: { URLForDispatchingEvents: '' },
+					settings: { URLForDispatchingEvents: '' },
 					linkedConnections: null,
 				},
 				'',
@@ -79,7 +79,7 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 					strategy: null,
 					websiteHost: '',
 					sendingMode: 'Cloud',
-					uiValues: { URLForDispatchingEvents: '' },
+					settings: { URLForDispatchingEvents: '' },
 					linkedConnections: null,
 				},
 				'',
@@ -103,7 +103,7 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 					strategy: null,
 					websiteHost: '',
 					sendingMode: null,
-					uiValues: {
+					settings: {
 						Database: config.dbName,
 						Host: config.dbHost,
 						Password: config.dbPassword,
@@ -133,7 +133,7 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 					strategy: null,
 					websiteHost: '',
 					sendingMode: null,
-					uiValues: {
+					settings: {
 						Database: config.dbName,
 						Host: config.dbHost,
 						Password: config.dbPassword,
@@ -167,7 +167,7 @@ const addFileSystemSource = async (
 						strategy: null,
 						websiteHost: '',
 						sendingMode: null,
-						uiValues: {
+						settings: {
 							Root: tempDir,
 						},
 						linkedConnections: null,
@@ -198,7 +198,7 @@ const addFileSystemDestination = async (
 						strategy: null,
 						websiteHost: '',
 						sendingMode: null,
-						uiValues: {
+						settings: {
 							Root: tempDir,
 						},
 						linkedConnections: null,
@@ -225,7 +225,7 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 					strategy: 'AB-C',
 					websiteHost: '',
 					sendingMode: null,
-					uiValues: {},
+					settings: {},
 					linkedConnections: null,
 				},
 				'',

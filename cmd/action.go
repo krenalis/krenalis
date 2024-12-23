@@ -37,14 +37,14 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 		return nil, err
 	}
 	var body struct {
-		Event  string     `json:"event"`
-		Values json.Value `json:"values"`
+		Event          string     `json:"event"`
+		FormatSettings json.Value `json:"formatSettings"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	ui, err := a.ServeUI(r.Context(), body.Event, body.Values)
+	ui, err := a.ServeUI(r.Context(), body.Event, body.FormatSettings)
 	if err != nil {
 		return nil, err
 	}

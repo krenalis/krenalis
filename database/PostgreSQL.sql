@@ -91,7 +91,7 @@ CREATE TABLE actions (
     path varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(31) NOT NULL DEFAULT '',
     compression compression NOT NULL DEFAULT '',
-    settings varchar(65535),
+    format_settings varchar(65535),
     export_mode export_mode NOT NULL DEFAULT '',
     matching_in text NOT NULL,
     matching_out text NOT NULL,

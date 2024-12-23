@@ -1,8 +1,8 @@
 import { createContext } from 'react';
-import { ConnectorValues } from '../lib/api/types/responses';
+import { ConnectorSettings } from '../lib/api/types/responses';
 
 interface FieldSetContextType {
-	values: ConnectorValues;
+	settings: ConnectorSettings;
 	onChange: (name: string, value: any) => void;
 }
 

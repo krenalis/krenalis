@@ -73,7 +73,7 @@ type Connection struct {
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	WebsiteHost       string        `json:"websiteHost"`
 	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
-	HasUI             bool          `json:"hasUI"`
+	HasSettings       bool          `json:"hasSettings"`
 	ActionsCount      int           `json:"actionsCount"`
 	Health            Health        `json:"health"`
 
@@ -434,7 +434,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - FormatNotExist, if the format of the action does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
+//   - InvalidSettings, if the settings are not valid.
 //   - TargetExist, if an action already exists for a target for the connection.
 //   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Connection) AddAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
@@ -454,7 +454,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 	if format != nil {
 		v.format.typ = format.Type
 		v.format.hasSheets = format.HasSheets
-		v.format.hasUI = format.HasUI
+		v.format.hasSettings = format.HasSettings
 	}
 	v.provider = this.core.transformerProvider
 	err := validateAction(action, state.Target(target), v)
@@ -548,17 +548,17 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		function = *n.Transformation.Function
 	}
 
-	// Settings.
-	if format != nil && format.HasUI {
+	// Format settings.
+	if format != nil && format.HasSettings {
 		conf := &connectors.ConnectorConfig{
 			Role:   this.connection.Role,
 			Region: this.connection.Workspace().PrivacyRegion,
 		}
-		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.UIValues)
+		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
@@ -593,7 +593,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
 			"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression,\n" +
-			"settings, export_mode, matching_in, matching_out, allow_duplicates, table_name, table_key_property,\n" +
+			"format_settings, export_mode, matching_in, matching_out, allow_duplicates, table_name, table_key_property,\n" +
 			"identity_property, last_change_time_property, last_change_time_format, file_ordering_property_path)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"
@@ -601,7 +601,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet,
-			n.Compression, string(n.Settings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates,
+			n.Compression, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates,
 			n.TableName, n.TableKeyProperty, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat,
 			n.FileOrderingPropertyPath)
 		if err != nil {
@@ -1117,18 +1117,18 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 // not start or end with "'", and does not contain any of "*", "/", ":", "?",
 // "[", "\", and "]". Sheet names are case-insensitive.
 //
-// compression indicates if the file is compressed and how. uiValues are the
-// user-entered values in JSON format, and limit restricts the number of records
-// to return, between 0 and 100.
+// compression indicates if the file is compressed and how. settings are the
+// format settings, and limit restricts the number of records to return, between
+// 0 and 100.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - FormatNotExist, if the format does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
+//   - InvalidSettings, if the settings are not valid.
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
 //   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) Records(ctx context.Context, format string, path, sheet string, compression Compression, uiValues json.Value, limit int) (json.Value, types.Type, error) {
+func (this *Connection) Records(ctx context.Context, format string, path, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, error) {
 
 	this.core.mustBeOpen()
 
@@ -1175,16 +1175,16 @@ func (this *Connection) Records(ctx context.Context, format string, path, sheet 
 		}
 	}
 
-	// Validate the UI values.
-	if formatConnector.HasUI {
-		if uiValues == nil {
-			return nil, types.Type{}, errors.BadRequest("UI values must be provided because connector %s has a UI", formatConnector.Name)
+	// Validate the settings.
+	if formatConnector.HasSettings {
+		if settings == nil {
+			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has settings", formatConnector.Name)
 		}
-		if !json.Valid(uiValues) || !uiValues.IsObject() {
-			return nil, types.Type{}, errors.BadRequest("UI values are not a valid JSON Object")
+		if !json.Valid(settings) || !settings.IsObject() {
+			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
 		}
-	} else if uiValues != nil {
-		return nil, types.Type{}, errors.BadRequest("UI values cannot be provided because connector %s has no UI", formatConnector.Name)
+	} else if settings != nil {
+		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no settings", formatConnector.Name)
 	}
 
 	// Validate the limit.
@@ -1192,7 +1192,7 @@ func (this *Connection) Records(ctx context.Context, format string, path, sheet 
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, uiValues, state.Compression(compression), limit)
+	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
 	if err != nil {
 		switch err {
 		case connectors.ErrNoColumnsFound:
@@ -1201,8 +1201,8 @@ func (this *Connection) Records(ctx context.Context, format string, path, sheet 
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *meergo.UnsupportedColumnTypeError:
 				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
 			case *connectors.UnavailableError:
@@ -1632,28 +1632,28 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 }
 
 // ServeUI serves the user interface for the connection. event is the event and
-// values are the user-entered values in JSON format.
+// settings are the connection's settings.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - EventNotExist, if the event does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Connection) ServeUI(ctx context.Context, event string, values json.Value) (json.Value, error) {
+//   - InvalidSettings, if the settings are not valid.
+func (this *Connection) ServeUI(ctx context.Context, event string, settings json.Value) (json.Value, error) {
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
 	connector := this.connection.Connector()
-	if !connector.HasUI {
-		return nil, errors.BadRequest("connector %s does not have a UI", connector.Name)
+	if !connector.HasSettings {
+		return nil, errors.BadRequest("connector %s does not have settings", connector.Name)
 	}
-	ui, err := this.core.connectors.ServeConnectionUI(ctx, this.connection, event, values)
+	ui, err := this.core.connectors.ServeConnectionUI(ctx, this.connection, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
@@ -1668,13 +1668,13 @@ func (this *Connection) ServeUI(ctx context.Context, event string, values json.V
 // range [1, 1024].
 //
 // format is the file format and refers to the file connector with multi sheets
-// to use. compression indicates if the file is compressed and how. uiValues are
-// the user-entered values.
+// to use. compression indicates if the file is compressed and how. settings are
+// the format settings.
 //
 // It returns an errors.UnprocessableError error with code
 //   - FormatNotExist, if the format does not exist.
-//   - InvalidUIValues, if the UI values are not valid.
-func (this *Connection) Sheets(ctx context.Context, format string, path string, uiValues json.Value, compression Compression) ([]string, error) {
+//   - InvalidSettings, if the settings are not valid.
+func (this *Connection) Sheets(ctx context.Context, format string, path string, settings json.Value, compression Compression) ([]string, error) {
 
 	this.core.mustBeOpen()
 
@@ -1702,27 +1702,27 @@ func (this *Connection) Sheets(ctx context.Context, format string, path string, 
 		return nil, errors.BadRequest("format %q does not refer to a file connector", format)
 	}
 
-	// Validate the UI values.
-	if formatConnector.HasUI {
-		if uiValues == nil {
-			return nil, errors.BadRequest("UI values must be provided because format %s has a UI", formatConnector.Name)
+	// Validate the settings.
+	if formatConnector.HasSettings {
+		if settings == nil {
+			return nil, errors.BadRequest("format settings must be provided because format %s has settings", formatConnector.Name)
 		}
-		if !json.Valid(uiValues) || !uiValues.IsObject() {
-			return nil, errors.BadRequest("UI values are not a valid JSON Object")
+		if !json.Valid(settings) || !settings.IsObject() {
+			return nil, errors.BadRequest("format settings are not a valid JSON Object")
 		}
-	} else if uiValues != nil {
-		return nil, errors.BadRequest("UI values cannot be provided because format %s has no UI", formatConnector.Name)
+	} else if settings != nil {
+		return nil, errors.BadRequest("format settings cannot be provided because format %s has no settings", formatConnector.Name)
 	}
 
 	if !formatConnector.HasSheets {
 		return nil, errors.BadRequest("format %s does not have sheets", formatConnector.Name)
 	}
 
-	sheets, err := this.storage().Sheets(ctx, formatConnector, path, uiValues, state.Compression(compression))
+	sheets, err := this.storage().Sheets(ctx, formatConnector, path, settings, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
-		case *meergo.InvalidUIValuesError:
-			err = errors.Unprocessable(InvalidUIValues, "%s", err)
+		case *meergo.InvalidSettingsError:
+			err = errors.Unprocessable(InvalidSettings, "%s", err)
 		case *connectors.UnavailableError:
 			err = errors.Unavailable("cannot read the file: %w", err)
 		}

@@ -86,8 +86,8 @@ func (state *State) keep() {
 			state.setAction(n)
 		case "SetActionSchedulePeriod":
 			state.setActionSchedulePeriod(n)
-		case "SetActionSettings":
-			state.setActionSettings(n)
+		case "SetActionFormatSettings":
+			state.setActionFormatSettings(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
 		case "SetConnection":
@@ -252,7 +252,7 @@ type AddAction struct {
 	Path                     string
 	Sheet                    string
 	Compression              Compression
-	Settings                 []byte
+	FormatSettings           []byte
 	ExportMode               ExportMode
 	Matching                 Matching
 	ExportOnDuplicates       bool
@@ -290,7 +290,7 @@ func (state *State) addAction(n notification) {
 		Path:                     e.Path,
 		Sheet:                    e.Sheet,
 		Compression:              e.Compression,
-		Settings:                 e.Settings,
+		FormatSettings:           e.FormatSettings,
 		ExportMode:               e.ExportMode,
 		Matching:                 e.Matching,
 		ExportOnDuplicates:       e.ExportOnDuplicates,
@@ -894,7 +894,7 @@ type SetAction struct {
 	Path                     string
 	Sheet                    string
 	Compression              Compression
-	Settings                 []byte
+	FormatSettings           []byte
 	ExportMode               ExportMode
 	Matching                 Matching
 	ExportOnDuplicates       bool
@@ -929,7 +929,7 @@ func (state *State) setAction(n notification) {
 		a.Path = e.Path
 		a.Sheet = e.Sheet
 		a.Compression = e.Compression
-		a.Settings = e.Settings
+		a.FormatSettings = e.FormatSettings
 		a.ExportMode = e.ExportMode
 		a.Matching = e.Matching
 		a.ExportOnDuplicates = e.ExportOnDuplicates
@@ -962,21 +962,21 @@ func (state *State) setActionSchedulePeriod(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetActionSettings is the event sent when the settings of an action is
-// changed.
-type SetActionSettings struct {
+// SetActionFormatSettings is the event sent when the format settings of an
+// action are changed.
+type SetActionFormatSettings struct {
 	Action   int
 	Settings []byte
 }
 
-// setConnectionSettings sets the settings of an action.
-func (state *State) setActionSettings(n notification) {
-	e := SetActionSettings{}
+// setActionFormatSettings sets the format settings of an action.
+func (state *State) setActionFormatSettings(n notification) {
+	e := SetActionFormatSettings{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	state.replaceAction(e.Action, func(a *Action) {
-		a.Settings = e.Settings
+		a.FormatSettings = e.Settings
 	})
 }
 

@@ -56,10 +56,10 @@ func New(conf *meergo.FileConfig) (*Excel, error) {
 
 type Excel struct {
 	conf     *meergo.FileConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	HasColumnNames bool
 }
 
@@ -152,17 +152,17 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 }
 
 // ServeUI serves the connector's user interface.
-func (exel *Excel) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (exel *Excel) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if exel.settings != nil {
 			s = *exel.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, exel.saveValues(ctx, values, role)
+		return nil, exel.saveSettings(ctx, settings, role)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -171,7 +171,7 @@ func (exel *Excel) ServeUI(ctx context.Context, event string, values json.Value,
 		Fields: []meergo.Component{
 			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -248,10 +248,10 @@ func (exel *Excel) Write(ctx context.Context, w io.Writer, sheet string, records
 	return err
 }
 
-// saveValues saves the user-entered values as settings.
-func (exel *Excel) saveValues(ctx context.Context, values json.Value, role meergo.Role) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (exel *Excel) saveSettings(ctx context.Context, settings json.Value, role meergo.Role) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

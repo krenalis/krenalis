@@ -26,7 +26,7 @@ import Workspace, {
 } from './types/workspace';
 import {
 	ConnectorUIResponse,
-	ConnectorValues,
+	ConnectorSettings,
 	authCodeURLResponse,
 	EventListenerEventsResponse,
 	AddEventListenerResponse,
@@ -222,7 +222,7 @@ class Connections {
 		path: string,
 		sheet: string | null,
 		compression: string,
-		uiValues: ConnectorValues,
+		formatSettings: ConnectorSettings,
 		limit: number,
 	): Promise<RecordsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/records`, http.POST, {
@@ -230,7 +230,7 @@ class Connections {
 			path,
 			sheet,
 			compression,
-			uiValues,
+			formatSettings,
 			limit,
 		});
 	};
@@ -240,13 +240,13 @@ class Connections {
 		format: string,
 		path: string,
 		compression: string,
-		uiValues: ConnectorValues,
+		formatSettings: ConnectorSettings,
 	): Promise<SheetsResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets`, http.POST, {
 			format,
 			path,
 			compression,
-			uiValues,
+			formatSettings,
 		});
 	};
 
@@ -254,10 +254,10 @@ class Connections {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui`, http.GET);
 	};
 
-	uiEvent = async (connection: number, event: string, values: ConnectorValues): Promise<ConnectorUIResponse> => {
+	uiEvent = async (connection: number, event: string, settings: ConnectorSettings): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/ui-event`, http.POST, {
 			event,
-			values,
+			settings,
 		});
 	};
 
@@ -366,7 +366,7 @@ class Connections {
 		connection: number,
 		action: number,
 		event: string,
-		values: ConnectorValues,
+		formatSettings: ConnectorSettings,
 	): Promise<ConnectorUIResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
@@ -375,7 +375,7 @@ class Connections {
 			http.POST,
 			{
 				event,
-				values,
+				formatSettings,
 			},
 		);
 	};
@@ -835,14 +835,14 @@ class Connectors {
 		workspace: number,
 		connector: string,
 		event: string,
-		values: ConnectorValues,
+		settings: ConnectorSettings,
 		role: ConnectionRole,
 		oauthToken: string,
 	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/workspaces/${workspace}/ui-event`, http.POST, {
 			connector,
 			event,
-			values,
+			settings,
 			role,
 			oauthToken,
 		});

@@ -57,10 +57,10 @@ func New(conf *meergo.FileStorageConfig) (*S3, error) {
 
 type S3 struct {
 	conf     *meergo.FileStorageConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Region          string
@@ -81,7 +81,7 @@ func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
 	if len(name) > 1024 {
-		return nil, time.Time{}, meergo.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
+		return nil, time.Time{}, meergo.NewInvalidsettingsError("object key cannot be longer than 1024 bytes")
 	}
 	client := ss3.client()
 	res, err := client.GetObject(ctx, &s3.GetObjectInput{
@@ -103,17 +103,17 @@ func (ss3 *S3) Reader(ctx context.Context, name string) (io.ReadCloser, time.Tim
 var bucketReg = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]+$`)
 
 // ServeUI serves the connector's user interface.
-func (ss3 *S3) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ss3 *S3) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if ss3.settings != nil {
 			s = *ss3.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ss3.saveValues(ctx, values)
+		return nil, ss3.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -149,7 +149,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values json.Value, rol
 			}},
 			&meergo.Input{Name: "Bucket", Label: "Bucket Name", Placeholder: "bucket", Type: "text", MinLength: 3, MaxLength: 63},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -158,7 +158,7 @@ func (ss3 *S3) ServeUI(ctx context.Context, event string, values json.Value, rol
 // Write writes the data read from r into the file with the given path name.
 func (ss3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) error {
 	if len(name) > 1024 {
-		return meergo.NewInvalidUIValuesError("object key cannot be longer than 1024 bytes")
+		return meergo.NewInvalidsettingsError("object key cannot be longer than 1024 bytes")
 	}
 	if name[0] == '/' {
 		name = name[1:]
@@ -186,35 +186,35 @@ func (ss3 *S3) client() *s3.Client {
 	return s3.NewFromConfig(cfg)
 }
 
-// saveValues saves the user-entered values as settings.
-func (ss3 *S3) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings.
+func (ss3 *S3) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate AccessKeyID.
 	if n := len(s.AccessKeyID); n != 20 {
-		return meergo.NewInvalidUIValuesError("access key id must be 20 bytes long")
+		return meergo.NewInvalidsettingsError("access key id must be 20 bytes long")
 	}
 	// Validate SecretAccessKey.
 	if n := len(s.SecretAccessKey); n < 40 || n > 200 {
-		return meergo.NewInvalidUIValuesError("secret access key length in bytes must be in range [40,200]")
+		return meergo.NewInvalidsettingsError("secret access key length in bytes must be in range [40,200]")
 	}
 	// Validate Region.
 	const regions = "us-east-1 us-east-2 us-west-1 us-west-2 af-south-1 ap-east-1 ap-southeast-3 ap-south-1 " +
 		"ap-northeast-1 ap-northeast-2 ap-northeast-3 ap-southeast-1 ap-southeast-2 ca-central-1 eu-central-1 " +
 		"eu-west-1 eu-west-2 eu-west-3 eu-south-1 eu-north-1 me-south-1 me-central-1 sa-east-1"
 	if !strings.Contains(regions, s.Region+" ") && !strings.HasSuffix(regions, " "+s.Region) {
-		return meergo.NewInvalidUIValuesError("region is not valid")
+		return meergo.NewInvalidsettingsError("region is not valid")
 	}
 	// Validate Bucket.
 	if n := len(s.Bucket); n < 3 || n > 63 {
-		return meergo.NewInvalidUIValuesError("bucket length must be in range [3,63]")
+		return meergo.NewInvalidsettingsError("bucket length must be in range [3,63]")
 	}
 	if !bucketReg.MatchString(s.Bucket) || strings.Contains(s.Bucket, "..") ||
 		strings.HasPrefix(s.Bucket, "xn--") || strings.HasSuffix(s.Bucket, "-s3alias") {
-		return meergo.NewInvalidUIValuesError("bucket value is not allowed")
+		return meergo.NewInvalidsettingsError("bucket value is not allowed")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

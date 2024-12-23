@@ -62,7 +62,7 @@ func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
 
 type PostgreSQL struct {
 	conf     *meergo.DatabaseConfig
-	settings *Settings
+	settings *innerSettings
 	pool     *pgxpool.Pool
 }
 
@@ -159,21 +159,21 @@ func (rows withCloseError) Close() error {
 }
 
 // ServeUI serves the connector's user interface.
-func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if ps.settings == nil {
 			s.Port = 5432
 		} else {
 			s = *ps.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ps.saveValues(ctx, values, false)
+		return nil, ps.saveSettings(ctx, settings, false)
 	case "test":
-		return nil, ps.saveValues(ctx, values, true)
+		return nil, ps.saveSettings(ctx, settings, true)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -186,7 +186,7 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values json.Val
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
 			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
 		},
-		Values: values,
+		Settings: settings,
 		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
@@ -195,7 +195,7 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, values json.Val
 	return ui, nil
 }
 
-type Settings struct {
+type innerSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -204,7 +204,7 @@ type Settings struct {
 }
 
 // dsn returns the connection string, from s, in the URL format.
-func (s *Settings) dsn() string {
+func (s *innerSettings) dsn() string {
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(s.Username, s.Password),
@@ -231,33 +231,33 @@ func (ps *PostgreSQL) openDB(ctx context.Context) error {
 	return nil
 }
 
-// saveValues saves the user-entered values as settings. If test is true, it
-// validates only the values without saving it.
-func (ps *PostgreSQL) saveValues(ctx context.Context, values json.Value, test bool) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings. If test is true, it validates
+// only the settings without saving it.
+func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, test bool) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n < 1 || n > 63 {
-		return meergo.NewInvalidUIValuesError("username length in bytes must be in range [1,63]")
+		return meergo.NewInvalidsettingsError("username length in bytes must be in range [1,63]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 100 {
-		return meergo.NewInvalidUIValuesError("password length must be in range [1,100]")
+		return meergo.NewInvalidsettingsError("password length must be in range [1,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
-		return meergo.NewInvalidUIValuesError("database length in bytes must be in range [1,63]")
+		return meergo.NewInvalidsettingsError("database length in bytes must be in range [1,63]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -277,7 +277,7 @@ func (ps *PostgreSQL) saveValues(ctx context.Context, values json.Value, test bo
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *Settings) error {
+func testConnection(ctx context.Context, settings *innerSettings) error {
 	db, err := sql.Open("pgx", settings.dsn())
 	if err != nil {
 		return err

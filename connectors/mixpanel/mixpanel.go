@@ -53,10 +53,10 @@ func init() {
 
 type Mixpanel struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	ProjectID string
 	Username  string
 	Secret    string
@@ -231,17 +231,17 @@ func (mp *Mixpanel) Schema(ctx context.Context, target meergo.Targets, role meer
 }
 
 // ServeUI serves the connector's user interface.
-func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if mp.settings != nil {
 			s = *mp.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, mp.saveValues(ctx, values)
+		return nil, mp.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -252,7 +252,7 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, values json.Value
 			&meergo.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
 			&meergo.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -295,21 +295,21 @@ func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reade
 	return nil
 }
 
-// saveValues saves the user-entered values as settings.
-func (mp *Mixpanel) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings.
+func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	if n, err := strconv.Atoi(s.ProjectID); err != nil || n < 0 {
-		return meergo.NewInvalidUIValuesError("project ID must be a positive number")
+		return meergo.NewInvalidsettingsError("project ID must be a positive number")
 	}
 	if n := len(s.Username); n < 20 || n > 100 {
-		return meergo.NewInvalidUIValuesError("username length must be in range [20, 100]")
+		return meergo.NewInvalidsettingsError("username length must be in range [20, 100]")
 	}
 	if n := len(s.Secret); n < 32 || n > 100 {
-		return meergo.NewInvalidUIValuesError("secret length must be in range [32, 100]")
+		return meergo.NewInvalidsettingsError("secret length must be in range [32, 100]")
 	}
 	b, err := json.Marshal(s)
 	if err != nil {

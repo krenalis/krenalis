@@ -63,7 +63,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		},
 		IdentityProperty: "identity",
 		Format:           "CSV",
-		UIValues: meergotester.JSONEncodeUIValues(map[string]interface{}{
+		FormatSettings: meergotester.JSONEncodeSettings(map[string]interface{}{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),
@@ -90,7 +90,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		},
 		IdentityProperty: "identity",
 		Format:           "CSV",
-		UIValues: meergotester.JSONEncodeUIValues(map[string]interface{}{
+		FormatSettings: meergotester.JSONEncodeSettings(map[string]interface{}{
 			"Comma":          ",",
 			"HasColumnNames": true,
 		}),

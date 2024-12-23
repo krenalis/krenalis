@@ -12,19 +12,19 @@ interface ConnectorFieldSetProps {
 }
 
 const ConnectorFieldSet = ({ name, fields, val, onChange }: ConnectorFieldSetProps) => {
-	const [values, setValues] = useState(val);
+	const [settings, setSettings] = useState(val);
 
 	useEffect(() => {
-		setValues(val);
+		setSettings(val);
 	}, [val]);
 
 	const onFieldChange = (fieldName: string, value: any) => {
-		setValues((prevValues: Record<string, any>) => {
+		setSettings((prevSettings: Record<string, any>) => {
 			let vals: Record<string, any>;
-			if (prevValues == null) {
+			if (prevSettings == null) {
 				vals = { [fieldName]: value };
 			} else {
-				vals = { ...prevValues, [fieldName]: value };
+				vals = { ...prevSettings, [fieldName]: value };
 			}
 			onChange(name, vals);
 			return vals;
@@ -36,7 +36,7 @@ const ConnectorFieldSet = ({ name, fields, val, onChange }: ConnectorFieldSetPro
 
 	return (
 		<div className='connector-fieldsets'>
-			<FieldSetContext.Provider value={{ values: values, onChange: onFieldChange }}>
+			<FieldSetContext.Provider value={{ settings: settings, onChange: onFieldChange }}>
 				{fieldSet}
 			</FieldSetContext.Provider>
 		</div>

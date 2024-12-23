@@ -19,7 +19,7 @@ import {
 	SendingMode as SendingModeType,
 	Strategy,
 } from '../../../lib/api/types/connection';
-import { ConnectorUIResponse, ConnectorValues } from '../../../lib/api/types/responses';
+import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
@@ -39,7 +39,7 @@ const ConnectorSettings = () => {
 	const [sendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
-	const [values, setValues] = useState<ConnectorValues>({});
+	const [settings, setSettings] = useState<ConnectorSettings>({});
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
@@ -101,7 +101,7 @@ const ConnectorSettings = () => {
 			if (connectionRole !== 'Source' && supportedModes.length > 0) {
 				setSendingMode(supportedModes[0]);
 			}
-			if (connector.hasUI === false) return;
+			if (connector.hasSettings === false) return;
 			let ui: ConnectorUIResponse;
 			try {
 				ui = await api.connectors.ui(selectedWorkspace, connectorName, connectionRole, OAuthToken);
@@ -127,7 +127,7 @@ const ConnectorSettings = () => {
 			}
 			setFields(ui.fields);
 			setButtons(ui.buttons);
-			setValues(ui.values);
+			setSettings(ui.settings);
 		};
 		fetchData();
 	}, []);
@@ -155,7 +155,7 @@ const ConnectorSettings = () => {
 		}
 		if (eventName === 'save') {
 			try {
-				validateConnectorSettings(values, fields);
+				validateConnectorSettings(settings, fields);
 			} catch (err) {
 				handleError(err);
 				if (hasConfirmationButton) {
@@ -173,7 +173,7 @@ const ConnectorSettings = () => {
 					strategy: strategy,
 					websiteHost: websiteHost,
 					sendingMode: sendingMode,
-					uiValues: values,
+					settings: settings,
 					linkedConnections: null,
 				};
 				id = await api.workspaces.addConnection(connection, OAuthToken);
@@ -202,7 +202,7 @@ const ConnectorSettings = () => {
 				selectedWorkspace,
 				connectorName,
 				eventName,
-				values,
+				settings,
 				connectionRole,
 				OAuthToken,
 			);
@@ -239,12 +239,12 @@ const ConnectorSettings = () => {
 		if (ui.fields != null) {
 			setFields(ui.fields);
 			setButtons(ui.buttons);
-			setValues(ui.values);
+			setSettings(ui.settings);
 		}
 	};
 
 	const onFieldChange = (name: string, value: any) => {
-		setValues((prevValues) => ({ ...prevValues, [name]: value }));
+		setSettings((prevSettings) => ({ ...prevSettings, [name]: value }));
 	};
 
 	const fieldsToRender: ReactNode[] = [];
@@ -392,7 +392,7 @@ const ConnectorSettings = () => {
 						<ConnectorUI
 							fields={fieldsToRender}
 							buttons={buttonsToRender}
-							values={values}
+							settings={settings}
 							onChange={onFieldChange}
 						/>
 					) : (

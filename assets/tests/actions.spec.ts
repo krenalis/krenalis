@@ -841,7 +841,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 				"lastChangeTimeFormat": "",
 				"compression": "",
 				"format": "CSV",
-				"uiValues": {
+				"formatSettings": {
 					"Comma": ",",
 					"Comment": "",
 					"FieldsPerRecord": 0,
@@ -1196,7 +1196,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 				"lastChangeTimeFormat": "",
 				"compression": "",
 				"format": "CSV",
-				"uiValues": {
+				"formatSettings": {
 					"Comma": ",",
 					"Comment": "",
 					"FieldsPerRecord": 0,

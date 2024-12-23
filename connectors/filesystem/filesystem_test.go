@@ -16,8 +16,8 @@ import (
 )
 
 func TestPathConvert(t *testing.T) {
-	fs := &Filesystem{settings: &Settings{Root: "/"}}
-	fs2 := &Filesystem{settings: &Settings{Root: "/root"}}
+	fs := &Filesystem{settings: &innerSettings{Root: "/"}}
+	fs2 := &Filesystem{settings: &innerSettings{Root: "/root"}}
 	tests := []meergo.CompletePathTest{
 		{Name: "a", Expected: "/a"},
 		{Name: "a.e", Expected: "/a.e"},

@@ -527,7 +527,7 @@ type Connector struct {
 	Targets                ConnectorTargets
 	SendingMode            *SendingMode
 	HasSheets              bool
-	HasUI                  bool
+	HasSettings            bool
 	IdentityIDLabel        string
 	Icon                   string
 	TimeLayouts            TimeLayouts
@@ -1055,7 +1055,7 @@ type Action struct {
 	Path                     string
 	Sheet                    string
 	Compression              Compression
-	Settings                 []byte
+	FormatSettings           []byte
 	ExportMode               ExportMode
 	Matching                 Matching
 	ExportOnDuplicates       bool

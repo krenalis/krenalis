@@ -1,5 +1,5 @@
 import { Action, ActionType } from './action';
-import { ConnectorValues } from './responses';
+import { ConnectorSettings } from './responses';
 
 type ConnectorType = 'App' | 'Database' | 'File' | 'FileStorage' | 'Mobile' | 'Server' | 'Stream' | 'Website';
 
@@ -18,7 +18,7 @@ interface Connection {
 	strategy?: Strategy | null;
 	websiteHost: string;
 	sendingMode: SendingMode | null;
-	hasUI: boolean;
+	hasSettings: boolean;
 	enabled: boolean;
 	actionsCount: number;
 	health: Health;
@@ -41,7 +41,7 @@ interface ConnectionToAdd {
 	strategy?: Strategy | null;
 	websiteHost: string;
 	sendingMode?: SendingMode | null;
-	uiValues: ConnectorValues;
+	settings: ConnectorSettings;
 	linkedConnections: Number[] | null;
 }
 

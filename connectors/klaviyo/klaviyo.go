@@ -70,10 +70,10 @@ func New(conf *meergo.AppConfig) (*Klavyio, error) {
 
 type Klavyio struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	PrivateAPIKey string
 }
 
@@ -405,17 +405,17 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ky *Klavyio) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if ky.settings != nil {
 			s = *ky.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ky.saveValues(ctx, values)
+		return nil, ky.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -424,7 +424,7 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, values json.Value,
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "PrivateAPIKey", Label: "Your Private Key", Placeholder: "pk_62a6ty4674c6bc5df7c252ea4ed2c7ef81", Type: "text", MinLength: 37, MaxLength: 255},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -462,23 +462,23 @@ func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records me
 	return ky.call(ctx, "PATCH", u+url.PathEscape(record.ID)+"/", &body, 200, nil)
 }
 
-// saveValues saves the user-entered values as settings.
-func (ky *Klavyio) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings.
+func (ky *Klavyio) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	if n := len(s.PrivateAPIKey); n < 37 {
-		return meergo.NewInvalidUIValuesError("private API key must be at least 37 characters long")
+		return meergo.NewInvalidsettingsError("private API key must be at least 37 characters long")
 	}
 	if !strings.HasPrefix(s.PrivateAPIKey, "pk_") {
-		return meergo.NewInvalidUIValuesError("private API key must begin with 'pk_'")
+		return meergo.NewInvalidsettingsError("private API key must begin with 'pk_'")
 	}
 	for i := 3; i < len(s.PrivateAPIKey); i++ {
 		c := s.PrivateAPIKey[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return meergo.NewInvalidUIValuesError("private API key after 'pk_' must contain only alphanumeric characters")
+			return meergo.NewInvalidsettingsError("private API key after 'pk_' must contain only alphanumeric characters")
 		}
 	}
 	b, err := json.Marshal(s)

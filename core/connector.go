@@ -29,7 +29,7 @@ type Connector struct {
 	Targets                []Target      `json:"targets"`
 	SendingMode            *SendingMode  `json:"sendingMode"`
 	HasSheets              bool          `json:"hasSheets"`
-	HasUI                  bool          `json:"hasUI"`
+	HasSettings            bool          `json:"hasSettings"`
 	IdentityIDLabel        string        `json:"identityIDLabel"`
 	Icon                   string        `json:"icon"`
 	FileExtension          string        `json:"fileExtension"`

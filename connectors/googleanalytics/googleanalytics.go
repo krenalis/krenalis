@@ -63,10 +63,10 @@ func New(conf *meergo.AppConfig) (*Analytics, error) {
 
 type Analytics struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	MeasurementID string
 	APISecret     string
 }
@@ -160,17 +160,17 @@ func (ga *Analytics) Schema(ctx context.Context, target meergo.Targets, role mee
 }
 
 // ServeUI serves the connector's user interface.
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if ga.settings != nil {
 			s = *ga.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ga.saveValues(ctx, values)
+		return nil, ga.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -180,33 +180,33 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Valu
 			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
 			&meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
 
 }
 
-// saveValues saves the user-entered values as settings.
-func (ga *Analytics) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (ga *Analytics) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	if n := len(s.MeasurementID); n < 2 || n > 20 {
-		return meergo.NewInvalidUIValuesError("Measurement ID length must be in [2,20]")
+		return meergo.NewInvalidsettingsError("Measurement ID length must be in [2,20]")
 	}
 	if !strings.HasPrefix(s.MeasurementID, "G-") && !strings.HasPrefix(s.MeasurementID, "AW-") {
-		return meergo.NewInvalidUIValuesError("Measurement ID must begin with 'G-' or 'AW-'")
+		return meergo.NewInvalidsettingsError("Measurement ID must begin with 'G-' or 'AW-'")
 	}
 	if n := len(s.APISecret); n < 1 || n > 40 {
-		return meergo.NewInvalidUIValuesError("API Secret length must be in [1,40]")
+		return meergo.NewInvalidsettingsError("API Secret length must be in [1,40]")
 	}
 	for i := 0; i < len(s.APISecret); i++ {
 		c := s.APISecret[i]
 		if !('a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || i > 0 && '0' <= c && c <= '9') {
-			return meergo.NewInvalidUIValuesError("API secret must contain only alphanumeric characters")
+			return meergo.NewInvalidsettingsError("API secret must contain only alphanumeric characters")
 		}
 	}
 	b, err := json.Marshal(s)

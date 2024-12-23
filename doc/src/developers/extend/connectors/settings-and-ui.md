@@ -80,13 +80,13 @@ For example, for the previous two settings of Google Analytics, the interface co
 			MaxLength:   40,
 		},
     },
-	Values: values,
+	Settings: settings,
 }
 ```
 
-Two `Input` components are present, "MeasurementID" and "APISecret," and a `Button` component with an event named "save." A `Button` component with the "save" event must always be present, as it ensures to Meergo that the values of the interface fields have been saved in the connector's settings.
+Two `Input` components are present, "MeasurementID" and "APISecret," and a `Button` component with an event named "save." A `Button` component with the "save" event must always be present, as it ensures to Meergo that the options of the interface fields have been saved in the connector's settings.
 
-The `Values` field, of type `json.Value`, contains the values of the interface components in JSON format. For example, `Values` could have the following value:
+The `Settings` field, of type `json.Value`, contains the settings of the interface components in JSON format. For example, `Settings` could have the following value:
 
 ```go
 json.Value(`{"MeasurementID":"G-2XYZBEB6AB","APISecret":"ZuHCHFZbRBi8V7u8crWFUz"}`)
@@ -97,29 +97,29 @@ json.Value(`{"MeasurementID":"G-2XYZBEB6AB","APISecret":"ZuHCHFZbRBi8V7u8crWFUz"
 To provide the interface to the user and respond to events triggered by user interaction, the connector must implement the `ServeUI` method:
 
 ```go
-ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error)
+ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error)
 ```
 
 - `ctx`: Context, it's never `nil`.
 - `event`: Event to serve.
-- `values`: Values of the interface components, serialized in JSON. If not `nil`, it's always valid JSON.
+- `settings`: Settings of the interface components, serialized in JSON. If not `nil`, it's always valid JSON.
 - `role`: Connection's role, it can be `Source` or `Destination`.
 
 The `ServeUI` method must serve the `"load"` and `"save"` events:
 
-- `"load"`: Initially, when the connector's interface is loaded, `ServeUI` is called with the `"load"` event and `values` set to `nil`. If no errors occur, the method must return a non-`nil` interface.
-- `"save"`: When the user clicks the "Add" or "Save" button, `ServeUI` is called with the `"save"` event and `values` representing the user-entered values serialized in JSON. The method must validate and save the values as settings and return a `nil` interface.
+- `"load"`: Initially, when the connector's interface is loaded, `ServeUI` is called with the `"load"` event and `settings` set to `nil`. If no errors occur, the method must return a non-`nil` interface.
+- `"save"`: When the user clicks the "Add" or "Save" button, `ServeUI` is called with the `"save"` event and `settings` representing the user-entered settings serialized in JSON. The method should validate and save the settings and return a `nil` interface.
 
-It must also serve any other event associated with the buttons present in the interface. When called for one of these events, `values` are in JSON-serialized format of the user-entered values. If the method returns a non-`nil` interface, the UI is updated with the returned interface.
+It must also serve any other event associated with the buttons present in the interface. When called for one of these events, `settings` are in JSON-serialized format of the user-entered settings. If the method returns a non-`nil` interface, the UI is updated with the returned interface.
 
-If the event is not among those expected, the method should return the `ErrUIEventNotExist` error. If the values passed as arguments are not valid, it should return an error of type `InvalidUIValuesError`. You can use the `meergo.NewInvalidUIValuesError` function for this purpose.
+If the event is not among those expected, the method should return the `ErrUIEventNotExist` error. If the settings passed as arguments are not valid, it should return an error of type `InvalidSettingsError`. You can use the `meergo.NewInvalidSettingsError` function for this purpose.
 
 #### Example
 
 The following is the `ServeUI` method of the Google Analytics connector:
 
 ```go
-func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ga *Analytics) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -128,10 +128,10 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Valu
 		if ga.settings != nil {
 			s = *ga.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		// Validate and save the values as settings.
-		s, err := validateValues(values)
+		// Validate and save the settings.
+		s, err := validateSettings(settings)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +145,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Valu
 			&meergo.Input{Name: "MeasurementID", Label: "Measurement ID", Placeholder: "G-2XYZBEB6AB", Type: "text", MinLength: 2, MaxLength: 20, HelpText: "Follow these instructions to get your Measurement ID: https://support.google.com/analytics/answer/9539598#find-G-ID"},
 			&meergo.Input{Name: "APISecret", Label: "API Secret", Placeholder: "ZuHCHFZbRBi8V7u8crWFUz", Type: "text", MinLength: 1, MaxLength: 40},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -155,7 +155,7 @@ func (ga *Analytics) ServeUI(ctx context.Context, event string, values json.Valu
 Pay attention to the following:
 
 - If `event` is `"load"`, it returns the user interface.
-- If `event` is `"save"`, it validates and saves the values of the interface fields in the settings using the `SetSettings` function, and returns a `nil` interface.
-- Before saving, the values are validated through its own method, which returns an `ErrUIEventNotExist` error if the values do not pass validation.
+- If `event` is `"save"`, it validates and saves the settings of the interface fields in the settings using the `SetSettings` function, and returns a `nil` interface.
+- Before saving, the settings are validated through its own method, which returns an `InvalidSettingsError` error if the settings do not pass validation.
 - If `event` is unknown, it returns the `ErrUIEventNotExist` error.
-- The serialized JSON settings are directly assigned to the `Values` field of the returned interface. This is because in this case, each interface field is associated with a setting with the same name as the field.
+- The serialized JSON settings are directly assigned to the `Settings` field of the returned interface. This is because in this case, each interface field is associated with a setting with the same name as the field.

@@ -45,9 +45,9 @@ type validationState struct {
 	// according to that format, if exists, otherwise must be the empty
 	// struct.
 	format struct {
-		typ       state.ConnectorType
-		hasUI     bool
-		hasSheets bool
+		typ         state.ConnectorType
+		hasSettings bool
+		hasSheets   bool
 	}
 
 	// provider is the transformers.Provider instantiated on the Core.
@@ -415,22 +415,22 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		}
 	}
 
-	// Check if the UI values are allowed and are a JSON Object.
+	// Check if the settings are allowed and are a JSON Object.
 	if v.connection.connector.typ == state.FileStorage {
-		if action.UIValues == nil {
-			if v.format.hasUI {
-				return errors.BadRequest("UI values must be provided because format %s has a UI", action.Format)
+		if action.FormatSettings == nil {
+			if v.format.hasSettings {
+				return errors.BadRequest("format settings must be provided because format %s has settings", action.Format)
 			}
 		} else {
-			if !v.format.hasUI {
-				return errors.BadRequest("UI values cannot be provided because format %s has no UI", action.Format)
+			if !v.format.hasSettings {
+				return errors.BadRequest("format settings cannot be provided because format %s has no settings", action.Format)
 			}
-			if !json.Valid(action.UIValues) || !action.UIValues.IsObject() {
-				return errors.BadRequest("UI values are not a valid JSON Object")
+			if !json.Valid(action.FormatSettings) || !action.FormatSettings.IsObject() {
+				return errors.BadRequest("format settings are not a valid JSON Object")
 			}
 		}
-	} else if action.UIValues != nil {
-		return errors.BadRequest("%s actions cannot have UI values", strings.ToLower(v.connection.connector.typ.String()))
+	} else if action.FormatSettings != nil {
+		return errors.BadRequest("%s actions cannot have format settings", strings.ToLower(v.connection.connector.typ.String()))
 	}
 
 	// Check if the compression is allowed.

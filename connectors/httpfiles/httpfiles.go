@@ -56,10 +56,10 @@ func New(conf *meergo.FileStorageConfig) (*HTTPFiles, error) {
 
 type HTTPFiles struct {
 	conf     *meergo.FileStorageConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	Host    string
 	Port    int
 	Headers []meergo.KV
@@ -122,19 +122,19 @@ func (h *HTTPFiles) Reader(ctx context.Context, name string) (io.ReadCloser, tim
 }
 
 // ServeUI serves the connector's user interface.
-func (h *HTTPFiles) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (h *HTTPFiles) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if h.settings == nil {
 			s.Port = 443
 		} else {
 			s = *h.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, h.saveValues(ctx, values)
+		return nil, h.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -148,7 +148,7 @@ func (h *HTTPFiles) ServeUI(ctx context.Context, event string, values json.Value
 				ValueComponent: &meergo.Input{Label: "Value", Placeholder: "Value", Type: "text", MinLength: 1, MaxLength: 10000},
 			},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -180,28 +180,28 @@ func (h *HTTPFiles) Write(ctx context.Context, r io.Reader, name, contentType st
 	return nil
 }
 
-// saveValues saves the user-entered values as settings.
-func (h *HTTPFiles) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (h *HTTPFiles) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
 	}
 	// Validate Headers.
 	for _, header := range s.Headers {
 		if n := utf8.RuneCountInString(header.Key); n == 0 || n > 100 {
-			return meergo.NewInvalidUIValuesError("header key length must be in range [1,100]")
+			return meergo.NewInvalidsettingsError("header key length must be in range [1,100]")
 		}
 		if n := utf8.RuneCountInString(header.Value); n == 0 || n > 10000 {
-			return meergo.NewInvalidUIValuesError("header value length must be in range [1,10000]")
+			return meergo.NewInvalidsettingsError("header value length must be in range [1,10000]")
 		}
 	}
 	b, err := json.Marshal(s)

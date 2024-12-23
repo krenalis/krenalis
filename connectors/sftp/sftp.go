@@ -61,10 +61,10 @@ func New(conf *meergo.FileStorageConfig) (*SFTP, error) {
 
 type SFTP struct {
 	conf     *meergo.FileStorageConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -112,21 +112,21 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *SFTP) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (sf *SFTP) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if sf.settings == nil {
 			s.Port = 22
 		} else {
 			s = *sf.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, sf.saveValues(ctx, values, role, false)
+		return nil, sf.saveSettings(ctx, settings, role, false)
 	case "test":
-		return nil, sf.saveValues(ctx, values, role, true)
+		return nil, sf.saveSettings(ctx, settings, role, true)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -139,7 +139,7 @@ func (sf *SFTP) ServeUI(ctx context.Context, event string, values json.Value, ro
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 200},
 			&meergo.Input{Name: "TempPath", Label: "Temporary directory path", Placeholder: "/", Type: "text", MinLength: 0, MaxLength: 1000, Role: meergo.Destination},
 		},
-		Values: values,
+		Settings: settings,
 		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
@@ -203,37 +203,37 @@ func (sf *SFTP) Write(ctx context.Context, r io.Reader, name, _ string) error {
 	return client.close()
 }
 
-// saveValues saves the user-entered values as settings. If test is true, it
-// validates only the values without saving it.
-func (sf *SFTP) saveValues(ctx context.Context, values json.Value, role meergo.Role, test bool) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings. If test is true, it validates
+// only the settings without saving it.
+func (sf *SFTP) saveSettings(ctx context.Context, settings json.Value, role meergo.Role, test bool) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 200 {
-		return meergo.NewInvalidUIValuesError("username length must be in range [1,200]")
+		return meergo.NewInvalidsettingsError("username length must be in range [1,200]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 200 {
-		return meergo.NewInvalidUIValuesError("password length must be in range [1,200]")
+		return meergo.NewInvalidsettingsError("password length must be in range [1,200]")
 	}
 	// Validate TempPath.
 	if role == meergo.Destination {
 		if n := utf8.RuneCountInString(s.TempPath); n > 1000 {
-			return meergo.NewInvalidUIValuesError("length of temporary directory path must be in range [1,1000]")
+			return meergo.NewInvalidsettingsError("length of temporary directory path must be in range [1,1000]")
 		}
 	} else if s.TempPath != "" {
-		return meergo.NewInvalidUIValuesError("temporary directory path must be empty for source destinations")
+		return meergo.NewInvalidsettingsError("temporary directory path must be empty for source destinations")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -307,7 +307,7 @@ func (client *client) close() error {
 // The returned client must be closed using the close method. If the context is
 // canceled before the client is closed, the underlying network connection, not
 // the client, will be automatically closed.
-func openClient(ctx context.Context, s *Settings) (*client, error) {
+func openClient(ctx context.Context, s *innerSettings) (*client, error) {
 	sshConfig := &ssh.ClientConfig{
 		User: s.Username,
 		Auth: []ssh.AuthMethod{
@@ -355,7 +355,7 @@ func openClient(ctx context.Context, s *Settings) (*client, error) {
 // testConnection tests a connection using the provided settings. It returns an
 // error if the connection cannot be established or if the server does not
 // respond within 5 seconds.
-func testConnection(ctx context.Context, settings *Settings) error {
+func testConnection(ctx context.Context, settings *innerSettings) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	client, err := openClient(ctx, settings)
@@ -368,7 +368,7 @@ func testConnection(ctx context.Context, settings *Settings) error {
 	defer client.close()
 	if settings.TempPath != "" {
 		if _, ok := client.sftp.HasExtension("posix-rename@openssh.com"); !ok {
-			return meergo.NewInvalidUIValuesError("temporary directory path must be empty because the server does not support posix-rename")
+			return meergo.NewInvalidsettingsError("temporary directory path must be empty because the server does not support posix-rename")
 		}
 	}
 	return nil

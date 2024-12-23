@@ -407,7 +407,7 @@ func connectorError(err error) error {
 	default:
 		switch err.(type) {
 		case *meergo.InvalidPathError:
-		case *meergo.InvalidUIValuesError:
+		case *meergo.InvalidSettingsError:
 		case *meergo.UnsupportedColumnTypeError:
 		case *UnavailableError:
 		default:
@@ -626,7 +626,7 @@ func setActionSettings(ctx context.Context, st *state.State, action int, setting
 	if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
 		return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
 	}
-	n := state.SetActionSettings{
+	n := state.SetActionFormatSettings{
 		Action:   action,
 		Settings: settings,
 	}

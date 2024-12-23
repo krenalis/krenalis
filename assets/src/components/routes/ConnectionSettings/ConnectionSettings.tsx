@@ -51,7 +51,7 @@ const ConnectionSettings = () => {
 				setIsLoading(false);
 			}, 300);
 		};
-		if (c.hasUI) {
+		if (c.hasSettings) {
 			fetchUI();
 		} else {
 			setIsLoading(false);

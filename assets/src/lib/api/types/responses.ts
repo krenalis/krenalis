@@ -7,13 +7,13 @@ interface authCodeURLResponse {
 	url: string;
 }
 
-type ConnectorValues = Record<string, any>;
+type ConnectorSettings = Record<string, any>;
 
 interface ConnectorUIResponse {
 	alert: ConnectorAlert;
 	fields: ConnectorField[];
 	buttons: ConnectorButton[];
-	values: ConnectorValues;
+	settings: ConnectorSettings;
 }
 
 interface Execution {
@@ -150,7 +150,7 @@ interface ActionErrorsResponse {
 export type {
 	authCodeURLResponse,
 	ConnectorUIResponse,
-	ConnectorValues,
+	ConnectorSettings,
 	Execution,
 	EventListenerEventsResponse,
 	AddEventListenerResponse,

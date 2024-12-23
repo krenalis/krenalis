@@ -29,7 +29,7 @@ const (
 	InvalidPath                  errors.Code = "InvalidPath"
 	InvalidPlaceholder           errors.Code = "InvalidPlaceholder"
 	InvalidSchemaChange          errors.Code = "InvalidSchemaChange"
-	InvalidUIValues              errors.Code = "InvalidUIValues"
+	InvalidSettings              errors.Code = "InvalidSettings"
 	InvalidWarehouseSettings     errors.Code = "InvalidWarehouseSettings"
 	InvitationTokenExpired       errors.Code = "InvitationTokenExpired"
 	KeyNotExist                  errors.Code = "KeyNotExist"

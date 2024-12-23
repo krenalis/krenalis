@@ -235,18 +235,18 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	var body struct {
-		Format      string           `json:"format"`
-		Path        string           `json:"path"`
-		Sheet       string           `json:"sheet"`
-		Compression core.Compression `json:"compression"`
-		UIValues    json.Value       `json:"uiValues"`
-		Limit       int              `json:"limit"`
+		Format         string           `json:"format"`
+		Path           string           `json:"path"`
+		Sheet          string           `json:"sheet"`
+		Compression    core.Compression `json:"compression"`
+		FormatSettings json.Value       `json:"formatSettings"`
+		Limit          int              `json:"limit"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	records, schema, err := c.Records(r.Context(), body.Format, body.Path, body.Sheet, body.Compression, body.UIValues, body.Limit)
+	records, schema, err := c.Records(r.Context(), body.Format, body.Path, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -270,8 +270,8 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 		return nil, err
 	}
 	var body struct {
-		Event  string     `json:"event"`
-		Values json.Value `json:"values"`
+		Event    string     `json:"event"`
+		Settings json.Value `json:"settings"`
 	}
 	if r.Method == "GET" {
 		body.Event = "load"
@@ -281,7 +281,7 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 			return nil, errors.BadRequest("%s", err)
 		}
 	}
-	ui, err := c.ServeUI(r.Context(), body.Event, body.Values)
+	ui, err := c.ServeUI(r.Context(), body.Event, body.Settings)
 	if err != nil {
 		return nil, err
 	}
@@ -314,16 +314,16 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	var body struct {
-		Format      string           `json:"format"`
-		Path        string           `json:"path"`
-		Compression core.Compression `json:"compression"`
-		UIValues    json.Value       `json:"uiValues"`
+		Format         string           `json:"format"`
+		Path           string           `json:"path"`
+		Compression    core.Compression `json:"compression"`
+		FormatSettings json.Value       `json:"formatSettings"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	sheets, err := c.Sheets(r.Context(), body.Format, body.Path, body.UIValues, body.Compression)
+	sheets, err := c.Sheets(r.Context(), body.Format, body.Path, body.FormatSettings, body.Compression)
 	if err != nil {
 		return nil, err
 	}

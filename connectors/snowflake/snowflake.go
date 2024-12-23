@@ -57,7 +57,7 @@ func New(conf *meergo.DatabaseConfig) (*Snowflake, error) {
 
 type Snowflake struct {
 	conf     *meergo.DatabaseConfig
-	settings *Settings
+	settings *innerSettings
 	db       *sql.DB
 }
 
@@ -118,19 +118,19 @@ func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []me
 }
 
 // ServeUI serves the connector's user interface.
-func (sf *Snowflake) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (sf *Snowflake) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if sf.settings != nil {
 			s = *sf.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, sf.saveValues(ctx, values, false)
+		return nil, sf.saveSettings(ctx, settings, false)
 	case "test":
-		return nil, sf.saveValues(ctx, values, true)
+		return nil, sf.saveSettings(ctx, settings, true)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -145,7 +145,7 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values json.Valu
 			&meergo.Input{Name: "Warehouse", Label: "Warehouse", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
 			&meergo.Input{Name: "Role", Label: "Role", Placeholder: "", Type: "text", MinLength: 1, MaxLength: 255},
 		},
-		Values: values,
+		Settings: settings,
 		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
@@ -154,7 +154,7 @@ func (sf *Snowflake) ServeUI(ctx context.Context, event string, values json.Valu
 	return ui, nil
 }
 
-type Settings struct {
+type innerSettings struct {
 	Account   string
 	Username  string
 	Password  string
@@ -165,7 +165,7 @@ type Settings struct {
 }
 
 // connector returns a driver.Connector from the settings.
-func (s *Settings) connector() gosnowflake.Connector {
+func (s *innerSettings) connector() gosnowflake.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -227,44 +227,44 @@ func (sf *Snowflake) query(ctx context.Context, query string) (meergo.Rows, []me
 // accountFormat is the format of the account identifier in the settings.
 var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
-// saveValues saves the user-entered values as settings. If test is true, it
-// validates only the values without saving it.
-func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test bool) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings validates and saves the settings. If test is true, it validates
+// only the settings without saving it.
+func (sf *Snowflake) saveSettings(ctx context.Context, options json.Value, test bool) error {
+	var s innerSettings
+	err := options.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Account.
 	if n := utf8.RuneCountInString(s.Account); n < 3 || n > 255 {
-		return meergo.NewInvalidUIValuesError("account identifier length must be in range [3,255]")
+		return meergo.NewInvalidsettingsError("account identifier length must be in range [3,255]")
 	}
 	if !accountFormat.MatchString(s.Account) {
-		return meergo.NewInvalidUIValuesError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
+		return meergo.NewInvalidsettingsError("account identifier must be in the <organization>.<account> or <organization>-<account> format")
 	}
 	// Validate Username.
 	if n := utf8.RuneCountInString(s.Username); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("username length must be in range [1,255]")
+		return meergo.NewInvalidsettingsError("username length must be in range [1,255]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("password length must be in range [1,255]")
+		return meergo.NewInvalidsettingsError("password length must be in range [1,255]")
 	}
 	// Validate Warehouse.
 	if n := utf8.RuneCountInString(s.Warehouse); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("warehouse length must be in range [1,255]")
+		return meergo.NewInvalidsettingsError("warehouse length must be in range [1,255]")
 	}
 	// Validate Database.
 	if n := utf8.RuneCountInString(s.Database); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("database length must be in range [1,255]")
+		return meergo.NewInvalidsettingsError("database length must be in range [1,255]")
 	}
 	// Validate Schema.
 	if n := utf8.RuneCountInString(s.Schema); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("schema length must be in range [1,255]")
+		return meergo.NewInvalidsettingsError("schema length must be in range [1,255]")
 	}
 	// Validate Role.
 	if n := utf8.RuneCountInString(s.Role); n < 1 || n > 255 {
-		return meergo.NewInvalidUIValuesError("role length must be in range [1,255]")
+		return meergo.NewInvalidsettingsError("role length must be in range [1,255]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -284,7 +284,7 @@ func (sf *Snowflake) saveValues(ctx context.Context, values json.Value, test boo
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *Settings) error {
+func testConnection(ctx context.Context, settings *innerSettings) error {
 	db := sql.OpenDB(settings.connector())
 	defer db.Close()
 	db.SetMaxIdleConns(0)

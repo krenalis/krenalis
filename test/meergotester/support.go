@@ -119,7 +119,7 @@ func (c *Meergo) AddDestinationFilesystem(storageDir string) int {
 		Role:      Destination,
 		Enabled:   true,
 		Connector: "Filesystem",
-		UIValues: JSONEncodeUIValues(map[string]any{
+		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
 	})
@@ -131,7 +131,7 @@ func (c *Meergo) AddDestinationPostgreSQL() int {
 		Role:      Destination,
 		Enabled:   true,
 		Connector: "PostgreSQL",
-		UIValues: JSONEncodeUIValues(map[string]any{
+		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
 			"Username": testsSettings.Database.Username,
@@ -148,7 +148,7 @@ func (c *Meergo) AddDummy(name string, role Role) int {
 		Role:      role,
 		Enabled:   true,
 		Connector: "Dummy",
-		UIValues:  []byte("{}"),
+		Settings:  []byte("{}"),
 	}
 	if role == Destination {
 		mode := Cloud
@@ -163,7 +163,7 @@ func (c *Meergo) AddDummyWithSettings(name string, role Role, settings DummySett
 		Role:      role,
 		Enabled:   true,
 		Connector: "Dummy",
-		UIValues:  JSONEncodeUIValues(settings),
+		Settings:  JSONEncodeSettings(settings),
 	}
 	if role == Destination {
 		mode := Cloud
@@ -190,7 +190,7 @@ func (c *Meergo) AddSourceFilesystem(storageDir string) int {
 		Role:      Source,
 		Enabled:   true,
 		Connector: "Filesystem",
-		UIValues: JSONEncodeUIValues(map[string]any{
+		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
 		}),
 	})
@@ -202,7 +202,7 @@ func (c *Meergo) AddSourcePostgreSQL() int {
 		Role:      Source,
 		Enabled:   true,
 		Connector: "PostgreSQL",
-		UIValues: JSONEncodeUIValues(map[string]any{
+		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
 			"Port":     testsSettings.Database.Port,
 			"Username": testsSettings.Database.Username,
@@ -374,14 +374,14 @@ func (c *Meergo) IdentifiersSchema() types.Type {
 	return schema
 }
 
-func (c *Meergo) Records(storage int, format string, path, sheet string, compression Compression, uiValues json.RawMessage, limit int) ([]map[string]any, types.Type) {
+func (c *Meergo) Records(storage int, format string, path, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	req := map[string]any{
-		"format":      format,
-		"path":        path,
-		"sheet":       sheet,
-		"compression": compression,
-		"uiValues":    uiValues,
-		"limit":       limit,
+		"format":         format,
+		"path":           path,
+		"sheet":          sheet,
+		"compression":    compression,
+		"formatSettings": settings,
+		"limit":          limit,
 	}
 	var response struct {
 		Records []map[string]any `json:"records"`
@@ -442,12 +442,12 @@ func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
 	c.MustCall("PUT", method, action, nil)
 }
 
-func (c *Meergo) Sheets(storage int, format string, path string, compression Compression, uiValues json.RawMessage) []string {
+func (c *Meergo) Sheets(storage int, format string, path string, compression Compression, settings json.RawMessage) []string {
 	request := map[string]any{
-		"format":      format,
-		"path":        path,
-		"compression": compression,
-		"uiValues":    uiValues,
+		"format":         format,
+		"path":           path,
+		"compression":    compression,
+		"formatSettings": settings,
 	}
 	var response struct {
 		Sheets []string `json:"sheets"`
@@ -591,8 +591,8 @@ func (c *Meergo) Workspace() Workspace {
 	return ws
 }
 
-func UIJSONProperties(properties map[string]bool) []byte {
-	var uiValues = struct {
+func SettingsProperties(properties map[string]bool) []byte {
+	var settings = struct {
 		Properties []KV
 	}{
 		Properties: []KV{},
@@ -604,15 +604,15 @@ func UIJSONProperties(properties map[string]bool) []byte {
 		} else {
 			kv.Value = "f"
 		}
-		uiValues.Properties = append(uiValues.Properties, kv)
+		settings.Properties = append(settings.Properties, kv)
 	}
-	return JSONEncodeUIValues(uiValues)
+	return JSONEncodeSettings(settings)
 }
 
-func JSONEncodeUIValues(values any) []byte {
+func JSONEncodeSettings(values any) []byte {
 	data, err := json.Marshal(values)
 	if err != nil {
-		panic(fmt.Sprintf("cannot encode connection UI values to JSON: %s", err))
+		panic(fmt.Sprintf("cannot encode connection settings to JSON: %s", err))
 	}
 	return data
 }

@@ -53,10 +53,10 @@ func New(conf *meergo.FileConfig) (*JSON, error) {
 
 type JSON struct {
 	conf     *meergo.FileConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	Properties         []meergo.KV `json:",omitzero"`
 	Indent             bool
 	GenerateASCII      bool
@@ -197,17 +197,17 @@ func (j *JSON) Read(ctx context.Context, r io.Reader, _ string, records meergo.R
 }
 
 // ServeUI serves the connector's user interface.
-func (j *JSON) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (j *JSON) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if j.settings != nil {
 			s = *j.settings
 		}
-		values, _ = jsonstd.Marshal(s)
+		settings, _ = jsonstd.Marshal(s)
 	case "save":
-		return nil, j.saveValues(ctx, values, role)
+		return nil, j.saveSettings(ctx, settings, role)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -225,9 +225,9 @@ func (j *JSON) ServeUI(ctx context.Context, event string, values json.Value, rol
 			},
 			&meergo.Checkbox{Name: "Indent", Label: "Indent the generated output", Role: meergo.Destination},
 			&meergo.Checkbox{Name: "GenerateASCII", Label: "Generate an ASCII output, by escaping any non-ASCII Unicode", Role: meergo.Destination},
-			&meergo.Checkbox{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity values", Role: meergo.Destination},
+			&meergo.Checkbox{Name: "AllowSpecialFloats", Label: "Allow non-standard NaN, Infinity, and -Infinity settings", Role: meergo.Destination},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -284,32 +284,32 @@ func (j *JSON) Write(ctx context.Context, w io.Writer, _ string, records meergo.
 	return err
 }
 
-// saveValues saves the user-entered values as settings.
-func (j *JSON) saveValues(ctx context.Context, values json.Value, role meergo.Role) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (j *JSON) saveSettings(ctx context.Context, settings json.Value, role meergo.Role) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Properties.
 	if role == meergo.Source {
 		if len(s.Properties) == 0 {
-			return meergo.NewInvalidUIValuesError("must have at least one property")
+			return meergo.NewInvalidsettingsError("must have at least one property")
 		}
 		hasName := map[string]struct{}{}
 		for _, property := range s.Properties {
 			if _, ok := hasName[property.Key]; ok {
-				return meergo.NewInvalidUIValuesError(fmt.Sprintf("property name %q is repeated", property.Key))
+				return meergo.NewInvalidsettingsError(fmt.Sprintf("property name %q is repeated", property.Key))
 			}
 			if property.Key == "" {
-				return meergo.NewInvalidUIValuesError("a property name is empty")
+				return meergo.NewInvalidsettingsError("a property name is empty")
 			}
 			if !types.IsValidPropertyName(property.Key) {
-				return meergo.NewInvalidUIValuesError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
+				return meergo.NewInvalidsettingsError(fmt.Sprintf("%q is not a valid property name. Property names must start"+
 					" with a letter or underscore [A-Za-z_] and subsequently contain only letters, numbers, or underscores [A-Za-z0-9_]", property.Key))
 			}
 			if property.Value != "f" && property.Value != "t" {
-				return meergo.NewInvalidUIValuesError("required is not valid")
+				return meergo.NewInvalidsettingsError("required is not valid")
 			}
 			hasName[property.Key] = struct{}{}
 		}

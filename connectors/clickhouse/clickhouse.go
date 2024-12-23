@@ -57,7 +57,7 @@ func New(conf *meergo.DatabaseConfig) (*ClickHouse, error) {
 
 type ClickHouse struct {
 	conf     *meergo.DatabaseConfig
-	settings *Settings
+	settings *innerSettings
 	db       driver.Conn
 }
 
@@ -122,21 +122,21 @@ func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []m
 }
 
 // ServeUI serves the connector's user interface.
-func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ch *ClickHouse) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if ch.settings == nil {
 			s.Port = 9000
 		} else {
 			s = *ch.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, ch.saveValues(ctx, values, false)
+		return nil, ch.saveSettings(ctx, settings, false)
 	case "test":
-		return nil, ch.saveValues(ctx, values, true)
+		return nil, ch.saveSettings(ctx, settings, true)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -149,7 +149,7 @@ func (ch *ClickHouse) ServeUI(ctx context.Context, event string, values json.Val
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
 			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 64},
 		},
-		Values: values,
+		Settings: settings,
 		Buttons: []meergo.Button{
 			{Event: "test", Text: "Test connection", Variant: "neutral"},
 		},
@@ -197,33 +197,33 @@ func (ch *ClickHouse) query(ctx context.Context, query string) (meergo.Rows, []m
 	return rows, columns, nil
 }
 
-// saveValues saves the user-entered values as settings. If test is true, it
-// validates only the values without saving it.
-func (ch *ClickHouse) saveValues(ctx context.Context, values json.Value, test bool) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings. If test is true, it validates only the
+// options without saving it.
+func (ch *ClickHouse) saveSettings(ctx context.Context, settings json.Value, test bool) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Host.
 	if n := len(s.Host); n == 0 || n > 253 {
-		return meergo.NewInvalidUIValuesError("host length in bytes must be in range [1,253]")
+		return meergo.NewInvalidsettingsError("host length in bytes must be in range [1,253]")
 	}
 	// Validate Port.
 	if s.Port < 1 || s.Port > 65536 {
-		return meergo.NewInvalidUIValuesError("port must be in range [1,65536]")
+		return meergo.NewInvalidsettingsError("port must be in range [1,65536]")
 	}
 	// Validate Username.
 	if n := len(s.Username); n > 64 {
-		return meergo.NewInvalidUIValuesError("username length in bytes must be in range [0,64]")
+		return meergo.NewInvalidsettingsError("username length in bytes must be in range [0,64]")
 	}
 	// Validate Password.
 	if n := utf8.RuneCountInString(s.Password); n > 100 {
-		return meergo.NewInvalidUIValuesError("password length must be in range [0,100]")
+		return meergo.NewInvalidsettingsError("password length must be in range [0,100]")
 	}
 	// Validate Database.
 	if n := len(s.Database); n > 64 {
-		return meergo.NewInvalidUIValuesError("database length in bytes must be in range [0,64]")
+		return meergo.NewInvalidsettingsError("database length in bytes must be in range [0,64]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
@@ -241,7 +241,7 @@ func (ch *ClickHouse) saveValues(ctx context.Context, values json.Value, test bo
 	return nil
 }
 
-type Settings struct {
+type innerSettings struct {
 	Host     string
 	Port     int
 	Username string
@@ -250,7 +250,7 @@ type Settings struct {
 }
 
 // options returns the connection options, from s.
-func (s *Settings) options() *clickhouse.Options {
+func (s *innerSettings) options() *clickhouse.Options {
 	return &clickhouse.Options{
 		Addr: []string{net.JoinHostPort(s.Host, strconv.Itoa(s.Port))},
 		Auth: clickhouse.Auth{
@@ -273,7 +273,7 @@ func propertyType(t driver.ColumnType) (types.Type, bool, error) {
 
 // testConnection tests a connection with the given settings.
 // Returns an error if the connection cannot be established.
-func testConnection(ctx context.Context, settings *Settings) error {
+func testConnection(ctx context.Context, settings *innerSettings) error {
 	conn, err := clickhouse.Open(settings.options())
 	if err != nil {
 		return err

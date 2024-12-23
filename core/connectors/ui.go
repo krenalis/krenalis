@@ -21,24 +21,24 @@ import (
 
 // ServeActionUI serves the user interface of the provided file action and
 // returns the new serialized interface to be sent back to the client. event is
-// the event to be served, and values are the user-entered values.
+// the event to be served, and settings are the format settings.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
-// *InvalidUIValuesError error if the values are not valid, and an
+// *InvalidSettingsError error if the settings are not valid, and an
 // *UnavailableError error if the connector returns an error.
 //
-// It panics if the connector has no UI.
-func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, values json.Value) (json.Value, error) {
+// It panics if the connector has no settings.
+func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.Action, event string, settings json.Value) (json.Value, error) {
 	role := meergo.Role(action.Connection().Role)
 	format := action.Format()
 	inner, err := meergo.RegisteredFile(format.Name).New(&meergo.FileConfig{
-		Settings:    action.Settings,
+		Settings:    action.FormatSettings,
 		SetSettings: setActionSettingsFunc(connectors.state, action),
 	})
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, role)
+	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, settings, role)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -47,14 +47,14 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 
 // ServeConnectionUI serves the user interface of the provided connection and
 // returns the new serialized interface to be sent back to the client. event
-// is the event to be served, and values are the user-entered values.
+// is the event to be served, and settings are the settings.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
-// *InvalidUIValuesError error if the values are not valid, and an
+// *InvalidSettingsError error if the settings are not valid, and an
 // *UnavailableError error if the connector returns an error.
 //
-// It panics if the connector has no UI.
-func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, values json.Value) (json.Value, error) {
+// It panics if the connector has no settings.
+func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection *state.Connection, event string, settings json.Value) (json.Value, error) {
 	var accountID int
 	var accountCode string
 	if r, ok := connection.Account(); ok {
@@ -109,7 +109,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, meergo.Role(connection.Role))
+	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, settings, meergo.Role(connection.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -128,14 +128,14 @@ type ConnectorConfig struct {
 
 // ServeConnectorUI serves the user interface of the provided connector and
 // returns the new serialized interface to be sent back to the client. event
-// is the event to be served, and values are the user-entered values.
+// is the event to be served, and settings are the settings.
 //
 // It returns the ErrUIEventNotExist error if the event does not exist, an
-// *InvalidUIValuesError error if the values are not valid, and an
+// *InvalidSettingsError error if the settings are not valid, and an
 // *UnavailableError error if the connector returns an error.
 //
-// It panics if the connector has no UI.
-func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, values json.Value) ([]byte, error) {
+// It panics if the connector has no settings.
+func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) ([]byte, error) {
 	var inner any
 	var err error
 	switch c := connector; c.Type {
@@ -166,32 +166,32 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, values, meergo.Role(conf.Role))
+	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, settings, meergo.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
 	return marshalUI(ui, meergo.Role(conf.Role))
 }
 
-// UpdatedSettings returns the settings, for the given connector, updated with
-// the provided user-entered values.
+// UpdatedSettings returns the inner settings, for the given connector, updated
+// with the provided settings.
 //
-// It returns an *InvalidUIValuesError error value if the values are not valid
+// It returns an *InvalidSettingsError error value if the settings are not valid
 // and an *UnavailableError error if the connector returns an error.
 //
-// It panics if the connector has no UI.
-func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, uiValues json.Value) ([]byte, error) {
+// It panics if the connector has no settings.
+func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) ([]byte, error) {
 	var inner any
 	var err error
-	var newSettings []byte
-	setSettings := func(_ context.Context, settings []byte) error {
-		if !utf8.Valid(settings) {
-			return errors.New("settings is not valid UTF-8")
+	var updatedSettings []byte
+	setSettings := func(_ context.Context, innerSettings []byte) error {
+		if !utf8.Valid(innerSettings) {
+			return errors.New("inner settings is not valid UTF-8")
 		}
-		if len(settings) > maxSettingsLen && utf8.RuneCount(settings) > maxSettingsLen {
-			return fmt.Errorf("settings is longer than %d runes", maxSettingsLen)
+		if len(innerSettings) > maxSettingsLen && utf8.RuneCount(innerSettings) > maxSettingsLen {
+			return fmt.Errorf("inner settings is longer than %d runes", maxSettingsLen)
 		}
-		newSettings = settings
+		updatedSettings = innerSettings
 		return nil
 	}
 	switch c := connector; c.Type {
@@ -222,11 +222,11 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	if err != nil {
 		return nil, err
 	}
-	_, err = inner.(meergo.UIHandler).ServeUI(ctx, "save", uiValues, meergo.Role(conf.Role))
+	_, err = inner.(meergo.UIHandler).ServeUI(ctx, "save", settings, meergo.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	return newSettings, nil
+	return updatedSettings, nil
 }
 
 // marshalUI marshals the provided UI, in the given role, into JSON format.
@@ -258,9 +258,9 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 			b.WriteString(",")
 		}
 
-		values := map[string]any{}
-		if len(ui.Values) > 0 {
-			err := json.Unmarshal(ui.Values, &values)
+		settings := map[string]any{}
+		if len(ui.Settings) > 0 {
+			err := json.Unmarshal(ui.Settings, &settings)
 			if err != nil {
 				return nil, err
 			}
@@ -269,7 +269,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 		comma := false
 		b.WriteString(`"fields":[`)
 		for _, field := range ui.Fields {
-			ok, err := marshalUIComponent(&b, field, role, values, comma)
+			ok, err := marshalUIComponent(&b, field, role, settings, comma)
 			if err != nil {
 				return nil, err
 			}
@@ -287,9 +287,9 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 			b.WriteString(`}`)
 		}
 		b.WriteString(`]`)
-		if len(ui.Values) > 0 {
-			b.WriteString(`,"values":`)
-			err := b.Encode(values)
+		if len(ui.Settings) > 0 {
+			b.WriteString(`,"settings":`)
+			err := b.Encode(settings)
 			if err != nil {
 				return nil, err
 			}
@@ -304,7 +304,7 @@ func marshalUI(ui *meergo.UI, role meergo.Role) (json.Value, error) {
 
 // marshalUIComponent marshals component with the provided role in JSON format.
 // If comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.Role, values map[string]any, comma bool) (bool, error) {
+func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.Role, settings map[string]any, comma bool) (bool, error) {
 	rv := reflect.ValueOf(component).Elem()
 	rt := rv.Type()
 	if r := meergo.Role(rv.FieldByName("Role").Int()); r != meergo.Both && r != role {
@@ -330,13 +330,13 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 		var err error
 		switch field := field.Interface().(type) {
 		case meergo.Component:
-			_, err = marshalUIComponent(b, field, role, values, false)
+			_, err = marshalUIComponent(b, field, role, settings, false)
 		case []meergo.FieldSet:
 			b.WriteByte('[')
 			comma = false
 			for _, set := range field {
 				var ok bool
-				ok, err = marshalUIFieldSet(b, set, role, values, comma)
+				ok, err = marshalUIFieldSet(b, set, role, settings, comma)
 				if ok {
 					comma = true
 				}
@@ -367,7 +367,7 @@ func marshalUIComponent(b *json.Buffer, component meergo.Component, role meergo.
 
 // marshalUIFieldSet marshals fieldSet with the provided role in JSON format. If
 // comma is true, it prepends a comma. Returns whether it has been marshaled.
-func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Role, values map[string]any, comma bool) (bool, error) {
+func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Role, settings map[string]any, comma bool) (bool, error) {
 	if fieldSet.Role != meergo.Both && fieldSet.Role != role {
 		return false, nil
 	}
@@ -381,7 +381,7 @@ func marshalUIFieldSet(b *json.Buffer, fieldSet meergo.FieldSet, role meergo.Rol
 	comma = false
 	for _, c := range fieldSet.Fields {
 		var valuesOfSet map[string]any
-		switch vs := values[fieldSet.Name].(type) {
+		switch vs := settings[fieldSet.Name].(type) {
 		case nil:
 		case map[string]any:
 			valuesOfSet = vs

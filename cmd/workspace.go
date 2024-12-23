@@ -694,7 +694,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	var body struct {
 		Connector  string     `json:"connector"`
 		Event      string     `json:"event"`
-		Values     json.Value `json:"values"`
+		Settings   json.Value `json:"settings"`
 		Role       string     `json:"role"`
 		OAuthToken string     `json:"oauthToken"`
 	}
@@ -704,7 +704,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	}
 	if strings.HasSuffix(r.URL.Path, "/ui") {
 		body.Event = "load"
-		body.Values = nil
+		body.Settings = nil
 	}
 	var role core.Role
 	switch body.Role {
@@ -715,7 +715,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
-	ui, err := ws.ServeUI(r.Context(), body.Event, body.Values, body.Connector, role, body.OAuthToken)
+	ui, err := ws.ServeUI(r.Context(), body.Event, body.Settings, body.Connector, role, body.OAuthToken)
 	if err != nil {
 		return nil, err
 	}

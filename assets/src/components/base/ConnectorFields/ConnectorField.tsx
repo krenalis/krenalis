@@ -189,10 +189,10 @@ const getContextValueAndCallback = (
 			throw new Error(`[error] cannot render ${f.componentType} inside an AlternativeFieldSets component`);
 		}
 		const ctx = fieldSetContext;
-		if (ctx.values == null || ctx.values[f.name] == null) {
+		if (ctx.settings == null || ctx.settings[f.name] == null) {
 			value = '';
 		} else {
-			value = ctx.values[f.name];
+			value = ctx.settings[f.name];
 		}
 		onChange = ctx.onChange;
 		return [value, onChange];
@@ -216,14 +216,14 @@ const getContextValueAndCallback = (
 
 	if (connectorUIContext != null) {
 		const ctx = connectorUIContext;
-		if (ctx.values == null) {
+		if (ctx.settings == null) {
 			value = '';
 		} else if (f.componentType === 'AlternativeFieldSets') {
-			value = ctx.values;
-		} else if (ctx.values[f.name] == null) {
+			value = ctx.settings;
+		} else if (ctx.settings[f.name] == null) {
 			value = '';
 		} else {
-			value = ctx.values[f.name];
+			value = ctx.settings[f.name];
 		}
 		onChange = ctx.onChange;
 		return [value, onChange];

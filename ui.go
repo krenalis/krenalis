@@ -19,43 +19,43 @@ import (
 // does not exist.
 var ErrUIEventNotExist = errors.New("event does not exist")
 
-// InvalidUIValuesError is returned by the ServeUI method when the values are
+// InvalidSettingsError is returned by the ServeUI method when the settings are
 // not valid.
-type InvalidUIValuesError struct {
+type InvalidSettingsError struct {
 	Msg string
 }
 
-func (err *InvalidUIValuesError) Error() string {
+func (err *InvalidSettingsError) Error() string {
 	return err.Msg
 }
 
-func NewInvalidUIValuesError(msg string) error {
-	return &InvalidUIValuesError{msg}
+func NewInvalidsettingsError(msg string) error {
+	return &InvalidSettingsError{msg}
 }
 
 // UIHandler is implemented by connectors that have a UI.
 type UIHandler interface {
 
 	// ServeUI serves the connector's user interface. event is the event to be
-	// served, values are the user-entered values in JSON format, and role is
-	// the connection's role, it can be Source or Destination.
+	// served, settings are the connector's settings, and role is the
+	// connection's role, it can be Source or Destination.
 	//
 	// The first time ServeUI is called to display the UI, event is "load" and
-	// values is nil. The connector save the values as settings only when serving
-	// the "save" event; for other events, it returns an updated interface without
-	// saving the values.
+	// settings is nil. The connector saves the settings only when serving the
+	// "save" event; for other events, it returns an updated interface without
+	// saving the settings.
 	//
 	// If event does not exist, it returns an ErrUIEventNotExist.
-	// If the values are invalid, it returns an InvalidUIValuesError error.
-	ServeUI(ctx context.Context, event string, values json.Value, role Role) (*UI, error)
+	// If the settings are invalid, it returns an InvalidSettingsError error.
+	ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 }
 
 // UI represents the user interface of a connector that is shown to users.
 type UI struct {
-	Alert   *Alert      // Alert, if not empty, appears as a notification.
-	Fields  []Component // Fields, if not empty, are the form inputs for settings.
-	Values  json.Value  // Values hold the values of the fields.
-	Buttons []Button    // Buttons are the button elements that can trigger actions.
+	Alert    *Alert      // Alert, if not empty, appears as a notification.
+	Fields   []Component // Fields, if not empty, are the form inputs for settings.
+	Settings json.Value  // Settings hold the settings of the fields.
+	Buttons  []Button    // Buttons are the button elements that can trigger actions.
 }
 
 type Component interface {

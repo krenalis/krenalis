@@ -287,15 +287,14 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// ServeUI serves the user interface for the file action (on a file storage
-// connection). event is the event to be served and values are the user-entered
-// values in JSON format.
+// ServeUI serves the user interface for the format settings of a file action.
+// event is the event to be served and settings are the updated settings.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - EventNotExist, if the event does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
-func (this *Action) ServeUI(ctx context.Context, event string, values json.Value) (json.Value, error) {
+//   - InvalidSettings, if the settings are not valid.
+func (this *Action) ServeUI(ctx context.Context, event string, settings json.Value) (json.Value, error) {
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
@@ -303,17 +302,17 @@ func (this *Action) ServeUI(ctx context.Context, event string, values json.Value
 	if connector.Type != state.FileStorage {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
-	if !connector.HasUI {
-		return nil, errors.BadRequest("connector %s does not have a UI", connector.Name)
+	if !connector.HasSettings {
+		return nil, errors.BadRequest("connector %s does not have settings", connector.Name)
 	}
-	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, values)
+	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
 		} else {
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
@@ -368,7 +367,7 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 // It returns an errors.UnprocessableError error with code:
 //
 //   - FormatNotExist, if the format does not exist.
-//   - InvalidUIValues, if the user-entered values are not valid.
+//   - InvalidSettings, if the settings are not valid.
 //   - UnsupportedLanguage, if the transformation language is not supported.
 func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 
@@ -389,7 +388,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 	if format != nil {
 		v.format.typ = format.Type
 		v.format.hasSheets = format.HasSheets
-		v.format.hasUI = format.HasUI
+		v.format.hasSettings = format.HasSettings
 	}
 	v.provider = this.core.transformerProvider
 	err := validateAction(action, this.action.Target, v)
@@ -460,17 +459,17 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	// Settings.
-	if format != nil && format.HasUI {
+	// Format settings.
+	if format != nil && format.HasSettings {
 		conf := &connectors.ConnectorConfig{
 			Role:   this.action.Connection().Role,
 			Region: this.action.Connection().Workspace().PrivacyRegion,
 		}
-		n.Settings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.UIValues)
+		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {
 			switch err.(type) {
-			case *meergo.InvalidUIValuesError:
-				err = errors.Unprocessable(InvalidUIValues, "%s", err)
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connectors.UnavailableError:
 				err = errors.Unavailable("%s", err)
 			}
@@ -532,13 +531,13 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
 			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
-			"compression = $17, settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
+			"compression = $17, format_settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
 			"allow_duplicates = $22, table_name = $23, table_key_property = $24, identity_property = $25, "+
 			"reload = reload OR $26, last_change_time_property = $27, last_change_time_format = $28, "+
 			"file_ordering_property_path = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
-			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.Settings),
+			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.FormatSettings),
 			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKeyProperty,
 			n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ID,
 		)
@@ -713,10 +712,9 @@ type ActionToSet struct {
 	// In any other case, must be 0.
 	Compression Compression `json:"compression"`
 
-	// UIValues represents the user-entered values of the connector user interface
-	// in JSON format.
-	// It must be nil if the connector does not have a user interface.
-	UIValues json.Value `json:"uiValues"`
+	// FormatSettings represents the format settings of a file connector.
+	// It must be nil if the connector does not have settings.
+	FormatSettings json.Value `json:"formatSettings"`
 
 	// Mode specifies, for apps, whether the export should create users or groups,
 	// update them, or do both.
@@ -935,7 +933,7 @@ func shouldReload(a *state.Action, n *state.SetAction) bool {
 	if a.Path != n.Path || a.Sheet != n.Sheet {
 		return true
 	}
-	if !bytes.Equal(a.Settings, n.Settings) {
+	if !bytes.Equal(a.FormatSettings, n.FormatSettings) {
 		return true
 	}
 	if a.IdentityProperty != n.IdentityProperty {

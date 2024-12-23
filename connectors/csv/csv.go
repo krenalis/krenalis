@@ -57,10 +57,10 @@ func New(conf *meergo.FileConfig) (*CSV, error) {
 
 type CSV struct {
 	conf     *meergo.FileConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	Comma            string
 	Comment          string
 	FieldsPerRecord  int
@@ -152,19 +152,19 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 }
 
 // ServeUI serves the connector's user interface.
-func (c *CSV) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (c *CSV) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if c.settings == nil {
 			s.Comma = ","
 		} else {
 			s = *c.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, c.saveValues(ctx, values, role)
+		return nil, c.saveSettings(ctx, settings, role)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -178,7 +178,7 @@ func (c *CSV) ServeUI(ctx context.Context, event string, values json.Value, role
 			&meergo.Checkbox{Name: "UseCRLF", Label: "Use CRLF", Role: meergo.Destination},
 			&meergo.Checkbox{Name: "HasColumnNames", Label: "The first row contains the column names", Role: meergo.Source},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -231,36 +231,36 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 	return err
 }
 
-// saveValues saves the user-entered values as settings.
-func (c *CSV) saveValues(ctx context.Context, values json.Value, role meergo.Role) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (c *CSV) saveSettings(ctx context.Context, settings json.Value, role meergo.Role) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}
 	// Validate Comma.
 	if utf8.RuneCountInString(s.Comma) != 1 {
-		return meergo.NewInvalidUIValuesError("comma must be a single character")
+		return meergo.NewInvalidsettingsError("comma must be a single character")
 	}
 	if c := s.Comma; c == "\n" || c == "\r" || c == "\uFFFD" {
-		return meergo.NewInvalidUIValuesError("comma cannot be \\r, \\n, or the Unicode replacement character")
+		return meergo.NewInvalidsettingsError("comma cannot be \\r, \\n, or the Unicode replacement character")
 	}
 	if role == meergo.Source {
 		// Validate Comment.
 		if c := s.Comment; c != "" {
 			if utf8.RuneCountInString(c) != 1 {
-				return meergo.NewInvalidUIValuesError("comment, if provided, must be a single character")
+				return meergo.NewInvalidsettingsError("comment, if provided, must be a single character")
 			}
 			if c == "\n" || c == "\r" || c == "\uFFFD" {
-				return meergo.NewInvalidUIValuesError("comment cannot be \\r, \\n, or the Unicode replacement character")
+				return meergo.NewInvalidsettingsError("comment cannot be \\r, \\n, or the Unicode replacement character")
 			}
 			if c == s.Comma {
-				return meergo.NewInvalidUIValuesError("comment cannot be equal to the comma")
+				return meergo.NewInvalidsettingsError("comment cannot be equal to the comma")
 			}
 		}
 		// Validate FieldsPerRecord.
 		if f := s.FieldsPerRecord; f < 0 || f > 1000 {
-			return meergo.NewInvalidUIValuesError("fields per record, if provided, must be in range [0,1000]")
+			return meergo.NewInvalidsettingsError("fields per record, if provided, must be in range [0,1000]")
 		}
 	} else {
 		s.Comment = ""

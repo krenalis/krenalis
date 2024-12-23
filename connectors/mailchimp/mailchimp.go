@@ -83,10 +83,10 @@ func New(conf *meergo.AppConfig) (*MailChimp, error) {
 
 type MailChimp struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
-type Settings struct {
+type innerSettings struct {
 	List          string
 	DataCenter    string
 	WebhookSecret string
@@ -435,17 +435,17 @@ func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role mee
 }
 
 // ServeUI serves the connector's user interface.
-func (mc *MailChimp) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if mc.settings != nil {
 			s = *mc.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, mc.saveValues(ctx, values)
+		return nil, mc.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -455,9 +455,9 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values json.Valu
 	if err != nil {
 		return nil, err
 	}
-	options := make([]meergo.Option, len(lists))
+	listOptions := make([]meergo.Option, len(lists))
 	for i, list := range lists {
-		options[i] = meergo.Option{
+		listOptions[i] = meergo.Option{
 			Text:  list.Name,
 			Value: list.ID,
 		}
@@ -465,9 +465,9 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, values json.Valu
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Select{Name: "List", Label: "List", Options: options},
+			&meergo.Select{Name: "List", Label: "List", Options: listOptions},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -529,17 +529,17 @@ func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records 
 	return nil
 }
 
-// saveValues saves the user-entered values as settings.
-func (mc *MailChimp) saveValues(ctx context.Context, values json.Value) error {
+// saveSettings validates and saves the settings.
+func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) error {
 	var list struct {
 		List string
 	}
-	err := values.Unmarshal(&list)
+	err := settings.Unmarshal(&list)
 	if err != nil {
 		return err
 	}
 	if list.List == "" || len(list.List) > 100 {
-		return meergo.NewInvalidUIValuesError("list length must be in range [1, 100]")
+		return meergo.NewInvalidsettingsError("list length must be in range [1, 100]")
 	}
 	// Check if the list exists.
 	lists, err := mc.lists(ctx)
@@ -554,13 +554,13 @@ func (mc *MailChimp) saveValues(ctx context.Context, values json.Value) error {
 		}
 	}
 	if !found {
-		return meergo.NewInvalidUIValuesError("list does not exist")
+		return meergo.NewInvalidsettingsError("list does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {
 		return err
 	}
-	s := Settings{
+	s := innerSettings{
 		List:       list.List,
 		DataCenter: dataCenter,
 	}

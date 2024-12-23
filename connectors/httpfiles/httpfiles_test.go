@@ -14,8 +14,8 @@ import (
 )
 
 func TestCompletePath(t *testing.T) {
-	httpFiles := &HTTPFiles{settings: &Settings{Host: "example.com", Port: 443}}
-	httpFiles2 := &HTTPFiles{settings: &Settings{Host: "example.com", Port: 8080}}
+	httpFiles := &HTTPFiles{settings: &innerSettings{Host: "example.com", Port: 443}}
+	httpFiles2 := &HTTPFiles{settings: &innerSettings{Host: "example.com", Port: 8080}}
 	tests := []meergo.CompletePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},

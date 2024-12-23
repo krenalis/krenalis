@@ -65,7 +65,7 @@ func New(conf *meergo.AppConfig) (*Dummy, error) {
 
 type Dummy struct {
 	conf     *meergo.AppConfig
-	settings *Settings
+	settings *innerSettings
 }
 
 var (
@@ -190,7 +190,7 @@ func init() {
 	usersLock.Unlock()
 }
 
-type Settings struct {
+type innerSettings struct {
 	URLForDispatchingEvents string
 }
 
@@ -245,17 +245,17 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 }
 
 // ServeUI serves the connector's user interface.
-func (dummy *Dummy) ServeUI(ctx context.Context, event string, values json.Value, role meergo.Role) (*meergo.UI, error) {
+func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
-		var s Settings
+		var s innerSettings
 		if dummy.settings != nil {
 			s = *dummy.settings
 		}
-		values, _ = json.Marshal(s)
+		settings, _ = json.Marshal(s)
 	case "save":
-		return nil, dummy.saveValues(ctx, values)
+		return nil, dummy.saveSettings(ctx, settings)
 	default:
 		return nil, meergo.ErrUIEventNotExist
 	}
@@ -264,7 +264,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, values json.Value
 		Fields: []meergo.Component{
 			&meergo.Input{Name: "URLForDispatchingEvents", Label: "URL for dispatching events", Role: meergo.Destination, Placeholder: "https://example.com"},
 		},
-		Values: values,
+		Settings: settings,
 	}
 
 	return ui, nil
@@ -311,10 +311,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 	return nil
 }
 
-// saveValues validates the user-entered values and returns the settings.
-func (dummy *Dummy) saveValues(ctx context.Context, values json.Value) error {
-	var s Settings
-	err := values.Unmarshal(&s)
+// saveSettings saves the settings.
+func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error {
+	var s innerSettings
+	err := settings.Unmarshal(&s)
 	if err != nil {
 		return err
 	}

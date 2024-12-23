@@ -62,7 +62,7 @@ type ActionToSet struct {
 	Path                     string          `json:"path"`
 	Sheet                    string          `json:"sheet"`
 	Compression              Compression     `json:"compression"`
-	UIValues                 json.RawMessage `json:"uiValues,omitempty"`
+	FormatSettings           json.RawMessage `json:"formatSettings,omitempty"`
 	ExportMode               ExportMode      `json:"exportMode,omitempty"`
 	Matching                 Matching        `json:"matching"`
 	ExportOnDuplicates       bool            `json:"exportOnDuplicates"`
@@ -94,7 +94,7 @@ type ConnectionToAdd struct {
 	WebsiteHost       string          `json:"websiteHost"`
 	LinkedConnections []int           `json:"linkedConnections"`
 	SendingMode       *SendingMode    `json:"sendingMode"`
-	UIValues          json.RawMessage `json:"uiValues"`
+	Settings          json.RawMessage `json:"settings"`
 }
 
 type DisplayedProperties struct {
