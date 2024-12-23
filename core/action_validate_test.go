@@ -1395,7 +1395,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     `output action schema property "email_out" cannot have CreateRequire set to true`,
+			err:                     `output action schema property "email_out" cannot have CreateRequired set to true`,
 		},
 		{
 			name: "BAD: Destination/App/Users - input schema contains a nullable property",
@@ -1451,7 +1451,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     `input action schema property "email_in" cannot have CreateRequire set to true`,
+			err:                     `input action schema property "email_in" cannot have CreateRequired set to true`,
 		},
 		{
 			name: "BAD: Source/App/Events - bad target for connection",

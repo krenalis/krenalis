@@ -760,7 +760,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		}
 		if p.CreateRequired {
 			if role != state.Destination || typ != state.App || io != "output" {
-				return fmt.Errorf("%s action schema property %q cannot have CreateRequire set to true", io, path)
+				return fmt.Errorf("%s action schema property %q cannot have CreateRequired set to true", io, path)
 			}
 		}
 		if isOutputDatabaseUserDestination {
