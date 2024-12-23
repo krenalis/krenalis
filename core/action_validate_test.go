@@ -2181,7 +2181,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
-			err:                     "output matching property cannot be transformed",
+			err:                     "mapping cannot map over the output matching property",
 		},
 		{
 			name: "BAD: Destination/App/Users - output matching property transformed with mapping with function",
@@ -2219,7 +2219,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "output matching property cannot be transformed",
+			err:                     "transformation function cannot transform over the output matching property",
 		},
 		{
 			name: "BAD: Destination/App/Users - output matching property not in out schema",
@@ -2365,6 +2365,137 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
 			err:                     "input property \"additional_properties.zzzz\" of transformation function does not exist in schema",
+		},
+		{
+			name: "BAD: Destination/App/Users - with mapping transformation that overwrites the out matching property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
+				},
+				ExportOnDuplicates: false,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+			err:                     "mapping cannot map over the output matching property",
+		},
+		{
+			name: "BAD: Destination/App/Users - with transformation function that overwrites the out matching property",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email": user["email_in"],`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email"},
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email",
+				},
+				ExportOnDuplicates: false,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+			err:                     "transformation function cannot transform over the output matching property",
+		},
+		{
+			name: "BAD: Destination/App/Users - in matching property cannot be a property path",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "additional", Type: types.Object([]types.Property{
+						{Name: "first_name", Type: types.Text()},
+						{Name: "last_name", Type: types.Text()},
+					})},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "additional", Type: types.Object([]types.Property{
+						{Name: "first_name", Type: types.Text()},
+						{Name: "last_name", Type: types.Text()},
+					})},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "additional.first_name",
+					Out: "email_in",
+				},
+				ExportOnDuplicates: false,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+			err:                     "matching properties cannot be property paths, can only be property names",
+		},
+		{
+			name: "BAD: Destination/App/Users - out matching property cannot be a property path",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.Text()},
+					{Name: "additional", Type: types.Object([]types.Property{
+						{Name: "first_name", Type: types.Text()},
+						{Name: "last_name", Type: types.Text()},
+					})},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "additional.first_name",
+				},
+				ExportOnDuplicates: false,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+			err:                     "matching properties cannot be property paths, can only be property names",
 		},
 	}
 

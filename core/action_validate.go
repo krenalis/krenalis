@@ -306,7 +306,11 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if action.ExportMode == "" {
 			return errors.BadRequest("export mode cannot be empty if there are matching properties")
 		}
+		// Validate the input matching property.
 		if !types.IsValidPropertyName(action.Matching.In) {
+			if types.IsValidPropertyPath(action.Matching.In) {
+				return errors.BadRequest("matching properties cannot be property paths, can only be property names")
+			}
 			return errors.BadRequest("input matching property %q is not a valid property name", action.Matching.In)
 		}
 		if !inSchema.Valid() {
@@ -320,12 +324,15 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			return errors.BadRequest("type %s cannot be used as matching property", in.Type)
 		}
 		usedInPaths = append(usedInPaths, action.Matching.In)
-		// Validate the matching output property.
-		if !types.IsValidPropertyName(action.Matching.In) {
-			return errors.BadRequest("app export matching output property %q is not a valid property name", action.Matching.Out)
-		}
+		// Validate the output matching property.
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema must be valid")
+		}
+		if !types.IsValidPropertyName(action.Matching.Out) {
+			if types.IsValidPropertyPath(action.Matching.Out) {
+				return errors.BadRequest("matching properties cannot be property paths, can only be property names")
+			}
+			return errors.BadRequest("output matching property %q is not a valid property name", action.Matching.Out)
 		}
 		out, ok := outSchema.Property(action.Matching.Out)
 		if !ok {
@@ -349,11 +356,11 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		// Check that the output property has not been transformed.
 		if m := action.Transformation.Mapping; m != nil {
 			if _, ok := m[action.Matching.Out]; ok {
-				return errors.BadRequest("output matching property cannot be transformed")
+				return errors.BadRequest("mapping cannot map over the output matching property")
 			}
 		} else if fn := action.Transformation.Function; fn != nil {
 			if slices.Contains(fn.OutPaths, action.Matching.Out) {
-				return errors.BadRequest("output matching property cannot be transformed")
+				return errors.BadRequest("transformation function cannot transform over the output matching property")
 			}
 		}
 	}
