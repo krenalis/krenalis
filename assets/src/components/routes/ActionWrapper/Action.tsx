@@ -16,7 +16,7 @@ import ActionContext from '../../../context/ActionContext';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 
 const Action = ({ actionType: providedActionType, action: providedAction }) => {
-	const [mode, setMode] = useState<'mappings' | 'transformation' | ''>('');
+	const [mode, setMode] = useState<'mappings' | 'function' | ''>('');
 	const [isSaveButtonLoading, setIsSaveButtonLoading] = useState<boolean>(false);
 
 	const { connection } = useContext(ConnectionContext);

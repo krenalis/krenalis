@@ -123,7 +123,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (action.transformation.function != null) {
-			setMode('transformation');
+			setMode('function');
 			setSelectedLanguage(action.transformation.function.language);
 		} else {
 			setMode('mappings');
@@ -520,8 +520,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 });
 
 interface TransformationBoxProps {
-	mode: 'mappings' | 'transformation' | '';
-	setMode: React.Dispatch<React.SetStateAction<'mappings' | 'transformation' | ''>>;
+	mode: 'mappings' | 'function' | '';
+	setMode: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
 	workspaces: Workspace[];
 	selectedWorkspace: number;
 	action: TransformedAction;
@@ -560,7 +560,7 @@ const isTransformationChanged = (
 };
 
 const isMappingModified = (
-	mode: '' | 'mappings' | 'transformation',
+	mode: '' | 'mappings' | 'function',
 	oldValue: TransformedMapping | TransformationFunction,
 	newValue: TransformedMapping | TransformationFunction,
 ) => {
@@ -668,7 +668,7 @@ const TransformationBox = ({
 				};
 				setSelectedLanguage(pendingMode.current);
 				setAction(a);
-				setMode('transformation');
+				setMode('function');
 			}
 		}, delay);
 	};
@@ -839,9 +839,7 @@ const TransformationBox = ({
 									<SlButton
 										key={language}
 										variant={
-											mode === 'transformation' && selectedLanguage === language
-												? 'primary'
-												: 'default'
+											mode === 'function' && selectedLanguage === language ? 'primary' : 'default'
 										}
 										onClick={() => onModeClick(language)}
 										disabled={isTransformationDisabled}
@@ -854,7 +852,7 @@ const TransformationBox = ({
 					)}
 				</div>
 				<div className='transformation-box__header-right-buttons'>
-					{mode === 'transformation' && (
+					{mode === 'function' && (
 						<SlDropdown
 							className={`transformation-box__function-settings${isFullscreenTransformationOpen ? ' transformation-box__function-settings--visible' : ''}`}
 						>
@@ -1580,7 +1578,7 @@ const FullscreenTransformation = ({
 				>
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
-				{mode === 'transformation' && (
+				{mode === 'function' && (
 					<SlSwitch
 						className='fullscreen-transformation__panel-schema-show-only-selected'
 						size='small'
@@ -1598,7 +1596,7 @@ const FullscreenTransformation = ({
 						}
 					}
 
-					if (mode === 'transformation') {
+					if (mode === 'function') {
 						const isSelected = selectedInPaths.includes(p.name);
 						const hasSelectedChildren =
 							selectedInPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
@@ -1646,7 +1644,7 @@ const FullscreenTransformation = ({
 					const isLastExecuted =
 						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
 					let sampleToShow = s;
-					if (mode === 'transformation') {
+					if (mode === 'function') {
 						// Show only the checked properties.
 						const filtered = {};
 						for (const k in s) {
@@ -1892,7 +1890,7 @@ const FullscreenTransformation = ({
 										>
 											<SlIcon name='search' slot='prefix' />
 										</SlInput>
-										{mode === 'transformation' && (
+										{mode === 'function' && (
 											<SlSwitch
 												className='fullscreen-transformation__panel-schema-show-only-selected'
 												size='small'
@@ -1920,7 +1918,7 @@ const FullscreenTransformation = ({
 												return null;
 											}
 
-											if (mode === 'transformation') {
+											if (mode === 'function') {
 												const isSelected = selectedOutPaths.includes(p.name);
 												const hasSelectedChildren =
 													selectedOutPaths.findIndex((prop) =>
@@ -2038,7 +2036,7 @@ interface TransformationNestedPropertiesProps {
 	nesting: number;
 	parentName?: string;
 	side: 'input' | 'output';
-	mode: 'mappings' | 'transformation' | '';
+	mode: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
 	selectedProperties: string[];
 	onChangeSelectedProperty: (key: string) => void;
@@ -2124,7 +2122,7 @@ interface TransformationPropertyProps {
 	isParent?: boolean;
 	parentName?: string;
 	side: 'input' | 'output';
-	mode: 'mappings' | 'transformation' | '';
+	mode: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
 	selectedProperties: string[];
 	onChangeSelectedProperty: (key: string) => void;
@@ -2162,7 +2160,7 @@ const TransformationProperty = ({
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}`}
 		>
-			{mode === 'transformation' && (
+			{mode === 'function' && (
 				<SlCheckbox
 					className='fullscreen-transformation__property-check'
 					checked={isSelected || hasSelectedParent}
