@@ -855,7 +855,9 @@ const TransformationBox = ({
 				</div>
 				<div className='transformation-box__header-right-buttons'>
 					{mode === 'transformation' && (
-						<SlDropdown className='transformation-box__function-settings'>
+						<SlDropdown
+							className={`transformation-box__function-settings${isFullscreenTransformationOpen ? ' transformation-box__function-settings--visible' : ''}`}
+						>
 							<SlButton slot='trigger' circle>
 								<SlIcon className='transformation-box__function-settings-icon' name='gear' />
 								<SlIcon

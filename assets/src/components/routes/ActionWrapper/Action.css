@@ -518,6 +518,15 @@ inherit the disabled style */
 
 .transformation-box__function-settings {
 	position: relative;
+	visibility: hidden;
+	opacity: 0;
+	transition: opacity 0s;
+}
+
+.transformation-box__function-settings--visible {
+	visibility: visible;
+	opacity: 1;
+	transition: opacity 0s 0.5s;
 }
 
 .transformation-box__function-settings::part(panel) {
