@@ -82,8 +82,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		action,
 		setAction,
 		actionType,
-		mode,
-		setMode,
+		transformationType,
+		setTransformationType,
 		setIsSaveHidden,
 		isFormatChanged,
 		isEditing,
@@ -123,10 +123,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (action.transformation.function != null) {
-			setMode('function');
+			setTransformationType('function');
 			setSelectedLanguage(action.transformation.function.language);
 		} else {
-			setMode('mappings');
+			setTransformationType('mappings');
 		}
 	}, []);
 
@@ -381,8 +381,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const box = (
 		<TransformationBox
-			mode={mode}
-			setMode={setMode}
+			transformationType={transformationType}
+			setTransformationType={setTransformationType}
 			workspaces={workspaces}
 			selectedWorkspace={selectedWorkspace}
 			action={action}
@@ -520,8 +520,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 });
 
 interface TransformationBoxProps {
-	mode: 'mappings' | 'function' | '';
-	setMode: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
+	transformationType: 'mappings' | 'function' | '';
+	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
 	workspaces: Workspace[];
 	selectedWorkspace: number;
 	action: TransformedAction;
@@ -560,14 +560,14 @@ const isTransformationChanged = (
 };
 
 const isMappingModified = (
-	mode: '' | 'mappings' | 'function',
+	transformationType: '' | 'mappings' | 'function',
 	oldValue: TransformedMapping | TransformationFunction,
 	newValue: TransformedMapping | TransformationFunction,
 ) => {
-	if (mode === '') {
+	if (transformationType === '') {
 		return;
 	}
-	if (mode === 'mappings') {
+	if (transformationType === 'mappings') {
 		const oldV = oldValue as TransformedMapping;
 		const newV = newValue as TransformedMapping;
 		return isMappingChanged(oldV, newV);
@@ -579,8 +579,8 @@ const isMappingModified = (
 };
 
 const TransformationBox = ({
-	mode,
-	setMode,
+	transformationType,
+	setTransformationType,
 	workspaces,
 	selectedWorkspace,
 	action,
@@ -604,20 +604,20 @@ const TransformationBox = ({
 	const [isFullscreenAnimating, setIsFullscreenAnimating] = useState<boolean>(false);
 	const [isEditTooltipOpen, setIsEditTooltipOpen] = useState<boolean>();
 
-	const pendingMode = useRef<string>();
+	const pendingTransformationType = useRef<string>();
 	const firstValue = useRef<TransformedMapping | TransformationFunction>();
-	const hasNeverChangedMode = useRef<boolean>(true);
+	const hasNeverChangedTransformationType = useRef<boolean>(true);
 
 	const { connection } = useContext(ConnectionContext);
 	const { setSelectedInPaths, setSelectedOutPaths, isEditing } = useContext(actionContext);
 
 	useEffect(() => {
-		if (mode === 'mappings') {
+		if (transformationType === 'mappings') {
 			firstValue.current = JSON.parse(JSON.stringify(action.transformation.mapping));
 		} else {
 			firstValue.current = JSON.parse(JSON.stringify(action.transformation.function));
 		}
-	}, [mode, selectedLanguage]);
+	}, [transformationType, selectedLanguage]);
 
 	useEffect(() => {
 		if (isFullscreenTransformationOpen) {
@@ -639,57 +639,57 @@ const TransformationBox = ({
 		});
 	};
 
-	const onChangeMode = (delay: number) => {
-		hasNeverChangedMode.current = false;
+	const onChangeTransformationType = (delay: number) => {
+		hasNeverChangedTransformationType.current = false;
 		const a = { ...action };
 		a.inSchema = null;
 		a.outSchema = null;
 		setIsAlertOpen(false);
 		setTimeout(() => {
-			if (pendingMode.current == 'mappings') {
+			if (pendingTransformationType.current == 'mappings') {
 				a.transformation.mapping = flattenSchema(actionType.outputSchema);
 				a.transformation.function = null;
 				setSelectedLanguage('');
 				setSelectedInPaths([]);
 				setSelectedOutPaths([]);
 				setAction(a);
-				setMode('mappings');
+				setTransformationType('mappings');
 			} else {
 				a.transformation.mapping = null;
 				a.transformation.function = {
-					source: RAW_TRANSFORMATION_FUNCTIONS[pendingMode.current].replace(
+					source: RAW_TRANSFORMATION_FUNCTIONS[pendingTransformationType.current].replace(
 						'$parameterName',
 						getTransformationFunctionParameterName(connection, actionType),
 					),
-					language: pendingMode.current,
+					language: pendingTransformationType.current,
 					preserveJSON: false,
 					inPaths: [],
 					outPaths: [],
 				};
-				setSelectedLanguage(pendingMode.current);
+				setSelectedLanguage(pendingTransformationType.current);
 				setAction(a);
-				setMode('function');
+				setTransformationType('function');
 			}
 		}, delay);
 	};
 
-	const onModeClick = (newMode: string) => {
-		if (newMode === mode) {
+	const onTransformationTypeClick = (newTransformationType: string) => {
+		if (newTransformationType === transformationType) {
 			return;
 		}
 		setIsEditTooltipOpen(false);
-		pendingMode.current = newMode;
+		pendingTransformationType.current = newTransformationType;
 		if (
 			isMappingModified(
-				mode,
+				transformationType,
 				firstValue.current,
-				mode === 'mappings' ? action.transformation.mapping : action.transformation.function,
+				transformationType === 'mappings' ? action.transformation.mapping : action.transformation.function,
 			) ||
-			(isEditing && hasNeverChangedMode.current)
+			(isEditing && hasNeverChangedTransformationType.current)
 		) {
 			setIsAlertOpen(true);
 		} else {
-			onChangeMode(0);
+			onChangeTransformationType(0);
 		}
 	};
 
@@ -706,7 +706,7 @@ const TransformationBox = ({
 	};
 
 	let body: ReactNode;
-	if (mode === 'mappings') {
+	if (transformationType === 'mappings') {
 		const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.transformation.mapping) {
@@ -809,7 +809,7 @@ const TransformationBox = ({
 
 	return (
 		<div
-			className={`transformation-box${' transformation-box--' + mode}${
+			className={`transformation-box${' transformation-box--' + transformationType}${
 				isFullscreenAnimating ? ' transformation-box--is-fullscreen-animating' : ''
 			}`}
 		>
@@ -818,18 +818,22 @@ const TransformationBox = ({
 					{isCompletelyOpen || !isTransformationFunctionSupported || transformationLanguages.length == 0 ? (
 						<>
 							<span className='transformation-box__header-icon'>
-								{mode === 'mappings' ? <SlIcon name='shuffle' /> : getLanguageLogo(selectedLanguage)}
+								{transformationType === 'mappings' ? (
+									<SlIcon name='shuffle' />
+								) : (
+									getLanguageLogo(selectedLanguage)
+								)}
 							</span>
 							<div className='transformation-box__header-text'>
-								{mode === 'mappings' ? 'Mappings' : selectedLanguage}
+								{transformationType === 'mappings' ? 'Mappings' : selectedLanguage}
 							</div>
 						</>
 					) : (
 						<SlButtonGroup className='transformation-box__header-buttons'>
 							<SlButton
 								className='transformation-box__mappings-button'
-								variant={mode === 'mappings' ? 'primary' : 'default'}
-								onClick={() => onModeClick('mappings')}
+								variant={transformationType === 'mappings' ? 'primary' : 'default'}
+								onClick={() => onTransformationTypeClick('mappings')}
 								disabled={isTransformationDisabled}
 							>
 								Mappings
@@ -839,9 +843,11 @@ const TransformationBox = ({
 									<SlButton
 										key={language}
 										variant={
-											mode === 'function' && selectedLanguage === language ? 'primary' : 'default'
+											transformationType === 'function' && selectedLanguage === language
+												? 'primary'
+												: 'default'
 										}
-										onClick={() => onModeClick(language)}
+										onClick={() => onTransformationTypeClick(language)}
 										disabled={isTransformationDisabled}
 									>
 										{language}
@@ -852,7 +858,7 @@ const TransformationBox = ({
 					)}
 				</div>
 				<div className='transformation-box__header-right-buttons'>
-					{mode === 'function' && (
+					{transformationType === 'function' && (
 						<SlDropdown
 							className={`transformation-box__function-settings${isFullscreenTransformationOpen ? ' transformation-box__function-settings--visible' : ''}`}
 						>
@@ -914,14 +920,14 @@ const TransformationBox = ({
 				actions={
 					<>
 						<SlButton onClick={() => setIsAlertOpen(false)}>Cancel</SlButton>
-						<SlButton variant='danger' onClick={() => onChangeMode(200)}>
+						<SlButton variant='danger' onClick={() => onChangeTransformationType(200)}>
 							Continue
 						</SlButton>
 					</>
 				}
 			>
 				<div style={{ textAlign: 'center' }}>
-					<p>If you switch the mapping mode you will permanently lose all the work you have done</p>
+					<p>If you switch the transformation type you will permanently lose all the work you have done</p>
 				</div>
 			</AlertDialog>
 		</div>
@@ -965,7 +971,7 @@ const FullscreenTransformation = ({
 		settings,
 		actionType,
 		connection,
-		mode,
+		transformationType,
 		selectedInPaths,
 		setSelectedInPaths,
 		selectedOutPaths,
@@ -1034,18 +1040,18 @@ const FullscreenTransformation = ({
 	}, []);
 
 	useEffect(() => {
-		// Reset the output of the transformation tests when the user switches
-		// the language or the mode of the transformation.
+		// Reset the output of the transformation tests when the user
+		// switches the language or the type of the transformation.
 		setOutput('');
 		setOutputError('');
-	}, [mode, selectedLanguage]);
+	}, [transformationType, selectedLanguage]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);
 		setShowOnlyOutSelected(false);
 		setInSearchTerm('');
 		setOutSearchTerm('');
-	}, [mode]);
+	}, [transformationType]);
 
 	useEffect(() => {
 		if (isFullscreenTransformationOpen) {
@@ -1370,7 +1376,7 @@ const FullscreenTransformation = ({
 		setIsOutputSchemaSelected(false);
 		setIsExecuting(true);
 
-		if (mode === 'mappings') {
+		if (transformationType === 'mappings') {
 			let hasMappedProperty = false;
 			for (const k in action.transformation.mapping) {
 				if (action.transformation.mapping[k].value !== '') {
@@ -1578,7 +1584,7 @@ const FullscreenTransformation = ({
 				>
 					<SlIcon name='search' slot='prefix' />
 				</SlInput>
-				{mode === 'function' && (
+				{transformationType === 'function' && (
 					<SlSwitch
 						className='fullscreen-transformation__panel-schema-show-only-selected'
 						size='small'
@@ -1596,7 +1602,7 @@ const FullscreenTransformation = ({
 						}
 					}
 
-					if (mode === 'function') {
+					if (transformationType === 'function') {
 						const isSelected = selectedInPaths.includes(p.name);
 						const hasSelectedChildren =
 							selectedInPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
@@ -1613,7 +1619,7 @@ const FullscreenTransformation = ({
 								language={selectedLanguage}
 								nesting={1}
 								side='input'
-								mode={mode}
+								transformationType={transformationType}
 								exportMode={action.exportMode}
 								selectedProperties={selectedInPaths}
 								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
@@ -1626,7 +1632,7 @@ const FullscreenTransformation = ({
 								language={selectedLanguage}
 								property={p}
 								side='input'
-								mode={mode}
+								transformationType={transformationType}
 								exportMode={action.exportMode}
 								selectedProperties={selectedInPaths}
 								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
@@ -1644,7 +1650,7 @@ const FullscreenTransformation = ({
 					const isLastExecuted =
 						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
 					let sampleToShow = s;
-					if (mode === 'function') {
+					if (transformationType === 'function') {
 						// Show only the checked properties.
 						const filtered = {};
 						for (const k in s) {
@@ -1890,7 +1896,7 @@ const FullscreenTransformation = ({
 										>
 											<SlIcon name='search' slot='prefix' />
 										</SlInput>
-										{mode === 'function' && (
+										{transformationType === 'function' && (
 											<SlSwitch
 												className='fullscreen-transformation__panel-schema-show-only-selected'
 												size='small'
@@ -1918,7 +1924,7 @@ const FullscreenTransformation = ({
 												return null;
 											}
 
-											if (mode === 'function') {
+											if (transformationType === 'function') {
 												const isSelected = selectedOutPaths.includes(p.name);
 												const hasSelectedChildren =
 													selectedOutPaths.findIndex((prop) =>
@@ -1937,7 +1943,7 @@ const FullscreenTransformation = ({
 														language={selectedLanguage}
 														nesting={1}
 														side='output'
-														mode={mode}
+														transformationType={transformationType}
 														exportMode={action.exportMode}
 														selectedProperties={selectedOutPaths}
 														onChangeSelectedProperty={(key) =>
@@ -1952,7 +1958,7 @@ const FullscreenTransformation = ({
 														property={p}
 														language={selectedLanguage}
 														side='output'
-														mode={mode}
+														transformationType={transformationType}
 														exportMode={action.exportMode}
 														selectedProperties={selectedOutPaths}
 														onChangeSelectedProperty={(key) =>
@@ -2036,7 +2042,7 @@ interface TransformationNestedPropertiesProps {
 	nesting: number;
 	parentName?: string;
 	side: 'input' | 'output';
-	mode: 'mappings' | 'function' | '';
+	transformationType: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
 	selectedProperties: string[];
 	onChangeSelectedProperty: (key: string) => void;
@@ -2048,7 +2054,7 @@ const TransformationNestedProperties = ({
 	nesting,
 	parentName,
 	side,
-	mode,
+	transformationType,
 	exportMode,
 	selectedProperties,
 	onChangeSelectedProperty,
@@ -2067,7 +2073,7 @@ const TransformationNestedProperties = ({
 				isParent={true}
 				parentName={parentName}
 				side={side}
-				mode={mode}
+				transformationType={transformationType}
 				exportMode={exportMode}
 				selectedProperties={selectedProperties}
 				onChangeSelectedProperty={onChangeSelectedProperty}
@@ -2089,7 +2095,7 @@ const TransformationNestedProperties = ({
 									nesting={nesting + 1}
 									parentName={parentName ? parentName + '.' + property.name : property.name}
 									side={side}
-									mode={mode}
+									transformationType={transformationType}
 									exportMode={exportMode}
 									selectedProperties={selectedProperties}
 									onChangeSelectedProperty={onChangeSelectedProperty}
@@ -2103,7 +2109,7 @@ const TransformationNestedProperties = ({
 									language={language}
 									parentName={parentName ? parentName + '.' + property.name : property.name}
 									side={side}
-									mode={mode}
+									transformationType={transformationType}
 									exportMode={exportMode}
 									selectedProperties={selectedProperties}
 									onChangeSelectedProperty={onChangeSelectedProperty}
@@ -2122,7 +2128,7 @@ interface TransformationPropertyProps {
 	isParent?: boolean;
 	parentName?: string;
 	side: 'input' | 'output';
-	mode: 'mappings' | 'function' | '';
+	transformationType: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
 	selectedProperties: string[];
 	onChangeSelectedProperty: (key: string) => void;
@@ -2136,7 +2142,7 @@ const TransformationProperty = ({
 	isParent,
 	parentName,
 	side,
-	mode,
+	transformationType,
 	exportMode,
 	selectedProperties,
 	onChangeSelectedProperty,
@@ -2160,7 +2166,7 @@ const TransformationProperty = ({
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}`}
 		>
-			{mode === 'function' && (
+			{transformationType === 'function' && (
 				<SlCheckbox
 					className='fullscreen-transformation__property-check'
 					checked={isSelected || hasSelectedParent}

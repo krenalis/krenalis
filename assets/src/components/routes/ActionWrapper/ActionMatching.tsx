@@ -7,7 +7,7 @@ import { checkIfPropertyExists } from './Action.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionMatching = () => {
-	const { connection, action, setAction, actionType, mode, selectedOutPaths, setSelectedOutPaths } =
+	const { connection, action, setAction, actionType, transformationType, selectedOutPaths, setSelectedOutPaths } =
 		useContext(ActionContext);
 
 	const flatInMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
@@ -63,7 +63,7 @@ const ActionMatching = () => {
 		} else {
 			a.matching!.out = v;
 			// The out matching properties cannot be transformed.
-			if (mode === 'mappings') {
+			if (transformationType === 'mappings') {
 				if (a.transformation.mapping[v] != null) {
 					a.transformation.mapping[v].value = '';
 				}
@@ -82,7 +82,7 @@ const ActionMatching = () => {
 		} else {
 			a.matching!.out = v;
 			// The out matching properties cannot be transformed.
-			if (mode === 'mappings') {
+			if (transformationType === 'mappings') {
 				if (a.transformation.mapping[v] != null) {
 					a.transformation.mapping[v].value = '';
 				}

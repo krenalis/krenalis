@@ -4,8 +4,8 @@ import { TransformedAction, TransformedActionType } from '../lib/core/action';
 import { ConnectorSettings } from '../lib/api/types/responses';
 
 interface ActionContext {
-	mode: 'mappings' | 'function' | '';
-	setMode: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
+	transformationType: 'mappings' | 'function' | '';
+	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
 	connection: TransformedConnection;
 	action: TransformedAction;
 	setAction: React.Dispatch<React.SetStateAction<TransformedAction | undefined>>;
