@@ -10,6 +10,8 @@ package snowflake
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/meergo/meergo"
@@ -23,7 +25,7 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 		return snowflake(err)
 	}
 	defer rows.Close()
-	var objects []string
+	count := map[string]int{}
 	for rows.Next() {
 		var createdOn, databaseName, schemaName any
 		var name, kind string
@@ -32,13 +34,29 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 			return snowflake(err)
 		}
 		typ := strings.ToLower(kind)
-		objects = append(objects, fmt.Sprintf("%s '%s'", typ, name))
+		count[typ] = count[typ] + 1
 	}
 	if err := rows.Err(); err != nil {
 		return snowflake(err)
 	}
-	if objects != nil {
-		reason := fmt.Sprintf("expected an empty database, got: %s", strings.Join(objects, ", "))
+	// Populate 'errors' to return an error like: «database is not empty (it
+	// contains 1 view, 3 sequences, 4 indexes, 5 tables)».
+	var errors []string
+	for typ, count := range count {
+		if count == 1 {
+			errors = append(errors, "1 "+typ)
+			continue
+		}
+		if typ == "index" {
+			typ += "es"
+		} else {
+			typ += "s"
+		}
+		errors = append(errors, strconv.Itoa(count)+" "+typ)
+	}
+	if errors != nil {
+		slices.Sort(errors)
+		reason := fmt.Sprintf("database is not empty (it contains %s)", strings.Join(errors, ", "))
 		return meergo.NewWarehouseNonInitializableError(reason)
 	}
 	return nil
