@@ -6,6 +6,20 @@ Schemas,,,,,,,,,,
 ,Output schema in UI,User,User,User,User,(none),App user (destination),"Event Type (none, if Event Type hasn’t one)",Table,(none)
 ,Input schema properties in state,Transformed properties,Transformed properties + identity property + last change time property,Transformed properties + identity property + last change time property,Event schema properties,Event schema properties,Filter properties + Transformed properties + internal matching property,Event schema properties,Filter properties + Transformed properties,User schema properties
 ,Output schema properties in state,Transformed properties,Transformed properties,Transformed properties,Transformed properties,(none),Transformed properties + external matching property,Transformed properties,Transformed properties + table key property,(none)
+Input schema property fields,,,,,,,,,,
+,Placeholder,Must be empty,Must be empty,Must be empty,"(event schema, not relevant)","(event schema, not relevant)",Must be empty,"(event schema, not relevant)",Must be empty,Must be empty
+,Role,Must be Both,Must be Both,Must be Both,"(event schema, not relevant)","(event schema, not relevant)",Must be Both,"(event schema, not relevant)",Must be Both,Must be Both
+,CreateRequired,Must be false,Must be false,Must be false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
+,UpdateRequired,Must be false,Must be false,Must be false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
+,ReadOptional,true or false,Must be false,true or false,"(event schema, not relevant)","(event schema, not relevant)",Must be true,"(event schema, not relevant)",Must be true,Must be true
+,Nullable,true or false,true or false,true or false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
+Output schema property fields,,,,,,,,,,
+,Placeholder,Must be empty,Must be empty,Must be empty,Must be empty,(no schema),Must be empty,Must be empty,Must be empty,(no schema)
+,Role,Must be Both,Must be Both,Must be Both,Must be Both,(no schema),Must be Both,Must be Both,Must be Both,(no schema)
+,CreateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false,(no schema)
+,UpdateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),Must be false (???),Must be false,Must be true,(no schema)
+,ReadOptional,Must be true,Must be true,Must be true,Must be true,(no schema),Must be false,Must be false,Must be false,(no schema)
+,Nullable,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false for the table key,(no schema)
 Transformation,,,,,,,,,,
 ,Transformation,Required,Required,Required,Optional,No,Required,"Optional, if Event Type has schema, no otherwise",Required,No
 ,Mapping and Function,Both supported,Both supported,Both supported,Both supported,-,Both supported,Both supported,Both supported,-
@@ -18,3 +32,16 @@ Pipeline,,,,,,,,,,
 ,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"
 Scheduler,,,,,,,,,,
 ,Scheduler,Yes (it’s batch),Yes (it’s batch),Yes (it’s batch),No (it’s event based),No (it’s event based),Yes (it’s batch),No (it’s event based),Yes (it’s batch),Yes (it’s batch)
+Transformation,,,,,,,,,,
+,Transformation,Required,Required,Required,Optional,No,Required,"Optional, if Event Type has schema, no otherwise",Required,No
+,Mapping and Function,Both supported,Both supported,Both supported,Both supported,-,Both supported,Both supported,Both supported,-
+,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
+Additional information,,,,,,,,,,
+,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
+,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key property,Ordering property path
+,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
+Pipeline,,,,,,,,,,
+,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"
+Scheduler,,,,,,,,,,
+,Scheduler,Yes (it’s batch),Yes (it’s batch),Yes (it’s batch),No (it’s event based),No (it’s event based),Yes (it’s batch),No (it’s event based),Yes (it’s batch),Yes (it’s batch)
+Transformation,,,,,,,,,,
