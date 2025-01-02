@@ -65,7 +65,7 @@ func (ky *Klavyio) Records(ctx context.Context, target meergo.Targets, schema ty
 	// ...
 }
 
-// Schema returns the schema of the specified target in the specified role
+// Schema returns the schema of the specified target in the specified role.
 func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	// ...
 }
