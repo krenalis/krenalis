@@ -170,6 +170,7 @@ func Test_Properties(t *testing.T) {
 func sameType(t1, t2 Type) error {
 	if t1.kind == t2.kind &&
 		t1.size == t2.size &&
+		t1.generic == t2.generic &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
 		t1.p == t2.p &&
@@ -213,6 +214,10 @@ func sameType(t1, t2 Type) error {
 		} else if t2.vl != nil {
 			return fmt.Errorf("expected no-range, got range %v", t2.vl)
 		}
+	}
+	// Generic.
+	if t1.generic != t2.generic {
+		return fmt.Errorf("expected generic %t, got %t", t1.generic, t2.generic)
 	}
 	// Real.
 	if t1.real != t2.real {
@@ -327,6 +332,15 @@ func sameType(t1, t2 Type) error {
 		}
 		if err := sameType(t1.vl.(Type), t2.vl.(Type)); err != nil {
 			return err
+		}
+	}
+	// Parameter name.
+	if t1.kind == InvalidKind {
+		if t1.vl != t2.vl {
+			if name, ok := t1.vl.(string); ok {
+				return fmt.Errorf("expected parameter name %q, got %#v", name, t2.vl)
+			}
+			return fmt.Errorf("expected no parameter name, got %#v", t2.vl)
 		}
 	}
 	return nil

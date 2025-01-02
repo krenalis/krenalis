@@ -49,7 +49,7 @@ func Parse(data string) (Type, error) {
 // MarshalJSON marshals t into JSON.
 // If t is not valid, it is marshalled as 'null'.
 func (t Type) MarshalJSON() ([]byte, error) {
-	if !t.Valid() {
+	if !t.Valid() && !t.Generic() {
 		return null, nil
 	}
 	var b bytes.Buffer
@@ -73,7 +73,7 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 // marshalType marshals t as JSON and writes it to b.
 func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"name":"`)
-	b.WriteString(t.kind.String())
+	b.WriteString(t.Name())
 	b.WriteString(`"`)
 	switch t.kind {
 	case IntKind:
@@ -251,7 +251,7 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	if p.Name == "" {
 		return errors.New("missing property name")
 	}
-	if !p.Type.Valid() {
+	if !p.Type.Valid() && !p.Type.Generic() {
 		return errors.New("missing property type")
 	}
 	b.WriteString(`{"name":`)
@@ -302,7 +302,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
 
-	var kind Kind
+	var name string
 	var bitSize int
 	var minimum, maximum json.Number
 	var real bool
@@ -345,12 +345,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 		switch key {
 		case "name":
-			if kind.Valid() {
+			if name != "" {
 				return Type{}, errors.New("repeated 'name' key")
 			}
-			kind, ok = KindByName(tok.(string))
-			if !ok {
-				return Type{}, errors.New("invalid kind type")
+			name = tok.(string)
+			if !IsValidPropertyName(name) {
+				return Type{}, errors.New("invalid type name")
 			}
 		case "bitSize":
 			if bitSize != 0 {
@@ -562,10 +562,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var t Type
 
-	if !kind.Valid() {
+	if name == "" {
 		return Type{}, errors.New("missing 'name' key")
 	}
-	t.kind = kind
+	t.kind, _ = KindByName(name)
+	if t.kind == InvalidKind {
+		t.generic = true
+		t.vl = name
+	}
 	if bitSize == 0 {
 		if t.kind == IntKind || t.kind == UintKind || t.kind == FloatKind {
 			return Type{}, errors.New("missing 'bitSize' key")
@@ -594,17 +598,17 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	}
 	if precision == 0 {
-		if kind == DecimalKind {
+		if t.kind == DecimalKind {
 			return Type{}, errors.New("missing precision")
 		}
 	} else {
-		if kind != DecimalKind {
+		if t.kind != DecimalKind {
 			return Type{}, errors.New("unexpected precision for non-Decimal type")
 		}
 		t.p = int32(precision)
 	}
 	if hasScale {
-		if kind != DecimalKind {
+		if t.kind != DecimalKind {
 			return Type{}, errors.New("unexpected scale for non-Decimal type")
 		}
 		if precision == 0 {
@@ -615,7 +619,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.s = int32(scale)
 	}
-	if kind == DecimalKind {
+	if t.kind == DecimalKind {
 		min, max := decimal.Range(precision, scale)
 		t.vl = decimalRange{min, max}
 	}
@@ -827,64 +831,65 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	}
 	if hasReal {
-		if kind != FloatKind {
+		if t.kind != FloatKind {
 			return Type{}, errors.New("unexpected real for non-Float type")
 		}
 		t.real = real
 	}
 	if re != nil {
-		if kind != TextKind {
+		if t.kind != TextKind {
 			return Type{}, errors.New("unexpected regular expression for non-Text type")
 		}
 		t.vl = re
 	}
 	if values != nil {
-		if kind != TextKind {
+		if t.kind != TextKind {
 			return Type{}, errors.New("unexpected values for non-Text type")
 		}
 		t.vl = values
 	}
 	if byteLen > 0 {
-		if kind != TextKind {
+		if t.kind != TextKind {
 			return Type{}, errors.New("unexpected length in bytes for non-Text type")
 		}
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
-		if kind != TextKind {
+		if t.kind != TextKind {
 			return Type{}, errors.New("unexpected length in characters for non-Text types")
 		}
 		t.s = int32(charLen)
 	}
-	if elementType.Valid() {
-		if kind != ArrayKind && kind != MapKind {
+	if elementType.Valid() || elementType.Generic() {
+		if t.kind != ArrayKind && t.kind != MapKind {
 			return Type{}, errors.New("unexpected element type for non-Array and non-Map type")
 		}
+		t.generic = elementType.generic
 		t.vl = elementType
 	} else {
-		if kind == ArrayKind || kind == MapKind {
+		if t.kind == ArrayKind || t.kind == MapKind {
 			return Type{}, errors.New("missing element type")
 		}
 	}
 	if hasMinElements {
-		if kind != ArrayKind {
+		if t.kind != ArrayKind {
 			return Type{}, errors.New("unexpected minElements for non-Array type")
 		}
 		t.p = int32(minElements)
 	}
 	if maxElements < MaxElements {
-		if kind != ArrayKind {
+		if t.kind != ArrayKind {
 			return Type{}, errors.New("unexpected maxElements for non-Array type")
 		}
 		if maxElements < minElements {
 			return Type{}, errors.New("maxElements must be greater or equal to minElements")
 		}
 	}
-	if kind == ArrayKind {
+	if t.kind == ArrayKind {
 		t.s = int32(maxElements)
 	}
 	if hasUniqueElements {
-		if kind != ArrayKind {
+		if t.kind != ArrayKind {
 			return Type{}, errors.New("unexpected uniqueElements for non-Array type")
 		}
 		if k := t.vl.(Type).kind; k == JSONKind || k == ArrayKind || k == MapKind || k == ObjectKind {
@@ -893,12 +898,18 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.unique = uniqueElements
 	}
 	if properties == nil {
-		if kind == ObjectKind {
+		if t.kind == ObjectKind {
 			return Type{}, errors.New("missing object properties")
 		}
 	} else {
-		if kind != ObjectKind {
+		if t.kind != ObjectKind {
 			return Type{}, errors.New("unexpected properties for non-Object type")
+		}
+		for _, p := range properties {
+			if p.Type.generic {
+				t.generic = true
+				break
+			}
 		}
 		t.vl = properties
 	}
@@ -927,7 +938,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 		key := tok.(string)
 
 		if key == "type" {
-			if p.Type.Valid() {
+			if p.Type.Valid() || p.Type.Generic() {
 				return Property{}, errors.New("repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec)
@@ -1032,7 +1043,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 	if p.Name == "" {
 		return Property{}, errors.New("missing property name")
 	}
-	if !p.Type.Valid() {
+	if !p.Type.Valid() && !p.Type.Generic() {
 		return Property{}, errors.New("missing property type")
 	}
 

@@ -29,7 +29,7 @@ import (
 )
 
 // Decode reads JSON from r and decodes it, validating it against t. t must be a
-// valid type, and T must be the Go type that corresponds to t.
+// valid non-generic type, and T must be the Go type that corresponds to t.
 //
 // It returns a json.SyntaxError if the data being unmarshaled is not valid
 // JSON, and it returns a *SchemaValidationError if an error occurs during
@@ -59,6 +59,18 @@ import (
 //   - Object: a JSON Object
 //   - Map: a JSON Object
 func Decode[T any](r io.Reader, t Type) (T, error) {
+	if r == nil {
+		var zero T
+		return zero, errors.New("r is nil")
+	}
+	if t.Generic() {
+		var zero T
+		return zero, errors.New("json: type is a generic type")
+	}
+	if t.Kind() == InvalidKind {
+		var zero T
+		return zero, errors.New("json: type is the invalid type")
+	}
 	v, err := decode(r, t)
 	vt, ok := v.(T)
 	if err == nil && !ok {
@@ -68,7 +80,7 @@ func Decode[T any](r io.Reader, t Type) (T, error) {
 }
 
 // Marshal encodes the given data, based on the provided schema, into JSON, and
-// returns it. schema cannot be the invalid type.
+// returns it. schema must be a valid non-generic type.
 //
 // For JSON properties, both nil and json.Value("null") are marshaled as JSON
 // null.
@@ -76,6 +88,12 @@ func Decode[T any](r io.Reader, t Type) (T, error) {
 // Unlike Decode, this function does not validate the data. Its behavior is
 // undefined if the value does not validate against the type.
 func Marshal(data any, schema Type) (json.Value, error) {
+	if schema.Generic() {
+		return nil, errors.New("json: schema is a generic type")
+	}
+	if schema.Kind() == InvalidKind {
+		return nil, errors.New("json: schema is the invalid type")
+	}
 	return marshal(nil, data, schema)
 }
 
@@ -86,12 +104,6 @@ var (
 )
 
 func decode(r io.Reader, t Type) (any, error) {
-	if r == nil {
-		return nil, errors.New("r is nil")
-	}
-	if t.Kind() == InvalidKind {
-		return nil, errors.New("json: type is the invalid type")
-	}
 	d := decoder{dec: json.NewDecoder(r)}
 	value, err := d.unmarshal(t)
 	if err != nil {

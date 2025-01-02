@@ -49,7 +49,7 @@ func AsRole(t Type, role Role) Type {
 
 // Equal reports whether two types are equal.
 func Equal(t1, t2 Type) bool {
-	almostEqual := t1.kind == t2.kind && t1.size == t2.size && t1.unique == t2.unique && t1.real == t2.real && t1.p == t2.p && t1.s == t2.s
+	almostEqual := t1.kind == t2.kind && t1.size == t2.size && t1.generic == t2.generic && t1.unique == t2.unique && t1.real == t2.real && t1.p == t2.p && t1.s == t2.s
 	if !almostEqual {
 		return false
 	}

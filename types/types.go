@@ -14,6 +14,7 @@ import (
 	"iter"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"unicode/utf8"
 
@@ -117,10 +118,10 @@ var kindName = []string{
 	"Map",
 }
 
-// String returns the name of k. Panics if k is not a kind.
+// String returns the name of k.
 func (k Kind) String() string {
 	if !k.Valid() {
-		panic("invalid kind")
+		return "Invalid"
 	}
 	return kindName[k-1]
 }
@@ -138,7 +139,7 @@ func KindByName(name string) (Kind, bool) {
 			return Kind(i + 1), true
 		}
 	}
-	return 0, false
+	return InvalidKind, false
 }
 
 // Role represents the role of a property.
@@ -189,8 +190,9 @@ type Type struct {
 
 	size int8 // size for Int, Uint and Float: 0 (8 bits), 1 (16 bits), 2 (24 bits), 3 (32 bits), and 4 (64 bits)
 
-	unique bool // unique reports whether the elements of an Array must be unique.
-	real   bool // real reports whether NaN, +Inf and -Inf are not allowed for Float.
+	generic bool // generic reports whether it is a generic type.
+	unique  bool // unique reports whether the elements of an Array must be unique.
+	real    bool // real reports whether NaN, +Inf and -Inf are not allowed for Float.
 
 	// p represents
 	//   - minimum value for Int with 8, 16, 24, and 32 bits
@@ -227,6 +229,18 @@ var _ interface {
 	json.Marshaler
 	json.Unmarshaler
 } = (*Type)(nil)
+
+// Parameter returns a type parameter with the specified name. name must follow
+// the syntax rules of a property and must not conflict with the name of a kind.
+func Parameter(name string) Type {
+	if !IsValidPropertyName(name) {
+		panic("parameter name is not valid")
+	}
+	if slices.Contains(kindName, name) {
+		panic("parameter name cannot be the same as a kind")
+	}
+	return Type{kind: InvalidKind, generic: true, vl: name}
+}
 
 // Boolean returns the Boolean type.
 func Boolean() Type {
@@ -385,6 +399,7 @@ func ObjectOf(properties []Property) (Type, error) {
 	if len(properties) == 0 {
 		return Type{}, errors.New("no property in type")
 	}
+	var generic bool
 	indexOf := make(map[string]int, len(properties))
 	ps := make([]Property, len(properties))
 	for i, property := range properties {
@@ -409,7 +424,9 @@ func ObjectOf(properties []Property) (Type, error) {
 		if property.Role < BothRole || property.Role > DestinationRole {
 			return Type{}, errors.New("invalid property role")
 		}
-		if !property.Type.Valid() {
+		if property.Type.Generic() {
+			generic = true
+		} else if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
 		if property.CreateRequired && property.Role == SourceRole {
@@ -438,7 +455,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			Description:    description,
 		}
 	}
-	return Type{kind: ObjectKind, vl: ps}, nil
+	return Type{kind: ObjectKind, generic: generic, vl: ps}, nil
 }
 
 // AsReal returns t but as a real number. As a real number, t does not allow
@@ -471,8 +488,24 @@ func (t Type) Valid() bool {
 	return t.kind != InvalidKind
 }
 
-// String returns a string representation of t.
-// Panics if t is not a valid type.
+// Generic reports whether t is generic.
+func (t Type) Generic() bool {
+	return t.generic
+}
+
+// Name returns the name of t. t must be valid or a generic type.
+func (t Type) Name() string {
+	if t.kind == InvalidKind {
+		if t.generic {
+			return t.vl.(string)
+		}
+		panic("type is the invalid type")
+	}
+	return t.kind.String()
+}
+
+// String returns the string representation of t. If t is a type parameter, it
+// returns its name; otherwise, for invalid types, it returns an empty string.
 func (t Type) String() string {
 	s := t.kind.String()
 	switch t.kind {
@@ -496,6 +529,8 @@ func (t Type) String() string {
 			}
 			s += ")"
 		}
+	case InvalidKind:
+		s, _ = t.vl.(string)
 	}
 	return s
 }
