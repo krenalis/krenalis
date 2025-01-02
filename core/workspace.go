@@ -625,16 +625,10 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 // subsequent call to the ListenedEvents method and must be in the range
 // [1, 1000].
 //
-// sources contains the identifiers of the sources, whether they are mobile,
-// server, or website connections. If sources is non-nil, only events
-// originating from these sources will be observed.
-//
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
-// It returns an errors.UnprocessableError with code:
-//
-//   - ConnectionNotExist, if a source connection does not exist.
-//   - TooManyListeners, if there are already too many listeners.
+// It returns an errors.UnprocessableError with code TooManyListeners, if there
+// are already too many listeners.
 func (this *Workspace) AddEventListener(size int, filter *Filter) (string, error) {
 	this.core.mustBeOpen()
 	if size < 1 || size > maxEventsListenedTo {
@@ -1218,7 +1212,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 		return "", errors.BadRequest("connector %s does not support OAuth", connector)
 	}
 
-	region := state.PrivacyRegion(this.PrivacyRegion)
+	region := this.workspace.PrivacyRegion
 	auth, err := this.core.connectors.GrantAuthorization(ctx, c, code, redirectionURI, region)
 	if err != nil {
 		return "", err

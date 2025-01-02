@@ -1436,7 +1436,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 			switch transformation.Function.Language {
 			case "JavaScript":
 				if this.core.transformerProvider == nil || !this.core.transformerProvider.SupportLanguage(state.JavaScript) {
-					return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language  is not supported")
+					return nil, errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language is not supported")
 				}
 			case "Python":
 				if this.core.transformerProvider == nil || !this.core.transformerProvider.SupportLanguage(state.Python) {
