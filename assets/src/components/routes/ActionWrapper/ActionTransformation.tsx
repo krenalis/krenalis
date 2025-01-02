@@ -49,7 +49,7 @@ import {
 	TransformDataResponse,
 } from '../../../lib/api/types/responses';
 import getLanguageLogo from '../../helpers/getLanguageLogo';
-import Type, { ObjectType, Property, typeNameToIconName } from '../../../lib/api/types/types';
+import Type, { ObjectType, Property } from '../../../lib/api/types/types';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Action.types';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -714,11 +714,62 @@ const TransformationBox = ({
 			if (isOutMatchingProperty) {
 				continue;
 			}
+
 			const property = action.transformation.mapping[k];
-			const isRequired =
+
+			const hasRequired =
 				action.exportMode != null &&
 				((property.createRequired && action.exportMode.includes('Create')) ||
 					(property.updateRequired && action.exportMode.includes('Update')));
+
+			let showRequired = false;
+			if (hasRequired) {
+				const isFirstLevel = property.indentation === 0;
+				if (isFirstLevel) {
+					showRequired = true;
+				} else {
+					if (property.value !== '') {
+						showRequired = true;
+					} else {
+						const keys = Object.keys(action.transformation.mapping);
+
+						const parents: string[] = [];
+						for (const key of keys) {
+							if (k.startsWith(`${key}.`)) {
+								parents.push(key);
+							}
+						}
+
+						const hasMappedParent =
+							parents.findIndex(
+								(k) =>
+									action.transformation.mapping[k].value !== '' &&
+									action.transformation.mapping[k].error === '',
+							) !== -1;
+						if (hasMappedParent) {
+							showRequired = true;
+						} else {
+							const siblings: string[] = [];
+							for (const key of keys) {
+								const prop = action.transformation.mapping[key];
+								if (
+									prop.root === property.root &&
+									prop.indentation === property.indentation &&
+									key !== k
+								) {
+									siblings.push(key);
+								}
+							}
+							const hasMappedSiblings =
+								siblings.findIndex((k) => action.transformation.mapping[k].value !== '') !== -1;
+							if (hasMappedSiblings) {
+								showRequired = true;
+							}
+						}
+					}
+				}
+			}
+
 			mappings.push(
 				<div
 					key={k}
@@ -743,13 +794,6 @@ const TransformationBox = ({
 						items={mappingItems}
 						onSelect={onSelectMappingItem}
 					>
-						{isRequired && (
-							<div className='action__transformation-property-icon' slot='prefix'>
-								<SlTooltip content='Required' hoist>
-									<SlIcon name='asterisk' className='action__transformation-property-icon-required' />
-								</SlTooltip>
-							</div>
-						)}
 						{workspace.identifiers.includes(k) && (
 							<div className='action__transformation-property-icon' slot='prefix'>
 								<SlTooltip content='Used as identifier' hoist>
@@ -764,21 +808,17 @@ const TransformationBox = ({
 					<div className='action__transformation-mapping-arrow'>
 						<SlIcon name='arrow-right' />
 					</div>
-					<SlInput
-						readonly
-						disabled
-						size='small'
-						value={k}
-						type='text'
-						name={k}
+					<div
 						className={`action__transformation-output-property${
-							action.transformation.mapping![k].indentation! > 0
-								? ' action__transformation-output-property--indented'
-								: ''
+							property?.indentation! > 0 ? ' action__transformation-output-property--indented' : ''
 						}`}
 					>
-						<SlIcon slot='suffix' name={typeNameToIconName[property.type]} />
-					</SlInput>
+						<span className='action__transformation-output-property-key'>{k}</span>
+						<span className='action__transformation-output-property-type'>{property.type}</span>
+						{showRequired && (
+							<span className='action__transformation-output-property-required'>required</span>
+						)}
+					</div>
 				</div>,
 			);
 		}
@@ -2162,6 +2202,42 @@ const TransformationProperty = ({
 	const hasSelectedChildren = selectedProperties.findIndex((p) => p.startsWith(`${key}.`)) !== -1;
 	const hasSelectedParent = selectedProperties.findIndex((p) => key.startsWith(`${p}.`)) !== -1;
 
+	const hasRequired =
+		exportMode != null &&
+		((property.createRequired && exportMode.includes('Create')) ||
+			(property.updateRequired && exportMode.includes('Update')));
+
+	let showRequired = false;
+	if (hasRequired) {
+		const isFirstLevel = parentName == null;
+		if (isFirstLevel) {
+			showRequired = true;
+		} else {
+			if (isSelected) {
+				showRequired = true;
+			} else {
+				if (hasSelectedParent) {
+					showRequired = true;
+				} else {
+					const selectedSiblings: string[] = [];
+					for (const path of selectedProperties) {
+						const hasSameParent = path.startsWith(`${parentName}.`);
+						if (hasSameParent) {
+							const suffix = path.slice(`${parentName}.`.length);
+							const isLowerLevel = suffix.includes('.');
+							if (!isLowerLevel) {
+								selectedSiblings.push(path);
+							}
+						}
+					}
+					if (selectedSiblings.length > 0) {
+						showRequired = true;
+					}
+				}
+			}
+		}
+	}
+
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}`}
@@ -2190,17 +2266,14 @@ const TransformationProperty = ({
 					<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
 					<span className='fullscreen-transformation__property-type'>
 						{side === 'input' && property.readOptional && <span>optional</span>}
-						{side === 'output' &&
-							exportMode != null &&
-							((property.createRequired && exportMode.includes('Create')) ||
-								(property.updateRequired && exportMode.includes('Update'))) && <span>required</span>}
 						<span>
 							{language === ''
 								? property.type.name
 								: language === 'Python'
-									? fromKindToPythonType(property.type)
-									: fromKindToJavascriptType(property.type)}
+									? toPythonType(property.type)
+									: toJavascriptType(property.type)}
 						</span>
+						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
 					</span>
 					{!isParent && (
 						<SlCopyButton
@@ -2239,7 +2312,7 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 	return isVerticallyVisible;
 }
 
-function fromKindToJavascriptType(type: Type) {
+function toJavascriptType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
 	//  property length). This needs the full type definition and not the
 	// type name only.
@@ -2283,7 +2356,7 @@ function fromKindToJavascriptType(type: Type) {
 	}
 }
 
-function fromKindToPythonType(type: Type) {
+function toPythonType(type: Type) {
 	// TODO: add additional information (property is nullable, property values,
 	// property length). This needs the full type definition and not the
 	// type name only.

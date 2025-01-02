@@ -384,6 +384,25 @@
 .action__transformation-output-property {
 	margin-left: var(--mapping-indentation);
 	position: relative;
+	font-size: 14px;
+	bottom: 1px;
+	padding-left: 10px;
+}
+
+.action__transformation-output-property-key {
+	margin-right: 5px;
+}
+
+.action__transformation-output-property-type {
+	opacity: 0.7;
+	font-size: 11px;
+	margin-right: 5px;
+}
+
+.action__transformation-output-property-required {
+	color: var(--sl-color-danger-500);
+	font-weight: 500;
+	font-size: 11px;
 }
 
 /* The output property must be disabled to avoid tab focus but it must not
@@ -775,6 +794,13 @@ inherit the disabled style */
 	opacity: 0.7;
 	font-size: 11px;
 	margin-right: 5px;
+}
+
+.fullscreen-transformation__property-required {
+	color: var(--sl-color-danger-500);
+	font-weight: 500;
+	font-size: 11px;
+	margin-left: 3px;
 }
 
 .fullscreen-transformation__property-type span:first-child {

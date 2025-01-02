@@ -12,7 +12,6 @@ import {
 	Matching,
 	SchedulePeriod,
 	TransformationFunction,
-	TransformationPurpose,
 } from '../api/types/action';
 import { ConnectorSettings } from '../api/types/responses';
 import { Compression } from '../api/types/connection';
@@ -627,41 +626,54 @@ const transformInActionToSet = async (
 		}
 	}
 
-	const purpose: TransformationPurpose =
-		action.exportMode != null && action.exportMode === 'UpdateOnly' ? 'Update' : 'Create';
-
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
 		const mappingToSave = {};
 		const expressions: ExpressionToBeExtracted[] = [];
 
-		for (const k in action.transformation.mapping) {
-			const v = action.transformation.mapping[k];
-			if (v.value === '') {
+		const keys = Object.keys(action.transformation.mapping);
+		for (const k of keys) {
+			// The property must be mapped if it is required and it is a
+			// first-level property, or one of its siblings has been
+			// mapped.
+			const p = action.transformation.mapping[k];
+			if (p.value === '') {
+				const hasRequired =
+					action.exportMode != null &&
+					((p.createRequired && action.exportMode.includes('Create')) ||
+						(p.updateRequired && action.exportMode.includes('Update')));
+
+				const isFirstLevel = p.indentation === 0;
+
+				const siblings: string[] = [];
+				for (const key of keys) {
+					const prop = action.transformation.mapping[key];
+					if (prop.root === p.root && prop.indentation === p.indentation && key !== k) {
+						siblings.push(key);
+					}
+				}
+				const hasMappedSiblings =
+					siblings.findIndex((k) => action.transformation.mapping[k].value !== '') !== -1;
+
+				const isRequired = hasRequired && (isFirstLevel || hasMappedSiblings);
 				const isInMatching = action.matching != null && action.matching.out === k;
-				if (purpose === 'Update' && v.updateRequired && !isInMatching) {
-					throw new Error(
-						`Property "${k}" is required for the update. Indicate an expression for this property.`,
-					);
-				} else if (purpose === 'Create' && v.createRequired && !isInMatching) {
-					throw new Error(
-						`Property "${k}" is required for creation. Indicate an expression for this property.`,
-					);
+				if (isRequired && !isInMatching) {
+					throw new Error(`Property "${k}" is required. Indicate an expression for this property.`);
 				}
 				continue;
 			}
-			if (v.error && v.error !== '') {
+			if (p.error && p.error !== '') {
 				throw new Error(`Please fix the errors in the mapping`);
 			}
 			const property = flattenedOutputSchema![k];
 			const fullProperty = property.full;
 			const parentProperty = flattenedOutputSchema![property.root!].full;
 			expressions.push({
-				value: v.value,
+				value: p.value,
 				type: fullProperty!.type,
 			});
-			mappingToSave[k] = v.value;
+			mappingToSave[k] = p.value;
 			const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find((p) => p.name === parentProperty!.name);
 			if (!isKeyPropertyAlreadyInSchema) {
 				outputSchema.properties!.push(parentProperty);
@@ -734,26 +746,43 @@ const transformInActionToSet = async (
 			throw new Error('You must select at least one output property');
 		}
 
-		for (const k in flattenedOutputSchema) {
-			// Check that each required output property has been passed.
+		const keys = Object.keys(flattenedOutputSchema);
+		for (const k of keys) {
+			// The property must be selected if it is required and it is
+			// a first-level property, or one of its siblings has been
+			// selected.
 			const p = flattenedOutputSchema[k];
-			if (!p.updateRequired && !p.createRequired) {
-				continue;
-			}
+
 			const isSelected = selectedOutPaths.findIndex((prop) => prop === k) !== -1;
 			const isParentSelected =
 				selectedOutPaths.findIndex((prop) => {
 					k.startsWith(`${prop}.`);
 				}) !== -1;
+
+			const hasRequired =
+				action.exportMode != null &&
+				((p.createRequired && action.exportMode.includes('Create')) ||
+					(p.updateRequired && action.exportMode.includes('Update')));
+
+			const isFirstLevel = p.indentation === 0;
+
+			const selectedSiblings: string[] = [];
+			const parentName = k.slice(0, k.lastIndexOf('.'));
+			for (const path of selectedOutPaths) {
+				const hasSameParent = path.startsWith(`${parentName}.`);
+				if (hasSameParent) {
+					const suffix = path.slice(`${parentName}.`.length);
+					const isLowerLevel = suffix.includes('.');
+					if (!isLowerLevel) {
+						selectedSiblings.push(path);
+					}
+				}
+			}
+
+			const isRequired = hasRequired && (isFirstLevel || selectedSiblings.length > 0);
 			const isInMatching = action.matching != null && action.matching.out === k;
-			if (purpose === 'Update' && p.updateRequired && !isSelected && !isParentSelected && !isInMatching) {
-				throw new Error(
-					`Property "${k}" is required for the update and you must pass it in the transformation function`,
-				);
-			} else if (purpose === 'Create' && p.createRequired && !isSelected && !isParentSelected && !isInMatching) {
-				throw new Error(
-					`Property "${k}" is required for creation and you must pass it in the transformation function`,
-				);
+			if (isRequired && !isSelected && !isParentSelected && !isInMatching) {
+				throw new Error(`Property "${k}" is required and you must pass it in the transformation function`);
 			}
 			continue;
 		}
