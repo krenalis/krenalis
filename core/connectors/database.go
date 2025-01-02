@@ -236,7 +236,6 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	}
 	properties := columnsToProperties(columns, state.Destination)
 	for i, p := range properties {
-		properties[i].UpdateRequired = true
 		// The table key property cannot be nullable. This sets it as not nullable
 		// as a temporary workaround, until we can ensure that all connector
 		// implementations correctly handle the Nullable attribute for each property
@@ -287,6 +286,8 @@ func columnsToProperties(columns []meergo.Column, role state.Role) []types.Prope
 		}
 		properties[i].Name = c.Name
 		properties[i].Type = c.Type
+		properties[i].CreateRequired = role == state.Destination
+		properties[i].UpdateRequired = role == state.Destination
 		properties[i].Nullable = c.Nullable
 	}
 	return properties

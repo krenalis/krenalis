@@ -8,16 +8,14 @@ Schemas,,,,,,,,,,
 ,Output schema properties in state,Transformed properties,Transformed properties,Transformed properties,Transformed properties,(none),Transformed properties + external matching property,Transformed properties,Transformed properties + table key property,(none)
 Input schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,"(event schema, not relevant)","(event schema, not relevant)",Must be empty,"(event schema, not relevant)",Must be empty,Must be empty
-,Role,Must be Both,Must be Both,Must be Both,"(event schema, not relevant)","(event schema, not relevant)",Must be Both,"(event schema, not relevant)",Must be Both,Must be Both
 ,CreateRequired,Must be false,Must be false,Must be false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
 ,UpdateRequired,Must be false,Must be false,Must be false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
 ,ReadOptional,true or false,Must be false,true or false,"(event schema, not relevant)","(event schema, not relevant)",Must be true,"(event schema, not relevant)",Must be true,Must be true
 ,Nullable,true or false,true or false,true or false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
 Output schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,Must be empty,(no schema),Must be empty,Must be empty,Must be empty,(no schema)
-,Role,Must be Both,Must be Both,Must be Both,Must be Both,(no schema),Must be Both,Must be Both,Must be Both,(no schema)
-,CreateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false,(no schema)
-,UpdateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),Must be false (???),Must be false,Must be true,(no schema)
+,CreateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be true,(no schema)
+,UpdateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),Must be false (???),Must be false,Must be false,(no schema)
 ,ReadOptional,Must be true,Must be true,Must be true,Must be true,(no schema),Must be false,Must be false,Must be false,(no schema)
 ,Nullable,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false for the table key,(no schema)
 Transformation,,,,,,,,,,

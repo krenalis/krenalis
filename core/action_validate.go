@@ -762,19 +762,22 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		if p.Placeholder != "" {
 			return fmt.Errorf("%s action schema property %q has a placeholder, but action schema properties cannot have placeholders", io, path)
 		}
-		if p.CreateRequired {
-			if role != state.Destination || typ != state.App || io != "output" {
-				return fmt.Errorf("%s action schema property %q cannot have CreateRequired set to true", io, path)
-			}
-		}
 		if isOutputDatabaseUserDestination {
+			if !p.CreateRequired {
+				return fmt.Errorf("%s action schema property %q must have CreateRequired to true", io, path)
+			}
 			if !p.UpdateRequired {
 				return fmt.Errorf("%s action schema property %q must have UpdateRequired to true", io, path)
 			}
-			if isTableKey && p.Nullable {
+			if p.Nullable && isTableKey {
 				return fmt.Errorf("%s action schema property %q cannot be nullable because it is the table key", io, path)
 			}
 		} else {
+			if p.CreateRequired {
+				if role != state.Destination || typ != state.App || io != "output" {
+					return fmt.Errorf("%s action schema property %q cannot have CreateRequired set to true", io, path)
+				}
+			}
 			if p.UpdateRequired && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
 				return fmt.Errorf("%s action schema property %q cannot have UpdateRequired set to true", io, path)
 			}

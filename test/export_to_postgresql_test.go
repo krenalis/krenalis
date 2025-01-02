@@ -70,8 +70,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 	{
 		schema := c.TableSchema(pgsql, "test_export_to_db")
 		expectedSchema := types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "full_name", Type: types.Text()},
+			{Name: "email", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
+			{Name: "full_name", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
 		})
 		if !types.Equal(expectedSchema, schema) {
 			t.Fatalf("\nexpected:  %#v\ngot:        %#v", types.Properties(expectedSchema), types.Properties(schema))
@@ -89,8 +89,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), UpdateRequired: true},
-			{Name: "full_name", Type: types.Text(), UpdateRequired: true},
+			{Name: "email", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
+			{Name: "full_name", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
@@ -121,8 +121,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text(), UpdateRequired: true},
-			{Name: "full_name", Type: types.Text(), UpdateRequired: true},
+			{Name: "email", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
+			{Name: "full_name", Type: types.Text(), CreateRequired: true, UpdateRequired: true},
 		}),
 		Transformation: meergotester.Transformation{
 			Mapping: map[string]string{
