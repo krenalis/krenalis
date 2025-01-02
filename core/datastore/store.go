@@ -137,7 +137,7 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 	store.mustBeOpen()
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
 	// actual IR execution. See issue
-	// https://github.com/meergo/meergo/issues/1162.
+	// https://github.com/meergo/meergo/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode|maintenanceMode)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 	defer done()
 	columns := propertiesToColumns(schema)
 	// TODO(Gianluca): The Background context is used here, since the store does
-	// not provide any. See issue https://github.com/meergo/meergo/issues/1162.
+	// not provide any. See issue https://github.com/meergo/meergo/issues/1224.
 	return store.warehouse().AlterUserColumns(context.Background(), columns, operations)
 }
 
@@ -581,7 +581,7 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
 	// actual IR execution. See issue
-	// https://github.com/meergo/meergo/issues/1162.
+	// https://github.com/meergo/meergo/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err
@@ -622,7 +622,7 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 	go func() {
 		// TODO(Gianluca): The Background context is used here, since the store
 		// does not provide any. See issue
-		// https://github.com/meergo/meergo/issues/1162.
+		// https://github.com/meergo/meergo/issues/1224.
 		err := store.warehouse().ResolveIdentities(context.Background(), identifiers, userColumns, userPrimarySources)
 		if err != nil {
 			slog.Error("the execution of the Identity Resolution failed", "workspace", store.workspace, "err", err)
