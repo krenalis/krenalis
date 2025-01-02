@@ -34,19 +34,15 @@ const (
 // ErrAlterInProgress is returned; if an IdentityResolution operation is
 // already in progress, the error ErrIdentityResolutionInProgress is returned.
 func (warehouse *Snowflake) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
-	err := warehouse.fixOperationsTable(ctx)
-	if err != nil {
-		return 0, err
-	}
 	var opID int
-	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
+	err := warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		// TODO(Gianluca): find a way to implement lock mechanism, if necessary.
 		// _, err := tx.Exec(`LOCK TABLE "_OPERATIONS"`)
 		// if err != nil {
 		// 	return meergo.Error(err)
 		// }
 		var runningOp *warehouseOperation
-		err = tx.QueryRow(`SELECT "OPERATION" FROM "_OPERATIONS" ` +
+		err := tx.QueryRow(`SELECT "OPERATION" FROM "_OPERATIONS" ` +
 			`WHERE "START_TIME" IS NOT NULL AND "END_TIME" IS NULL ORDER BY "ID" DESC LIMIT 1`).Scan(&runningOp)
 		if err != nil && err != sql.ErrNoRows {
 			return snowflake(err)
@@ -87,39 +83,4 @@ func (warehouse *Snowflake) endOperation(ctx context.Context, opID int, endTime 
 	db := warehouse.openDB()
 	_, err := db.ExecContext(ctx, `UPDATE "_OPERATIONS" SET "END_TIME" = ? WHERE "ID" = ? AND "END_TIME" IS NULL`, endTime, opID)
 	return snowflake(err)
-}
-
-// fixOperationsTable fixes the '_OPERATIONS' table.
-//
-// Note that, currently, calling this method is a no-op. See the issue
-// https://github.com/meergo/meergo/issues/1046.
-func (warehouse *Snowflake) fixOperationsTable(ctx context.Context) error {
-
-	// TODO(Gianluca): this code has been commented as did not work as expected.
-	//
-	// See https://github.com/meergo/meergo/issues/1046.
-
-	// db, err := warehouse.connection()
-	// if err != nil {
-	// 	return err
-	// }
-	// query := `UPDATE _OPERATIONS
-	// 	SET
-	// 		end_time = (clock_timestamp() at time zone 'utc')::timestamp
-	// 	WHERE
-	// 		end_time IS NULL AND operation = 'IdentityResolution'
-	// 			AND
-	// 		NOT EXISTS (
-	// 			SELECT pid
-	// 			FROM pg_stat_activity
-	// 			WHERE
-	// 				datname = ` + quoteIdent(warehouse.settings.Database) + `
-	// 					AND
-	// 				query = 'CALL RESOLVE_IDENTITIES()'
-	// 		)`
-	// _, err = db.Query(ctx, query)
-	// if err != nil {
-	// 	return meergo.Error(err)
-	// }
-	return nil
 }

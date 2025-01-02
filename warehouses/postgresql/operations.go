@@ -35,12 +35,8 @@ const (
 // ErrAlterInProgress is returned; if an IdentityResolution operation is
 // already in progress, the error ErrIdentityResolutionInProgress is returned.
 func (warehouse *PostgreSQL) startOperation(ctx context.Context, operation warehouseOperation) (int, error) {
-	err := warehouse.fixOperationsTable(ctx)
-	if err != nil {
-		return 0, err
-	}
 	var opID int
-	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
+	err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `LOCK TABLE "_operations"`)
 		if err != nil {
 			return err
@@ -84,39 +80,4 @@ func (warehouse *PostgreSQL) endOperation(ctx context.Context, opID int, endTime
 	}
 	_, err = pool.Exec(ctx, `UPDATE "_operations" SET "end_time" = $1 WHERE "id" = $2 AND "end_time" IS NULL`, endTime, opID)
 	return err
-}
-
-// fixOperationsTable fixes the '_operations' table.
-//
-// Note that, currently, calling this method is a no-op. See the issue
-// https://github.com/meergo/meergo/issues/1046.
-func (warehouse *PostgreSQL) fixOperationsTable(ctx context.Context) error {
-
-	// TODO(Gianluca): this code has been commented as did not work as expected.
-	//
-	// See https://github.com/meergo/meergo/issues/1046.
-
-	// db, err := warehouse.connection()
-	// if err != nil {
-	// 	return err
-	// }
-	// query := `UPDATE _operations
-	// 	SET
-	// 		end_time = (clock_timestamp() at time zone 'utc')::timestamp
-	// 	WHERE
-	// 		end_time IS NULL AND operation = 'IdentityResolution'
-	// 			AND
-	// 		NOT EXISTS (
-	// 			SELECT pid
-	// 			FROM pg_stat_activity
-	// 			WHERE
-	// 				datname = ` + quoteIdent(warehouse.settings.Database) + `
-	// 					AND
-	// 				query = 'CALL resolve_identities()'
-	// 		)`
-	// _, err = db.Query(ctx, query)
-	// if err != nil {
-	// 	return meergo.Error(err)
-	// }
-	return nil
 }

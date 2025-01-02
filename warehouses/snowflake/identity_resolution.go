@@ -238,10 +238,6 @@ func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTi
 		return nil, nil, snowflake(err)
 	}
 	defer conn.Close()
-	err = warehouse.fixOperationsTable(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
 	query := `SELECT "START_TIME", "END_TIME" FROM "_OPERATIONS" WHERE ` +
 		`"OPERATION" = 'IdentityResolution' ORDER BY "ID" DESC LIMIT 1`
 	err = conn.QueryRowContext(ctx, query).Scan(&startTime, &endTime)

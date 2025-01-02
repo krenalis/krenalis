@@ -243,10 +243,6 @@ func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startT
 	if err != nil {
 		return nil, nil, err
 	}
-	err = warehouse.fixOperationsTable(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
 	query := `SELECT "start_time", "end_time" FROM "_operations" WHERE ` +
 		`"operation" = 'IdentityResolution' ORDER BY "id" DESC LIMIT 1`
 	err = pool.QueryRow(ctx, query).Scan(&startTime, &endTime)

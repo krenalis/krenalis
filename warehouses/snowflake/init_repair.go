@@ -65,17 +65,31 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 // Initialize initializes the database objects on the data warehouse in order to
 // make it work with Meergo.
 func (warehouse *Snowflake) Initialize(ctx context.Context, userColumns []meergo.Column) error {
-	return warehouse.initRepair(ctx, userColumns, false)
+	return warehouse.initRepairDatabaseObjects(ctx, userColumns, false)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Meergo.
 func (warehouse *Snowflake) Repair(ctx context.Context, userColumns []meergo.Column) error {
-	return warehouse.initRepair(ctx, userColumns, true)
+	err := warehouse.initRepairDatabaseObjects(ctx, userColumns, true)
+	if err != nil {
+		return err
+	}
+	// Repair the rows of the "_OPERATIONS" table, setting an end timestamp for
+	// all those rows that do not have one, which were produced by abrupt
+	// interruptions of the Meergo process.
+	//
+	// This clearly requires that the repair is executed only when it is certain
+	// that no operations are ongoing.
+	db := warehouse.openDB()
+	_, err = db.ExecContext(ctx, `UPDATE "_OPERATIONS"`+
+		` SET "END_TIME" = SYSDATE()`+
+		` WHERE "END_TIME" IS NULL`)
+	return err
 }
 
-// initRepair initializes (or repairs) the database objects (as tables, types,
-// etc...) on the data warehouse.
-func (warehouse *Snowflake) initRepair(ctx context.Context, userColumns []meergo.Column, repair bool) error {
+// initRepairDatabaseObjects initializes (or repairs) the database objects (as
+// tables, types, etc...) on the data warehouse.
+func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, userColumns []meergo.Column, repair bool) error {
 	queries := []string{
 		createDestinationUsersTable,
 		createEventsTable,

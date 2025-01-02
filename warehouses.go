@@ -215,6 +215,8 @@ type Warehouse interface {
 	ResolveIdentities(ctx context.Context, identifiers, userColumns []Column, userPrimarySources map[string]int) error
 
 	// Repair repairs the database objects on the data warehouse needed by Meergo.
+	// It also takes care of correcting other inconsistent data (such as any tables
+	// that store ongoing operations).
 	// The given user schema will be used to repair the user tables.
 	//
 	// This method should only be called on warehouses that have already been
