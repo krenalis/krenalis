@@ -233,7 +233,7 @@ func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ types.Typ
 	return users, cursor, nil
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (stripe *Stripe) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	// docs: https://stripe.com/docs/api/customers/object
 	//

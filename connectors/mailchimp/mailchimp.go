@@ -206,7 +206,7 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, _ types.Type
 	return users, strconv.Itoa(offset), nil
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	params := url.Values{
 		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},

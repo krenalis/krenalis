@@ -144,7 +144,7 @@ func (ga *Analytics) EventTypes(ctx context.Context) ([]*meergo.EventType, error
 	}, nil
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (ga *Analytics) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	switch eventType {
 	case "page_view":

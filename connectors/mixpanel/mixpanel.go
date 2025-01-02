@@ -211,7 +211,7 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 	}, nil
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (mp *Mixpanel) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {
 		return types.Object([]types.Property{

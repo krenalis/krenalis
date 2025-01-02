@@ -291,7 +291,7 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.W
 	return events, nil
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, role meergo.Role, _ string) (types.Type, error) {
 
 	var response struct {

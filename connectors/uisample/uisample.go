@@ -48,7 +48,7 @@ type UISample struct {
 	settings *innerSettings
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (uiSample *UISample) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	return types.Type{}, meergo.ErrEventTypeNotExist
 }

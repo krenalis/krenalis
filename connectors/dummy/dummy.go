@@ -194,7 +194,7 @@ type innerSettings struct {
 	URLForDispatchingEvents string
 }
 
-// Schema returns the schema of the specified target.
+// Schema returns the schema of the specified target in the specified role.
 func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	if target == meergo.Users {
 		schema := types.Object([]types.Property{
