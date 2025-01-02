@@ -2011,27 +2011,6 @@ func Test_validateAction(t *testing.T) {
 			err:                     `two output action schema properties would have the same column name "email_out" in the data warehouse, case-insensitively`,
 		},
 		{
-			name: "BAD: Source/App/Users - schema properties cannot specify a role",
-			action: ActionToSet{
-				Name: "Import users",
-				InSchema: types.Object([]types.Property{
-					{Name: "email_in", Type: types.Text(), Role: types.DestinationRole},
-				}),
-				OutSchema: types.Object([]types.Property{
-					{Name: "email_out", Type: types.Text()},
-				}),
-				Transformation: Transformation{
-					Mapping: map[string]string{
-						"email_out": "email_in",
-					},
-				},
-			},
-			target:                  state.Users,
-			connectionRole:          state.Source,
-			connectionConnectorType: state.App,
-			err:                     `input action schema property "email_in" has the Source role, but action schema properties can only have the Both role`,
-		},
-		{
 			name: "BAD: Source/App/Users - output schema - which refers to users - cannot have a property with type Array(Object)",
 			action: ActionToSet{
 				Name: "Import users",

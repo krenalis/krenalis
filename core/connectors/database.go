@@ -65,12 +65,16 @@ func (database *Database) Close() error {
 	return connectorError(err)
 }
 
-// Schema returns the schema of the provided table. If a column type is not
-// supported, it returns a *meergo.UnsupportedColumnTypeError error. If the
+// Schema returns the schema of the provided table and role. If a column type is
+// not supported, it returns a *meergo.UnsupportedColumnTypeError error. If the
 // connector returns an error, it returns an *UnavailableError error.
-func (database *Database) Schema(ctx context.Context, table string) (types.Type, error) {
+// It panics if role is not Source or Destination.
+func (database *Database) Schema(ctx context.Context, table string, role state.Role) (types.Type, error) {
 	if database.err != nil {
 		return types.Type{}, database.err
+	}
+	if role != state.Source && role != state.Destination {
+		panic("invalid role")
 	}
 	columns, err := database.inner.Columns(ctx, table)
 	if err != nil {
@@ -79,7 +83,7 @@ func (database *Database) Schema(ctx context.Context, table string) (types.Type,
 	if len(columns) == 0 {
 		return types.Type{}, errors.New("no columns defined for table")
 	}
-	schema, err := types.ObjectOf(columnsToProperties(columns))
+	schema, err := types.ObjectOf(columnsToProperties(columns, role))
 	if err != nil {
 		return types.Type{}, rewriteColumnErrors(err)
 	}
@@ -139,7 +143,7 @@ func (database *Database) Query(ctx context.Context, query string, queryReplacer
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	if _, err = types.ObjectOf(columnsToProperties(columns)); err != nil {
+	if _, err = types.ObjectOf(columnsToProperties(columns, state.Source)); err != nil {
 		_ = rows.Close()
 		return nil, connectorError(rewriteColumnErrors(err))
 	}
@@ -202,7 +206,7 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 	}
 
 	// Check that schema is aligned with the query's schema.
-	querySchema, err := types.ObjectOf(columnsToProperties(columns))
+	querySchema, err := types.ObjectOf(columnsToProperties(columns, state.Source))
 	if err != nil {
 		return nil, rewriteColumnErrors(err)
 	}
@@ -230,7 +234,7 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	properties := columnsToProperties(columns)
+	properties := columnsToProperties(columns, state.Destination)
 	for i, p := range properties {
 		properties[i].UpdateRequired = true
 		// The table key property cannot be nullable. This sets it as not nullable
@@ -273,16 +277,17 @@ func columnsOfType(t types.Type) []meergo.Column {
 	return columns
 }
 
-// columnsToProperties returns the provided column as types.Property values.
-func columnsToProperties(columns []meergo.Column) []types.Property {
+// columnsToProperties returns the provided columns as types.Property values.
+// If role is Destination, it excludes non-writable columns.
+func columnsToProperties(columns []meergo.Column, role state.Role) []types.Property {
 	properties := make([]types.Property, len(columns))
 	for i, c := range columns {
+		if role == state.Destination && !c.Writable {
+			continue
+		}
 		properties[i].Name = c.Name
 		properties[i].Type = c.Type
 		properties[i].Nullable = c.Nullable
-		if !c.Writable {
-			properties[i].Role = types.SourceRole
-		}
 	}
 	return properties
 }
@@ -366,7 +371,7 @@ func (rs *Rows) Close() error {
 
 // Columns returns the columns as properties.
 func (rs *Rows) Columns() []types.Property {
-	return columnsToProperties(rs.columns)
+	return columnsToProperties(rs.columns, state.Source)
 }
 
 // Err returns the error encountered during iteration, if any. It can be called

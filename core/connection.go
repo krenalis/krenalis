@@ -1732,9 +1732,9 @@ func (this *Connection) Sheets(ctx context.Context, format string, path string, 
 	return sheets, nil
 }
 
-// TableSchema returns the schema of the given table for the connection.
-// connection must be a destination database connection, and table must be UTF-8
-// encoded with a length in range [1, 1024].
+// TableSchema returns the destination schema of the given table for the
+// connection. connection must be a destination database connection, and table
+// must be UTF-8 encoded with a length in range [1, 1024].
 //
 // If the table contains a column with an unsupported type, it returns an
 // errors.UnprocessableError error.
@@ -1753,7 +1753,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	}
 	database := this.database()
 	defer database.Close()
-	schema, err := database.Schema(ctx, table)
+	schema, err := database.Schema(ctx, table, state.Destination)
 	if err != nil {
 		switch err.(type) {
 		case *meergo.UnsupportedColumnTypeError:

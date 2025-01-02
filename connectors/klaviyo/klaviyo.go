@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -252,7 +253,6 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 			Name:  "id",
 			Label: "Unique ID",
 			Type:  types.Text(),
-			Role:  types.SourceRole,
 		},
 		{
 			Name:     "email",
@@ -274,7 +274,6 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 		{
 			Name:     "anonymous_id",
 			Type:     types.Text(),
-			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
@@ -311,20 +310,17 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 			Name:     "created",
 			Label:    "Profile Created",
 			Type:     types.DateTime(),
-			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
 			Name:     "updated",
 			Label:    "Profile Updated",
 			Type:     types.DateTime(),
-			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
 			Name:     "last_event_date",
 			Type:     types.DateTime(),
-			Role:     types.SourceRole,
 			Nullable: true,
 		},
 		{
@@ -401,6 +397,12 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 			Nullable: true,
 		},
 	})
+	if role == meergo.Destination {
+		sourceOnlyProperties := []string{"id", "anonymous_id", "created", "updated", "last_event_date"}
+		schema = types.SubsetFunc(schema, func(p types.Property) bool {
+			return !slices.Contains(sourceOnlyProperties, p.Name)
+		})
+	}
 	return schema, nil
 }
 

@@ -24,29 +24,6 @@ func (err PathNotExistError) Error() string {
 	return fmt.Sprintf("property path %q does not exist", err.Path)
 }
 
-// AsRole returns a new type with properties of t that are compatible with role.
-// If all properties of t are compatible with role, it returns t. If no
-// properties of t are compatible with role, it returns an invalid type.
-//
-// It panics if t or role are not valid types, or if t is not an object type or
-// role is 'Both'.
-func AsRole(t Type, role Role) Type {
-	if !t.Valid() {
-		panic("type is not valid")
-	}
-	if t.kind != ObjectKind {
-		panic("cannot return type as role for non-Object type")
-	}
-	if role < BothRole || role > DestinationRole {
-		panic("role is not valid")
-	}
-	if role == BothRole {
-		return t
-	}
-	t, _ = asRole(t, role)
-	return t
-}
-
 // Equal reports whether two types are equal.
 func Equal(t1, t2 Type) bool {
 	almostEqual := t1.kind == t2.kind && t1.size == t2.size && t1.generic == t2.generic && t1.unique == t2.unique && t1.real == t2.real && t1.p == t2.p && t1.s == t2.s
@@ -77,7 +54,6 @@ func Equal(t1, t2 Type) bool {
 			if p1.Name != p2.Name ||
 				p1.Label != p2.Label ||
 				p1.Placeholder != p2.Placeholder ||
-				p1.Role != p2.Role ||
 				p1.CreateRequired != p2.CreateRequired ||
 				p1.UpdateRequired != p2.UpdateRequired ||
 				p1.ReadOptional != p2.ReadOptional ||
@@ -459,52 +435,6 @@ func WalkAll(t Type) iter.Seq2[string, Property] {
 // It panics if t is not an Object.
 func WalkObjects(t Type) iter.Seq2[string, Property] {
 	return walk(t, false)
-}
-
-// asRole is a recursive function called by the Type.AsRole method. t must be an
-// Object type, and role must be either Source or Destination. It returns the
-// resulting type and a boolean indicating whether the returned type is
-// different from t.
-func asRole(t Type, role Role) (Type, bool) {
-	last := 0
-	var roleProperties []Property
-	properties := t.vl.([]Property)
-	for i, p := range properties {
-		ok := p.Role == role || p.Role == BothRole &&
-			(role == SourceRole && !p.CreateRequired && !p.UpdateRequired || role == DestinationRole && !p.ReadOptional)
-		if p.Type.Kind() == ObjectKind && (ok || p.Role == BothRole) {
-			var changed bool
-			p.Type, changed = asRole(p.Type, role)
-			ok = ok && !changed
-		}
-		if ok {
-			continue
-		}
-		if last < i {
-			roleProperties = append(roleProperties, properties[last:i]...)
-		}
-		if p.Role == BothRole && p.Type.Valid() {
-			switch role {
-			case SourceRole:
-				p.CreateRequired = false
-				p.UpdateRequired = false
-			case DestinationRole:
-				p.ReadOptional = false
-			}
-			roleProperties = append(roleProperties, p)
-		}
-		last = i + 1
-	}
-	if last == 0 {
-		return t, false
-	}
-	if last < len(properties) {
-		roleProperties = append(roleProperties, properties[last:]...)
-	}
-	if roleProperties == nil {
-		return Type{}, true
-	}
-	return Type{kind: ObjectKind, vl: roleProperties}, true
 }
 
 // walk is the internal function underlying the exported functions WalkAll and

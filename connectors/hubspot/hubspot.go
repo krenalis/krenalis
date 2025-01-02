@@ -292,7 +292,7 @@ func (hs *HubSpot) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.W
 }
 
 // Schema returns the schema of the specified target.
-func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, _ meergo.Role, _ string) (types.Type, error) {
+func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, role meergo.Role, _ string) (types.Type, error) {
 
 	var response struct {
 		Results []struct {
@@ -322,15 +322,15 @@ func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, _ meergo.Role, 
 		if !typ.Valid() {
 			continue
 		}
+		if role == meergo.Destination && r.ModificationMetadata.ReadOnlyValue {
+			continue
+		}
 		property := types.Property{
 			Name:        r.Name,
 			Label:       r.Label,
 			Type:        typ,
 			Nullable:    true,
 			Description: r.Description,
-		}
-		if r.ModificationMetadata.ReadOnlyValue {
-			property.Role = types.SourceRole
 		}
 		if typ.Kind() == types.TextKind {
 			if len(r.Options) == 0 {

@@ -263,9 +263,6 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		if p.Placeholder != "" {
 			return errors.New("user schema properties cannot have a placeholder")
 		}
-		if p.Role != types.BothRole {
-			return errors.New("user schema properties can only have the Both role")
-		}
 		if p.CreateRequired {
 			return errors.New("user schema properties cannot be required for creation")
 		}

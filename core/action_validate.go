@@ -762,9 +762,6 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 		if p.Placeholder != "" {
 			return fmt.Errorf("%s action schema property %q has a placeholder, but action schema properties cannot have placeholders", io, path)
 		}
-		if p.Role != types.BothRole {
-			return fmt.Errorf("%s action schema property %q has the %s role, but action schema properties can only have the Both role", io, path, role)
-		}
 		if p.CreateRequired {
 			if role != state.Destination || typ != state.App || io != "output" {
 				return fmt.Errorf("%s action schema property %q cannot have CreateRequired set to true", io, path)

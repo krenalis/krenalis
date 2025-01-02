@@ -51,21 +51,21 @@ func TestPropertySerialization(t *testing.T) {
 		},
 		{
 			Property: Property{
-				Name: "a", Label: "a label", Placeholder: "<placeholder>", Role: DestinationRole,
+				Name: "a", Label: "a label", Placeholder: "<placeholder>",
 				Type: Text(), Description: "some description"},
 			Expected: `{"name":"a","label":"a label","placeholder":"<placeholder>",` +
 				`"type":{"name":"Text"},"description":"some description"}`,
 		},
 		{
 			Property: Property{
-				Name: "a", Label: "a label", Placeholder: "<placeholder>", Role: DestinationRole,
+				Name: "a", Label: "a label", Placeholder: "<placeholder>",
 				Type: Text(), CreateRequired: true, UpdateRequired: true, Description: "some description"},
 			Expected: `{"name":"a","label":"a label","placeholder":"<placeholder>",` +
 				`"type":{"name":"Text"},"createRequired":true,"updateRequired":true,"description":"some description"}`,
 		},
 		{
 			Property: Property{
-				Name: "a", Label: "a label", Placeholder: "<placeholder>", Role: DestinationRole,
+				Name: "a", Label: "a label", Placeholder: "<placeholder>",
 				Type: Text(), CreateRequired: true, Nullable: true, Description: "some description"},
 			Expected: `{"name":"a","label":"a label","placeholder":"<placeholder>",` +
 				`"type":{"name":"Text"},"createRequired":true,` +
@@ -73,7 +73,7 @@ func TestPropertySerialization(t *testing.T) {
 		},
 		{
 			Property: Property{
-				Name: "a", Label: "a label", Placeholder: "<placeholder>", Role: DestinationRole,
+				Name: "a", Label: "a label", Placeholder: "<placeholder>",
 				Type: Text(), UpdateRequired: true, ReadOptional: true, Nullable: true, Description: "some description"},
 			Expected: `{"name":"a","label":"a label","placeholder":"<placeholder>",` +
 				`"type":{"name":"Text"},"updateRequired":true,"readOptional":true,` +

@@ -358,9 +358,6 @@ func sameProperty(p1, p2 Property) error {
 	if p1.Placeholder != p2.Placeholder {
 		return fmt.Errorf("expected property placeholder %q, got %q", p1.Placeholder, p2.Placeholder)
 	}
-	if p1.Role != p2.Role {
-		return fmt.Errorf("expected property key 'role' with value %s, got %s", p1.Role, p2.Role)
-	}
 	if err := sameType(p1.Type, p2.Type); err != nil {
 		return err
 	}

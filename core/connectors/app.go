@@ -152,9 +152,13 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
 // error. If the connector returns an error, it returns a *UnavailableError
 // error.
+// It panics is role is not Source or Destination.
 func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {
 		return types.Type{}, app.err
+	}
+	if role != state.Source && role != state.Destination {
+		panic("invalid role")
 	}
 	switch target {
 	case state.Events:
@@ -164,7 +168,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		return schema, nil
 	case state.Users:
-		schema, err := app.userSchema(ctx, types.Role(role))
+		schema, err := app.userSchema(ctx, role)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -176,10 +180,6 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		if !schema.Valid() {
 			return types.Type{}, fmt.Errorf("connector %s returned an invalid group schema", app.name)
-		}
-		schema = types.AsRole(schema, types.Role(role))
-		if !schema.Valid() {
-			return types.Type{}, fmt.Errorf("connector %s has returned a schema without %s properties", app.name, strings.ToLower(role.String()))
 		}
 	}
 	panic("unexpected target")
@@ -216,7 +216,7 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 		return nil, fmt.Errorf("schema is not valid")
 	}
 	// Check that the user schema is aligned with the app user schema.
-	appSchema, err := app.userSchema(ctx, types.SourceRole)
+	appSchema, err := app.userSchema(ctx, state.Source)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,11 @@ func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (
 
 // userSchema returns the user schema with the provided role.
 // If the connector returns an error, it returns an *UnavailableError error.
-func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, error) {
+// It panics if role is not Source or Destination.
+func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, error) {
+	if role != state.Source && role != state.Destination {
+		panic("invalid role")
+	}
 	select {
 	case <-ctx.Done():
 		return types.Type{}, errors.New("canceled context")
@@ -289,22 +293,18 @@ func (app *App) userSchema(ctx context.Context, role types.Role) (types.Type, er
 	defer func() {
 		<-app.users.lock
 	}()
-	if schema := app.users.schemas[role]; schema.Valid() {
+	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
 	schema, err := app.inner.Schema(ctx, meergo.Users, meergo.Role(role), "")
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
-	var schemas [3]types.Type
-	for r := types.BothRole; r <= types.DestinationRole; r++ {
-		schemas[r] = types.AsRole(schema, r)
-		if !schemas[r].Valid() {
-			return types.Type{}, fmt.Errorf("connection has returned a schema without %s properties", strings.ToLower(role.String()))
-		}
+	if !schema.Valid() {
+		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.name, strings.ToLower(role.String())))
 	}
-	app.users.schemas = schemas
-	return app.users.schemas[role], nil
+	app.users.schemas[role-1] = schema
+	return app.users.schemas[role-1], nil
 }
 
 // sameValue checks if v and v2 have the same value, with t being the type of v.
@@ -497,5 +497,5 @@ func (r *appRecords) Last() bool {
 
 type schema struct {
 	lock    chan struct{}
-	schemas [3]types.Type
+	schemas [2]types.Type
 }

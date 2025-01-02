@@ -142,35 +142,11 @@ func KindByName(name string) (Kind, bool) {
 	return InvalidKind, false
 }
 
-// Role represents the role of a property.
-type Role int
-
-const (
-	BothRole        Role = iota // both
-	SourceRole                  // source
-	DestinationRole             // destination
-)
-
-// String returns the string representation of role.
-// It panics if role is not a valid Role value.
-func (role Role) String() string {
-	switch role {
-	case BothRole:
-		return "Both"
-	case SourceRole:
-		return "Source"
-	case DestinationRole:
-		return "Destination"
-	}
-	panic("invalid role")
-}
-
 // Property represents an object property.
 type Property struct {
 	Name           string
 	Label          string
 	Placeholder    string
-	Role           Role
 	Type           Type
 	CreateRequired bool
 	UpdateRequired bool
@@ -421,22 +397,10 @@ func ObjectOf(properties []Property) (Type, error) {
 		if err != nil {
 			return Type{}, err
 		}
-		if property.Role < BothRole || property.Role > DestinationRole {
-			return Type{}, errors.New("invalid property role")
-		}
 		if property.Type.Generic() {
 			generic = true
 		} else if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
-		}
-		if property.CreateRequired && property.Role == SourceRole {
-			return Type{}, errors.New("property cannot have CreateRequired if its role is Source")
-		}
-		if property.UpdateRequired && property.Role == SourceRole {
-			return Type{}, errors.New("property cannot have UpdateRequired if its role is Source")
-		}
-		if property.ReadOptional && property.Role == DestinationRole {
-			return Type{}, errors.New("property cannot have ReadOptional if its role is Destination")
 		}
 		description, err := normalizedUTF8(property.Description)
 		if err != nil {
@@ -446,7 +410,6 @@ func ObjectOf(properties []Property) (Type, error) {
 			Name:           property.Name,
 			Label:          label,
 			Placeholder:    placeholder,
-			Role:           property.Role,
 			Type:           property.Type,
 			CreateRequired: property.CreateRequired,
 			UpdateRequired: property.UpdateRequired,
