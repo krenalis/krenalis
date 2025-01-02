@@ -15,7 +15,7 @@ Input schema property fields,,,,,,,,,,
 Output schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,Must be empty,(no schema),Must be empty,Must be empty,Must be empty,(no schema)
 ,CreateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be true,(no schema)
-,UpdateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),Must be false (???),Must be false,Must be false,(no schema)
+,UpdateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),Must be false (???),Must be false,Must be true,(no schema)
 ,ReadOptional,Must be true,Must be true,Must be true,Must be true,(no schema),Must be false,Must be false,Must be false,(no schema)
 ,Nullable,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false for the table key,(no schema)
 Transformation,,,,,,,,,,
