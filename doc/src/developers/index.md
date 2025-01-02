@@ -18,8 +18,6 @@ Learn how to integrate with Meergo: send events, manage APIs, and create custom 
   <li><a href="python-sdk"> Python SDK</a></li>
 </ul>
 
-### Manage APIs
-
 ### Create custom connectors:
 
 - [App connectors](extend/connectors/app)

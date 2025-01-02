@@ -1,0 +1,290 @@
+
+{% macro props(url, name string, properties []any, inReturns bool) %}
+{%%
+  var dataType func(t any) string
+  dataType = func(typ any) string {
+    t := typ.(map[string]any)
+    switch name := t.name.(string); name {
+    case "Int":
+      if t.bitSize == 32.0 {
+        return "int"
+      }
+      return sprintf("%.0f bit int", t.bitSize)
+    case "Uint":
+      if t.bitSize == 32.0 {
+        return "unsigned int"
+      }
+      return sprintf("%.0f bit unsigned int", t.bitSize)
+    case "Decimal":
+      return sprintf("decimal(%.0f, %.0f)", t.precision, t.scale)
+    case "Text":
+      return "string"
+    case "Array":
+      return sprintf("array of %s", dataType(t.elementType))
+    case "Map":
+      return sprintf("object with %s values", dataType(t.elementType))
+    case "UIValues":
+      return "object"
+    default:
+      return toLower(name)
+    }
+  }
+
+  passedInURL := func(url, name string) bool {
+    name = ":"+name
+    if hasSuffix(url, name) {
+      return true
+    }
+    i := index(url, name)
+    return i != -1 and "/?,&" contains url[i+len(name)]
+  }
+%%}
+
+<script>
+  function toggleJSONBody(row) {
+	  const code = row.querySelector('.message').getAttribute('data-code');
+	  const msg = row.querySelector('.message').textContent;
+	  const json = { error: { code, message: msg } };
+
+	  let jsonBody = row.querySelector('.json-body');
+	  if (!jsonBody) {
+		  jsonBody = document.createElement('div');
+		  jsonBody.classList.add('json-body');
+		  const pre = document.createElement('pre');
+		  pre.textContent = JSON.stringify(json, null, 2);
+		  jsonBody.appendChild(pre);
+		  row.appendChild(jsonBody);
+		  jsonBody.addEventListener('click', (e) => e.stopPropagation());
+	  }
+
+	  jsonBody.style.display = jsonBody.style.display === 'block' ? 'none' : 'block';
+  }
+</script>
+
+<ul class="method-list">
+  {% for property in properties %}
+  {% p := property.(map[string]any) %}
+  <li>
+    <h4>{% if url != "" and passedInURL(url, p.name.(string)) %}:{% else if name != "" %}<span>{{ name }}.</span>{% end %}{{ p.name }}</h4>
+    <span class="api-property-type">{% if p.nullable %}nullable {% end %}{{ dataType(p["type"]) }}</span>
+    {% if not inReturns and (p.createRequired or p.updateRequired) %}
+    <span class="api-property-create-required">Required</span>
+    {% end if %}
+    <span class="api-property-description">
+      {{ unsafeconv.ToMarkdown(p.description.(string)) }}
+      {% if t := p["type"].(map[string]any); t.name == "Text" %}
+        {% if values, ok := t.values.([]any); ok %}
+          {%%
+            last := len(values) - 1
+            if last == 0 { last-- }
+          %%}
+          Possible values:
+          {% for i, v := range values %}{% if i > 0 and i !=last %},{% else if i == last %} or{% end %} <code>"{{ v }}"</code>{% end %}.
+        {% else if t.charLen %}
+          It {% if inReturns %}is not{% else %}cannot be{% end %} longer than {{ t.charLen }} characters.
+        {% else if re, ok := t.regexp.(string); ok %}
+          It {% if inReturns %}matches{% else %}must match{% end %} the regular expression <code>/{{ re }}/</code>.
+        {% end %}
+      {% end if %}
+    </span>
+    {%%
+      propertyName := p.name.(string)
+      if name != "" {
+        propertyName = name + "." + propertyName
+      }
+      if t := p["type"].(map[string]any); t.name == "Object" {
+        show props("", propertyName, t.properties.([]any), inReturns)
+      } else if t := p["type"].(map[string]any); t.name == "Array" {
+        if t := t.elementType.(map[string]any); t.name == "Object" {
+          show props("", "", t.properties.([]any), inReturns)
+        }
+      }
+    %%}
+  </li>
+  {% end for %}
+</ul>
+{% end macro %}
+
+{% macro Resource(resource map[string]any) %}
+
+{%%
+  passedInURL := func(url, name string) bool {
+    name = ":"+name
+    if hasSuffix(url, name) {
+      return true
+    }
+    i := index(url, name)
+    return i != -1 and "/?,&" contains url[i+len(name)]
+  }
+
+  bodyParameters := func(url string, parameters []any) []map[string]any {
+    var params []map[string]any
+    for parameter in parameters {
+      p := parameter.(map[string]any)
+      if not p.createRequired and not p.updateRequired {
+        continue
+      }
+      if name := p.name.(string); not passedInURL(url, name) {
+        params = append(params, p)
+      }
+    }
+    return params
+  }
+
+  var toJSON_old func(property map[string]any) html
+  toJSON_old = func(property map[string]any) html {
+      if placeholder, _ := property.placeholder.(string); placeholder != "" {
+        return htmlEscape(placeholder)
+      }
+      // Handle array of object.
+      t, ok := property["type"].(map[string]any).elementType.(map[string]any)
+      if !ok {
+        return "???"
+      }
+      var s html = "[ {</div>\n"
+      for i, p := range t.properties.([]any) {
+        property := p.(map[string]any)
+        if i > 0 {
+          s += ",</div>\n"
+        }
+        s += `<div>&nbsp;&nbsp;&nbsp;"` + htmlEscape(property.name.(string)) + `": ` + toJSON_old(property)
+      }
+      s += "</div><div>&nbsp;&nbsp;} ]"
+      return s
+  }
+
+  var toJSON func(t map[string]any, depth int) json
+  toJSON = func(t map[string]any, depth int) json {
+    switch t.name {
+    case "Array":
+      return "[ " + toJSON(t.elementType.(map[string]any), depth) + " ]"
+    case "Object":
+      var s json = "{\n"
+      i := 0
+      for property in t.properties.([]any) {
+        p := property.(map[string]any)
+        placeholder, ok := p.placeholder.(string)
+        if !ok {
+          continue
+        }
+        if i > 0 {
+          s += ",\n"
+        }
+        for i := 0; i < depth+1; i++ {
+          s += "  "
+        }
+        s += `"` + unsafeconv.ToJSON(p.name.(string)) + `": `
+        if placeholder == "..." {
+          s += toJSON(p["type"].(map[string]any), depth+1)
+        } else {
+          s += unsafeconv.ToJSON(placeholder)
+        }
+        i++
+      }
+      s += "\n"
+      for i := 0; i < depth; i++ {
+        s += "  "
+      }
+      s += "}"
+      return s
+    default:
+      return "???"
+    }
+  }
+
+  endpoints := resource.endpoints.([]any)
+%%}
+
+<h1>{{ resource.name }}</h1>
+<section class="api-spec" id="api-section-actions">
+  <div class="spec">
+    <div>
+      <p>{{ unsafeconv.ToMarkdown(resource.description.(string)) }}</p>
+    </div>
+    <div>
+      <div class="aside-box">
+        <div>Endpoints</div>
+        <ul>
+          {% for ep in endpoints %}
+          {% endpoint := ep.(map[string]any) %}
+          <li>
+            <a href="#{{ toKebab(endpoint.name.(string)) }}" aria-label="{{ endpoint.name }}" data-microtip-position="left" role="tooltip">
+              <span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}
+            </a>
+          </li>
+          {% end for %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% for ep in endpoints %}
+{% endpoint := ep.(map[string]any) %}
+<section class="api-spec" id="api-section-create_action">
+  {% id := toKebab(endpoint.name.(string)) %}
+  <h2 id="{{ id }}" ><a href="#{{ id }}">{{ endpoint.name }}</a></h2>
+  <div class="spec">
+    <div>
+      {% if endpoint.description != "" %}
+      <p class="description">{{ unsafeconv.ToMarkdown(endpoint.description.(string)) }}</p>
+      {% end if %}
+      <h3>Parameters</h3>
+      {% parameters := endpoint.parameters.([]any) %}
+      {% if len(parameters) > 0 %}
+      {{ props(endpoint.url.(string), "", parameters, false) }}
+      {% else %}
+      <span class="api-no-parameters">No parameters.</span>
+      {% end if %}
+      <h3>Response</h3>
+      {% if response, ok := endpoint.response.(map[string]any); ok %}
+      {% if response.description != "" %}<div>{{ unsafeconv.ToMarkdown(response.description.(string)) }}</div>{% end %}
+      {% if parameters, ok := response.parameters.([]any); ok %}{{ props("", "", parameters, true) }}{% end %}
+      {% else %}
+      <span class="api-no-response">No response.</span>
+      {% end if %}
+    </div>
+    <div>
+      <div class="api-request-box">
+        <div><span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}</div>
+        <div>
+          <div>curl {% if m := endpoint.method; m == "DELETE" or m == "PUT" %}-X {{ m }} {% end if %}https://api.meergo.com{{ endpoint.url }} \</div>
+          {% body := bodyParameters(endpoint.url.(string), endpoint.parameters.([]any)) %}
+          <div>   -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;"{% if body %} \{% end %}</div>
+          {% if body %}
+          {% last := len(body)-1 %}
+          <div>   -d '{</div>
+          {% for i, p := range body %}
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;"{{ p.name }}": {{ toJSON_old(p) }}{% if i < last %},{% end %}</div>
+          {% end for %}
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;}'</div>
+          {% end if %}
+        </div>
+      </div>
+      {% if response, ok := endpoint.response.(map[string]any); ok %}
+      {% if parameters := response.parameters.([]any); len(parameters) > 0 %}
+      <div class="api-response-box">
+        <div>Response</div>
+        <div>{{ toJSON(map[string]any{"name": "Object", "properties": parameters, "placeholder": "..."}, 0) }}</div>
+      </div>
+      {% end if %}
+      {% end if %}
+      {% if errors := endpoint.errors.([]any); len(errors) > 0 %}
+      <div class="api-errors-box">
+        <div>Errors</div>
+        <div>
+          {% for err in errors %}
+          {% err := err.(map[string]any) %}
+          <div class="row" onclick="toggleJSONBody(this)">
+            <div class="status" data-status="{{ err.status }}">{{ err.status }}</div>
+            <div class="message" data-code="{{ err.code }}">{{ err.message }}</div>
+          </div>
+          {% end for %}
+        </div>
+      </div>
+      {% end if %}
+  </div>
+</section>
+{% end for %}
+
+{% end macro %}

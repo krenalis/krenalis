@@ -1,0 +1,17 @@
+{% import "specification.txt" %}
+{% import "resource.html" %}
+
+{% macro ResourceByID(id string) %}
+  {%%
+    specification, err := Specification()
+    if err != nil {
+      panic(err)
+    }
+    for resource in specification.resources.([]any) {
+      if r := resource.(map[string]any); r.id == id {
+        show Resource(r)
+        break
+      }
+    }
+  %%}
+{% end macro %}

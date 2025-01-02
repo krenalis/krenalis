@@ -1,0 +1,13 @@
+{%%
+
+var Specification = func() (map[string]any, error) {
+	var spec map[string]any
+	data := render "/api/spec.json"
+	err := unmarshalJSON(string(data), &spec)
+	if err != nil {
+		return nil, err
+	}
+	return spec, nil
+}
+
+%%}

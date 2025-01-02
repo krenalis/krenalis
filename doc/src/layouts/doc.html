@@ -5,6 +5,7 @@
 <head>
     {% title := Title() default "" %}
     <title>{{ title }}</title>
+    <link rel="stylesheet" href="/css/microtip.css">
     {{ highlight.Style() }}
     {{ Meta(title) }}
 </head>
@@ -104,12 +105,6 @@
                         </ul>
                     </li>
                     <li>
-                        <h4>API References</h4>
-                        <ul>
-                            <li>{{ item(`developers/api`, `API`) }}</li>
-                        </ul>
-                    </li>
-                    <li>
                         <h4>Extend Meergo</h4>
                         <ul>
                             <li>{{ item(`developers/extend/data-types`, `Data types`) }}</li>
@@ -131,6 +126,51 @@
                                 </ul>
                             </li>
                             <li>{{ item(`developers/extend/telemetry`, `Telemetry`) }}</li>
+                        </ul>
+                    </li>
+                    {% else if hasPrefix(filepath, "api/") %}
+                    <li>
+                        <div>API reference</div>
+                        <ul>
+                            <li>{{ item(`api/workspace`, `Workspace`) }}</li>
+                            <li>{{ item(`api/warehouse`, `Warehouse`) }}</li>
+                            <li>{{ item(`api/connectors`, `Connectors`) }}</li>
+                            <li>{{ item(`api/users`, `Users`) }}</li>
+                            <li>{{ item(`api/events`, `Events`) }}</li>
+                            <li>
+                                <div>Connections</div>
+                                <ul>
+                                    <li>{{ item(`api/connections`, `Connections`) }}</li>
+                                    <li>{{ item(`api/connection-app`, `Connection app`) }}</li>
+                                    <li>{{ item(`api/connection-files`, `Connection files`) }}</li>
+                                    <li>{{ item(`api/connection-database`, `Connection database`) }}</li>
+                                    <li>{{ item(`api/connection-keys`, `Connection keys`) }}</li>
+                                    <li>{{ item(`api/connection-identities`, `Connection identities`) }}</li>
+                                    <li>{{ item(`api/linked-connections`, `Linked connections`) }}</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <div>Source actions</div>
+                                <ul>
+                                    <li>{{ item(`api/source-app-actions-on-users`, `App users`) }}</li>
+                                    <li>{{ item(`api/source-database-actions`, `Database users`) }}</li>
+                                    <li>{{ item(`api/source-file-actions`, `File users`) }}</li>
+                                    <li>{{ item(`api/source-actions-on-events`, `Website events`) }}</li>
+                                    <li>{{ item(`api/source-actions-on-events`, `Mobile events`) }}</li>
+                                    <li>{{ item(`api/source-actions-on-events`, `Server events`) }}</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <div>Destination actions</div>
+                                <ul>
+                                    <li>{{ item(`api/destination-actions-on-events`, `App events`) }}</li>
+                                </ul>
+                            </li>
+                            <li>{{ item(`api/executions`, `Executions`) }}</li>
+                            <li>{{ item(`api/action-types`, `Action types`) }}</li>
+                            <li>{{ item(`api/identity-resolution`, `Identity resolution`) }}</li>
+                            <li>{{ item(`api/metrics-and-errors`, `Metrics and errors`) }}</li>
+                            <li>{{ item(`api/system`, `System`) }}</li>
                         </ul>
                     </li>
                     {% else %}
@@ -178,9 +218,10 @@
         </aside>
         <div class="content">
             <nav class="sections">
-                <a href="/"{% if !hasPrefix(filepath, "connectors/") && !hasPrefix(filepath, "developers/") %} class="selected"{% end %}>Documentation</a>
+                <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "developers/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
                 <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
                 <a href="/developers/"{% if hasPrefix(filepath, "developers/") %} class="selected"{% end %}>Developers</a>
+                <a href="/api/workspace"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
             </nav>
             {{ Article() }}
         </div>
