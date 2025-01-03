@@ -258,18 +258,12 @@ type reader struct {
 }
 
 func (r reader) Close() error {
-	if r.client == nil {
-		return nil
-	}
 	defer r.client.close()
 	err := r.fi.Close()
-	r.fi = nil
-	err2 := r.client.close()
-	r.client = nil
 	if err != nil {
 		return err
 	}
-	return err2
+	return r.client.close()
 }
 
 func (r reader) Read(p []byte) (int, error) {
