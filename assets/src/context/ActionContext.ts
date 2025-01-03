@@ -19,6 +19,8 @@ interface ActionContext {
 	isTransformationFunctionSupported: boolean;
 	onClose: () => void;
 	transformationSectionRef: React.MutableRefObject<any>;
+	handleEmptyMatchingError: () => void;
+	showEmptyMatchingError: boolean;
 	isTransformationHidden: boolean;
 	isTransformationDisabled: boolean;
 	isSaveButtonLoading: boolean;

@@ -87,6 +87,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		setIsSaveHidden,
 		isFormatChanged,
 		isEditing,
+		handleEmptyMatchingError,
 	} = useContext(ActionContext);
 
 	const isFirstCompilation = useRef(true);
@@ -364,7 +365,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			const inMatching = action.matching.in;
 			const outMatching = action.matching.out;
 			if (inMatching === '' || outMatching === '') {
-				handleError('Matching properties cannot be empty');
+				handleEmptyMatchingError();
 				return;
 			}
 		}

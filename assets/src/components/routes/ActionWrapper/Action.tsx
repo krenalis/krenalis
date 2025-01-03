@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, ReactNode } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import './Action.css';
 import ActionHeader from './ActionHeader';
 import ActionTransformation from './ActionTransformation';
@@ -18,11 +18,23 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
 	const [isSaveButtonLoading, setIsSaveButtonLoading] = useState<boolean>(false);
+	const [showEmptyMatchingError, setShowEmptyMatchingError] = useState<boolean>(false);
 
 	const { connection } = useContext(ConnectionContext);
 	const { closeFullscreen } = useContext(FullscreenContext)!;
 
-	const transformationSectionRef = useRef<ReactNode>();
+	const transformationSectionRef = useRef<any>();
+	const matchingSectionRef = useRef<any>();
+
+	const handleEmptyMatchingError = () => {
+		setShowEmptyMatchingError(true);
+		const top = matchingSectionRef.current.getBoundingClientRect().top;
+		matchingSectionRef.current.closest('.fullscreen').scrollBy({
+			top: top - 130,
+			left: 0,
+			behavior: 'smooth',
+		});
+	};
 
 	const onClose = () => {
 		closeFullscreen();
@@ -94,6 +106,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				isTransformationFunctionSupported,
 				onClose,
 				transformationSectionRef,
+				handleEmptyMatchingError,
+				showEmptyMatchingError,
 				isTransformationHidden,
 				isTransformationDisabled,
 				isSaveButtonLoading,
@@ -120,7 +134,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.fields.includes('File') && <ActionFile />}
 					{actionType!.fields.includes('Table') && <ActionTable />}
 					{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
-					{actionType!.fields.includes('Matching') && <ActionMatching />}
+					{actionType!.fields.includes('Matching') && <ActionMatching ref={matchingSectionRef} />}
 					{actionType!.fields.includes('ExportOnDuplicates') && <ActionExportOnDuplicates />}
 					{actionType!.fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (
 						<ActionFilters ref={transformationSectionRef} />

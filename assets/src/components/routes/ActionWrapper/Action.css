@@ -1187,6 +1187,14 @@ inherit the disabled style */
 	height: 100% !important;
 }
 
+.action__matching-section .section__content {
+	padding: 36px 36px 50px 36px;
+}
+
+.action__matching-wrapper {
+	position: relative;
+}
+
 .action__matching-properties {
 	display: grid;
 	grid-template-columns: 1fr 100px 1fr;
@@ -1207,6 +1215,24 @@ inherit the disabled style */
 	font-size: 30px;
 	position: relative;
 	right: 1px;
+}
+
+.action__matching-empty-error {
+	color: var(--sl-color-danger-600);
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 13px;
+	font-weight: 500;
+	position: absolute;
+	bottom: -35px;
+	width: 100%;
+	justify-content: center;
+}
+
+.action__matching-empty-error sl-icon {
+	position: relative;
+	top: 1px;
 }
 
 .action__query-buttons,

@@ -1,14 +1,23 @@
-import React, { useContext, useMemo } from 'react';
+import React, { forwardRef, useContext, useMemo } from 'react';
 import Section from '../../base/Section/Section';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { flattenSchema, outPathsTypesAreEqual, TransformedMapping, validateMatching } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
-const ActionMatching = () => {
-	const { connection, action, setAction, actionType, transformationType, selectedOutPaths, setSelectedOutPaths } =
-		useContext(ActionContext);
+const ActionMatching = forwardRef<any>((_, ref) => {
+	const {
+		connection,
+		action,
+		setAction,
+		actionType,
+		transformationType,
+		selectedOutPaths,
+		setSelectedOutPaths,
+		showEmptyMatchingError,
+	} = useContext(ActionContext);
 
 	const flatInMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
 
@@ -100,35 +109,45 @@ const ActionMatching = () => {
 			description='The properties used to identify and match the resources'
 			padded={true}
 			annotated={true}
+			ref={ref}
+			className='action__matching-section'
 		>
-			<div className='action__matching-properties'>
-				<Combobox
-					onInput={onUpdateMatching}
-					initialValue={action.matching!.in}
-					label={`User's schema property`}
-					name='in'
-					className='action__transformation-input-property'
-					items={getSchemaComboboxItems(flatInMatchingSchema)}
-					onSelect={onSelectMatching}
-					isExpression={false}
-					caret={true}
-					error={inMatchingError}
-				/>
-				<div className='action__matching-properties-equal'>=</div>
-				<Combobox
-					onInput={onUpdateMatching}
-					label={`${connection.name}'s property`}
-					initialValue={action.matching!.out}
-					name='out'
-					isExpression={false}
-					items={outMatchingItems}
-					onSelect={onSelectMatching}
-					caret={true}
-					error={outMatchingError}
-				/>
+			<div className='action__matching-wrapper'>
+				<div className='action__matching-properties'>
+					<Combobox
+						onInput={onUpdateMatching}
+						initialValue={action.matching!.in}
+						label={`User's schema property`}
+						name='in'
+						className='action__transformation-input-property'
+						items={getSchemaComboboxItems(flatInMatchingSchema)}
+						onSelect={onSelectMatching}
+						isExpression={false}
+						caret={true}
+						error={inMatchingError}
+					/>
+					<div className='action__matching-properties-equal'>=</div>
+					<Combobox
+						onInput={onUpdateMatching}
+						label={`${connection.name}'s property`}
+						initialValue={action.matching!.out}
+						name='out'
+						isExpression={false}
+						items={outMatchingItems}
+						onSelect={onSelectMatching}
+						caret={true}
+						error={outMatchingError}
+					/>
+				</div>
+				{showEmptyMatchingError && (action.matching.in === '' || action.matching.out === '') && (
+					<div className='action__matching-empty-error'>
+						<SlIcon name='exclamation-circle' slot='prefix' />
+						Matching properties cannot be empty
+					</div>
+				)}
 			</div>
 		</Section>
 	);
-};
+});
 
 export default ActionMatching;
