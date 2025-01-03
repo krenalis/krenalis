@@ -123,7 +123,7 @@ func (exel *Excel) Read(ctx context.Context, r io.Reader, sheet string, records 
 					}
 					columns[i].Name = name
 					if name != record[i] {
-						columns[i].Label = header
+						columns[i].Description = header
 					}
 					nameOfHeader[header] = name
 				} else {

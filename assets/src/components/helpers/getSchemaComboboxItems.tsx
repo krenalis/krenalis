@@ -113,7 +113,6 @@ const computeItems = (flatSchema: TransformedMapping) => {
 	const items: ComboboxItem[] = [];
 	for (const name in flatSchema) {
 		let typ = flatSchema[name].type;
-		let label = flatSchema[name].label;
 		items.push({
 			content: (
 				<div className='schema-combobox-item' key={name}>
@@ -121,9 +120,6 @@ const computeItems = (flatSchema: TransformedMapping) => {
 						<SlIcon name={typeNameToIconName[typ]} />
 					</div>
 					<div className='schema-combobox-item__text'>
-						<div className='schema-combobox-item__label'>
-							{label == null || label === '' ? name : label}
-						</div>
 						<div className='schema-combobox-item__name'>{name}</div>
 					</div>
 				</div>

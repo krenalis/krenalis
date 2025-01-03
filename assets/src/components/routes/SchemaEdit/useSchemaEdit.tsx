@@ -16,7 +16,6 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
-	{ name: 'Label' },
 	{ name: 'Primary source' },
 	{ name: '' }, // buttons
 ];
@@ -146,7 +145,6 @@ const useSchemaEdit = (
 			name: property.name,
 			type: property.type,
 			nullable: property.nullable,
-			label: property.label,
 			placeholder: '',
 			role: 'Both',
 			readOptional: true,
@@ -252,7 +250,6 @@ const useSchemaEdit = (
 			name: property.name,
 			type: property.type,
 			nullable: property.nullable,
-			label: property.label,
 			placeholder: current.placeholder,
 			role: current.role,
 			readOptional: current.readOptional,
@@ -544,7 +541,7 @@ const buildRow = (
 		}
 	}
 	return {
-		cells: [property.name, typeCell, property.label, primarySourceCell, buttons],
+		cells: [property.name, typeCell, primarySourceCell, buttons],
 		dragKey: propertyKey,
 		id: propertyKey,
 	};

@@ -273,9 +273,9 @@ For example:
 
 ```go
 types.Object([]types.Property{
-	{Name: "first_name", Label: "First name", Type: types.Text().WithCharLen(30)},
-    {Name: "last_name", Label: "Last name", Type: types.Text().WithCharLen(30)},
-    {Name: "birth_date", Label: "Date of birth", Type: types.Year()},
+	{Name: "first_name", Type: types.Text().WithCharLen(30)},
+    {Name: "last_name", Type: types.Text().WithCharLen(30)},
+    {Name: "birth_date", Type: types.Year()},
 })
 ```
 
@@ -295,26 +295,24 @@ An Object property is defined as follows:
 ```go
 type Property struct {
 	Name           string
-	Label          string
 	Placeholder    string
 	Type           Type
 	CreateRequired bool
 	UpdateRequired bool
 	ReadOptional   bool
 	Nullable       bool
-	Note           string
+	Description    string
 }
 ```
 
 * `Name`: The name of the property. It must start with a letter `[A-Za-z_]` and can only contain alphanumeric characters and underscores `[A-Za-z0-9_]` after that. To check if a name is valid, use the `types.IsValidPropertyName` function.
-* `Label`: The label of the property, used for display purposes only. For example, if the property name is `"first_name"`, its label might be `"First Name"`. If empty, the name will be displayed instead of the label.
 * `Placeholder`: A placeholder to use in transformation mappings for events sent to applications. It pre-fills the input with the expression that evaluates to the property's value.
 * `Type`: The type of the property, which can be any [data type](#how-to-construct-data-types).
 * `CreateRequired`: Indicates whether the property is required for creation.
 * `UpdateRequired`: Indicates whether the property is required for the update.
 * `ReadOptional`: Indicates whether the property may not be present when reading.
 * `Nullable`: Indicates whether the property can be null. In Go, this means it can be `nil`. In JavaScript, it can be `null`, and in Python, it can be `None`.
-* `Note`: A note providing additional information about the property's usage.
+* `Description`: A description providing additional information about the property's usage.
 
 ### Map(T)
 

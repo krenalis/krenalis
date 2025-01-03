@@ -145,7 +145,6 @@ func KindByName(name string) (Kind, bool) {
 // Property represents an object property.
 type Property struct {
 	Name           string
-	Label          string
 	Placeholder    string
 	Type           Type
 	CreateRequired bool
@@ -389,10 +388,6 @@ func ObjectOf(properties []Property) (Type, error) {
 			return Type{}, RepeatedPropertyNameError{j, i, property.Name}
 		}
 		indexOf[property.Name] = i
-		label, err := normalizedUTF8(property.Label)
-		if err != nil {
-			return Type{}, err
-		}
 		placeholder, err := normalizedUTF8(property.Placeholder)
 		if err != nil {
 			return Type{}, err
@@ -408,7 +403,6 @@ func ObjectOf(properties []Property) (Type, error) {
 		}
 		ps[i] = Property{
 			Name:           property.Name,
-			Label:          label,
 			Placeholder:    placeholder,
 			Type:           property.Type,
 			CreateRequired: property.CreateRequired,

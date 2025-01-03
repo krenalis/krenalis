@@ -149,7 +149,6 @@ interface TransformedProperty {
 	updateRequired: boolean;
 	readOptional: boolean;
 	type: string;
-	label: string;
 	size: number | null;
 	full: Property;
 	indentation?: number;
@@ -440,7 +439,6 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 			createRequired: property.createRequired,
 			updateRequired: property.updateRequired,
 			type: property.type.name,
-			label: property.label,
 			size: null,
 			full: { ...property },
 		};
@@ -862,7 +860,6 @@ const transformInActionToSet = async (
 				p = {
 					...b,
 					readOptional: a.readOptional,
-					label: a.label,
 				};
 			} else {
 				if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {

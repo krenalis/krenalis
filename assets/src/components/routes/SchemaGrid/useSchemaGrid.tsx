@@ -8,12 +8,7 @@ import { TransformedMapping, TransformedProperty, flattenSchema } from '../../..
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 
-const SCHEMA_COLUMNS: GridColumn[] = [
-	{ name: 'Name' },
-	{ name: 'Type' },
-	{ name: 'Label' },
-	{ name: 'Primary source' },
-];
+const SCHEMA_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Type' }, { name: 'Primary source' }];
 
 const useSchemaGrid = (schema: ObjectType, isLoading: boolean) => {
 	const { workspaces, selectedWorkspace, connections } = useContext(AppContext);
@@ -87,7 +82,7 @@ const buildRow = (property: TransformedProperty, primarySource?: TransformedConn
 			primarySourceCell = 'None';
 		}
 	}
-	return { cells: [property.full.name, typeCell, property.label, primarySourceCell] };
+	return { cells: [property.full.name, typeCell, primarySourceCell] };
 };
 
 export { useSchemaGrid };

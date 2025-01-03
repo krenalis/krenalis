@@ -352,9 +352,6 @@ func sameProperty(p1, p2 Property) error {
 	if p1.Name != p2.Name {
 		return fmt.Errorf("expected property name %q, got %q", p1.Name, p2.Name)
 	}
-	if p1.Label != p2.Label {
-		return fmt.Errorf("expected property label %q, got %q", p1.Label, p2.Label)
-	}
 	if p1.Placeholder != p2.Placeholder {
 		return fmt.Errorf("expected property placeholder %q, got %q", p1.Placeholder, p2.Placeholder)
 	}

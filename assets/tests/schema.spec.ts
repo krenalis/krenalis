@@ -18,7 +18,6 @@ test(`Add schema property`, async ({ page }) => {
 	await page.locator('sl-input >> input[name="name"]').fill('foo');
 	await page.click('.property-dialog__type-select');
 	await page.locator('sl-option', { hasText: 'Text' }).click();
-	await page.locator('sl-input >> input[name="label"]').fill('Foo');
 	await page.locator('sl-textarea >> textarea[name="description"]').fill('Foo property');
 
 	await page.click('.property-dialog__save');

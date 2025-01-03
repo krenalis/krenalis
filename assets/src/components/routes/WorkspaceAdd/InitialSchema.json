@@ -2,7 +2,6 @@
 	"name": "Object",
 	"properties": [
 		{
-			"label": "First name",
 			"name": "first_name",
 			"readOptional": true,
 			"type": {
@@ -11,7 +10,6 @@
 			}
 		},
 		{
-			"label": "Last name",
 			"name": "last_name",
 			"readOptional": true,
 			"type": {
@@ -20,7 +18,6 @@
 			}
 		},
 		{
-			"label": "Email",
 			"name": "email",
 			"readOptional": true,
 			"type": {
@@ -29,7 +26,6 @@
 			}
 		},
 		{
-			"label": "Phone number",
 			"name": "phone_number",
 			"readOptional": true,
 			"type": {
@@ -38,7 +34,6 @@
 			}
 		},
 		{
-			"label": "Date of Birth",
 			"name": "date_of_birth",
 			"readOptional": true,
 			"type": {
@@ -46,14 +41,12 @@
 			}
 		},
 		{
-			"label": "Address",
 			"name": "address",
 			"readOptional": true,
 			"type": {
 				"name": "Object",
 				"properties": [
 					{
-						"label": "Street",
 						"name": "street",
 						"readOptional": true,
 						"type": {
@@ -62,7 +55,6 @@
 						}
 					},
 					{
-						"label": "City",
 						"name": "city",
 						"readOptional": true,
 						"type": {
@@ -71,7 +63,6 @@
 						}
 					},
 					{
-						"label": "State",
 						"name": "state",
 						"readOptional": true,
 						"type": {
@@ -80,7 +71,6 @@
 						}
 					},
 					{
-						"label": "Zip Code",
 						"name": "zip_code",
 						"readOptional": true,
 						"type": {
@@ -89,7 +79,6 @@
 						}
 					},
 					{
-						"label": "Country",
 						"name": "country",
 						"readOptional": true,
 						"type": {
@@ -101,7 +90,6 @@
 			}
 		},
 		{
-			"label": "Gender",
 			"name": "gender",
 			"readOptional": true,
 			"type": {
@@ -109,7 +97,6 @@
 			}
 		},
 		{
-			"label": "Loyalty Program Member",
 			"name": "loyalty_program_member",
 			"readOptional": true,
 			"type": {
@@ -117,7 +104,6 @@
 			}
 		},
 		{
-			"label": "Preferred Contact Method",
 			"name": "preferred_contact_method",
 			"readOptional": true,
 			"type": {
@@ -125,7 +111,6 @@
 			}
 		},
 		{
-			"label": "Account Creation Date",
 			"name": "account_creation_date",
 			"readOptional": true,
 			"type": {
@@ -133,7 +118,6 @@
 			}
 		},
 		{
-			"label": "Last Purchase Date",
 			"name": "last_purchase_date",
 			"readOptional": true,
 			"type": {

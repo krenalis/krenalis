@@ -215,8 +215,8 @@ func (mp *Mixpanel) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 func (mp *Mixpanel) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	schema := func(placeholder string) types.Type {
 		return types.Object([]types.Property{
-			{Name: "event", Label: "Event Name", Placeholder: placeholder, Type: types.Text().WithCharLen(255), CreateRequired: true},
-			{Name: "properties", Label: "Your Properties", Type: types.Map(types.JSON()), CreateRequired: true},
+			{Name: "event", Placeholder: placeholder, Type: types.Text().WithCharLen(255), CreateRequired: true, Description: "Event Name"},
+			{Name: "properties", Type: types.Map(types.JSON()), CreateRequired: true, Description: "Your Properties"},
 		})
 	}
 	switch eventType {

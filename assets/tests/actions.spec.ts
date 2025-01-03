@@ -64,19 +64,19 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 			"inSchema": {
 				"name": "Object",
 				"properties": [
-					{ "name": "email", "label": "", "type": { "name": "Text" }, "description": "" },
-					{ "name": "dummyId", "label": "", "type": { "name": "Text" }, "description": "" },
-					{ "name": "firstName", "label": "", "type": { "name": "Text" }, "description": "" },
-					{ "name": "lastName", "label": "", "type": { "name": "Text" }, "description": "" }
+					{ "name": "email", "type": { "name": "Text" }, "description": "" },
+					{ "name": "dummyId", "type": { "name": "Text" }, "description": "" },
+					{ "name": "firstName", "type": { "name": "Text" }, "description": "" },
+					{ "name": "lastName", "type": { "name": "Text" }, "description": "" }
 				]
 			},
 			"outSchema": {
 				"name": "Object",
 				"properties": [
-					{ "name": "email", "label": "Email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
-					{ "name": "dummy_id", "label": "Dummy ID", "type": { "name": "Text" }, "readOptional": true, "description": "" },
-					{ "name": "first_name", "label": "First Name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
-					{ "name": "last_name", "label": "Last Name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" }
+					{ "name": "email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
+					{ "name": "dummy_id", "type": { "name": "Text" }, "readOptional": true, "description": "" },
+					{ "name": "first_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
+					{ "name": "last_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" }
 				]
 			},
 			"transformation": {
@@ -192,7 +192,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "first_name",
-						"label": "First Name",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -202,7 +201,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					},
 					{
 						"name": "last_name",
-						"label": "Last Name",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -212,7 +210,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					},
 					{
 						"name": "email",
-						"label": "Email",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -222,7 +219,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					},
 					{
 						"name": "dummy_id",
-						"label": "Dummy ID",
 						"type": {
 							"name": "Text"
 						},
@@ -236,7 +232,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "firstName",
-						"label": "",
 						"type": {
 							"name": "Text"
 						},
@@ -244,7 +239,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					},
 					{
 						"name": "lastName",
-						"label": "",
 						"type": {
 							"name": "Text"
 						},
@@ -252,7 +246,6 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					},
 					{
 						"name": "email",
-						"label": "",
 						"type": {
 							"name": "Text"
 						},
@@ -329,7 +322,6 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "email",
-						"label": "",
 						"type": {
 							"name": "Text"
 						},
@@ -418,7 +410,6 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "first_name",
-						"label": "",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -428,7 +419,6 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "last_name",
-						"label": "",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -438,7 +428,6 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "email",
-						"label": "",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -453,7 +442,6 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "first_name",
-						"label": "First Name",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -463,7 +451,6 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "last_name",
-						"label": "Last Name",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -580,7 +567,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "email",
-						"label": "Email",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -590,7 +576,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "first_name",
-						"label": "First Name",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -600,7 +585,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "last_name",
-						"label": "Last Name",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -610,7 +594,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "dummy_id",
-						"label": "Dummy ID",
 						"type": {
 							"name": "Text"
 						},
@@ -624,7 +607,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 				"properties": [
 					{
 						"name": "email",
-						"label": "",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -634,7 +616,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "first_name",
-						"label": "",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -644,7 +625,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 					},
 					{
 						"name": "last_name",
-						"label": "",
 						"type": {
 							"name": "Text",
 							"charLen": 300
@@ -765,7 +745,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 					"properties": [
 						{
 							"name": "email",
-							"label": " email",
 							"type": {
 								"name": "Text"
 							},
@@ -773,7 +752,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "first_name",
-							"label": "",
 							"type": {
 								"name": "Text"
 							},
@@ -781,7 +759,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "last_name",
-							"label": " last_name",
 							"type": {
 								"name": "Text"
 							},
@@ -794,7 +771,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 					"properties": [
 						{
 							"name": "email",
-							"label": "Email",
 							"type": {
 								"name": "Text",
 								"charLen": 300
@@ -804,7 +780,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "first_name",
-							"label": "First Name",
 							"type": {
 								"name": "Text",
 								"charLen": 300
@@ -814,7 +789,6 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "last_name",
-							"label": "Last Name",
 							"type": {
 								"name": "Text",
 								"charLen": 300
@@ -939,7 +913,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 					"properties": [
 						{
 							"name": "email",
-							"label": "Email",
 							"type": {
 								"name": "Text",
 								"charLen": 300
@@ -949,7 +922,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "dummy_id",
-							"label": "Dummy ID",
 							"type": {
 								"name": "Text"
 							},
@@ -958,13 +930,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "android",
-							"label": "Android",
 							"type": {
 								"name": "Object",
 								"properties": [
 									{
 										"name": "id",
-										"label": "ID",
 										"type": {
 											"name": "Text"
 										},
@@ -973,7 +943,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "idfa",
-										"label": "IDFA",
 										"type": {
 											"name": "Text"
 										},
@@ -982,7 +951,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "push_token",
-										"label": "Push Token",
 										"type": {
 											"name": "Text"
 										},
@@ -996,13 +964,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "ios",
-							"label": "IOS",
 							"type": {
 								"name": "Object",
 								"properties": [
 									{
 										"name": "id",
-										"label": "ID",
 										"type": {
 											"name": "Text"
 										},
@@ -1011,7 +977,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "idfa",
-										"label": "IDFA",
 										"type": {
 											"name": "Text"
 										},
@@ -1020,7 +985,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "push_token",
-										"label": "Push Token",
 										"type": {
 											"name": "Text"
 										},
@@ -1034,7 +998,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "first_name",
-							"label": "First Name",
 							"type": {
 								"name": "Text",
 								"charLen": 300
@@ -1044,7 +1007,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "last_name",
-							"label": "Last Name",
 							"type": {
 								"name": "Text",
 								"charLen": 300
@@ -1054,7 +1016,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "gender",
-							"label": "Gender",
 							"type": {
 								"name": "Text"
 							},
@@ -1063,13 +1024,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "food_preferences",
-							"label": "Food Preferences",
 							"type": {
 								"name": "Object",
 								"properties": [
 									{
 										"name": "drink",
-										"label": "Drink",
 										"type": {
 											"name": "Text"
 										},
@@ -1078,7 +1037,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "fruit",
-										"label": "Fruit",
 										"type": {
 											"name": "Text"
 										},
@@ -1092,7 +1050,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "phone_numbers",
-							"label": "Phone Numbers",
 							"type": {
 								"name": "Array",
 								"elementType": {
@@ -1105,13 +1062,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 						},
 						{
 							"name": "favorite_movie",
-							"label": "Favourite Movie",
 							"type": {
 								"name": "Object",
 								"properties": [
 									{
 										"name": "title",
-										"label": "Title",
 										"type": {
 											"name": "Text"
 										},
@@ -1120,7 +1075,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "length",
-										"label": "Length",
 										"type": {
 											"name": "Float",
 											"bitSize": 64
@@ -1130,13 +1084,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 									},
 									{
 										"name": "soundtrack",
-										"label": "Soundtrack",
 										"type": {
 											"name": "Object",
 											"properties": [
 												{
 													"name": "title",
-													"label": "Title",
 													"type": {
 														"name": "Text"
 													},
@@ -1145,7 +1097,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 												},
 												{
 													"name": "author",
-													"label": "Author",
 													"type": {
 														"name": "Text"
 													},
@@ -1154,7 +1105,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 												},
 												{
 													"name": "length",
-													"label": "Length",
 													"type": {
 														"name": "Float",
 														"bitSize": 64
@@ -1164,7 +1114,6 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 												},
 												{
 													"name": "genre",
-													"label": "Genre",
 													"type": {
 														"name": "Text"
 													},

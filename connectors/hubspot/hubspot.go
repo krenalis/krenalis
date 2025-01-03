@@ -327,10 +327,9 @@ func (hs *HubSpot) Schema(ctx context.Context, _ meergo.Targets, role meergo.Rol
 		}
 		property := types.Property{
 			Name:        r.Name,
-			Label:       r.Label,
 			Type:        typ,
 			Nullable:    true,
-			Description: r.Description,
+			Description: r.Label + "\n\n" + r.Description,
 		}
 		if typ.Kind() == types.TextKind {
 			if len(r.Options) == 0 {

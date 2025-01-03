@@ -279,7 +279,7 @@ func Test_SubsetByPathFunc(t *testing.T) {
 			{Name: "b", Type: Text()},
 		}))},
 		{Name: "f", Type: Object([]Property{
-			{Name: "f1", Type: Text(), Label: "Label of f1", Placeholder: "Placeholder of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+			{Name: "f1", Type: Text(), Placeholder: "Placeholder of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 		})},
 	})
 	tests := []struct {
@@ -363,11 +363,11 @@ func Test_SubsetByPathFunc(t *testing.T) {
 			expected: Type{},
 		},
 		{
-			name: "Referencing a top-level Object and its children, which has Label, Placeholder, etc...",
+			name: "Referencing a top-level Object and its children, which has Placeholder, CreateRequired, etc...",
 			f:    func(path string) bool { return strings.HasPrefix(path, "f") },
 			expected: Object([]Property{
 				{Name: "f", Type: Object([]Property{
-					{Name: "f1", Type: Text(), Label: "Label of f1", Placeholder: "Placeholder of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
+					{Name: "f1", Type: Text(), Placeholder: "Placeholder of f1", CreateRequired: true, UpdateRequired: true, Nullable: true},
 				})},
 			}),
 		},

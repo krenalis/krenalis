@@ -394,24 +394,17 @@ sl-split-panel sl-icon[slot='divider'] {
 	display: flex;
 	align-items: start;
 	gap: 0;
-	height: 40px;
 }
 
 .schema-combobox-item__type {
 	width: 42px;
-	font-size: 18px;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	padding-top: 2px;
 }
 
 .schema-combobox-item__text {
 	font-size: 13px;
-}
-
-.schema-combobox-item__label {
-	font-size: 14px;
 }
 
 .schema-combobox-item__name {

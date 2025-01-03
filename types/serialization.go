@@ -258,8 +258,6 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	b.WriteByte('"')
 	b.WriteString(p.Name)
 	b.WriteByte('"')
-	b.WriteString(`,"label":`)
-	_ = marshalString(b, p.Label)
 	if p.Placeholder != "" {
 		b.WriteString(`,"placeholder":`)
 		_ = marshalString(b, p.Placeholder)
@@ -922,7 +920,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasLabel, hasPlaceholder, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
+	var hasPlaceholder, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
 
 	// Read property keys and values.
 	for {
@@ -971,15 +969,6 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 			if !IsValidPropertyName(p.Name) {
 				return Property{}, errors.New("invalid property name")
 			}
-		case "label":
-			if hasLabel {
-				return Property{}, errors.New("repeated 'label' key")
-			}
-			p.Label, ok = tok.(string)
-			if !ok {
-				return Property{}, errors.New("unexpected value for property label")
-			}
-			hasLabel = true
 		case "placeholder":
 			if hasPlaceholder {
 				return Property{}, errors.New("repeated 'placeholder' key")

@@ -52,7 +52,6 @@ func Equal(t1, t2 Type) bool {
 		for i, p1 := range vl1 {
 			p2 := (vl2)[i]
 			if p1.Name != p2.Name ||
-				p1.Label != p2.Label ||
 				p1.Placeholder != p2.Placeholder ||
 				p1.CreateRequired != p2.CreateRequired ||
 				p1.UpdateRequired != p2.UpdateRequired ||

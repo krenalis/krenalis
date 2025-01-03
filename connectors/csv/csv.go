@@ -122,9 +122,6 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records meerg
 						}
 					}
 					columns[i].Name = name
-					if name != record[i] {
-						columns[i].Label = header
-					}
 					nameOfHeader[header] = name
 				} else {
 					name := columnNumberToName(i + 1)
@@ -195,11 +192,7 @@ func (c *CSV) Write(ctx context.Context, w io.Writer, _ string, records meergo.R
 	columns := records.Columns()
 	recordString := make([]string, len(columns))
 	for i, c := range columns {
-		if c.Label != "" {
-			recordString[i] = c.Label
-		} else {
-			recordString[i] = c.Name
-		}
+		recordString[i] = c.Name
 	}
 	err := v.Write(recordString)
 	if err != nil {
