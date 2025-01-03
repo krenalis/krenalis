@@ -629,8 +629,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"name": "Text",
 							"charLen": 300
 						},
-						"createRequired": true,
-						"updateRequired": true,
 						"nullable": false,
 						"description": ""
 					},
@@ -641,8 +639,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"name": "Text",
 							"charLen": 300
 						},
-						"createRequired": true,
-						"updateRequired": true,
 						"nullable": true,
 						"description": ""
 					},
@@ -653,8 +649,6 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 							"name": "Text",
 							"charLen": 300
 						},
-						"createRequired": true,
-						"updateRequired": true,
 						"nullable": true,
 						"description": ""
 					}

@@ -108,7 +108,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps
+	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
 			case importUserIdentitiesFromEvents:
@@ -411,7 +412,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Do some validations on the input and the output schemas.
-	if inSchema.Valid() {
+	if inSchema.Valid() && !inSchemaIsEventSchema {
 		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ, action.TableKeyProperty); err != nil {
 			return errors.BadRequest("%s", err)
 		}
@@ -748,49 +749,23 @@ func unusedProperties(schema types.Type, used []string) []string {
 }
 
 // validateActionSchema validates an action schema, returning an error if it is
-// not valid.
+// not valid. It is not called if schema is the event schema.
 //
 // io specifies whether the validation relates to "input" or "output", schema is
 // the schema of the input or output action, role and target are the role and
 // target of the action, and typ is the action's connection type.
 func validateActionSchema(io string, schema types.Type, role state.Role, target state.Target, typ state.ConnectorType, tableKey string) error {
+
 	isUserSchema := target == state.Users &&
 		(io == "input" && role == state.Destination || io == "output" && role == state.Source)
-	isOutputDatabaseUserDestination := io == "output" && typ == state.Database && target == state.Users && role == state.Destination
+
 	for path, p := range types.WalkAll(schema) {
-		isTableKey := isOutputDatabaseUserDestination && path == tableKey
 		if p.Placeholder != "" {
 			return fmt.Errorf("%s action schema property %q has a placeholder, but action schema properties cannot have placeholders", io, path)
-		}
-		if isOutputDatabaseUserDestination {
-			if !p.CreateRequired {
-				return fmt.Errorf("%s action schema property %q must have CreateRequired to true", io, path)
-			}
-			if !p.UpdateRequired {
-				return fmt.Errorf("%s action schema property %q must have UpdateRequired to true", io, path)
-			}
-			if p.Nullable && isTableKey {
-				return fmt.Errorf("%s action schema property %q cannot be nullable because it is the table key", io, path)
-			}
-		} else {
-			if p.CreateRequired {
-				if role != state.Destination || typ != state.App || io != "output" {
-					return fmt.Errorf("%s action schema property %q cannot have CreateRequired set to true", io, path)
-				}
-			}
-			if p.UpdateRequired && (role != state.Destination || typ != state.App || target == state.Users || io != "output") {
-				return fmt.Errorf("%s action schema property %q cannot have UpdateRequired set to true", io, path)
-			}
 		}
 		if isUserSchema {
 			if isMetaProperty(path) {
 				return fmt.Errorf("%s action schema property %q is a meta property", io, path)
-			}
-			if !p.ReadOptional {
-				return fmt.Errorf("%s action schema property %q must have ReadOptional set to true", io, path)
-			}
-			if p.Nullable {
-				return fmt.Errorf("%s action schema property %q cannot be nullable", io, path)
 			}
 			if k := p.Type.Kind(); k == types.ArrayKind || k == types.MapKind {
 				elemK := p.Type.Elem().Kind()
@@ -798,17 +773,61 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 					return fmt.Errorf("%s action schema property %q cannot have type %s(%s)", io, path, k, elemK)
 				}
 			}
-		} else {
-			if p.ReadOptional && io == "output" {
+			if p.CreateRequired {
+				return fmt.Errorf("%s action schema property %q cannot have CreateRequired set to true", io, path)
+			}
+			if p.UpdateRequired {
+				return fmt.Errorf("%s action schema property %q cannot have UpdateRequired set to true", io, path)
+			}
+			if !p.ReadOptional {
+				return fmt.Errorf("%s action schema property %q must have ReadOptional set to true", io, path)
+			}
+			if p.Nullable {
+				return fmt.Errorf("%s action schema property %q cannot have Nullable set to true", io, path)
+			}
+			continue
+		}
+		if role == state.Source && io == "input" {
+			if p.CreateRequired {
+				return fmt.Errorf("source action schema property %q cannot have CreateRequired set to true", path)
+			}
+			if p.UpdateRequired {
+				return fmt.Errorf("%s action schema property %q cannot have UpdateRequired set to true", io, path)
+			}
+			if p.ReadOptional && typ == state.Database {
+				return fmt.Errorf("%s action schema property %q cannot have ReadOptional set to true", io, path)
+			}
+			continue
+		}
+		if role == state.Destination && io == "output" {
+			switch {
+			case typ == state.App && target == state.Events:
+				if p.UpdateRequired {
+					return fmt.Errorf("output action schema property %q cannot have UpdateRequired set to true", path)
+				}
+			case typ == state.Database:
+				if p.CreateRequired {
+					return fmt.Errorf("output action schema property %q cannot have CreateRequired set to true", path)
+				}
+				if p.UpdateRequired {
+					return fmt.Errorf("output action schema property %q cannot have UpdateRequired set to true", path)
+				}
+				if p.Nullable && path == tableKey {
+					return fmt.Errorf("output action schema property %q cannot have Nullable set to true", path)
+				}
+			}
+			if p.ReadOptional {
 				return fmt.Errorf("output action schema property %q cannot have ReadOptional set to true", path)
 			}
 		}
 	}
+
 	if isUserSchema {
 		if err := datastore.CheckConflictingProperties(io, schema); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

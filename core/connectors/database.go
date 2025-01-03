@@ -286,8 +286,6 @@ func columnsToProperties(columns []meergo.Column, role state.Role) []types.Prope
 		}
 		properties[i].Name = c.Name
 		properties[i].Type = c.Type
-		properties[i].CreateRequired = role == state.Destination
-		properties[i].UpdateRequired = role == state.Destination
 		properties[i].Nullable = c.Nullable
 	}
 	return properties

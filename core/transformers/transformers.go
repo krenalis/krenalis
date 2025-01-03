@@ -73,6 +73,10 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 			inPaths:   action.Transformation.InPaths,
 			outPaths:  action.Transformation.OutPaths,
 		}
+		// Set CreateRequired to true for the output schema first level properties of a destination database.
+		if isDestinationDatabase := action.TableName != ""; isDestinationDatabase {
+			t.outSchema = setCreateRequired(t.outSchema)
+		}
 		return &t, nil
 	}
 
@@ -87,6 +91,10 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 		}
 		if len(t.inPaths) > 0 {
 			t.inSchema = schemaSubset(action.InSchema, t.inPaths)
+		}
+		// Set CreateRequired to true for the output schema first level properties of a destination database.
+		if isDestinationDatabase := action.TableName != ""; isDestinationDatabase {
+			t.outSchema = setCreateRequired(t.outSchema)
 		}
 		return &t, nil
 	}
@@ -175,6 +183,16 @@ func schemaSubset(schema types.Type, paths []string) types.Type {
 		_, ok := has[path]
 		return ok
 	})
+}
+
+// setCreateRequired returns a copy of schema with all first-level properties'
+// CreateRequired attribute set to true.
+func setCreateRequired(schema types.Type) types.Type {
+	properties := types.Properties(schema)
+	for i := 0; i < len(properties); i++ {
+		properties[i].CreateRequired = true
+	}
+	return types.Object(properties)
 }
 
 // transformationFunctionName returns the name of the transformation function
