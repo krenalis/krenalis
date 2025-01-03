@@ -1273,47 +1273,47 @@ const FullscreenTransformation = ({
 		setShowOnlyOutSelected(!showOnlyOutSelected);
 	};
 
-	const onChangeSelectedProperty = (side: 'in' | 'out', key: string) => {
-		let properties;
+	const onChangeSelectedPath = (side: 'in' | 'out', path: string) => {
+		let paths;
 		let schema;
 		if (side === 'in') {
-			properties = selectedInPaths;
+			paths = selectedInPaths;
 			schema = flatInputSchema;
 		} else {
-			properties = selectedOutPaths;
+			paths = selectedOutPaths;
 			schema = flatOutputSchema;
 		}
 
 		const keys = Object.keys(schema);
-		const children = keys.filter((k) => k.startsWith(`${key}.`));
+		const children = keys.filter((k) => k.startsWith(`${path}.`));
 
-		const isSelected = properties.includes(key);
-		let props: string[] = [];
+		const isSelected = paths.includes(path);
+		let p: string[] = [];
 		if (isSelected) {
 			// Remove the property from the selected list.
-			for (const s of properties) {
-				if (s !== key) {
-					props.push(s);
+			for (const s of paths) {
+				if (s !== path) {
+					p.push(s);
 				}
 			}
 		} else {
-			props = [];
-			props.push(key);
+			p = [];
+			p.push(path);
 
 			// Remove any child properties that were previously selected
 			// since only the parent property will be sent to the
 			// server.
-			for (const s of properties) {
+			for (const s of paths) {
 				if (!children.includes(s)) {
-					props.push(s);
+					p.push(s);
 				}
 			}
 		}
 
 		if (side == 'in') {
-			setSelectedInPaths(props);
+			setSelectedInPaths(p);
 		} else {
-			setSelectedOutPaths(props);
+			setSelectedOutPaths(p);
 		}
 	};
 
@@ -1662,8 +1662,8 @@ const FullscreenTransformation = ({
 								side='input'
 								transformationType={transformationType}
 								exportMode={action.exportMode}
-								selectedProperties={selectedInPaths}
-								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
+								selectedPaths={selectedInPaths}
+								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
 							/>
 						);
 					} else {
@@ -1675,8 +1675,8 @@ const FullscreenTransformation = ({
 								side='input'
 								transformationType={transformationType}
 								exportMode={action.exportMode}
-								selectedProperties={selectedInPaths}
-								onChangeSelectedProperty={(key) => onChangeSelectedProperty('in', key)}
+								selectedPaths={selectedInPaths}
+								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
 							/>
 						);
 					}
@@ -1986,9 +1986,9 @@ const FullscreenTransformation = ({
 														side='output'
 														transformationType={transformationType}
 														exportMode={action.exportMode}
-														selectedProperties={selectedOutPaths}
-														onChangeSelectedProperty={(key) =>
-															onChangeSelectedProperty('out', key)
+														selectedPaths={selectedOutPaths}
+														onChangeSelectedPath={(path) =>
+															onChangeSelectedPath('out', path)
 														}
 													/>
 												);
@@ -2001,9 +2001,9 @@ const FullscreenTransformation = ({
 														side='output'
 														transformationType={transformationType}
 														exportMode={action.exportMode}
-														selectedProperties={selectedOutPaths}
-														onChangeSelectedProperty={(key) =>
-															onChangeSelectedProperty('out', key)
+														selectedPaths={selectedOutPaths}
+														onChangeSelectedPath={(path) =>
+															onChangeSelectedPath('out', path)
 														}
 													/>
 												);
@@ -2085,8 +2085,8 @@ interface TransformationNestedPropertiesProps {
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
-	selectedProperties: string[];
-	onChangeSelectedProperty: (key: string) => void;
+	selectedPaths: string[];
+	onChangeSelectedPath: (path: string) => void;
 }
 
 const TransformationNestedProperties = ({
@@ -2097,8 +2097,8 @@ const TransformationNestedProperties = ({
 	side,
 	transformationType,
 	exportMode,
-	selectedProperties,
-	onChangeSelectedProperty,
+	selectedPaths,
+	onChangeSelectedPath,
 }: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -2116,8 +2116,8 @@ const TransformationNestedProperties = ({
 				side={side}
 				transformationType={transformationType}
 				exportMode={exportMode}
-				selectedProperties={selectedProperties}
-				onChangeSelectedProperty={onChangeSelectedProperty}
+				selectedPaths={selectedPaths}
+				onChangeSelectedPath={onChangeSelectedPath}
 				isExpanded={isExpanded}
 				setIsExpanded={setIsExpanded}
 			/>
@@ -2138,8 +2138,8 @@ const TransformationNestedProperties = ({
 									side={side}
 									transformationType={transformationType}
 									exportMode={exportMode}
-									selectedProperties={selectedProperties}
-									onChangeSelectedProperty={onChangeSelectedProperty}
+									selectedPaths={selectedPaths}
+									onChangeSelectedPath={onChangeSelectedPath}
 								/>
 							);
 						} else {
@@ -2152,8 +2152,8 @@ const TransformationNestedProperties = ({
 									side={side}
 									transformationType={transformationType}
 									exportMode={exportMode}
-									selectedProperties={selectedProperties}
-									onChangeSelectedProperty={onChangeSelectedProperty}
+									selectedPaths={selectedPaths}
+									onChangeSelectedPath={onChangeSelectedPath}
 								/>
 							);
 						}
@@ -2171,8 +2171,8 @@ interface TransformationPropertyProps {
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
-	selectedProperties: string[];
-	onChangeSelectedProperty: (key: string) => void;
+	selectedPaths: string[];
+	onChangeSelectedPath: (path: string) => void;
 	isExpanded?: boolean;
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -2185,23 +2185,23 @@ const TransformationProperty = ({
 	side,
 	transformationType,
 	exportMode,
-	selectedProperties,
-	onChangeSelectedProperty,
+	selectedPaths,
+	onChangeSelectedPath,
 	isExpanded,
 	setIsExpanded,
 }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
-	let key = property.name;
+	let path = property.name;
 	if (parentName) {
-		key = parentName + '.' + property.name;
+		path = parentName + '.' + property.name;
 	}
 
 	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
-	const isIdentifier = workspace.identifiers.includes(key);
-	const isSelected = selectedProperties.includes(key);
-	const hasSelectedChildren = selectedProperties.findIndex((p) => p.startsWith(`${key}.`)) !== -1;
-	const hasSelectedParent = selectedProperties.findIndex((p) => key.startsWith(`${p}.`)) !== -1;
+	const isIdentifier = workspace.identifiers.includes(path);
+	const isSelected = selectedPaths.includes(path);
+	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
+	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
 
 	const hasRequired =
 		exportMode != null &&
@@ -2221,7 +2221,7 @@ const TransformationProperty = ({
 					showRequired = true;
 				} else {
 					const selectedSiblings: string[] = [];
-					for (const path of selectedProperties) {
+					for (const path of selectedPaths) {
 						const hasSameParent = path.startsWith(`${parentName}.`);
 						if (hasSameParent) {
 							const suffix = path.slice(`${parentName}.`.length);
@@ -2249,7 +2249,7 @@ const TransformationProperty = ({
 					checked={isSelected || hasSelectedParent}
 					indeterminate={hasSelectedChildren && !isSelected}
 					disabled={hasSelectedParent}
-					onSlChange={() => onChangeSelectedProperty(key)}
+					onSlChange={() => onChangeSelectedPath(path)}
 					size='small'
 				/>
 			)}
