@@ -383,6 +383,7 @@ func Test_SubsetByPathFunc(t *testing.T) {
 }
 
 func Test_SubsetFunc(t *testing.T) {
+
 	o := Object([]Property{
 		{Name: "a", Type: Text()},
 		{Name: "b", Type: Object([]Property{
@@ -398,38 +399,54 @@ func Test_SubsetFunc(t *testing.T) {
 			{Name: "z", Type: Text()},
 		}))},
 	})
-	expected := Object([]Property{
-		{Name: "a", Type: Text()},
-		{Name: "c", Type: Array(Text())},
+
+	t.Run("Valid Object expected (1)", func(t *testing.T) {
+		expected := Object([]Property{
+			{Name: "a", Type: Text()},
+			{Name: "c", Type: Array(Text())},
+		})
+		got := SubsetFunc(o, func(p Property) bool {
+			return p.Name == "a" || p.Name == "c"
+		})
+		if err := sameType(expected, got); err != nil {
+			t.Fatalf("expected %v, got %v", expected, got)
+		}
 	})
-	got := SubsetFunc(o, func(p Property) bool {
-		return p.Name == "a" || p.Name == "c"
+
+	t.Run("Valid Object expected (2)", func(t *testing.T) {
+		expected := Object([]Property{
+			{Name: "a", Type: Text()},
+			{Name: "b", Type: Object([]Property{
+				{Name: "x", Type: Text()},
+			})},
+			{Name: "c", Type: Array(Text())},
+		})
+		got := SubsetFunc(o, func(p Property) bool {
+			return p.Name != "d"
+		})
+		if err := sameType(expected, got); err != nil {
+			t.Fatalf("expected %v, got %v", expected, got)
+		}
 	})
-	expected = Object([]Property{
-		{Name: "a", Type: Text()},
-		{Name: "b", Type: Object([]Property{
-			{Name: "x", Type: Text()},
-		})},
-		{Name: "c", Type: Array(Text())},
+
+	t.Run("Invalid type expected", func(t *testing.T) {
+		got := SubsetFunc(o, func(p Property) bool {
+			return false
+		})
+		if got.Valid() {
+			t.Fatalf("expected invalid type, got %v", got)
+		}
 	})
-	got = SubsetFunc(o, func(p Property) bool {
-		return p.Name != "d"
+
+	t.Run("Original Object expected", func(t *testing.T) {
+		got := SubsetFunc(o, func(p Property) bool {
+			return true
+		})
+		if err := sameType(o, got); err != nil {
+			t.Fatalf("expected %v, got %v", o, got)
+		}
 	})
-	if err := sameType(expected, got); err != nil {
-		t.Fatalf("expected %v, got %v", expected, got)
-	}
-	got = SubsetFunc(o, func(p Property) bool {
-		return false
-	})
-	if got.Valid() {
-		t.Fatalf("expected invalid type, got %v", got)
-	}
-	got = SubsetFunc(o, func(p Property) bool {
-		return true
-	})
-	if err := sameType(o, got); err != nil {
-		t.Fatalf("expected %v, got %v", o, got)
-	}
+
 }
 
 func Test_WalkAll(t *testing.T) {
