@@ -47,7 +47,7 @@ type normalizationError struct {
 // newNormalizationErrorf returns a *normalizationError error based on a format
 // specifier. The error message can report the invalid value and should complete
 // the sentence "property foo ".
-func newNormalizationErrorf(path string, format string, a ...any) error {
+func newNormalizationErrorf(path string, format string, a ...any) *normalizationError {
 	return &normalizationError{
 		path: path,
 		msg:  fmt.Sprintf(format, a...),
@@ -58,12 +58,12 @@ func (err *normalizationError) Error() string {
 	return fmt.Sprintf("property %q ", err.path) + err.msg
 }
 
-func (err *normalizationError) prependPath(path string) {
-	err.path = path + err.path
-}
-
 func (err *normalizationError) PropertyPath() string {
 	return err.path
+}
+
+func (err *normalizationError) prependPath(path string) {
+	err.path = path + "." + err.path
 }
 
 // normalize normalizes a property value, and returns its normalized value. If
@@ -428,12 +428,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			var err error
 			data, err = src.MarshalJSON()
 			if err != nil {
-				return nil, fmt.Errorf("error occurred calling the MarshalJSON method of the property %q: %s", name, err)
+				return nil, newNormalizationErrorf(name, "cannot be unmarshalled; MarshalJSON returned an error: %s", err)
 			}
 		}
 		if data != nil {
 			if !json.Valid(data) {
-				return nil, fmt.Errorf("value of property %q is not valid JSON", name)
+				return nil, newNormalizationErrorf(name, "is not valid JSON")
 			}
 			value = json.Value(data)
 			valid = true
@@ -473,8 +473,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		if valid {
 			if !utf8.ValidString(v) {
-				return nil, fmt.Errorf("value of property %s does not contain valid UTF-8 characters: %q ",
-					errors.Abbreviate(v, 20), name)
+				return nil, newNormalizationErrorf(name, "does not contain valid UTF-8 characters")
 			}
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
@@ -500,7 +499,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if s != "" && s[0] == '[' && typ.Elem().Kind() == types.JSONKind {
 				v := json.Value(s)
 				if !json.Valid(v) {
-					return nil, fmt.Errorf("value of property %q is not valid JSON", name)
+					return nil, newNormalizationErrorf(name, "is not valid JSON")
 				}
 				min := typ.MinElements()
 				max := typ.MaxElements()
@@ -554,14 +553,16 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				value, ok := src[p.Name]
 				if !ok {
 					if !p.ReadOptional {
-						return nil, fmt.Errorf(`property "%s.%s" does not have a value`, name, p.Name)
+						err := newNormalizationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
+						err.prependPath(name)
+						return nil, err
 					}
 					continue
 				}
 				src[p.Name], err = normalize(p.Name, p.Type, value, p.Nullable, layouts)
 				if err != nil {
 					if err, ok := err.(*normalizationError); ok {
-						err.prependPath(name + ".")
+						err.prependPath(name)
 					}
 					return nil, err
 				}
