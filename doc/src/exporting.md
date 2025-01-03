@@ -46,6 +46,10 @@ And this determines the fact that, in the example, the Meergo user matches with 
 
 ## Exporting users to databases
 
+It is possible to export users from Meergo to a database table, creating or updating them.
+
+> Note that exporting to the database **does not handle the deletion of users** who are no longer present in Meergo. Such users will remain in the table to which they have been exported, and it is the user's responsibility to remove them if necessary.
+
 When exporting users to a database, both a **table name** and a **table key property** must be specified.
 
 The table key property must be a property of the table, and it will be used as key for the insert / update queries on the database. It must have one of the following types:
@@ -57,7 +61,7 @@ The table key property must be a property of the table, and it will be used as k
 
 A value for the table key property must be returned by the transformation, as, otherwise, would be impossible to match the user with the users on the database's table.
 
-> Note that for some database connectors, for example, MySQL, it is the user's responsibility to choose the primary key of the table as the table key property, otherwise the export won't behave consistently. In this regard, refer to the specific documentation for each database.
+> **Table keys and primary keys**. For some database connectors, for example, MySQL, it is the user's responsibility to choose the primary key of the table as the table key property, otherwise the export won't behave consistently. In this regard, refer to the specific documentation for each database.
 
 ## Exporting users to files
 

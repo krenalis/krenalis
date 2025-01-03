@@ -165,7 +165,7 @@ func Test_Merge_Query(t *testing.T) {
 	for i, c := range cols {
 		row[i] = c.MeergoValue
 	}
-	err = connector.Merge(context.Background(), table, [][]any{row}, nil)
+	err = connector.Merge(context.Background(), table, [][]any{row})
 	if err != nil {
 		t.Fatalf("cannot upsert: %s", err)
 	}

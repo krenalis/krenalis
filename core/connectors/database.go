@@ -336,7 +336,7 @@ func (w *databaseWriter) Write(ctx context.Context, id string, properties map[st
 // merge calls the Merge method of the database connector with the collected
 // records.
 func (w *databaseWriter) merge(ctx context.Context) {
-	err := w.inner.Merge(ctx, w.table, w.rows, nil)
+	err := w.inner.Merge(ctx, w.table, w.rows)
 	w.ack(w.ids, connectorError(err))
 	w.rows = slices.Delete(w.rows, 0, len(w.rows))
 	w.ids = slices.Delete(w.ids, 0, len(w.ids))

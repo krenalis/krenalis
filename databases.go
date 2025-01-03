@@ -75,15 +75,13 @@ type Database interface {
 	// `TRUE`.
 	LastChangeTimeCondition(column string, typ types.Type, value any) string
 
-	// Merge performs batch insert, update, and delete operations on the specified
-	// table. rows contains the rows to be inserted or updated; rows with matching
-	// table keys are updated, while new rows are inserted. The deleted parameter
-	// contains the table key(s) identifying rows to delete; if empty, no deletions
-	// occur.
+	// Merge performs batch insert and update operations on the specified table,
+	// basing on the table keys. rows contains the rows to be inserted or updated;
+	// rows with matching table keys are updated, while new rows are inserted.
 	//
 	// Some connectors may check that the table keys actually match the primary keys
 	// of the table, returning an error if they do not.
-	Merge(ctx context.Context, table Table, rows [][]any, deleted []any) error
+	Merge(ctx context.Context, table Table, rows [][]any) error
 
 	// Query executes the given query and returns the resulting rows and columns.
 	// If a column type is not supported, it returns a *UnsupportedColumnTypeError

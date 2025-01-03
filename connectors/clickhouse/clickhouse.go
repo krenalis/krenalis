@@ -106,14 +106,14 @@ func (ch *ClickHouse) LastChangeTimeCondition(column string, typ types.Type, val
 	return b.String()
 }
 
-// Merge performs batch insert, update, and delete operations on the specified
-// table.
-func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+// Merge performs batch insert and update operations on the specified table,
+// basing on the table keys.
+func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
 	if err := ch.openDB(); err != nil {
 		return err
 	}
 	// Merge rows.
-	return merge(ctx, ch.db, table, rows, deleted)
+	return merge(ctx, ch.db, table, rows)
 }
 
 // Query executes the given query and returns the resulting rows and columns.

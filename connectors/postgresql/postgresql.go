@@ -105,9 +105,9 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 	return b.String()
 }
 
-// Merge performs batch insert, update, and delete operations on the specified
-// table.
-func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+// Merge performs batch insert and update operations on the specified table,
+// basing on the table keys.
+func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
 	if err := ps.openDB(ctx); err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]an
 	}
 	defer conn.Release()
 	// Merge rows.
-	return merge(ctx, conn, table, rows, deleted)
+	return merge(ctx, conn, table, rows, nil)
 }
 
 // Query executes the given query and returns the resulting rows and columns.

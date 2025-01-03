@@ -57,9 +57,9 @@ func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, val
 	// ...
 }
 
-// Merge performs batch insert, update, and delete operations on the specified
-// table.
-func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+// Merge performs batch insert and update operations on the specified table,
+// basing on the table keys.
+func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
 	// ...
 }
 
@@ -215,7 +215,7 @@ LIMIT 1000
 ### Merge method
 
 ```go
-Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error
+Merge(ctx context.Context, table meergo.Table, rows [][]any) error
 ```
 
 The `Merge` method is used by Meergo during data export to a database. It updates existing rows if matching keys are found, or inserts new rows into the specified table.
@@ -235,11 +235,6 @@ type Table struct {
 - `Keys`: The columns that serve as keys for the table. This typically includes the primary key but does not have to. The columns specified in `table.Keys` are also included in `table.Columns`.
 
 The `rows` parameter contains the rows to be updated or inserted. For each `row`, `row[i]` contains the value for the column `table.Columns[i]`. If a column is nullable, the corresponding value in a raw can be `nil`, representing the `NULL` value in the database.
-
-If not `nil`, the `deleted` parameter contains the key values of rows to delete:
-
-* If the table has a single key, each element in `deleted` is the key value of a row to delete.
-* If the table has multiple keys (N keys), the first N values represent the keys of the first row to delete, the next N values represent the keys of the second row, and so on.
 
 A database connector can require that the columns in `table.Keys` form the primary key and can return an error if they do not.
 

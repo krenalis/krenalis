@@ -106,9 +106,9 @@ func (my *MySQL) LastChangeTimeCondition(column string, typ types.Type, value an
 	return b.String()
 }
 
-// Merge performs batch insert, update, and delete operations on the specified
-// table.
-func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+// Merge performs batch insert and update operations on the specified table,
+// basing on the table keys.
+func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
 	if err := my.openDB(); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (my *MySQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, de
 	}
 	defer conn.Close()
 	// Merge rows.
-	return merge(ctx, conn, table, rows, deleted)
+	return merge(ctx, conn, table, rows)
 }
 
 // Query executes the given query and returns the resulting rows and columns.

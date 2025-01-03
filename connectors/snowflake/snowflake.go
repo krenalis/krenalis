@@ -98,7 +98,7 @@ func (sf *Snowflake) LastChangeTimeCondition(column string, typ types.Type, valu
 
 // Merge performs batch insert, update, and delete operations on the specified
 // table.
-func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
 	if err := sf.openDB(); err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any
 	}
 	defer conn.Close()
 	// Merge rows.
-	return merge(ctx, conn, table, rows, deleted)
+	return merge(ctx, conn, table, rows, nil)
 }
 
 // Query executes the given query and returns the resulting rows and columns.

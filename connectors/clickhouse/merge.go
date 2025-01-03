@@ -17,7 +17,7 @@ import (
 )
 
 // merge performs a table merge operation.
-func merge(ctx context.Context, db driver.Conn, table meergo.Table, rows [][]any, deleted []any) error {
+func merge(ctx context.Context, db driver.Conn, table meergo.Table, rows [][]any) error {
 
 	name, err := quoteTable(table.Name)
 	if err != nil {
