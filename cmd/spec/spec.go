@@ -30,9 +30,9 @@ type Method string
 
 const (
 	GET    Method = "GET"
-	POST          = "POST"
-	PUT           = "PUT"
-	DELETE        = "DELETE"
+	POST   Method = "POST"
+	PUT    Method = "PUT"
+	DELETE Method = "DELETE"
 )
 
 type Endpoint struct {
