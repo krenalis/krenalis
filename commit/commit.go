@@ -138,6 +138,9 @@ func main() {
 	NewCmd("deno", "fmt").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
 	NewCmd("deno", "task", "build").InDir(repo, "javascript-sdk").Run(cliOptions.explicit)
 
+	// Run "go generate" within cmd/spec.
+	NewCmd("go", "generate", "./...").InDir(repo, "cmd", "spec").Run(cliOptions.explicit)
+
 	if cliOptions.explicit {
 		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
 	}
