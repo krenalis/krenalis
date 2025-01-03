@@ -104,6 +104,7 @@ func (sf *SFTP) Reader(ctx context.Context, name string) (io.ReadCloser, time.Ti
 	}
 	st, err := f.Stat()
 	if err != nil {
+		_ = f.Close()
 		return nil, time.Time{}, err
 	}
 	ts := st.ModTime().UTC()
