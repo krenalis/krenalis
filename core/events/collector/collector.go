@@ -368,7 +368,6 @@ func (c *Collector) reloadEvents(ctx context.Context) {
 	if err := errf(); err != nil {
 		slog.Error("error occurred reloading events", "err", err)
 	}
-	return
 }
 
 // serveSettings is called by the ServeHTTP method to serve a settings request.
