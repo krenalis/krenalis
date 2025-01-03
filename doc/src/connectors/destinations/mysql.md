@@ -29,3 +29,5 @@ MySQL is an open-source relational database management system. It's popular for 
 8. Click **Add**.
 
 Once the MySQL data destination is added, the **Actions** page will be displayed, indicating the actions required to update the table.
+
+**Note about choosing the table key**: when exporting to a MySQL data destination, it is necessary for the table key selected on the action screen to match the primary key of the table to which you intend to export.

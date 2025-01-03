@@ -77,9 +77,12 @@ type Database interface {
 
 	// Merge performs batch insert, update, and delete operations on the specified
 	// table. rows contains the rows to be inserted or updated; rows with matching
-	// primary keys are updated, while new rows are inserted. The deleted parameter
-	// contains the primary key(s) identifying rows to delete; if empty, no
-	// deletions occur.
+	// table keys are updated, while new rows are inserted. The deleted parameter
+	// contains the table key(s) identifying rows to delete; if empty, no deletions
+	// occur.
+	//
+	// Some connectors may check that the table keys actually match the primary keys
+	// of the table, returning an error if they do not.
 	Merge(ctx context.Context, table Table, rows [][]any, deleted []any) error
 
 	// Query executes the given query and returns the resulting rows and columns.
