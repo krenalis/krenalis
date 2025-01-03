@@ -109,7 +109,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c.ResolveIdentities()
 
 	// Check that the user has been created.
-	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
+	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 2 {
 		t.Fatalf("expected 2 users, got %d", count)
 	}
@@ -150,7 +150,7 @@ def transform(event: dict) -> dict:
 	c.ResolveIdentities()
 
 	// Check that the user has been created.
-	users, _, count = c.Users([]string{"email"}, "", false, 0, 100)
+	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
 	if count != 3 {
 		t.Fatalf("expected 3 users, got %d", count)
 	}
