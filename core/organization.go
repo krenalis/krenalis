@@ -371,7 +371,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 // If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 	this.core.mustBeOpen()
-	if id < 0 || id > math.MaxInt32 {
+	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
 	result, err := this.core.db.Exec(ctx, "DELETE FROM members WHERE id = $1 AND organization = $2", id, this.organization.ID)
@@ -388,7 +388,7 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 // If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) Member(ctx context.Context, id int) (*Member, error) {
 	this.core.mustBeOpen()
-	if id < 0 || id > math.MaxInt32 {
+	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
 	var member Member
@@ -462,7 +462,7 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 // an errors.UnprocessableError error with code MemberEmailExists.
 func (this *Organization) SetMember(ctx context.Context, id int, member MemberToSet) error {
 	this.core.mustBeOpen()
-	if id < 0 || id > math.MaxInt32 {
+	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)
 	}
 	err := validateMemberToSet(member, true, false)
