@@ -122,100 +122,6 @@ func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
 	return keys, nil
 }
 
-// CanInitializeWarehouse indicates whether the warehouse with the provided name
-// and settings can be initialized.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
-//   - WarehouseError, if an operation on the data warehouse fails.
-//   - WarehouseNonInitializable, if the warehouse intended for connection is
-//     not initializable.
-//   - WarehouseNotExist, if a data warehouse with the provided name does not
-//     exist.
-func (this *Organization) CanInitializeWarehouse(ctx context.Context, name string, settings []byte) error {
-	this.core.mustBeOpen()
-
-	// Validate the parameters.
-	if name == "" {
-		return errors.BadRequest("warehouse name is empty")
-	}
-
-	// Normalize the warehouse settings.
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(name, settings)
-	if err != nil {
-		if err == datastore.DataWarehouseNotExist {
-			return errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", name)
-		}
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
-			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return err
-	}
-
-	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, name, settings)
-	if err != nil {
-		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
-			return errors.Unprocessable(WarehouseNonInitializable, "%s", err)
-		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		return err
-	}
-
-	return nil
-
-}
-
-// InviteMember sends an invitation email to the given email address using the
-// given template. It then creates a new invited member.
-//
-// It returns an errors.UnprocessableError error with code
-//   - EmailSendFailed, if emails cannot be sent.
-//   - MemberEmailExists, if the email address has already been invited.
-func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
-	this.core.mustBeOpen()
-	err := validateMemberEmail(email)
-	if err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	invitationToken, err := generateInvitationToken()
-	if err != nil {
-		return err
-	}
-	if this.core.smtp == nil {
-		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
-	}
-	now := time.Now().UTC()
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		err := this.core.db.QueryVoid(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
-		if err != nil && err != sql.ErrNoRows {
-			return err
-		}
-		if err == nil {
-			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
-		}
-		_, err = this.core.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
-			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
-			this.organization.ID, "", email, "", nil, invitationToken, now)
-		return err
-	})
-	if err != nil {
-		return err
-	}
-	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
-	emailToSend := &emailToSend{
-		From:     this.core.smtp.User,
-		Subject:  "You have been invited to Meergo",
-		To:       email,
-		BodyHTML: []byte(t),
-	}
-	err = sendMail(emailToSend, this.core.smtp)
-	return err
-}
-
 // AddWorkspace adds a workspace with the given name, privacy region, user
 // schema and displayed properties, and connects to a data warehouse of the
 // provided name and settings. Returns the identifier of the workspace that has
@@ -402,6 +308,52 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	return id, nil
 }
 
+// CanInitializeWarehouse indicates whether the warehouse with the provided name
+// and settings can be initialized.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - WarehouseError, if an operation on the data warehouse fails.
+//   - WarehouseNonInitializable, if the warehouse intended for connection is
+//     not initializable.
+//   - WarehouseNotExist, if a data warehouse with the provided name does not
+//     exist.
+func (this *Organization) CanInitializeWarehouse(ctx context.Context, name string, settings []byte) error {
+	this.core.mustBeOpen()
+
+	// Validate the parameters.
+	if name == "" {
+		return errors.BadRequest("warehouse name is empty")
+	}
+
+	// Normalize the warehouse settings.
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(name, settings)
+	if err != nil {
+		if err == datastore.DataWarehouseNotExist {
+			return errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", name)
+		}
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+
+	// Check if the warehouse is initializable.
+	err = this.core.datastore.CanInitialize(ctx, name, settings)
+	if err != nil {
+		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
+			return errors.Unprocessable(WarehouseNonInitializable, "%s", err)
+		}
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		return err
+	}
+
+	return nil
+}
+
 // CreateAPIKey creates a new API key for the organization with the specified
 // name, which must be between 1 and 100 runes in length. If the workspace is
 // not 0, the key will be restricted to that specific workspace.
@@ -496,6 +448,53 @@ func (this *Organization) DeleteMember(ctx context.Context, id int) error {
 		return errors.NotFound("member %d does not exist", id)
 	}
 	return nil
+}
+
+// InviteMember sends an invitation email to the given email address using the
+// given template. It then creates a new invited member.
+//
+// It returns an errors.UnprocessableError error with code
+//   - EmailSendFailed, if emails cannot be sent.
+//   - MemberEmailExists, if the email address has already been invited.
+func (this *Organization) InviteMember(ctx context.Context, email string, emailTemplate string) error {
+	this.core.mustBeOpen()
+	err := validateMemberEmail(email)
+	if err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	invitationToken, err := generateInvitationToken()
+	if err != nil {
+		return err
+	}
+	if this.core.smtp == nil {
+		return errors.Unprocessable(EmailSendFailed, "emails cannot be sent")
+	}
+	now := time.Now().UTC()
+	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		err := this.core.db.QueryVoid(ctx, "SELECT FROM members WHERE organization = $1 AND email = $2 AND invitation_token = ''", this.organization.ID, email)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if err == nil {
+			return errors.Unprocessable(MemberEmailExists, "a member with this email already exists")
+		}
+		_, err = this.core.db.Exec(ctx, "INSERT INTO members (organization, name, email, password, avatar, invitation_token, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) "+
+			"ON CONFLICT (organization, email) DO UPDATE SET invitation_token = $6, created_at = $7",
+			this.organization.ID, "", email, "", nil, invitationToken, now)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	t := strings.ReplaceAll(emailTemplate, "${token}", html.EscapeString(invitationToken))
+	emailToSend := &emailToSend{
+		From:     this.core.smtp.User,
+		Subject:  "You have been invited to Meergo",
+		To:       email,
+		BodyHTML: []byte(t),
+	}
+	err = sendMail(emailToSend, this.core.smtp)
+	return err
 }
 
 // Member returns the organization's member with identifier id.
@@ -652,51 +651,6 @@ func (this *Organization) SetMember(ctx context.Context, id int, member MemberTo
 	return err
 }
 
-func sendMail(mail *emailToSend, config *SMTPConfig) error {
-	e := email.NewEmail()
-	if mail.RealName != "" {
-		e.From = mail.RealName + "<" + mail.From + ">"
-	} else {
-		e.From = mail.From
-	}
-	e.To = []string{mail.To}
-	e.Subject = mail.Subject
-	if len(mail.Cc) > 0 {
-		e.Cc = mail.Cc
-	}
-	if len(mail.Bcc) > 0 {
-		e.Bcc = mail.Bcc
-	}
-	if mail.BodyText != nil {
-		e.Text = mail.BodyText
-	}
-	if mail.BodyHTML != nil {
-		e.HTML = mail.BodyHTML
-	}
-	e.Headers = textproto.MIMEHeader{"X-Mailer": []string{"Open2b"}}
-	var auth smtp.Auth
-	if config.User != "" {
-		auth = smtp.PlainAuth("", config.User, config.Pass, config.Host)
-	}
-	conf := &tls.Config{
-		InsecureSkipVerify: true,
-		ServerName:         config.Host,
-	}
-	var err error
-	if config.Port == 465 {
-		err = e.SendWithTLS(config.Host+":"+strconv.Itoa(config.Port), auth, conf)
-	} else {
-		err = e.SendWithStartTLS(config.Host+":"+strconv.Itoa(config.Port), auth, conf)
-		if err2, ok := err.(x509.HostnameError); ok {
-			if len(err2.Certificate.DNSNames) > 0 {
-				hostname := err2.Certificate.DNSNames[0]
-				err = e.SendWithStartTLS(hostname+":"+strconv.Itoa(config.Port), auth, conf)
-			}
-		}
-	}
-	return err
-}
-
 // Workspace returns the organization's workspace with identifier id.
 //
 // It returns an errors.NotFound error if the workspace does not exist.
@@ -765,6 +719,16 @@ func generateAPIKeyToken() string {
 	return string(src)
 }
 
+// generateInvitationToken generates an invitation token.
+func generateInvitationToken() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
 var bigMaxInt32 = big.NewInt(maxInt32)
 
 // generateRandomID generates a random identifier in [1, maxInt32].
@@ -774,6 +738,77 @@ func generateRandomID() (int, error) {
 		return 0, err
 	}
 	return int(n.Int64()) + 1, nil
+}
+
+// isInvitationTokenExpired checks if the invitation token of a member is expired, given
+// the member's creation time.
+func isInvitationTokenExpired(createdAt time.Time) bool {
+	tokenExpiration := createdAt.Add(time.Duration(invitationTokenMaxAge) * time.Second)
+	now := time.Now()
+	return now.After(tokenExpiration)
+}
+
+func sendMail(mail *emailToSend, config *SMTPConfig) error {
+	e := email.NewEmail()
+	if mail.RealName != "" {
+		e.From = mail.RealName + "<" + mail.From + ">"
+	} else {
+		e.From = mail.From
+	}
+	e.To = []string{mail.To}
+	e.Subject = mail.Subject
+	if len(mail.Cc) > 0 {
+		e.Cc = mail.Cc
+	}
+	if len(mail.Bcc) > 0 {
+		e.Bcc = mail.Bcc
+	}
+	if mail.BodyText != nil {
+		e.Text = mail.BodyText
+	}
+	if mail.BodyHTML != nil {
+		e.HTML = mail.BodyHTML
+	}
+	e.Headers = textproto.MIMEHeader{"X-Mailer": []string{"Open2b"}}
+	var auth smtp.Auth
+	if config.User != "" {
+		auth = smtp.PlainAuth("", config.User, config.Pass, config.Host)
+	}
+	conf := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         config.Host,
+	}
+	var err error
+	if config.Port == 465 {
+		err = e.SendWithTLS(config.Host+":"+strconv.Itoa(config.Port), auth, conf)
+	} else {
+		err = e.SendWithStartTLS(config.Host+":"+strconv.Itoa(config.Port), auth, conf)
+		if err2, ok := err.(x509.HostnameError); ok {
+			if len(err2.Certificate.DNSNames) > 0 {
+				hostname := err2.Certificate.DNSNames[0]
+				err = e.SendWithStartTLS(hostname+":"+strconv.Itoa(config.Port), auth, conf)
+			}
+		}
+	}
+	return err
+}
+
+// validateMemberEmail validates a member's email and returns an error if it is
+// not valid.
+func validateMemberEmail(email string) error {
+	if email == "" {
+		return errors.New("email is empty")
+	}
+	if !utf8.ValidString(email) {
+		return errors.New("email is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(email); n > 120 {
+		return errors.New("email is longer than 120 runes")
+	}
+	if !emailRegExp.MatchString(email) {
+		return errors.New("email is not a valid email address")
+	}
+	return nil
 }
 
 // validateMemberToSet validates a member to add or set and returns an error
@@ -824,40 +859,4 @@ func validateMemberToSet(member MemberToSet, validateEmail bool, validatePasswor
 		}
 	}
 	return nil
-}
-
-// validateMemberEmail validates a member's email and returns an error if it is
-// not valid.
-func validateMemberEmail(email string) error {
-	if email == "" {
-		return errors.New("email is empty")
-	}
-	if !utf8.ValidString(email) {
-		return errors.New("email is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(email); n > 120 {
-		return errors.New("email is longer than 120 runes")
-	}
-	if !emailRegExp.MatchString(email) {
-		return errors.New("email is not a valid email address")
-	}
-	return nil
-}
-
-// generateInvitationToken generates a token.
-func generateInvitationToken() (string, error) {
-	bytes := make([]byte, 32)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(bytes), nil
-}
-
-// isInvitationTokenExpired checks if the invitation token of a member is expired, given
-// the member's creation time.
-func isInvitationTokenExpired(createdAt time.Time) bool {
-	tokenExpiration := createdAt.Add(time.Duration(invitationTokenMaxAge) * time.Second)
-	now := time.Now()
-	return now.After(tokenExpiration)
 }
