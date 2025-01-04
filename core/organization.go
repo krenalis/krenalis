@@ -14,9 +14,9 @@ import (
 	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
+	"fmt"
 	"html"
 	"maps"
-	"math"
 	"math/big"
 	"net/smtp"
 	"net/textproto"
@@ -85,6 +85,41 @@ type emailToSend struct {
 	Bcc      []string
 	BodyText []byte
 	BodyHTML []byte
+}
+
+// APIKey represents an API key.
+type APIKey struct {
+	ID        int       `json:"id"`
+	Workspace *int      `json:"workspace"`
+	Name      string    `json:"name"`
+	Token     string    `json:"token"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// APIKeys returns the API keys of the organization ordered by creation time.
+func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
+	this.core.mustBeOpen()
+	keys := make([]*APIKey, 0)
+	query := "SELECT id, workspace, name, token, created_at FROM api_keys WHERE organization = $1 ORDER BY created_at"
+	err := this.core.db.QueryScan(ctx, query, this.organization.ID, func(rows *postgres.Rows) error {
+		var err error
+		for rows.Next() {
+			var key APIKey
+			if err = rows.Scan(&key.ID, &key.Workspace, &key.Name, &key.Token, &key.CreatedAt); err != nil {
+				return err
+			}
+			if len(key.Token) != 43 {
+				return fmt.Errorf("API key %d has an invalid token in the database", key.ID)
+			}
+			key.Token = key.Token[:4] + "..." + key.Token[40:]
+			keys = append(keys, &key)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return keys, nil
 }
 
 // CanInitializeWarehouse indicates whether the warehouse with the provided name
@@ -367,6 +402,85 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	return id, nil
 }
 
+// CreateAPIKey creates a new API key for the organization with the specified
+// name, which must be between 1 and 100 runes in length. If the workspace is
+// not 0, the key will be restricted to that specific workspace.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - OrganizationNotExist, if the organization does not exist.
+//   - WorkspaceNotExist, if the workspace does not exist.
+func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspace int) (int, string, error) {
+	this.core.mustBeOpen()
+	if containsNUL(name) || utf8.RuneCountInString(name) > 100 {
+		return 0, "", errors.BadRequest("name %q is not valid", name)
+	}
+	if workspace < 0 || workspace > maxInt32 {
+		return 0, "", errors.BadRequest("workspace is not a valid workspace identifier")
+	}
+	if workspace > 0 {
+		if _, ok := this.organization.Workspace(workspace); !ok {
+			return 0, "", errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", workspace)
+		}
+	}
+	// Generate a random identifier.
+	id, err := generateRandomID()
+	if err != nil {
+		return 0, "", err
+	}
+	n := state.CreateAPIKey{
+		ID:           id,
+		Organization: this.organization.ID,
+		Workspace:    workspace,
+		Token:        generateAPIKeyToken(),
+	}
+	createdAt := time.Now().UTC().Truncate(time.Second)
+	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "INSERT INTO api_keys (id, organization, workspace, name, token, created_at) "+
+			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6)", n.ID, n.Organization, n.Workspace, name, n.Token, createdAt)
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				switch postgres.ErrConstraintName(err) {
+				case "api_keys_organization_fkey":
+					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
+				case "api_keys_workspace_fkey":
+					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+				}
+			}
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	if err != nil {
+		return 0, "", err
+	}
+	return n.ID, n.Token, nil
+}
+
+// DeleteAPIKey deletes the API key of the organization with identifier id.
+// If the API key does not exist for the organization, it returns an
+// errors.NotFound error.
+func (this *Organization) DeleteAPIKey(ctx context.Context, id int) error {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return errors.BadRequest("identifier %d is not a valid API key identifier", id)
+	}
+	n := state.DeleteAPIKey{
+		ID: id,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "DELETE FROM api_keys WHERE id = $1 AND organization = $2", id, this.organization.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("API key %d does not exist", id)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
 // DeleteMember deletes a member of the organization with identifier id.
 // If the member does not exist, it returns an errors.NotFound error.
 func (this *Organization) DeleteMember(ctx context.Context, id int) error {
@@ -452,6 +566,29 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 		return nil, err
 	}
 	return members, nil
+}
+
+// SetAPIKey sets the name of the API key for the organization with the
+// specified identifier. name must be between 1 and 100 runes in length.
+//
+// If the API key does not exist for the organization, it returns an
+// errors.NotFound error.
+func (this *Organization) SetAPIKey(ctx context.Context, id int, name string) error {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return errors.BadRequest("identifier %d is not a valid API key identifier", id)
+	}
+	if containsNUL(name) || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
+	}
+	result, err := this.core.db.Exec(ctx, "UPDATE api_keys SET name = $1 WHERE id = $2 AND organization = $3", name, id, this.organization.ID)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.NotFound("API key %d does not exist", id)
+	}
+	return nil
 }
 
 // SetMember sets a member of the organization with identifier id. If password
@@ -616,7 +753,19 @@ func (this *Organization) Workspaces() []*Workspace {
 	return infos
 }
 
-var bigMaxInt32 = big.NewInt(math.MaxInt32)
+// generateAPIKeyToken generates a new API key token.
+func generateAPIKeyToken() string {
+	// ⌈log₆₂ 2²⁵⁶⌉ ≈ 43 chars
+	const base62alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	src := make([]byte, 43)
+	_, _ = rand.Read(src)
+	for i := range src {
+		src[i] = base62alphabet[src[i]%62]
+	}
+	return string(src)
+}
+
+var bigMaxInt32 = big.NewInt(maxInt32)
 
 // generateRandomID generates a random identifier in [1, maxInt32].
 func generateRandomID() (int, error) {

@@ -289,6 +289,18 @@ func (core *Core) AddOrganization(ctx context.Context, name string) (int, error)
 	return id, nil
 }
 
+// APIKey returns the organization and workspace identifiers associated with the
+// provided API key token. If the API key is not restricted to a workspace, the
+// workspace identifier will be 0. The boolean return value indicates whether
+// the token exists.
+func (core *Core) APIKey(token string) (int, int, bool) {
+	key, ok := core.state.APIKeyByToken(token)
+	if !ok {
+		return 0, 0, false
+	}
+	return key.Organization, key.Workspace, true
+}
+
 // Close closes the Core. When Close is called, no other calls to Core's methods
 // should be in progress and no other shall be made.
 // It panics if it has already been called.

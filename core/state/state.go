@@ -45,6 +45,7 @@ type State struct {
 	accounts         map[int]*Account       // protected by mu
 	connections      map[int]*Connection    // protected by mu
 	connectionsByKey map[string]*Connection // protected by mu
+	apiKeyByToken    map[string]*APIKey     // protected by mu
 	election         election               // protected by mu
 	organizations    map[int]*Organization  // protected by mu
 	workspaces       map[int]*Workspace     // protected by mu
@@ -108,6 +109,15 @@ func New(db *postgres.DB, connectorsOAuth map[string]*ConnectorOAuth) (*State, e
 	go state.keep()
 
 	return state, nil
+}
+
+// APIKeyByToken returns the API key with the provided token.
+// The boolean return value reports whether the API key exists.
+func (state *State) APIKeyByToken(token string) (*APIKey, bool) {
+	state.mu.Lock()
+	key, ok := state.apiKeyByToken[token]
+	state.mu.Unlock()
+	return key, ok
 }
 
 // Account returns the account with identifier id.
@@ -304,6 +314,13 @@ func (state *State) Workspaces() []*Workspace {
 	}
 	state.mu.Unlock()
 	return workspaces
+}
+
+// APIKey represents an API key.
+type APIKey struct {
+	ID           int
+	Organization int
+	Workspace    int
 }
 
 // Organization represents an organization.

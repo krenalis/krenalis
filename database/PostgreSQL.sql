@@ -34,6 +34,16 @@ CREATE TABLE workspaces (
     PRIMARY KEY (id)
 );
 
+CREATE TABLE api_keys (
+    id integer NOT NULL,
+    organization integer NOT NULL REFERENCES organizations ON DELETE CASCADE,
+    workspace integer REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(100) NOT NULL,
+    token varchar(43) NOT NULL UNIQUE,
+    created_at timestamp(0) NOT NULL,
+    PRIMARY KEY (id)
+);
+
 CREATE TYPE connector_type AS ENUM ('App', 'Database', 'File', 'FileStorage', 'Mobile', 'Server', 'Stream', 'Website');
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');

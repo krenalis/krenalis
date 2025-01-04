@@ -240,6 +240,28 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			return err
 		}
 
+		// Read all API keys.
+		state.apiKeyByToken = map[string]*APIKey{}
+		err = state.db.QueryScan(ctx, "SELECT id, organization, workspace, token FROM api_keys",
+			func(rows *postgres.Rows) error {
+				for rows.Next() {
+					k := APIKey{}
+					var token string
+					var workspace *int
+					if err := rows.Scan(&k.ID, &k.Organization, &workspace, &token); err != nil {
+						return err
+					}
+					if workspace != nil {
+						k.Workspace = *workspace
+					}
+					state.apiKeyByToken[token] = &k
+				}
+				return nil
+			})
+		if err != nil {
+			return err
+		}
+
 		// Read all accounts.
 		state.accounts = map[int]*Account{}
 		err = state.db.QueryScan(ctx, "SELECT id, workspace, connector, code, access_token, refresh_token, expires_in FROM accounts",

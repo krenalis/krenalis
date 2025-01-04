@@ -54,6 +54,10 @@ func (state *State) keep() {
 			state.addConnectionKey(n)
 		case "AddWorkspace":
 			state.addWorkspace(n)
+		case "CreateAPIKey":
+			state.createAPIKey(n)
+		case "DeleteAPIKey":
+			state.deleteAPIKey(n)
 		case "DeleteAction":
 			state.deleteAction(n)
 		case "DeleteConnection":
@@ -489,6 +493,51 @@ func (state *State) addWorkspace(n notification) {
 	organization.workspaces[e.ID] = &ws
 	organization.mu.Unlock()
 	dispatchNotification(state, e)
+}
+
+// CreateAPIKey is the event sent when an API key is created.
+type CreateAPIKey struct {
+	ID           int
+	Organization int
+	Workspace    int
+	Token        string
+}
+
+// createAPIKey creates an API key.
+func (state *State) createAPIKey(n notification) {
+	e := CreateAPIKey{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	key := APIKey{
+		ID:           e.ID,
+		Organization: e.Organization,
+		Workspace:    e.Workspace,
+	}
+	state.mu.Lock()
+	state.apiKeyByToken[e.Token] = &key
+	state.mu.Unlock()
+}
+
+// DeleteAPIKey is the event sent when an API key is deleted.
+type DeleteAPIKey struct {
+	ID int
+}
+
+// deleteAPIKey deletes an API key.
+func (state *State) deleteAPIKey(n notification) {
+	e := DeleteAPIKey{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.mu.Lock()
+	for token, key := range state.apiKeyByToken {
+		if key.ID == e.ID {
+			delete(state.apiKeyByToken, token)
+			break
+		}
+	}
+	state.mu.Unlock()
 }
 
 // DeleteAction is the event sent when an action is deleted.

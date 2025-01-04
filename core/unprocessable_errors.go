@@ -39,6 +39,7 @@ const (
 	NoColumnsFound               errors.Code = "NoColumnsFound"
 	OrderNotExist                errors.Code = "OrderNotExist"
 	OrderTypeNotSortable         errors.Code = "OrderTypeNotSortable"
+	OrganizationNotExist         errors.Code = "OrganizationNotExist"
 	PropertyNotExist             errors.Code = "PropertyNotExist"
 	SchemaNotAligned             errors.Code = "SchemaNotAligned"
 	SheetNotExist                errors.Code = "SheetNotExist"
