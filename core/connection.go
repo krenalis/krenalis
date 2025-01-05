@@ -1310,7 +1310,7 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the unique key of the server, it returns an
-// errors.UnprocessableError error with code CannotDeleteLastKey.
+// errors.UnprocessableError error with code ConnectionUniqueKey.
 func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	this.core.mustBeOpen()
 	if key == "" {
@@ -1340,14 +1340,14 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 			return err
 		}
 		if count == 1 {
-			return errors.Unprocessable(CannotDeleteLastKey, "key cannot be revoked because it's the unique key of the connection")
+			return errors.Unprocessable(ConnectionUniqueKey, "key cannot be revoked as it is the connection’s only key")
 		}
 		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
 		if err != nil {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(KeyNotExist, "key %q does not exist", key)
+			return errors.NotFound("key %q does not exist", key)
 		}
 		return tx.Notify(ctx, n)
 	})

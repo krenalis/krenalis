@@ -100,6 +100,8 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "connection does not exist"},
+					{404, NotFound, "key does not exist"},
+					{422, ConnectionUniqueKey, "key cannot be revoked as it is the connection’s only key"},
 				},
 			},
 		},

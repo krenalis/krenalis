@@ -65,20 +65,14 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			await api.workspaces.connections.revokeKey(c.id, key);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
-				redirect('connections');
-				handleError('The connection does not exist anymore');
+				// let the key be removed from the UI without showing errors.
 				return;
 			}
 			if (err instanceof UnprocessableError) {
-				if (err.code === 'UniqueKey') {
-					handleError('The last key cannot be deleted');
+				if (err.code === 'ConnectionUniqueKey') {
+					handleError(err.message);
 					return;
 				}
-			}
-			if (err.code === 'CannotDeleteLastKey') {
-				// if the error code is 'KeyNotExist', let the key be
-				// removed from the UI without showing errors.
-				return;
 			}
 			handleError(err);
 			return;

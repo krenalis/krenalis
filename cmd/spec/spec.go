@@ -103,9 +103,9 @@ const (
 
 	AlterSchemaInProgress        = "AlterSchemaInProgress"
 	AuthenticationFailed         = "AuthenticationFailed"
-	CannotDeleteLastKey          = "CannotDeleteLastKey"
 	ConnectionDisabled           = "ConnectionDisabled"
 	ConnectionNotExist           = "ConnectionNotExist"
+	ConnectionUniqueKey          = "ConnectionUniqueKey"
 	ConnectorNotExist            = "ConnectorNotExist"
 	DifferentWarehouse           = "DifferentWarehouse"
 	EmailSendFailed              = "EmailSendFailed"
@@ -121,7 +121,6 @@ const (
 	InvalidSettings              = "InvalidSettings"
 	InvalidWarehouseSettings     = "InvalidWarehouseSettings"
 	InvitationTokenExpired       = "InvitationTokenExpired"
-	KeyNotExist                  = "KeyNotExist"
 	LinkedConnectionNotExist     = "LinkedConnectionNotExist"
 	MaintenanceMode              = "MaintenanceMode"
 	MemberEmailExists            = "MemberEmailExists"
