@@ -56,24 +56,6 @@ func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request)
 	return c.ActionTypes(r.Context())
 }
 
-// CreateAction creates an action.
-func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Target    core.Target      `json:"target"`
-		EventType string           `json:"eventType"`
-		Action    core.ActionToSet `json:"action"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	return c.CreateAction(r.Context(), body.Target, body.EventType, body.Action)
-}
-
 // AppUsers returns the users of an app connection.
 func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -108,6 +90,33 @@ func (connection connection) CompletePath(_ http.ResponseWriter, r *http.Request
 	return map[string]any{"path": path}, nil
 }
 
+// CreateAction creates an action.
+func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Target    core.Target      `json:"target"`
+		EventType string           `json:"eventType"`
+		Action    core.ActionToSet `json:"action"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	return c.CreateAction(r.Context(), body.Target, body.EventType, body.Action)
+}
+
+// CreateWriteKey creates a new write key for a connection.
+func (connection connection) CreateWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	return c.CreateWriteKey(r.Context())
+}
+
 // Delete deletes a connection.
 func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -115,6 +124,16 @@ func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	err = c.Delete(r.Context())
+	return nil, err
+}
+
+// DeleteWriteKey deletes a write key of a connection.
+func (connection connection) DeleteWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	err = c.DeleteWriteKey(r.Context(), r.PathValue("key"))
 	return nil, err
 }
 
@@ -170,24 +189,6 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 		"identities": identities,
 		"count":      count,
 	}, nil
-}
-
-// WriteKeys returns the write keys of a connection.
-func (connection connection) WriteKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	return c.WriteKeys()
-}
-
-// CreateWriteKey creates a new write key for a connection.
-func (connection connection) CreateWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	return c.CreateWriteKey(r.Context())
 }
 
 // LinkConnection links a connection to another connection and vice versa.
@@ -253,16 +254,6 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 	return map[string]any{"records": records, "schema": schema}, nil
 }
 
-// DeleteWriteKey deletes a write key of a connection.
-func (connection connection) DeleteWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	err = c.DeleteWriteKey(r.Context(), r.PathValue("key"))
-	return nil, err
-}
-
 // ServeUI serves the user interface for a connection.
 func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -288,23 +279,6 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 	w.Header().Add("Content-Type", "application/json")
 	_, _ = w.Write(ui)
 	return nil, nil
-}
-
-// Update updates a connection.
-func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Connection core.ConnectionToSet `json:"connection"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = c.Update(r.Context(), body.Connection)
-	return nil, err
 }
 
 // Sheets returns the sheets of a file at the given path.
@@ -351,6 +325,32 @@ func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Req
 	}
 	err = c.UnlinkConnection(r.Context(), c2)
 	return nil, err
+}
+
+// Update updates a connection.
+func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Connection core.ConnectionToSet `json:"connection"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = c.Update(r.Context(), body.Connection)
+	return nil, err
+}
+
+// WriteKeys returns the write keys of a connection.
+func (connection connection) WriteKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	return c.WriteKeys()
 }
 
 func (connection connection) action(r *http.Request) (int, error) {

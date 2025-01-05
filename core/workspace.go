@@ -340,6 +340,83 @@ func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int,
 	}, nil
 }
 
+// Connection returns the connection with identifier id of the workspace.
+//
+// If the connection does not exist, it returns an errors.NotFoundError error.
+func (this *Workspace) Connection(id int) (*Connection, error) {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
+	}
+	c, ok := this.workspace.Connection(id)
+	if !ok {
+		return nil, errors.NotFound("connection %d does not exist", id)
+	}
+	conn := c.Connector()
+
+	connection := Connection{
+		core:              this.core,
+		store:             this.store,
+		connection:        c,
+		ID:                c.ID,
+		Name:              c.Name,
+		Type:              ConnectorType(conn.Type),
+		Role:              Role(c.Role),
+		Enabled:           c.Enabled,
+		Connector:         conn.Name,
+		Strategy:          (*Strategy)(c.Strategy),
+		SendingMode:       (*SendingMode)(c.SendingMode),
+		WebsiteHost:       c.WebsiteHost,
+		LinkedConnections: slices.Clone(c.LinkedConnections),
+		HasSettings:       conn.HasSettings,
+		ActionsCount:      len(c.Actions()),
+		Health:            Health(c.Health),
+	}
+
+	// Set the actions.
+	actions := c.Actions()
+	a := make([]Action, len(actions))
+	connection.Actions = &a
+	for i, a := range actions {
+		(*connection.Actions)[i].fromState(this.core, this.store, a)
+	}
+	return &connection, nil
+}
+
+// Connections returns the connections of the workspace.
+func (this *Workspace) Connections() []*Connection {
+	this.core.mustBeOpen()
+	connections := this.workspace.Connections()
+	infos := make([]*Connection, len(connections))
+	for i, c := range connections {
+		conn := c.Connector()
+		connection := Connection{
+			core:              this.core,
+			store:             this.store,
+			connection:        c,
+			ID:                c.ID,
+			Name:              c.Name,
+			Type:              ConnectorType(conn.Type),
+			Role:              Role(c.Role),
+			Enabled:           c.Enabled,
+			Connector:         conn.Name,
+			Strategy:          (*Strategy)(c.Strategy),
+			SendingMode:       (*SendingMode)(c.SendingMode),
+			WebsiteHost:       c.WebsiteHost,
+			LinkedConnections: slices.Clone(c.LinkedConnections),
+			HasSettings:       conn.HasSettings,
+			ActionsCount:      len(c.Actions()),
+			Health:            Health(c.Health),
+		}
+		infos[i] = &connection
+	}
+	sort.Slice(infos, func(i, j int) bool {
+		a, b := infos[i], infos[j]
+		return a.Name < b.Name || a.Name == b.Name && a.ID == b.ID
+	})
+	return infos
+}
+
 // CreateConnection creates a new connection. oAuthToken is an OAuth token
 // returned by the OAuthToken method and must be empty if the connector does not
 // support OAuth authentication.
@@ -652,335 +729,6 @@ func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, er
 	return id, nil
 }
 
-// TestWarehouseUpdate tests the update of the workspace's warehouse.
-//
-// It returns an errors.UnprocessableError with code:
-//
-//   - DifferentWarehouse, if the settings connect to a different
-//     data warehouse.
-//   - InvalidWarehouseSettings, if the settings are not valid.
-//   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte) error {
-	this.core.mustBeOpen()
-	ws := this.workspace
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
-	if err != nil {
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
-			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return err
-	}
-	err = this.store.TestWarehouseUpdate(ctx, settings)
-	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		if err == datastore.ErrDifferentWarehouse {
-			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
-		}
-		return err
-	}
-	return nil
-}
-
-// UpdateIdentityResolution updates the identity resolution of the workspace.
-//
-// runOnBatchImport determines whether the identities should be resolved
-// automatically every time a batch import is completed.
-//
-// identifiers specify the identity resolution identifiers in the specified
-// order. An identifier must be a property in the user schema with a type of
-// Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
-// be repeated.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - PropertyNotExist, if an identifier path does not exist in the user
-//     schema.
-//   - TypeNotAllowed, if an identifier path's type, as defined in the user
-//     schema, is not allowed for identifiers.
-func (this *Workspace) UpdateIdentityResolution(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
-
-	this.core.mustBeOpen()
-
-	for i, id := range identifiers {
-		if !types.IsValidPropertyPath(id) {
-			return errors.BadRequest("identifier %q is not a valid property path", id)
-		}
-		if slices.Contains(identifiers[i+1:], id) {
-			return errors.BadRequest("identifier %q is repeated", id)
-		}
-	}
-
-	if identifiers == nil {
-		identifiers = []string{}
-	}
-	ws := this.workspace
-	n := state.UpdateIdentityResolution{
-		Workspace:                      ws.ID,
-		ResolveIdentitiesOnBatchImport: runOnBatchImport,
-		Identifiers:                    identifiers,
-	}
-
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		if len(identifiers) > 0 {
-			var s []byte
-			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			var schema types.Type
-			err = json.Unmarshal(s, &schema)
-			if err != nil {
-				return err
-			}
-			for _, path := range identifiers {
-				p, err := types.PropertyByPath(schema, path)
-				if err != nil {
-					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
-				}
-				if !canBeIdentifier(p.Type) {
-					return errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
-				}
-			}
-		}
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET resolve_identities_on_batch_import = $1,\n"+
-			"identifiers = $2 WHERE id = $3", n.ResolveIdentitiesOnBatchImport, n.Identifiers, n.Workspace)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
-// UpdateWarehouseMode updates the mode of the data warehouse for the workspace.
-//
-// If cancelIncompatibleOperations is true, the operations currently in progress
-// on the warehouse that are incompatible with mode are cancelled.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore.
-func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMode, cancelIncompatibleOperations bool) error {
-	this.core.mustBeOpen()
-
-	switch mode {
-	case Normal, Inspection, Maintenance:
-	default:
-		return errors.BadRequest("mode %d is not valid", mode)
-	}
-
-	ws := this.workspace
-
-	n := state.UpdateWarehouseMode{
-		Workspace:                    ws.ID,
-		Mode:                         state.WarehouseMode(mode),
-		CancelIncompatibleOperations: cancelIncompatibleOperations,
-	}
-
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2", n.Mode, n.Workspace)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
-// LastIdentityResolution returns information about the last Identity
-// Resolution of the workspace.
-//
-// In particular:
-//
-//   - if the Identity Resolution has been started and completed, returns its
-//     start time and end time;
-//   - if it is in progress, returns its start time and nil for the end time;
-//   - if no Identity Resolution has ever been executed, returns nil and nil.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
-	this.core.mustBeOpen()
-	startTime, endTime, err = this.store.LastIdentityResolution(ctx)
-	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return nil, nil, errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		if err == datastore.ErrMaintenanceMode {
-			return nil, nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return nil, nil, err
-	}
-	return startTime, endTime, nil
-}
-
-// UpdateWarehouse updates the mode and settings of the warehouse associated
-// with the workspace.
-//
-// If cancelIncompatibleOperations is true, the operations currently in progress
-// on the warehouse that are incompatible with mode are cancelled.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore, and it returns an errors.UnprocessableError error with code
-//
-//   - DifferentWarehouse, if the settings connect to a different
-//     data warehouse.
-//   - InvalidWarehouseSettings, if the settings are not valid.
-//   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
-	this.core.mustBeOpen()
-
-	switch mode {
-	case Normal, Inspection, Maintenance:
-	default:
-		return errors.BadRequest("mode %d is not valid", mode)
-	}
-
-	ws := this.workspace
-
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
-	if err != nil {
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
-			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return err
-	}
-
-	err = this.store.TestWarehouseUpdate(ctx, settings)
-	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		if err == datastore.ErrDifferentWarehouse {
-			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
-		}
-		return nil
-	}
-
-	n := state.UpdateWarehouse{
-		Workspace:                    ws.ID,
-		Mode:                         state.WarehouseMode(mode),
-		Settings:                     settings,
-		CancelIncompatibleOperations: cancelIncompatibleOperations,
-	}
-
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
-			n.Mode, string(n.Settings), n.Workspace)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			var warehouseName string
-			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err = errors.NotFound("workspace %d does not exist", n.Workspace)
-				}
-				return err
-			}
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-
-	return err
-}
-
-// Connection returns the connection with identifier id of the workspace.
-//
-// If the connection does not exist, it returns an errors.NotFoundError error.
-func (this *Workspace) Connection(id int) (*Connection, error) {
-	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("connection identifier %d is not valid", id)
-	}
-	c, ok := this.workspace.Connection(id)
-	if !ok {
-		return nil, errors.NotFound("connection %d does not exist", id)
-	}
-	conn := c.Connector()
-
-	connection := Connection{
-		core:              this.core,
-		store:             this.store,
-		connection:        c,
-		ID:                c.ID,
-		Name:              c.Name,
-		Type:              ConnectorType(conn.Type),
-		Role:              Role(c.Role),
-		Enabled:           c.Enabled,
-		Connector:         conn.Name,
-		Strategy:          (*Strategy)(c.Strategy),
-		SendingMode:       (*SendingMode)(c.SendingMode),
-		WebsiteHost:       c.WebsiteHost,
-		LinkedConnections: slices.Clone(c.LinkedConnections),
-		HasSettings:       conn.HasSettings,
-		ActionsCount:      len(c.Actions()),
-		Health:            Health(c.Health),
-	}
-
-	// Set the actions.
-	actions := c.Actions()
-	a := make([]Action, len(actions))
-	connection.Actions = &a
-	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.core, this.store, a)
-	}
-	return &connection, nil
-}
-
-// Connections returns the connections of the workspace.
-func (this *Workspace) Connections() []*Connection {
-	this.core.mustBeOpen()
-	connections := this.workspace.Connections()
-	infos := make([]*Connection, len(connections))
-	for i, c := range connections {
-		conn := c.Connector()
-		connection := Connection{
-			core:              this.core,
-			store:             this.store,
-			connection:        c,
-			ID:                c.ID,
-			Name:              c.Name,
-			Type:              ConnectorType(conn.Type),
-			Role:              Role(c.Role),
-			Enabled:           c.Enabled,
-			Connector:         conn.Name,
-			Strategy:          (*Strategy)(c.Strategy),
-			SendingMode:       (*SendingMode)(c.SendingMode),
-			WebsiteHost:       c.WebsiteHost,
-			LinkedConnections: slices.Clone(c.LinkedConnections),
-			HasSettings:       conn.HasSettings,
-			ActionsCount:      len(c.Actions()),
-			Health:            Health(c.Health),
-		}
-		infos[i] = &connection
-	}
-	sort.Slice(infos, func(i, j int) bool {
-		a, b := infos[i], infos[j]
-		return a.Name < b.Name || a.Name == b.Name && a.ID == b.ID
-	})
-	return infos
-}
-
 // Delete deletes the workspace with all its connections.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
@@ -1000,6 +748,13 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		return tx.Notify(ctx, n)
 	})
 	return err
+}
+
+// DeleteEventListener deletes the given event listener of the workspace. It
+// does nothing if the listener does not exist.
+func (this *Workspace) DeleteEventListener(listener string) {
+	this.core.mustBeOpen()
+	this.core.events.observer.DeleteListener(listener)
 }
 
 // Events returns events that match the provided filter, if not nil, and are
@@ -1156,6 +911,35 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 	return identities, count, nil
 }
 
+// LastIdentityResolution returns information about the last Identity
+// Resolution of the workspace.
+//
+// In particular:
+//
+//   - if the Identity Resolution has been started and completed, returns its
+//     start time and end time;
+//   - if it is in progress, returns its start time and nil for the end time;
+//   - if no Identity Resolution has ever been executed, returns nil and nil.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - WarehouseError, if an error occurred with the data warehouse.
+func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+	this.core.mustBeOpen()
+	startTime, endTime, err = this.store.LastIdentityResolution(ctx)
+	if err != nil {
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return nil, nil, errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		if err == datastore.ErrMaintenanceMode {
+			return nil, nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		return nil, nil, err
+	}
+	return startTime, endTime, nil
+}
+
 // ListenedEvents returns the events listened to the specified listener and the
 // number of discarded events. If the listener does not exist, it returns an
 // errors.NotFoundError.
@@ -1234,11 +1018,227 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 	return base62.EncodeToString(account), nil
 }
 
-// DeleteEventListener deletes the given event listener of the workspace. It
-// does nothing if the listener does not exist.
-func (this *Workspace) DeleteEventListener(listener string) {
+// TestWarehouseUpdate tests the update of the workspace's warehouse.
+//
+// It returns an errors.UnprocessableError with code:
+//
+//   - DifferentWarehouse, if the settings connect to a different
+//     data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
+//   - WarehouseError, if an error occurred with the data warehouse.
+func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte) error {
 	this.core.mustBeOpen()
-	this.core.events.observer.DeleteListener(listener)
+	ws := this.workspace
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	if err != nil {
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+	err = this.store.TestWarehouseUpdate(ctx, settings)
+	if err != nil {
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		if err == datastore.ErrDifferentWarehouse {
+			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
+		}
+		return err
+	}
+	return nil
+}
+
+// UpdateIdentityResolution updates the identity resolution of the workspace.
+//
+// runOnBatchImport determines whether the identities should be resolved
+// automatically every time a batch import is completed.
+//
+// identifiers specify the identity resolution identifiers in the specified
+// order. An identifier must be a property in the user schema with a type of
+// Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
+// be repeated.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - PropertyNotExist, if an identifier path does not exist in the user
+//     schema.
+//   - TypeNotAllowed, if an identifier path's type, as defined in the user
+//     schema, is not allowed for identifiers.
+func (this *Workspace) UpdateIdentityResolution(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
+
+	this.core.mustBeOpen()
+
+	for i, id := range identifiers {
+		if !types.IsValidPropertyPath(id) {
+			return errors.BadRequest("identifier %q is not a valid property path", id)
+		}
+		if slices.Contains(identifiers[i+1:], id) {
+			return errors.BadRequest("identifier %q is repeated", id)
+		}
+	}
+
+	if identifiers == nil {
+		identifiers = []string{}
+	}
+	ws := this.workspace
+	n := state.UpdateIdentityResolution{
+		Workspace:                      ws.ID,
+		ResolveIdentitiesOnBatchImport: runOnBatchImport,
+		Identifiers:                    identifiers,
+	}
+
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		if len(identifiers) > 0 {
+			var s []byte
+			err := tx.QueryRow(ctx, "SELECT user_schema FROM workspaces WHERE id = $1", n.Workspace).Scan(&s)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			var schema types.Type
+			err = json.Unmarshal(s, &schema)
+			if err != nil {
+				return err
+			}
+			for _, path := range identifiers {
+				p, err := types.PropertyByPath(schema, path)
+				if err != nil {
+					return errors.Unprocessable(PropertyNotExist, "property %q does not exist in the user schema", path)
+				}
+				if !canBeIdentifier(p.Type) {
+					return errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
+				}
+			}
+		}
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET resolve_identities_on_batch_import = $1,\n"+
+			"identifiers = $2 WHERE id = $3", n.ResolveIdentitiesOnBatchImport, n.Identifiers, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
+}
+
+// UpdateWarehouse updates the mode and settings of the warehouse associated
+// with the workspace.
+//
+// If cancelIncompatibleOperations is true, the operations currently in progress
+// on the warehouse that are incompatible with mode are cancelled.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore, and it returns an errors.UnprocessableError error with code
+//
+//   - DifferentWarehouse, if the settings connect to a different
+//     data warehouse.
+//   - InvalidWarehouseSettings, if the settings are not valid.
+//   - WarehouseError, if an error occurred with the data warehouse.
+func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
+	this.core.mustBeOpen()
+
+	switch mode {
+	case Normal, Inspection, Maintenance:
+	default:
+		return errors.BadRequest("mode %d is not valid", mode)
+	}
+
+	ws := this.workspace
+
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	if err != nil {
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+
+	err = this.store.TestWarehouseUpdate(ctx, settings)
+	if err != nil {
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		if err == datastore.ErrDifferentWarehouse {
+			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
+		}
+		return nil
+	}
+
+	n := state.UpdateWarehouse{
+		Workspace:                    ws.ID,
+		Mode:                         state.WarehouseMode(mode),
+		Settings:                     settings,
+		CancelIncompatibleOperations: cancelIncompatibleOperations,
+	}
+
+	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
+			n.Mode, string(n.Settings), n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			var warehouseName string
+			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
+}
+
+// UpdateWarehouseMode updates the mode of the data warehouse for the workspace.
+//
+// If cancelIncompatibleOperations is true, the operations currently in progress
+// on the warehouse that are incompatible with mode are cancelled.
+//
+// It returns an errors.NotFoundError error, if the workspace does not exist
+// anymore.
+func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMode, cancelIncompatibleOperations bool) error {
+	this.core.mustBeOpen()
+
+	switch mode {
+	case Normal, Inspection, Maintenance:
+	default:
+		return errors.BadRequest("mode %d is not valid", mode)
+	}
+
+	ws := this.workspace
+
+	n := state.UpdateWarehouseMode{
+		Workspace:                    ws.ID,
+		Mode:                         state.WarehouseMode(mode),
+		CancelIncompatibleOperations: cancelIncompatibleOperations,
+	}
+
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1 WHERE id = $2", n.Mode, n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			err = tx.QueryVoid(ctx, "SELECT FROM workspaces WHERE id = $1", n.Workspace)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					err = errors.NotFound("workspace %d does not exist", n.Workspace)
+				}
+				return err
+			}
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
 }
 
 // Rename renames the workspace with the given new name.
@@ -1282,31 +1282,6 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	if err != nil {
 		if err, ok := (err).(*datastore.WarehouseError); ok {
 			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		return err
-	}
-	return nil
-}
-
-// StartIdentityResolution starts an Identity Resolution operation that resolves
-// the identities of the workspace.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - InspectionMode, if the data warehouse is in inspection mode.
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
-	this.core.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Workspace.StartIdentityResolution", "workspace_id", this.workspace.ID)
-	defer span.End()
-	telemetry.IncrementCounter(ctx, "IdentityResolutionExecutions", 1)
-	err := this.store.StartIdentityResolution(ctx)
-	if err != nil {
-		if err == datastore.ErrInspectionMode {
-			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-		}
-		if err == datastore.ErrMaintenanceMode {
-			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		return err
 	}
@@ -1394,44 +1369,29 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	return ui, nil
 }
 
-// Update updates the name, the privacy region and the displayed properties of
-// the workspace. name must be between 1 and 100 runes long. displayedProperties
-// must contain valid displayed property names. A valid displayed property name
-// is an empty string, or alternatively a valid property name between 1 and 100
-// runes long.
-func (this *Workspace) Update(ctx context.Context, name string, region PrivacyRegion, displayedProperties DisplayedProperties) error {
+// StartIdentityResolution starts an Identity Resolution operation that resolves
+// the identities of the workspace.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - InspectionMode, if the data warehouse is in inspection mode.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 	this.core.mustBeOpen()
-	if name == "" || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
-	}
-	switch region {
-	case PrivacyRegionNotSpecified,
-		PrivacyRegionEurope:
-	default:
-		return errors.BadRequest("invalid privacy region %q", string(region))
-	}
-	if err := validateDisplayedProperties(displayedProperties); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	ws := this.workspace
-	n := state.UpdateWorkspace{
-		Workspace:           ws.ID,
-		Name:                name,
-		PrivacyRegion:       state.PrivacyRegion(region),
-		DisplayedProperties: state.DisplayedProperties(displayedProperties),
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2, displayed_image = $3, "+
-			"displayed_first_name = $4, displayed_last_name = $5, displayed_information = $6 "+
-			"WHERE id = $7",
-			n.Name, n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
-			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Workspace)
-		if err != nil {
-			return err
+	ctx, span := telemetry.TraceSpan(ctx, "Workspace.StartIdentityResolution", "workspace_id", this.workspace.ID)
+	defer span.End()
+	telemetry.IncrementCounter(ctx, "IdentityResolutionExecutions", 1)
+	err := this.store.StartIdentityResolution(ctx)
+	if err != nil {
+		if err == datastore.ErrInspectionMode {
+			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 		}
-		return tx.Notify(ctx, n)
-	})
-	return err
+		if err == datastore.ErrMaintenanceMode {
+			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		return err
+	}
+	return nil
 }
 
 // Traits returns the traits of a user.
@@ -1481,6 +1441,46 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 	}
 
 	return types.Marshal(records[0], ws.UserSchema)
+}
+
+// Update updates the name, the privacy region and the displayed properties of
+// the workspace. name must be between 1 and 100 runes long. displayedProperties
+// must contain valid displayed property names. A valid displayed property name
+// is an empty string, or alternatively a valid property name between 1 and 100
+// runes long.
+func (this *Workspace) Update(ctx context.Context, name string, region PrivacyRegion, displayedProperties DisplayedProperties) error {
+	this.core.mustBeOpen()
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
+	}
+	switch region {
+	case PrivacyRegionNotSpecified,
+		PrivacyRegionEurope:
+	default:
+		return errors.BadRequest("invalid privacy region %q", string(region))
+	}
+	if err := validateDisplayedProperties(displayedProperties); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	ws := this.workspace
+	n := state.UpdateWorkspace{
+		Workspace:           ws.ID,
+		Name:                name,
+		PrivacyRegion:       state.PrivacyRegion(region),
+		DisplayedProperties: state.DisplayedProperties(displayedProperties),
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2, displayed_image = $3, "+
+			"displayed_first_name = $4, displayed_last_name = $5, displayed_information = $6 "+
+			"WHERE id = $7",
+			n.Name, n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
+			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }
 
 // User represents a user.

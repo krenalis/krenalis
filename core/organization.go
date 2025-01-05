@@ -122,6 +122,113 @@ func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
 	return keys, nil
 }
 
+// AuthenticateMember authenticates a member of the organization given its email
+// and password. email's length must be in range [4, 120] and must be a valid
+// email address. password's length must be at least 8 character long.
+//
+// If a member with the provided email does not exist or the password does not
+// correspond, it returns an errors.UnprocessableError error with code
+// AuthenticationFailed.
+func (this *Organization) AuthenticateMember(ctx context.Context, email, password string) (int, error) {
+
+	this.core.mustBeOpen()
+
+	// Validate email.
+	if email == "" {
+		return 0, errors.BadRequest("email is empty")
+	}
+	if !utf8.ValidString(email) {
+		return 0, errors.BadRequest("email is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(email); n > 120 {
+		return 0, errors.BadRequest("email is longer than 120 runes")
+	}
+	if !emailRegExp.MatchString(email) {
+		return 0, errors.BadRequest("email is not a valid email address")
+	}
+	// Validate password.
+	if password == "" {
+		return 0, errors.BadRequest("password is empty")
+	}
+	if !utf8.ValidString(password) {
+		return 0, errors.BadRequest("password is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(password); n < 8 {
+		return 0, errors.BadRequest("password must be at least 8 characters long")
+	}
+
+	var id int
+	var hashedPassword []byte
+	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email).Scan(&id, &hashedPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
+		}
+		return 0, err
+	}
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
+	if err != nil {
+		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
+	}
+
+	return id, nil
+}
+
+// CreateAPIKey creates a new API key for the organization with the specified
+// name, which must be between 1 and 100 runes in length. If the workspace is
+// not 0, the key will be restricted to that specific workspace.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - OrganizationNotExist, if the organization does not exist.
+//   - WorkspaceNotExist, if the workspace does not exist.
+func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspace int) (int, string, error) {
+	this.core.mustBeOpen()
+	if containsNUL(name) || utf8.RuneCountInString(name) > 100 {
+		return 0, "", errors.BadRequest("name %q is not valid", name)
+	}
+	if workspace < 0 || workspace > maxInt32 {
+		return 0, "", errors.BadRequest("workspace is not a valid workspace identifier")
+	}
+	if workspace > 0 {
+		if _, ok := this.organization.Workspace(workspace); !ok {
+			return 0, "", errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", workspace)
+		}
+	}
+	// Generate a random identifier.
+	id, err := generateRandomID()
+	if err != nil {
+		return 0, "", err
+	}
+	n := state.CreateAPIKey{
+		ID:           id,
+		Organization: this.organization.ID,
+		Workspace:    workspace,
+		Token:        generateAPIKeyToken(),
+	}
+	createdAt := time.Now().UTC().Truncate(time.Second)
+	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "INSERT INTO api_keys (id, organization, workspace, name, token, created_at) "+
+			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6)", n.ID, n.Organization, n.Workspace, name, n.Token, createdAt)
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				switch postgres.ErrConstraintName(err) {
+				case "api_keys_organization_fkey":
+					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
+				case "api_keys_workspace_fkey":
+					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
+				}
+			}
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	if err != nil {
+		return 0, "", err
+	}
+	return n.ID, n.Token, nil
+}
+
 // CreateWorkspace creates a workspace with the given name, privacy region, user
 // schema and displayed properties, and connects to a data warehouse of the
 // provided name and settings. Returns the identifier of the workspace that has
@@ -254,159 +361,6 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	}
 
 	return n.ID, nil
-}
-
-// AuthenticateMember authenticates a member of the organization given its email
-// and password. email's length must be in range [4, 120] and must be a valid
-// email address. password's length must be at least 8 character long.
-//
-// If a member with the provided email does not exist or the password does not
-// correspond, it returns an errors.UnprocessableError error with code
-// AuthenticationFailed.
-func (this *Organization) AuthenticateMember(ctx context.Context, email, password string) (int, error) {
-
-	this.core.mustBeOpen()
-
-	// Validate email.
-	if email == "" {
-		return 0, errors.BadRequest("email is empty")
-	}
-	if !utf8.ValidString(email) {
-		return 0, errors.BadRequest("email is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(email); n > 120 {
-		return 0, errors.BadRequest("email is longer than 120 runes")
-	}
-	if !emailRegExp.MatchString(email) {
-		return 0, errors.BadRequest("email is not a valid email address")
-	}
-	// Validate password.
-	if password == "" {
-		return 0, errors.BadRequest("password is empty")
-	}
-	if !utf8.ValidString(password) {
-		return 0, errors.BadRequest("password is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(password); n < 8 {
-		return 0, errors.BadRequest("password must be at least 8 characters long")
-	}
-
-	var id int
-	var hashedPassword []byte
-	err := this.core.db.QueryRow(ctx, "SELECT id, password FROM members WHERE organization = $1 AND email = $2", this.organization.ID, email).Scan(&id, &hashedPassword)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
-		}
-		return 0, err
-	}
-	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
-	if err != nil {
-		return 0, errors.Unprocessable(AuthenticationFailed, "authentication has failed")
-	}
-
-	return id, nil
-}
-
-// TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
-// with the provided name and settings can be initialized.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
-//   - WarehouseError, if an operation on the data warehouse fails.
-//   - WarehouseNonInitializable, if the warehouse intended for connection is
-//     not initializable.
-//   - WarehouseNotExist, if a data warehouse with the provided name does not
-//     exist.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, settings []byte) error {
-	this.core.mustBeOpen()
-
-	// Validate the parameters.
-	if name == "" {
-		return errors.BadRequest("warehouse name is empty")
-	}
-
-	// Normalize the warehouse settings.
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(name, settings)
-	if err != nil {
-		if err == datastore.DataWarehouseNotExist {
-			return errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", name)
-		}
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
-			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return err
-	}
-
-	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, name, settings)
-	if err != nil {
-		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
-			return errors.Unprocessable(WarehouseNonInitializable, "%s", err)
-		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		return err
-	}
-
-	return nil
-}
-
-// CreateAPIKey creates a new API key for the organization with the specified
-// name, which must be between 1 and 100 runes in length. If the workspace is
-// not 0, the key will be restricted to that specific workspace.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - OrganizationNotExist, if the organization does not exist.
-//   - WorkspaceNotExist, if the workspace does not exist.
-func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspace int) (int, string, error) {
-	this.core.mustBeOpen()
-	if containsNUL(name) || utf8.RuneCountInString(name) > 100 {
-		return 0, "", errors.BadRequest("name %q is not valid", name)
-	}
-	if workspace < 0 || workspace > maxInt32 {
-		return 0, "", errors.BadRequest("workspace is not a valid workspace identifier")
-	}
-	if workspace > 0 {
-		if _, ok := this.organization.Workspace(workspace); !ok {
-			return 0, "", errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", workspace)
-		}
-	}
-	// Generate a random identifier.
-	id, err := generateRandomID()
-	if err != nil {
-		return 0, "", err
-	}
-	n := state.CreateAPIKey{
-		ID:           id,
-		Organization: this.organization.ID,
-		Workspace:    workspace,
-		Token:        generateAPIKeyToken(),
-	}
-	createdAt := time.Now().UTC().Truncate(time.Second)
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "INSERT INTO api_keys (id, organization, workspace, name, token, created_at) "+
-			"VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6)", n.ID, n.Organization, n.Workspace, name, n.Token, createdAt)
-		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				switch postgres.ErrConstraintName(err) {
-				case "api_keys_organization_fkey":
-					err = errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
-				case "api_keys_workspace_fkey":
-					err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
-				}
-			}
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-	if err != nil {
-		return 0, "", err
-	}
-	return n.ID, n.Token, nil
 }
 
 // DeleteAPIKey deletes the API key of the organization with identifier id.
@@ -565,6 +519,52 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 		return nil, err
 	}
 	return members, nil
+}
+
+// TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
+// with the provided name and settings can be initialized.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - WarehouseError, if an operation on the data warehouse fails.
+//   - WarehouseNonInitializable, if the warehouse intended for connection is
+//     not initializable.
+//   - WarehouseNotExist, if a data warehouse with the provided name does not
+//     exist.
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, settings []byte) error {
+	this.core.mustBeOpen()
+
+	// Validate the parameters.
+	if name == "" {
+		return errors.BadRequest("warehouse name is empty")
+	}
+
+	// Normalize the warehouse settings.
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(name, settings)
+	if err != nil {
+		if err == datastore.DataWarehouseNotExist {
+			return errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", name)
+		}
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return err
+	}
+
+	// Check if the warehouse is initializable.
+	err = this.core.datastore.CanInitialize(ctx, name, settings)
+	if err != nil {
+		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
+			return errors.Unprocessable(WarehouseNonInitializable, "%s", err)
+		}
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		return err
+	}
+
+	return nil
 }
 
 // UpdateAPIKey updates the name of the API key for the organization with the

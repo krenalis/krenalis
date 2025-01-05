@@ -330,6 +330,32 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 		"failed": metrics.Failed}, nil
 }
 
+// Connection returns a connection of a workspace.
+func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("connection")
+	if v[0] == '+' {
+		return nil, errors.NotFound("")
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.NotFound("")
+	}
+	return ws.Connection(id)
+}
+
+// Connections returns the connections of a workspace.
+func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	return ws.Connections(), nil
+}
+
 // CreateConnection creates a connection for a workspace.
 func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
@@ -373,145 +399,6 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 	return map[string]string{"id": id}, nil
 }
 
-// TestWarehouseUpdate tests a warehouse update.
-func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Settings json.Value `json:"settings"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.TestWarehouseUpdate(r.Context(), body.Settings)
-	return nil, err
-}
-
-// UpdateIdentityResolution updates the identity resolution of the workspace.
-func (workspace workspace) UpdateIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		RunOnBatchImport bool     `json:"runOnBatchImport"`
-		Identifiers      []string `json:"identifiers"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.UpdateIdentityResolution(r.Context(), body.RunOnBatchImport, body.Identifiers)
-	return nil, err
-}
-
-// UpdateUserSchema updates the user schema of a workspace.
-func (workspace workspace) UpdateUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Schema         types.Type     `json:"schema"`
-		PrimarySources map[string]int `json:"primarySources"`
-		RePaths        map[string]any `json:"rePaths"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.UpdateUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
-	return nil, err
-}
-
-// PreviewUserSchemaUpdate previews a user schema update and returns the queries
-// that would be executed.
-func (workspace workspace) PreviewUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Schema  types.Type     `json:"schema"`
-		RePaths map[string]any `json:"rePaths"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	queries, err := ws.PreviewUserSchemaUpdate(r.Context(), body.Schema, body.RePaths)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"queries": queries}, nil
-}
-
-// UpdateWarehouseMode updates the mode of the data warehouse for a workspace.
-func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Mode                         core.WarehouseMode `json:"mode"`
-		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.UpdateWarehouseMode(r.Context(), body.Mode, body.CancelIncompatibleOperations)
-	return nil, err
-}
-
-// UpdateWarehouse updates the warehouse of a workspace.
-func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Settings                     json.Value         `json:"settings"`
-		Mode                         core.WarehouseMode `json:"mode"`
-		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.CancelIncompatibleOperations)
-	return nil, err
-}
-
-// Connection returns a connection of a workspace.
-func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	v := r.PathValue("connection")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.NotFound("")
-	}
-	return ws.Connection(id)
-}
-
-// Connections returns the connections of a workspace.
-func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	return ws.Connections(), nil
-}
-
 // Delete deletes a workspace with all its connections.
 func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
@@ -520,6 +407,16 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 	}
 	err = ws.Delete(r.Context())
 	return nil, err
+}
+
+// DeleteEventListener deletes an event listener of a workspace.
+func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	ws.DeleteEventListener(r.PathValue("listener"))
+	return nil, nil
 }
 
 // Events returns the events.
@@ -546,16 +443,6 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 	}
 	events, _ := types.Marshal(evts, types.Array(events.Schema))
 	return map[string]any{"events": events}, nil
-}
-
-// IdentifiersSchema returns the properties of the "users" schema that can be
-// used as identifiers in the Identity Resolution.
-func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	return ws.IdentifiersSchema(), nil
 }
 
 // Identities returns the user identities of a user, and an estimate of their
@@ -589,6 +476,16 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 		"identities": identities,
 		"count":      count,
 	}, nil
+}
+
+// IdentifiersSchema returns the properties of the "users" schema that can be
+// used as identifiers in the Identity Resolution.
+func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	return ws.IdentifiersSchema(), nil
 }
 
 // LastIdentityResolution returns information about the last Identity
@@ -649,14 +546,26 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 	return ws.OAuthToken(r.Context(), body.OAuthCode, body.RedirectURI, body.Connector)
 }
 
-// DeleteEventListener deletes an event listener of a workspace.
-func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
+// PreviewUserSchemaUpdate previews a user schema update and returns the queries
+// that would be executed.
+func (workspace workspace) PreviewUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	ws.DeleteEventListener(r.PathValue("listener"))
-	return nil, nil
+	var body struct {
+		Schema  types.Type     `json:"schema"`
+		RePaths map[string]any `json:"rePaths"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	queries, err := ws.PreviewUserSchemaUpdate(r.Context(), body.Schema, body.RePaths)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"queries": queries}, nil
 }
 
 // RepairWarehouse repairs the database objects needed by Meergo on a
@@ -667,17 +576,6 @@ func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Reques
 		return nil, err
 	}
 	err = ws.RepairWarehouse(r.Context())
-	return nil, err
-}
-
-// StartIdentityResolution starts an Identity Resolution operation that resolves
-// the identities of the workspace.
-func (workspace workspace) StartIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	err = ws.StartIdentityResolution(r.Context())
 	return nil, err
 }
 
@@ -720,6 +618,48 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	return nil, nil
 }
 
+// StartIdentityResolution starts an Identity Resolution operation that resolves
+// the identities of the workspace.
+func (workspace workspace) StartIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	err = ws.StartIdentityResolution(r.Context())
+	return nil, err
+}
+
+// TestWarehouseUpdate tests a warehouse update.
+func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Settings json.Value `json:"settings"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.TestWarehouseUpdate(r.Context(), body.Settings)
+	return nil, err
+}
+
+// Traits returns the traits of a user.
+func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	user := r.PathValue("user")
+	traits, err := ws.Traits(r.Context(), user)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"traits": traits}, nil
+}
+
 // Update updates the name, the privacy region and the displayed properties of a
 // workspace.
 func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -740,18 +680,87 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 	return nil, err
 }
 
-// Traits returns the traits of a user.
-func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateIdentityResolution updates the identity resolution of the workspace.
+func (workspace workspace) UpdateIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	user := r.PathValue("user")
-	traits, err := ws.Traits(r.Context(), user)
+	var body struct {
+		RunOnBatchImport bool     `json:"runOnBatchImport"`
+		Identifiers      []string `json:"identifiers"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.UpdateIdentityResolution(r.Context(), body.RunOnBatchImport, body.Identifiers)
+	return nil, err
+}
+
+// UpdateUserSchema updates the user schema of a workspace.
+func (workspace workspace) UpdateUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"traits": traits}, nil
+	var body struct {
+		Schema         types.Type     `json:"schema"`
+		PrimarySources map[string]int `json:"primarySources"`
+		RePaths        map[string]any `json:"rePaths"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.UpdateUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
+	return nil, err
+}
+
+// UpdateWarehouse updates the warehouse of a workspace.
+func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Settings                     json.Value         `json:"settings"`
+		Mode                         core.WarehouseMode `json:"mode"`
+		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.CancelIncompatibleOperations)
+	return nil, err
+}
+
+// UpdateWarehouseMode updates the mode of the data warehouse for a workspace.
+func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Mode                         core.WarehouseMode `json:"mode"`
+		CancelIncompatibleOperations bool               `json:"cancelIncompatibleOperations"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	err = ws.UpdateWarehouseMode(r.Context(), body.Mode, body.CancelIncompatibleOperations)
+	return nil, err
+}
+
+// UserSchema returns the user schema of a workspace.
+func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	return ws.UserSchema, nil
 }
 
 // Users returns the users, the user schema of a workspace, and an estimate of
@@ -803,15 +812,6 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 	b.writeByte('}')
 	b.flush()
 	return nil, nil
-}
-
-// UserSchema returns the user schema of a workspace.
-func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	return ws.UserSchema, nil
 }
 
 // Warehouse returns the type and settings of the data warehouse for a

@@ -30,6 +30,22 @@ func (action action) Delete(_ http.ResponseWriter, r *http.Request) (any, error)
 	return nil, err
 }
 
+// Execute executes an action.
+func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error) {
+	a, err := action.action(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Reload bool `json:"reload"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	return a.Execute(r.Context(), body.Reload)
+}
+
 // ServeUI serves the UI of an action.
 func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
 	a, err := action.action(r)
@@ -53,18 +69,20 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 	return nil, nil
 }
 
-// Update updates an action.
-func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
+// SetSchedulePeriod sets the schedule period of an action.
+func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (any, error) {
 	a, err := action.action(r)
 	if err != nil {
 		return nil, err
 	}
-	var body core.ActionToSet
+	var body struct {
+		SchedulePeriod core.SchedulePeriod `json:"schedulePeriod"`
+	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.Update(r.Context(), body)
+	err = a.SetSchedulePeriod(r.Context(), body.SchedulePeriod)
 	return nil, err
 }
 
@@ -85,37 +103,19 @@ func (action action) SetStatus(_ http.ResponseWriter, r *http.Request) (any, err
 	return nil, err
 }
 
-// SetSchedulePeriod sets the schedule period of an action.
-func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (any, error) {
+// Update updates an action.
+func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	a, err := action.action(r)
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		SchedulePeriod core.SchedulePeriod `json:"schedulePeriod"`
-	}
+	var body core.ActionToSet
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.SetSchedulePeriod(r.Context(), body.SchedulePeriod)
+	err = a.Update(r.Context(), body)
 	return nil, err
-}
-
-// Execute executes an action.
-func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Reload bool `json:"reload"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	return a.Execute(r.Context(), body.Reload)
 }
 
 func (action action) action(r *http.Request) (*core.Action, error) {

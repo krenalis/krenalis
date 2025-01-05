@@ -120,93 +120,6 @@ const (
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
 
-// fromState serializes action into this.
-func (this *Action) fromState(core *Core, store *datastore.Store, action *state.Action) {
-	c := action.Connection()
-	this.core = core
-	this.action = action
-	this.connection = &Connection{core: core, store: store, connection: c}
-	this.ID = action.ID
-	this.Connection = c.ID
-	this.Target = Target(action.Target)
-	this.Name = action.Name
-	this.Enabled = action.Enabled
-	if action.EventType != "" {
-		et := action.EventType
-		this.EventType = &et
-	}
-	_, this.Running = this.action.Execution()
-	if action.Target == state.Users || action.Target == state.Groups {
-		start := int(action.ScheduleStart)
-		period := SchedulePeriod(action.SchedulePeriod)
-		this.ScheduleStart = &start
-		this.SchedulePeriod = &period
-	}
-	this.InSchema = action.InSchema
-	this.OutSchema = action.OutSchema
-	if action.Filter != nil {
-		this.Filter = convertWhereToFilter(action.Filter, action.InSchema)
-	}
-	this.Transformation.Mapping = maps.Clone(action.Transformation.Mapping)
-	if function := action.Transformation.Function; function != nil {
-		this.Transformation.Function = &TransformationFunction{
-			Source:       function.Source,
-			Language:     Language(function.Language.String()),
-			PreserveJSON: function.PreserveJSON,
-			InPaths:      slices.Clone(action.Transformation.InPaths),
-			OutPaths:     slices.Clone(action.Transformation.OutPaths),
-		}
-	}
-	if action.Query != "" {
-		query := action.Query
-		this.Query = &query
-	}
-	if f := action.Format(); f != nil {
-		this.Format = f.Name
-	}
-	if action.Path != "" {
-		path := action.Path
-		this.Path = &path
-	}
-	if action.Sheet != "" {
-		sheet := action.Sheet
-		this.Sheet = &sheet
-	}
-	this.Compression = Compression(action.Compression)
-	if action.TableName != "" {
-		table := action.TableName
-		this.Table = &table
-	}
-	if action.ExportMode != "" {
-		mode := action.ExportMode
-		matching := action.Matching
-		exportOnDuplicates := action.ExportOnDuplicates
-		this.ExportMode = (*ExportMode)(&mode)
-		this.Matching = (*Matching)(&matching)
-		this.ExportOnDuplicates = &exportOnDuplicates
-	}
-	if action.TableKeyProperty != "" {
-		key := action.TableKeyProperty
-		this.TableKeyProperty = &key
-	}
-	if action.IdentityProperty != "" {
-		p := action.IdentityProperty
-		this.IdentityProperty = &p
-	}
-	if action.LastChangeTimeProperty != "" {
-		column := action.LastChangeTimeProperty
-		this.LastChangeTimeProperty = &column
-	}
-	if action.LastChangeTimeFormat != "" {
-		format := action.LastChangeTimeFormat
-		this.LastChangeTimeFormat = &format
-	}
-	if action.FileOrderingPropertyPath != "" {
-		p := action.FileOrderingPropertyPath
-		this.FileOrderingPropertyPath = &p
-	}
-}
-
 // Target represents a target.
 type Target int
 
@@ -287,41 +200,6 @@ func (this *Action) Delete(ctx context.Context) error {
 	return err
 }
 
-// ServeUI serves the user interface for the format settings of a file action.
-// event is the event to be served and settings are the updated settings.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - EventNotExist, if the event does not exist.
-//   - InvalidSettings, if the settings are not valid.
-func (this *Action) ServeUI(ctx context.Context, event string, settings json.Value) (json.Value, error) {
-	this.core.mustBeOpen()
-	// TODO: check and delete alternative fieldsets keys that have 'null' value
-	// before saving to database
-	connector := this.action.Connection().Connector()
-	if connector.Type != state.FileStorage {
-		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
-	}
-	if !connector.HasSettings {
-		return nil, errors.BadRequest("connector %s does not have settings", connector.Name)
-	}
-	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
-	if err != nil {
-		if err == meergo.ErrUIEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
-		} else {
-			switch err.(type) {
-			case *meergo.InvalidSettingsError:
-				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
-				err = errors.Unavailable("%s", err)
-			}
-		}
-		return nil, err
-	}
-	return ui, nil
-}
-
 // Execute executes the action, which must be an app, database, or file storage
 // action with a target of Users or Groups, creating an execution and returning
 // its identifier.
@@ -358,6 +236,96 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 		return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
 	return this.addExecution(ctx, reload)
+}
+
+// ServeUI serves the user interface for the format settings of a file action.
+// event is the event to be served and settings are the updated settings.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - EventNotExist, if the event does not exist.
+//   - InvalidSettings, if the settings are not valid.
+func (this *Action) ServeUI(ctx context.Context, event string, settings json.Value) (json.Value, error) {
+	this.core.mustBeOpen()
+	// TODO: check and delete alternative fieldsets keys that have 'null' value
+	// before saving to database
+	connector := this.action.Connection().Connector()
+	if connector.Type != state.FileStorage {
+		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
+	}
+	if !connector.HasSettings {
+		return nil, errors.BadRequest("connector %s does not have settings", connector.Name)
+	}
+	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
+	if err != nil {
+		if err == meergo.ErrUIEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for %s connector", event, connector.Name)
+		} else {
+			switch err.(type) {
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
+			}
+		}
+		return nil, err
+	}
+	return ui, nil
+}
+
+// SetSchedulePeriod sets the schedule period, in minutes, of the action. The
+// action must be a Users or Groups action and period can be 5, 15, 30, 60, 120,
+// 180, 360, 480, 720, or 1440.
+func (this *Action) SetSchedulePeriod(ctx context.Context, period SchedulePeriod) error {
+	this.core.mustBeOpen()
+	switch this.action.Target {
+	case state.Users, state.Groups:
+	default:
+		return errors.BadRequest("cannot set schedule period of a %s action", this.action.Target)
+	}
+	switch period {
+	case 5, 15, 30, 60, 120, 180, 360, 480, 720, 1440:
+	default:
+		return errors.BadRequest("schedule period %d is not valid", period)
+	}
+	n := state.SetActionSchedulePeriod{
+		ID:             this.action.ID,
+		SchedulePeriod: int16(period),
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// SetStatus sets the status of the action.
+func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
+	this.core.mustBeOpen()
+	if enabled == this.action.Enabled {
+		return nil
+	}
+	n := state.SetActionStatus{
+		ID:      this.action.ID,
+		Enabled: enabled,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE actions SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }
 
 // Update updates the action.
@@ -553,68 +521,6 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	return err
 }
 
-// setExecutionCursor sets the cursor of the action execution.
-func (this *Action) setExecutionCursor(ctx context.Context, cursor time.Time) error {
-	execution, _ := this.action.Execution()
-	_, err := this.core.db.Exec(ctx, "UPDATE actions_executions SET cursor = $1 WHERE id = $2", cursor, execution.ID)
-	return err
-}
-
-// SetSchedulePeriod sets the schedule period, in minutes, of the action. The
-// action must be a Users or Groups action and period can be 5, 15, 30, 60, 120,
-// 180, 360, 480, 720, or 1440.
-func (this *Action) SetSchedulePeriod(ctx context.Context, period SchedulePeriod) error {
-	this.core.mustBeOpen()
-	switch this.action.Target {
-	case state.Users, state.Groups:
-	default:
-		return errors.BadRequest("cannot set schedule period of a %s action", this.action.Target)
-	}
-	switch period {
-	case 5, 15, 30, 60, 120, 180, 360, 480, 720, 1440:
-	default:
-		return errors.BadRequest("schedule period %d is not valid", period)
-	}
-	n := state.SetActionSchedulePeriod{
-		ID:             this.action.ID,
-		SchedulePeriod: int16(period),
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return nil
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
-// SetStatus sets the status of the action.
-func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
-	this.core.mustBeOpen()
-	if enabled == this.action.Enabled {
-		return nil
-	}
-	n := state.SetActionStatus{
-		ID:      this.action.ID,
-		Enabled: enabled,
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE actions SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return nil
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
 // app returns the app of the action.
 func (this *Action) app() *connectors.App {
 	return this.core.connectors.App(this.action.Connection())
@@ -633,6 +539,93 @@ func (this *Action) file() *connectors.File {
 	return this.core.connectors.File(this.action, this.connection.connection.Role)
 }
 
+// fromState serializes action into this.
+func (this *Action) fromState(core *Core, store *datastore.Store, action *state.Action) {
+	c := action.Connection()
+	this.core = core
+	this.action = action
+	this.connection = &Connection{core: core, store: store, connection: c}
+	this.ID = action.ID
+	this.Connection = c.ID
+	this.Target = Target(action.Target)
+	this.Name = action.Name
+	this.Enabled = action.Enabled
+	if action.EventType != "" {
+		et := action.EventType
+		this.EventType = &et
+	}
+	_, this.Running = this.action.Execution()
+	if action.Target == state.Users || action.Target == state.Groups {
+		start := int(action.ScheduleStart)
+		period := SchedulePeriod(action.SchedulePeriod)
+		this.ScheduleStart = &start
+		this.SchedulePeriod = &period
+	}
+	this.InSchema = action.InSchema
+	this.OutSchema = action.OutSchema
+	if action.Filter != nil {
+		this.Filter = convertWhereToFilter(action.Filter, action.InSchema)
+	}
+	this.Transformation.Mapping = maps.Clone(action.Transformation.Mapping)
+	if function := action.Transformation.Function; function != nil {
+		this.Transformation.Function = &TransformationFunction{
+			Source:       function.Source,
+			Language:     Language(function.Language.String()),
+			PreserveJSON: function.PreserveJSON,
+			InPaths:      slices.Clone(action.Transformation.InPaths),
+			OutPaths:     slices.Clone(action.Transformation.OutPaths),
+		}
+	}
+	if action.Query != "" {
+		query := action.Query
+		this.Query = &query
+	}
+	if f := action.Format(); f != nil {
+		this.Format = f.Name
+	}
+	if action.Path != "" {
+		path := action.Path
+		this.Path = &path
+	}
+	if action.Sheet != "" {
+		sheet := action.Sheet
+		this.Sheet = &sheet
+	}
+	this.Compression = Compression(action.Compression)
+	if action.TableName != "" {
+		table := action.TableName
+		this.Table = &table
+	}
+	if action.ExportMode != "" {
+		mode := action.ExportMode
+		matching := action.Matching
+		exportOnDuplicates := action.ExportOnDuplicates
+		this.ExportMode = (*ExportMode)(&mode)
+		this.Matching = (*Matching)(&matching)
+		this.ExportOnDuplicates = &exportOnDuplicates
+	}
+	if action.TableKeyProperty != "" {
+		key := action.TableKeyProperty
+		this.TableKeyProperty = &key
+	}
+	if action.IdentityProperty != "" {
+		p := action.IdentityProperty
+		this.IdentityProperty = &p
+	}
+	if action.LastChangeTimeProperty != "" {
+		column := action.LastChangeTimeProperty
+		this.LastChangeTimeProperty = &column
+	}
+	if action.LastChangeTimeFormat != "" {
+		format := action.LastChangeTimeFormat
+		this.LastChangeTimeFormat = &format
+	}
+	if action.FileOrderingPropertyPath != "" {
+		p := action.FileOrderingPropertyPath
+		this.FileOrderingPropertyPath = &p
+	}
+}
+
 // isLanguageSupported reports whether the transformation language of the action
 // is supported. If the action does not have a transformation, it returns true.
 func (this *Action) isLanguageSupported() bool {
@@ -644,6 +637,13 @@ func (this *Action) isLanguageSupported() bool {
 		return true
 	}
 	return false
+}
+
+// setExecutionCursor sets the cursor of the action execution.
+func (this *Action) setExecutionCursor(ctx context.Context, cursor time.Time) error {
+	execution, _ := this.action.Execution()
+	_, err := this.core.db.Exec(ctx, "UPDATE actions_executions SET cursor = $1 WHERE id = $2", cursor, execution.ID)
+	return err
 }
 
 // ActionToSet represents an action to set in a connection, by creating a new

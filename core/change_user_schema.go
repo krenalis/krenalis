@@ -21,9 +21,49 @@ import (
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/json"
-
 	"github.com/meergo/meergo/types"
 )
+
+// PreviewUserSchemaUpdate previews a user schema update and returns the queries
+// that would be executed to update the user schema of the workspace, without
+// making any actual changes to the data or the schema.
+//
+// See the documentation of UpdateUserSchema for more details about this method.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - InvalidSchemaUpdate, if the schema update is invalid.
+//   - WarehouseError, if an error occurred with the data warehouse.
+func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
+	this.core.mustBeOpen()
+	if !schema.Valid() {
+		return nil, errors.BadRequest("schema must be valid")
+	}
+	if schema.Kind() != types.ObjectKind {
+		return nil, errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+	}
+	if err := validateRePaths(rePaths); err != nil {
+		return nil, errors.BadRequest("invalid rePaths: %s", err)
+	}
+	if err := checkAllowedPropertyUserSchema(schema); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
+	if err != nil {
+		return nil, errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
+	}
+	queries, err := this.store.PreviewUserSchemaUpdate(ctx, schema, operations)
+	if err != nil {
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return nil, errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		return nil, err
+	}
+	return queries, nil
+}
 
 // UpdateUserSchema updates the user schema and the primary sources of the
 // workspace. schema must be a valid schema.
@@ -211,47 +251,6 @@ Identifiers:
 	}
 
 	return nil
-}
-
-// PreviewUserSchemaUpdate previews a user schema update and returns the queries
-// that would be executed to update the user schema of the workspace, without
-// making any actual changes to the data or the schema.
-//
-// See the documentation of UpdateUserSchema for more details about this method.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - InvalidSchemaUpdate, if the schema update is invalid.
-//   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
-	this.core.mustBeOpen()
-	if !schema.Valid() {
-		return nil, errors.BadRequest("schema must be valid")
-	}
-	if schema.Kind() != types.ObjectKind {
-		return nil, errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
-	}
-	if err := validateRePaths(rePaths); err != nil {
-		return nil, errors.BadRequest("invalid rePaths: %s", err)
-	}
-	if err := checkAllowedPropertyUserSchema(schema); err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	if err := datastore.CheckConflictingProperties("users", schema); err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
-	if err != nil {
-		return nil, errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
-	}
-	queries, err := this.store.PreviewUserSchemaUpdate(ctx, schema, operations)
-	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return nil, errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		return nil, err
-	}
-	return queries, nil
 }
 
 // checkAllowedPropertyUserSchema checks the given user schema and returns

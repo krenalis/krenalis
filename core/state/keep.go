@@ -46,16 +46,16 @@ func (state *State) keep() {
 		}
 		state.changing.Lock()
 		switch n.Name {
+		case "CreateAPIKey":
+			state.createAPIKey(n)
 		case "CreateAction":
 			state.createAction(n)
 		case "CreateConnection":
 			state.createConnection(n)
-		case "CreateWriteKey":
-			state.createWriteKey(n)
 		case "CreateWorkspace":
 			state.createWorkspace(n)
-		case "CreateAPIKey":
-			state.createAPIKey(n)
+		case "CreateWriteKey":
+			state.createWriteKey(n)
 		case "DeleteAPIKey":
 			state.deleteAPIKey(n)
 		case "DeleteAction":
@@ -64,6 +64,8 @@ func (state *State) keep() {
 			state.deleteConnection(n)
 		case "DeleteWorkspace":
 			state.deleteWorkspace(n)
+		case "DeleteWriteKey":
+			state.deleteWriteKey(n)
 		case "ElectLeader":
 			state.electLeader(n)
 		case "EndActionExecution":
@@ -80,34 +82,32 @@ func (state *State) keep() {
 			state.renameConnection(n)
 		case "RenameWorkspace":
 			state.renameWorkspace(n)
-		case "DeleteWriteKey":
-			state.deleteWriteKey(n)
 		case "SeeLeader":
 			state.seeLeader(n)
 		case "SetAccount":
 			state.setAccount(n)
-		case "UpdateAction":
-			state.updateAction(n)
-		case "SetActionSchedulePeriod":
-			state.setActionSchedulePeriod(n)
 		case "SetActionFormatSettings":
 			state.setActionFormatSettings(n)
+		case "SetActionSchedulePeriod":
+			state.setActionSchedulePeriod(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
-		case "UpdateConnection":
-			state.updateConnection(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
+		case "UpdateAction":
+			state.updateAction(n)
+		case "UpdateConnection":
+			state.updateConnection(n)
 		case "UpdateIdentityResolution":
 			state.updateIdentityResolution(n)
+		case "UpdateUserSchema":
+			state.updateUserSchema(n)
 		case "UpdateWarehouse":
 			state.updateWarehouse(n)
 		case "UpdateWarehouseMode":
 			state.updateWarehouseMode(n)
 		case "UpdateWorkspace":
 			state.updateWorkspace(n)
-		case "UpdateUserSchema":
-			state.updateUserSchema(n)
 		case "UnlinkConnection":
 			state.unlinkConnection(n)
 		default:
@@ -235,6 +235,30 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 		}
 	}
 	return ww
+}
+
+// CreateAPIKey is the event sent when an API key is created.
+type CreateAPIKey struct {
+	ID           int
+	Organization int
+	Workspace    int
+	Token        string
+}
+
+// createAPIKey creates an API key.
+func (state *State) createAPIKey(n notification) {
+	e := CreateAPIKey{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	key := APIKey{
+		ID:           e.ID,
+		Organization: e.Organization,
+		Workspace:    e.Workspace,
+	}
+	state.mu.Lock()
+	state.apiKeyByToken[e.Token] = &key
+	state.mu.Unlock()
 }
 
 // CreateAction is the event sent when an action is created.
@@ -424,30 +448,6 @@ func (state *State) createConnection(n notification) {
 	dispatchNotification(state, e)
 }
 
-// CreateWriteKey is the event sent when a write key is created.
-type CreateWriteKey struct {
-	Connection   int
-	Value        string
-	CreationTime time.Time
-}
-
-// createWriteKey creates a write key.
-func (state *State) createWriteKey(n notification) {
-	e := CreateWriteKey{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	c := state.replaceConnection(e.Connection, func(c *Connection) {
-		keys := make([]string, len(c.Keys)+1)
-		copy(keys, c.Keys)
-		keys[len(c.Keys)] = e.Value
-		c.Keys = keys
-	})
-	state.mu.Lock()
-	state.connectionsByKey[e.Value] = c
-	state.mu.Unlock()
-}
-
 // CreateWorkspace is the event sent when a workspace is created.
 type CreateWorkspace struct {
 	ID                             int
@@ -495,27 +495,27 @@ func (state *State) createWorkspace(n notification) {
 	dispatchNotification(state, e)
 }
 
-// CreateAPIKey is the event sent when an API key is created.
-type CreateAPIKey struct {
-	ID           int
-	Organization int
-	Workspace    int
-	Token        string
+// CreateWriteKey is the event sent when a write key is created.
+type CreateWriteKey struct {
+	Connection   int
+	Value        string
+	CreationTime time.Time
 }
 
-// createAPIKey creates an API key.
-func (state *State) createAPIKey(n notification) {
-	e := CreateAPIKey{}
+// createWriteKey creates a write key.
+func (state *State) createWriteKey(n notification) {
+	e := CreateWriteKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	key := APIKey{
-		ID:           e.ID,
-		Organization: e.Organization,
-		Workspace:    e.Workspace,
-	}
+	c := state.replaceConnection(e.Connection, func(c *Connection) {
+		keys := make([]string, len(c.Keys)+1)
+		copy(keys, c.Keys)
+		keys[len(c.Keys)] = e.Value
+		c.Keys = keys
+	})
 	state.mu.Lock()
-	state.apiKeyByToken[e.Token] = &key
+	state.connectionsByKey[e.Value] = c
 	state.mu.Unlock()
 }
 
@@ -681,6 +681,34 @@ func (state *State) deleteWorkspace(n notification) {
 	}
 	state.mu.Unlock()
 	dispatchNotification(state, e)
+}
+
+// DeleteWriteKey is the event sent when a write key is deleted.
+type DeleteWriteKey struct {
+	Connection int
+	Value      string
+}
+
+// deleteWriteKey deletes a write key.
+func (state *State) deleteWriteKey(n notification) {
+	e := DeleteWriteKey{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		keys := make([]string, len(c.Keys)-1)
+		i := 0
+		for _, key := range c.Keys {
+			if key != e.Value {
+				keys[i] = key
+				i++
+			}
+		}
+		c.Keys = keys
+	})
+	state.mu.Lock()
+	delete(state.connectionsByKey, e.Value)
+	state.mu.Unlock()
 }
 
 // ElectLeader is the event sent when a leader is elected.
@@ -861,34 +889,6 @@ func (state *State) renameWorkspace(n notification) {
 	})
 }
 
-// DeleteWriteKey is the event sent when a write key is deleted.
-type DeleteWriteKey struct {
-	Connection int
-	Value      string
-}
-
-// deleteWriteKey deletes a write key.
-func (state *State) deleteWriteKey(n notification) {
-	e := DeleteWriteKey{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		keys := make([]string, len(c.Keys)-1)
-		i := 0
-		for _, key := range c.Keys {
-			if key != e.Value {
-				keys[i] = key
-				i++
-			}
-		}
-		c.Keys = keys
-	})
-	state.mu.Lock()
-	delete(state.connectionsByKey, e.Value)
-	state.mu.Unlock()
-}
-
 // SeeLeader is the event sent when the leader is seen.
 type SeeLeader struct {
 	Election int
@@ -927,6 +927,79 @@ func (state *State) setAccount(n notification) {
 		a.RefreshToken = e.RefreshToken
 		a.ExpiresIn = e.ExpiresIn
 	})
+}
+
+// SetActionSchedulePeriod is the event sent when the schedule period of an
+// action is set.
+type SetActionSchedulePeriod struct {
+	ID             int
+	SchedulePeriod int16
+}
+
+// SetActionFormatSettings is the event sent when the format settings of an
+// action are changed.
+type SetActionFormatSettings struct {
+	Action   int
+	Settings []byte
+}
+
+// setActionFormatSettings sets the format settings of an action.
+func (state *State) setActionFormatSettings(n notification) {
+	e := SetActionFormatSettings{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.Action, func(a *Action) {
+		a.FormatSettings = e.Settings
+	})
+}
+
+// setActionSchedulePeriod sets the schedule period of an action.
+func (state *State) setActionSchedulePeriod(n notification) {
+	e := SetActionSchedulePeriod{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.SchedulePeriod = e.SchedulePeriod
+	})
+	dispatchNotification(state, e)
+}
+
+// SetActionStatus is the event sent when the status of an action is set.
+type SetActionStatus struct {
+	ID      int
+	Enabled bool
+}
+
+// setActionStatus sets the status of an action.
+func (state *State) setActionStatus(n notification) {
+	e := SetActionStatus{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceAction(e.ID, func(a *Action) {
+		a.Enabled = e.Enabled
+	})
+}
+
+// SetConnectionSettings is the event sent when the settings of a connection is
+// changed.
+type SetConnectionSettings struct {
+	Connection int
+	Settings   []byte
+}
+
+// setConnectionSettings sets the settings of a connection.
+func (state *State) setConnectionSettings(n notification) {
+	e := SetConnectionSettings{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceConnection(e.Connection, func(c *Connection) {
+		c.Settings = e.Settings
+	})
+	dispatchNotification(state, e)
 }
 
 // UpdateAction is the event sent when an action is updated.
@@ -992,60 +1065,6 @@ func (state *State) updateAction(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetActionSchedulePeriod is the event sent when the schedule period of an
-// action is set.
-type SetActionSchedulePeriod struct {
-	ID             int
-	SchedulePeriod int16
-}
-
-// setActionSchedulePeriod sets the schedule period of an action.
-func (state *State) setActionSchedulePeriod(n notification) {
-	e := SetActionSchedulePeriod{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceAction(e.ID, func(a *Action) {
-		a.SchedulePeriod = e.SchedulePeriod
-	})
-	dispatchNotification(state, e)
-}
-
-// SetActionFormatSettings is the event sent when the format settings of an
-// action are changed.
-type SetActionFormatSettings struct {
-	Action   int
-	Settings []byte
-}
-
-// setActionFormatSettings sets the format settings of an action.
-func (state *State) setActionFormatSettings(n notification) {
-	e := SetActionFormatSettings{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceAction(e.Action, func(a *Action) {
-		a.FormatSettings = e.Settings
-	})
-}
-
-// SetActionStatus is the event sent when the status of an action is set.
-type SetActionStatus struct {
-	ID      int
-	Enabled bool
-}
-
-// setActionStatus sets the status of an action.
-func (state *State) setActionStatus(n notification) {
-	e := SetActionStatus{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceAction(e.ID, func(a *Action) {
-		a.Enabled = e.Enabled
-	})
-}
-
 // UpdateConnection is the event sent when a connection is updated.
 type UpdateConnection struct {
 	Connection  int
@@ -1072,21 +1091,44 @@ func (state *State) updateConnection(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetConnectionSettings is the event sent when the settings of a connection is
-// changed.
-type SetConnectionSettings struct {
-	Connection int
-	Settings   []byte
+// UpdateIdentityResolution is the event sent when the identity resolution of a
+// workspace is updated.
+type UpdateIdentityResolution struct {
+	Workspace                      int
+	ResolveIdentitiesOnBatchImport bool
+	Identifiers                    []string
 }
 
-// setConnectionSettings sets the settings of a connection.
-func (state *State) setConnectionSettings(n notification) {
-	e := SetConnectionSettings{}
+// updateIdentityResolution updates the identity resolution of a workspace.
+func (state *State) updateIdentityResolution(n notification) {
+	e := UpdateIdentityResolution{}
 	if !decodeNotification(n, &e) {
 		return
 	}
-	state.replaceConnection(e.Connection, func(c *Connection) {
-		c.Settings = e.Settings
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.ResolveIdentitiesOnBatchImport = e.ResolveIdentitiesOnBatchImport
+		w.Identifiers = e.Identifiers
+	})
+}
+
+// UpdateUserSchema is the event sent when a user schema is updated.
+type UpdateUserSchema struct {
+	Workspace      int
+	UserSchema     types.Type
+	PrimarySources map[string]int
+	Identifiers    []string
+}
+
+// updateUserSchema updates a user schema.
+func (state *State) updateUserSchema(n notification) {
+	e := UpdateUserSchema{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
+		w.UserSchema = e.UserSchema
+		w.UserPrimarySources = e.PrimarySources
+		w.Identifiers = e.Identifiers
 	})
 	dispatchNotification(state, e)
 }
@@ -1152,48 +1194,6 @@ func (state *State) updateWorkspace(n notification) {
 		w.Name = e.Name
 		w.PrivacyRegion = e.PrivacyRegion
 		w.DisplayedProperties = e.DisplayedProperties
-	})
-	dispatchNotification(state, e)
-}
-
-// UpdateIdentityResolution is the event sent when the identity resolution of a
-// workspace is updated.
-type UpdateIdentityResolution struct {
-	Workspace                      int
-	ResolveIdentitiesOnBatchImport bool
-	Identifiers                    []string
-}
-
-// updateIdentityResolution updates the identity resolution of a workspace.
-func (state *State) updateIdentityResolution(n notification) {
-	e := UpdateIdentityResolution{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.ResolveIdentitiesOnBatchImport = e.ResolveIdentitiesOnBatchImport
-		w.Identifiers = e.Identifiers
-	})
-}
-
-// UpdateUserSchema is the event sent when a user schema is updated.
-type UpdateUserSchema struct {
-	Workspace      int
-	UserSchema     types.Type
-	PrimarySources map[string]int
-	Identifiers    []string
-}
-
-// updateUserSchema updates a user schema.
-func (state *State) updateUserSchema(n notification) {
-	e := UpdateUserSchema{}
-	if !decodeNotification(n, &e) {
-		return
-	}
-	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
-		w.UserSchema = e.UserSchema
-		w.UserPrimarySources = e.PrimarySources
-		w.Identifiers = e.Identifiers
 	})
 	dispatchNotification(state, e)
 }

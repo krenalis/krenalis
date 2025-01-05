@@ -81,6 +81,18 @@ func (observer *Observer) CreateListener(size int, filter *state.Where) (string,
 	return id, nil
 }
 
+// DeleteListener deletes the listener with identifier id.
+func (observer *Observer) DeleteListener(id string) {
+	observer.Lock()
+	for i, listener := range observer.listeners {
+		if listener.id == id {
+			observer.listeners = slices.Delete(observer.listeners, i, i)
+			break
+		}
+	}
+	observer.Unlock()
+}
+
 // Events returns the observed events listen to by the specified listener and
 // the number of discarded events. If the listener does not exist, it returns
 // the ErrEventListenerNotFound error.
@@ -110,18 +122,6 @@ func (observer *Observer) Events(listenerID string) ([]json.Value, int, error) {
 	}
 	listener.Unlock()
 	return observedEvents, discarded, nil
-}
-
-// DeleteListener deletes the listener with identifier id.
-func (observer *Observer) DeleteListener(id string) {
-	observer.Lock()
-	for i, listener := range observer.listeners {
-		if listener.id == id {
-			observer.listeners = slices.Delete(observer.listeners, i, i)
-			break
-		}
-	}
-	observer.Unlock()
 }
 
 // addEvent adds an event to the observed events.

@@ -149,75 +149,6 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 	return store.warehouse().AlterUserColumns(context.Background(), columns, operations)
 }
 
-// PreviewUserSchemaUpdate previews a user schema update returning the queries
-// that would be executed updating the user schema of the store.
-//
-// schema is the user schema without meta properties (this parameter is useful
-// for obtaining type information and for creating views), while operations is
-// the set of operations to apply in order to migrate the current schema to the
-// given schema.
-//
-// TODO(Gianluca): in this method, there is an inconsistency related to the
-// parameters, that is: the schema is passed as properties, while the operations
-// are columns, so there is a mix of different levels of abstraction. This is
-// discussed in the issue https://github.com/meergo/meergo/issues/862.
-//
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
-	if err != nil {
-		return nil, err
-	}
-	defer done()
-	userColumns := propertiesToColumns(schema)
-	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
-}
-
-// TestWarehouseUpdate tests if it is possible to update the warehouse of the
-// store. If an attempt is made to connect a data warehouse which has already
-// been connected to another workspace, the method returns the error
-// ErrDifferentWarehouse. If an error occurs with the data warehouse, it returns
-// a *DataWarehouseError error.
-func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) error {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
-	if err != nil {
-		return err
-	}
-	defer done()
-	ws, ok := store.ds.state.Workspace(store.workspace)
-	if !ok {
-		return nil
-	}
-	// Count the users on the current warehouse.
-	query := meergo.RowQuery{
-		Columns: []meergo.Column{{Name: "__id__", Type: types.UUID()}},
-		Table:   "users",
-	}
-	_, count1, err := store.warehouse().Query(ctx, query, true)
-	if err != nil {
-		return err
-	}
-	// Count the users on the warehouse that will be connected.
-	dw, err := registeredWarehouse(ws.Warehouse.Name, toSettings)
-	if err != nil {
-		return err
-	}
-	_, count2, err := dw.Query(ctx, query, true)
-	if err != nil {
-		return err
-	}
-	// If the number of users is different, it means (except for the "unlucky"
-	// cases where Identity Resolution is in progress) that an attempt is being
-	// made to connect to another data warehouse.
-	if count1 != count2 {
-		return ErrDifferentWarehouse
-	}
-	return nil
-}
-
 // DeleteDestinationUsers deletes the destination users of the provided action.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
@@ -456,12 +387,6 @@ func (store *Store) NewBatchIdentityWriter(action *state.Action, purge bool, ack
 	return &iw, nil
 }
 
-// NewEventWriter returns a new writer to write events.
-func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
-	store.mustBeOpen()
-	return newEventWriter(store, ack)
-}
-
 // NewEventIdentityWriter returns an identity writer for writing user
 // identities, relative to the action, on the data warehouse, in case of
 // importing identities from events.
@@ -519,6 +444,38 @@ func (store *Store) NewEventIdentityWriter(actionID int, ack EventIdentityWriter
 	}
 
 	return iw, nil
+}
+
+// NewEventWriter returns a new writer to write events.
+func (store *Store) NewEventWriter(ack EventWriterAckFunc) *EventWriter {
+	store.mustBeOpen()
+	return newEventWriter(store, ack)
+}
+
+// PreviewUserSchemaUpdate previews a user schema update returning the queries
+// that would be executed updating the user schema of the store.
+//
+// schema is the user schema without meta properties (this parameter is useful
+// for obtaining type information and for creating views), while operations is
+// the set of operations to apply in order to migrate the current schema to the
+// given schema.
+//
+// TODO(Gianluca): in this method, there is an inconsistency related to the
+// parameters, that is: the schema is passed as properties, while the operations
+// are columns, so there is a mix of different levels of abstraction. This is
+// discussed in the issue https://github.com/meergo/meergo/issues/862.
+//
+// If an error occurs with the data warehouse, it returns a *DataWarehouseError
+// error.
+func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	userColumns := propertiesToColumns(schema)
+	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
 }
 
 // PurgeActions purges the provided actions from the data warehouse, deleting
@@ -628,6 +585,49 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 		}
 	}()
 
+	return nil
+}
+
+// TestWarehouseUpdate tests if it is possible to update the warehouse of the
+// store. If an attempt is made to connect a data warehouse which has already
+// been connected to another workspace, the method returns the error
+// ErrDifferentWarehouse. If an error occurs with the data warehouse, it returns
+// a *DataWarehouseError error.
+func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) error {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	ws, ok := store.ds.state.Workspace(store.workspace)
+	if !ok {
+		return nil
+	}
+	// Count the users on the current warehouse.
+	query := meergo.RowQuery{
+		Columns: []meergo.Column{{Name: "__id__", Type: types.UUID()}},
+		Table:   "users",
+	}
+	_, count1, err := store.warehouse().Query(ctx, query, true)
+	if err != nil {
+		return err
+	}
+	// Count the users on the warehouse that will be connected.
+	dw, err := registeredWarehouse(ws.Warehouse.Name, toSettings)
+	if err != nil {
+		return err
+	}
+	_, count2, err := dw.Query(ctx, query, true)
+	if err != nil {
+		return err
+	}
+	// If the number of users is different, it means (except for the "unlucky"
+	// cases where Identity Resolution is in progress) that an attempt is being
+	// made to connect to another data warehouse.
+	if count1 != count2 {
+		return ErrDifferentWarehouse
+	}
 	return nil
 }
 

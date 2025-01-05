@@ -46,18 +46,6 @@ const (
 	queryMaxSize         = 16_777_215 // maximum size in runes of a connection query.
 )
 
-// Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
-type Strategy string
-
-// isValidStrategy reports whether s is a valid strategy.
-func isValidStrategy(s Strategy) bool {
-	switch s {
-	case "AB-C", "ABC", "A-B-C", "AC-B":
-		return true
-	}
-	return false
-}
-
 // Connection represents a connection.
 type Connection struct {
 	core              *Core
@@ -80,6 +68,9 @@ type Connection struct {
 	// Actions is populated only by the (*Workspace).Connection method.
 	Actions *[]Action `json:"actions,omitzero"`
 }
+
+// Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
+type Strategy string
 
 // Action returns the action with identifier id of the connection.
 // It returns an errors.NotFound error if the action does not exist.
@@ -423,6 +414,127 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	return actionTypes, nil
 }
 
+// AppUsers returns the users of an app connection and the cursor to get the
+// next users. The returned cursor is empty if there are no other users.
+//
+// It returns an errors.UnprocessableError error with code SchemaNotAligned if
+// the provided schema is not aligned with the app's source schema.
+func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) (json.Value, string, error) {
+
+	this.core.mustBeOpen()
+
+	if this.connection.Connector().Type != state.App {
+		return nil, "", errors.BadRequest("connection %d is not an app connection", this.connection.ID)
+	}
+	if !schema.Valid() {
+		return nil, "", errors.BadRequest("schema is not valid")
+	}
+	var lastChangeTime time.Time
+	if cursor != "" {
+		var err error
+		lastChangeTime, err = deserializeCursor(cursor)
+		if err != nil {
+			return nil, "", errors.BadRequest("cursor is malformed")
+		}
+	}
+
+	// Get the users.
+	records, err := this.app().Users(ctx, schema, lastChangeTime)
+	if err != nil {
+		switch err.(type) {
+		case *connectors.UnavailableError:
+			err = errors.Unavailable("%s", err)
+		case *connectors.SchemaError:
+			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the app's source schema: %w", err)
+		}
+		return nil, "", err
+	}
+	defer records.Close()
+
+	var last connectors.Record
+	users := make([]any, 0, 100)
+
+	for user := range records.All(ctx) {
+		if user.Err != nil {
+			return nil, "", user.Err
+		}
+		users = append(users, user.Properties)
+		if records.Last() {
+			last = user
+		}
+		if len(users) == 100 {
+			break
+		}
+	}
+	if err = records.Err(); err != nil {
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("%s", err)
+		}
+		return nil, "", err
+	}
+
+	// Build the cursor.
+	cursor, err = serializeCursor(last.LastChangeTime)
+	if err != nil {
+		return nil, "", err
+	}
+
+	marshaledUsers, err := types.Marshal(users, types.Array(schema))
+	if err != nil {
+		return nil, "", err
+	}
+
+	return marshaledUsers, cursor, nil
+}
+
+// CompletePath returns the complete representation of the given path, based
+// on the connector that must be a file with a storage. path cannot be empty,
+// cannot be longer than 1024 runes, and must be UTF-8 encoded.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - InvalidPath, if path is not valid for the file storage connector.
+//   - InvalidPlaceholder, if path for source connections contains a placeholder
+//     or path for destination connections contains an invalid placeholder.
+func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
+	this.core.mustBeOpen()
+	c := this.connection
+	if c.Connector().Type != state.FileStorage {
+		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
+	}
+	if path == "" {
+		return "", errors.BadRequest("path is empty")
+	}
+	if !utf8.ValidString(path) {
+		return "", errors.BadRequest("path is not UTF-8 encoded")
+	}
+	if n := utf8.RuneCountInString(path); n > 1024 {
+		return "", errors.BadRequest("path is longer than 1024 runes")
+	}
+	var replacer connectors.PlaceholderReplacer
+	switch c.Role {
+	case state.Source:
+		_, err := connectors.ReplacePlaceholders(path, func(_ string) (string, bool) {
+			return "", false
+		})
+		if err != nil {
+			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
+		}
+	case state.Destination:
+		replacer = newPathPlaceholderReplacer(time.Now().UTC())
+	}
+	path, err := this.storage().CompletePath(ctx, path, replacer)
+	if err != nil {
+		switch err.(type) {
+		case *meergo.InvalidPathError:
+			err = errors.Unprocessable(InvalidPath, "%s", err)
+		case *connectors.PlaceholderError:
+			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		}
+		return "", err
+	}
+	return path, nil
+}
+
 // CreateAction creates an action for the connection returning the identifier of
 // the created action. target is the target of the action and must be supported
 // by the connector of the connection.
@@ -619,125 +731,59 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	return n.ID, nil
 }
 
-// AppUsers returns the users of an app connection and the cursor to get the
-// next users. The returned cursor is empty if there are no other users.
+// CreateWriteKey creates a new write key for the connection. The connection
+// must be a source mobile, server or website connection.
 //
-// It returns an errors.UnprocessableError error with code SchemaNotAligned if
-// the provided schema is not aligned with the app's source schema.
-func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor string) (json.Value, string, error) {
-
-	this.core.mustBeOpen()
-
-	if this.connection.Connector().Type != state.App {
-		return nil, "", errors.BadRequest("connection %d is not an app connection", this.connection.ID)
-	}
-	if !schema.Valid() {
-		return nil, "", errors.BadRequest("schema is not valid")
-	}
-	var lastChangeTime time.Time
-	if cursor != "" {
-		var err error
-		lastChangeTime, err = deserializeCursor(cursor)
-		if err != nil {
-			return nil, "", errors.BadRequest("cursor is malformed")
-		}
-	}
-
-	// Get the users.
-	records, err := this.app().Users(ctx, schema, lastChangeTime)
-	if err != nil {
-		switch err.(type) {
-		case *connectors.UnavailableError:
-			err = errors.Unavailable("%s", err)
-		case *connectors.SchemaError:
-			err = errors.Unprocessable(SchemaNotAligned, "schema is not aligned with the app's source schema: %w", err)
-		}
-		return nil, "", err
-	}
-	defer records.Close()
-
-	var last connectors.Record
-	users := make([]any, 0, 100)
-
-	for user := range records.All(ctx) {
-		if user.Err != nil {
-			return nil, "", user.Err
-		}
-		users = append(users, user.Properties)
-		if records.Last() {
-			last = user
-		}
-		if len(users) == 100 {
-			break
-		}
-	}
-	if err = records.Err(); err != nil {
-		if _, ok := err.(*connectors.UnavailableError); ok {
-			err = errors.Unavailable("%s", err)
-		}
-		return nil, "", err
-	}
-
-	// Build the cursor.
-	cursor, err = serializeCursor(last.LastChangeTime)
-	if err != nil {
-		return nil, "", err
-	}
-
-	marshaledUsers, err := types.Marshal(users, types.Array(schema))
-	if err != nil {
-		return nil, "", err
-	}
-
-	return marshaledUsers, cursor, nil
-}
-
-// CompletePath returns the complete representation of the given path, based
-// on the connector that must be a file with a storage. path cannot be empty,
-// cannot be longer than 1024 runes, and must be UTF-8 encoded.
-//
-// It returns an errors.UnprocessableError error with code:
-//   - InvalidPath, if path is not valid for the file storage connector.
-//   - InvalidPlaceholder, if path for source connections contains a placeholder
-//     or path for destination connections contains an invalid placeholder.
-func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
+// If the connection does not exist, it returns an errors.NotFoundError error.
+// If the connection has already too many keys, it returns an
+// errors.UnprocessableError error with code TooManyKeys.
+func (this *Connection) CreateWriteKey(ctx context.Context) (string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
-	if c.Connector().Type != state.FileStorage {
-		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
+	connector := c.Connector()
+	switch connector.Type {
+	case state.Mobile, state.Server, state.Website:
+	default:
+		return "", errors.NotFound("connection %d is not a mobile, server or website", c.ID)
 	}
-	if path == "" {
-		return "", errors.BadRequest("path is empty")
+	if c.Role != state.Source {
+		return "", errors.NotFound("connection %d is not a source", c.ID)
 	}
-	if !utf8.ValidString(path) {
-		return "", errors.BadRequest("path is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(path); n > 1024 {
-		return "", errors.BadRequest("path is longer than 1024 runes")
-	}
-	var replacer connectors.PlaceholderReplacer
-	switch c.Role {
-	case state.Source:
-		_, err := connectors.ReplacePlaceholders(path, func(_ string) (string, bool) {
-			return "", false
-		})
-		if err != nil {
-			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
-		}
-	case state.Destination:
-		replacer = newPathPlaceholderReplacer(time.Now().UTC())
-	}
-	path, err := this.storage().CompletePath(ctx, path, replacer)
+	value, err := generateWriteKey()
 	if err != nil {
-		switch err.(type) {
-		case *meergo.InvalidPathError:
-			err = errors.Unprocessable(InvalidPath, "%s", err)
-		case *connectors.PlaceholderError:
-			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
-		}
 		return "", err
 	}
-	return path, nil
+	n := state.CreateWriteKey{
+		Connection:   c.ID,
+		Value:        value,
+		CreationTime: time.Now().UTC(),
+	}
+	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		var count int
+		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		if err != nil {
+			return err
+		}
+		if count == maxKeysPerConnection {
+			return errors.Unprocessable(TooManyKeys, "connection %d has already %d keys", n.Connection, maxKeysPerConnection)
+		}
+		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
+			n.Connection, n.Value, n.CreationTime)
+		if err != nil {
+			if postgres.IsForeignKeyViolation(err) {
+				if postgres.ErrConstraintName(err) == "connections_keys_connection_fkey" {
+					err = errors.NotFound("connection %d does not exist", n.Connection)
+				}
+			}
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return value, nil
 }
 
 // Delete deletes the connection.
@@ -801,6 +847,57 @@ func (this *Connection) Delete(ctx context.Context) error {
 		}
 		return tx.Notify(ctx, n)
 	})
+	return err
+}
+
+// DeleteWriteKey deletes the given write key of the connection. key cannot be
+// empty and cannot be the unique key of the connection. The connection must be
+// a source mobile, server or website connection.
+//
+// If the key does not exist, it returns an errors.NotFoundError error.
+// If the key is the unique key of the server, it returns an
+// errors.UnprocessableError error with code ConnectionUniqueKey.
+func (this *Connection) DeleteWriteKey(ctx context.Context, key string) error {
+	this.core.mustBeOpen()
+	if key == "" {
+		return errors.BadRequest("key is empty")
+	}
+	if !isWriteKey(key) {
+		return errors.BadRequest("key %q is malformed", key)
+	}
+	c := this.connection
+	connector := c.Connector()
+	switch connector.Type {
+	case state.Mobile, state.Server, state.Website:
+	default:
+		return errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
+	}
+	if c.Role != state.Source {
+		return errors.BadRequest("connection %d is not a source", c.ID)
+	}
+	n := state.DeleteWriteKey{
+		Connection: c.ID,
+		Value:      key,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		var count int
+		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		if err != nil {
+			return err
+		}
+		if count == 1 {
+			return errors.Unprocessable(ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key")
+		}
+		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("key %q does not exist", key)
+		}
+		return tx.Notify(ctx, n)
+	})
+
 	return err
 }
 
@@ -992,77 +1089,6 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	return identities, count, err
 }
 
-// WriteKeys returns the write keys of the connection.
-// The connection must be a source mobile, server or website connection.
-func (this *Connection) WriteKeys() ([]string, error) {
-	this.core.mustBeOpen()
-	c := this.connection
-	switch c.Connector().Type {
-	case state.Mobile, state.Server, state.Website:
-	default:
-		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
-	}
-	if c.Role != state.Source {
-		return nil, errors.BadRequest("connection %d is not a source", c.ID)
-	}
-	return slices.Clone(c.Keys), nil
-}
-
-// CreateWriteKey creates a new write key for the connection. The connection
-// must be a source mobile, server or website connection.
-//
-// If the connection does not exist, it returns an errors.NotFoundError error.
-// If the connection has already too many keys, it returns an
-// errors.UnprocessableError error with code TooManyKeys.
-func (this *Connection) CreateWriteKey(ctx context.Context) (string, error) {
-	this.core.mustBeOpen()
-	c := this.connection
-	connector := c.Connector()
-	switch connector.Type {
-	case state.Mobile, state.Server, state.Website:
-	default:
-		return "", errors.NotFound("connection %d is not a mobile, server or website", c.ID)
-	}
-	if c.Role != state.Source {
-		return "", errors.NotFound("connection %d is not a source", c.ID)
-	}
-	value, err := generateWriteKey()
-	if err != nil {
-		return "", err
-	}
-	n := state.CreateWriteKey{
-		Connection:   c.ID,
-		Value:        value,
-		CreationTime: time.Now().UTC(),
-	}
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		var count int
-		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
-		if err != nil {
-			return err
-		}
-		if count == maxKeysPerConnection {
-			return errors.Unprocessable(TooManyKeys, "connection %d has already %d keys", n.Connection, maxKeysPerConnection)
-		}
-		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
-			n.Connection, n.Value, n.CreationTime)
-		if err != nil {
-			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "connections_keys_connection_fkey" {
-					err = errors.NotFound("connection %d does not exist", n.Connection)
-				}
-			}
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return value, nil
-}
-
 // LinkConnection links the connection with identifier id to this connection and
 // vice versa.
 // If the connection to link does not exist, it returns an
@@ -1104,254 +1130,6 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 		}
 		return tx.Notify(ctx, n)
 	})
-	return err
-}
-
-// Records returns the records and the schema of the file with the given path
-// stored in the connection, that must be a file storage connection. path must
-// be UTF-8 encoded with a length in range [1, 1024].
-//
-// fileConnector refers to the file connector to use. If it supports sheets,
-// sheet must be a valid sheet name; otherwise, it must be an empty string. A
-// valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
-// not start or end with "'", and does not contain any of "*", "/", ":", "?",
-// "[", "\", and "]". Sheet names are case-insensitive.
-//
-// compression indicates if the file is compressed and how. settings are the
-// format settings, and limit restricts the number of records to return, between
-// 0 and 100.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FormatNotExist, if the format does not exist.
-//   - InvalidSettings, if the settings are not valid.
-//   - NoColumnsFound, if the file has no columns.
-//   - SheetNotExist, if the file does not contain the provided sheet.
-//   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) Records(ctx context.Context, format string, path, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, error) {
-
-	this.core.mustBeOpen()
-
-	c := this.connection
-
-	// Validate the connection type.
-	if c.Connector().Type != state.FileStorage {
-		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
-	}
-	// Validate the path.
-	if path == "" {
-		return nil, types.Type{}, errors.BadRequest("path cannot be empty")
-	}
-	if !utf8.ValidString(path) {
-		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
-	}
-	if containsNUL(path) {
-		return nil, types.Type{}, errors.BadRequest("path contains NUL rune")
-	}
-	if n := utf8.RuneCountInString(path); n > 1024 {
-		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
-	}
-
-	// Validate the format.
-	formatConnector, ok := this.core.state.Connector(format)
-	if !ok {
-		return nil, types.Type{}, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
-	}
-	if formatConnector.Type != state.File {
-		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
-	}
-
-	// Validate the sheet.
-	if formatConnector.HasSheets {
-		if sheet == "" {
-			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
-		}
-		if !connectors.IsValidSheetName(sheet) {
-			return nil, types.Type{}, errors.BadRequest("sheet is not valid")
-		}
-	} else {
-		if sheet != "" {
-			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
-		}
-	}
-
-	// Validate the settings.
-	if formatConnector.HasSettings {
-		if settings == nil {
-			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has settings", formatConnector.Name)
-		}
-		if !json.Valid(settings) || !settings.IsObject() {
-			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
-		}
-	} else if settings != nil {
-		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no settings", formatConnector.Name)
-	}
-
-	// Validate the limit.
-	if limit < 0 || limit > 100 {
-		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
-	if err != nil {
-		switch err {
-		case connectors.ErrNoColumnsFound:
-			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
-		case meergo.ErrSheetNotExist:
-			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
-		default:
-			switch err.(type) {
-			case *meergo.InvalidSettingsError:
-				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *meergo.UnsupportedColumnTypeError:
-				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
-			case *connectors.UnavailableError:
-				err = errors.Unavailable("cannot read records: %w", err)
-			}
-		}
-		return nil, types.Type{}, err
-	}
-
-	recs := make([]any, len(records))
-	for i, r := range records {
-		recs[i] = r
-	}
-
-	schema := types.Object(columns)
-	marshaledRecords, err := types.Marshal(recs, types.Array(schema))
-	if err != nil {
-		return nil, types.Type{}, err
-	}
-
-	return marshaledRecords, schema, nil
-}
-
-// UnlinkConnection unlinks the connection with the specified identifier id from
-// this connection and vice versa.
-// If the connection to unlink does not exist, it returns an
-// errors.UnprocessableError with the code LinkedConnectionNotExist.
-func (this *Connection) UnlinkConnection(ctx context.Context, id int) error {
-	this.core.mustBeOpen()
-	// Validate the connection to unlink.
-	c := this.connection.Connector()
-	ws := this.connection.Workspace()
-	role := this.connection.Role
-	err := validateLinkedConnections([]int{id}, c, ws, role)
-	if err != nil {
-		return err
-	}
-	// Return if this connection is not linked to any other connection.
-	if !slices.Contains(this.connection.LinkedConnections, id) {
-		return nil
-	}
-	n := state.UnlinkConnection{
-		Connections: [2]int{this.connection.ID, id},
-	}
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		const remove = "UPDATE connections\n" +
-			"SET linked_connections =\n" +
-			"\tCASE\n" +
-			"\t\tWHEN array_remove(linked_connections, $1) = '{}' THEN NULL\n" +
-			"\t\tELSE array_remove(linked_connections, $1)\n" +
-			"\tEND\n" +
-			"WHERE id = $2 AND $1 = ANY(linked_connections)"
-		result, err := tx.Exec(ctx, remove, n.Connections[1], n.Connections[0])
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return nil
-		}
-		result, err = tx.Exec(ctx, remove, n.Connections[0], n.Connections[1])
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", n.Connections[1])
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
-// Rename renames the connection with the given new name.
-// name must be between 1 and 100 runes long.
-//
-// It returns an errors.NotFoundError error if the connection does not exist
-// anymore.
-func (this *Connection) Rename(ctx context.Context, name string) error {
-	this.core.mustBeOpen()
-	if name == "" || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
-	}
-	if name == this.connection.Name {
-		return nil
-	}
-	n := state.RenameConnection{
-		Connection: this.connection.ID,
-		Name:       name,
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("connection %d does not exist", n.Connection)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
-// DeleteWriteKey deletes the given write key of the connection. key cannot be
-// empty and cannot be the unique key of the connection. The connection must be
-// a source mobile, server or website connection.
-//
-// If the key does not exist, it returns an errors.NotFoundError error.
-// If the key is the unique key of the server, it returns an
-// errors.UnprocessableError error with code ConnectionUniqueKey.
-func (this *Connection) DeleteWriteKey(ctx context.Context, key string) error {
-	this.core.mustBeOpen()
-	if key == "" {
-		return errors.BadRequest("key is empty")
-	}
-	if !isWriteKey(key) {
-		return errors.BadRequest("key %q is malformed", key)
-	}
-	c := this.connection
-	connector := c.Connector()
-	switch connector.Type {
-	case state.Mobile, state.Server, state.Website:
-	default:
-		return errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
-	}
-	if c.Role != state.Source {
-		return errors.BadRequest("connection %d is not a source", c.ID)
-	}
-	n := state.DeleteWriteKey{
-		Connection: c.ID,
-		Value:      key,
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		var count int
-		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
-		if err != nil {
-			return err
-		}
-		if count == 1 {
-			return errors.Unprocessable(ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key")
-		}
-		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("key %q does not exist", key)
-		}
-		return tx.Notify(ctx, n)
-	})
-
 	return err
 }
 
@@ -1546,88 +1324,152 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	return b.Bytes(), nil
 }
 
-// Update updates the connection.
-func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) error {
+// Records returns the records and the schema of the file with the given path
+// stored in the connection, that must be a file storage connection. path must
+// be UTF-8 encoded with a length in range [1, 1024].
+//
+// fileConnector refers to the file connector to use. If it supports sheets,
+// sheet must be a valid sheet name; otherwise, it must be an empty string. A
+// valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
+// not start or end with "'", and does not contain any of "*", "/", ":", "?",
+// "[", "\", and "]". Sheet names are case-insensitive.
+//
+// compression indicates if the file is compressed and how. settings are the
+// format settings, and limit restricts the number of records to return, between
+// 0 and 100.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FormatNotExist, if the format does not exist.
+//   - InvalidSettings, if the settings are not valid.
+//   - NoColumnsFound, if the file has no columns.
+//   - SheetNotExist, if the file does not contain the provided sheet.
+//   - UnsupportedColumnType, if a column type is not supported.
+func (this *Connection) Records(ctx context.Context, format string, path, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, error) {
 
 	this.core.mustBeOpen()
 
-	if connection.Name == "" || containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
-		return errors.BadRequest("name %q is not valid", connection.Name)
+	c := this.connection
+
+	// Validate the connection type.
+	if c.Connector().Type != state.FileStorage {
+		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
-	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
-		return errors.BadRequest("strategy %q is not valid", *s)
+	// Validate the path.
+	if path == "" {
+		return nil, types.Type{}, errors.BadRequest("path cannot be empty")
 	}
-	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
-		return errors.BadRequest("sending mode %q is not valid", *sm)
+	if !utf8.ValidString(path) {
+		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
 	}
-	if host := connection.WebsiteHost; host != "" {
-		if _, _, err := parseWebsiteHost(host); err != nil {
-			return errors.BadRequest("website host %q is not valid", host)
+	if containsNUL(path) {
+		return nil, types.Type{}, errors.BadRequest("path contains NUL rune")
+	}
+	if n := utf8.RuneCountInString(path); n > 1024 {
+		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
+	}
+
+	// Validate the format.
+	formatConnector, ok := this.core.state.Connector(format)
+	if !ok {
+		return nil, types.Type{}, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
+	}
+	if formatConnector.Type != state.File {
+		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
+	}
+
+	// Validate the sheet.
+	if formatConnector.HasSheets {
+		if sheet == "" {
+			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+		}
+		if !connectors.IsValidSheetName(sheet) {
+			return nil, types.Type{}, errors.BadRequest("sheet is not valid")
+		}
+	} else {
+		if sheet != "" {
+			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
 		}
 	}
 
-	n := state.UpdateConnection{
-		Connection:  this.connection.ID,
-		Name:        connection.Name,
-		Enabled:     connection.Enabled,
-		Strategy:    (*state.Strategy)(connection.Strategy),
-		SendingMode: (*state.SendingMode)(connection.SendingMode),
-		WebsiteHost: connection.WebsiteHost,
+	// Validate the settings.
+	if formatConnector.HasSettings {
+		if settings == nil {
+			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has settings", formatConnector.Name)
+		}
+		if !json.Valid(settings) || !settings.IsObject() {
+			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
+		}
+	} else if settings != nil {
+		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no settings", formatConnector.Name)
 	}
 
-	c := this.connection.Connector()
+	// Validate the limit.
+	if limit < 0 || limit > 100 {
+		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
+	}
 
-	// Validate the strategy.
-	if this.connection.Role == state.Source {
-		switch c.Type {
-		case state.Mobile, state.Website:
-			if connection.Strategy == nil {
-				return errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
-			}
+	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
+	if err != nil {
+		switch err {
+		case connectors.ErrNoColumnsFound:
+			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
+		case meergo.ErrSheetNotExist:
+			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
-			if connection.Strategy != nil {
-				return errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
+			switch err.(type) {
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
+			case *meergo.UnsupportedColumnTypeError:
+				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("cannot read records: %w", err)
 			}
 		}
-	} else if connection.Strategy != nil {
-		return errors.BadRequest("destination connections cannot have a strategy")
+		return nil, types.Type{}, err
 	}
 
-	// Validate the sending mode.
-	if this.connection.Role == state.Destination {
-		if c.SendingMode != nil {
-			if connection.SendingMode == nil {
-				return errors.BadRequest("connector %s requires a sending mode", c.Name)
-			}
-			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
-				return errors.BadRequest("connector %s does not support sending mode %s", c.Name, *c.SendingMode)
-			}
-		} else if connection.SendingMode != nil {
-			return errors.BadRequest("connector %s does not support sending modes", c.Name)
-		}
-	} else if connection.SendingMode != nil {
-		return errors.BadRequest("source connections cannot have a sending mode")
+	recs := make([]any, len(records))
+	for i, r := range records {
+		recs[i] = r
 	}
 
-	// Validate the website host.
-	if n.WebsiteHost != "" && c.Type != state.Website {
-		return errors.BadRequest("connector %s cannot have a website host, it's a %s",
-			c.Name, strings.ToLower(c.Type.String()))
+	schema := types.Object(columns)
+	marshaledRecords, err := types.Marshal(recs, types.Array(schema))
+	if err != nil {
+		return nil, types.Type{}, err
 	}
 
+	return marshaledRecords, schema, nil
+}
+
+// Rename renames the connection with the given new name.
+// name must be between 1 and 100 runes long.
+//
+// It returns an errors.NotFoundError error if the connection does not exist
+// anymore.
+func (this *Connection) Rename(ctx context.Context, name string) error {
+	this.core.mustBeOpen()
+	if name == "" || utf8.RuneCountInString(name) > 100 {
+		return errors.BadRequest("name %q is not valid", name)
+	}
+	if name == this.connection.Name {
+		return nil
+	}
+	n := state.RenameConnection{
+		Connection: this.connection.ID,
+		Name:       name,
+	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" strategy = $3, sending_mode = $4, website_host = $5 WHERE id = $6",
-			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1 WHERE id = $2", n.Name, n.Connection)
 		if err != nil {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return nil
+			return errors.NotFound("connection %d does not exist", n.Connection)
 		}
 		return tx.Notify(ctx, n)
 	})
-
 	return err
 }
 
@@ -1765,6 +1607,155 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	return schema, err
 }
 
+// UnlinkConnection unlinks the connection with the specified identifier id from
+// this connection and vice versa.
+// If the connection to unlink does not exist, it returns an
+// errors.UnprocessableError with the code LinkedConnectionNotExist.
+func (this *Connection) UnlinkConnection(ctx context.Context, id int) error {
+	this.core.mustBeOpen()
+	// Validate the connection to unlink.
+	c := this.connection.Connector()
+	ws := this.connection.Workspace()
+	role := this.connection.Role
+	err := validateLinkedConnections([]int{id}, c, ws, role)
+	if err != nil {
+		return err
+	}
+	// Return if this connection is not linked to any other connection.
+	if !slices.Contains(this.connection.LinkedConnections, id) {
+		return nil
+	}
+	n := state.UnlinkConnection{
+		Connections: [2]int{this.connection.ID, id},
+	}
+	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		const remove = "UPDATE connections\n" +
+			"SET linked_connections =\n" +
+			"\tCASE\n" +
+			"\t\tWHEN array_remove(linked_connections, $1) = '{}' THEN NULL\n" +
+			"\t\tELSE array_remove(linked_connections, $1)\n" +
+			"\tEND\n" +
+			"WHERE id = $2 AND $1 = ANY(linked_connections)"
+		result, err := tx.Exec(ctx, remove, n.Connections[1], n.Connections[0])
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		result, err = tx.Exec(ctx, remove, n.Connections[0], n.Connections[1])
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", n.Connections[1])
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// Update updates the connection.
+func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) error {
+
+	this.core.mustBeOpen()
+
+	if connection.Name == "" || containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
+		return errors.BadRequest("name %q is not valid", connection.Name)
+	}
+	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
+		return errors.BadRequest("strategy %q is not valid", *s)
+	}
+	if sm := connection.SendingMode; sm != nil && !isValidSendingMode(*sm) {
+		return errors.BadRequest("sending mode %q is not valid", *sm)
+	}
+	if host := connection.WebsiteHost; host != "" {
+		if _, _, err := parseWebsiteHost(host); err != nil {
+			return errors.BadRequest("website host %q is not valid", host)
+		}
+	}
+
+	n := state.UpdateConnection{
+		Connection:  this.connection.ID,
+		Name:        connection.Name,
+		Enabled:     connection.Enabled,
+		Strategy:    (*state.Strategy)(connection.Strategy),
+		SendingMode: (*state.SendingMode)(connection.SendingMode),
+		WebsiteHost: connection.WebsiteHost,
+	}
+
+	c := this.connection.Connector()
+
+	// Validate the strategy.
+	if this.connection.Role == state.Source {
+		switch c.Type {
+		case state.Mobile, state.Website:
+			if connection.Strategy == nil {
+				return errors.BadRequest("%s connections must have a strategy", strings.ToLower(c.Type.String()))
+			}
+		default:
+			if connection.Strategy != nil {
+				return errors.BadRequest("%s connections cannot have a strategy", strings.ToLower(c.Type.String()))
+			}
+		}
+	} else if connection.Strategy != nil {
+		return errors.BadRequest("destination connections cannot have a strategy")
+	}
+
+	// Validate the sending mode.
+	if this.connection.Role == state.Destination {
+		if c.SendingMode != nil {
+			if connection.SendingMode == nil {
+				return errors.BadRequest("connector %s requires a sending mode", c.Name)
+			}
+			if !c.SendingMode.Contains(state.SendingMode(*connection.SendingMode)) {
+				return errors.BadRequest("connector %s does not support sending mode %s", c.Name, *c.SendingMode)
+			}
+		} else if connection.SendingMode != nil {
+			return errors.BadRequest("connector %s does not support sending modes", c.Name)
+		}
+	} else if connection.SendingMode != nil {
+		return errors.BadRequest("source connections cannot have a sending mode")
+	}
+
+	// Validate the website host.
+	if n.WebsiteHost != "" && c.Type != state.Website {
+		return errors.BadRequest("connector %s cannot have a website host, it's a %s",
+			c.Name, strings.ToLower(c.Type.String()))
+	}
+
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
+			" strategy = $3, sending_mode = $4, website_host = $5 WHERE id = $6",
+			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return nil
+		}
+		return tx.Notify(ctx, n)
+	})
+
+	return err
+}
+
+// WriteKeys returns the write keys of the connection.
+// The connection must be a source mobile, server or website connection.
+func (this *Connection) WriteKeys() ([]string, error) {
+	this.core.mustBeOpen()
+	c := this.connection
+	switch c.Connector().Type {
+	case state.Mobile, state.Server, state.Website:
+	default:
+		return nil, errors.BadRequest("connection %d is not a mobile, server or website", c.ID)
+	}
+	if c.Role != state.Source {
+		return nil, errors.BadRequest("connection %d is not a source", c.ID)
+	}
+	return slices.Clone(c.Keys), nil
+}
+
 // app returns the app of the connection.
 func (this *Connection) app() *connectors.App {
 	return this.core.connectors.App(this.connection)
@@ -1844,6 +1835,68 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	return types.Type{}, nil
 }
 
+// deserializeCursor deserializes a cursor passed to the API.
+func deserializeCursor(cursor string) (time.Time, error) {
+	data, err := hex.DecodeString(cursor)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var c time.Time
+	err = json.Unmarshal(data, &c)
+	if err != nil {
+		return time.Time{}, err
+	}
+	// TODO(marco): validate the cursor's fields.
+	return c, nil
+}
+
+// isMetaProperty reports whether the given property name refers to a property
+// considered a meta property by a data warehouse.
+func isMetaProperty(name string) bool {
+	return len(name) >= 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
+}
+
+// isValidStrategy reports whether s is a valid strategy.
+func isValidStrategy(s Strategy) bool {
+	switch s {
+	case "AB-C", "ABC", "A-B-C", "AC-B":
+		return true
+	}
+	return false
+}
+
+// isWriteKey reports whether key can be a write key.
+func isWriteKey(key string) bool {
+	if len(key) != 32 {
+		return false
+	}
+	_, err := base62.DecodeString(key)
+	return err == nil
+}
+
+// generateWriteKey generates a write key in its base62 form.
+func generateWriteKey() (string, error) {
+	key := make([]byte, 24)
+	_, err := rand.Read(key)
+	if err != nil {
+		return "", errors.New("cannot generate a write key")
+	}
+	return base62.EncodeToString(key)[0:32], nil
+}
+
+// marshalSchema marshals the given schema.
+// If schema is invalid, returns []byte("null") and no errors.
+func marshalSchema(schema types.Type) ([]byte, error) {
+	rawSchema, err := schema.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
+		return nil, errors.New("data is too large")
+	}
+	return rawSchema, nil
+}
+
 // parseWebsiteHost parses a website host from the format "host:port" and
 // returns the host and the port. The host cannot be empty, cannot contain the
 // NUL rune and cannot be longer than 255 characters. If a port is present, it
@@ -1861,6 +1914,15 @@ func parseWebsiteHost(s string) (string, int, error) {
 		}
 	}
 	return h, port, nil
+}
+
+// serializeCursor serializes a cursor to be returned by the API.
+func serializeCursor(cursor time.Time) (string, error) {
+	b, err := json.Marshal(cursor)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // validateLinkedConnections checks whether the provided connections can be
@@ -1904,25 +1966,6 @@ func validateLinkedConnections(connections []int, c *state.Connector, ws *state.
 		}
 	}
 	return nil
-}
-
-// isWriteKey reports whether key can be a write key.
-func isWriteKey(key string) bool {
-	if len(key) != 32 {
-		return false
-	}
-	_, err := base62.DecodeString(key)
-	return err == nil
-}
-
-// generateWriteKey generates a write key in its base62 form.
-func generateWriteKey() (string, error) {
-	key := make([]byte, 24)
-	_, err := rand.Read(key)
-	if err != nil {
-		return "", errors.New("cannot generate a write key")
-	}
-	return base62.EncodeToString(key)[0:32], nil
 }
 
 // Compression represents the compression of a file connection.
@@ -2045,49 +2088,6 @@ type ConnectionToSet struct {
 	// connection. It must be empty if the connection is not a website. It
 	// cannot be longer than 261 runes.
 	WebsiteHost string `json:"websiteHost"`
-}
-
-// isMetaProperty reports whether the given property name refers to a property
-// considered a meta property by a data warehouse.
-func isMetaProperty(name string) bool {
-	return len(name) >= 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
-}
-
-// marshalSchema marshals the given schema.
-// If schema is invalid, returns []byte("null") and no errors.
-func marshalSchema(schema types.Type) ([]byte, error) {
-	rawSchema, err := schema.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	if utf8.RuneCount(rawSchema) > rawSchemaMaxSize {
-		return nil, errors.New("data is too large")
-	}
-	return rawSchema, nil
-}
-
-// deserializeCursor deserializes a cursor passed to the API.
-func deserializeCursor(cursor string) (time.Time, error) {
-	data, err := hex.DecodeString(cursor)
-	if err != nil {
-		return time.Time{}, err
-	}
-	var c time.Time
-	err = json.Unmarshal(data, &c)
-	if err != nil {
-		return time.Time{}, err
-	}
-	// TODO(marco): validate the cursor's fields.
-	return c, nil
-}
-
-// serializeCursor serializes a cursor to be returned by the API.
-func serializeCursor(cursor time.Time) (string, error) {
-	b, err := json.Marshal(cursor)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
 }
 
 // tempTransformerProvider is a function transformer provider that creates a
