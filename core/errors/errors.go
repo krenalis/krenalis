@@ -58,30 +58,30 @@ type ResponseWriterTo interface {
 // It can be used when an invalid call is received. For example, it could be
 // used if a required argument is empty or if the provided data is not formally
 // valid.
-func BadRequest(format string, a ...any) error {
+func BadRequest(format string, a ...any) *BadRequestError {
 	e := fmt.Errorf(format, a...)
-	return &badRequestError{s: e.Error(), err: Unwrap(e)}
+	return &BadRequestError{s: e.Error(), err: Unwrap(e)}
 }
 
-// badRequestError is an implementation of error used to represent a bad
+// BadRequestError is an implementation of error used to represent a bad
 // request error.
-type badRequestError struct {
+type BadRequestError struct {
 	s   string
 	err error
 }
 
 // Error implements the errors interface.
-func (e *badRequestError) Error() string {
+func (e *BadRequestError) Error() string {
 	return e.s
 }
 
 // Unwrap returns the wrapped error.
-func (e *badRequestError) Unwrap() error {
+func (e *BadRequestError) Unwrap() error {
 	return e.err
 }
 
 // WriteTo implements the ResponseWriterTo interface.
-func (e *badRequestError) WriteTo(w http.ResponseWriter) error {
+func (e *BadRequestError) WriteTo(w http.ResponseWriter) error {
 	var cause string
 	if e.err != nil {
 		cause = e.err.Error()
@@ -127,30 +127,30 @@ func (e *NotFoundError) WriteTo(w http.ResponseWriter) error {
 // Unavailable should be used when a request cannot be fulfilled due to an
 // unexpected error from a connector. For instance, it could be utilized if a
 // connector encounters an error while trying to connect to a database.
-func Unavailable(format string, a ...any) error {
+func Unavailable(format string, a ...any) *UnavailableError {
 	e := fmt.Errorf(format, a...)
-	return &unavailableError{s: e.Error(), err: Unwrap(e)}
+	return &UnavailableError{s: e.Error(), err: Unwrap(e)}
 }
 
-// A unavailableError value is returned when a connector has returned an
+// A UnavailableError value is returned when a connector has returned an
 // unexpected error.
-type unavailableError struct {
+type UnavailableError struct {
 	s   string
 	err error
 }
 
 // Error implements the errors interface.
-func (e *unavailableError) Error() string {
+func (e *UnavailableError) Error() string {
 	return e.s
 }
 
 // Unwrap returns the wrapped error.
-func (e *unavailableError) Unwrap() error {
+func (e *UnavailableError) Unwrap() error {
 	return e.err
 }
 
 // WriteTo implements the ResponseWriterTo interface.
-func (e *unavailableError) WriteTo(w http.ResponseWriter) error {
+func (e *UnavailableError) WriteTo(w http.ResponseWriter) error {
 	var cause string
 	if e.err != nil {
 		cause = e.err.Error()
