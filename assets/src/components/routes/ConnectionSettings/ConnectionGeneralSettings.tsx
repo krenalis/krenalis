@@ -86,7 +86,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const onSave = async () => {
 		setIsSaving(true);
 		try {
-			await api.workspaces.connections.set(connection.id, connectionToSet);
+			await api.workspaces.connections.update(connection.id, connectionToSet);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);

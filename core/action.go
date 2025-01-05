@@ -360,7 +360,7 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	return this.addExecution(ctx, reload)
 }
 
-// Set sets the action.
+// Update updates the action.
 //
 // Refer to the specifications in the file "core/Actions.md" for more details.
 //
@@ -369,7 +369,7 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 //   - FormatNotExist, if the format does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (this *Action) Set(ctx context.Context, action ActionToSet) error {
+func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 
 	this.core.mustBeOpen()
 
@@ -405,7 +405,7 @@ func (this *Action) Set(ctx context.Context, action ActionToSet) error {
 		inSchema = events.Schema
 	}
 
-	n := state.SetAction{
+	n := state.UpdateAction{
 		ID:                       this.action.ID,
 		Name:                     action.Name,
 		Enabled:                  action.Enabled,
@@ -646,9 +646,9 @@ func (this *Action) isLanguageSupported() bool {
 	return false
 }
 
-// ActionToSet represents an action to set in a connection, by adding a new
-// action (using the method Connection.AddAction) or updating an existing one
-// (using the method Action.Set).
+// ActionToSet represents an action to set in a connection, by creating a new
+// action (using the method Connection.CreateAction) or updating an existing one
+// (using the method Action.Update).
 //
 // Refer to the specifications in the file "core/Actions.md" for more details.
 type ActionToSet struct {
@@ -910,8 +910,8 @@ func onlyForMatching(schema types.Type) types.Type {
 }
 
 // shouldReload determines if the next execution of the action requires
-// reloading, based on whether the notification n is used to modify the action.
-func shouldReload(a *state.Action, n *state.SetAction) bool {
+// reloading, based on whether the notification n is used to update the action.
+func shouldReload(a *state.Action, n *state.UpdateAction) bool {
 	if a.Target != state.Users && a.Target != state.Groups {
 		return false
 	}

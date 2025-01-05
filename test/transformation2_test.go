@@ -27,11 +27,11 @@ func TestTransformation2(t *testing.T) {
 	defer c.Stop()
 
 	// Create a Dummy (source) connection.
-	dummy := c.AddDummy("Dummy (source)", meergotester.Source)
+	dummy := c.CreateDummy("Dummy (source)", meergotester.Source)
 
-	// Add an action with a transformation function which imports users, then
+	// Create an action with a transformation function which imports users, then
 	// execute it.
-	action := c.AddAction(dummy, "Users", meergotester.ActionToSet{
+	action := c.CreateAction(dummy, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},

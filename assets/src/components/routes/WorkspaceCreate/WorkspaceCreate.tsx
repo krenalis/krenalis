@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import './WorkspaceAdd.css';
+import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
 import { DisplayedProperties } from '../../../lib/api/types/workspace';
 import appContext from '../../../context/AppContext';
@@ -14,7 +14,7 @@ import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
 import * as icons from '../../../constants/icons';
 
-const WorkspaceAdd = () => {
+const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
 	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('PostgreSQL');
@@ -39,7 +39,7 @@ const WorkspaceAdd = () => {
 	const onCheckWarehouse = async () => {
 		setIsCheckingWarehouse(true);
 		try {
-			await api.canInitializeWarehouse(selectedWarehouse, 'Normal', warehouseSettings);
+			await api.testWorkspaceCreation(selectedWarehouse, 'Normal', warehouseSettings);
 		} catch (err) {
 			setTimeout(() => {
 				setIsCheckingWarehouse(false);
@@ -57,7 +57,7 @@ const WorkspaceAdd = () => {
 		}, 300);
 	};
 
-	const onAddWorkspace = async () => {
+	const onCreateWorkspace = async () => {
 		const privacyRegion = useEuropeRegion ? 'Europe' : '';
 		try {
 			validateWorkspaceName(name);
@@ -74,7 +74,7 @@ const WorkspaceAdd = () => {
 			image: '',
 		};
 		try {
-			const res = await api.workspaces.add(
+			const res = await api.workspaces.create(
 				name,
 				privacyRegion,
 				InitialSchema as ObjectType,
@@ -137,7 +137,7 @@ const WorkspaceAdd = () => {
 				<SlButton
 					className='workspace-add__add-button'
 					variant='primary'
-					onClick={onAddWorkspace}
+					onClick={onCreateWorkspace}
 					loading={isAddingWorkspace}
 				>
 					Add workspace
@@ -156,4 +156,4 @@ const validateWorkspaceName = (name: string) => {
 	}
 };
 
-export { WorkspaceAdd };
+export { WorkspaceCreate };

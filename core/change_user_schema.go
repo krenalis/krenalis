@@ -25,13 +25,13 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// ChangeUserSchema changes the user schema and the primary sources of the
+// UpdateUserSchema updates the user schema and the primary sources of the
 // workspace. schema must be a valid schema.
 //
-// The properties within user schema cannot specify a placeholder, must have
-// role Both, cannot be required for creation or update, must be read optional
-// and cannot be nullable; there are also limits on types, which are documented
-// in "datastore/README.md".
+// The properties within user schema cannot specify a placeholder, cannot be
+// required for creation or update, must be read optional and cannot be
+// nullable; there are also limits on types, which are documented in
+// "datastore/README.md".
 //
 // primarySources cannot specify a primary source for a property which has kind
 // Object or Array.
@@ -44,21 +44,21 @@ import (
 // the new property path and its value is the old property path. In case of new
 // properties created with the same name of already existent properties, the
 // value must be the untyped nil. rePaths cannot contain keys with the same path
-// as their value. Any property path which does not refer to changed properties
+// as their value. Any property path which does not refer to updated properties
 // is ignored.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - AlterSchemaInProgress, if an alter schema operation is already in
 //     progress on the warehouse.
-//   - ConnectionNotExist, if a connections used as primary source does not
+//   - ConnectionNotExist, if a connection used as primary source does not
 //     exist.
 //   - IdentityResolutionInProgress, if an Identity Resolution is currently in
 //     progress on the warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
-//   - InvalidSchemaChange, if the schema change is invalid.
+//   - InvalidSchemaUpdate, if the schema update is invalid.
 //   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
 		primarySources = map[string]int{}
@@ -86,7 +86,7 @@ func (this *Workspace) ChangeUserSchema(ctx context.Context, schema types.Type, 
 
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
-		return errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
+		return errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
 	}
 
 	for _, s := range primarySources {
@@ -122,7 +122,7 @@ Identifiers:
 	}
 
 	// Update the database and send the notification.
-	n := state.SetWorkspaceUserSchema{
+	n := state.UpdateUserSchema{
 		Workspace:      this.ID,
 		UserSchema:     schema,
 		PrimarySources: primarySources,
@@ -213,15 +213,17 @@ Identifiers:
 	return nil
 }
 
-// ChangeUserSchemaQueries returns the queries that would be executed changing
-// the user schema to schema.
+// PreviewUserSchemaUpdate previews a user schema update and returns the queries
+// that would be executed to update the user schema of the workspace, without
+// making any actual changes to the data or the schema.
 //
-// See the documentation of ChangeUserSchema for more details about this method.
+// See the documentation of UpdateUserSchema for more details about this method.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - InvalidSchemaChange, if the schema change is invalid.
+//
+//   - InvalidSchemaUpdate, if the schema update is invalid.
 //   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
+func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.core.mustBeOpen()
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
@@ -240,9 +242,9 @@ func (this *Workspace) ChangeUserSchemaQueries(ctx context.Context, schema types
 	}
 	operations, err := diffschemas.Diff(this.workspace.UserSchema, schema, rePaths, "")
 	if err != nil {
-		return nil, errors.Unprocessable(InvalidSchemaChange, "cannot change the schema as specified: %s", err)
+		return nil, errors.Unprocessable(InvalidSchemaUpdate, "cannot update the schema as specified: %s", err)
 	}
-	queries, err := this.store.AlterUserSchemaQueries(ctx, schema, operations)
+	queries, err := this.store.PreviewUserSchemaUpdate(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unprocessable(WarehouseError, "%s", err)

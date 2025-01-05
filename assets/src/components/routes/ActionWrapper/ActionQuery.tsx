@@ -112,7 +112,7 @@ const ActionQuery = () => {
 		}
 		let res: ExecQueryResponse;
 		try {
-			res = await api.workspaces.connections.query(connection.id, q, limit);
+			res = await api.workspaces.connections.execQuery(connection.id, q, limit);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');

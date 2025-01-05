@@ -18,18 +18,18 @@ import { UI_BASE_PATH } from '../../constants/paths';
 import { Connector } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
-	AddWorkspaceResponse,
+	CreateWorkspaceResponse,
 	PrivacyRegion,
 	DisplayedProperties,
 	PrimarySources,
-	IdentityResolutionExecution,
+	LastIdentityResolution,
 } from './types/workspace';
 import {
 	ConnectorUIResponse,
 	ConnectorSettings,
 	authCodeURLResponse,
 	EventListenerEventsResponse,
-	AddEventListenerResponse,
+	CreateEventListenerResponse,
 	ActionSchemasResponse,
 	ExecQueryResponse,
 	CompletePathResponse,
@@ -39,7 +39,7 @@ import {
 	TransformDataResponse,
 	FindUsersResponse,
 	AppUsersResponse,
-	EventPreviewResponse,
+	PreviewSendEventResponse,
 	Event,
 	UserEventsResponse,
 	userTraitsResponse,
@@ -49,7 +49,7 @@ import {
 	MemberInvitationResponse,
 	UserIdentitiesResponse,
 	ConnectionIdentitiesResponse,
-	ChangeUserSchemaQueriesResponse,
+	PreviewUserSchemaUpdateResponse,
 	RePaths,
 	ActionErrorsResponse,
 } from './types/responses';
@@ -158,7 +158,7 @@ class API {
 		return await call(`${this.apiURL}/members/${member}`, http.DELETE);
 	};
 
-	canInitializeWarehouse = async (
+	testWorkspaceCreation = async (
 		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		settings: any,
@@ -188,7 +188,7 @@ class Connections {
 		return c as Connection;
 	};
 
-	set = async (id: number, connection: ConnectionToSet) => {
+	update = async (id: number, connection: ConnectionToSet) => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(id)}`, http.PUT, {
 			connection,
 		});
@@ -209,7 +209,7 @@ class Connections {
 		});
 	};
 
-	query = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {
+	execQuery = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/query/executions`, http.POST, {
 			query: query,
 			limit: limit,
@@ -261,15 +261,15 @@ class Connections {
 		});
 	};
 
-	keys = async (connection: number): Promise<string[]> => {
+	writeKeys = async (connection: number): Promise<string[]> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys`, http.GET);
 	};
 
-	generateKey = async (connection: number): Promise<string> => {
+	createWriteKey = async (connection: number): Promise<string> => {
 		return await call(`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys`, http.POST);
 	};
 
-	revokeKey = async (connection: number, key: string): Promise<void> => {
+	deleteWriteKey = async (connection: number, key: string): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys/${encodeURIComponent(key)}`,
 			http.DELETE,
@@ -302,7 +302,7 @@ class Connections {
 		}
 	};
 
-	addAction = async (
+	createAction = async (
 		connection: number,
 		target: ActionTarget,
 		eventType: string,
@@ -315,7 +315,7 @@ class Connections {
 		});
 	};
 
-	setAction = async (connection: number, id: number, action: ActionToSet): Promise<void> => {
+	updateAction = async (connection: number, id: number, action: ActionToSet): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(id)}`,
 			http.PUT,
@@ -405,13 +405,13 @@ class Connections {
 		});
 	};
 
-	eventPreview = async (
+	previewSendEvent = async (
 		connection: number,
 		eventType: string,
 		event: Event,
 		outSchema: ObjectType,
 		transformation?: Transformation,
-	): Promise<EventPreviewResponse> => {
+	): Promise<PreviewSendEventResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/send-previews`,
 			http.POST,
@@ -443,21 +443,21 @@ class Connections {
 	};
 }
 
-class Eventlisteners {
+class EventListeners {
 	apiURL: string;
 
 	constructor(url: string) {
 		this.apiURL = url;
 	}
 
-	add = async (size: number, filter: Filter): Promise<AddEventListenerResponse> => {
+	create = async (size: number, filter: Filter): Promise<CreateEventListenerResponse> => {
 		return await call(`${this.apiURL}/event-listeners`, http.POST, {
 			size,
 			filter,
 		});
 	};
 
-	remove = async (eventListener: string): Promise<void> => {
+	delete = async (eventListener: string): Promise<void> => {
 		return await call(`${this.apiURL}/event-listeners/${encodeURIComponent(eventListener)}`, http.DELETE);
 	};
 
@@ -546,7 +546,7 @@ class Workspaces {
 	baseAPIURL: string;
 	apiURL: string;
 	connections: Connections;
-	eventlisteners: Eventlisteners;
+	eventListeners: EventListeners;
 	users: Users;
 
 	constructor(origin: string, apiURL: string, workspaceID: number) {
@@ -555,7 +555,7 @@ class Workspaces {
 		const url = this.baseAPIURL + `/${workspaceID}`;
 		this.apiURL = url;
 		this.connections = new Connections(url);
-		this.eventlisteners = new Eventlisteners(url);
+		this.eventListeners = new EventListeners(url);
 		this.users = new Users(url);
 	}
 
@@ -563,7 +563,7 @@ class Workspaces {
 		return await call(`${this.baseAPIURL}`, http.GET);
 	};
 
-	add = async (
+	create = async (
 		name: string,
 		privacyRegion: PrivacyRegion,
 		userSchema: ObjectType,
@@ -571,7 +571,7 @@ class Workspaces {
 		warehouseName: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-	): Promise<AddWorkspaceResponse> => {
+	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.baseAPIURL}`, http.POST, {
 			name: name,
 			privacyRegion: privacyRegion,
@@ -613,7 +613,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/identifiers-schema`, http.GET);
 	};
 
-	addConnection = async (connection: ConnectionToAdd, oauthToken: string): Promise<number> => {
+	createConnection = async (connection: ConnectionToAdd, oauthToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/connections`, http.POST, {
 			connection,
 			oauthToken,
@@ -629,31 +629,31 @@ class Workspaces {
 		});
 	};
 
-	changeIdentityResolutionSettings = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {
+	updateIdentityResolution = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {
 		return await call(`${this.apiURL}/identity-resolution/settings`, http.PUT, {
 			runOnBatchImport,
 			identifiers,
 		});
 	};
 
-	warehouseSettings = async (): Promise<WarehouseResponse> => {
+	warehouse = async (): Promise<WarehouseResponse> => {
 		return await call(`${this.apiURL}/warehouse/settings`, http.GET);
 	};
 
-	changeWarehouseMode = async (mode: WarehouseMode, cancelIncompatibleOperations: boolean): Promise<void> => {
+	updateWarehouseMode = async (mode: WarehouseMode, cancelIncompatibleOperations: boolean): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/mode`, http.PUT, {
 			mode,
 			cancelIncompatibleOperations,
 		});
 	};
 
-	canChangeWarehouseSettings = async (settings: any): Promise<void> => {
+	testWarehouseUpdate = async (settings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/can-change-settings`, http.POST, {
 			settings,
 		});
 	};
 
-	changeWarehouseSettings = async (
+	updateWarehouse = async (
 		name: string,
 		mode: WarehouseMode,
 		settings: any,
@@ -667,15 +667,11 @@ class Workspaces {
 		});
 	};
 
-	disconnectWarehouse = async (): Promise<void> => {
-		return await call(`${this.apiURL}/warehouse`, http.DELETE);
-	};
-
 	startIdentityResolution = async (): Promise<void> => {
 		return await call(`${this.apiURL}/identity-resolutions`, http.POST);
 	};
 
-	changeUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
+	updateUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
 		return await call(`${this.apiURL}/user-schema`, http.PUT, {
 			schema,
 			primarySources,
@@ -683,10 +679,10 @@ class Workspaces {
 		});
 	};
 
-	changeUserSchemaQueries = async (
+	previewUserSchemaUpdate = async (
 		schema: ObjectType,
 		rePaths: RePaths,
-	): Promise<ChangeUserSchemaQueriesResponse> => {
+	): Promise<PreviewUserSchemaUpdateResponse> => {
 		return await call(`${this.apiURL}/change-user-schema-queries`, http.POST, {
 			schema,
 			rePaths,
@@ -788,7 +784,7 @@ class Workspaces {
 		return r;
 	};
 
-	identityResolutionExecution = async (): Promise<IdentityResolutionExecution> => {
+	lastIdentityResolution = async (): Promise<LastIdentityResolution> => {
 		return await call(`${this.apiURL}/identity-resolution/execution`, http.GET);
 	};
 }

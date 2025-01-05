@@ -27,15 +27,15 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 
 	// Create a JavaScript connection and get its key.
 	var javaScriptKey string
-	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
-	keys := c.ConnectionKeys(javaScriptID)
+	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+	keys := c.WriteKeys(javaScriptID)
 	if len(keys) != 1 {
 		t.Fatalf("expected one key, got %d keys", len(keys))
 	}
 	javaScriptKey = keys[0]
 
-	// Add a first action, with a filter.
-	action1 := c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
+	// Create a first action, with a filter.
+	action1 := c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
 		Name:     "Action 1",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -56,9 +56,9 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		},
 	})
 
-	// Add a second action, which imports identities from events with a
+	// Create a second action, which imports identities from events with a
 	// different filter than the first action.
-	action2 := c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
+	action2 := c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
 		Name:     "Action 2",
 		Enabled:  true,
 		InSchema: types.Type{},

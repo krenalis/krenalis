@@ -177,7 +177,7 @@ const useApp = (
 			// get the warehouse.
 			let warehouseResponse: WarehouseResponse;
 			try {
-				warehouseResponse = await api.workspaces.warehouseSettings();
+				warehouseResponse = await api.workspaces.warehouse();
 			} catch (err) {
 				setTimeout(() => setIsLoadingState(false), 300);
 				setWarehouse(null);

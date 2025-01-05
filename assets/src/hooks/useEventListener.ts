@@ -1,7 +1,7 @@
 import { useEffect, useContext, useState } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
-import { Event, AddEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
+import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
 import { Filter } from '../lib/api/types/action';
 
 interface EventListenerEvent {
@@ -34,9 +34,9 @@ const useEventListener = (
 		let interval: number;
 		let id = eventID;
 		const startListener = async () => {
-			let listener: AddEventListenerResponse;
+			let listener: CreateEventListenerResponse;
 			try {
-				listener = await api.workspaces.eventlisteners.add(3, filter);
+				listener = await api.workspaces.eventListeners.create(3, filter);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExists') {
@@ -56,7 +56,7 @@ const useEventListener = (
 			interval = window.setInterval(async () => {
 				let res: EventListenerEventsResponse;
 				try {
-					res = await api.workspaces.eventlisteners.events(listenerID);
+					res = await api.workspaces.eventListeners.events(listenerID);
 				} catch (err) {
 					if (err instanceof NotFoundError) {
 						setIsListenerNotFound(true);
@@ -86,7 +86,7 @@ const useEventListener = (
 			clearInterval(interval);
 			const removeListener = async () => {
 				try {
-					await api.workspaces.eventlisteners.remove(listenerID);
+					await api.workspaces.eventListeners.delete(listenerID);
 				} catch (err) {
 					handleError(err);
 					return;

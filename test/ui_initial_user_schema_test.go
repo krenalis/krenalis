@@ -28,7 +28,7 @@ func TestUIInitialUserSchema(t *testing.T) {
 	c := meergotester.InitAndLaunch(t, meergotester.DoNotPopulateUserSchema)
 	defer c.Stop()
 
-	f, err := os.Open(filepath.Join("..", "assets/src/components/routes/WorkspaceAdd/InitialSchema.json"))
+	f, err := os.Open(filepath.Join("..", "assets/src/components/routes/WorkspaceCreate/InitialSchema.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,11 +40,11 @@ func TestUIInitialUserSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries := c.ChangeUserSchemaQueries(schema, nil)
+	queries := c.PreviewUserSchemaUpdate(schema, nil)
 	const expectedQueriesCount = 6
 	if len(queries) != expectedQueriesCount {
 		t.Fatalf("expected %d queries, got %d", expectedQueriesCount, len(queries))
 	}
-	c.ChangeUserSchema(schema, nil, nil)
+	c.UpdateUserSchema(schema, nil, nil)
 
 }

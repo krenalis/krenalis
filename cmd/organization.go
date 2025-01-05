@@ -36,8 +36,8 @@ func (organization organization) APIKeys(_ http.ResponseWriter, r *http.Request)
 	return map[string][]*core.APIKey{"keys": keys}, nil
 }
 
-// AddWorkspace adds a workspace to an organization.
-func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreateWorkspace creates a workspace for the organization.
+func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, o, err := organization.credentials(r)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := o.AddWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
+	id, err := o.CreateWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
 		body.DisplayedProperties, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
@@ -65,8 +65,8 @@ func (organization organization) AddWorkspace(_ http.ResponseWriter, r *http.Req
 	return map[string]int{"id": id}, nil
 }
 
-// CanInitializeWarehouse indicates whether a data warehouse can be initialized.
-func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
+// TestWorkspaceCreation tests a workspace creation.
+func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, o, err := organization.credentials(r)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (organization organization) CanInitializeWarehouse(_ http.ResponseWriter, r
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = o.CanInitializeWarehouse(r.Context(), body.Name, body.Settings)
+	err = o.TestWorkspaceCreation(r.Context(), body.Name, body.Settings)
 	return nil, err
 }
 
@@ -168,8 +168,8 @@ func (organization organization) Members(_ http.ResponseWriter, r *http.Request)
 	return o.Members(r.Context())
 }
 
-// SetAPIKey sets the name of an API key for an organization.
-func (organization organization) SetAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateAPIKey updates the name of an API key for an organization.
+func (organization organization) UpdateAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	_, o, err := organization.credentials(r)
 	if err != nil {
 		return nil, err
@@ -185,12 +185,12 @@ func (organization organization) SetAPIKey(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = o.SetAPIKey(r.Context(), key, body.Name)
+	err = o.UpdateAPIKey(r.Context(), key, body.Name)
 	return nil, err
 }
 
-// SetMember sets a member of an organization.
-func (organization organization) SetMember(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateMember updates a member of an organization.
+func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
 	member, o, err := organization.credentials(r)
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func (organization organization) SetMember(_ http.ResponseWriter, r *http.Reques
 		}
 		memberToSet.Avatar = avatar
 	}
-	err = o.SetMember(r.Context(), member.ID, memberToSet)
+	err = o.UpdateMember(r.Context(), member.ID, memberToSet)
 	return nil, err
 }
 

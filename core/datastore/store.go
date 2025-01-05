@@ -149,7 +149,8 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 	return store.warehouse().AlterUserColumns(context.Background(), columns, operations)
 }
 
-// AlterUserSchemaQueries returns the queries of a schema altering operation.
+// PreviewUserSchemaUpdate previews a user schema update returning the queries
+// that would be executed updating the user schema of the store.
 //
 // schema is the user schema without meta properties (this parameter is useful
 // for obtaining type information and for creating views), while operations is
@@ -163,7 +164,7 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 //
 // If an error occurs with the data warehouse, it returns a *DataWarehouseError
 // error.
-func (store *Store) AlterUserSchemaQueries(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
+func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, operations []meergo.AlterOperation) ([]string, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {
@@ -174,14 +175,12 @@ func (store *Store) AlterUserSchemaQueries(ctx context.Context, schema types.Typ
 	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
 }
 
-// CanChangeWarehouseSettings determines if it is possible to change the
-// warehouse settings of the store's workspace to the given settings.
-// If an attempt is made to connect a data warehouse which has already been
-// connected to another workspace, the method returns the error
-// ErrDifferentWarehouse.
-// If an error occurs with the data warehouse, it returns a *DataWarehouseError
-// error.
-func (store *Store) CanChangeWarehouseSettings(ctx context.Context, toSettings []byte) error {
+// TestWarehouseUpdate tests if it is possible to update the warehouse of the
+// store. If an attempt is made to connect a data warehouse which has already
+// been connected to another workspace, the method returns the error
+// ErrDifferentWarehouse. If an error occurs with the data warehouse, it returns
+// a *DataWarehouseError error.
+func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
 	if err != nil {
@@ -733,14 +732,14 @@ func (store *Store) mustBeOpen() {
 	}
 }
 
-// onAddAction is called when an action of the store's workspace is added.
+// onCreateAction is called when an action of the store's workspace is created.
 //
-// The notification is propagated by the Store.onAddAction method.
-func (store *Store) onAddAction(n state.AddAction) {
+// The notification is propagated by the Store.onCreateAction method.
+func (store *Store) onCreateAction(n state.CreateAction) {
 	store.mu.Lock()
 	for _, iw := range store.eventIdentityWriters {
 		if iw.connection == n.Connection {
-			iw.onAddAction(n)
+			iw.onCreateAction(n)
 		}
 	}
 	store.mu.Unlock()
@@ -775,24 +774,23 @@ func (store *Store) onDeleteConnection(n state.DeleteConnection) {
 	store.mu.Unlock()
 }
 
-// onSetAction is called when an action of the store's workspace is set.
+// onUpdateAction is called when an action of the store's workspace is updated.
 //
-// The notification is propagated by the Store.onSetAction method.
-func (store *Store) onSetAction(n state.SetAction) {
+// The notification is propagated by the Store.onUpdateAction method.
+func (store *Store) onUpdateAction(n state.UpdateAction) {
 	store.mu.Lock()
 	iw, ok := store.eventIdentityWriters[n.ID]
 	store.mu.Unlock()
 	if !ok {
 		return
 	}
-	iw.onSetAction(n)
+	iw.onUpdateAction(n)
 }
 
-// onSetWorkspaceUserSchema is called when the user schema of the store's
-// workspace is set.
+// onUpdateUserSchema is called when the user schema of the store's is updated.
 //
-// The notification is propagated by the Store.onSetWorkspaceUserSchema method.
-func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
+// The notification is propagated by the Store.onUpdateUserSchema method.
+func (store *Store) onUpdateUserSchema(n state.UpdateUserSchema) {
 
 	// Update the user and the identity columns.
 	store.columnByProperty.mu.Lock()
@@ -805,7 +803,7 @@ func (store *Store) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
 	// Propagate the notification to the EventIdentityWriters.
 	store.mu.Lock()
 	for _, iw := range store.eventIdentityWriters {
-		iw.onSetWorkspaceUserSchema(n)
+		iw.onUpdateUserSchema(n)
 	}
 	store.mu.Unlock()
 

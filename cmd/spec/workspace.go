@@ -56,7 +56,7 @@ func init() {
 	}
 	warehouseSettingsParameter := types.Property{
 		Name:        "settings",
-		Type:        types.Parameter("WarehouseSettings"),
+		Type:        types.Parameter("Warehouse"),
 		Placeholder: "{...}",
 		Description: "The settings of the data warehouse",
 	}

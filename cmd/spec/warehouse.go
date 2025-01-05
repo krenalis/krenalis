@@ -26,7 +26,7 @@ func init() {
 	}
 	settingsParameter := types.Property{
 		Name:           "settings",
-		Type:           types.Parameter("WarehouseSettings"),
+		Type:           types.Parameter("Warehouse"),
 		Placeholder:    "{...}",
 		UpdateRequired: true,
 		Description:    "The settings of the data warehouse.",
@@ -55,8 +55,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Change access settings",
-				Description: "Change the access settings of a workspace’s warehouse along with its mode.",
+				Name:        "Update the warehouse",
+				Description: "Updates the warehouse of a workspace.",
 				Method:      PUT,
 				URL:         "/v0/warehouse",
 				Parameters: []types.Property{
@@ -71,8 +71,8 @@ func init() {
 				},
 			},
 			{
-				Name: "Test access settings",
-				Description: "Tests the access settings of a workspace’s warehouse.\n\n" +
+				Name: "Test the warehouse update",
+				Description: "Tests the update of a workspace’s warehouse.\n\n" +
 					"If the settings are incorrect or the warehouse can’t be accessed with the given settings, an error will be returned. " +
 					"If no error occurs, the settings are valid.",
 				Method: PUT,
@@ -87,8 +87,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Change mode",
-				Description: "Change the mode of a workspace's data warehouse.",
+				Name:        "Update warehouse mode",
+				Description: "Updates the mode of a workspace's data warehouse.",
 				Method:      PUT,
 				URL:         "/v0/warehouse/mode",
 				Parameters: []types.Property{

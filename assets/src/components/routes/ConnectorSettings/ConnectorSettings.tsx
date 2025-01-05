@@ -176,7 +176,7 @@ const ConnectorSettings = () => {
 					settings: settings,
 					linkedConnections: null,
 				};
-				id = await api.workspaces.addConnection(connection, OAuthToken);
+				id = await api.workspaces.createConnection(connection, OAuthToken);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectorNotExist') {

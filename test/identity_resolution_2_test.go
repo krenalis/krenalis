@@ -38,7 +38,7 @@ func TestIdentityResolution2(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.Text()), ReadOptional: true},
 		{Name: "total_orders", Type: types.Int(32), ReadOptional: true},
 	})
-	c.ChangeUserSchema(schema, nil, nil)
+	c.UpdateUserSchema(schema, nil, nil)
 
 	// Set the email as the only identifier, as the 3 identities, imported from
 	// the 3 connections, will all be put together in a single user as they
@@ -46,13 +46,13 @@ func TestIdentityResolution2(t *testing.T) {
 	//
 	// Also disable the automatic execution of the Identity Resolution, which
 	// will be explicitly executed later.
-	c.ChangeIdentityResolutionSettings(false, []string{"email"})
+	c.UpdateIdentityResolution(false, []string{"email"})
 
 	storage := meergotester.NewTempStorage(t)
 
-	sourceA := c.AddSourceFilesystem(storage.Root())
-	sourceB := c.AddSourceFilesystem(storage.Root())
-	sourceC := c.AddSourceFilesystem(storage.Root())
+	sourceA := c.CreateSourceFilesystem(storage.Root())
+	sourceB := c.CreateSourceFilesystem(storage.Root())
+	sourceC := c.CreateSourceFilesystem(storage.Root())
 
 	// Create three JSON files in storage, one for each connection. Each file
 	// will contain a single user, which will be the only identity imported for
@@ -106,7 +106,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Create and execute the actions.
 
 	addJSONAction := func(source int, filename string, properties map[string]bool) int {
-		return c.AddAction(source, "Users", meergotester.ActionToSet{
+		return c.CreateAction(source, "Users", meergotester.ActionToSet{
 			Name: "Action",
 			Path: filename,
 			InSchema: types.Object([]types.Property{
@@ -200,7 +200,7 @@ func TestIdentityResolution2(t *testing.T) {
 	primarySources := map[string]int{
 		"total_orders": sourceB,
 	}
-	c.ChangeUserSchema(schema, primarySources, nil)
+	c.UpdateUserSchema(schema, primarySources, nil)
 
 	c.ResolveIdentities()
 

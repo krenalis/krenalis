@@ -40,7 +40,7 @@ func TestStorage(t *testing.T) {
 	if !stat.IsDir() {
 		t.Fatalf("%q is not a dir", storageDir)
 	}
-	storage := c.AddSourceFilesystem(storageDir)
+	storage := c.CreateSourceFilesystem(storageDir)
 
 	// Test the "/sheets" method.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}

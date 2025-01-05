@@ -117,7 +117,7 @@ const (
 	InspectionMode               = "InspectionMode"
 	InvalidPath                  = "InvalidPath"
 	InvalidPlaceholder           = "InvalidPlaceholder"
-	InvalidSchemaChange          = "InvalidSchemaChange"
+	InvalidSchemaUpdate          = "InvalidSchemaUpdate"
 	InvalidSettings              = "InvalidSettings"
 	InvalidWarehouseSettings     = "InvalidWarehouseSettings"
 	InvitationTokenExpired       = "InvitationTokenExpired"

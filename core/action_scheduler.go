@@ -52,7 +52,7 @@ func newActionScheduler(core *Core) *actionScheduler {
 	}
 	as.ctx, as.cancel = context.WithCancel(context.Background())
 	core.state.Freeze()
-	core.state.AddListener(as.onAddAction)
+	core.state.AddListener(as.onCreateAction)
 	core.state.AddListener(as.onDeleteAction)
 	core.state.AddListener(as.onDeleteConnection)
 	core.state.AddListener(as.onDeleteWorkspace)
@@ -74,8 +74,8 @@ func (as *actionScheduler) Close() {
 	as.wg.Wait()
 }
 
-// onAddAction is called when an action is added to the state.
-func (as *actionScheduler) onAddAction(n state.AddAction) {
+// onCreateAction is called when an action is created.
+func (as *actionScheduler) onCreateAction(n state.CreateAction) {
 	if as.executor == nil {
 		return
 	}

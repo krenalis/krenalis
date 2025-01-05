@@ -54,17 +54,17 @@ func newObserver(db *postgres.DB) *Observer {
 	return &Observer{db: db}
 }
 
-// AddListener adds a listener for events and returns its identifier. size
+// CreateListener creates a listener for events and returns its identifier. size
 // specifies the maximum number of observed events to be returned by a
 // subsequent call to the Events method. size must be in range [1, 1000]. If
 // filter is non-nil, only events that satisfy the filter will be observed.
 //
-// AddListener does not validate its arguments, so it is the caller's
+// CreateListener does not validate its arguments, so it is the caller's
 // responsibility to pass valid arguments.
 //
 // It returns the ErrTooManyListeners error if there are already too many
 // listeners.
-func (observer *Observer) AddListener(size int, filter *state.Where) (string, error) {
+func (observer *Observer) CreateListener(size int, filter *state.Where) (string, error) {
 	id := uuid.New().String()
 	listener := listener{
 		id:     id,
@@ -112,8 +112,8 @@ func (observer *Observer) Events(listenerID string) ([]json.Value, int, error) {
 	return observedEvents, discarded, nil
 }
 
-// RemoveListener removes the listener with identifier id.
-func (observer *Observer) RemoveListener(id string) {
+// DeleteListener deletes the listener with identifier id.
+func (observer *Observer) DeleteListener(id string) {
 	observer.Lock()
 	for i, listener := range observer.listeners {
 		if listener.id == id {

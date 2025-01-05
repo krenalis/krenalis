@@ -55,7 +55,7 @@ func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) m
 	return schemas
 }
 
-func (c *Meergo) AddAction(conn int, target string, action ActionToSet) int {
+func (c *Meergo) CreateAction(conn int, target string, action ActionToSet) int {
 	switch target {
 	case "Events", "Users", "Groups":
 	default:
@@ -71,7 +71,7 @@ func (c *Meergo) AddAction(conn int, target string, action ActionToSet) int {
 	return id
 }
 
-func (c *Meergo) AddEventAction(conn int, eventType string, action ActionToSet) int {
+func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSet) int {
 	data := map[string]any{
 		"target":    "Events",
 		"eventType": eventType,
@@ -83,8 +83,9 @@ func (c *Meergo) AddEventAction(conn int, eventType string, action ActionToSet) 
 	return id
 }
 
-// AddActionErr is like AddAction but returns an error instead of panicking.
-func (c *Meergo) AddActionErr(conn int, target string, action ActionToSet) (int, error) {
+// CreateActionErr is like CreateAction but returns an error instead of
+// panicking.
+func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (int, error) {
 	switch target {
 	case "Events", "Users", "Groups":
 	default:
@@ -103,7 +104,7 @@ func (c *Meergo) AddActionErr(conn int, target string, action ActionToSet) (int,
 	return id, nil
 }
 
-func (c *Meergo) AddConnection(connection ConnectionToAdd) int {
+func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 	data := map[string]any{
 		"connection": connection,
 	}
@@ -113,8 +114,8 @@ func (c *Meergo) AddConnection(connection ConnectionToAdd) int {
 	return id
 }
 
-func (c *Meergo) AddDestinationFilesystem(storageDir string) int {
-	return c.AddConnection(ConnectionToAdd{
+func (c *Meergo) CreateDestinationFilesystem(storageDir string) int {
+	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Destination,
 		Enabled:   true,
@@ -125,8 +126,8 @@ func (c *Meergo) AddDestinationFilesystem(storageDir string) int {
 	})
 }
 
-func (c *Meergo) AddDestinationPostgreSQL() int {
-	return c.AddConnection(ConnectionToAdd{
+func (c *Meergo) CreateDestinationPostgreSQL() int {
+	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
 		Enabled:   true,
@@ -142,8 +143,8 @@ func (c *Meergo) AddDestinationPostgreSQL() int {
 	})
 }
 
-func (c *Meergo) AddDummy(name string, role Role) int {
-	conn := ConnectionToAdd{
+func (c *Meergo) CreateDummy(name string, role Role) int {
+	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
 		Enabled:   true,
@@ -154,11 +155,11 @@ func (c *Meergo) AddDummy(name string, role Role) int {
 		mode := Cloud
 		conn.SendingMode = &mode
 	}
-	return c.AddConnection(conn)
+	return c.CreateConnection(conn)
 }
 
-func (c *Meergo) AddDummyWithSettings(name string, role Role, settings DummySettings) int {
-	conn := ConnectionToAdd{
+func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummySettings) int {
+	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
 		Enabled:   true,
@@ -169,11 +170,11 @@ func (c *Meergo) AddDummyWithSettings(name string, role Role, settings DummySett
 		mode := Cloud
 		conn.SendingMode = &mode
 	}
-	return c.AddConnection(conn)
+	return c.CreateConnection(conn)
 }
 
-func (c *Meergo) AddJavaScriptSource(name, host string, linkedConnections []int) int {
-	return c.AddConnection(ConnectionToAdd{
+func (c *Meergo) CreateJavaScriptSource(name, host string, linkedConnections []int) int {
+	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
 		Enabled:           true,
@@ -184,8 +185,8 @@ func (c *Meergo) AddJavaScriptSource(name, host string, linkedConnections []int)
 	})
 }
 
-func (c *Meergo) AddSourceFilesystem(storageDir string) int {
-	return c.AddConnection(ConnectionToAdd{
+func (c *Meergo) CreateSourceFilesystem(storageDir string) int {
+	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Source,
 		Enabled:   true,
@@ -196,8 +197,8 @@ func (c *Meergo) AddSourceFilesystem(storageDir string) int {
 	})
 }
 
-func (c *Meergo) AddSourcePostgreSQL() int {
-	return c.AddConnection(ConnectionToAdd{
+func (c *Meergo) CreateSourcePostgreSQL() int {
+	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
 		Enabled:   true,
@@ -223,7 +224,7 @@ func (c *Meergo) IdentityResolutionExecution() (startTime, endTime *time.Time) {
 	return response.StartTime, response.EndTime
 }
 
-func (c *Meergo) CanChangeWarehouseSettings(settings []byte) {
+func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	body := map[string]any{
 		"settings": json.RawMessage(settings),
 	}
@@ -231,7 +232,7 @@ func (c *Meergo) CanChangeWarehouseSettings(settings []byte) {
 	c.MustCall("POST", method, body, nil)
 }
 
-func (c *Meergo) CanInitializeWarehouse(name string, settings []byte) error {
+func (c *Meergo) TestWorkspaceCreation(name string, settings []byte) error {
 	body := map[string]any{
 		"name":     name,
 		"settings": json.RawMessage(settings),
@@ -239,7 +240,7 @@ func (c *Meergo) CanInitializeWarehouse(name string, settings []byte) error {
 	return c.Call("POST", "/api/can-initialize-warehouse", body, nil)
 }
 
-func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identifiers []string) {
+func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
 	body := map[string]any{
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
@@ -248,7 +249,7 @@ func (c *Meergo) ChangeIdentityResolutionSettings(runOnBatchImport bool, identif
 	c.MustCall("PUT", method, body, nil)
 }
 
-func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error {
+func (c *Meergo) UpdateIdentityResolutionErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
@@ -256,7 +257,7 @@ func (c *Meergo) ChangeIdentityResolutionSettingsErr(identifiers []string) error
 	return c.Call("PUT", method, body, nil)
 }
 
-func (c *Meergo) ChangeUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
+func (c *Meergo) UpdateUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"schema":         schema,
@@ -266,9 +267,9 @@ func (c *Meergo) ChangeUserSchema(schema types.Type, primarySources map[string]i
 	c.MustCall("PUT", method, req, nil)
 }
 
-// ChangeUserSchemaErr is like ChangeUserSchema but returns an error instead of
+// UpdateUserSchemaErr is like UpdateUserSchema but returns an error instead of
 // panicking.
-func (c *Meergo) ChangeUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
+func (c *Meergo) UpdateUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"schema":         schema,
@@ -278,7 +279,7 @@ func (c *Meergo) ChangeUserSchemaErr(schema types.Type, primarySources map[strin
 	return c.Call("PUT", method, req, nil)
 }
 
-func (c *Meergo) ChangeUserSchemaQueries(schema types.Type, rePaths map[string]any) []string {
+func (c *Meergo) PreviewUserSchemaUpdate(schema types.Type, rePaths map[string]any) []string {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -291,9 +292,9 @@ func (c *Meergo) ChangeUserSchemaQueries(schema types.Type, rePaths map[string]a
 	return response.Queries
 }
 
-// ChangeUserSchemaQueriesErr is like ChangeUserSchemaQueries but returns an
+// PreviewUserSchemaUpdateErr is like PreviewUserSchemaUpdate but returns an
 // error instead of panicking.
-func (c *Meergo) ChangeUserSchemaQueriesErr(schema types.Type, rePaths map[string]any) ([]string, error) {
+func (c *Meergo) PreviewUserSchemaUpdateErr(schema types.Type, rePaths map[string]any) ([]string, error) {
 	req := map[string]any{
 		"schema":  schema,
 		"rePaths": rePaths,
@@ -309,7 +310,7 @@ func (c *Meergo) ChangeUserSchemaQueriesErr(schema types.Type, rePaths map[strin
 	return response.Queries, nil
 }
 
-func (c *Meergo) ChangeWarehouseSettings(mode string, settings []byte) {
+func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 	body := map[string]any{
 		"mode":     mode,
 		"settings": json.RawMessage(settings),
@@ -341,7 +342,7 @@ func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, i
 	return response.Identities, response.Count
 }
 
-func (c *Meergo) ConnectionKeys(conn int) []string {
+func (c *Meergo) WriteKeys(conn int) []string {
 	var keys []string
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/keys", c.ws, conn)
 	c.MustCall("GET", method, nil, &keys)
@@ -430,14 +431,14 @@ func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
 	}
 }
 
-func (c *Meergo) GetConnectionUI(connection int) map[string]any {
+func (c *Meergo) ConnectionUI(connection int) map[string]any {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/ui", c.ws, connection)
 	var ui map[string]any
 	c.MustCall("GET", method, nil, &ui)
 	return ui
 }
 
-func (c *Meergo) SetAction(conn int, actionID int, action ActionToSet) {
+func (c *Meergo) UpdateAction(conn int, actionID int, action ActionToSet) {
 	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d", c.ws, conn, actionID)
 	c.MustCall("PUT", method, action, nil)
 }

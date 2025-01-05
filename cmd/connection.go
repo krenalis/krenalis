@@ -56,8 +56,8 @@ func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request)
 	return c.ActionTypes(r.Context())
 }
 
-// AddAction adds an action.
-func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreateAction creates an action.
+func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (connection connection) AddAction(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return c.AddAction(r.Context(), body.Target, body.EventType, body.Action)
+	return c.CreateAction(r.Context(), body.Target, body.EventType, body.Action)
 }
 
 // AppUsers returns the users of an app connection.
@@ -172,22 +172,22 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 	}, nil
 }
 
-// Keys returns the write keys of a connection.
-func (connection connection) Keys(_ http.ResponseWriter, r *http.Request) (any, error) {
+// WriteKeys returns the write keys of a connection.
+func (connection connection) WriteKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {
 		return nil, err
 	}
-	return c.Keys()
+	return c.WriteKeys()
 }
 
-// GenerateKey generates a new write key for a connection.
-func (connection connection) GenerateKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreateWriteKey creates a new write key for a connection.
+func (connection connection) CreateWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {
 		return nil, err
 	}
-	return c.GenerateKey(r.Context())
+	return c.CreateWriteKey(r.Context())
 }
 
 // LinkConnection links a connection to another connection and vice versa.
@@ -253,13 +253,13 @@ func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (an
 	return map[string]any{"records": records, "schema": schema}, nil
 }
 
-// RevokeKey revokes a write key of a connection.
-func (connection connection) RevokeKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// DeleteWriteKey deletes a write key of a connection.
+func (connection connection) DeleteWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {
 		return nil, err
 	}
-	err = c.RevokeKey(r.Context(), r.PathValue("key"))
+	err = c.DeleteWriteKey(r.Context(), r.PathValue("key"))
 	return nil, err
 }
 
@@ -290,8 +290,8 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 	return nil, nil
 }
 
-// Set sets a connection.
-func (connection connection) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
+// Update updates a connection.
+func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {
 		return nil, err
@@ -303,7 +303,7 @@ func (connection connection) Set(_ http.ResponseWriter, r *http.Request) (any, e
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = c.Set(r.Context(), body.Connection)
+	err = c.Update(r.Context(), body.Connection)
 	return nil, err
 }
 

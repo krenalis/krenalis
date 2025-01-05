@@ -20,7 +20,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 		const fetchKeys = async () => {
 			let keys: string[];
 			try {
-				keys = await api.workspaces.connections.keys(c.id);
+				keys = await api.workspaces.connections.writeKeys(c.id);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
@@ -39,7 +39,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 	const onAddKey = async () => {
 		let key: string;
 		try {
-			key = await api.workspaces.connections.generateKey(c.id);
+			key = await api.workspaces.connections.createWriteKey(c.id);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -60,9 +60,9 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 		setIsLoadingConnections(true);
 	};
 
-	const onRevokeKey = async (key: string) => {
+	const onDeleteWriteKey = async (key: string) => {
 		try {
-			await api.workspaces.connections.revokeKey(c.id, key);
+			await api.workspaces.connections.deleteWriteKey(c.id, key);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				// let the key be removed from the UI without showing errors.
@@ -95,7 +95,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 								<SlInput readonly value={key} filled />
 								<SlCopyButton value={key} />
 							</div>
-							<SlButton variant='danger' onClick={() => onRevokeKey(key)}>
+							<SlButton variant='danger' onClick={() => onDeleteWriteKey(key)}>
 								Revoke
 							</SlButton>
 						</Flex>

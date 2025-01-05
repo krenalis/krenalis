@@ -45,10 +45,10 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	defer c.Stop()
 
 	// Create a connection that exports to Dummy
-	dummyID := c.AddDummyWithSettings("Dummy", meergotester.Destination, meergotester.DummySettings{
+	dummyID := c.CreateDummyWithSettings("Dummy", meergotester.Destination, meergotester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
 	})
-	c.AddEventAction(dummyID, "send_identity", meergotester.ActionToSet{
+	c.CreateEventAction(dummyID, "send_identity", meergotester.ActionToSet{
 		Name:    "Send events",
 		Enabled: true,
 		Transformation: meergotester.Transformation{
@@ -62,8 +62,8 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	})
 
 	// Create a JavaScript event source connection.
-	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", []int{dummyID})
-	key := c.ConnectionKeys(javaScriptID)[0]
+	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", "example.com", []int{dummyID})
+	key := c.WriteKeys(javaScriptID)[0]
 
 	c.SendEvent(key, analytics.Identify{
 		UserId: "f4ca124298",

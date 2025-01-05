@@ -55,8 +55,8 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 	state.Freeze()
 	state.AddListener(p.onDeleteAction)
 	state.AddListener(p.onDeleteConnection)
-	state.AddListener(p.onSetWarehouse)
-	state.AddListener(p.onSetWarehouseMode)
+	state.AddListener(p.onUpdateWarehouse)
+	state.AddListener(p.onUpdateWarehouseMode)
 	var workspaces []int
 	for _, ws := range p.state.Workspaces() {
 		if ws.NumActionsToPurge() > 0 {
@@ -129,8 +129,8 @@ func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) {
 	}
 }
 
-// onSetWarehouse is called when the settings of a data warehouse are changed.
-func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) {
+// onUpdateWarehouse is called when a warehouse is updated.
+func (p *actionPurger) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if n.Mode != state.Normal {
 		return
 	}
@@ -140,8 +140,8 @@ func (p *actionPurger) onSetWarehouse(n state.SetWarehouse) {
 	go p.purgeWorkspace(n.Workspace, nil)
 }
 
-// onSetWarehouseMode is called when the mode of a data warehouse is changed.
-func (p *actionPurger) onSetWarehouseMode(n state.SetWarehouseMode) {
+// onUpdateWarehouseMode is called when the mode of a warehouse is updated.
+func (p *actionPurger) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	if n.Mode != state.Normal {
 		return
 	}

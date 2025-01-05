@@ -34,12 +34,12 @@ func TestExportUsersToFile(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.ChangeIdentityResolutionSettings(true, []string{"email"})
+	c.UpdateIdentityResolution(true, []string{"email"})
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
+		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
+		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -69,7 +69,7 @@ func TestExportUsersToFile(t *testing.T) {
 	storage := meergotester.NewTempStorage(t)
 
 	// Create the Filesystem connection.
-	fsID := c.AddConnection(meergotester.ConnectionToAdd{
+	fsID := c.CreateConnection(meergotester.ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      meergotester.Destination,
 		Enabled:   true,
@@ -82,8 +82,8 @@ func TestExportUsersToFile(t *testing.T) {
 	exportedFilename := "exported-users.tmp.csv"
 	exportFilePath := filepath.Join(storage.Root(), exportedFilename)
 
-	// Add an action to the CSV for exporting the users.
-	exportUsersActionID := c.AddAction(fsID, "Users", meergotester.ActionToSet{
+	// Create an action for the CSV for exporting the users.
+	exportUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Export users to the CSV on Filesystem",
 		Path: exportedFilename,
 		InSchema: types.Object([]types.Property{

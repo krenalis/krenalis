@@ -39,12 +39,12 @@ func TestImportUsersFromFile(t *testing.T) {
 	}
 
 	// Create the Filesystem connection.
-	fsID := c.AddSourceFilesystem(storageDir)
+	fsID := c.CreateSourceFilesystem(storageDir)
 
-	c.ChangeIdentityResolutionSettings(true, []string{"email"})
+	c.UpdateIdentityResolution(true, []string{"email"})
 
-	// Add an action to the CSV for importing the users.
-	importUsersActionID := c.AddAction(fsID, "Users", meergotester.ActionToSet{
+	// Create an action for the CSV for importing the users.
+	importUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Import users from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{

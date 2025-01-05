@@ -38,8 +38,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var dummy, dummyAction int
 	{
 
-		dummy = c.AddDummy("Dummy", meergotester.Source)
-		dummyAction = c.AddAction(dummy, "Users", meergotester.ActionToSet{
+		dummy = c.CreateDummy("Dummy", meergotester.Source)
+		dummyAction = c.CreateAction(dummy, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -85,8 +85,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		if !stat.IsDir() {
 			t.Fatalf("%q is not a dir", storageDir)
 		}
-		fs = c.AddSourceFilesystem(storageDir)
-		csvAction = c.AddAction(fs, "Users", meergotester.ActionToSet{
+		fs = c.CreateSourceFilesystem(storageDir)
+		csvAction = c.CreateAction(fs, "Users", meergotester.ActionToSet{
 			Name: "Import users from CSV on Filesystem",
 			Path: "users_genders.csv",
 			InSchema: types.Object([]types.Property{
@@ -128,21 +128,21 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	var javaScript, javascriptUsersAction int
 	t.Log("importing users and events...")
 	{
-		// Add a JavaScript connection with two actions (one for importing
+		// Create a JavaScript connection with two actions (one for importing
 		// events, one for importing user identities) and retrieve its key.
 		var javaScriptKey string
 		{
-			javaScript = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
-			keys := c.ConnectionKeys(javaScript)
+			javaScript = c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+			keys := c.WriteKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expected one key, got %d keys", len(keys))
 			}
 			javaScriptKey = keys[0]
-			c.AddAction(javaScript, "Events", meergotester.ActionToSet{
+			c.CreateAction(javaScript, "Events", meergotester.ActionToSet{
 				Name:    "JavaScript",
 				Enabled: true,
 			})
-			javascriptUsersAction = c.AddAction(javaScript, "Users", meergotester.ActionToSet{
+			javascriptUsersAction = c.CreateAction(javaScript, "Users", meergotester.ActionToSet{
 				Name:     "JavaScript",
 				Enabled:  true,
 				InSchema: types.Type{},
@@ -178,7 +178,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Set the "email" as identifier and run the Identity Resolution.
-	c.ChangeIdentityResolutionSettings(true, []string{"email"})
+	c.UpdateIdentityResolution(true, []string{"email"})
 	c.ResolveIdentities()
 
 	// Ensure that there are 10 users.

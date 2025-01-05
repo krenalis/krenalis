@@ -85,7 +85,7 @@ const (
 
 type Strategy string
 
-type ConnectionToAdd struct {
+type ConnectionToCreate struct {
 	Name              string          `json:"name"`
 	Role              Role            `json:"role"`
 	Enabled           bool            `json:"enabled"`

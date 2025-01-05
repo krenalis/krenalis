@@ -26,8 +26,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
+		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
+		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -64,7 +64,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			)
 		`)
 
-	pgsql := c.AddDestinationPostgreSQL()
+	pgsql := c.CreateDestinationPostgreSQL()
 
 	// Check if the schema is correct.
 	{
@@ -79,7 +79,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Export to PostgreSQL.
-	exportAction := c.AddAction(pgsql, "Users", meergotester.ActionToSet{
+	exportAction := c.CreateAction(pgsql, "Users", meergotester.ActionToSet{
 		Name:             "Export users to PostgreSQL",
 		TableName:        "test_export_to_db",
 		TableKeyProperty: "email",
@@ -112,8 +112,8 @@ func TestExportToPostgreSQL(t *testing.T) {
 		t.Fatalf("expected count %d, got %d", expectedCount, count)
 	}
 
-	// Change the action to export the empty string for full_name.
-	c.SetAction(pgsql, exportAction, meergotester.ActionToSet{
+	// Update the action to export the empty string for full_name.
+	c.UpdateAction(pgsql, exportAction, meergotester.ActionToSet{
 		Name:             "Export users to PostgreSQL",
 		TableName:        "test_export_to_db",
 		TableKeyProperty: "email",

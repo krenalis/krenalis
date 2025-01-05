@@ -16,7 +16,7 @@ const ConnectionSnippet = () => {
 		const fetchKeys = async () => {
 			let keys: string[];
 			try {
-				keys = await api.workspaces.connections.keys(c.id);
+				keys = await api.workspaces.connections.writeKeys(c.id);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');

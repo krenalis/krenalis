@@ -31,7 +31,7 @@ interface EventListenerEventsResponse {
 	discarded: number;
 }
 
-interface AddEventListenerResponse {
+interface CreateEventListenerResponse {
 	id: string;
 }
 
@@ -107,7 +107,7 @@ interface ConnectionIdentitiesResponse {
 	count: number;
 }
 
-interface EventPreviewResponse {
+interface PreviewSendEventResponse {
 	preview: string;
 }
 
@@ -139,7 +139,7 @@ interface MemberInvitationResponse {
 
 type RePaths = Record<string, string | null>;
 
-interface ChangeUserSchemaQueriesResponse {
+interface PreviewUserSchemaUpdateResponse {
 	queries: string[];
 }
 
@@ -153,7 +153,7 @@ export type {
 	ConnectorSettings,
 	Execution,
 	EventListenerEventsResponse,
-	AddEventListenerResponse,
+	CreateEventListenerResponse,
 	ActionSchemasResponse,
 	ExecQueryResponse,
 	RecordsResponse,
@@ -167,14 +167,14 @@ export type {
 	userTraitsResponse,
 	UserIdentitiesResponse,
 	ConnectionIdentitiesResponse,
-	EventPreviewResponse,
+	PreviewSendEventResponse,
 	Event,
 	Member,
 	MemberToSet,
 	MemberAvatar,
 	MemberInvitationResponse,
 	RePaths,
-	ChangeUserSchemaQueriesResponse,
+	PreviewUserSchemaUpdateResponse,
 	ResponseUser,
 	ActionError,
 	ActionErrorsResponse,

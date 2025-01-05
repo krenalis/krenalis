@@ -31,24 +31,24 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.ChangeIdentityResolutionSettings(true, []string{})
+	c.UpdateIdentityResolution(true, []string{})
 	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 	if ws := c.Workspace(); ws.Identifiers == nil || len(ws.Identifiers) != 0 {
 		t.Fatalf("expected an empty slice, got %v", ws.Identifiers)
 	}
-	c.ChangeIdentityResolutionSettings(true, []string{"dummy_id"})
+	c.UpdateIdentityResolution(true, []string{"dummy_id"})
 	if ws := c.Workspace(); len(ws.Identifiers) != 1 || ws.Identifiers[0] != "dummy_id" {
 		t.Fatalf("expected \"dummy_id\", got %v", ws.Identifiers)
 	}
-	c.ChangeIdentityResolutionSettings(true, []string{"email", "android.id"})
+	c.UpdateIdentityResolution(true, []string{"email", "android.id"})
 	if ws := c.Workspace(); len(ws.Identifiers) != 2 || ws.Identifiers[0] != "email" || ws.Identifiers[1] != "android.id" {
 		t.Fatalf("expected \"email\" and \"android.id\", got %v", ws.Identifiers)
 	}
 
 	// Test an invalid path.
-	err := c.ChangeIdentityResolutionSettingsErr([]string{"invalid path"})
+	err := c.UpdateIdentityResolutionErr([]string{"invalid path"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -58,7 +58,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not existent path in the user schema.
-	err = c.ChangeIdentityResolutionSettingsErr([]string{"non_existent"})
+	err = c.UpdateIdentityResolutionErr([]string{"non_existent"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -68,7 +68,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test a not allowed type for identifiers.
-	err = c.ChangeIdentityResolutionSettingsErr([]string{"phone_numbers"})
+	err = c.UpdateIdentityResolutionErr([]string{"phone_numbers"})
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
@@ -78,13 +78,13 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	}
 
 	// Test the disabling of ResolveIdentitiesOnBatchImport.
-	c.ChangeIdentityResolutionSettings(false, []string{})
+	c.UpdateIdentityResolution(false, []string{})
 	if ws := c.Workspace(); ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be false, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}
 
 	// Test the enabling of ResolveIdentitiesOnBatchImport.
-	c.ChangeIdentityResolutionSettings(true, []string{})
+	c.UpdateIdentityResolution(true, []string{})
 	if ws := c.Workspace(); !ws.ResolveIdentitiesOnBatchImport {
 		t.Fatalf("expected ResolveIdentitiesOnBatchImport to be true, got %t", ws.ResolveIdentitiesOnBatchImport)
 	}

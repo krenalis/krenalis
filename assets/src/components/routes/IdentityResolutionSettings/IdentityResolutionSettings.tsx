@@ -104,7 +104,7 @@ const IdentityResolutionSettings = () => {
 		}
 		setIsSaving(true);
 		try {
-			await api.workspaces.changeIdentityResolutionSettings(runOnBatchImport, identifiers);
+			await api.workspaces.updateIdentityResolution(runOnBatchImport, identifiers);
 		} catch (err) {
 			setTimeout(() => {
 				setIsSaving(false);

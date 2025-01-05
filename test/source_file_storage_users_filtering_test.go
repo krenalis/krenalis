@@ -28,9 +28,9 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs1 := c.AddSourceFilesystem(storageDir)
+	fs1 := c.CreateSourceFilesystem(storageDir)
 
-	action1 := c.AddAction(fs1, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(fs1, "Users", meergotester.ActionToSet{
 		Name: "CSV",
 		Path: "users.csv",
 		Filter: &meergotester.Filter{

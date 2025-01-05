@@ -340,16 +340,16 @@ func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int,
 	}, nil
 }
 
-// AddConnection adds a new connection. oAuthToken is an OAuth token returned by
-// the OAuthToken method and must be empty if the connector does not support
-// OAuth authentication.
+// CreateConnection creates a new connection. oAuthToken is an OAuth token
+// returned by the OAuthToken method and must be empty if the connector does not
+// support OAuth authentication.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - ConnectorNotExist, if the connector does not exist.
 //   - LinkedConnectionNotExist, if a linked connection does not exist.
 //   - InvalidSettings, if the settings are not valid.
-func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
+func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
 
 	this.core.mustBeOpen()
 
@@ -402,7 +402,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 		return 0, err
 	}
 
-	n := state.AddConnection{
+	n := state.CreateConnection{
 		Workspace:         this.workspace.ID,
 		Name:              connection.Name,
 		Role:              state.Role(connection.Role),
@@ -618,8 +618,8 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 	return n.ID, nil
 }
 
-// AddEventListener adds an event listener to the workspace that listens to
-// events and returns its identifier.
+// CreateEventListener creates an event listener for the workspace that listens
+// to events and returns its identifier.
 //
 // size specifies the maximum number of observed events to be returned by a
 // subsequent call to the ListenedEvents method and must be in the range
@@ -629,7 +629,7 @@ func (this *Workspace) AddConnection(ctx context.Context, connection ConnectionT
 //
 // It returns an errors.UnprocessableError with code TooManyListeners, if there
 // are already too many listeners.
-func (this *Workspace) AddEventListener(size int, filter *Filter) (string, error) {
+func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, error) {
 	this.core.mustBeOpen()
 	if size < 1 || size > maxEventsListenedTo {
 		return "", errors.BadRequest("size %d is not valid", size)
@@ -642,7 +642,7 @@ func (this *Workspace) AddEventListener(size int, filter *Filter) (string, error
 		}
 		where = convertFilterToWhere(filter, events.Schema)
 	}
-	id, err := this.core.events.observer.AddListener(size, where)
+	id, err := this.core.events.observer.CreateListener(size, where)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
@@ -652,15 +652,15 @@ func (this *Workspace) AddEventListener(size int, filter *Filter) (string, error
 	return id, nil
 }
 
-// CanChangeWarehouseSettings determines if it is possible to change the
-// warehouse settings of the store's workspace.
+// TestWarehouseUpdate tests the update of the workspace's warehouse.
+//
 // It returns an errors.UnprocessableError with code:
 //
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
 //   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) CanChangeWarehouseSettings(ctx context.Context, settings []byte) error {
+func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
 	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
@@ -670,7 +670,7 @@ func (this *Workspace) CanChangeWarehouseSettings(ctx context.Context, settings 
 		}
 		return err
 	}
-	err = this.store.CanChangeWarehouseSettings(ctx, settings)
+	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return errors.Unprocessable(WarehouseError, "%s", err)
@@ -683,13 +683,12 @@ func (this *Workspace) CanChangeWarehouseSettings(ctx context.Context, settings 
 	return nil
 }
 
-// ChangeIdentityResolutionSettings changes the settings of the Identity
-// Resolution of the workspace.
+// UpdateIdentityResolution updates the identity resolution of the workspace.
 //
 // runOnBatchImport determines whether the identities should be resolved
 // automatically every time a batch import is completed.
 //
-// identifiers specify the Identity Resolution identifiers in the specified
+// identifiers specify the identity resolution identifiers in the specified
 // order. An identifier must be a property in the user schema with a type of
 // Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
 // be repeated.
@@ -700,7 +699,7 @@ func (this *Workspace) CanChangeWarehouseSettings(ctx context.Context, settings 
 //     schema.
 //   - TypeNotAllowed, if an identifier path's type, as defined in the user
 //     schema, is not allowed for identifiers.
-func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
+func (this *Workspace) UpdateIdentityResolution(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
 
 	this.core.mustBeOpen()
 
@@ -717,7 +716,7 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 		identifiers = []string{}
 	}
 	ws := this.workspace
-	n := state.SetIdentityResolutionSettings{
+	n := state.UpdateIdentityResolution{
 		Workspace:                      ws.ID,
 		ResolveIdentitiesOnBatchImport: runOnBatchImport,
 		Identifiers:                    identifiers,
@@ -759,14 +758,14 @@ func (this *Workspace) ChangeIdentityResolutionSettings(ctx context.Context, run
 	return err
 }
 
-// ChangeWarehouseMode changes the mode of the data warehouse for the workspace.
+// UpdateWarehouseMode updates the mode of the data warehouse for the workspace.
 //
 // If cancelIncompatibleOperations is true, the operations currently in progress
 // on the warehouse that are incompatible with mode are cancelled.
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore.
-func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMode, cancelIncompatibleOperations bool) error {
+func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMode, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
 	switch mode {
@@ -777,7 +776,7 @@ func (this *Workspace) ChangeWarehouseMode(ctx context.Context, mode WarehouseMo
 
 	ws := this.workspace
 
-	n := state.SetWarehouseMode{
+	n := state.UpdateWarehouseMode{
 		Workspace:                    ws.ID,
 		Mode:                         state.WarehouseMode(mode),
 		CancelIncompatibleOperations: cancelIncompatibleOperations,
@@ -832,8 +831,8 @@ func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, e
 	return startTime, endTime, nil
 }
 
-// ChangeWarehouseSettings changes the mode and the settings of the data
-// warehouse for the workspace.
+// UpdateWarehouse updates the mode and settings of the warehouse associated
+// with the workspace.
 //
 // If cancelIncompatibleOperations is true, the operations currently in progress
 // on the warehouse that are incompatible with mode are cancelled.
@@ -845,7 +844,7 @@ func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, e
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
 //   - WarehouseError, if an error occurred with the data warehouse.
-func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
+func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
 	switch mode {
@@ -864,7 +863,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode Warehou
 		return err
 	}
 
-	err = this.store.CanChangeWarehouseSettings(ctx, settings)
+	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return errors.Unprocessable(WarehouseError, "%s", err)
@@ -875,7 +874,7 @@ func (this *Workspace) ChangeWarehouseSettings(ctx context.Context, mode Warehou
 		return nil
 	}
 
-	n := state.SetWarehouse{
+	n := state.UpdateWarehouse{
 		Workspace:                    ws.ID,
 		Mode:                         state.WarehouseMode(mode),
 		Settings:                     settings,
@@ -1235,11 +1234,11 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 	return base62.EncodeToString(account), nil
 }
 
-// RemoveEventListener removes the given event listener from the workspace. It
+// DeleteEventListener deletes the given event listener of the workspace. It
 // does nothing if the listener does not exist.
-func (this *Workspace) RemoveEventListener(listener string) {
+func (this *Workspace) DeleteEventListener(listener string) {
 	this.core.mustBeOpen()
-	this.core.events.observer.RemoveListener(listener)
+	this.core.events.observer.DeleteListener(listener)
 }
 
 // Rename renames the workspace with the given new name.
@@ -1395,12 +1394,12 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	return ui, nil
 }
 
-// Set sets the name, the privacy region and the displayed properties of the
-// workspace. name must be between 1 and 100 runes long. displayedProperties
+// Update updates the name, the privacy region and the displayed properties of
+// the workspace. name must be between 1 and 100 runes long. displayedProperties
 // must contain valid displayed property names. A valid displayed property name
 // is an empty string, or alternatively a valid property name between 1 and 100
 // runes long.
-func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegion, displayedProperties DisplayedProperties) error {
+func (this *Workspace) Update(ctx context.Context, name string, region PrivacyRegion, displayedProperties DisplayedProperties) error {
 	this.core.mustBeOpen()
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return errors.BadRequest("name %q is not valid", name)
@@ -1415,7 +1414,7 @@ func (this *Workspace) Set(ctx context.Context, name string, region PrivacyRegio
 		return errors.BadRequest("%s", err)
 	}
 	ws := this.workspace
-	n := state.SetWorkspace{
+	n := state.UpdateWorkspace{
 		Workspace:           ws.ID,
 		Name:                name,
 		PrivacyRegion:       state.PrivacyRegion(region),
@@ -1616,9 +1615,8 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	return users, schema, count, nil
 }
 
-// WarehouseSettings returns name and settings of the data warehouse for the
-// workspace.
-func (this *Workspace) WarehouseSettings() (string, json.Value) {
+// Warehouse returns name and settings of the data warehouse for the workspace.
+func (this *Workspace) Warehouse() (string, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
 	return ws.Warehouse.Name, json.Value(slices.Clone(ws.Warehouse.Settings))

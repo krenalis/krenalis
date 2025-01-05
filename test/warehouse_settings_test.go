@@ -24,10 +24,10 @@ func TestWarehouseSettings(t *testing.T) {
 
 	settings := meergotester.PostgresWarehouseSettings()
 
-	// Call the CanInitializeWarehouse method, checking that it returns the
+	// Call the TestWorkspaceCreation method, checking that it returns the
 	// error that the data warehouse cannot be initialized (because it already
 	// contains database objects).
-	err := c.CanInitializeWarehouse("PostgreSQL", settings)
+	err := c.TestWorkspaceCreation("PostgreSQL", settings)
 	var gotErr string
 	if err != nil {
 		gotErr = err.Error()
@@ -37,13 +37,13 @@ func TestWarehouseSettings(t *testing.T) {
 		t.Fatalf("expected error '%s', got '%s'", expectedErr, gotErr)
 	}
 
-	// The call to CanChangeWarehouseSettings should succeed, as the warehouse
+	// The call to TestWarehouseUpdate should succeed, as the warehouse
 	// being attempted to connect to is the same as the one currently connected
 	// to.
-	c.CanChangeWarehouseSettings(settings)
+	c.TestWarehouseUpdate(settings)
 
-	// The call to ChangeWarehouseSettings should also succeed, as the warehouse
+	// The call to UpdateWarehouse should also succeed, as the warehouse
 	// to connect to is the same as the one currently connected to.
-	c.ChangeWarehouseSettings("Normal", settings)
+	c.UpdateWarehouse("Normal", settings)
 
 }

@@ -33,8 +33,8 @@ func TestEvents(t *testing.T) {
 	defer c.Stop()
 
 	// Load some users in the data warehouse from Dummy.
-	dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
+	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
+	importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -54,22 +54,22 @@ func TestEvents(t *testing.T) {
 	exec := c.ExecuteAction(dummySrc, importUsersID, true)
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
-	// Add a JavaScript connection with 2 actions (one for importing events, one
-	// for importing user identities) and retrieve its key.
+	// Create a JavaScript connection with 2 actions (one for importing events,
+	// one for importing user identities) and retrieve its key.
 	var javaScriptID int
 	var javaScriptKey string
 	{
-		javaScriptID = c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
-		keys := c.ConnectionKeys(javaScriptID)
+		javaScriptID = c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+		keys := c.WriteKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
 		javaScriptKey = keys[0]
-		c.AddAction(javaScriptID, "Events", meergotester.ActionToSet{
+		c.CreateAction(javaScriptID, "Events", meergotester.ActionToSet{
 			Name:    "JavaScript",
 			Enabled: true,
 		})
-		c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
+		c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
 			Name:     "JavaScript",
 			Enabled:  true,
 			InSchema: types.Type{},
@@ -219,9 +219,9 @@ func TestEvents(t *testing.T) {
 	}
 
 	// Test importing a user identity with an action that has no mapping.
-	javaScript2ID := c.AddJavaScriptSource("JavaScript (source 2)", "example.com", nil)
-	javaScript2Key := c.ConnectionKeys(javaScript2ID)[0]
-	c.AddAction(javaScript2ID, "Users", meergotester.ActionToSet{
+	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", "example.com", nil)
+	javaScript2Key := c.WriteKeys(javaScript2ID)[0]
+	c.CreateAction(javaScript2ID, "Users", meergotester.ActionToSet{
 		Name:    "JavaScript",
 		Enabled: true,
 	})

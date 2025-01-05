@@ -27,7 +27,7 @@ const DataWarehouse = () => {
 		const fetchWarehouse = async () => {
 			setHasError(false);
 			try {
-				const response = await api.workspaces.warehouseSettings();
+				const response = await api.workspaces.warehouse();
 				setConnectedWarehouse(response.name);
 				setWarehouseSettings(response.settings);
 			} catch (err) {
@@ -137,7 +137,7 @@ const WarehouseInfo = ({
 	const onConfirmChangeMode = async () => {
 		setIsWarehouseModeLoading(true);
 		try {
-			await api.workspaces.changeWarehouseMode(warehouseModeToSet as WarehouseMode, false);
+			await api.workspaces.updateWarehouseMode(warehouseModeToSet as WarehouseMode, false);
 		} catch (err) {
 			setIsWarehouseModeLoading(false);
 			handleError(err);

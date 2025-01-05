@@ -41,7 +41,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import {
 	AppUsersResponse,
-	EventPreviewResponse,
+	PreviewSendEventResponse,
 	ExecQueryResponse,
 	FindUsersResponse,
 	RecordsResponse,
@@ -1527,9 +1527,9 @@ const FullscreenTransformation = ({
 			return;
 		}
 
-		let res: EventPreviewResponse;
+		let res: PreviewSendEventResponse;
 		try {
-			res = await api.workspaces.connections.eventPreview(
+			res = await api.workspaces.connections.previewSendEvent(
 				connection.id,
 				actionType.eventType,
 				event.full,
@@ -1558,7 +1558,7 @@ const FullscreenTransformation = ({
 	const onQuery = async () => {
 		let res: ExecQueryResponse;
 		try {
-			res = await api.workspaces.connections.query(connection.id, action.query, 20);
+			res = await api.workspaces.connections.execQuery(connection.id, action.query, 20);
 		} catch (err) {
 			handleError(err);
 			return;

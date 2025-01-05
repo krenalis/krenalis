@@ -40,10 +40,10 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	}
 
 	// Create the Filesystem connection.
-	fsID := c.AddSourceFilesystem(storageDir)
+	fsID := c.CreateSourceFilesystem(storageDir)
 
-	// Add the first action to the CSV for importing "email" and "name".
-	actionFirstName := c.AddAction(fsID, "Users", meergotester.ActionToSet{
+	// Create the first action for the CSV for importing "email" and "name".
+	actionFirstName := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Import users' email and name from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{
@@ -69,8 +69,8 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		}),
 	})
 
-	// Add the second action to the CSV for importing "email" and "lastName".
-	actionLastName := c.AddAction(fsID, "Users", meergotester.ActionToSet{
+	// Create the second action for the CSV for importing "email" and "lastName".
+	actionLastName := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name: "Import users' email and lastName from CSV on Filesystem",
 		Path: "users.csv",
 		InSchema: types.Object([]types.Property{

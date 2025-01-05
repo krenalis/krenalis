@@ -25,10 +25,10 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	defer c.Stop()
 
 	// Create two Dummy connections for importing users.
-	dummy1 := c.AddDummy("Dummy 1", meergotester.Source)
-	dummy2 := c.AddDummy("Dummy 2", meergotester.Source)
+	dummy1 := c.CreateDummy("Dummy 1", meergotester.Source)
+	dummy2 := c.CreateDummy("Dummy 2", meergotester.Source)
 
-	// Add two identical actions on two different connections.
+	// Create two identical actions for two different connections.
 	actionParams := meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
@@ -49,8 +49,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 			},
 		},
 	}
-	action1 := c.AddAction(dummy1, "Users", actionParams)
-	action2 := c.AddAction(dummy2, "Users", actionParams)
+	action1 := c.CreateAction(dummy1, "Users", actionParams)
+	action2 := c.CreateAction(dummy2, "Users", actionParams)
 
 	// Import from both actions - and implicitly trigger the identity resolution
 	// process.

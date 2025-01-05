@@ -46,7 +46,7 @@ const addDummySource = async (page: Page): Promise<number> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
-			return await api.workspaces.addConnection(
+			return await api.workspaces.createConnection(
 				{
 					name: 'Dummy',
 					role: 'Source',
@@ -70,7 +70,7 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
-			return await api.workspaces.addConnection(
+			return await api.workspaces.createConnection(
 				{
 					name: 'Dummy',
 					role: 'Destination',
@@ -94,7 +94,7 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 	const id = await page.evaluate(
 		async ({ config }) => {
 			const api = new (window as any).API(config.baseURL, config.workspaceID) as API;
-			return await api.workspaces.addConnection(
+			return await api.workspaces.createConnection(
 				{
 					name: 'PostgreSQL',
 					role: 'Source',
@@ -124,7 +124,7 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 	const id = await page.evaluate(
 		async ({ config}) => {
 			const api = new (window as any).API(config.baseURL, config.workspaceID) as API;
-			return await api.workspaces.addConnection(
+			return await api.workspaces.createConnection(
 				{
 					name: 'PostgreSQL',
 					role: 'Destination',
@@ -158,7 +158,7 @@ const addFileSystemSource = async (
 		const id = await page.evaluate(
 			async ({ url, workspace, tempDir }) => {
 				const api = new (window as any).API(url, workspace) as API;
-				return await api.workspaces.addConnection(
+				return await api.workspaces.createConnection(
 					{
 						name: 'Filesystem',
 						role: 'Source',
@@ -189,7 +189,7 @@ const addFileSystemDestination = async (
 		const id = await page.evaluate(
 			async ({ url, workspace, tempDir }) => {
 				const api = new (window as any).API(url, workspace) as API;
-				return await api.workspaces.addConnection(
+				return await api.workspaces.createConnection(
 					{
 						name: 'Filesystem',
 						role: 'Destination',
@@ -216,7 +216,7 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 	const id = await page.evaluate(
 		async ({ url, workspace }) => {
 			const api = new (window as any).API(url, workspace) as API;
-			return await api.workspaces.addConnection(
+			return await api.workspaces.createConnection(
 				{
 					name: 'JavaScript',
 					role: 'Source',

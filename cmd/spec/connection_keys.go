@@ -21,8 +21,8 @@ func init() {
 			"A connection can have at most 20 keys.",
 		Endpoints: []*Endpoint{
 			{
-				Name: "Generate a connection key",
-				Description: "Generate a key for a mobile, server, or website source connection. " +
+				Name: "Create a connection key",
+				Description: "Creates a key for a mobile, server, or website source connection. " +
 					"Returns an error if the connection already has the maximum limit of 20 keys.",
 				Method: POST,
 				URL:    "/v0/connections/:id/keys",
@@ -101,7 +101,7 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "connection does not exist"},
 					{404, NotFound, "key does not exist"},
-					{422, ConnectionUniqueKey, "key cannot be revoked as it is the connection’s only key"},
+					{422, ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key"},
 				},
 			},
 		},

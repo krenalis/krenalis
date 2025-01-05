@@ -46,14 +46,14 @@ func (state *State) keep() {
 		}
 		state.changing.Lock()
 		switch n.Name {
-		case "AddAction":
-			state.addAction(n)
-		case "AddConnection":
-			state.addConnection(n)
-		case "AddConnectionKey":
-			state.addConnectionKey(n)
-		case "AddWorkspace":
-			state.addWorkspace(n)
+		case "CreateAction":
+			state.createAction(n)
+		case "CreateConnection":
+			state.createConnection(n)
+		case "CreateWriteKey":
+			state.createWriteKey(n)
+		case "CreateWorkspace":
+			state.createWorkspace(n)
 		case "CreateAPIKey":
 			state.createAPIKey(n)
 		case "DeleteAPIKey":
@@ -80,34 +80,34 @@ func (state *State) keep() {
 			state.renameConnection(n)
 		case "RenameWorkspace":
 			state.renameWorkspace(n)
-		case "RevokeConnectionKey":
-			state.revokeConnectionKey(n)
+		case "DeleteWriteKey":
+			state.deleteWriteKey(n)
 		case "SeeLeader":
 			state.seeLeader(n)
 		case "SetAccount":
 			state.setAccount(n)
-		case "SetAction":
-			state.setAction(n)
+		case "UpdateAction":
+			state.updateAction(n)
 		case "SetActionSchedulePeriod":
 			state.setActionSchedulePeriod(n)
 		case "SetActionFormatSettings":
 			state.setActionFormatSettings(n)
 		case "SetActionStatus":
 			state.setActionStatus(n)
-		case "SetConnection":
-			state.setConnection(n)
+		case "UpdateConnection":
+			state.updateConnection(n)
 		case "SetConnectionSettings":
 			state.setConnectionSettings(n)
-		case "SetIdentityResolutionSettings":
-			state.setIdentityResolutionSettings(n)
-		case "SetWarehouse":
-			state.setWarehouse(n)
-		case "SetWarehouseMode":
-			state.setWarehouseMode(n)
-		case "SetWorkspace":
-			state.setWorkspace(n)
-		case "SetWorkspaceUserSchema":
-			state.setWorkspaceUserSchema(n)
+		case "UpdateIdentityResolution":
+			state.updateIdentityResolution(n)
+		case "UpdateWarehouse":
+			state.updateWarehouse(n)
+		case "UpdateWarehouseMode":
+			state.updateWarehouseMode(n)
+		case "UpdateWorkspace":
+			state.updateWorkspace(n)
+		case "UpdateUserSchema":
+			state.updateUserSchema(n)
 		case "UnlinkConnection":
 			state.unlinkConnection(n)
 		default:
@@ -237,8 +237,8 @@ func (state *State) replaceWorkspace(id int, f func(*Workspace)) *Workspace {
 	return ww
 }
 
-// AddAction is the event sent when an action is added.
-type AddAction struct {
+// CreateAction is the event sent when an action is created.
+type CreateAction struct {
 	ID                       int
 	Connection               int
 	Target                   Target
@@ -268,9 +268,9 @@ type AddAction struct {
 	FileOrderingPropertyPath string
 }
 
-// addAction adds a new action.
-func (state *State) addAction(n notification) {
-	e := AddAction{}
+// createAction creates a new action.
+func (state *State) createAction(n notification) {
+	e := CreateAction{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -319,8 +319,8 @@ func (state *State) addAction(n notification) {
 
 }
 
-// AddConnection is the event sent when a new connection is added.
-type AddConnection struct {
+// CreateConnection is the event sent when a new connection is created.
+type CreateConnection struct {
 	Workspace int      // workspace identifier
 	ID        int      // identifier
 	Name      string   // name
@@ -342,9 +342,9 @@ type AddConnection struct {
 	Settings          []byte
 }
 
-// addConnection adds a new connection.
-func (state *State) addConnection(n notification) {
-	e := AddConnection{}
+// createConnection creates a new connection.
+func (state *State) createConnection(n notification) {
+	e := CreateConnection{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -424,16 +424,16 @@ func (state *State) addConnection(n notification) {
 	dispatchNotification(state, e)
 }
 
-// AddConnectionKey is the event sent when a connection key is added.
-type AddConnectionKey struct {
+// CreateWriteKey is the event sent when a write key is created.
+type CreateWriteKey struct {
 	Connection   int
 	Value        string
 	CreationTime time.Time
 }
 
-// addConnectionKey adds a new connection key.
-func (state *State) addConnectionKey(n notification) {
-	e := AddConnectionKey{}
+// createWriteKey creates a write key.
+func (state *State) createWriteKey(n notification) {
+	e := CreateWriteKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -448,8 +448,8 @@ func (state *State) addConnectionKey(n notification) {
 	state.mu.Unlock()
 }
 
-// AddWorkspace is the event sent when a workspace is added.
-type AddWorkspace struct {
+// CreateWorkspace is the event sent when a workspace is created.
+type CreateWorkspace struct {
 	ID                             int
 	Organization                   int
 	Name                           string
@@ -464,9 +464,9 @@ type AddWorkspace struct {
 	}
 }
 
-// addWorkspace adds a workspace.
-func (state *State) addWorkspace(n notification) {
-	e := AddWorkspace{}
+// createWorkspace creates a workspace.
+func (state *State) createWorkspace(n notification) {
+	e := CreateWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -861,15 +861,15 @@ func (state *State) renameWorkspace(n notification) {
 	})
 }
 
-// RevokeConnectionKey is the event sent when a connection key is revoked.
-type RevokeConnectionKey struct {
+// DeleteWriteKey is the event sent when a write key is deleted.
+type DeleteWriteKey struct {
 	Connection int
 	Value      string
 }
 
-// revokeConnectionKey revokes a connection key.
-func (state *State) revokeConnectionKey(n notification) {
-	e := RevokeConnectionKey{}
+// deleteWriteKey deletes a write key.
+func (state *State) deleteWriteKey(n notification) {
+	e := DeleteWriteKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -929,8 +929,8 @@ func (state *State) setAccount(n notification) {
 	})
 }
 
-// SetAction is the event sent when an action is set.
-type SetAction struct {
+// UpdateAction is the event sent when an action is updated.
+type UpdateAction struct {
 	ID                       int
 	Name                     string
 	Enabled                  bool
@@ -955,9 +955,9 @@ type SetAction struct {
 	FileOrderingPropertyPath string
 }
 
-// setAction sets an action.
-func (state *State) setAction(n notification) {
-	e := SetAction{}
+// updateAction updates an action.
+func (state *State) updateAction(n notification) {
+	e := UpdateAction{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1046,8 +1046,8 @@ func (state *State) setActionStatus(n notification) {
 	})
 }
 
-// SetConnection is the event sent when a connection is changed.
-type SetConnection struct {
+// UpdateConnection is the event sent when a connection is updated.
+type UpdateConnection struct {
 	Connection  int
 	Name        string
 	Enabled     bool
@@ -1056,9 +1056,9 @@ type SetConnection struct {
 	WebsiteHost string
 }
 
-// setConnection sets a connection.
-func (state *State) setConnection(n notification) {
-	e := SetConnection{}
+// updateConnection updates a connection.
+func (state *State) updateConnection(n notification) {
+	e := UpdateConnection{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1091,18 +1091,17 @@ func (state *State) setConnectionSettings(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetWarehouse is the event sent when the settings of a data warehouse are
-// changed.
-type SetWarehouse struct {
+// UpdateWarehouse is the event sent when a warehouse is updated.
+type UpdateWarehouse struct {
 	Workspace                    int
 	Mode                         WarehouseMode
 	Settings                     json.RawMessage
 	CancelIncompatibleOperations bool
 }
 
-// setWarehouse sets the settings of a data warehouse.
-func (state *State) setWarehouse(n notification) {
-	e := SetWarehouse{}
+// updateWarehouse updates a warehouse.
+func (state *State) updateWarehouse(n notification) {
+	e := UpdateWarehouse{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1114,17 +1113,17 @@ func (state *State) setWarehouse(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetWarehouseMode is the event sent when the mode of a data warehouse is
-// changed.
-type SetWarehouseMode struct {
+// UpdateWarehouseMode is the event sent when the mode of a data warehouse is
+// updated.
+type UpdateWarehouseMode struct {
 	Workspace                    int
 	Mode                         WarehouseMode
 	CancelIncompatibleOperations bool
 }
 
-// setWarehouseMode sets the mode of a data warehouse.
-func (state *State) setWarehouseMode(n notification) {
-	e := SetWarehouseMode{}
+// updateWarehouseMode updates the mode of a data warehouse.
+func (state *State) updateWarehouseMode(n notification) {
+	e := UpdateWarehouseMode{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1134,18 +1133,18 @@ func (state *State) setWarehouseMode(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetWorkspace is the event sent when the name, the privacy region and the
-// displayed properties of a workspace are changed.
-type SetWorkspace struct {
+// UpdateWorkspace is the event sent when the name, the privacy region and the
+// displayed properties of a workspace are updated.
+type UpdateWorkspace struct {
 	Workspace           int
 	Name                string
 	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
 }
 
-// setWorkspace sets the name and the privacy region of a workspace.
-func (state *State) setWorkspace(n notification) {
-	e := SetWorkspace{}
+// updateWorkspace updates the name and the privacy region of a workspace.
+func (state *State) updateWorkspace(n notification) {
+	e := UpdateWorkspace{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1157,18 +1156,17 @@ func (state *State) setWorkspace(n notification) {
 	dispatchNotification(state, e)
 }
 
-// SetIdentityResolutionSettings is the event sent when the settings of the
-// Identity Resolution of a workspace are changed.
-type SetIdentityResolutionSettings struct {
+// UpdateIdentityResolution is the event sent when the identity resolution of a
+// workspace is updated.
+type UpdateIdentityResolution struct {
 	Workspace                      int
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 }
 
-// setIdentityResolutionSettings sets the Identity Resolution settings of a
-// workspace.
-func (state *State) setIdentityResolutionSettings(n notification) {
-	e := SetIdentityResolutionSettings{}
+// updateIdentityResolution updates the identity resolution of a workspace.
+func (state *State) updateIdentityResolution(n notification) {
+	e := UpdateIdentityResolution{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -1178,18 +1176,17 @@ func (state *State) setIdentityResolutionSettings(n notification) {
 	})
 }
 
-// SetWorkspaceUserSchema is the event sent when the "users" schema of a
-// workspace is changed.
-type SetWorkspaceUserSchema struct {
+// UpdateUserSchema is the event sent when a user schema is updated.
+type UpdateUserSchema struct {
 	Workspace      int
 	UserSchema     types.Type
 	PrimarySources map[string]int
 	Identifiers    []string
 }
 
-// setWorkspaceUserSchema sets the "users" schema of a workspace.
-func (state *State) setWorkspaceUserSchema(n notification) {
-	e := SetWorkspaceUserSchema{}
+// updateUserSchema updates a user schema.
+func (state *State) updateUserSchema(n notification) {
+	e := UpdateUserSchema{}
 	if !decodeNotification(n, &e) {
 		return
 	}

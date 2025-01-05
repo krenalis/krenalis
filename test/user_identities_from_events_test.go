@@ -26,13 +26,13 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	javaScriptID := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
-	javaScriptKey := c.ConnectionKeys(javaScriptID)[0]
-	c.AddAction(javaScriptID, "Events", meergotester.ActionToSet{
+	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+	javaScriptKey := c.WriteKeys(javaScriptID)[0]
+	c.CreateAction(javaScriptID, "Events", meergotester.ActionToSet{
 		Name:    "JavaScript events",
 		Enabled: true,
 	})
-	importUsersAction := c.AddAction(javaScriptID, "Users", meergotester.ActionToSet{
+	importUsersAction := c.CreateAction(javaScriptID, "Users", meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -81,8 +81,8 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		t.Fatalf("user with email %q not found", eventUserEmail)
 	}
 
-	// Change the action to import identities through a constant mapping.
-	c.SetAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
+	// Update the action to import identities through a constant mapping.
+	c.UpdateAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -114,8 +114,8 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		t.Fatalf("expected 2 users, got %d", count)
 	}
 
-	// Change the action to import identities through a transformation function.
-	c.SetAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
+	// Update the action to import identities through a transformation function.
+	c.UpdateAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},

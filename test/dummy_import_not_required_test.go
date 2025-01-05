@@ -25,8 +25,8 @@ func TestDummyImportNotRequired(t *testing.T) {
 	defer c.Stop()
 
 	// Import users from Dummy.
-	dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
-	importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
+	dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
+	importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},

@@ -4,7 +4,7 @@ import { SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';
-import { ChangeUserSchemaQueriesResponse, RePaths } from '../../../lib/api/types/responses';
+import { PreviewUserSchemaUpdateResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
 import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 import { SortableGridRef } from '../../base/Grid/SortableGrid';
@@ -327,9 +327,9 @@ const useSchemaEdit = (
 			return;
 		}
 		const s = normalizeSchema(editableSchema);
-		let res: ChangeUserSchemaQueriesResponse;
+		let res: PreviewUserSchemaUpdateResponse;
 		try {
-			res = await api.workspaces.changeUserSchemaQueries(s, rePaths.current);
+			res = await api.workspaces.previewUserSchemaUpdate(s, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);
@@ -363,7 +363,7 @@ const useSchemaEdit = (
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(editableSchema);
 		try {
-			await api.workspaces.changeUserSchema(s, sources, rePaths.current);
+			await api.workspaces.updateUserSchema(s, sources, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);

@@ -26,16 +26,16 @@ func Test_UserIdentities(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.ChangeIdentityResolutionSettings(true, []string{"email"})
+	c.UpdateIdentityResolution(true, []string{"email"})
 
 	storageDir, err := filepath.Abs("testdata/user_identities_test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fs1 := c.AddSourceFilesystem(storageDir)
-	fs2 := c.AddSourceFilesystem(storageDir)
+	fs1 := c.CreateSourceFilesystem(storageDir)
+	fs2 := c.CreateSourceFilesystem(storageDir)
 
-	action1 := c.AddAction(fs1, "Users", meergotester.ActionToSet{
+	action1 := c.CreateAction(fs1, "Users", meergotester.ActionToSet{
 		Name: "CSV 1",
 		Path: "users1.csv",
 		InSchema: types.Object([]types.Property{
@@ -58,7 +58,7 @@ func Test_UserIdentities(t *testing.T) {
 		}),
 	})
 
-	action2 := c.AddAction(fs2, "Users", meergotester.ActionToSet{
+	action2 := c.CreateAction(fs2, "Users", meergotester.ActionToSet{
 		Name: "CSV 2",
 		Path: "users2.csv",
 		InSchema: types.Object([]types.Property{

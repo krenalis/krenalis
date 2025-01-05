@@ -423,9 +423,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	return actionTypes, nil
 }
 
-// AddAction adds action to the connection returning the identifier of the
-// added action. target is the target of the action and must be supported by the
-// connector of the connection.
+// CreateAction creates an action for the connection returning the identifier of
+// the created action. target is the target of the action and must be supported
+// by the connector of the connection.
 //
 // Refer to the specifications in the file "core/Actions.md" for more details.
 //
@@ -437,7 +437,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 //   - InvalidSettings, if the settings are not valid.
 //   - TargetExist, if an action already exists for a target for the connection.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (this *Connection) AddAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
+func (this *Connection) CreateAction(ctx context.Context, target Target, eventType string, action ActionToSet) (int, error) {
 
 	this.core.mustBeOpen()
 
@@ -473,7 +473,7 @@ func (this *Connection) AddAction(ctx context.Context, target Target, eventType 
 		inSchema = events.Schema
 	}
 
-	n := state.AddAction{
+	n := state.CreateAction{
 		Connection:               this.connection.ID,
 		Target:                   state.Target(target),
 		Name:                     action.Name,
@@ -992,9 +992,9 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	return identities, count, err
 }
 
-// Keys returns the write keys of the connection.
+// WriteKeys returns the write keys of the connection.
 // The connection must be a source mobile, server or website connection.
-func (this *Connection) Keys() ([]string, error) {
+func (this *Connection) WriteKeys() ([]string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	switch c.Connector().Type {
@@ -1008,13 +1008,13 @@ func (this *Connection) Keys() ([]string, error) {
 	return slices.Clone(c.Keys), nil
 }
 
-// GenerateKey generates a new write key for the connection. The connection must
-// be a source mobile, server or website connection.
+// CreateWriteKey creates a new write key for the connection. The connection
+// must be a source mobile, server or website connection.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the connection has already too many keys, it returns an
 // errors.UnprocessableError error with code TooManyKeys.
-func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
+func (this *Connection) CreateWriteKey(ctx context.Context) (string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
@@ -1030,7 +1030,7 @@ func (this *Connection) GenerateKey(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	n := state.AddConnectionKey{
+	n := state.CreateWriteKey{
 		Connection:   c.ID,
 		Value:        value,
 		CreationTime: time.Now().UTC(),
@@ -1304,14 +1304,14 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 	return err
 }
 
-// RevokeKey revokes the given write key of the connection. key cannot be empty
-// and cannot be the unique key of the connection. The connection must be a
-// source mobile, server or website connection.
+// DeleteWriteKey deletes the given write key of the connection. key cannot be
+// empty and cannot be the unique key of the connection. The connection must be
+// a source mobile, server or website connection.
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
 // If the key is the unique key of the server, it returns an
 // errors.UnprocessableError error with code ConnectionUniqueKey.
-func (this *Connection) RevokeKey(ctx context.Context, key string) error {
+func (this *Connection) DeleteWriteKey(ctx context.Context, key string) error {
 	this.core.mustBeOpen()
 	if key == "" {
 		return errors.BadRequest("key is empty")
@@ -1329,7 +1329,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
 	}
-	n := state.RevokeConnectionKey{
+	n := state.DeleteWriteKey{
 		Connection: c.ID,
 		Value:      key,
 	}
@@ -1340,7 +1340,7 @@ func (this *Connection) RevokeKey(ctx context.Context, key string) error {
 			return err
 		}
 		if count == 1 {
-			return errors.Unprocessable(ConnectionUniqueKey, "key cannot be revoked as it is the connection’s only key")
+			return errors.Unprocessable(ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key")
 		}
 		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
 		if err != nil {
@@ -1546,8 +1546,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	return b.Bytes(), nil
 }
 
-// Set sets the connection.
-func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) error {
+// Update updates the connection.
+func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) error {
 
 	this.core.mustBeOpen()
 
@@ -1566,7 +1566,7 @@ func (this *Connection) Set(ctx context.Context, connection ConnectionToSet) err
 		}
 	}
 
-	n := state.SetConnection{
+	n := state.UpdateConnection{
 		Connection:  this.connection.ID,
 		Name:        connection.Name,
 		Enabled:     connection.Enabled,
@@ -2019,9 +2019,9 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ConnectionToSet represents a connection to set in a workspace, by adding a
-// new connection (using the method Workspace.AddConnection) or updating an
-// existing one (using the method Connection.Set).
+// ConnectionToSet represents a connection to set in a workspace, by creating a
+// new connection (using the method Workspace.CreateConnection) or updating an
+// existing one (using the method Connection.Update).
 type ConnectionToSet struct {
 
 	// Name is the name of the connection. It cannot be longer than 100 runes.

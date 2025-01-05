@@ -330,8 +330,8 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 		"failed": metrics.Failed}, nil
 }
 
-// AddConnection adds a new connection.
-func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreateConnection creates a connection for a workspace.
+func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -344,12 +344,12 @@ func (workspace workspace) AddConnection(_ http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return ws.AddConnection(r.Context(), body.Connection, body.OAuthToken)
+	return ws.CreateConnection(r.Context(), body.Connection, body.OAuthToken)
 }
 
-// AddEventListener adds an event listener to a workspace that listens to
+// CreateEventListener creates an event listener for a workspace that listens to
 // events.
-func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -366,16 +366,15 @@ func (workspace workspace) AddEventListener(_ http.ResponseWriter, r *http.Reque
 	if body.Size != nil {
 		size = *body.Size
 	}
-	id, err := ws.AddEventListener(size, body.Filter)
+	id, err := ws.CreateEventListener(size, body.Filter)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]string{"id": id}, nil
 }
 
-// CanChangeWarehouseSettings determines if it is possible to change the
-// warehouse settings of a workspace.
-func (workspace workspace) CanChangeWarehouseSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+// TestWarehouseUpdate tests a warehouse update.
+func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -387,13 +386,12 @@ func (workspace workspace) CanChangeWarehouseSettings(_ http.ResponseWriter, r *
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.CanChangeWarehouseSettings(r.Context(), body.Settings)
+	err = ws.TestWarehouseUpdate(r.Context(), body.Settings)
 	return nil, err
 }
 
-// ChangeIdentityResolutionSettings changes the settings of the Identity
-// Resolution of the workspace.
-func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateIdentityResolution updates the identity resolution of the workspace.
+func (workspace workspace) UpdateIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -406,12 +404,12 @@ func (workspace workspace) ChangeIdentityResolutionSettings(_ http.ResponseWrite
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeIdentityResolutionSettings(r.Context(), body.RunOnBatchImport, body.Identifiers)
+	err = ws.UpdateIdentityResolution(r.Context(), body.RunOnBatchImport, body.Identifiers)
 	return nil, err
 }
 
-// ChangeUserSchema changes the user schema of a workspace.
-func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateUserSchema updates the user schema of a workspace.
+func (workspace workspace) UpdateUserSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -425,13 +423,13 @@ func (workspace workspace) ChangeUserSchema(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
+	err = ws.UpdateUserSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
 	return nil, err
 }
 
-// ChangeUserSchemaQueries returns the queries that would be executed changing
-// the "users" schema of a workspace.
-func (workspace workspace) ChangeUserSchemaQueries(_ http.ResponseWriter, r *http.Request) (any, error) {
+// PreviewUserSchemaUpdate previews a user schema update and returns the queries
+// that would be executed.
+func (workspace workspace) PreviewUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -444,15 +442,15 @@ func (workspace workspace) ChangeUserSchemaQueries(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	queries, err := ws.ChangeUserSchemaQueries(r.Context(), body.Schema, body.RePaths)
+	queries, err := ws.PreviewUserSchemaUpdate(r.Context(), body.Schema, body.RePaths)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"queries": queries}, nil
 }
 
-// ChangeWarehouseMode changes the mode of the data warehouse for a workspace.
-func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateWarehouseMode updates the mode of the data warehouse for a workspace.
+func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -465,13 +463,12 @@ func (workspace workspace) ChangeWarehouseMode(_ http.ResponseWriter, r *http.Re
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeWarehouseMode(r.Context(), body.Mode, body.CancelIncompatibleOperations)
+	err = ws.UpdateWarehouseMode(r.Context(), body.Mode, body.CancelIncompatibleOperations)
 	return nil, err
 }
 
-// ChangeWarehouseSettings changes the settings of the data warehouse for a
-// workspace.
-func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateWarehouse updates the warehouse of a workspace.
+func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -485,8 +482,7 @@ func (workspace workspace) ChangeWarehouseSettings(_ http.ResponseWriter, r *htt
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.ChangeWarehouseSettings(r.Context(), body.Mode, body.Settings,
-		body.CancelIncompatibleOperations)
+	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.CancelIncompatibleOperations)
 	return nil, err
 }
 
@@ -653,13 +649,13 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 	return ws.OAuthToken(r.Context(), body.OAuthCode, body.RedirectURI, body.Connector)
 }
 
-// RemoveEventListener removes an event listener from a workspace.
-func (workspace workspace) RemoveEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
+// DeleteEventListener deletes an event listener of a workspace.
+func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	ws.RemoveEventListener(r.PathValue("listener"))
+	ws.DeleteEventListener(r.PathValue("listener"))
 	return nil, nil
 }
 
@@ -724,9 +720,9 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	return nil, nil
 }
 
-// Set sets the name, the privacy region and the displayed properties of a
+// Update updates the name, the privacy region and the displayed properties of a
 // workspace.
-func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -740,7 +736,7 @@ func (workspace workspace) Set(_ http.ResponseWriter, r *http.Request) (any, err
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.Set(r.Context(), body.Name, body.PrivacyRegion, body.DisplayedProperties)
+	err = ws.Update(r.Context(), body.Name, body.PrivacyRegion, body.DisplayedProperties)
 	return nil, err
 }
 
@@ -818,14 +814,14 @@ func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (a
 	return ws.UserSchema, nil
 }
 
-// WarehouseSettings returns the type and settings of the data warehouse for a
+// Warehouse returns the type and settings of the data warehouse for a
 // workspace.
-func (workspace workspace) WarehouseSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	name, settings := ws.WarehouseSettings()
+	name, settings := ws.Warehouse()
 	return map[string]any{"name": name, "settings": settings}, nil
 }
 

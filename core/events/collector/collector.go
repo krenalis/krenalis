@@ -129,12 +129,12 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, opStore even
 		dispatcher:          dispatcher,
 	}
 	st.Freeze()
-	st.AddListener(c.onAddAction)
-	st.AddListener(c.onAddWorkspace)
+	st.AddListener(c.onCreateAction)
+	st.AddListener(c.onCreateWorkspace)
 	st.AddListener(c.onDeleteAction)
 	st.AddListener(c.onDeleteConnection)
 	st.AddListener(c.onDeleteWorkspace)
-	st.AddListener(c.onSetAction)
+	st.AddListener(c.onUpdateAction)
 	for _, ws := range st.Workspaces() {
 		store := ds.Store(ws.ID)
 		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
@@ -574,8 +574,8 @@ func (c *Collector) skip(id uuid.UUID) bool {
 	return skip
 }
 
-// onAddAction is called when an action is added.
-func (c *Collector) onAddAction(n state.AddAction) {
+// onCreateAction is called when an action is created.
+func (c *Collector) onCreateAction(n state.CreateAction) {
 	action, _ := c.state.Action(n.ID)
 	if !canActionCollectIdentities(action) {
 		return
@@ -590,8 +590,8 @@ func (c *Collector) onAddAction(n state.AddAction) {
 	}()
 }
 
-// onAddWorkspace is called when a workspace is added.
-func (c *Collector) onAddWorkspace(n state.AddWorkspace) {
+// onCreateWorkspace is called when a workspace is created.
+func (c *Collector) onCreateWorkspace(n state.CreateWorkspace) {
 	store := c.datastore.Store(n.ID)
 	c.eventWriters.Store(n.ID, store.NewEventWriter(c.eventAck))
 }
@@ -629,8 +629,8 @@ func (c *Collector) onDeleteWorkspace(n state.DeleteWorkspace) {
 	c.eventWriters.Delete(n.ID)
 }
 
-// onSetAction is called when an action is set.
-func (c *Collector) onSetAction(n state.SetAction) {
+// onUpdateAction is called when an action is updated.
+func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	action, _ := c.state.Action(n.ID)
 	if !canActionCollectIdentities(action) {
 		sa, ok := c.actions.LoadAndDelete(action.ID)

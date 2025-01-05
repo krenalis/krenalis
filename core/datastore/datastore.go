@@ -49,14 +49,14 @@ func New(st *state.State) *Datastore {
 		store: map[int]*Store{},
 	}
 	st.Freeze()
-	ds.state.AddListener(ds.onAddAction)
-	ds.state.AddListener(ds.onAddWorkspace)
+	ds.state.AddListener(ds.onCreateAction)
+	ds.state.AddListener(ds.onCreateWorkspace)
 	ds.state.AddListener(ds.onDeleteAction)
 	ds.state.AddListener(ds.onDeleteConnection)
-	ds.state.AddListener(ds.onSetAction)
-	ds.state.AddListener(ds.onSetWarehouse)
-	ds.state.AddListener(ds.onSetWarehouseMode)
-	ds.state.AddListener(ds.onSetWorkspaceUserSchema)
+	ds.state.AddListener(ds.onUpdateAction)
+	ds.state.AddListener(ds.onUpdateWarehouse)
+	ds.state.AddListener(ds.onUpdateWarehouseMode)
+	ds.state.AddListener(ds.onUpdateUserSchema)
 	for _, ws := range st.Workspaces() {
 		store, err := newStore(ds, ws)
 		if err != nil {
@@ -168,8 +168,8 @@ func (ds *Datastore) mustBeOpen() {
 	}
 }
 
-// onAddAction is called when an action is added.
-func (ds *Datastore) onAddAction(n state.AddAction) {
+// onCreateAction is called when an action is created.
+func (ds *Datastore) onCreateAction(n state.CreateAction) {
 	connection, _ := ds.state.Connection(n.Connection)
 	ws := connection.Workspace()
 	ds.mu.Lock()
@@ -178,11 +178,11 @@ func (ds *Datastore) onAddAction(n state.AddAction) {
 	if !ok {
 		return
 	}
-	store.onAddAction(n)
+	store.onCreateAction(n)
 }
 
-// onAddWorkspace is called when a workspace is added.
-func (ds *Datastore) onAddWorkspace(n state.AddWorkspace) {
+// onCreateWorkspace is called when a workspace is created.
+func (ds *Datastore) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := ds.state.Workspace(n.ID)
 	store, _ := newStore(ds, ws)
 	ds.mu.Lock()
@@ -214,8 +214,8 @@ func (ds *Datastore) onDeleteConnection(n state.DeleteConnection) {
 	store.onDeleteConnection(n)
 }
 
-// onSetAction is called when an action is set.
-func (ds *Datastore) onSetAction(n state.SetAction) {
+// onUpdateAction is called when an action is updated.
+func (ds *Datastore) onUpdateAction(n state.UpdateAction) {
 	action, _ := ds.state.Action(n.ID)
 	ws := action.Connection().Workspace()
 	ds.mu.Lock()
@@ -224,11 +224,11 @@ func (ds *Datastore) onSetAction(n state.SetAction) {
 	if !ok {
 		return
 	}
-	store.onSetAction(n)
+	store.onUpdateAction(n)
 }
 
-// onSetWarehouse is called when the data warehouse is changed.
-func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
+// onUpdateWarehouse is called when a warehouse is updated.
+func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	ds.mu.Lock()
 	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
@@ -250,20 +250,20 @@ func (ds *Datastore) onSetWarehouse(n state.SetWarehouse) {
 	}
 }
 
-// onSetWarehouseMode is called when the mode of a data warehouse is changed.
-func (ds *Datastore) onSetWarehouseMode(n state.SetWarehouseMode) {
+// onUpdateWarehouseMode is called when the mode of a warehouse is updated.
+func (ds *Datastore) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	ds.mu.Lock()
 	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
 	store.mc.ChangeMode(n.Mode, n.CancelIncompatibleOperations)
 }
 
-// onSetWorkspaceUserSchema is called when a workspace's user schema is set.
-func (ds *Datastore) onSetWorkspaceUserSchema(n state.SetWorkspaceUserSchema) {
+// onUpdateUserSchema is called when a user schema is updated.
+func (ds *Datastore) onUpdateUserSchema(n state.UpdateUserSchema) {
 	ds.mu.Lock()
 	store := ds.store[n.Workspace]
 	ds.mu.Unlock()
-	store.onSetWorkspaceUserSchema(n)
+	store.onUpdateUserSchema(n)
 }
 
 // CheckConflictingProperties checks if schema contains conflicting properties

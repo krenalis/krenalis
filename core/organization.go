@@ -67,7 +67,7 @@ type Avatar struct {
 	MimeType string `json:"mimeType"` // Mime type, must be `image/jpeg` or `image/png`
 }
 
-// MemberToSet represents a member to set with the SetMember method.
+// MemberToSet represents a member to update with the UpdateMember method.
 type MemberToSet struct {
 	Name     string  `json:"name"`     // Name, in range [1, 60]
 	Email    string  `json:"email"`    // Email, in range [4,120] and must match `^[\w_\.\+\-\=\?\^\#]+\@(?:[a-zA-Z0-9\-]+\.)+\w+$`
@@ -122,7 +122,7 @@ func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
 	return keys, nil
 }
 
-// AddWorkspace adds a workspace with the given name, privacy region, user
+// CreateWorkspace creates a workspace with the given name, privacy region, user
 // schema and displayed properties, and connects to a data warehouse of the
 // provided name and settings. Returns the identifier of the workspace that has
 // been created. name must be between 1 and 100 runes long.
@@ -139,7 +139,7 @@ func (this *Organization) APIKeys(ctx context.Context) ([]*APIKey, error) {
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseNotExist, if a data warehouse with the provided name does not
 //     exist.
-func (this *Organization) AddWorkspace(ctx context.Context, name string,
+func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
 	whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
@@ -205,7 +205,7 @@ func (this *Organization) AddWorkspace(ctx context.Context, name string,
 		return 0, err
 	}
 
-	n := state.AddWorkspace{
+	n := state.CreateWorkspace{
 		Organization:                   this.organization.ID,
 		Name:                           name,
 		UserSchema:                     userSchema,
@@ -308,8 +308,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	return id, nil
 }
 
-// CanInitializeWarehouse indicates whether the warehouse with the provided name
-// and settings can be initialized.
+// TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
+// with the provided name and settings can be initialized.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -319,7 +319,7 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 //     not initializable.
 //   - WarehouseNotExist, if a data warehouse with the provided name does not
 //     exist.
-func (this *Organization) CanInitializeWarehouse(ctx context.Context, name string, settings []byte) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, settings []byte) error {
 	this.core.mustBeOpen()
 
 	// Validate the parameters.
@@ -567,12 +567,12 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 	return members, nil
 }
 
-// SetAPIKey sets the name of the API key for the organization with the
+// UpdateAPIKey updates the name of the API key for the organization with the
 // specified identifier. name must be between 1 and 100 runes in length.
 //
 // If the API key does not exist for the organization, it returns an
 // errors.NotFound error.
-func (this *Organization) SetAPIKey(ctx context.Context, id int, name string) error {
+func (this *Organization) UpdateAPIKey(ctx context.Context, id int, name string) error {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid API key identifier", id)
@@ -590,13 +590,13 @@ func (this *Organization) SetAPIKey(ctx context.Context, id int, name string) er
 	return nil
 }
 
-// SetMember sets a member of the organization with identifier id. If password
-// is empty, it does not change the password.
+// UpdateMember updates a member of the organization with identifier id.
+// If password is empty, it does not change the password.
 //
 // If the member does not exist, it returns an errors.NotFound error. If the
 // member to set has an email that is already used by another member, it returns
 // an errors.UnprocessableError error with code MemberEmailExists.
-func (this *Organization) SetMember(ctx context.Context, id int, member MemberToSet) error {
+func (this *Organization) UpdateMember(ctx context.Context, id int, member MemberToSet) error {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid member identifier", id)

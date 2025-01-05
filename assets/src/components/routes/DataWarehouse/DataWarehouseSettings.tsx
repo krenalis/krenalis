@@ -45,7 +45,7 @@ const DataWarehouseSettings = ({
 	const onCheck = async () => {
 		const timeout = setTimeout(() => setIsCheckLoading(true), 300);
 		try {
-			await api.workspaces.canChangeWarehouseSettings(settings);
+			await api.workspaces.testWarehouseUpdate(settings);
 		} catch (err) {
 			handleError(err);
 			clearTimeout(timeout);
@@ -64,7 +64,7 @@ const DataWarehouseSettings = ({
 	const onSave = async () => {
 		setIsActionButtonLoading(true);
 		try {
-			await api.workspaces.changeWarehouseSettings(selectedWarehouse.name, mode, settings, false);
+			await api.workspaces.updateWarehouse(selectedWarehouse.name, mode, settings, false);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'InvalidWarehouseType') {

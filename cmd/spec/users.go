@@ -196,8 +196,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Change the user schema",
-				Description: "Change the user schema of the workspace.",
+				Name:        "Update the user schema",
+				Description: "Updates the user schema of the workspace.",
 				Method:      PUT,
 				URL:         "/v0/users/schema",
 				Parameters: []types.Property{
@@ -228,13 +228,13 @@ func init() {
 					{422, ConnectionNotExist, "primary source does not exist"},
 					{422, IdentityResolutionInProgress, "identity resolution is currently in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
-					{422, InvalidSchemaChange, "cannot change the schema as specified"},
+					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
-				Name: "Preview a user schema change",
-				Description: "Returns the SQL queries that would be executed on the warehouse to modify the user schema.\n\n" +
+				Name: "Preview a user schema update",
+				Description: "Returns the SQL queries that would be executed on the warehouse to update the user schema.\n\n" +
 					"It does not make any changes to the schema or execute any queries on the warehouse.",
 				Method: PUT,
 				URL:    "/v0/users/schema/preview",
@@ -264,7 +264,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
-					{422, InvalidSchemaChange, "cannot change the schema as specified"},
+					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},

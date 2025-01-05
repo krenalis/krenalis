@@ -21,7 +21,7 @@ func init() {
 			"Once identity resolution is complete, the collected identities from all connections are unified to form the workspace users.",
 		Endpoints: []*Endpoint{
 			{
-				Name:   "Change identity resolution settings",
+				Name:   "Update identity resolution",
 				Method: PUT,
 				URL:    "/v0/identity-resolution",
 				Parameters: []types.Property{
@@ -47,7 +47,7 @@ func init() {
 				},
 			},
 			{
-				Name:   "Get identity resolution settings",
+				Name:   "Get identity resolution",
 				Method: GET,
 				URL:    "/v0/identity-resolution",
 				Response: &Response{

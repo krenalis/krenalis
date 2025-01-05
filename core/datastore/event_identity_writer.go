@@ -216,11 +216,11 @@ func (iw *EventIdentityWriter) flush() {
 	}()
 }
 
-// onAddAction is called when an action of the connection of iw's action is
-// added.
+// onCreateAction is called when an action of the connection of iw's action is
+// created.
 //
-// The notification is propagated by the Store.onAddAction method.
-func (iw *EventIdentityWriter) onAddAction(n state.AddAction) {
+// The notification is propagated by the Store.onCreateAction method.
+func (iw *EventIdentityWriter) onCreateAction(n state.CreateAction) {
 	iw.mu.Lock()
 	if iw.actions != nil {
 		iw.actions[n.ID] = struct{}{}
@@ -251,10 +251,11 @@ func (iw *EventIdentityWriter) onDeleteConnection(_ state.DeleteConnection) {
 	iw.mu.Unlock()
 }
 
-// onSetAction is called when an action of the connection of iw's action is set.
+// onUpdateAction is called when an action of the connection of iw's action is
+// updated.
 //
-// The notification is propagated by the Store.onSetAction method.
-func (iw *EventIdentityWriter) onSetAction(n state.SetAction) {
+// The notification is propagated by the Store.onUpdateAction method.
+func (iw *EventIdentityWriter) onUpdateAction(n state.UpdateAction) {
 	var aligned bool
 	var flatter *flatter
 	if n.OutSchema.Valid() {
@@ -278,11 +279,11 @@ func (iw *EventIdentityWriter) onSetAction(n state.SetAction) {
 	iw.mu.Unlock()
 }
 
-// onSetWorkspaceUserSchema is called when the user schema of the workspace of
-// the iw's connection is set.
+// onUpdateUserSchema is called when the user schema of the iw's connection is
+// updated.
 //
-// The notification is propagated by the Store.onSetWorkspaceUserSchema method.
-func (iw *EventIdentityWriter) onSetWorkspaceUserSchema(_ state.SetWorkspaceUserSchema) {
+// The notification is propagated by the Store.onUpdateUserSchema method.
+func (iw *EventIdentityWriter) onUpdateUserSchema(_ state.UpdateUserSchema) {
 	action, ok := iw.store.ds.state.Action(iw.action)
 	if !ok {
 		return

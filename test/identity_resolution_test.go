@@ -37,7 +37,7 @@ func TestIdentityResolution(t *testing.T) {
 
 	// Create the Filesystem connection.
 	storage := meergotester.NewTempStorage(t)
-	fsID := c.AddSourceFilesystem(storage.Root())
+	fsID := c.CreateSourceFilesystem(storage.Root())
 
 	properties := map[string]bool{
 		"dummyId":      true,
@@ -56,17 +56,17 @@ func TestIdentityResolution(t *testing.T) {
 		{Name: "phone_numbers", Type: types.Array(types.Text().WithCharLen(300)), ReadOptional: true},
 	}
 
-	c.ChangeIdentityResolutionSettings(false, []string{"dummy_id", "email"})
+	c.UpdateIdentityResolution(false, []string{"dummy_id", "email"})
 
-	// Generate and add an action to the JSON for importing the users.
+	// Create an action for the JSON for importing the users.
 	mapping := map[string]string{
 		"dummy_id":      "dummyId",
 		"email":         "email",
 		"phone_numbers": "phoneNumbers",
 	}
 
-	// Add the action A.
-	actionA := c.AddAction(fsID, "Users", meergotester.ActionToSet{
+	// Create the action A.
+	actionA := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name:      "Action A",
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
@@ -79,8 +79,8 @@ func TestIdentityResolution(t *testing.T) {
 		FormatSettings:   meergotester.SettingsProperties(properties),
 	})
 
-	// Add the action B.
-	actionB := c.AddAction(fsID, "Users", meergotester.ActionToSet{
+	// Create the action B.
+	actionB := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name:      "Action B",
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),

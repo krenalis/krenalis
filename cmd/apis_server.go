@@ -78,9 +78,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"DELETE /api/workspaces/{workspace}":                                                             workspace.Delete,
 		"DELETE /api/workspaces/{workspace}/connections/{connection}":                                    connection.Delete,
 		"DELETE /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   action.Delete,
-		"DELETE /api/workspaces/{workspace}/connections/{connection}/keys/{key}":                         connection.RevokeKey,
+		"DELETE /api/workspaces/{workspace}/connections/{connection}/keys/{key}":                         connection.DeleteWriteKey,
 		"DELETE /api/workspaces/{workspace}/connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
-		"DELETE /api/workspaces/{workspace}/event-listeners/{listener}":                                  workspace.RemoveEventListener,
+		"DELETE /api/workspaces/{workspace}/event-listeners/{listener}":                                  workspace.DeleteEventListener,
 		"GET    /api/connectors":                                                                         api.Connectors,
 		"GET    /api/connectors/{connector}":                                                             api.Connector,
 		"GET    /api/connectors/{connector}/auth-code-url":                                               connector.AuthCodeURL,
@@ -106,7 +106,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   connection.Action,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/complete-path/{path}":               connection.CompletePath,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/executions":                         connection.Executions,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.Keys,
+		"GET    /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.WriteKeys,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/tables/{table}/schema":              connection.TableSchema,
 		"GET    /api/workspaces/{workspace}/connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
 		"GET    /api/workspaces/{workspace}/event-listeners/{listener}/events":                           workspace.ListenedEvents,
@@ -115,8 +115,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /api/workspaces/{workspace}/user-schema":                                                 workspace.UserSchema,
 		"GET    /api/workspaces/{workspace}/users/{user}/identities":                                     workspace.Identities,
 		"GET    /api/workspaces/{workspace}/users/{user}/traits":                                         workspace.Traits,
-		"GET    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.WarehouseSettings,
-		"POST   /api/can-initialize-warehouse":                                                           organization.CanInitializeWarehouse,
+		"GET    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.Warehouse,
+		"POST   /api/can-initialize-warehouse":                                                           organization.TestWorkspaceCreation,
 		"POST   /api/expressions-properties":                                                             api.ExpressionsProperties, /* only UI */
 		"POST   /api/keys":                                                                               organization.CreateAPIKey, /* only UI */
 		"POST   /api/members/invitations":                                                                organization.InviteMember, /* only UI */
@@ -124,42 +124,42 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /api/members/logout":                                                                     s.logout,                  /* only UI */
 		"POST   /api/transformations":                                                                    api.TransformData,         /* only UI */
 		"POST   /api/validate-expression":                                                                api.ValidateExpression,    /* only UI */
-		"POST   /api/workspaces":                                                                         organization.AddWorkspace,
-		"POST   /api/workspaces/{workspace}/change-user-schema-queries":                                  workspace.ChangeUserSchemaQueries,
-		"POST   /api/workspaces/{workspace}/connections":                                                 workspace.AddConnection,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/actions":                            connection.AddAction,
+		"POST   /api/workspaces":                                                                         organization.CreateWorkspace,
+		"POST   /api/workspaces/{workspace}/change-user-schema-queries":                                  workspace.PreviewUserSchemaUpdate,
+		"POST   /api/workspaces/{workspace}/connections":                                                 workspace.CreateConnection,
+		"POST   /api/workspaces/{workspace}/connections/{connection}/actions":                            connection.CreateAction,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/actions/{action}/executions":        action.Execute,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
 		"POST   /api/workspaces/{workspace}/connections/{connection}/app-users":                          connection.AppUsers,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/events/send-previews":               connection.PreviewSendEvent,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/identities":                         connection.Identities,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.GenerateKey,
+		"POST   /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.CreateWriteKey,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/query/executions":                   connection.ExecQuery,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/records":                            connection.Records,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/sheets":                             connection.Sheets,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
-		"POST   /api/workspaces/{workspace}/event-listeners":                                             workspace.AddEventListener,
+		"POST   /api/workspaces/{workspace}/event-listeners":                                             workspace.CreateEventListener,
 		"POST   /api/workspaces/{workspace}/events":                                                      workspace.Events,
 		"POST   /api/workspaces/{workspace}/identity-resolutions":                                        workspace.StartIdentityResolution,
 		"POST   /api/workspaces/{workspace}/oauth-token":                                                 workspace.OAuthToken,
 		"POST   /api/workspaces/{workspace}/ui":                                                          workspace.ServeUI, /* only UI */
 		"POST   /api/workspaces/{workspace}/ui-event":                                                    workspace.ServeUI, /* only UI */
 		"POST   /api/workspaces/{workspace}/users":                                                       workspace.Users,
-		"POST   /api/workspaces/{workspace}/warehouse/can-change-settings":                               workspace.CanChangeWarehouseSettings,
+		"POST   /api/workspaces/{workspace}/warehouse/can-change-settings":                               workspace.TestWarehouseUpdate,
 		"POST   /api/workspaces/{workspace}/warehouse/repair":                                            workspace.RepairWarehouse,
-		"PUT    /api/keys/{key}":                                                                         organization.SetAPIKey, /* only UI */
-		"PUT    /api/members/current":                                                                    organization.SetMember, /* only UI */
-		"PUT    /api/members/invitations/{token}":                                                        api.AcceptInvitation,   /* only UI */
-		"PUT    /api/workspaces/{workspace}":                                                             workspace.Set,
-		"PUT    /api/workspaces/{workspace}/connections/{connection}":                                    connection.Set,
-		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   action.Set,
+		"PUT    /api/keys/{key}":                                                                         organization.UpdateAPIKey, /* only UI */
+		"PUT    /api/members/current":                                                                    organization.UpdateMember, /* only UI */
+		"PUT    /api/members/invitations/{token}":                                                        api.AcceptInvitation,      /* only UI */
+		"PUT    /api/workspaces/{workspace}":                                                             workspace.Update,
+		"PUT    /api/workspaces/{workspace}/connections/{connection}":                                    connection.Update,
+		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   action.Update,
 		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
 		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}/status":            action.SetStatus,
-		"PUT    /api/workspaces/{workspace}/identity-resolution/settings":                                workspace.ChangeIdentityResolutionSettings,
-		"PUT    /api/workspaces/{workspace}/user-schema":                                                 workspace.ChangeUserSchema,
-		"PUT    /api/workspaces/{workspace}/warehouse/mode":                                              workspace.ChangeWarehouseMode,
-		"PUT    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.ChangeWarehouseSettings,
+		"PUT    /api/workspaces/{workspace}/identity-resolution/settings":                                workspace.UpdateIdentityResolution,
+		"PUT    /api/workspaces/{workspace}/user-schema":                                                 workspace.UpdateUserSchema,
+		"PUT    /api/workspaces/{workspace}/warehouse/mode":                                              workspace.UpdateWarehouseMode,
+		"PUT    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.UpdateWarehouse,
 	}
 
 	s.mux = http.NewServeMux()

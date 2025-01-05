@@ -125,7 +125,7 @@ const useAction = (
 				if (fields.includes('Query') && isEditing) {
 					let res: ExecQueryResponse;
 					try {
-						res = await api.workspaces.connections.query(connection.id, providedAction.query!, 0);
+						res = await api.workspaces.connections.execQuery(connection.id, providedAction.query!, 0);
 						inputSchema = res.schema;
 					} catch (err) {
 						if (
@@ -265,9 +265,9 @@ const useAction = (
 		let id: number = 0;
 		try {
 			if (isEditing) {
-				await api.workspaces.connections.setAction(connection.id, action.id!, actionToSet);
+				await api.workspaces.connections.updateAction(connection.id, action.id!, actionToSet);
 			} else {
-				id = await api.workspaces.connections.addAction(
+				id = await api.workspaces.connections.createAction(
 					connection.id,
 					actionType.target,
 					actionType.eventType,

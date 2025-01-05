@@ -44,10 +44,10 @@ func TestActionsCreation(t *testing.T) {
 	if !stat.IsDir() {
 		t.Fatalf("%q is not a dir", storageDir)
 	}
-	srcFsID := c.AddSourceFilesystem(storageDir)
-	dstFsID := c.AddDestinationFilesystem(storageDir)
-	javaScriptConnection := c.AddJavaScriptSource("JavaScript (source)", "example.com", nil)
-	postgreSQLConnection := c.AddSourcePostgreSQL()
+	srcFsID := c.CreateSourceFilesystem(storageDir)
+	dstFsID := c.CreateDestinationFilesystem(storageDir)
+	javaScriptConnection := c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
+	postgreSQLConnection := c.CreateSourcePostgreSQL()
 
 	tests := []struct {
 		conn   int
@@ -418,7 +418,7 @@ func TestActionsCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			_, err := c.AddActionErr(test.conn, "Users", test.action)
+			_, err := c.CreateActionErr(test.conn, "Users", test.action)
 			switch {
 			case test.err == "" && err == nil:
 				// Ok.

@@ -23,14 +23,14 @@ interface Workspace {
 	userPrimarySources: PrimarySources;
 }
 
-interface AddWorkspaceResponse {
+interface CreateWorkspaceResponse {
 	id: number;
 }
 
-interface IdentityResolutionExecution {
+interface LastIdentityResolution {
 	startTime: string;
 	endTime: string;
 }
 
 export default Workspace;
-export type { PrivacyRegion, AddWorkspaceResponse, DisplayedProperties, PrimarySources, IdentityResolutionExecution };
+export type { PrivacyRegion, CreateWorkspaceResponse, DisplayedProperties, PrimarySources, LastIdentityResolution };

@@ -15,7 +15,7 @@ import { UserDrawer } from './UserDrawer';
 import { useUsersGrid } from './useUsersGrid';
 import { UserProperty } from './Users.types';
 import AppContext from '../../../context/AppContext';
-import { IdentityResolutionExecution } from '../../../lib/api/types/workspace';
+import { LastIdentityResolution } from '../../../lib/api/types/workspace';
 
 const UsersList = () => {
 	const [selectedUser, setSelectedUser] = useState<string>('');
@@ -53,9 +53,9 @@ const UsersList = () => {
 	}, [usersProperties]);
 
 	const handleIdentityResolutionExecution = async () => {
-		let res: IdentityResolutionExecution;
+		let res: LastIdentityResolution;
 		try {
-			res = await api.workspaces.identityResolutionExecution();
+			res = await api.workspaces.lastIdentityResolution();
 		} catch (err) {
 			handleError(err);
 			return;

@@ -23,12 +23,12 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	c.ChangeIdentityResolutionSettings(true, []string{"email"})
+	c.UpdateIdentityResolution(true, []string{"email"})
 
 	// Load some users in the data warehouse.
 	{
-		dummySrc := c.AddDummy("Dummy (source)", meergotester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
+		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
+		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
@@ -51,8 +51,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 
 	// Export the users to Dummy.
 	{
-		dummyDest := c.AddDummy("Dummy (destination)", meergotester.Destination)
-		exportUsersActionID := c.AddAction(dummyDest, "Users", meergotester.ActionToSet{
+		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
+		exportUsersActionID := c.CreateAction(dummyDest, "Users", meergotester.ActionToSet{
 			Name: "Export users to Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -80,8 +80,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	// Import from Dummy - again - to check if the users have been updated
 	// successfully.
 	{
-		dummySrc := c.AddDummy("Dummy (source 2)", meergotester.Source)
-		importUsersID := c.AddAction(dummySrc, "Users", meergotester.ActionToSet{
+		dummySrc := c.CreateDummy("Dummy (source 2)", meergotester.Source)
+		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
 			Name: "Import users from Dummy",
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},

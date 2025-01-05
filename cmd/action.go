@@ -53,8 +53,8 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 	return nil, nil
 }
 
-// Set sets an action.
-func (action action) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
+// Update updates an action.
+func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	a, err := action.action(r)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (action action) Set(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.Set(r.Context(), body)
+	err = a.Update(r.Context(), body)
 	return nil, err
 }
 

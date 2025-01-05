@@ -37,7 +37,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 
 	identifiers := []string{"email", "android.id"}
-	c.ChangeIdentityResolutionSettings(true, identifiers)
+	c.UpdateIdentityResolution(true, identifiers)
 
 	// Read the schema in "testdata/change_user_schema_test.json".
 	f, err := os.Open("testdata/change_user_schema_test.json")
@@ -56,12 +56,12 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Change the user schema.
-	queries := c.ChangeUserSchemaQueries(file.Schema, file.RePaths)
+	// Update the user schema.
+	queries := c.PreviewUserSchemaUpdate(file.Schema, file.RePaths)
 	if len(queries) != 4 {
 		t.Fatalf("expected 4 queries, got %d", len(queries))
 	}
-	c.ChangeUserSchema(file.Schema, file.PrimarySources, file.RePaths)
+	c.UpdateUserSchema(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 10 {
@@ -78,7 +78,7 @@ func TestChangeUserSchema(t *testing.T) {
 	schema := types.Object(append(types.Properties(file.Schema), types.Property{
 		Name: "new_prop", Type: types.Text(), ReadOptional: true,
 	}))
-	queries = c.ChangeUserSchemaQueries(schema, nil)
+	queries = c.PreviewUserSchemaUpdate(schema, nil)
 	expectedQueries := []string{"BEGIN;",
 		"DROP VIEW \"users\";",
 		"ALTER TABLE \"_users_0\"\n\tADD COLUMN \"new_prop\" character varying;",
@@ -89,7 +89,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.ChangeUserSchema(schema, nil, nil)
+	c.UpdateUserSchema(schema, nil, nil)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 11 {
@@ -122,7 +122,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 	schema = types.Object(properties)
 	rePaths := map[string]any{"android.identifier": "android.id"}
-	queries = c.ChangeUserSchemaQueries(schema, rePaths)
+	queries = c.PreviewUserSchemaUpdate(schema, rePaths)
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"users\";", "ALTER TABLE \"_users_0\"\n\tDROP COLUMN \"email\";",
@@ -135,7 +135,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.ChangeUserSchema(schema, nil, rePaths)
+	c.UpdateUserSchema(schema, nil, rePaths)
 	identifiers = []string{"android.identifier"}
 
 	ws = c.Workspace()
@@ -178,7 +178,7 @@ func TestChangeUserSchema(t *testing.T) {
 		properties = append(properties, p)
 	}
 	schema = types.Object(properties)
-	queries = c.ChangeUserSchemaQueries(schema, nil)
+	queries = c.PreviewUserSchemaUpdate(schema, nil)
 	expectedQueries = []string{
 		"BEGIN;",
 		"DROP VIEW \"users\";",
@@ -190,7 +190,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if !slices.Equal(expectedQueries, queries) {
 		t.Fatalf("expected queries %#v, got %#v", expectedQueries, queries)
 	}
-	c.ChangeUserSchema(schema, nil, rePaths)
+	c.UpdateUserSchema(schema, nil, rePaths)
 
 	ws = c.Workspace()
 	if n := types.NumProperties(ws.UserSchema); n != 10 {
@@ -220,7 +220,7 @@ func TestChangeUserSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), ReadOptional: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
+	_, err = c.PreviewUserSchemaUpdateErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -228,7 +228,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.ChangeUserSchemaErr(schema, nil, nil)
+	err = c.UpdateUserSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -242,7 +242,7 @@ func TestChangeUserSchema(t *testing.T) {
 			{Name: "b", Type: types.Text(), ReadOptional: true, Nullable: true},
 		}), ReadOptional: true},
 	))
-	_, err = c.ChangeUserSchemaQueriesErr(schema, nil)
+	_, err = c.PreviewUserSchemaUpdateErr(schema, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -250,7 +250,7 @@ func TestChangeUserSchema(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
-	err = c.ChangeUserSchemaErr(schema, nil, nil)
+	err = c.UpdateUserSchemaErr(schema, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -258,11 +258,11 @@ func TestChangeUserSchema(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
 	}
 
-	// Set a primary source for the first property.
+	// Create a primary source for the first property.
 	firstProperty := types.PropertyNames(file.Schema)[0]
-	primarySource := c.AddDummy("Primary Source", meergotester.Source)
+	primarySource := c.CreateDummy("Primary Source", meergotester.Source)
 	primarySources := map[string]int{firstProperty: primarySource}
-	c.ChangeUserSchema(file.Schema, primarySources, nil)
+	c.UpdateUserSchema(file.Schema, primarySources, nil)
 	ws = c.Workspace()
 	if !maps.Equal(primarySources, ws.UserPrimarySources) {
 		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.UserPrimarySources)
@@ -273,7 +273,7 @@ func TestChangeUserSchema(t *testing.T) {
 
 	// Set a primary source for a not existent property.
 	primarySources = map[string]int{"not_existent_property": primarySource}
-	err = c.ChangeUserSchemaErr(file.Schema, primarySources, nil)
+	err = c.UpdateUserSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = `unexpected HTTP status code 400: {"error":{"code":"BadRequest","message":"primary sources are not valid: property path \"not_existent_property\" does not exist","cause":"property path \"not_existent_property\" does not exist"}}`
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
@@ -285,7 +285,7 @@ func TestChangeUserSchema(t *testing.T) {
 		notExistentSource = 2
 	}
 	primarySources = map[string]int{firstProperty: notExistentSource}
-	err = c.ChangeUserSchemaErr(file.Schema, primarySources, nil)
+	err = c.UpdateUserSchemaErr(file.Schema, primarySources, nil)
 	expectedErr = fmt.Sprintf(`unexpected HTTP status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %d does not exist"}}`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())

@@ -25,14 +25,14 @@ func TestReimport(t *testing.T) {
 	defer c.Stop()
 
 	// First of all, create a Dummy connection.
-	dummy := c.AddDummy("Dummy", meergotester.Source)
+	dummy := c.CreateDummy("Dummy", meergotester.Source)
 
-	// Add an action that imports users from Dummy, that imports:
+	// Create an action that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the first name
 	//
-	dummyAction := c.AddAction(dummy, "Users", meergotester.ActionToSet{
+	dummyAction := c.CreateAction(dummy, "Users", meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
@@ -73,12 +73,12 @@ func TestReimport(t *testing.T) {
 	assertEq("second user first name", "Bryon", users[1].Properties["first_name"])
 	assertEq("second user last name", nil, users[1].Properties["last_name"])
 
-	// Change an action that imports users from Dummy, that imports:
+	// Update the action that imports users from Dummy, that imports:
 	//
 	// - the email
 	// - the last name (instead of the first name)
 	//
-	c.SetAction(dummy, dummyAction, meergotester.ActionToSet{
+	c.UpdateAction(dummy, dummyAction, meergotester.ActionToSet{
 		Name: "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
