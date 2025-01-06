@@ -397,12 +397,21 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	c.MustCall("POST", method, body, nil)
 }
 
-func (c *Meergo) TestWorkspaceCreation(name string, settings []byte) error {
+func (c *Meergo) TestWorkspaceCreation(name string,
+	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
+	whName string, whSettings []byte, mode WarehouseMode) error {
 	body := map[string]any{
-		"name":     name,
-		"settings": json.RawMessage(settings),
+		"name":                name,
+		"userSchema":          userSchema,
+		"displayedProperties": displayedProperties,
+		"privacyRegion":       region,
+		"warehouse": map[string]any{
+			"name":     whName,
+			"mode":     mode,
+			"settings": json.RawMessage(whSettings),
+		},
 	}
-	return c.Call("POST", "/api/can-initialize-warehouse", body, nil)
+	return c.Call("POST", "/api/workspaces/test", body, nil)
 }
 
 func (c *Meergo) UpdateAction(conn int, actionID int, action ActionToSet) {

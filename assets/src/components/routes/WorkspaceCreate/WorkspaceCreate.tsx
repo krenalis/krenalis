@@ -36,10 +36,31 @@ const WorkspaceCreate = () => {
 		redirect('workspaces');
 	};
 
-	const onCheckWarehouse = async () => {
-		setIsCheckingWarehouse(true);
+	const onTestWorkspaceCreation = async () => {
+		const privacyRegion = useEuropeRegion ? 'Europe' : '';
 		try {
-			await api.testWorkspaceCreation(selectedWarehouse, 'Normal', warehouseSettings);
+			validateWorkspaceName(name);
+		} catch (err) {
+			handleError(err);
+			return;
+		}
+		setIsCheckingWarehouse(true);
+		let displayedProperties: DisplayedProperties = {
+			firstName: 'first_name',
+			lastName: 'last_name',
+			information: 'email',
+			image: '',
+		};
+		try {
+			await api.workspaces.testCreation(
+				name,
+				privacyRegion,
+				InitialSchema as ObjectType,
+				displayedProperties,
+				selectedWarehouse,
+				'Normal',
+				warehouseSettings,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				setIsCheckingWarehouse(false);
@@ -129,7 +150,7 @@ const WorkspaceCreate = () => {
 				</SlButton>
 				<SlButton
 					className='workspace-add__check-button'
-					onClick={onCheckWarehouse}
+					onClick={onTestWorkspaceCreation}
 					loading={isCheckingWarehouse}
 				>
 					Check warehouse

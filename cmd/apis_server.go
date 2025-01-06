@@ -116,7 +116,6 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /api/workspaces/{workspace}/users/{user}/identities":                                     workspace.Identities,
 		"GET    /api/workspaces/{workspace}/users/{user}/traits":                                         workspace.Traits,
 		"GET    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.Warehouse,
-		"POST   /api/can-initialize-warehouse":                                                           organization.TestWorkspaceCreation,
 		"POST   /api/expressions-properties":                                                             api.ExpressionsProperties, /* only UI */
 		"POST   /api/keys":                                                                               organization.CreateAPIKey, /* only UI */
 		"POST   /api/members/invitations":                                                                organization.InviteMember, /* only UI */
@@ -125,6 +124,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /api/transformations":                                                                    api.TransformData,         /* only UI */
 		"POST   /api/validate-expression":                                                                api.ValidateExpression,    /* only UI */
 		"POST   /api/workspaces":                                                                         organization.CreateWorkspace,
+		"POST   /api/workspaces/test":                                                                    organization.TestWorkspaceCreation,
 		"POST   /api/workspaces/{workspace}/change-user-schema-queries":                                  workspace.PreviewUserSchemaUpdate,
 		"POST   /api/workspaces/{workspace}/connections":                                                 workspace.CreateConnection,
 		"POST   /api/workspaces/{workspace}/connections/{connection}/actions":                            connection.CreateAction,

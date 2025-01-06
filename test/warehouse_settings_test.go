@@ -11,9 +11,10 @@ import (
 	"testing"
 
 	"github.com/meergo/meergo/test/meergotester"
+	"github.com/meergo/meergo/types"
 )
 
-func TestWarehouseSettings(t *testing.T) {
+func TestWarehouse(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
@@ -27,7 +28,11 @@ func TestWarehouseSettings(t *testing.T) {
 	// Call the TestWorkspaceCreation method, checking that it returns the
 	// error that the data warehouse cannot be initialized (because it already
 	// contains database objects).
-	err := c.TestWorkspaceCreation("PostgreSQL", settings)
+	userSchema := types.Object([]types.Property{
+		{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
+	})
+	err := c.TestWorkspaceCreation("PostgreSQL", meergotester.PrivacyRegionNotSpecified, userSchema,
+		meergotester.DisplayedProperties{}, "PostgreSQL", settings, meergotester.Normal)
 	var gotErr string
 	if err != nil {
 		gotErr = err.Error()

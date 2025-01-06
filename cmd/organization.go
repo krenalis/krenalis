@@ -156,15 +156,22 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
-		Name     string             `json:"name"`
-		Mode     core.WarehouseMode `json:"mode"`
-		Settings json.Value         `json:"settings"`
+		Name                string                   `json:"name"`
+		UserSchema          types.Type               `json:"userSchema"`
+		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
+		PrivacyRegion       core.PrivacyRegion       `json:"privacyRegion"`
+		Warehouse           struct {
+			Name     string             `json:"name"`
+			Mode     core.WarehouseMode `json:"mode"`
+			Settings json.Value         `json:"settings"`
+		} `json:"warehouse"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = o.TestWorkspaceCreation(r.Context(), body.Name, body.Settings)
+	err = o.TestWorkspaceCreation(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
+		body.DisplayedProperties, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
 	return nil, err
 }
 

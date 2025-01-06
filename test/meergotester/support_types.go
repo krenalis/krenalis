@@ -10,6 +10,7 @@ package meergotester
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -376,6 +377,27 @@ type TransformationFunction struct {
 	PreserveJSON bool     `json:"preserveJSON"`
 	InPaths      []string `json:"inPaths"`
 	OutPaths     []string `json:"outPaths"`
+}
+
+type WarehouseMode int
+
+const (
+	Normal WarehouseMode = iota
+	Inspection
+	Maintenance
+)
+
+// MarshalJSON returns mode as the JSON encoding of mode.
+func (mode WarehouseMode) MarshalJSON() ([]byte, error) {
+	switch mode {
+	case Normal:
+		return []byte(`"Normal"`), nil
+	case Inspection:
+		return []byte(`"Inspection"`), nil
+	case Maintenance:
+		return []byte(`"Maintenance"`), nil
+	}
+	return nil, errors.New("invalid warehouse mode")
 }
 
 type Workspace struct {

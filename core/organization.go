@@ -252,54 +252,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 
 	this.core.mustBeOpen()
 
-	// Validate the parameters.
-	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
-		return 0, errors.BadRequest("name %q is not valid", name)
-	}
-	if !userSchema.Valid() {
-		return 0, errors.BadRequest("user schema is invalid")
-	}
-	switch region {
-	case PrivacyRegionNotSpecified, PrivacyRegionEurope:
-	default:
-		return 0, errors.BadRequest("privacy region is not valid")
-	}
-	if err := validateDisplayedProperties(displayedProperties); err != nil {
-		return 0, errors.BadRequest("%s", err)
-	}
-	if whName == "" {
-		return 0, errors.BadRequest("warehouse name is empty")
-	}
-
-	// Perform additional checks on the compliance of the user schema.
-	if err := checkAllowedPropertyUserSchema(userSchema); err != nil {
-		return 0, errors.BadRequest("%s", err)
-	}
-	if err := datastore.CheckConflictingProperties("users", userSchema); err != nil {
-		return 0, errors.BadRequest("%s", err)
-	}
-
-	// Normalize the warehouse settings.
-	whSettings, err := this.core.datastore.NormalizeWarehouseSettings(whName, whSettings)
+	whSettings, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whName, whSettings, whMode)
 	if err != nil {
-		if err == datastore.DataWarehouseNotExist {
-			return 0, errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", whName)
-		}
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
-			return 0, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return 0, err
-	}
-
-	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, whName, whSettings)
-	if err != nil {
-		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
-			return 0, errors.Unprocessable(WarehouseNonInitializable, "%s", err)
-		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return 0, errors.Unprocessable(WarehouseError, "%s", err)
-		}
 		return 0, err
 	}
 
@@ -532,39 +486,12 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 //     not initializable.
 //   - WarehouseNotExist, if a data warehouse with the provided name does not
 //     exist.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, settings []byte) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string,
+	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
+	whName string, whSettings []byte, mode WarehouseMode) error {
 	this.core.mustBeOpen()
-
-	// Validate the parameters.
-	if name == "" {
-		return errors.BadRequest("warehouse name is empty")
-	}
-
-	// Normalize the warehouse settings.
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(name, settings)
-	if err != nil {
-		if err == datastore.DataWarehouseNotExist {
-			return errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", name)
-		}
-		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
-			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
-		}
-		return err
-	}
-
-	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, name, settings)
-	if err != nil {
-		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
-			return errors.Unprocessable(WarehouseNonInitializable, "%s", err)
-		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
-		}
-		return err
-	}
-
-	return nil
+	_, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whName, whSettings, mode)
+	return err
 }
 
 // UpdateAPIKey updates the name of the API key for the organization with the
@@ -705,6 +632,81 @@ func (this *Organization) Workspaces() []*Workspace {
 		infos[i] = &workspace
 	}
 	return infos
+}
+
+// validateWorkspaceCreation validates the arguments for a workspace creation.
+// It tests that a warehouse with the provided name and settings can be
+// initialized, and returns an error if the arguments are not valid.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - WarehouseError, if an operation on the data warehouse fails.
+//   - WarehouseNonInitializable, if the warehouse intended for connection is
+//     not initializable.
+//   - WarehouseNotExist, if a data warehouse with the provided name does not
+//     exist.
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string,
+	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
+	whName string, whSettings []byte, whMode WarehouseMode) ([]byte, error) {
+
+	// Validate the parameters.
+	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
+		return nil, errors.BadRequest("name %q is not valid", name)
+	}
+	if !userSchema.Valid() {
+		return nil, errors.BadRequest("user schema is invalid")
+	}
+	switch region {
+	case PrivacyRegionNotSpecified, PrivacyRegionEurope:
+	default:
+		return nil, errors.BadRequest("privacy region is not valid")
+	}
+	if err := validateDisplayedProperties(displayedProperties); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if whName == "" {
+		return nil, errors.BadRequest("warehouse name is empty")
+	}
+	switch whMode {
+	case Normal, Inspection, Maintenance:
+	default:
+		return nil, errors.BadRequest("warehouse mode is not valid")
+	}
+
+	// Perform additional checks on the compliance of the user schema.
+	if err := checkAllowedPropertyUserSchema(userSchema); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if err := datastore.CheckConflictingProperties("users", userSchema); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+
+	// Normalize the warehouse settings.
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(whName, whSettings)
+	if err != nil {
+		if err == datastore.DataWarehouseNotExist {
+			return nil, errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", whName)
+		}
+		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
+			return nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
+		}
+		return nil, err
+	}
+
+	// Check if the warehouse is initializable.
+	err = this.core.datastore.CanInitialize(ctx, whName, settings)
+	if err != nil {
+		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
+			return nil, errors.Unprocessable(WarehouseNonInitializable, "%s", err)
+		}
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return nil, errors.Unprocessable(WarehouseError, "%s", err)
+		}
+		return nil, err
+	}
+
+	return settings, nil
 }
 
 // generateAPIKeyToken generates a new API key token.

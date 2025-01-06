@@ -157,18 +157,6 @@ class API {
 	deleteMember = async (member: number): Promise<void> => {
 		return await call(`${this.apiURL}/members/${member}`, http.DELETE);
 	};
-
-	testWorkspaceCreation = async (
-		warehouseName: string,
-		warehouseMode: WarehouseMode,
-		settings: any,
-	): Promise<void> => {
-		return await call(`${this.apiURL}/can-initialize-warehouse`, http.POST, {
-			name: warehouseName,
-			mode: warehouseMode,
-			settings: settings,
-		});
-	};
 }
 
 class Connections {
@@ -573,6 +561,28 @@ class Workspaces {
 		warehouseSettings: WarehouseSettings,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.baseAPIURL}`, http.POST, {
+			name: name,
+			privacyRegion: privacyRegion,
+			userSchema: userSchema,
+			displayedProperties: displayedProperties,
+			warehouse: {
+				name: warehouseName,
+				mode: warehouseMode,
+				settings: warehouseSettings,
+			},
+		});
+	};
+
+	testCreation = async (
+		name: string,
+		privacyRegion: PrivacyRegion,
+		userSchema: ObjectType,
+		displayedProperties: DisplayedProperties,
+		warehouseName: string,
+		warehouseMode: WarehouseMode,
+		warehouseSettings: WarehouseSettings,
+	): Promise<void> => {
+		return await call(`${this.baseAPIURL}/test`, http.POST, {
 			name: name,
 			privacyRegion: privacyRegion,
 			userSchema: userSchema,
