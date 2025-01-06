@@ -150,12 +150,12 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 	return api.core.ValidateExpression(body.Expression, body.Properties, body.Type)
 }
 
-// Warehouses returns the data warehouses.
-func (api api) Warehouses(_ http.ResponseWriter, r *http.Request) (any, error) {
+// WarehouseTypes returns the supported data warehouse types.
+func (api api) WarehouseTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return api.core.Warehouses(), nil
+	return api.core.WarehouseTypes(), nil
 }
 
 func (api api) connector(r *http.Request) string {

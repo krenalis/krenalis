@@ -90,7 +90,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /api/members/current":                                                                    api.Member,           /* only UI */
 		"GET    /api/members/invitations/{token}":                                                        api.MemberInvitation, /* only UI */
 		"GET    /api/transformation-languages":                                                           api.TransformationLanguages,
-		"GET    /api/warehouses":                                                                         api.Warehouses,
+		"GET    /api/warehouses":                                                                         api.WarehouseTypes,
 		"GET    /api/workspaces":                                                                         organization.Workspaces,
 		"GET    /api/workspaces/{workspace}":                                                             organization.Workspace,
 		"GET    /api/workspaces/{workspace}/action-errors":                                               workspace.ActionErrors,
