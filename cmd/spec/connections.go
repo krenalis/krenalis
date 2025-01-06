@@ -189,6 +189,46 @@ func init() {
 				},
 			},
 			{
+				Name:        "Get an OAuth token",
+				Description: "Retrieves an OAuth token that can be used to create a connection that requires OAuth authentication.",
+				Method:      GET,
+				URL:         "/v0/connections/oauth",
+				Parameters: []types.Property{
+					{
+						Name:           "oauthCode",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Description:    "The OAuth authorization code to complete the authentication process.",
+					},
+					{
+						Name:           "redirectURI",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Description:    "The URI where the user will be redirected after authorization.",
+					},
+					{
+						Name:           "connector",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Description:    "The name of the connector for which the connection will be created.",
+					},
+				},
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name:        "token",
+							Type:        types.Text(),
+							Placeholder: `"jK64q6Vu0DMoqpXm0M+/6qbZagaVipMsRZ"`,
+							Description: "The OAuth token that can be used to create a connection on the specified connector.",
+						},
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+					{422, ConnectorNotExist, "connector does not exist"},
+				},
+			},
+			{
 				Name:        "Update a connection",
 				Description: "Update a connection.",
 				Method:      PUT,
