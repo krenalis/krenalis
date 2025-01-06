@@ -155,7 +155,7 @@ func (api api) Warehouses(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return api.core.Warehouses(r.Context()), nil
+	return api.core.Warehouses(), nil
 }
 
 func (api api) connector(r *http.Request) string {

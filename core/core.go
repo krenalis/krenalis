@@ -745,7 +745,7 @@ type Warehouse struct {
 }
 
 // Warehouses returns the data warehouses.
-func (core *Core) Warehouses(ctx context.Context) []*Warehouse {
+func (core *Core) Warehouses() []*Warehouse {
 	core.mustBeOpen()
 	whs := core.state.Warehouses()
 	warehouses := make([]*Warehouse, len(whs))
