@@ -69,6 +69,9 @@ func init() {
 						},
 					},
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 		},
 	})

@@ -248,6 +248,9 @@ func init() {
 						},
 					},
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Create an event listener",
@@ -275,6 +278,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, TooManyListeners, "there are already the maximum of number of listeners"},
 				},
 			},
@@ -303,6 +307,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "event listener does not exist"},
 				},
 			},
@@ -313,6 +318,9 @@ func init() {
 				URL:         "/v0/events/listeners/:id",
 				Parameters: []types.Property{
 					idParameter,
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 		},

@@ -183,7 +183,8 @@ func init() {
 					},
 				},
 				Errors: []Error{
-					{404, NotFound, ConnectorNotExist},
+					{404, NotFound, "workspace does not exist"},
+					{422, ConnectorNotExist, "connector does not exist"},
 					{422, LinkedConnectionNotExist, "linked connection does not exist"},
 					{422, InvalidSettings, "settings are not valid"},
 				},
@@ -242,6 +243,7 @@ func init() {
 					websiteHostParameter,
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},
@@ -259,6 +261,9 @@ func init() {
 						},
 					},
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Get a connection",
@@ -272,6 +277,7 @@ func init() {
 					Parameters: getReturnsParameters,
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},
@@ -284,6 +290,7 @@ func init() {
 					idParameter,
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},

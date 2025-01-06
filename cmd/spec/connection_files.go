@@ -95,6 +95,11 @@ func init() {
 						},
 					},
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+					{404, NotFound, "connection does not exist"},
+					{404, NotFound, "path does not exist"},
+				},
 			},
 			{
 				Name:        "Read the sheet names",
@@ -144,7 +149,9 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
+					{404, NotFound, "path does not exist"},
 					{422, FormatNotExist, "format does not exist"},
 					{422, InvalidSettings, "format settings are not valid"},
 				},
@@ -176,6 +183,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{422, InvalidPath, "path is not valid"},
 					{422, InvalidPlaceholder, "placeholder is not valid"},

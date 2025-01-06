@@ -135,6 +135,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
@@ -175,6 +176,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
@@ -193,6 +195,9 @@ func init() {
 							Placeholder: "...",
 						},
 					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 			{
@@ -224,6 +229,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, AlterSchemaInProgress, "alter schema operation is already in progress"},
 					{422, ConnectionNotExist, "primary source does not exist"},
 					{422, IdentityResolutionInProgress, "identity resolution is currently in progress"},
@@ -264,6 +270,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 				},

@@ -46,6 +46,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{422, TooManyKeys, "connection has already 20 keys"},
 				},
@@ -75,6 +76,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},
@@ -99,6 +101,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{404, NotFound, "key does not exist"},
 					{422, ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key"},

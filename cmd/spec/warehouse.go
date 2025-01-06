@@ -39,7 +39,7 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Get the warehouse",
-				Description: "Returns the name and the settings of the workspace's warehouse.",
+				Description: "Returns the name and the settings of the current workspace's warehouse.",
 				Method:      GET,
 				URL:         "/v0/warehouse",
 				Response: &Response{
@@ -53,10 +53,13 @@ func init() {
 						settingsParameter,
 					},
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Update the warehouse",
-				Description: "Updates the warehouse of a workspace.",
+				Description: "Updates the warehouse of the current workspace.",
 				Method:      PUT,
 				URL:         "/v0/warehouse",
 				Parameters: []types.Property{
@@ -65,6 +68,7 @@ func init() {
 					cancelIncompatibleOperationsParameter,
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, DifferentWarehouse, "data warehouse is a different data warehouse"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
@@ -72,7 +76,7 @@ func init() {
 			},
 			{
 				Name: "Test the warehouse update",
-				Description: "Tests the update of a workspace’s warehouse.\n\n" +
+				Description: "Tests the update of the warehouse of the current workspace.\n\n" +
 					"If the settings are incorrect or the warehouse can’t be accessed with the given settings, an error will be returned. " +
 					"If no error occurs, the settings are valid.",
 				Method: PUT,
@@ -81,6 +85,7 @@ func init() {
 					settingsParameter,
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, DifferentWarehouse, "data warehouse is a different data warehouse"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
@@ -88,20 +93,24 @@ func init() {
 			},
 			{
 				Name:        "Update warehouse mode",
-				Description: "Updates the mode of a workspace's data warehouse.",
+				Description: "Updates the mode of the current workspace's data warehouse.",
 				Method:      PUT,
 				URL:         "/v0/warehouse/mode",
 				Parameters: []types.Property{
 					modeParameter,
 					cancelIncompatibleOperationsParameter,
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Repair the warehouse",
-				Description: "Repairs the workspace's warehouse.",
+				Description: "Repairs the current workspace's warehouse.",
 				Method:      POST,
 				URL:         "/v0/warehouse/repair",
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},

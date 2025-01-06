@@ -78,6 +78,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, ConnectionNotExist, "connection does not exist"},
 					{422, ConnectorNotExist, "connector does not exist"},
 					{422, UnsupportedLanguage, "transformation language is not supported"},
@@ -124,6 +125,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 					{422, UnsupportedLanguage, "transformation language is not supported"},
 				},
@@ -184,6 +186,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 				},
 			},
@@ -202,6 +205,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 				},
 			},

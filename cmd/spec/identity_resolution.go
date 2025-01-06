@@ -42,6 +42,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, PropertyNotExist, "property does not exist in the user schema"},
 					{422, TypeNotAllowed, "a property has a type which is not allowed for identifiers"},
 				},
@@ -68,6 +69,9 @@ func init() {
 						},
 					},
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Start identity resolution",
@@ -75,6 +79,7 @@ func init() {
 				Method:      POST,
 				URL:         "/v0/identity-resolution/start",
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
 				},
@@ -103,6 +108,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 				},

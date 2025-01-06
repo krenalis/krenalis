@@ -132,6 +132,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{422, ConnectionNotExist, "connection does not exist"},
 					{422, FormatNotExist, "format does not exist"},
 					{422, InvalidSettings, "format settings are not valid"},
@@ -182,6 +183,7 @@ func init() {
 					compressionParameter,
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 					{422, FormatNotExist, "format does not exist"},
 					{422, InvalidSettings, "format settings are not valid"},
@@ -211,6 +213,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 				},
 			},
@@ -293,6 +296,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 				},
 			},
@@ -330,6 +334,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 					{422, ConnectionDisabled, "connection is disabled"},
 					{422, ExecutionInProgress, "action is already in progress"},
@@ -353,6 +358,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 				},
 			},

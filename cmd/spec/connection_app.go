@@ -55,6 +55,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{422, SchemaNotAligned, "schema is not aligned with the app's source schema"},
 				},
@@ -94,6 +95,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{422, EventTypeNotExist, "connection does not have the event type"},
 					{422, SchemaNotAligned, "output schema is not compatible with the event type's schema"},
@@ -132,6 +134,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},
@@ -166,6 +169,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},
@@ -194,6 +198,7 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 				},
 			},

@@ -77,6 +77,9 @@ func init() {
 				Response: &Response{
 					Parameters: responseParameters,
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Get action metrics per day",
@@ -94,6 +97,9 @@ func init() {
 				},
 				Response: &Response{
 					Parameters: responseParameters,
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 			{
@@ -113,6 +119,9 @@ func init() {
 				Response: &Response{
 					Parameters: responseParameters,
 				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
 			},
 			{
 				Name:        "Get action metrics per minute",
@@ -130,6 +139,9 @@ func init() {
 				},
 				Response: &Response{
 					Parameters: responseParameters,
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 			{
@@ -208,6 +220,9 @@ func init() {
 							Description: "The errors that occurred during the specified period for the provided actions.",
 						},
 					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 		},
