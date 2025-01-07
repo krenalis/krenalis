@@ -21,9 +21,9 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// DataWarehouseNotExist is returned by the Datastore.NormalizeWarehouseSettings
-// method when the provided data warehouse does not exist.
-var DataWarehouseNotExist = errors.New("data warehouse does not exist")
+// WarehouseTypeNotExist is returned by the Datastore.NormalizeWarehouseSettings
+// method when the provided warehouse type does not exist.
+var WarehouseTypeNotExist = errors.New("warehouse type does not exist")
 
 // ConnectionFailed is the error returned when a connection to a data warehouse
 // cannot be established.
@@ -78,7 +78,7 @@ func New(st *state.State) *Datastore {
 // data warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
-	dw, err := registeredWarehouse(name, settings)
+	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {
 		return err
 	}
@@ -115,9 +115,9 @@ func (ds *Datastore) Close() {
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *DataWarehouseError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byte, userSchema types.Type) error {
+func (ds *Datastore) Initialize(ctx context.Context, typ string, settings []byte, userSchema types.Type) error {
 	ds.mustBeOpen()
-	dw, err := registeredWarehouse(name, settings)
+	dw, err := getWarehouseInstance(typ, settings)
 	if err != nil {
 		return err
 	}
@@ -133,15 +133,15 @@ func (ds *Datastore) Initialize(ctx context.Context, name string, settings []byt
 // NormalizeWarehouseSettings returns data warehouse settings in a canonical
 // form.
 //
-// It returns the DataWarehouseNotExist error if a data warehouse with the
+// It returns the WarehouseTypeNotExist error if a warehouse type with the
 // provided name does not exist, and it returns a SettingsError error if the
 // settings are not valid.
 func (ds *Datastore) NormalizeWarehouseSettings(name string, settings []byte) ([]byte, error) {
 	ds.mustBeOpen()
-	if _, ok := ds.state.Warehouse(name); !ok {
-		return nil, DataWarehouseNotExist
+	if _, ok := ds.state.WarehouseType(name); !ok {
+		return nil, WarehouseTypeNotExist
 	}
-	dw, err := registeredWarehouse(name, settings)
+	dw, err := getWarehouseInstance(name, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	// Update the warehouse if the settings have changed.
 	prevWarehouse := store.warehouse()
 	ws, _ := ds.state.Workspace(n.Workspace)
-	nextWarehouse, _ := registeredWarehouse(ws.Warehouse.Name, n.Settings)
+	nextWarehouse, _ := getWarehouseInstance(ws.Warehouse.Type, n.Settings)
 	if !bytes.Equal(prevWarehouse.Settings(), nextWarehouse.Settings()) {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.

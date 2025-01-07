@@ -483,7 +483,7 @@ func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion, userS
 		"userSchema":          userSchema,
 		"displayedProperties": displayedProperties,
 		"warehouse": map[string]any{
-			"name":     testsSettings.WarehouseName,
+			"type":     testsSettings.WarehouseType,
 			"settings": testsSettings.Warehouse,
 		},
 	}

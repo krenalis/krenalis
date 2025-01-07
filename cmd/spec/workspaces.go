@@ -65,23 +65,23 @@ func init() {
 			"However, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. " +
 			"For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation.",
 	}
-	warehouseNameParameter := types.Property{
-		Name:        "name",
-		Type:        types.Text().WithValues("PostgreSQL", "Snowflake"),
+	warehouseTypeParameter := types.Property{
+		Name:        "type",
+		Type:        types.Text().WithValues("Snowflake", "PostgreSQL"),
 		Placeholder: "Snowflake",
-		Description: "The data warehouse name",
+		Description: "The data warehouse type.",
 	}
 	warehouseModeParameter := types.Property{
 		Name:        "mode",
 		Type:        types.Text().WithValues("Normal", "Inspection", "Maintenance"),
 		Placeholder: `"Normal"`,
-		Description: "The mode of the data warehouse",
+		Description: "The mode of the data warehouse.",
 	}
 	warehouseSettingsParameter := types.Property{
 		Name:        "settings",
 		Type:        types.Parameter("Warehouse"),
 		Placeholder: "{...}",
-		Description: "The settings of the data warehouse",
+		Description: "The settings of the data warehouse.",
 	}
 	displayedPropertiesParameter := types.Property{
 		Name: "displayedProperties",
@@ -116,7 +116,7 @@ func init() {
 	warehouseParameter := types.Property{
 		Name: "warehouse",
 		Type: types.Object([]types.Property{
-			warehouseNameParameter,
+			warehouseTypeParameter,
 			warehouseModeParameter,
 			warehouseSettingsParameter,
 		}),
@@ -149,10 +149,10 @@ func init() {
 					},
 				},
 				Errors: []Error{
+					{422, WarehouseTypeNotExist, "warehouse type does not exist"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 					{422, WarehouseNonInitializable, "data warehouse cannot be initialized"},
-					{422, WarehouseNotExist, "data warehouse does not exist"},
 				},
 			},
 			{
@@ -168,10 +168,10 @@ func init() {
 					warehouseParameter,
 				},
 				Errors: []Error{
+					{422, WarehouseTypeNotExist, "warehouse type does not exist"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
 					{422, WarehouseNonInitializable, "data warehouse cannot be initialized"},
-					{422, WarehouseNotExist, "data warehouse does not exist"},
 				},
 			},
 			{

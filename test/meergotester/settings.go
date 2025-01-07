@@ -15,7 +15,7 @@ type TestsSettings struct {
 	MeergoHost       string
 	Database         *DBSettings
 	PythonExecutable string
-	WarehouseName    string
+	WarehouseType    string
 	Warehouse        *DBSettings
 }
 
@@ -54,7 +54,7 @@ func init() {
 			Schema:   "public",
 		},
 		PythonExecutable: "python3",
-		WarehouseName:    "PostgreSQL",
+		WarehouseType:    "PostgreSQL",
 		Warehouse: &DBSettings{
 			// Host and Port will be set when warehouse container starts.
 			Database: "test_warehouse",

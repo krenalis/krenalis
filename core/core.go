@@ -738,24 +738,24 @@ func (core *Core) ValidateExpression(expression string, properties []types.Prope
 	return "", nil
 }
 
-// SupportedWarehouseType represents a supported warehouse type.
-type SupportedWarehouseType struct {
+// WarehouseType represents a warehouse type.
+type WarehouseType struct {
 	Name string `json:"name"`
 	Icon string `json:"icon"`
 }
 
-// WarehouseTypes returns the supported data warehouse types.
-func (core *Core) WarehouseTypes() []SupportedWarehouseType {
+// WarehouseTypes returns the warehouse types.
+func (core *Core) WarehouseTypes() []WarehouseType {
 	core.mustBeOpen()
-	whs := core.state.Warehouses()
-	wsTypes := make([]SupportedWarehouseType, len(whs))
-	for i, wh := range whs {
-		wsTypes[i] = SupportedWarehouseType{
-			Name: wh.Name,
-			Icon: wh.Icon,
+	types := core.state.WarehouseTypes()
+	warehouseTypes := make([]WarehouseType, len(types))
+	for i, t := range types {
+		warehouseTypes[i] = WarehouseType{
+			Name: t.Name,
+			Icon: t.Icon,
 		}
 	}
-	return wsTypes
+	return warehouseTypes
 }
 
 // mustBeOpen panics if core has been closed.

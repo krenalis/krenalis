@@ -19,34 +19,6 @@ func init() {
 		Description: "...",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "List supported warehouses",
-				Description: "Returns a list of supported data warehouses than can be used for a workspace warehouse.",
-				Method:      GET,
-				URL:         "/v0/system/warehouses",
-				Response: &Response{
-					Parameters: []types.Property{
-						{
-							Name: "warehouses",
-							Type: types.Object([]types.Property{
-								{
-									Name:        "name",
-									Type:        types.Text(),
-									Placeholder: `"Snowflake"`,
-									Description: "The name of the supported data warehouse.",
-								},
-								{
-									Name:        "icon",
-									Type:        types.Text(),
-									Placeholder: `"<svg icon>"`,
-									Description: "The icon of the supported data warehouse.",
-								},
-							}),
-							Placeholder: "...",
-						},
-					},
-				},
-			},
-			{
 				Name:        "List supported languages",
 				Description: "Returns a list of supported languages that can be used for transformation functions.",
 				Method:      GET,

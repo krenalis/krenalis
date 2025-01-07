@@ -399,14 +399,14 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 
 func (c *Meergo) TestWorkspaceCreation(name string,
 	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
-	whName string, whSettings []byte, mode WarehouseMode) error {
+	whType string, whSettings []byte, mode WarehouseMode) error {
 	body := map[string]any{
 		"name":                name,
 		"userSchema":          userSchema,
 		"displayedProperties": displayedProperties,
 		"privacyRegion":       region,
 		"warehouse": map[string]any{
-			"name":     whName,
+			"type":     whType,
 			"mode":     mode,
 			"settings": json.RawMessage(whSettings),
 		},

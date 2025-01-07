@@ -33,12 +33,12 @@ type election struct {
 
 // State represents the application state.
 type State struct {
-	id         uuid.UUID
-	db         *postgres.DB
-	syncing    bool // reports whether the keeper has started synchronizing the state.
-	changing   *sync.RWMutex
-	connectors map[string]*Connector
-	warehouses map[string]*Warehouse
+	id             uuid.UUID
+	db             *postgres.DB
+	syncing        bool // reports whether the keeper has started synchronizing the state.
+	changing       *sync.RWMutex
+	connectors     map[string]*Connector
+	warehouseTypes map[string]WarehouseType
 
 	mu               *sync.Mutex            // for the 'actions', 'accounts', 'connections', 'connectionsByKey', 'election', 'organizations', and 'workspaces' fields
 	actions          map[int]*Action        // protected by mu
@@ -269,29 +269,29 @@ func (state *State) Unfreeze() {
 	state.changing.RUnlock()
 }
 
-// Warehouse returns the data warehouse with the provided name.
-// The boolean return value reports whether the data warehouse exists.
-func (state *State) Warehouse(name string) (*Warehouse, bool) {
+// WarehouseType returns the warehouse type with the provided name.
+// The boolean return value reports whether the warehouse type exists.
+func (state *State) WarehouseType(name string) (WarehouseType, bool) {
 	state.mu.Lock()
-	wh, ok := state.warehouses[name]
+	wh, ok := state.warehouseTypes[name]
 	state.mu.Unlock()
 	return wh, ok
 }
 
-// Warehouses returns all data warehouses.
-func (state *State) Warehouses() []*Warehouse {
+// WarehouseTypes returns all warehouse types.
+func (state *State) WarehouseTypes() []WarehouseType {
 	state.mu.Lock()
-	warehouses := make([]*Warehouse, len(state.warehouses))
+	types := make([]WarehouseType, len(state.warehouseTypes))
 	i := 0
-	for _, warehouse := range state.warehouses {
-		warehouses[i] = warehouse
+	for _, t := range state.warehouseTypes {
+		types[i] = t
 		i++
 	}
 	state.mu.Unlock()
-	sort.Slice(warehouses, func(i, j int) bool {
-		return warehouses[i].Name < warehouses[j].Name
+	sort.Slice(types, func(i, j int) bool {
+		return types[i].Name < types[j].Name
 	})
-	return warehouses
+	return types
 }
 
 // Workspace returns the workspace with identifier id.
@@ -353,8 +353,8 @@ func (organization *Organization) Workspaces() []*Workspace {
 	return workspaces
 }
 
-// Warehouse represents a data warehouse.
-type Warehouse struct {
+// WarehouseType represents a warehouse type.
+type WarehouseType struct {
 	Name string
 	Icon string
 }
@@ -417,7 +417,7 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 type Workspace struct {
 	mu        *sync.Mutex
 	Warehouse struct {
-		Name     string
+		Type     string
 		Mode     WarehouseMode
 		Settings json.RawMessage
 	}

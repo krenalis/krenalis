@@ -151,13 +151,13 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			state.connectors[name] = &c
 		}
 
-		// Read all data warehouses.
-		warehouses := meergo.Warehouses()
-		state.warehouses = make(map[string]*Warehouse, len(warehouses))
-		for name, warehouse := range warehouses {
-			state.warehouses[name] = &Warehouse{
-				Name: name,
-				Icon: warehouse.Icon,
+		// Read all warehouse types.
+		drivers := meergo.WarehouseDrivers()
+		state.warehouseTypes = make(map[string]WarehouseType, len(drivers))
+		for _, driver := range drivers {
+			state.warehouseTypes[driver.Name] = WarehouseType{
+				Name: driver.Name,
+				Icon: driver.Icon,
 			}
 		}
 
@@ -186,13 +186,13 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all workspaces.
 		state.workspaces = map[int]*Workspace{}
-		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_name, warehouse_mode,"+
+		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
 			" warehouse_settings, user_schema, resolve_identities_on_batch_import,"+
 			" identifiers, privacy_region, displayed_image, displayed_first_name,displayed_last_name,"+
 			" displayed_information, actions_to_purge FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
-				var warehouseName string
+				var warehouseType string
 				var warehouseMode WarehouseMode
 				var displayedImage string
 				var displayedFirstName string
@@ -206,7 +206,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						connections: map[int]*Connection{},
 						accounts:    map[int]*Account{},
 					}
-					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseName,
+					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
 						&warehouseMode, &warehouseSettings, &userSchema,
 						&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers,
 						&ws.PrivacyRegion, &displayedImage, &displayedFirstName,
@@ -214,10 +214,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
-					if _, ok := state.warehouses[warehouseName]; !ok {
-						return fmt.Errorf("the %s data warehouse is required but not registered. (Possibly forgotten import?)", warehouseName)
+					if _, ok := state.warehouseTypes[warehouseType]; !ok {
+						return fmt.Errorf("warehouse driver for type %q is required but not registered. (Possibly forgotten import?)", warehouseType)
 					}
-					ws.Warehouse.Name = warehouseName
+					ws.Warehouse.Type = warehouseType
 					ws.Warehouse.Mode = warehouseMode
 					ws.Warehouse.Settings = warehouseSettings
 					err = json.Unmarshal(userSchema, &ws.UserSchema)

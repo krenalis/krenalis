@@ -458,7 +458,7 @@ type CreateWorkspace struct {
 	PrivacyRegion                  PrivacyRegion
 	DisplayedProperties            DisplayedProperties
 	Warehouse                      struct {
-		Name     string
+		Type     string
 		Mode     WarehouseMode
 		Settings json.RawMessage
 	}

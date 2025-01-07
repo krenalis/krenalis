@@ -43,7 +43,7 @@ var (
 var _ meergo.Warehouse = &PostgreSQL{}
 
 func init() {
-	meergo.RegisterWarehouse(meergo.WarehouseInfo{
+	meergo.RegisterWarehouseDriver(meergo.WarehouseDriver{
 		Name: "PostgreSQL",
 		Icon: icon,
 	}, New)

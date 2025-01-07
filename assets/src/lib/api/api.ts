@@ -556,7 +556,7 @@ class Workspaces {
 		privacyRegion: PrivacyRegion,
 		userSchema: ObjectType,
 		displayedProperties: DisplayedProperties,
-		warehouseName: string,
+		warehouseType: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<CreateWorkspaceResponse> => {
@@ -566,7 +566,7 @@ class Workspaces {
 			userSchema: userSchema,
 			displayedProperties: displayedProperties,
 			warehouse: {
-				name: warehouseName,
+				type: warehouseType,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
@@ -578,7 +578,7 @@ class Workspaces {
 		privacyRegion: PrivacyRegion,
 		userSchema: ObjectType,
 		displayedProperties: DisplayedProperties,
-		warehouseName: string,
+		warehouseType: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<void> => {
@@ -588,7 +588,7 @@ class Workspaces {
 			userSchema: userSchema,
 			displayedProperties: displayedProperties,
 			warehouse: {
-				name: warehouseName,
+				type: warehouseType,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},

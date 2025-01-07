@@ -142,7 +142,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	wh, err := meergo.RegisteredWarehouse("PostgreSQL").New(&meergo.WarehouseConfig{
+	wh, err := meergo.RegisteredWarehouseDriver("PostgreSQL").New(&meergo.WarehouseConfig{
 		Settings: settings,
 	})
 	if err != nil {

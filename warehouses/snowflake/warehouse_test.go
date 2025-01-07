@@ -102,7 +102,7 @@ func Test_Merge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 	}
-	wh, err := meergo.RegisteredWarehouse("Snowflake").New(&meergo.WarehouseConfig{
+	wh, err := meergo.RegisteredWarehouseDriver("Snowflake").New(&meergo.WarehouseConfig{
 		Settings: settings,
 	})
 	if err != nil {

@@ -244,21 +244,20 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid.
 //   - WarehouseError, if an operation on the data warehouse fails.
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
-//   - WarehouseNotExist, if a data warehouse with the provided name does not
-//     exist.
+//   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
-	whName string, whSettings []byte, whMode WarehouseMode) (int, error) {
+	whType string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
 
-	whSettings, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whName, whSettings, whMode)
+	whSettings, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whType, whSettings, whMode)
 	if err != nil {
 		return 0, err
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, whName, whSettings, userSchema)
+	err = this.core.datastore.Initialize(ctx, whType, whSettings, userSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return 0, errors.Unprocessable(WarehouseError, "%s", err)
@@ -274,7 +273,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		PrivacyRegion:                  state.PrivacyRegion(region),
 		DisplayedProperties:            state.DisplayedProperties(displayedProperties),
 	}
-	n.Warehouse.Name = whName
+	n.Warehouse.Type = whType
 	n.Warehouse.Mode = state.WarehouseMode(whMode)
 	n.Warehouse.Settings = whSettings
 
@@ -294,11 +293,11 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 			" user_schema, resolve_identities_on_batch_import, privacy_region,"+
 			" displayed_image, displayed_first_name, displayed_last_name, displayed_information,"+
-			" warehouse_name, warehouse_mode, warehouse_settings)"+
+			" warehouse_type, warehouse_mode, warehouse_settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,
 			n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
-			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Warehouse.Name,
+			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Warehouse.Type,
 			n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
@@ -484,13 +483,12 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 //   - WarehouseError, if an operation on the data warehouse fails.
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
-//   - WarehouseNotExist, if a data warehouse with the provided name does not
-//     exist.
+//   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string,
 	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
-	whName string, whSettings []byte, mode WarehouseMode) error {
+	whType string, whSettings []byte, mode WarehouseMode) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whName, whSettings, mode)
+	_, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whType, whSettings, mode)
 	return err
 }
 
@@ -644,11 +642,10 @@ func (this *Organization) Workspaces() []*Workspace {
 //   - WarehouseError, if an operation on the data warehouse fails.
 //   - WarehouseNonInitializable, if the warehouse intended for connection is
 //     not initializable.
-//   - WarehouseNotExist, if a data warehouse with the provided name does not
-//     exist.
+//   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string,
 	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
-	whName string, whSettings []byte, whMode WarehouseMode) ([]byte, error) {
+	whType string, whSettings []byte, whMode WarehouseMode) ([]byte, error) {
 
 	// Validate the parameters.
 	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
@@ -665,8 +662,8 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	if err := validateDisplayedProperties(displayedProperties); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if whName == "" {
-		return nil, errors.BadRequest("warehouse name is empty")
+	if whType == "" {
+		return nil, errors.BadRequest("warehouse type is empty")
 	}
 	switch whMode {
 	case Normal, Inspection, Maintenance:
@@ -683,10 +680,10 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Normalize the warehouse settings.
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(whName, whSettings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(whType, whSettings)
 	if err != nil {
-		if err == datastore.DataWarehouseNotExist {
-			return nil, errors.Unprocessable(WarehouseNotExist, "data warehouse %q does not exist", whName)
+		if err == datastore.WarehouseTypeNotExist {
+			return nil, errors.Unprocessable(WarehouseTypeNotExist, "warehouse type %q does not exist", whType)
 		}
 		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 			return nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -695,7 +692,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, whName, settings)
+	err = this.core.datastore.CanInitialize(ctx, whType, settings)
 	if err != nil {
 		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
 			return nil, errors.Unprocessable(WarehouseNonInitializable, "%s", err)

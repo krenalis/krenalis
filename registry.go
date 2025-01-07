@@ -9,7 +9,6 @@ package meergo
 
 import (
 	"fmt"
-	"maps"
 	"reflect"
 	"sync"
 )
@@ -24,7 +23,7 @@ var (
 		mobiles    map[string]MobileInfo
 		servers    map[string]ServerInfo
 		streams    map[string]StreamInfo
-		warehouses map[string]WarehouseInfo
+		warehouses map[string]WarehouseDriver
 		websites   map[string]WebsiteInfo
 	}{
 		apps:       make(map[string]AppInfo),
@@ -34,7 +33,7 @@ var (
 		mobiles:    make(map[string]MobileInfo),
 		servers:    make(map[string]ServerInfo),
 		streams:    make(map[string]StreamInfo),
-		warehouses: make(map[string]WarehouseInfo),
+		warehouses: make(map[string]WarehouseDriver),
 		websites:   make(map[string]WebsiteInfo),
 	}
 )
@@ -191,21 +190,21 @@ func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
 	registry.streams[stream.Name] = stream
 }
 
-// RegisterWarehouse makes a data warehouse driver available by the provided
-// name. If RegisterWarehouse is called twice with the same name or if new is
-// nil, it panics.
-func RegisterWarehouse[T Warehouse](warehouse WarehouseInfo, new WarehouseNewFunc[T]) {
+// RegisterWarehouseDriver makes a warehouse driver available by the provided
+// name. If RegisterWarehouseDriver is called twice with the same name or if new
+// is nil, it panics.
+func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriverNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil")
 	}
-	warehouse.newFunc = reflect.ValueOf(new)
-	warehouse.ct = reflect.TypeOf((*T)(nil)).Elem()
+	typ.newFunc = reflect.ValueOf(new)
+	typ.ct = reflect.TypeOf((*T)(nil)).Elem()
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if _, dup := registry.warehouses[warehouse.Name]; dup {
-		panic("meergo: RegisterWarehouse called twice for driver " + warehouse.Name)
+	if _, dup := registry.warehouses[typ.Name]; dup {
+		panic("meergo: RegisterWarehouseDriver called twice for type " + typ.Name)
 	}
-	registry.warehouses[warehouse.Name] = warehouse
+	registry.warehouses[typ.Name] = typ
 }
 
 // RegisterWebsite makes a website connector available by the provided name. If
@@ -309,14 +308,15 @@ func RegisteredServer(name string) ServerInfo {
 	return server
 }
 
-// RegisteredWarehouse returns the data warehouse registered with the given
-// name. If a data warehouse with this name is not registered, it panics.
-func RegisteredWarehouse(name string) WarehouseInfo {
+// RegisteredWarehouseDriver returns the warehouse driver registered with the
+// given name. If a warehouse driver with this name is not registered, it
+// panics.
+func RegisteredWarehouseDriver(name string) WarehouseDriver {
 	registryMu.Lock()
 	warehouse, ok := registry.warehouses[name]
 	registryMu.Unlock()
 	if !ok {
-		panic(fmt.Errorf("meergo: unknown data warehouse driver %q (forgotten import?)", name))
+		panic(fmt.Errorf("meergo: unknown warehouse driver %q (forgotten import?)", name))
 	}
 	return warehouse
 }
@@ -333,10 +333,13 @@ func RegisteredWebsite(name string) WebsiteInfo {
 	return website
 }
 
-// Warehouses returns the registered data warehouses as a map from the name to
-// its WarehouseInfo.
-func Warehouses() map[string]WarehouseInfo {
+// WarehouseDrivers returns the warehouse drivers.
+func WarehouseDrivers() []WarehouseDriver {
 	registryMu.Lock()
-	defer registryMu.Unlock()
-	return maps.Clone(registry.warehouses)
+	drivers := make([]WarehouseDriver, 0, len(registry.warehouses))
+	for _, t := range registry.warehouses {
+		drivers = append(drivers, t)
+	}
+	registryMu.Unlock()
+	return drivers
 }

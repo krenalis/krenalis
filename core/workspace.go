@@ -1029,7 +1029,7 @@ func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI stri
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
 		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1148,7 +1148,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Name, settings)
+	settings, err := this.core.datastore.NormalizeWarehouseSettings(ws.Warehouse.Type, settings)
 	if err != nil {
 		if err, ok := err.(*meergo.WarehouseSettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1182,7 +1182,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		}
 		if result.RowsAffected() == 0 {
 			var warehouseName string
-			err = tx.QueryRow(ctx, "SELECT warehouse_name FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
+			err = tx.QueryRow(ctx, "SELECT warehouse_type FROM workspaces WHERE id = $1", n.Workspace).Scan(&warehouseName)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					err = errors.NotFound("workspace %d does not exist", n.Workspace)
@@ -1615,11 +1615,11 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	return users, schema, count, nil
 }
 
-// Warehouse returns name and settings of the data warehouse for the workspace.
+// Warehouse returns type and settings of the data warehouse for the workspace.
 func (this *Workspace) Warehouse() (string, json.Value) {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	return ws.Warehouse.Name, json.Value(slices.Clone(ws.Warehouse.Settings))
+	return ws.Warehouse.Type, json.Value(slices.Clone(ws.Warehouse.Settings))
 }
 
 // userIdentities returns the user identities matching the provided where
@@ -1761,59 +1761,6 @@ type ConnectionToAdd struct {
 	// Settings represents the settings of the connector.
 	// It must be nil if the connector does not have settings.
 	Settings json.Value `json:"settings"`
-}
-
-// WarehouseType represents a data warehouse type.
-type WarehouseType int
-
-const (
-	PostgreSQL WarehouseType = iota + 1
-	Snowflake
-)
-
-// MarshalJSON implements the json.Marshaler interface.
-// It panics if typ is not a valid WarehouseType value.
-func (typ WarehouseType) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + typ.String() + `"`), nil
-}
-
-// String returns the string representation of typ.
-// It panics if typ is not a valid WarehouseType value.
-func (typ WarehouseType) String() string {
-	switch typ {
-	case PostgreSQL:
-		return "PostgreSQL"
-	case Snowflake:
-		return "Snowflake"
-	}
-	panic("invalid store type")
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (typ *WarehouseType) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, null) {
-		return nil
-	}
-	var v any
-	err := json.Unmarshal(data, &v)
-	if err != nil {
-		return err
-	}
-	s, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("json: cannot scan a %T value into an WarehouseType value", v)
-	}
-	var t WarehouseType
-	switch s {
-	case "PostgreSQL":
-		t = PostgreSQL
-	case "Snowflake":
-		t = Snowflake
-	default:
-		return fmt.Errorf("json: invalid WarehouseType: %s", s)
-	}
-	*typ = t
-	return nil
 }
 
 // WarehouseMode represents a data warehouse mode.

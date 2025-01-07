@@ -76,7 +76,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
 		PrivacyRegion       core.PrivacyRegion       `json:"privacyRegion"`
 		Warehouse           struct {
-			Name     string             `json:"name"`
+			Type     string             `json:"type"`
 			Mode     core.WarehouseMode `json:"mode"`
 			Settings json.Value         `json:"settings"`
 		} `json:"warehouse"`
@@ -86,7 +86,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, errors.BadRequest("%s", err)
 	}
 	id, err := o.CreateWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
-		body.DisplayedProperties, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
+		body.DisplayedProperties, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
 		PrivacyRegion       core.PrivacyRegion       `json:"privacyRegion"`
 		Warehouse           struct {
-			Name     string             `json:"name"`
+			Type     string             `json:"type"`
 			Mode     core.WarehouseMode `json:"mode"`
 			Settings json.Value         `json:"settings"`
 		} `json:"warehouse"`
@@ -171,7 +171,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, errors.BadRequest("%s", err)
 	}
 	err = o.TestWorkspaceCreation(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
-		body.DisplayedProperties, body.Warehouse.Name, body.Warehouse.Settings, body.Warehouse.Mode)
+		body.DisplayedProperties, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	return nil, err
 }
 

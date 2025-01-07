@@ -469,15 +469,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Run the tests on every registered warehouse.
-	warehouses := meergo.Warehouses()
-	if len(warehouses) == 0 {
-		t.Fatal("there are no warehouses registered. Missing warehouses import in test file?")
+	// Run the tests on every warehouse type.
+	warehouseTypes := meergo.WarehouseDrivers()
+	if len(warehouseTypes) == 0 {
+		t.Fatal("there are no warehouse drivers. Missing warehouse drivers import in test file?")
 	}
-	for warehouseName, warehouseInfo := range warehouses {
-		t.Run(warehouseName, func(t *testing.T) {
+	for _, warehouseType := range warehouseTypes {
+		t.Run(warehouseType.Name, func(t *testing.T) {
 			var settings []byte
-			switch warehouseName {
+			switch warehouseType.Name {
 			case "PostgreSQL":
 				const (
 					database = "test_meergo"
@@ -526,7 +526,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			case "Snowflake":
 				// Read the warehouse settings, if the env variable is set,
 				// otherwise skip this warehouse.
-				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseName))
+				settingsEnvKey := fmt.Sprintf("MEERGO_TEST_PATH_WAREHOUSE_%s", strings.ToUpper(warehouseType.Name))
 				settingsFile, ok := os.LookupEnv(settingsEnvKey)
 				if !ok {
 					t.Skipf("the %s environment variable is not present", settingsEnvKey)
@@ -538,11 +538,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					t.Fatalf("cannot open the path %q specified in the %s environment variable: %s", settingsFile, settingsEnvKey, err)
 				}
 			default:
-				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseName))
+				panic(fmt.Sprintf("unsupported data warehouse %q", warehouseType.Name))
 			}
 
 			// Open the warehouse.
-			wh, err := warehouseInfo.New(&meergo.WarehouseConfig{
+			wh, err := warehouseType.New(&meergo.WarehouseConfig{
 				Settings: settings,
 			})
 			if err != nil {

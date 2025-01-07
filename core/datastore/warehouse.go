@@ -36,14 +36,14 @@ func wrapWarehouseError(err error) error {
 	return &WarehouseError{Err: err}
 }
 
-// registeredWarehouse returns a warehouse instance registered under the given
-// name, initialized with the provided settings, and wrapped in a warehouse
-// type.
+// getWarehouseInstance returns a warehouse instance for the warehouse type with
+// the given name, initialized with the provided settings, and wrapped in a
+// warehouse type.
 //
-// It panics if a warehouse with the given name does not exist.
+// It panics if a warehouse driver with the given name does not exist.
 // It returns a *meergo.WarehouseSettingsError if the settings are invalid.
-func registeredWarehouse(name string, settings []byte) (warehouse, error) {
-	inner, err := meergo.RegisteredWarehouse(name).New(&meergo.WarehouseConfig{Settings: settings})
+func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
+	inner, err := meergo.RegisteredWarehouseDriver(name).New(&meergo.WarehouseConfig{Settings: settings})
 	if err != nil {
 		return warehouse{}, err
 	}

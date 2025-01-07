@@ -139,7 +139,7 @@ const (
 	UnsupportedLanguage          = "UnsupportedLanguage"
 	WarehouseError               = "WarehouseError"
 	WarehouseNonInitializable    = "WarehouseNonInitializable"
-	WarehouseNotExist            = "WarehouseNotExist"
+	WarehouseTypeNotExist        = "WarehouseTypeNotExist"
 	WorkspaceNotExist            = "WorkspaceNotExist"
 )
 

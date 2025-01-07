@@ -44,7 +44,7 @@ var (
 var _ meergo.Warehouse = &Snowflake{}
 
 func init() {
-	meergo.RegisterWarehouse(meergo.WarehouseInfo{
+	meergo.RegisterWarehouseDriver(meergo.WarehouseDriver{
 		Name: "Snowflake",
 		Icon: icon,
 	}, New)

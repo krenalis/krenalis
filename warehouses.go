@@ -26,8 +26,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// WarehouseInfo represents a data warehouse driver info.
-type WarehouseInfo struct {
+// WarehouseDriver represents a warehouse driver.
+type WarehouseDriver struct {
 	Name string
 	Icon string // icon in SVG format
 
@@ -35,29 +35,28 @@ type WarehouseInfo struct {
 	ct      reflect.Type
 }
 
-// ReflectType returns the type of the value implementing the data warehouse
-// driver info.
-func (info WarehouseInfo) ReflectType() reflect.Type {
+// ReflectType returns the type of the value implementing the warehouse driver.
+func (info WarehouseDriver) ReflectType() reflect.Type {
 	return info.ct
 }
 
-// New returns a new data warehouse driver instance.
-func (info WarehouseInfo) New(conf *WarehouseConfig) (Warehouse, error) {
+// New returns a new data warehouse instance.
+func (info WarehouseDriver) New(conf *WarehouseConfig) (Warehouse, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
 	d := out[0].Interface().(Warehouse)
 	err, _ := out[1].Interface().(error)
 	return d, err
 }
 
-// WarehouseConfig represents the configuration of a data warehouse driver.
+// WarehouseConfig represents the configuration of a data warehouse.
 type WarehouseConfig struct {
 	Settings    []byte
 	SetSettings SetSettingsFunc
 }
 
-// WarehouseNewFunc represents functions that create new data warehouse driver
-// instances.
-type WarehouseNewFunc[T Warehouse] func(*WarehouseConfig) (T, error)
+// WarehouseDriverNewFunc represents functions that create new warehouse driver
+// instance.
+type WarehouseDriverNewFunc[T Warehouse] func(*WarehouseConfig) (T, error)
 
 // AlterOperation represents an operation that alters the columns of the user
 // tables.
@@ -102,7 +101,7 @@ var (
 	ErrIdentityResolutionInProgress = errors.New("the Identity Resolution is currently in progress on the data warehouse")
 )
 
-// Warehouse is the interface implemented by data warehouses.
+// Warehouse is the interface implemented by warehouse drivers.
 type Warehouse interface {
 
 	// AlterUserColumns alters the columns of the user tables.

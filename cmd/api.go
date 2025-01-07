@@ -155,7 +155,7 @@ func (api api) WarehouseTypes(_ http.ResponseWriter, r *http.Request) (any, erro
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return api.core.WarehouseTypes(), nil
+	return map[string]any{"types": api.core.WarehouseTypes()}, nil
 }
 
 func (api api) connector(r *http.Request) string {

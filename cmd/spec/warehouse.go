@@ -114,6 +114,34 @@ func init() {
 					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
+			{
+				Name:        "List warehouse types",
+				Description: "Returns a list of warehouse types than can be used for a workspace warehouse.",
+				Method:      GET,
+				URL:         "/v0/warehouse/types",
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name: "types",
+							Type: types.Object([]types.Property{
+								{
+									Name:        "name",
+									Type:        types.Text(),
+									Placeholder: `"Snowflake"`,
+									Description: "The name of the warehouse type",
+								},
+								{
+									Name:        "icon",
+									Type:        types.Text(),
+									Placeholder: `"<svg icon>"`,
+									Description: "The SVG icon of the warehouse type.",
+								},
+							}),
+							Placeholder: "...",
+						},
+					},
+				},
+			},
 		},
 	})
 
