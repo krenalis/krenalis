@@ -107,7 +107,7 @@ func init() {
 			Name:        "webhooksPer",
 			Type:        types.Text().WithValues("None", "Account", "Connection", "Connector"),
 			Placeholder: `"None"`,
-			Description: "\"Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
+			Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
 				"It is `\"None\"` if the connector is not an app or does not support webhooks.",
 		},
 		{

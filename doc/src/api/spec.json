@@ -1940,7 +1940,7 @@
                                                         "Connector"
                                                     ]
                                                 },
-                                                "description": "\"Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
+                                                "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
                                             },
                                             {
                                                 "name": "oAuth",
@@ -2126,7 +2126,7 @@
                                         "Connector"
                                     ]
                                 },
-                                "description": "\"Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
+                                "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
                             },
                             {
                                 "name": "oAuth",
