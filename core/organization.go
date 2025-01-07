@@ -695,7 +695,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	err = this.core.datastore.CanInitialize(ctx, whType, settings)
 	if err != nil {
 		if err, ok := err.(*meergo.WarehouseNonInitializableError); ok {
-			return nil, errors.Unprocessable(WarehouseNonInitializable, "%s", err)
+			return nil, errors.Unprocessable(WarehouseNonInitializable, "data warehouse is not initializable: %w", err.Err)
 		}
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unprocessable(WarehouseError, "%s", err)

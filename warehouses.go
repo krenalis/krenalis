@@ -477,17 +477,17 @@ func ValidateText(name string, t types.Type, s string) (any, error) {
 // WarehouseNonInitializableError indicates that the data warehouse is not
 // initializable.
 type WarehouseNonInitializableError struct {
-	reason string
+	Err error
 }
 
 // NewWarehouseNonInitializableError returns a new
 // WarehouseNonInitializableError error.
-func NewWarehouseNonInitializableError(reason string) error {
-	return &WarehouseNonInitializableError{reason: reason}
+func NewWarehouseNonInitializableError(err error) error {
+	return &WarehouseNonInitializableError{Err: err}
 }
 
 func (err *WarehouseNonInitializableError) Error() string {
-	return fmt.Sprintf("data warehouse is not initializable: %s", err.reason)
+	return fmt.Sprintf("data warehouse is not initializable: %s", err.Err)
 }
 
 // WarehouseSettingsError represents an error in the data warehouse settings.

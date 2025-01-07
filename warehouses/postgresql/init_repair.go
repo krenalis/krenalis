@@ -76,8 +76,8 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 	}
 	if errors != nil {
 		slices.Sort(errors)
-		reason := fmt.Sprintf("database is not empty (it contains %s)", strings.Join(errors, ", "))
-		return meergo.NewWarehouseNonInitializableError(reason)
+		err := fmt.Errorf("database is not empty (it contains %s)", strings.Join(errors, ", "))
+		return meergo.NewWarehouseNonInitializableError(err)
 	}
 	return nil
 }
