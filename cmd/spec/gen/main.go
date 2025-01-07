@@ -24,7 +24,7 @@ func main() {
 	destPath := filepath.Join(filepath.Dir(filepath.Dir(wd)), "doc", "src", "api", "spec.json")
 
 	var b json.Buffer
-	err = b.Encode(spec.Specification)
+	err = b.EncodeIndent(spec.Specification, "", "    ")
 	if err != nil {
 		log.Fatal(err)
 	}
