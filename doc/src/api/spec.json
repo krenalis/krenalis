@@ -9218,7 +9218,7 @@
                                 ]
                             },
                             "createRequired": true,
-                            "description": "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\nAs part of the workspace provisioning process, the specified database is initialized with the schema, including all necessary tables, views, and stored procedures. The target database must be empty prior to initialization."
+                            "description": "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\nSince this method only tests the creation of a workspace, the data warehouse is not modified. The target database must be empty to make the check succeed."
                         }
                     ],
                     "moreParameters": [],

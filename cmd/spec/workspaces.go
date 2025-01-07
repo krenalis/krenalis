@@ -113,18 +113,6 @@ func init() {
 		}),
 		Description: "The user properties to be displayed in the user profile within the UI. If any of these fields are empty, no corresponding value will be shown in the UI.",
 	}
-	warehouseParameter := types.Property{
-		Name: "warehouse",
-		Type: types.Object([]types.Property{
-			warehouseTypeParameter,
-			warehouseModeParameter,
-			warehouseSettingsParameter,
-		}),
-		CreateRequired: true,
-		Description: "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\n" +
-			"As part of the workspace provisioning process, the specified database is initialized with the schema, including all necessary tables, views, and stored procedures. " +
-			"The target database must be empty prior to initialization.",
-	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "workspaces",
@@ -141,7 +129,18 @@ func init() {
 					userSchemaParameter,
 					displayedPropertiesParameter,
 					privacyRegionParameter,
-					warehouseParameter,
+					{
+						Name: "warehouse",
+						Type: types.Object([]types.Property{
+							warehouseTypeParameter,
+							warehouseModeParameter,
+							warehouseSettingsParameter,
+						}),
+						CreateRequired: true,
+						Description: "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\n" +
+							"As part of the workspace provisioning process, the specified database is initialized with the schema, including all necessary tables, views, and stored procedures. " +
+							"The target database must be empty prior to initialization.",
+					},
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -165,7 +164,18 @@ func init() {
 					userSchemaParameter,
 					displayedPropertiesParameter,
 					privacyRegionParameter,
-					warehouseParameter,
+					{
+						Name: "warehouse",
+						Type: types.Object([]types.Property{
+							warehouseTypeParameter,
+							warehouseModeParameter,
+							warehouseSettingsParameter,
+						}),
+						CreateRequired: true,
+						Description: "The data warehouse of the workspace, serving as the central repository for the workspace's user data and collected events.\n\n" +
+							"Since this method only tests the creation of a workspace, the data warehouse is not modified. " +
+							"The target database must be empty to make the check succeed.",
+					},
 				},
 				Errors: []Error{
 					{422, WarehouseTypeNotExist, "warehouse type does not exist"},
