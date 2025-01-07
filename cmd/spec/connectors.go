@@ -24,7 +24,7 @@ func init() {
 			Name:        "sourceDescription",
 			Type:        types.Text(),
 			Placeholder: `"import contacts as users and companies as groups from HubSpot"`,
-			Description: `A brief description of the connector when it is used as a source. It complete the sentence "Add an action to ...".`,
+			Description: `A brief description of the connector when it is used as a source. It completes the sentence "Add an action to ...".`,
 		},
 		{
 			Name:        "destinationDescription",

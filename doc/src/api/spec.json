@@ -1806,7 +1806,7 @@
                                                 "type": {
                                                     "name": "Text"
                                                 },
-                                                "description": "A brief description of the connector when it is used as a source. It complete the sentence \"Add an action to ...\"."
+                                                "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
                                             },
                                             {
                                                 "name": "destinationDescription",
@@ -1992,7 +1992,7 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "description": "A brief description of the connector when it is used as a source. It complete the sentence \"Add an action to ...\"."
+                                "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
                             },
                             {
                                 "name": "destinationDescription",
