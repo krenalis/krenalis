@@ -133,7 +133,7 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create a workspace",
-				Description: "Create a new workspace.",
+				Description: "Creates a new workspace.",
 				Method:      POST,
 				URL:         "/v0/workspaces",
 				Parameters: []types.Property{
