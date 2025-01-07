@@ -155,7 +155,7 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article .api-spec h3 { color: #444; font-size: 16px; margin: 24px 0 16px 0; padding-top: 20px; }
 .article .api-spec .description { font-size: 14px; }
 .article .api-spec .api-no-parameters,
-.article .api-spec .api-no-returns { color: #666; font-size: 14px; }
+.article .api-spec .api-no-response { color: #666; font-size: 14px; }
 .article .api-spec .method-list { list-style: none; padding-left: 0; margin-top: 12px; }
 .article .api-spec .method-list code { font-size: 13px; }
 .article .api-spec .method-list > li { border-top: 1px solid #d8dee4; padding: 12px 0; }
