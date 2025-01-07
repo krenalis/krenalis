@@ -121,7 +121,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "connectors",
 		Name:        "Connectors",
-		Description: "...",
+		Description: "Connectors allows to instantiate [connections](connections) to interface Meergo with external data.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "List all connectors",
