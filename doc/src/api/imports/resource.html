@@ -131,33 +131,54 @@
     return params
   }
 
-  var toJSON_old func(property map[string]any) html
-  toJSON_old = func(property map[string]any) html {
-      if placeholder, _ := property.placeholder.(string); placeholder != "" {
-        return htmlEscape(placeholder)
-      }
-      // Handle array of object.
-      t, ok := property["type"].(map[string]any).elementType.(map[string]any)
-      if !ok {
-        return "???"
-      }
-      var s html = "[ {</div>\n"
-      for i, p := range t.properties.([]any) {
-        property := p.(map[string]any)
+  var requestToHTML func(t map[string]any, depth int) html
+  requestToHTML = func(t map[string]any, depth int) html {
+    switch t.name {
+    case "Array":
+      return "[ " + requestToHTML(t.elementType.(map[string]any), depth) + " ]"
+    case "Object":
+      var s html = "{</div>\n"
+      i := 0
+      for property in t.properties.([]any) {
+        p := property.(map[string]any)
+        placeholder, ok := p.placeholder.(string)
+        if !ok {
+          continue
+        }
         if i > 0 {
           s += ",</div>\n"
         }
-        s += `<div>&nbsp;&nbsp;&nbsp;"` + htmlEscape(property.name.(string)) + `": ` + toJSON_old(property)
+        for i := 0; i < depth+1; i++ {
+          s += "  "
+        }
+        s += "<div>"
+        for i := 0; i < depth+1; i++ {
+          s += "&nbsp;&nbsp;&nbsp;&nbsp;"
+        }
+        s += `"` + unsafeconv.ToHTML(p.name.(string)) + `": `
+        if placeholder == "..." {
+          s += requestToHTML(p["type"].(map[string]any), depth+1)
+        } else {
+          s += htmlEscape(placeholder)
+        }
+        i++
       }
-      s += "</div><div>&nbsp;&nbsp;} ]"
+      s += "</div>\n<div>"
+      for i := 0; i < depth; i++ {
+        s += "&nbsp;&nbsp;&nbsp;&nbsp;"
+      }
+      s += "}"
       return s
+    default:
+      return "???"
+    }
   }
 
-  var toJSON func(t map[string]any, depth int) json
-  toJSON = func(t map[string]any, depth int) json {
+  var responseToJSON func(t map[string]any, depth int) json
+  responseToJSON = func(t map[string]any, depth int) json {
     switch t.name {
     case "Array":
-      return "[ " + toJSON(t.elementType.(map[string]any), depth) + " ]"
+      return "[ " + responseToJSON(t.elementType.(map[string]any), depth) + " ]"
     case "Object":
       var s json = "{\n"
       i := 0
@@ -175,7 +196,7 @@
         }
         s += `"` + unsafeconv.ToJSON(p.name.(string)) + `": `
         if placeholder == "..." {
-          s += toJSON(p["type"].(map[string]any), depth+1)
+          s += responseToJSON(p["type"].(map[string]any), depth+1)
         } else {
           s += unsafeconv.ToJSON(placeholder)
         }
@@ -248,16 +269,16 @@
       <div class="api-request-box">
         <div><span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}</div>
         <div>
-          <div>curl {% if m := endpoint.method; m == "DELETE" or m == "PUT" %}-X {{ m }} {% end if %}https://api.meergo.com{{ endpoint.url }} \</div>
+          <div>curl -X {{ endpoint.method }} https://api.meergo.com{{ endpoint.url }} \</div>
           {% body := bodyParameters(endpoint.url.(string), endpoint.parameters.([]any)) %}
           <div>   -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;"{% if body %} \{% end %}</div>
           {% if body %}
           {% last := len(body)-1 %}
-          <div>   -d '{</div>
+          <div>   --json '{</div>
           {% for i, p := range body %}
-          <div>&nbsp;&nbsp;&nbsp;&nbsp;"{{ p.name }}": {{ toJSON_old(p) }}{% if i < last %},{% end %}</div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp;"{{ p.name }}": {{ requestToHTML(p["type"].(map[string]any), 1) }}{% if i < last %},{% end %}</div>
           {% end for %}
-          <div>&nbsp;&nbsp;&nbsp;&nbsp;}'</div>
+          <div>   }'</div>
           {% end if %}
         </div>
       </div>
@@ -265,7 +286,7 @@
       {% if parameters := response.parameters.([]any); len(parameters) > 0 %}
       <div class="api-response-box">
         <div>Response</div>
-        <div>{{ toJSON(map[string]any{"name": "Object", "properties": parameters, "placeholder": "..."}, 0) }}</div>
+        <div>{{ responseToJSON(map[string]any{"name": "Object", "properties": parameters, "placeholder": "..."}, 0) }}</div>
       </div>
       {% end if %}
       {% end if %}

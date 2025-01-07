@@ -68,7 +68,7 @@ func init() {
 	warehouseTypeParameter := types.Property{
 		Name:        "type",
 		Type:        types.Text().WithValues("Snowflake", "PostgreSQL"),
-		Placeholder: "Snowflake",
+		Placeholder: `"Snowflake"`,
 		Description: "The data warehouse type.",
 	}
 	warehouseModeParameter := types.Property{
