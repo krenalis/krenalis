@@ -8899,25 +8899,28 @@
                                 "name": "types",
                                 "placeholder": "...",
                                 "type": {
-                                    "name": "Object",
-                                    "properties": [
-                                        {
-                                            "name": "name",
-                                            "placeholder": "\"Snowflake\"",
-                                            "type": {
-                                                "name": "Text"
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Object",
+                                        "properties": [
+                                            {
+                                                "name": "name",
+                                                "placeholder": "\"Snowflake\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The name of the warehouse type"
                                             },
-                                            "description": "The name of the warehouse type"
-                                        },
-                                        {
-                                            "name": "icon",
-                                            "placeholder": "\"<svg icon>\"",
-                                            "type": {
-                                                "name": "Text"
-                                            },
-                                            "description": "The SVG icon of the warehouse type."
-                                        }
-                                    ]
+                                            {
+                                                "name": "icon",
+                                                "placeholder": "\"<svg icon>\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The SVG icon of the warehouse type."
+                                            }
+                                        ]
+                                    }
                                 },
                                 "description": ""
                             }

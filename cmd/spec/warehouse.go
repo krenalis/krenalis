@@ -125,7 +125,7 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name: "types",
-							Type: types.Object([]types.Property{
+							Type: types.Array(types.Object([]types.Property{
 								{
 									Name:        "name",
 									Type:        types.Text(),
@@ -138,7 +138,7 @@ func init() {
 									Placeholder: `"<svg icon>"`,
 									Description: "The SVG icon of the warehouse type.",
 								},
-							}),
+							})),
 							Placeholder: "...",
 						},
 					},
