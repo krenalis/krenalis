@@ -90,6 +90,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /api/members/current":                                                                    api.Member,           /* only UI */
 		"GET    /api/members/invitations/{token}":                                                        api.MemberInvitation, /* only UI */
 		"GET    /api/transformation-languages":                                                           api.TransformationLanguages,
+		"GET    /api/warehouse/types":                                                                    api.WarehouseTypes,
 		"GET    /api/workspaces":                                                                         organization.Workspaces,
 		"GET    /api/workspaces/{workspace}":                                                             organization.Workspace,
 		"GET    /api/workspaces/{workspace}/action-errors":                                               workspace.ActionErrors,
@@ -122,7 +123,6 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /api/members/logout":                                                                     s.logout,                  /* only UI */
 		"POST   /api/transformations":                                                                    api.TransformData,         /* only UI */
 		"POST   /api/validate-expression":                                                                api.ValidateExpression,    /* only UI */
-		"GET    /api/warehouse/type":                                                                     api.WarehouseTypes,
 		"POST   /api/workspaces":                                                                         organization.CreateWorkspace,
 		"POST   /api/workspaces/test":                                                                    organization.TestWorkspaceCreation,
 		"POST   /api/workspaces/{workspace}/change-user-schema-queries":                                  workspace.PreviewUserSchemaUpdate,
