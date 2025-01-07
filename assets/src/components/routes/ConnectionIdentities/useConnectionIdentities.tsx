@@ -6,6 +6,7 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { UserIdentity } from '../../../lib/api/types/user';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { Link } from '../../base/Link/Link';
 
 const useConnectionIdentities = () => {
 	const [identities, setIdentities] = useState<UserIdentity[]>();
@@ -72,10 +73,13 @@ const useConnectionIdentities = () => {
 
 		const rows: GridRow[] = [];
 		for (const identity of identities) {
+			const actionName = connection.actions.find((a) => a.id === identity.action).name;
 			const row: GridRow = {
 				cells: [
 					identity.lastChangeTime,
-					identity.action,
+					<span className='connection-identities__action'>
+						<Link path={`connections/${connection.id}/actions/edit/${identity.action}`}>{actionName}</Link>
+					</span>,
 					identity.id ? (
 						identity.id
 					) : (

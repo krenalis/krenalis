@@ -40,3 +40,8 @@
 .connection-identities .grid code:first-child {
 	margin-left: 0;
 }
+
+.connection-identities .connection-identities__action {
+	color: var(--sl-color-primary-600);
+	text-decoration: underline;
+}
