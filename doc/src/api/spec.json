@@ -8866,7 +8866,7 @@
                 },
                 {
                     "name": "Repair the warehouse",
-                    "description": "Repairs the current workspace's warehouse.",
+                    "description": "Repairs the current workspace's warehouse.\n\nThis method must be called when no identity resolution and alter schema operations are running on the data warehouse.",
                     "method": "POST",
                     "url": "/v0/warehouse/repair",
                     "parameters": [],

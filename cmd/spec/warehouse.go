@@ -106,10 +106,11 @@ func init() {
 				},
 			},
 			{
-				Name:        "Repair the warehouse",
-				Description: "Repairs the current workspace's warehouse.",
-				Method:      POST,
-				URL:         "/v0/warehouse/repair",
+				Name: "Repair the warehouse",
+				Description: "Repairs the current workspace's warehouse.\n\n" +
+					"This method must be called when no identity resolution and alter schema operations are running on the data warehouse.",
+				Method: POST,
+				URL:    "/v0/warehouse/repair",
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, WarehouseError, "error occurred with the data warehouse"},
