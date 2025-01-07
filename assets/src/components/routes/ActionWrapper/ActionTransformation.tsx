@@ -1692,11 +1692,23 @@ const FullscreenTransformation = ({
 						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
 					let sampleToShow = s;
 					if (transformationType === 'function') {
-						// Show only the checked properties.
+						// Show only the selected properties.
 						const filtered = {};
 						for (const k in s) {
-							if (selectedInPaths.includes(k)) {
-								filtered[k] = s[k];
+							const v = s[k];
+							if (typeof v === 'object') {
+								if (selectedInPaths.includes(k)) {
+									filtered[k] = v;
+								} else {
+									const props = getSampleSelectedChildrenProperties(k, selectedInPaths, v);
+									if (Object.keys(props).length > 0) {
+										filtered[k] = props;
+									}
+								}
+							} else {
+								if (selectedInPaths.includes(k)) {
+									filtered[k] = v;
+								}
 							}
 						}
 						sampleToShow = filtered;
@@ -2299,6 +2311,33 @@ const TransformationProperty = ({
 		</div>
 	);
 };
+
+function getSampleSelectedChildrenProperties(
+	parentPath: string,
+	selectedPaths: string[],
+	property: Record<string, any>,
+): Record<string, any> {
+	let props: Record<string, any> = {};
+	for (const k in property) {
+		const v = property[k];
+		const path = `${parentPath}.${k}`;
+		if (typeof v === 'object') {
+			if (selectedPaths.includes(path)) {
+				props[k] = v;
+			} else {
+				const p = getSampleSelectedChildrenProperties(path, selectedPaths, v);
+				if (Object.keys(p).length > 0) {
+					props[k] = p;
+				}
+			}
+		} else {
+			if (selectedPaths.includes(path)) {
+				props[k] = v;
+			}
+		}
+	}
+	return props;
+}
 
 function isElementVisibleInLeftPanel(element: Element, container: Element) {
 	const elementRect = element.getBoundingClientRect();
