@@ -21,8 +21,9 @@ func init() {
 		Description:    "The mode of the data warehouse.",
 	}
 	cancelIncompatibleOperationsParameter := types.Property{
-		Name: "cancelIncompatibleOperations",
-		Type: types.Boolean(),
+		Name:        "cancelIncompatibleOperations",
+		Type:        types.Boolean(),
+		Description: "Indicates whether operations currently running on the warehouse that are incompatible with the passed `mode` must be canceled.",
 	}
 	settingsParameter := types.Property{
 		Name:           "settings",

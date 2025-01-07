@@ -8757,7 +8757,7 @@
                             "type": {
                                 "name": "Boolean"
                             },
-                            "description": ""
+                            "description": "Indicates whether operations currently running on the warehouse that are incompatible with the passed `mode` must be canceled."
                         }
                     ],
                     "moreParameters": [],
@@ -8851,7 +8851,7 @@
                             "type": {
                                 "name": "Boolean"
                             },
-                            "description": ""
+                            "description": "Indicates whether operations currently running on the warehouse that are incompatible with the passed `mode` must be canceled."
                         }
                     ],
                     "moreParameters": [],
