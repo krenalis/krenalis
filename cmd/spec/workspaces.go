@@ -108,7 +108,7 @@ func init() {
 				Name:        "information",
 				Type:        types.Text().WithCharLen(100),
 				Placeholder: `"email"`,
-				Description: "The property name in the user schema for additional user information.",
+				Description: "The property name in the user schema for additional user information. For example, the user schema property that represents the email.",
 			},
 		}),
 		Description: "The user properties to be displayed in the user profile within the UI. If any of these fields are empty, no corresponding value will be shown in the UI.",
