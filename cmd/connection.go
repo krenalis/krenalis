@@ -58,7 +58,7 @@ func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request)
 
 // AppUsers returns the users of an app connection.
 func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -342,6 +342,46 @@ func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any
 	}
 	err = c.Update(r.Context(), body.Connection)
 	return nil, err
+}
+
+// AppEventSchema returns the schema of the provided event type of the
+// connection.
+func (connection connection) AppEventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.id(r)
+	if err != nil {
+		return nil, err
+	}
+	schema, err := c.AppEventSchema(r.Context(), r.PathValue("type"))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"schema": schema}, nil
+}
+
+// AppGroupSchemas returns the group schemas for an app connection.
+func (connection connection) AppGroupSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.id(r)
+	if err != nil {
+		return nil, err
+	}
+	src, dst, err := c.AppGroupSchemas(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"schemas": map[string]any{"source": src, "destination": dst}}, nil
+}
+
+// AppUserSchemas returns the user schemas for an app connection.
+func (connection connection) AppUserSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.id(r)
+	if err != nil {
+		return nil, err
+	}
+	src, dst, err := c.AppUserSchemas(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"schemas": map[string]any{"source": src, "destination": dst}}, nil
 }
 
 // WriteKeys returns the write keys of a connection.

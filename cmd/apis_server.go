@@ -104,6 +104,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{connection}/tables/{table}/schema":              connection.TableSchema,
 		"GET    /connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
 		"GET    /connections/{id}":                                            workspace.Connection,
+		"GET    /connections/{id}/schemas/user":                               connection.AppUserSchemas,
+		"GET    /connections/{id}/schemas/event/{type}":                       connection.AppEventSchema,
+		"GET    /connections/{id}/schemas/group":                              connection.AppGroupSchemas,
 		"GET    /connectors":                                                  api.Connectors,
 		"GET    /connectors/{name}":                                           api.Connector,
 		"GET    /connectors/{name}/oauth":                                     connector.AuthCodeURL,
@@ -127,8 +130,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{connection}/actions":                            connection.CreateAction,
 		"POST   /connections/{connection}/actions/{action}/executions":        action.Execute,
 		"POST   /connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
-		"POST   /connections/{connection}/app-users":                          connection.AppUsers,
-		"POST   /connections/{connection}/events/send-previews":               connection.PreviewSendEvent,
+		"POST   /connections/{id}/users":                                      connection.AppUsers,
+		"POST   /connections/{id}/preview-send-event":                         connection.PreviewSendEvent,
 		"POST   /connections/{connection}/identities":                         connection.Identities,
 		"POST   /connections/{connection}/keys":                               connection.CreateWriteKey,
 		"POST   /connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,

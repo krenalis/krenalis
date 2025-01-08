@@ -234,8 +234,8 @@
                     ]
                 },
                 {
-                    "name": "Get the user schemas",
-                    "description": "Returns the source and destination user schema of an app connection.",
+                    "name": "Get user schemas",
+                    "description": "Returns the source and destination user schema of a connection. The connection must be an app connection that supports users.",
                     "method": "GET",
                     "url": "/v0/connections/:id/schemas/user",
                     "parameters": [
@@ -247,7 +247,7 @@
                                 "bitSize": 32
                             },
                             "updateRequired": true,
-                            "description": "The ID of the app connection."
+                            "description": "The ID of the app connection. It must support users."
                         }
                     ],
                     "moreParameters": [],
@@ -255,20 +255,30 @@
                         "description": "",
                         "parameters": [
                             {
-                                "name": "sourceSchema",
-                                "placeholder": "{ ... }",
+                                "name": "schemas",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "Schema"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "source",
+                                            "placeholder": "{ ... }",
+                                            "type": {
+                                                "name": "Schema"
+                                            },
+                                            "description": "The source schema."
+                                        },
+                                        {
+                                            "name": "destination",
+                                            "placeholder": "{ ... }",
+                                            "type": {
+                                                "name": "Schema"
+                                            },
+                                            "description": "The destination schema. It is null for source connections."
+                                        }
+                                    ]
                                 },
-                                "description": "The source user schema of the app connection."
-                            },
-                            {
-                                "name": "destinationSchema",
-                                "placeholder": "{ ... }",
-                                "type": {
-                                    "name": "Schema"
-                                },
-                                "description": "The destination user schema of the app connection."
+                                "description": "The user schemas of the app connection."
                             }
                         ]
                     },
@@ -286,8 +296,8 @@
                     ]
                 },
                 {
-                    "name": "Get the group schemas",
-                    "description": "Returns the source and destination group schema of an app connection.",
+                    "name": "Get group schemas",
+                    "description": "Returns the source and destination user schemas for a connection. The connection must be an app connection that supports users.",
                     "method": "GET",
                     "url": "/v0/connections/:id/schemas/group",
                     "parameters": [
@@ -299,7 +309,7 @@
                                 "bitSize": 32
                             },
                             "updateRequired": true,
-                            "description": "The ID of the app connection."
+                            "description": "The ID of the app connection. It must support groups."
                         }
                     ],
                     "moreParameters": [],
@@ -307,20 +317,30 @@
                         "description": "",
                         "parameters": [
                             {
-                                "name": "sourceSchema",
-                                "placeholder": "{ ... }",
+                                "name": "schemas",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "Schema"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "source",
+                                            "placeholder": "{ ... }",
+                                            "type": {
+                                                "name": "Schema"
+                                            },
+                                            "description": "The source schema. It is always non-null."
+                                        },
+                                        {
+                                            "name": "destination",
+                                            "placeholder": "{ ... }",
+                                            "type": {
+                                                "name": "Schema"
+                                            },
+                                            "description": "The destination schema. It is null for source connections."
+                                        }
+                                    ]
                                 },
-                                "description": "The source group schema of the app connection."
-                            },
-                            {
-                                "name": "destinationSchema",
-                                "placeholder": "{ ... }",
-                                "type": {
-                                    "name": "Schema"
-                                },
-                                "description": "The destination group schema of the app connection."
+                                "description": "The group schemas of the app connection."
                             }
                         ]
                     },
@@ -338,8 +358,8 @@
                     ]
                 },
                 {
-                    "name": "Get an event type schema",
-                    "description": "Returns the schema of an event type within a destination app connection.",
+                    "name": "Get event type schema",
+                    "description": "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
                     "method": "GET",
                     "url": "/v0/connections/:id/schemas/event/:type",
                     "parameters": [
@@ -351,7 +371,16 @@
                                 "bitSize": 32
                             },
                             "updateRequired": true,
-                            "description": "The ID of the destination app connection."
+                            "description": "The ID of the destination app connection. It must support events."
+                        },
+                        {
+                            "name": "type",
+                            "placeholder": "\"page_view\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "updateRequired": true,
+                            "description": "The ID of the event type."
                         }
                     ],
                     "moreParameters": [],
@@ -364,7 +393,7 @@
                                 "type": {
                                     "name": "Schema"
                                 },
-                                "description": "The schema of the event type."
+                                "description": "The schema of the event type. It is null if the event type does not have a schema. Note that an event type without a schema does not require a transformation"
                             }
                         ]
                     },
@@ -378,6 +407,11 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "connection does not exist"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "event type does not exist"
                         }
                     ]
                 }

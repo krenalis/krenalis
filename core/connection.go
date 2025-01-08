@@ -106,6 +106,14 @@ var dummyGroupsSchema = types.Object([]types.Property{
 	{Name: "id", Type: types.Int(32)},
 })
 
+// ActionType represents an action type.
+type ActionType struct {
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Target      Target  `json:"target"`
+	EventType   *string `json:"eventType"`
+}
+
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
 //
@@ -235,14 +243,6 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 	}
 
 	panic("unreachable code")
-}
-
-// ActionType represents an action type.
-type ActionType struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Target      Target  `json:"target"`
-	EventType   *string `json:"eventType"`
 }
 
 // ActionTypes returns the action types for the connection.
@@ -412,6 +412,59 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 		actionTypes = []ActionType{}
 	}
 	return actionTypes, nil
+}
+
+// AppEventSchema returns the schema of the provided event type of the
+// connection. If the event type does not have a schema, it returns an invalid
+// schema. The connection must be a destination app connection that supports
+// events.
+//
+// It returns an errors.NotFoundError error if the event type does not exist.
+func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (types.Type, error) {
+	this.core.mustBeOpen()
+	if eventType == "" {
+		return types.Type{}, errors.BadRequest("event type is empty")
+	}
+	c := this.connection
+	connector := c.Connector()
+	if connector.Type != state.App {
+		return types.Type{}, errors.BadRequest("connection %d is not an app", c.ID)
+	}
+	if c.Role != state.Destination {
+		return types.Type{}, errors.BadRequest("connection %d is not a destination", c.ID)
+	}
+	if !connector.Targets.Contains(state.Events) {
+		return types.Type{}, errors.BadRequest("connection %d does not support events", c.ID)
+	}
+	schema, err := this.app().SchemaAsRole(ctx, state.Destination, state.Events, eventType)
+	if err != nil {
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("an error occurred fetching the schema: %w", err)
+		}
+		if err == meergo.ErrEventTypeNotExist {
+			err = errors.NotFound("event type %q does not exist", eventType)
+		}
+		return types.Type{}, err
+	}
+	return schema, nil
+}
+
+// AppGroupSchemas returns the group schemas for the connection. The connection
+// must be an app connection that supports groups. For a source, it returns only
+// the source schema. For a destination, it returns both the source and
+// destination schemas.
+func (this *Connection) AppGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
+	this.core.mustBeOpen()
+	return this.appSchemas(ctx, state.Groups)
+}
+
+// AppUserSchemas returns the user schemas for the connection. The connection
+// must be an app connection that supports users. For a source, it returns only
+// the source schema. For a destination, it returns both the source and
+// destination schemas.
+func (this *Connection) AppUserSchemas(ctx context.Context) (src, dst types.Type, err error) {
+	this.core.mustBeOpen()
+	return this.appSchemas(ctx, state.Users)
 }
 
 // AppUsers returns the users of an app connection and the cursor to get the
@@ -1759,6 +1812,43 @@ func (this *Connection) WriteKeys() ([]string, error) {
 // app returns the app of the connection.
 func (this *Connection) app() *connectors.App {
 	return this.core.connectors.App(this.connection)
+}
+
+// appSchemas returns the user or group schemas, based on target, for an app
+// connection. The connection must support the provided target.
+//
+// For a source connection, it returns only the group source schema.
+// For a destination connection, it returns both the group source and
+// destination schemas.
+func (this *Connection) appSchemas(ctx context.Context, target state.Target) (src, dst types.Type, err error) {
+	c := this.connection
+	connector := c.Connector()
+	if connector.Type != state.App {
+		err = errors.BadRequest("connection %d is not an app", c.ID)
+		return
+	}
+	if !connector.Targets.Contains(target) {
+		err = errors.BadRequest("connection %d does not support %s", c.ID, target)
+		return
+	}
+	app := this.app()
+	src, err = app.SchemaAsRole(ctx, state.Source, target, "")
+	if err != nil {
+		if _, ok := err.(*connectors.UnavailableError); ok {
+			err = errors.Unavailable("an error occurred fetching the source schema: %w", err)
+		}
+		return
+	}
+	if c.Role == state.Destination {
+		dst, err = app.SchemaAsRole(ctx, state.Destination, target, "")
+		if err != nil {
+			if _, ok := err.(*connectors.UnavailableError); ok {
+				err = errors.Unavailable("an error occurred fetching the destination schema: %w", err)
+			}
+			return
+		}
+	}
+	return src, dst, nil
 }
 
 // database returns the database of the connection.

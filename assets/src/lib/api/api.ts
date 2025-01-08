@@ -462,7 +462,7 @@ class Connections {
 
 	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/app-users`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/schemas/user`,
 			http.POST,
 			this.workspaceID,
 			{
@@ -480,7 +480,7 @@ class Connections {
 		transformation?: Transformation,
 	): Promise<PreviewSendEventResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/events/send-previews`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/preview-send-event`,
 			http.POST,
 			this.workspaceID,
 			{
