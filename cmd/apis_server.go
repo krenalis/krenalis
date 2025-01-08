@@ -118,7 +118,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /user-schema":                                                 workspace.UserSchema,
 		"GET    /users/{user}/identities":                                     workspace.Identities,
 		"GET    /users/{user}/traits":                                         workspace.Traits,
-		"GET    /warehouse/settings":                                          workspace.Warehouse,
+		"GET    /warehouse":                                                   workspace.Warehouse,
 		"GET    /warehouse/types":                                             api.WarehouseTypes,
 		"GET    /workspaces":                                                  organization.Workspaces,
 		"GET    /workspaces/current":                                          organization.Workspace,
@@ -150,7 +150,6 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /ui-event":                                                    workspace.ServeUI, /* only UI */
 		"POST   /users":                                                       workspace.Users,
 		"POST   /validate-expression":                                         api.ValidateExpression, /* only UI */
-		"POST   /warehouse/can-change-settings":                               workspace.TestWarehouseUpdate,
 		"POST   /warehouse/repair":                                            workspace.RepairWarehouse,
 		"POST   /workspaces":                                                  organization.CreateWorkspace,
 		"POST   /workspaces/test":                                             organization.TestWorkspaceCreation,
@@ -163,8 +162,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"PUT    /members/current":                                             organization.UpdateMember, /* only UI */
 		"PUT    /members/invitations/{token}":                                 api.AcceptInvitation,      /* only UI */
 		"PUT    /user-schema":                                                 workspace.UpdateUserSchema,
+		"PUT    /warehouse":                                                   workspace.UpdateWarehouse,
 		"PUT    /warehouse/mode":                                              workspace.UpdateWarehouseMode,
-		"PUT    /warehouse/settings":                                          workspace.UpdateWarehouse,
+		"PUT    /warehouse/test":                                              workspace.TestWarehouseUpdate,
 		"PUT    /workspaces/current":                                          workspace.Update,
 	}
 

@@ -386,7 +386,7 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	body := map[string]any{
 		"settings": json.RawMessage(settings),
 	}
-	c.MustCall("POST", "/api/warehouse/can-change-settings", body, nil)
+	c.MustCall("PUT", "/api/warehouse/test", body, nil)
 }
 
 func (c *Meergo) TestWorkspaceCreation(name string,
@@ -451,7 +451,7 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 		"mode":     mode,
 		"settings": json.RawMessage(settings),
 	}
-	c.MustCall("PUT", "/api/warehouse/settings", body, nil)
+	c.MustCall("PUT", "/api/warehouse", body, nil)
 }
 
 func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]any {

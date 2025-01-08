@@ -741,7 +741,7 @@ class Workspaces {
 	};
 
 	warehouse = async (): Promise<WarehouseResponse> => {
-		return await call(`${this.apiURL}/warehouse/settings`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/warehouse`, http.GET, this.workspaceID);
 	};
 
 	updateWarehouseMode = async (mode: WarehouseMode, cancelIncompatibleOperations: boolean): Promise<void> => {
@@ -752,7 +752,7 @@ class Workspaces {
 	};
 
 	testWarehouseUpdate = async (settings: any): Promise<void> => {
-		return await call(`${this.apiURL}/warehouse/can-change-settings`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/warehouse/test`, http.PUT, this.workspaceID, {
 			settings,
 		});
 	};
@@ -763,7 +763,7 @@ class Workspaces {
 		settings: any,
 		cancelIncompatibleOperations: boolean,
 	): Promise<void> => {
-		return await call(`${this.apiURL}/warehouse/settings`, http.PUT, this.workspaceID, {
+		return await call(`${this.apiURL}/warehouse`, http.PUT, this.workspaceID, {
 			name,
 			mode,
 			settings,
