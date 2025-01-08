@@ -136,7 +136,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{connection}/keys":                               connection.CreateWriteKey,
 		"POST   /connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
 		"POST   /connections/{connection}/query/executions":                   connection.ExecQuery,
-		"POST   /connections/{connection}/records":                            connection.Records,
+		"POST   /connections/{connection}/records":                            connection.File,
 		"POST   /connections/{connection}/sheets":                             connection.Sheets,
 		"POST   /connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
 		"POST   /events":                                                      workspace.Events,

@@ -161,8 +161,8 @@ const useAction = (
 					try {
 						res = await api.workspaces.connections.records(
 							connection.id,
-							providedAction.format,
 							providedAction.path!,
+							providedAction.format,
 							providedAction.sheet,
 							providedAction.compression,
 							s,

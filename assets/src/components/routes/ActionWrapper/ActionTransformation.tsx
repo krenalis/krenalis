@@ -1126,8 +1126,8 @@ const FullscreenTransformation = ({
 				try {
 					res = await api.workspaces.connections.records(
 						connection.id,
-						action.format,
 						action.path,
+						action.format,
 						action.sheet,
 						action.compression,
 						settings,

@@ -44,7 +44,7 @@ func TestStorage(t *testing.T) {
 
 	// Test the "/sheets" method.
 	expectedSheets := []string{"First sheet", "Second sheet", "Third sheet"}
-	gotSheets := c.Sheets(storage, "Excel", "file_with_3_sheets.xlsx", meergotester.NoCompression, []byte("{}"))
+	gotSheets := c.Sheets(storage, "file_with_3_sheets.xlsx", "Excel", meergotester.NoCompression, []byte("{}"))
 	if !reflect.DeepEqual(expectedSheets, gotSheets) {
 		t.Fatalf("expected sheets %#v, got %#v", expectedSheets, gotSheets)
 	}
@@ -63,7 +63,7 @@ func TestStorage(t *testing.T) {
 	excelSettings := meergotester.JSONEncodeSettings(map[string]any{
 		"HasColumnNames": true,
 	})
-	records, schema := c.Records(storage, "Excel", "storage_users.xlsx", "Sheet1", meergotester.NoCompression, excelSettings, 100)
+	records, schema := c.File(storage, "storage_users.xlsx", "Excel", "Sheet1", meergotester.NoCompression, excelSettings, 100)
 
 	expectedRecords := []map[string]any{
 		{"customer_id": "1234", "email": "john.smith@example.com", "first_name": "John", "last_name": "Smith"},

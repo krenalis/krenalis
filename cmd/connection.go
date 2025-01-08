@@ -167,6 +167,32 @@ func (connection connection) Executions(_ http.ResponseWriter, r *http.Request) 
 	return c.Executions(r.Context())
 }
 
+// File returns the records and schema of the file located at the specified path
+// within a connection.
+func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, error) {
+	c, err := connection.connection(r)
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Path           string           `json:"path"`
+		Format         string           `json:"format"`
+		Sheet          string           `json:"sheet"`
+		Compression    core.Compression `json:"compression"`
+		FormatSettings json.Value       `json:"formatSettings"`
+		Limit          int              `json:"limit"`
+	}
+	err = json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	records, schema, err := c.File(r.Context(), body.Path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"records": records, "schema": schema}, nil
+}
+
 // Identities returns the user identities of a connection.
 func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -228,32 +254,6 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	return map[string]any{"preview": string(preview)}, nil
 }
 
-// Records returns the records and the schema of the file with a given path for
-// a connection.
-func (connection connection) Records(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	var body struct {
-		Format         string           `json:"format"`
-		Path           string           `json:"path"`
-		Sheet          string           `json:"sheet"`
-		Compression    core.Compression `json:"compression"`
-		FormatSettings json.Value       `json:"formatSettings"`
-		Limit          int              `json:"limit"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	records, schema, err := c.Records(r.Context(), body.Format, body.Path, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"records": records, "schema": schema}, nil
-}
-
 // ServeUI serves the user interface for a connection.
 func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
@@ -288,8 +288,8 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	var body struct {
-		Format         string           `json:"format"`
 		Path           string           `json:"path"`
+		Format         string           `json:"format"`
 		Compression    core.Compression `json:"compression"`
 		FormatSettings json.Value       `json:"formatSettings"`
 	}
@@ -297,7 +297,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	sheets, err := c.Sheets(r.Context(), body.Format, body.Path, body.FormatSettings, body.Compression)
+	sheets, err := c.Sheets(r.Context(), body.Path, body.Format, body.Compression, body.FormatSettings)
 	if err != nil {
 		return nil, err
 	}

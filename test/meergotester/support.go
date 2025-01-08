@@ -262,6 +262,24 @@ func (c *Meergo) Executions(conn int) []Execution {
 	return executions
 }
 
+func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
+	req := map[string]any{
+		"path":           path,
+		"format":         format,
+		"sheet":          sheet,
+		"compression":    compression,
+		"formatSettings": settings,
+		"limit":          limit,
+	}
+	var response struct {
+		Records []map[string]any `json:"records"`
+		Schema  types.Type       `json:"schema"`
+	}
+	method := fmt.Sprintf("/api/connections/%d/records", storage)
+	c.MustCall("POST", method, req, &response)
+	return response.Records, response.Schema
+}
+
 func (c *Meergo) IdentifiersSchema() types.Type {
 	var schema types.Type
 	c.MustCall("GET", "/api/identifiers-schema", nil, &schema)
@@ -306,24 +324,6 @@ func (c *Meergo) PreviewUserSchemaUpdateErr(schema types.Type, rePaths map[strin
 	return response.Queries, nil
 }
 
-func (c *Meergo) Records(storage int, format string, path, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
-	req := map[string]any{
-		"format":         format,
-		"path":           path,
-		"sheet":          sheet,
-		"compression":    compression,
-		"formatSettings": settings,
-		"limit":          limit,
-	}
-	var response struct {
-		Records []map[string]any `json:"records"`
-		Schema  types.Type       `json:"schema"`
-	}
-	method := fmt.Sprintf("/api/connections/%d/records", storage)
-	c.MustCall("POST", method, req, &response)
-	return response.Records, response.Schema
-}
-
 func (c *Meergo) RepairWarehouse() {
 	c.MustCall("POST", "/api/warehouse/repair", nil, nil)
 }
@@ -360,10 +360,10 @@ func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
 	}
 }
 
-func (c *Meergo) Sheets(storage int, format string, path string, compression Compression, settings json.RawMessage) []string {
+func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.RawMessage) []string {
 	request := map[string]any{
-		"format":         format,
 		"path":           path,
+		"format":         format,
 		"compression":    compression,
 		"formatSettings": settings,
 	}

@@ -233,8 +233,8 @@ class Connections {
 
 	records = async (
 		connection: number,
-		format: string,
 		path: string,
+		format: string,
 		sheet: string | null,
 		compression: string,
 		formatSettings: ConnectorSettings,
@@ -245,8 +245,8 @@ class Connections {
 			http.POST,
 			this.workspaceID,
 			{
-				format,
 				path,
+				format,
 				sheet,
 				compression,
 				formatSettings,
@@ -257,8 +257,8 @@ class Connections {
 
 	sheets = async (
 		connection: number,
-		format: string,
 		path: string,
+		format: string,
 		compression: string,
 		formatSettings: ConnectorSettings,
 	): Promise<SheetsResponse> => {
@@ -267,8 +267,8 @@ class Connections {
 			http.POST,
 			this.workspaceID,
 			{
-				format,
 				path,
+				format,
 				compression,
 				formatSettings,
 			},

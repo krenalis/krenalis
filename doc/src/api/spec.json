@@ -393,7 +393,7 @@
                                 "type": {
                                     "name": "Schema"
                                 },
-                                "description": "The schema of the event type. It is null if the event type does not have a schema. Note that an event type without a schema does not require a transformation"
+                                "description": "The schema of the event type. It is null if the event type does not have a schema."
                             }
                         ]
                     },

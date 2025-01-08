@@ -472,8 +472,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.sheets(
 				connection.id,
-				action.format,
 				action.path!,
+				action.format,
 				action.compression,
 				settings,
 			);
@@ -622,8 +622,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		try {
 			res = await api.workspaces.connections.records(
 				connection.id,
-				action.format,
 				action.path,
+				action.format,
 				action.sheet === undefined ? null : action.sheet,
 				action.compression,
 				settings,

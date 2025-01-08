@@ -1104,6 +1104,126 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 	return executions, nil
 }
 
+// File returns the records and schema of the file located at the specified path
+// within the connection. The connection must be a file storage connection. path
+// must be UTF-8 encoded with a length in range [1, 1024].
+//
+// format specifies the file format and must match the name of a file connector.
+// If the connector supports sheets, sheet must be a valid sheet name;
+// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
+// has a length in the range [1, 31], does not start or end with "'", and does
+// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
+// case-insensitive.
+//
+// compression indicates if the file is compressed and how. settings are the
+// format settings, and limit restricts the number of records to return, between
+// 0 and 100.
+//
+// It returns an errors.UnprocessableError error with code
+//
+//   - FormatNotExist, if the format does not exist.
+//   - InvalidSettings, if the settings are not valid.
+//   - NoColumnsFound, if the file has no columns.
+//   - SheetNotExist, if the file does not contain the provided sheet.
+//   - UnsupportedColumnType, if a column type is not supported.
+func (this *Connection) File(ctx context.Context, path, format, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, error) {
+
+	this.core.mustBeOpen()
+
+	c := this.connection
+
+	// Validate the connection type.
+	if c.Connector().Type != state.FileStorage {
+		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
+	}
+	// Validate the path.
+	if path == "" {
+		return nil, types.Type{}, errors.BadRequest("path cannot be empty")
+	}
+	if !utf8.ValidString(path) {
+		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
+	}
+	if containsNUL(path) {
+		return nil, types.Type{}, errors.BadRequest("path contains NUL rune")
+	}
+	if n := utf8.RuneCountInString(path); n > 1024 {
+		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
+	}
+
+	// Validate the format.
+	formatConnector, ok := this.core.state.Connector(format)
+	if !ok {
+		return nil, types.Type{}, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
+	}
+	if formatConnector.Type != state.File {
+		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
+	}
+
+	// Validate the sheet.
+	if formatConnector.HasSheets {
+		if sheet == "" {
+			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
+		}
+		if !connectors.IsValidSheetName(sheet) {
+			return nil, types.Type{}, errors.BadRequest("sheet is not valid")
+		}
+	} else {
+		if sheet != "" {
+			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
+		}
+	}
+
+	// Validate the settings.
+	if formatConnector.HasSettings {
+		if settings == nil {
+			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has settings", formatConnector.Name)
+		}
+		if !json.Valid(settings) || !settings.IsObject() {
+			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
+		}
+	} else if settings != nil {
+		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no settings", formatConnector.Name)
+	}
+
+	// Validate the limit.
+	if limit < 0 || limit > 100 {
+		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
+	if err != nil {
+		switch err {
+		case connectors.ErrNoColumnsFound:
+			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
+		case meergo.ErrSheetNotExist:
+			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
+		default:
+			switch err.(type) {
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
+			case *meergo.UnsupportedColumnTypeError:
+				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("cannot read records: %w", err)
+			}
+		}
+		return nil, types.Type{}, err
+	}
+
+	recs := make([]any, len(records))
+	for i, r := range records {
+		recs[i] = r
+	}
+
+	schema := types.Object(columns)
+	marshaledRecords, err := types.Marshal(recs, types.Array(schema))
+	if err != nil {
+		return nil, types.Type{}, err
+	}
+
+	return marshaledRecords, schema, nil
+}
+
 // Identities returns the user identities of the connection, and an estimate of
 // their count without applying first and limit.
 //
@@ -1377,125 +1497,6 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	return b.Bytes(), nil
 }
 
-// Records returns the records and the schema of the file with the given path
-// stored in the connection, that must be a file storage connection. path must
-// be UTF-8 encoded with a length in range [1, 1024].
-//
-// fileConnector refers to the file connector to use. If it supports sheets,
-// sheet must be a valid sheet name; otherwise, it must be an empty string. A
-// valid sheet name is UTF-8 encoded, has a length in the range [1, 31], does
-// not start or end with "'", and does not contain any of "*", "/", ":", "?",
-// "[", "\", and "]". Sheet names are case-insensitive.
-//
-// compression indicates if the file is compressed and how. settings are the
-// format settings, and limit restricts the number of records to return, between
-// 0 and 100.
-//
-// It returns an errors.UnprocessableError error with code
-//
-//   - FormatNotExist, if the format does not exist.
-//   - InvalidSettings, if the settings are not valid.
-//   - NoColumnsFound, if the file has no columns.
-//   - SheetNotExist, if the file does not contain the provided sheet.
-//   - UnsupportedColumnType, if a column type is not supported.
-func (this *Connection) Records(ctx context.Context, format string, path, sheet string, compression Compression, settings json.Value, limit int) (json.Value, types.Type, error) {
-
-	this.core.mustBeOpen()
-
-	c := this.connection
-
-	// Validate the connection type.
-	if c.Connector().Type != state.FileStorage {
-		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
-	}
-	// Validate the path.
-	if path == "" {
-		return nil, types.Type{}, errors.BadRequest("path cannot be empty")
-	}
-	if !utf8.ValidString(path) {
-		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
-	}
-	if containsNUL(path) {
-		return nil, types.Type{}, errors.BadRequest("path contains NUL rune")
-	}
-	if n := utf8.RuneCountInString(path); n > 1024 {
-		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
-	}
-
-	// Validate the format.
-	formatConnector, ok := this.core.state.Connector(format)
-	if !ok {
-		return nil, types.Type{}, errors.Unprocessable(FormatNotExist, "format %q does not exist", format)
-	}
-	if formatConnector.Type != state.File {
-		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
-	}
-
-	// Validate the sheet.
-	if formatConnector.HasSheets {
-		if sheet == "" {
-			return nil, types.Type{}, errors.BadRequest("sheet cannot be empty because connection %d has sheets", c.ID)
-		}
-		if !connectors.IsValidSheetName(sheet) {
-			return nil, types.Type{}, errors.BadRequest("sheet is not valid")
-		}
-	} else {
-		if sheet != "" {
-			return nil, types.Type{}, errors.BadRequest("sheet must be empty because connection %d does not have sheets", c.ID)
-		}
-	}
-
-	// Validate the settings.
-	if formatConnector.HasSettings {
-		if settings == nil {
-			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has settings", formatConnector.Name)
-		}
-		if !json.Valid(settings) || !settings.IsObject() {
-			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
-		}
-	} else if settings != nil {
-		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no settings", formatConnector.Name)
-	}
-
-	// Validate the limit.
-	if limit < 0 || limit > 100 {
-		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
-	}
-
-	columns, records, err := this.storage().Read(ctx, formatConnector, path, sheet, settings, state.Compression(compression), limit)
-	if err != nil {
-		switch err {
-		case connectors.ErrNoColumnsFound:
-			err = errors.Unprocessable(NoColumnsFound, "file does not have columns")
-		case meergo.ErrSheetNotExist:
-			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
-		default:
-			switch err.(type) {
-			case *meergo.InvalidSettingsError:
-				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *meergo.UnsupportedColumnTypeError:
-				err = errors.Unprocessable(UnsupportedColumnType, "%s", err)
-			case *connectors.UnavailableError:
-				err = errors.Unavailable("cannot read records: %w", err)
-			}
-		}
-		return nil, types.Type{}, err
-	}
-
-	recs := make([]any, len(records))
-	for i, r := range records {
-		recs[i] = r
-	}
-
-	schema := types.Object(columns)
-	marshaledRecords, err := types.Marshal(recs, types.Array(schema))
-	if err != nil {
-		return nil, types.Type{}, err
-	}
-
-	return marshaledRecords, schema, nil
-}
-
 // Rename renames the connection with the given new name.
 // name must be between 1 and 100 runes long.
 //
@@ -1558,18 +1559,18 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 	return ui, nil
 }
 
-// Sheets returns the sheets of the file at the given path for the connection,
-// that must be a file connection. path must be UTF-8 encoded with a length in
-// range [1, 1024].
+// Sheets returns the sheets of the file located at the specified path within
+// the connection. The connection must be a file storage connection. path must
+// be UTF-8 encoded with a length in range [1, 1024].
 //
-// format is the file format and refers to the file connector with multi sheets
-// to use. compression indicates if the file is compressed and how. settings are
-// the format settings.
+// format specifies the file format and must match the name of a file connector
+// that supports sheets. compression indicates if the file is compressed and
+// how. settings are the format settings.
 //
 // It returns an errors.UnprocessableError error with code
 //   - FormatNotExist, if the format does not exist.
 //   - InvalidSettings, if the settings are not valid.
-func (this *Connection) Sheets(ctx context.Context, format string, path string, settings json.Value, compression Compression) ([]string, error) {
+func (this *Connection) Sheets(ctx context.Context, path string, format string, compression Compression, settings json.Value) ([]string, error) {
 
 	this.core.mustBeOpen()
 
