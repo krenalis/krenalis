@@ -119,7 +119,7 @@ func (connection connection) CreateWriteKey(_ http.ResponseWriter, r *http.Reque
 
 // Delete deletes a connection.
 func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Req
 
 // Update updates a connection.
 func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -391,6 +391,22 @@ func (connection connection) connection2(r *http.Request) (int, error) {
 		return 0, errors.NotFound("")
 	}
 	return id, nil
+}
+
+func (connection connection) id(r *http.Request) (*core.Connection, error) {
+	ws, err := workspace{connection.apisServer}.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("id")
+	if v[0] == '+' {
+		return nil, errors.NotFound("")
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.NotFound("")
+	}
+	return ws.Connection(id)
 }
 
 func (connection connection) target(r *http.Request) (core.Target, string, error) {

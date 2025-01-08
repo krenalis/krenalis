@@ -79,10 +79,10 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 	action := action{s}
 
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
-		"DELETE /connections/{connection}":                                    connection.Delete,
 		"DELETE /connections/{connection}/actions/{action}":                   action.Delete,
 		"DELETE /connections/{connection}/keys/{key}":                         connection.DeleteWriteKey,
 		"DELETE /connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
+		"DELETE /connections/{id}":                                            connection.Delete,
 		"DELETE /events/listeners/{id}":                                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                                  organization.DeleteAPIKey, /* only UI */
 		"DELETE /members/{member}":                                            organization.DeleteMember, /* only UI */
@@ -93,7 +93,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /action-metrics/hours":                                        workspace.ActionMetricsPerHour,
 		"GET    /action-metrics/minutes":                                      workspace.ActionMetricsPerMinute,
 		"GET    /connections":                                                 workspace.Connections,
-		"GET    /connections/{connection}":                                    workspace.Connection,
+		"GET    /connections/oauth":                                           workspace.OAuthToken,
 		"GET    /connections/{connection}/action-types":                       connection.ActionTypes,
 		"GET    /connections/{connection}/actions/schemas/Events/{eventType}": connection.ActionSchemas,
 		"GET    /connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas,
@@ -103,6 +103,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{connection}/keys":                               connection.WriteKeys,
 		"GET    /connections/{connection}/tables/{table}/schema":              connection.TableSchema,
 		"GET    /connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
+		"GET    /connections/{id}":                                            workspace.Connection,
 		"GET    /connectors":                                                  api.Connectors,
 		"GET    /connectors/{name}":                                           api.Connector,
 		"GET    /connectors/{name}/oauth":                                     connector.AuthCodeURL,
@@ -143,19 +144,18 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /members/invitations":                                         organization.InviteMember, /* only UI */
 		"POST   /members/login":                                               s.login,                   /* only UI */
 		"POST   /members/logout":                                              s.logout,                  /* only UI */
-		"POST   /oauth-token":                                                 workspace.OAuthToken,
-		"POST   /transformations":                                             api.TransformData, /* only UI */
-		"POST   /ui":                                                          workspace.ServeUI, /* only UI */
-		"POST   /ui-event":                                                    workspace.ServeUI, /* only UI */
+		"POST   /transformations":                                             api.TransformData,         /* only UI */
+		"POST   /ui":                                                          workspace.ServeUI,         /* only UI */
+		"POST   /ui-event":                                                    workspace.ServeUI,         /* only UI */
 		"POST   /users":                                                       workspace.Users,
 		"POST   /validate-expression":                                         api.ValidateExpression, /* only UI */
 		"POST   /warehouse/repair":                                            workspace.RepairWarehouse,
 		"POST   /workspaces":                                                  organization.CreateWorkspace,
 		"POST   /workspaces/test":                                             organization.TestWorkspaceCreation,
-		"PUT    /connections/{connection}":                                    connection.Update,
 		"PUT    /connections/{connection}/actions/{action}":                   action.Update,
 		"PUT    /connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
 		"PUT    /connections/{connection}/actions/{action}/status":            action.SetStatus,
+		"PUT    /connections/{id}":                                            connection.Update,
 		"PUT    /identity-resolution/settings":                                workspace.UpdateIdentityResolution,
 		"PUT    /keys/{key}":                                                  organization.UpdateAPIKey, /* only UI */
 		"PUT    /members/current":                                             organization.UpdateMember, /* only UI */

@@ -726,11 +726,11 @@ class Workspaces {
 
 	oauthToken = async (connector: string, oauthCode: string): Promise<string> => {
 		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
-		return await call(`${this.apiURL}/oauth-token`, http.POST, this.workspaceID, {
-			connector,
-			oauthCode,
-			redirectURI,
-		});
+		return await call(
+			`${this.apiURL}/connections/oauth?oauthCode=${encodeURIComponent(oauthCode)}&redirectURI=${encodeURIComponent(redirectURI)}&connector=${encodeURIComponent(connector)}`,
+			http.GET,
+			this.workspaceID,
+		);
 	};
 
 	updateIdentityResolution = async (runOnBatchImport: boolean, identifiers: Identifiers): Promise<void> => {

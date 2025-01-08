@@ -336,7 +336,7 @@ func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("connection")
+	v := r.PathValue("id")
 	if v[0] == '+' {
 		return nil, errors.NotFound("")
 	}
@@ -534,16 +534,11 @@ func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		OAuthCode   string `json:"oauthCode"`
-		RedirectURI string `json:"redirectURI"`
-		Connector   string `json:"connector"`
-	}
-	err = json.Decode(r.Body, &body)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	return ws.OAuthToken(r.Context(), body.OAuthCode, body.RedirectURI, body.Connector)
+	query := r.URL.Query()
+	oauthCode := query.Get("oauthCode")
+	redirectURI := query.Get("redirectURI")
+	connector := query.Get("connector")
+	return ws.OAuthToken(r.Context(), oauthCode, redirectURI, connector)
 }
 
 // PreviewUserSchemaUpdate previews a user schema update and returns the queries
