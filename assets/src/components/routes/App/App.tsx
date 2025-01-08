@@ -13,7 +13,7 @@ import SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import { useApp } from './useApp';
-import { LoginRequiredError } from '../../../lib/api/errors';
+import { UnauthorizedError } from '../../../lib/api/errors';
 
 setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.0/dist/');
 
@@ -42,7 +42,7 @@ const App = () => {
 	};
 
 	const handleError = (err: Error | string) => {
-		if (err instanceof LoginRequiredError) {
+		if (err instanceof UnauthorizedError) {
 			logout();
 			return;
 		}

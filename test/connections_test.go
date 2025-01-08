@@ -9,7 +9,6 @@ package test
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/meergo/meergo/core"
@@ -25,11 +24,9 @@ func TestConnections(t *testing.T) {
 	c := meergotester.InitAndLaunch(t)
 	defer c.Stop()
 
-	wsID := c.WorkspaceID()
-
 	// Ensure that there are no connections.
 	var connections []any
-	c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(wsID)+"/connections", nil, &connections)
+	c.MustCall("GET", "/api/connections", nil, &connections)
 	if len(connections) != 0 {
 		t.Fatalf("expected 0 connections, got %d", len(connections))
 	}
@@ -39,7 +36,7 @@ func TestConnections(t *testing.T) {
 
 	// Check if the Dummy connection has been created successfully.
 	connections = nil
-	c.MustCall("GET", "/api/workspaces/"+strconv.Itoa(wsID)+"/connections", nil, &connections)
+	c.MustCall("GET", "/api/connections", nil, &connections)
 	if len(connections) != 1 {
 		t.Fatalf("expected 1 connections, got %d", len(connections))
 	}

@@ -13,7 +13,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/meergo/meergo/core"
@@ -21,7 +23,11 @@ import (
 	"github.com/meergo/meergo/json"
 
 	"github.com/gorilla/securecookie"
+	"golang.org/x/text/unicode/norm"
 )
+
+// maxRequestSize is the maximum size bytes for an API request.
+const maxRequestSize = 500 * 1024
 
 //go:embed invite-member-email.html
 var inviteMemberEmail string
@@ -73,93 +79,93 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 	action := action{s}
 
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
-		"DELETE /api/keys/{key}":                                                                         organization.DeleteAPIKey, /* only UI */
-		"DELETE /api/members/{member}":                                                                   organization.DeleteMember, /* only UI */
-		"DELETE /api/workspaces/{workspace}":                                                             workspace.Delete,
-		"DELETE /api/workspaces/{workspace}/connections/{connection}":                                    connection.Delete,
-		"DELETE /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   action.Delete,
-		"DELETE /api/workspaces/{workspace}/connections/{connection}/keys/{key}":                         connection.DeleteWriteKey,
-		"DELETE /api/workspaces/{workspace}/connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
-		"DELETE /api/workspaces/{workspace}/event-listeners/{listener}":                                  workspace.DeleteEventListener,
-		"GET    /api/connectors":                                                                         api.Connectors,
-		"GET    /api/connectors/{connector}":                                                             api.Connector,
-		"GET    /api/connectors/{connector}/auth-code-url":                                               connector.AuthCodeURL,
-		"GET    /api/event-schema":                                                                       api.EventSchema,
-		"GET    /api/keys":                                                                               organization.APIKeys, /* only UI */
-		"GET    /api/members":                                                                            organization.Members, /* only UI */
-		"GET    /api/members/current":                                                                    api.Member,           /* only UI */
-		"GET    /api/members/invitations/{token}":                                                        api.MemberInvitation, /* only UI */
-		"GET    /api/transformation-languages":                                                           api.TransformationLanguages,
-		"GET    /api/warehouse/types":                                                                    api.WarehouseTypes,
-		"GET    /api/workspaces":                                                                         organization.Workspaces,
-		"GET    /api/workspaces/{workspace}":                                                             organization.Workspace,
-		"GET    /api/workspaces/{workspace}/action-errors":                                               workspace.ActionErrors,
-		"GET    /api/workspaces/{workspace}/action-metrics/dates":                                        workspace.ActionMetricsPerDate,
-		"GET    /api/workspaces/{workspace}/action-metrics/days":                                         workspace.ActionMetricsPerDay,
-		"GET    /api/workspaces/{workspace}/action-metrics/hours":                                        workspace.ActionMetricsPerHour,
-		"GET    /api/workspaces/{workspace}/action-metrics/minutes":                                      workspace.ActionMetricsPerMinute,
-		"GET    /api/workspaces/{workspace}/connections":                                                 workspace.Connections,
-		"GET    /api/workspaces/{workspace}/connections/{connection}":                                    workspace.Connection,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/action-types":                       connection.ActionTypes,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/schemas/Events/{eventType}": connection.ActionSchemas,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   connection.Action,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/complete-path/{path}":               connection.CompletePath,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/executions":                         connection.Executions,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.WriteKeys,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/tables/{table}/schema":              connection.TableSchema,
-		"GET    /api/workspaces/{workspace}/connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
-		"GET    /api/workspaces/{workspace}/event-listeners/{listener}/events":                           workspace.ListenedEvents,
-		"GET    /api/workspaces/{workspace}/identifiers-schema":                                          workspace.IdentifiersSchema,
-		"GET    /api/workspaces/{workspace}/identity-resolution/execution":                               workspace.LastIdentityResolution,
-		"GET    /api/workspaces/{workspace}/user-schema":                                                 workspace.UserSchema,
-		"GET    /api/workspaces/{workspace}/users/{user}/identities":                                     workspace.Identities,
-		"GET    /api/workspaces/{workspace}/users/{user}/traits":                                         workspace.Traits,
-		"GET    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.Warehouse,
-		"POST   /api/expressions-properties":                                                             api.ExpressionsProperties, /* only UI */
-		"POST   /api/keys":                                                                               organization.CreateAPIKey, /* only UI */
-		"POST   /api/members/invitations":                                                                organization.InviteMember, /* only UI */
-		"POST   /api/members/login":                                                                      s.login,                   /* only UI */
-		"POST   /api/members/logout":                                                                     s.logout,                  /* only UI */
-		"POST   /api/transformations":                                                                    api.TransformData,         /* only UI */
-		"POST   /api/validate-expression":                                                                api.ValidateExpression,    /* only UI */
-		"POST   /api/workspaces":                                                                         organization.CreateWorkspace,
-		"POST   /api/workspaces/test":                                                                    organization.TestWorkspaceCreation,
-		"POST   /api/workspaces/{workspace}/change-user-schema-queries":                                  workspace.PreviewUserSchemaUpdate,
-		"POST   /api/workspaces/{workspace}/connections":                                                 workspace.CreateConnection,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/actions":                            connection.CreateAction,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/actions/{action}/executions":        action.Execute,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
-		"POST   /api/workspaces/{workspace}/connections/{connection}/app-users":                          connection.AppUsers,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/events/send-previews":               connection.PreviewSendEvent,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/identities":                         connection.Identities,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/keys":                               connection.CreateWriteKey,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/query/executions":                   connection.ExecQuery,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/records":                            connection.Records,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/sheets":                             connection.Sheets,
-		"POST   /api/workspaces/{workspace}/connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
-		"POST   /api/workspaces/{workspace}/event-listeners":                                             workspace.CreateEventListener,
-		"POST   /api/workspaces/{workspace}/events":                                                      workspace.Events,
-		"POST   /api/workspaces/{workspace}/identity-resolutions":                                        workspace.StartIdentityResolution,
-		"POST   /api/workspaces/{workspace}/oauth-token":                                                 workspace.OAuthToken,
-		"POST   /api/workspaces/{workspace}/ui":                                                          workspace.ServeUI, /* only UI */
-		"POST   /api/workspaces/{workspace}/ui-event":                                                    workspace.ServeUI, /* only UI */
-		"POST   /api/workspaces/{workspace}/users":                                                       workspace.Users,
-		"POST   /api/workspaces/{workspace}/warehouse/can-change-settings":                               workspace.TestWarehouseUpdate,
-		"POST   /api/workspaces/{workspace}/warehouse/repair":                                            workspace.RepairWarehouse,
-		"PUT    /api/keys/{key}":                                                                         organization.UpdateAPIKey, /* only UI */
-		"PUT    /api/members/current":                                                                    organization.UpdateMember, /* only UI */
-		"PUT    /api/members/invitations/{token}":                                                        api.AcceptInvitation,      /* only UI */
-		"PUT    /api/workspaces/{workspace}":                                                             workspace.Update,
-		"PUT    /api/workspaces/{workspace}/connections/{connection}":                                    connection.Update,
-		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}":                   action.Update,
-		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
-		"PUT    /api/workspaces/{workspace}/connections/{connection}/actions/{action}/status":            action.SetStatus,
-		"PUT    /api/workspaces/{workspace}/identity-resolution/settings":                                workspace.UpdateIdentityResolution,
-		"PUT    /api/workspaces/{workspace}/user-schema":                                                 workspace.UpdateUserSchema,
-		"PUT    /api/workspaces/{workspace}/warehouse/mode":                                              workspace.UpdateWarehouseMode,
-		"PUT    /api/workspaces/{workspace}/warehouse/settings":                                          workspace.UpdateWarehouse,
+		"DELETE /api/keys/{key}":                                                  organization.DeleteAPIKey, /* only UI */
+		"DELETE /api/members/{member}":                                            organization.DeleteMember, /* only UI */
+		"DELETE /api/workspaces/current":                                          workspace.Delete,
+		"DELETE /api/connections/{connection}":                                    connection.Delete,
+		"DELETE /api/connections/{connection}/actions/{action}":                   action.Delete,
+		"DELETE /api/connections/{connection}/keys/{key}":                         connection.DeleteWriteKey,
+		"DELETE /api/connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
+		"DELETE /api/event-listeners/{listener}":                                  workspace.DeleteEventListener,
+		"GET    /api/connectors":                                                  api.Connectors,
+		"GET    /api/connectors/{connector}":                                      api.Connector,
+		"GET    /api/connectors/{connector}/auth-code-url":                        connector.AuthCodeURL,
+		"GET    /api/event-schema":                                                api.EventSchema,
+		"GET    /api/keys":                                                        organization.APIKeys, /* only UI */
+		"GET    /api/members":                                                     organization.Members, /* only UI */
+		"GET    /api/members/current":                                             api.Member,           /* only UI */
+		"GET    /api/members/invitations/{token}":                                 api.MemberInvitation, /* only UI */
+		"GET    /api/transformation-languages":                                    api.TransformationLanguages,
+		"GET    /api/warehouse/types":                                             api.WarehouseTypes,
+		"GET    /api/workspaces":                                                  organization.Workspaces,
+		"GET    /api/workspaces/current":                                          organization.Workspace,
+		"GET    /api/action-errors":                                               workspace.ActionErrors,
+		"GET    /api/action-metrics/dates":                                        workspace.ActionMetricsPerDate,
+		"GET    /api/action-metrics/days":                                         workspace.ActionMetricsPerDay,
+		"GET    /api/action-metrics/hours":                                        workspace.ActionMetricsPerHour,
+		"GET    /api/action-metrics/minutes":                                      workspace.ActionMetricsPerMinute,
+		"GET    /api/connections":                                                 workspace.Connections,
+		"GET    /api/connections/{connection}":                                    workspace.Connection,
+		"GET    /api/connections/{connection}/action-types":                       connection.ActionTypes,
+		"GET    /api/connections/{connection}/actions/schemas/Events/{eventType}": connection.ActionSchemas,
+		"GET    /api/connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas,
+		"GET    /api/connections/{connection}/actions/{action}":                   connection.Action,
+		"GET    /api/connections/{connection}/complete-path/{path}":               connection.CompletePath,
+		"GET    /api/connections/{connection}/executions":                         connection.Executions,
+		"GET    /api/connections/{connection}/keys":                               connection.WriteKeys,
+		"GET    /api/connections/{connection}/tables/{table}/schema":              connection.TableSchema,
+		"GET    /api/connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
+		"GET    /api/event-listeners/{listener}/events":                           workspace.ListenedEvents,
+		"GET    /api/identifiers-schema":                                          workspace.IdentifiersSchema,
+		"GET    /api/identity-resolution/execution":                               workspace.LastIdentityResolution,
+		"GET    /api/user-schema":                                                 workspace.UserSchema,
+		"GET    /api/users/{user}/identities":                                     workspace.Identities,
+		"GET    /api/users/{user}/traits":                                         workspace.Traits,
+		"GET    /api/warehouse/settings":                                          workspace.Warehouse,
+		"POST   /api/expressions-properties":                                      api.ExpressionsProperties, /* only UI */
+		"POST   /api/keys":                                                        organization.CreateAPIKey, /* only UI */
+		"POST   /api/members/invitations":                                         organization.InviteMember, /* only UI */
+		"POST   /api/members/login":                                               s.login,                   /* only UI */
+		"POST   /api/members/logout":                                              s.logout,                  /* only UI */
+		"POST   /api/transformations":                                             api.TransformData,         /* only UI */
+		"POST   /api/validate-expression":                                         api.ValidateExpression,    /* only UI */
+		"POST   /api/workspaces":                                                  organization.CreateWorkspace,
+		"POST   /api/workspaces/test":                                             organization.TestWorkspaceCreation,
+		"POST   /api/change-user-schema-queries":                                  workspace.PreviewUserSchemaUpdate,
+		"POST   /api/connections":                                                 workspace.CreateConnection,
+		"POST   /api/connections/{connection}/actions":                            connection.CreateAction,
+		"POST   /api/connections/{connection}/actions/{action}/executions":        action.Execute,
+		"POST   /api/connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
+		"POST   /api/connections/{connection}/app-users":                          connection.AppUsers,
+		"POST   /api/connections/{connection}/events/send-previews":               connection.PreviewSendEvent,
+		"POST   /api/connections/{connection}/identities":                         connection.Identities,
+		"POST   /api/connections/{connection}/keys":                               connection.CreateWriteKey,
+		"POST   /api/connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
+		"POST   /api/connections/{connection}/query/executions":                   connection.ExecQuery,
+		"POST   /api/connections/{connection}/records":                            connection.Records,
+		"POST   /api/connections/{connection}/sheets":                             connection.Sheets,
+		"POST   /api/connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
+		"POST   /api/event-listeners":                                             workspace.CreateEventListener,
+		"POST   /api/events":                                                      workspace.Events,
+		"POST   /api/identity-resolutions":                                        workspace.StartIdentityResolution,
+		"POST   /api/oauth-token":                                                 workspace.OAuthToken,
+		"POST   /api/ui":                                                          workspace.ServeUI, /* only UI */
+		"POST   /api/ui-event":                                                    workspace.ServeUI, /* only UI */
+		"POST   /api/users":                                                       workspace.Users,
+		"POST   /api/warehouse/can-change-settings":                               workspace.TestWarehouseUpdate,
+		"POST   /api/warehouse/repair":                                            workspace.RepairWarehouse,
+		"PUT    /api/keys/{key}":                                                  organization.UpdateAPIKey, /* only UI */
+		"PUT    /api/members/current":                                             organization.UpdateMember, /* only UI */
+		"PUT    /api/members/invitations/{token}":                                 api.AcceptInvitation,      /* only UI */
+		"PUT    /api/workspaces/current":                                          workspace.Update,
+		"PUT    /api/connections/{connection}":                                    connection.Update,
+		"PUT    /api/connections/{connection}/actions/{action}":                   action.Update,
+		"PUT    /api/connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
+		"PUT    /api/connections/{connection}/actions/{action}/status":            action.SetStatus,
+		"PUT    /api/identity-resolution/settings":                                workspace.UpdateIdentityResolution,
+		"PUT    /api/user-schema":                                                 workspace.UpdateUserSchema,
+		"PUT    /api/warehouse/mode":                                              workspace.UpdateWarehouseMode,
+		"PUT    /api/warehouse/settings":                                          workspace.UpdateWarehouse,
 	}
 
 	s.mux = http.NewServeMux()
@@ -192,31 +198,135 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 
 // ServeHTTP servers the API methods from HTTP.
 func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case "POST", "PUT":
+		// Validate the content type.
+		mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		if err != nil || (mt != "application/json" && mt != "text/plain") || len(params) > 1 {
+			err := errors.BadRequest("request's content type must be 'application/json'")
+			_ = err.WriteTo(w)
+			return
+		}
+		if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
+			err := errors.BadRequest("request's content type charset must be 'utf-8'")
+			_ = err.WriteTo(w)
+			return
+		}
+		// Validate the content length.
+		if cl := r.Header.Get("Content-Length"); cl != "" {
+			length, _ := strconv.Atoi(cl)
+			if length < 0 || length > maxRequestSize {
+				err := errors.BadRequest("request's content length must be in the range [1,%d]", maxRequestSize)
+				_ = err.WriteTo(w)
+				return
+			}
+		}
+		lr := &io.LimitedReader{R: r.Body, N: maxRequestSize + 1}
+		payload := norm.NFC.Reader(lr)
+		r.Body = io.NopCloser(payload)
+	}
+
 	s.mux.ServeHTTP(w, r)
 }
 
-var loginRequiredError = errors.Unprocessable(LoginRequired, "login is required")
-
 // credentials returns the logged member with its organization. If no member is
 // logged, it returns an errors.Unprocessable error with code LoginRequired.
-func (s *apisServer) credentials(r *http.Request) (*core.Member, *core.Organization, error) {
+func (s *apisServer) credentials(r *http.Request) (*core.Organization, *core.Workspace, error) {
+
+	if auth, ok := r.Header["Authorization"]; ok {
+		// Attempt to read and process the Authorization header.
+		if len(auth) > 1 {
+			return nil, nil, errors.BadRequest("request contains multiple Authorization headers")
+		}
+		token, found := strings.CutPrefix(auth[0], "Bearer ")
+		if !found || token == "" {
+			return nil, nil, errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_API_KEY>'.")
+		}
+		organizationID, workspaceID, found := s.core.APIKey(token)
+		if !found {
+			return nil, nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
+		}
+		org, err := s.core.Organization(r.Context(), organizationID)
+		if err != nil {
+			return nil, nil, err
+		}
+		// If the key is restricted to a workspace, return the workspace as well.
+		if workspaceID > 0 {
+			ws, err := org.Workspace(workspaceID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return org, ws, nil
+		}
+		header, ok := r.Header["Meergo-Workspace"]
+		// If the Meergo-Workspace header is present, return the workspace as well.
+		if !ok {
+			return org, nil, nil
+		}
+		if len(header) > 1 {
+			return nil, nil, errors.BadRequest("request contains multiple Meergo-Warehouse headers")
+		}
+		var id int64
+		if header[0] != "" && header[0][0] != '+' {
+			id, _ = strconv.ParseInt(header[0], 10, 32)
+		}
+		if id <= 0 {
+			return nil, nil, errors.BadRequest("Meergo-Workspace header is invalid. It should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+		}
+		ws, err := org.Workspace(int(id))
+		if err != nil {
+			return nil, nil, err
+		}
+		return org, ws, nil
+	}
+
+	org, _, err := s.memberCredentials(r)
+	if err != nil {
+		return nil, nil, err
+	}
+	header, ok := r.Header["Meergo-Workspace"]
+	if !ok {
+		return org, nil, nil
+	}
+	if len(header) > 1 {
+		return nil, nil, errors.BadRequest("request contains multiple Meergo-Warehouse headers")
+	}
+	var workspaceID int64
+	if header[0] != "" && header[0][0] != '+' {
+		workspaceID, _ = strconv.ParseInt(header[0], 10, 32)
+	}
+	if workspaceID <= 0 {
+		return nil, nil, errors.BadRequest("Meergo-Workspace header is invalid. It should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+	}
+	ws, err := org.Workspace(int(workspaceID))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return org, ws, nil
+}
+
+var errInvalidSessionCookie = errors.Unauthorized("session cookie has expired or is no longer valid")
+
+func (s *apisServer) memberCredentials(r *http.Request) (*core.Organization, *core.Member, error) {
 
 	// Get the session.
 	cookie, _ := r.Cookie(sessionCookieName)
 	if cookie == nil {
-		return nil, nil, loginRequiredError
+		return nil, nil, errors.Unauthorized("the Authorization header with the API key is not present in the request")
 	}
 	session := &sessionCookie{}
 	err := s.secureCookie.Decode(sessionCookieName, cookie.Value, session)
 	if err != nil {
-		return nil, nil, loginRequiredError
+		return nil, nil, errInvalidSessionCookie
 	}
 
 	// Get the organization.
 	organization, err := s.core.Organization(r.Context(), session.Organization)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
-			return nil, nil, loginRequiredError
+			return nil, nil, errInvalidSessionCookie
 		}
 		return nil, nil, err
 	}
@@ -225,12 +335,12 @@ func (s *apisServer) credentials(r *http.Request) (*core.Member, *core.Organizat
 	member, err := organization.Member(r.Context(), session.Member)
 	if err != nil {
 		if _, ok := err.(*errors.NotFoundError); ok {
-			err = loginRequiredError
+			err = errInvalidSessionCookie
 		}
 		return nil, nil, err
 	}
 
-	return member, organization, nil
+	return organization, member, nil
 }
 
 // login logs a user in.

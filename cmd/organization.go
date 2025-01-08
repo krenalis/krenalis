@@ -25,11 +25,11 @@ type organization struct {
 
 // APIKeys returns the API keys of an organization.
 func (organization organization) APIKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := o.APIKeys(r.Context())
+	keys, err := org.APIKeys(r.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (organization organization) APIKeys(_ http.ResponseWriter, r *http.Request)
 
 // CreateAPIKey creates a new API key for an organization.
 func (organization organization) CreateAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (organization organization) CreateAPIKey(_ http.ResponseWriter, r *http.Req
 		}
 		workspace = *body.Workspace
 	}
-	id, token, err := o.CreateAPIKey(r.Context(), body.Name, workspace)
+	id, token, err := org.CreateAPIKey(r.Context(), body.Name, workspace)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (organization organization) CreateAPIKey(_ http.ResponseWriter, r *http.Req
 
 // CreateWorkspace creates a workspace for the organization.
 func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, err := organization.organization(r)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := o.CreateWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
 		body.DisplayedProperties, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 
 // DeleteAPIKey deletes an API key of an organization.
 func (organization organization) DeleteAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +103,13 @@ func (organization organization) DeleteAPIKey(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	err = o.DeleteAPIKey(r.Context(), key)
+	err = org.DeleteAPIKey(r.Context(), key)
 	return nil, err
 }
 
 // DeleteMember deletes a member of an organization.
 func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -117,13 +117,13 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	err = o.DeleteMember(r.Context(), member)
+	err = org.DeleteMember(r.Context(), member)
 	return nil, err
 }
 
 // InviteMember sends an invitation email.
 func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	member, o, err := organization.credentials(r)
+	org, member, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -135,23 +135,23 @@ func (organization organization) InviteMember(_ http.ResponseWriter, r *http.Req
 		return nil, errors.BadRequest("%s", err)
 	}
 	emailTemplate := strings.ReplaceAll(inviteMemberEmail, "${invitationFrom}", html.EscapeString(member.Email))
-	emailTemplate = strings.ReplaceAll(emailTemplate, "${organization}", html.EscapeString(o.Name))
-	err = o.InviteMember(r.Context(), body.Email, emailTemplate)
+	emailTemplate = strings.ReplaceAll(emailTemplate, "${organization}", html.EscapeString(org.Name))
+	err = org.InviteMember(r.Context(), body.Email, emailTemplate)
 	return nil, err
 }
 
 // Members returns the members of an organization.
 func (organization organization) Members(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
-	return o.Members(r.Context())
+	return org.Members(r.Context())
 }
 
 // TestWorkspaceCreation tests a workspace creation.
 func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, err := organization.organization(r)
 	if err != nil {
 		return nil, err
 	}
@@ -170,14 +170,14 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = o.TestWorkspaceCreation(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.PrivacyRegion, body.UserSchema,
 		body.DisplayedProperties, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	return nil, err
 }
 
 // UpdateAPIKey updates the name of an API key for an organization.
 func (organization organization) UpdateAPIKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, _, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -192,13 +192,13 @@ func (organization organization) UpdateAPIKey(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = o.UpdateAPIKey(r.Context(), key, body.Name)
+	err = org.UpdateAPIKey(r.Context(), key, body.Name)
 	return nil, err
 }
 
 // UpdateMember updates a member of an organization.
 func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Request) (any, error) {
-	member, o, err := organization.credentials(r)
+	org, member, err := organization.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
@@ -227,34 +227,29 @@ func (organization organization) UpdateMember(_ http.ResponseWriter, r *http.Req
 		}
 		memberToSet.Avatar = avatar
 	}
-	err = o.UpdateMember(r.Context(), member.ID, memberToSet)
+	err = org.UpdateMember(r.Context(), member.ID, memberToSet)
 	return nil, err
 }
 
-// Workspace returns the workspace of an organization.
+// Workspace returns the current workspace.
 func (organization organization) Workspace(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	_, ws, err := organization.credentials(r)
 	if err != nil {
 		return nil, err
 	}
-	v := r.PathValue("workspace")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
+	if ws == nil {
+		return nil, errors.Forbidden("provided key ")
 	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.NotFound("")
-	}
-	return o.Workspace(id)
+	return ws, nil
 }
 
 // Workspaces returns the workspaces of an organization.
 func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, o, err := organization.credentials(r)
+	org, err := organization.organization(r)
 	if err != nil {
 		return nil, err
 	}
-	return o.Workspaces(), nil
+	return org.Workspaces(), nil
 }
 
 func (organization organization) key(r *http.Request) (int, error) {
@@ -279,4 +274,13 @@ func (organization organization) member(r *http.Request) (int, error) {
 		return 0, errors.NotFound("")
 	}
 	return id, nil
+}
+
+// organization returns the organization.
+func (organization organization) organization(r *http.Request) (*core.Organization, error) {
+	org, _, err := organization.credentials(r)
+	if err != nil {
+		return nil, err
+	}
+	return org, nil
 }

@@ -30,7 +30,7 @@ var defaultStrategy Strategy = "AB-C"
 // This file contains support methods which reduce verbosity of tests.
 
 func (c *Meergo) Action(connection, action int) Action {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d", c.ws, connection, action)
+	method := fmt.Sprintf("/api/connections/%d/actions/%d", connection, action)
 	var response map[string]any
 	c.MustCall("GET", method, nil, &response)
 	data, err := json.Marshal(response)
@@ -46,7 +46,7 @@ func (c *Meergo) Action(connection, action int) Action {
 }
 
 func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) map[string]any {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/schemas/%s", c.ws, conn, target)
+	method := fmt.Sprintf("/api/connections/%d/actions/schemas/%s", conn, target)
 	if eventType != "" {
 		method += "/" + eventType
 	}
@@ -59,7 +59,7 @@ func (c *Meergo) CompletePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/complete-path/%s", c.ws, storage, url.PathEscape(path))
+	method := fmt.Sprintf("/api/connections/%d/complete-path/%s", storage, url.PathEscape(path))
 	c.MustCall("GET", method, nil, &response)
 	return response.Path
 }
@@ -73,13 +73,13 @@ func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, i
 		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/identities", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d/identities", conn)
 	c.MustCall("POST", method, req, &response)
 	return response.Identities, response.Count
 }
 
 func (c *Meergo) ConnectionUI(connection int) map[string]any {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/ui", c.ws, connection)
+	method := fmt.Sprintf("/api/connections/%d/ui", connection)
 	var ui map[string]any
 	c.MustCall("GET", method, nil, &ui)
 	return ui
@@ -96,7 +96,7 @@ func (c *Meergo) CreateAction(conn int, target string, action ActionToSet) int {
 		"action": action,
 	}
 	var id int
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d/actions", conn)
 	c.MustCall("POST", method, data, &id)
 	return id
 }
@@ -114,7 +114,7 @@ func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (i
 		"action": action,
 	}
 	var id int
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d/actions", conn)
 	err := c.Call("POST", method, data, &id)
 	if err != nil {
 		return 0, err
@@ -127,8 +127,7 @@ func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
 		"connection": connection,
 	}
 	var id int
-	method := fmt.Sprintf("/api/workspaces/%d/connections", c.ws)
-	c.MustCall("POST", method, data, &id)
+	c.MustCall("POST", "/api/connections", data, &id)
 	return id
 }
 
@@ -198,7 +197,7 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 		"action":    action,
 	}
 	var id int
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d/actions", conn)
 	c.MustCall("POST", method, data, &id)
 	return id
 }
@@ -245,12 +244,12 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 }
 
 func (c *Meergo) DeleteConnection(conn int) {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d", conn)
 	c.MustCall("DELETE", method, nil, nil)
 }
 
 func (c *Meergo) ExecuteAction(conn, action int, reload bool) int {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d/executions", c.ws, conn, action)
+	method := fmt.Sprintf("/api/connections/%d/actions/%d/executions", conn, action)
 	var id int
 	c.MustCall("POST", method, map[string]any{"Reload": reload}, &id)
 	return id
@@ -258,15 +257,14 @@ func (c *Meergo) ExecuteAction(conn, action int, reload bool) int {
 
 func (c *Meergo) Executions(conn int) []Execution {
 	var executions []Execution
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/executions", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d/executions", conn)
 	c.MustCall("GET", method, nil, &executions)
 	return executions
 }
 
 func (c *Meergo) IdentifiersSchema() types.Type {
 	var schema types.Type
-	method := fmt.Sprintf("/api/workspaces/%d/identifiers-schema", c.ws)
-	c.MustCall("GET", method, nil, &schema)
+	c.MustCall("GET", "/api/identifiers-schema", nil, &schema)
 	return schema
 }
 
@@ -275,8 +273,7 @@ func (c *Meergo) IdentityResolutionExecution() (startTime, endTime *time.Time) {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/execution", c.ws)
-	c.MustCall("GET", method, nil, &response)
+	c.MustCall("GET", "/api/identity-resolution/execution", nil, &response)
 	return response.StartTime, response.EndTime
 }
 
@@ -288,8 +285,7 @@ func (c *Meergo) PreviewUserSchemaUpdate(schema types.Type, rePaths map[string]a
 	var response struct {
 		Queries []string
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/change-user-schema-queries", c.ws)
-	c.MustCall("POST", method, req, &response)
+	c.MustCall("POST", "/api/change-user-schema-queries", req, &response)
 	return response.Queries
 }
 
@@ -303,8 +299,7 @@ func (c *Meergo) PreviewUserSchemaUpdateErr(schema types.Type, rePaths map[strin
 	var response struct {
 		Queries []string
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/change-user-schema-queries", c.ws)
-	err := c.Call("POST", method, req, &response)
+	err := c.Call("POST", "/api/change-user-schema-queries", req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -324,19 +319,17 @@ func (c *Meergo) Records(storage int, format string, path, sheet string, compres
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/records", c.ws, storage)
+	method := fmt.Sprintf("/api/connections/%d/records", storage)
 	c.MustCall("POST", method, req, &response)
 	return response.Records, response.Schema
 }
 
 func (c *Meergo) RepairWarehouse() {
-	method := fmt.Sprintf("/api/workspaces/%d/warehouse/repair", c.ws)
-	c.MustCall("POST", method, nil, nil)
+	c.MustCall("POST", "/api/warehouse/repair", nil, nil)
 }
 
 func (c *Meergo) ResolveIdentities() {
-	method := fmt.Sprintf("/api/workspaces/%d/identity-resolutions", c.ws)
-	c.MustCall("POST", method, nil, nil)
+	c.MustCall("POST", "/api/identity-resolutions", nil, nil)
 	// TODO(Gianluca): a timeout is used here until we implement a reliable
 	// mechanism to check the current status of Identity Resolution.
 	time.Sleep(3 * time.Second)
@@ -377,14 +370,14 @@ func (c *Meergo) Sheets(storage int, format string, path string, compression Com
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/sheets", c.ws, storage)
+	method := fmt.Sprintf("/api/connections/%d/sheets", storage)
 	c.MustCall("POST", method, request, &response)
 	return response.Sheets
 }
 
 func (c *Meergo) TableSchema(conn int, table string) types.Type {
 	var schema types.Type
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/tables/%s/schema", c.ws, conn, url.PathEscape(table))
+	method := fmt.Sprintf("/api/connections/%d/tables/%s/schema", conn, url.PathEscape(table))
 	c.MustCall("GET", method, nil, &schema)
 	return schema
 }
@@ -393,8 +386,7 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	body := map[string]any{
 		"settings": json.RawMessage(settings),
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/warehouse/can-change-settings", c.ws)
-	c.MustCall("POST", method, body, nil)
+	c.MustCall("POST", "/api/warehouse/can-change-settings", body, nil)
 }
 
 func (c *Meergo) TestWorkspaceCreation(name string,
@@ -415,7 +407,7 @@ func (c *Meergo) TestWorkspaceCreation(name string,
 }
 
 func (c *Meergo) UpdateAction(conn int, actionID int, action ActionToSet) {
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/actions/%d", c.ws, conn, actionID)
+	method := fmt.Sprintf("/api/connections/%d/actions/%d", conn, actionID)
 	c.MustCall("PUT", method, action, nil)
 }
 
@@ -424,38 +416,34 @@ func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []s
 		"runOnBatchImport": runOnBatchImport,
 		"identifiers":      identifiers,
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
-	c.MustCall("PUT", method, body, nil)
+	c.MustCall("PUT", "/api/identity-resolution/settings", body, nil)
 }
 
 func (c *Meergo) UpdateIdentityResolutionErr(identifiers []string) error {
 	body := map[string]any{
 		"identifiers": identifiers,
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/identity-resolution/settings", c.ws)
-	return c.Call("PUT", method, body, nil)
+	return c.Call("PUT", "/api/identity-resolution/settings", body, nil)
 }
 
 func (c *Meergo) UpdateUserSchema(schema types.Type, primarySources map[string]int, rePaths map[string]any) {
-	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	c.MustCall("PUT", method, req, nil)
+	c.MustCall("PUT", "/api/user-schema", req, nil)
 }
 
 // UpdateUserSchemaErr is like UpdateUserSchema but returns an error instead of
 // panicking.
 func (c *Meergo) UpdateUserSchemaErr(schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
-	method := fmt.Sprintf("/api/workspaces/%d/user-schema", c.ws)
 	req := map[string]any{
 		"schema":         schema,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	return c.Call("PUT", method, req, nil)
+	return c.Call("PUT", "/api/user-schema", req, nil)
 }
 
 func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
@@ -463,8 +451,7 @@ func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {
 		"mode":     mode,
 		"settings": json.RawMessage(settings),
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/warehouse/settings", c.ws)
-	c.MustCall("PUT", method, body, nil)
+	c.MustCall("PUT", "/api/warehouse/settings", body, nil)
 }
 
 func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]any {
@@ -486,8 +473,7 @@ func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]an
 	var response struct {
 		Events []map[string]any `json:"events"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/events", c.ws)
-	c.MustCall("POST", method, request, &response)
+	c.MustCall("POST", "/api/events", request, &response)
 	return response.Events
 }
 
@@ -496,7 +482,7 @@ func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/users/%s/identities?first=%d&limit=%d", c.ws, user, first, limit)
+	method := fmt.Sprintf("/api/users/%s/identities?first=%d&limit=%d", user, first, limit)
 	c.MustCall("GET", method, nil, &response)
 	return response.Identities, response.Count
 }
@@ -514,8 +500,7 @@ func (c *Meergo) Users(properties []string, order string, orderDesc bool, first,
 		Count  int        `json:"count"`
 		Schema types.Type `json:"schema"`
 	}
-	method := fmt.Sprintf("/api/workspaces/%d/users", c.ws)
-	c.MustCall("POST", method, req, &response)
+	c.MustCall("POST", "/api/users", req, &response)
 	return response.Users, response.Schema, response.Count
 }
 
@@ -561,15 +546,14 @@ func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...
 
 func (c *Meergo) WriteKeys(conn int) []string {
 	var keys []string
-	method := fmt.Sprintf("/api/workspaces/%d/connections/%d/keys", c.ws, conn)
+	method := fmt.Sprintf("/api/connections/%d/keys", conn)
 	c.MustCall("GET", method, nil, &keys)
 	return keys
 }
 
 func (c *Meergo) Workspace() Workspace {
 	var ws Workspace
-	method := fmt.Sprintf("/api/workspaces/%d", c.ws)
-	c.MustCall("GET", method, nil, &ws)
+	c.MustCall("GET", "/api/workspaces/current", nil, &ws)
 	return ws
 }
 

@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"strings"
 )
 
@@ -68,6 +69,11 @@ func (c *Meergo) call(httpMethod, method string, body any, response any) error {
 	req, err := http.NewRequest(httpMethod, url, data)
 	if err != nil {
 		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	if id := c.WorkspaceID(); id > 0 {
+		req.Header.Set("Meergo-Workspace", strconv.Itoa(id))
 	}
 
 	c.t.Logf("[info] %s %s", httpMethod, url)

@@ -22,7 +22,7 @@ test('Login', async ({ page }) => {
 		await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeVisible();
 	} catch {
 		// The user must first select a workspace, because the
-		// organization has more then one.
+		// organization has more than one.
 		const workspaceList = page.locator('.workspace-list__workspaces');
 		const firstWorkspaceTile = workspaceList.locator(`.workspace-list__workspace[data-id="${String(config.workspaceID)}"]`).nth(0);
 		await firstWorkspaceTile.click();

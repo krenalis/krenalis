@@ -90,6 +90,31 @@ func (e *BadRequestError) WriteTo(w http.ResponseWriter) error {
 	return writeTo(w, http.StatusBadRequest, "BadRequest", message, cause)
 }
 
+// Forbidden returns an error that formats as the given text, and its WriteTo
+// method replies to the request with an HTTP 403 forbidden error.
+//
+// It can be used when a request is made with insufficient permissions or when
+// access to the resource is forbidden.
+func Forbidden(format string, a ...any) *ForbiddenError {
+	return &ForbiddenError{fmt.Sprintf(format, a...)}
+}
+
+// ForbiddenError is an implementation of error used to represent a forbidden
+// error.
+type ForbiddenError struct {
+	Message string
+}
+
+// Error implements the errors interface.
+func (e *ForbiddenError) Error() string {
+	return e.Message
+}
+
+// WriteTo implements the ResponseWriterTo interface.
+func (e *ForbiddenError) WriteTo(w http.ResponseWriter) error {
+	return writeTo(w, http.StatusForbidden, "Forbidden", e.Message, "")
+}
+
 // NotFound returns an error that formats as the given text, and its WriteTo
 // method replies to the request with an HTTP 404 not found error.
 //
@@ -157,6 +182,31 @@ func (e *UnavailableError) WriteTo(w http.ResponseWriter) error {
 	}
 	message := e.s
 	return writeTo(w, http.StatusServiceUnavailable, "ServiceUnavailable", message, cause)
+}
+
+// Unauthorized returns an error that formats as the given text, and its WriteTo
+// method replies to the request with an HTTP 401 unauthorized error.
+//
+// It can be used when a request is made without an API key or with a
+// non-existent key.
+func Unauthorized(format string, a ...any) *UnauthorizedError {
+	return &UnauthorizedError{fmt.Sprintf(format, a...)}
+}
+
+// UnauthorizedError is an implementation of error used to represent an
+// unauthorized error.
+type UnauthorizedError struct {
+	Message string
+}
+
+// Error implements the errors interface.
+func (e *UnauthorizedError) Error() string {
+	return e.Message
+}
+
+// WriteTo implements the ResponseWriterTo interface.
+func (e *UnauthorizedError) WriteTo(w http.ResponseWriter) error {
+	return writeTo(w, http.StatusUnauthorized, "Unauthorized", e.Message, "")
 }
 
 // Unprocessable returns an error with the given code that formats as the given

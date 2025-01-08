@@ -8,7 +8,6 @@
 package test
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -144,8 +143,7 @@ func Test_UserIdentities(t *testing.T) {
 	// Additional test: test that a call to '/identities' for an user which does not exist
 	// returns a NotFound error.
 	{
-		url := fmt.Sprintf("/api/workspaces/%d/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", c.WorkspaceID())
-		err := c.Call("GET", url, nil, nil)
+		err := c.Call("GET", "/api/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil)
 		if err == nil {
 			t.Fatalf("expected error, got nothing")
 		}

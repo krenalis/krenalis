@@ -825,18 +825,14 @@ func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (an
 	return map[string]any{"name": name, "settings": settings}, nil
 }
 
+// workspace returns the workspace.
 func (workspace workspace) workspace(r *http.Request) (*core.Workspace, error) {
-	v := r.PathValue("workspace")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.NotFound("")
-	}
-	_, organization, err := workspace.credentials(r)
+	_, ws, err := workspace.credentials(r)
 	if err != nil {
 		return nil, err
 	}
-	return organization.Workspace(id)
+	if ws == nil {
+		return nil, errors.Forbidden("access to the workspace is not allowed")
+	}
+	return ws, nil
 }

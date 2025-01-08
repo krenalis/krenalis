@@ -1,9 +1,16 @@
-import { NotFoundError, UnavailableError, UnprocessableError, LoginRequiredError } from './errors';
+import { NotFoundError, UnavailableError, UnprocessableError, UnauthorizedError } from './errors';
 import JSONbig from 'json-bigint';
 
-const call = async (url: string, method: string, body?: any, opt?: any) => {
+const call = async (url: string, method: string, workspaceID?: number, body?: any, opt?: any) => {
+	let headers = {
+		'Content-Type': 'application/json',
+	};
+	if (workspaceID) {
+		headers['Meergo-Workspace'] = workspaceID;
+	}
 	const request: RequestInit = {
 		method: method,
+		headers: headers,
 		...opt,
 	};
 
@@ -30,6 +37,7 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 			case 500:
 				throw new Error('Internal server error');
 			case 400:
+			case 401:
 			case 404:
 			case 422:
 			case 503:
@@ -41,14 +49,12 @@ const call = async (url: string, method: string, body?: any, opt?: any) => {
 						'background:#dc362e;color:#dcdcdc',
 					);
 					throw new Error('An internal error occurred');
+				} else if (res.status === 401) {
+					throw new UnauthorizedError();
 				} else if (res.status === 404) {
 					throw new NotFoundError(message);
 				} else if (res.status === 422) {
-					if (code === 'LoginRequired') {
-						throw new LoginRequiredError();
-					} else {
-						throw new UnprocessableError(code, message, cause);
-					}
+					throw new UnprocessableError(code, message, cause);
 				} else if (res.status === 503) {
 					throw new UnavailableError(message, cause);
 				}
