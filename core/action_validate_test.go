@@ -753,7 +753,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     `input schema is required by the transformation`,
+			err:                     `input schema is required by the transformation function`,
 		},
 		{
 			name: "BAD: Source/App/Users - invalid output schema with transformation function",
@@ -779,7 +779,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "output schema is required by the transformation",
+			err:                     "output schema is required by the transformation function",
 		},
 		{
 			name: "BAD: Source/App/Users - empty source code in transformation function",

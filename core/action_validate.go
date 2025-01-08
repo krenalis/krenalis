@@ -204,13 +204,13 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		// Output property paths.
 		usedOutPaths = transformer.OutPaths()
 	}
-	// Validate the transformation.
+	// Validate the transformation function.
 	if function := action.Transformation.Function; function != nil {
 		if !inSchema.Valid() && !dispatchEventsToApps {
-			return errors.BadRequest("input schema is required by the transformation")
+			return errors.BadRequest("input schema is required by the transformation function")
 		}
 		if !outSchema.Valid() {
-			return errors.BadRequest("output schema is required by the transformation")
+			return errors.BadRequest("output schema is required by the transformation function")
 		}
 		if function.Source == "" {
 			return errors.BadRequest("source of transformation function cannot be empty")
