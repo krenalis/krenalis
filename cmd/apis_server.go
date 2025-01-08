@@ -104,8 +104,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{connection}/tables/{table}/schema":              connection.TableSchema,
 		"GET    /connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
 		"GET    /connectors":                                                  api.Connectors,
-		"GET    /connectors/{connector}":                                      api.Connector,
-		"GET    /connectors/{connector}/auth-code-url":                        connector.AuthCodeURL,
+		"GET    /connectors/{name}":                                           api.Connector,
+		"GET    /connectors/{name}/oauth":                                     connector.AuthCodeURL,
 		"GET    /event-listeners/{listener}/events":                           workspace.ListenedEvents,
 		"GET    /event-schema":                                                api.EventSchema,
 		"GET    /identifiers-schema":                                          workspace.IdentifiersSchema,

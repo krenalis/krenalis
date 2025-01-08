@@ -24,7 +24,7 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 	if _, _, err := connector.credentials(r); err != nil {
 		return nil, err
 	}
-	c, err := connector.connector(r)
+	c, err := connector.name(r)
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +45,6 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 	return map[string]any{"url": authCodeURL}, nil
 }
 
-func (connector connector) connector(r *http.Request) (*core.Connector, error) {
-	return connector.core.Connector(r.Context(), r.PathValue("connector"))
+func (connector connector) name(r *http.Request) (*core.Connector, error) {
+	return connector.core.Connector(r.Context(), r.PathValue("name"))
 }

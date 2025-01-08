@@ -910,7 +910,7 @@ class Connectors {
 	authCodeURL = async (connector: string, role: Role): Promise<authCodeURLResponse> => {
 		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
 		return await call(
-			`${this.apiURL}/connectors/${connector}/auth-code-url?role=${role}&redirecturi=${encodeURIComponent(redirectURI)}`,
+			`${this.apiURL}/connectors/${connector}/oauth?role=${role}&redirecturi=${encodeURIComponent(redirectURI)}`,
 			http.GET,
 		);
 	};

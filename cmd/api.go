@@ -42,7 +42,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	connector := api.connector(r)
+	connector := api.name(r)
 	return api.core.Connector(r.Context(), connector)
 }
 
@@ -158,6 +158,6 @@ func (api api) WarehouseTypes(_ http.ResponseWriter, r *http.Request) (any, erro
 	return map[string]any{"types": api.core.WarehouseTypes()}, nil
 }
 
-func (api api) connector(r *http.Request) string {
-	return r.PathValue("connector")
+func (api api) name(r *http.Request) string {
+	return r.PathValue("name")
 }
