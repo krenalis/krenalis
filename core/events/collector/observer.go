@@ -8,6 +8,7 @@
 package collector
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"sort"
@@ -29,7 +30,7 @@ const MaxEventListeners = 100 // maximum number of event listeners.
 
 var (
 	ErrEventListenerNotFound = errors.New("event listener does not exist")
-	ErrTooManyListeners      = errors.New("too many listeners")
+	ErrTooManyListeners      = fmt.Errorf("there are already %d listeners", MaxEventListeners)
 )
 
 // Observer represents an event observer.

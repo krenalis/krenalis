@@ -38,6 +38,9 @@ import (
 
 const (
 	maxEventsListenedTo = 1000 // maximum number of processed events listened to.
+
+	// MaxEventListeners is the maximum number of event listeners.
+	MaxEventListeners = collector.MaxEventListeners
 )
 
 // Workspace represents a workspace.
@@ -722,7 +725,7 @@ func (this *Workspace) CreateEventListener(size int, filter *Filter) (string, er
 	id, err := this.core.events.observer.CreateListener(size, where)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
-			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", collector.MaxEventListeners)
+			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)
 		}
 		return "", err
 	}

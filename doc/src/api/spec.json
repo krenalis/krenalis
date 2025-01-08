@@ -3800,7 +3800,7 @@
                         {
                             "status": 422,
                             "code": "TooManyListeners",
-                            "message": "there are already the maximum of number of listeners"
+                            "message": "there are already 100 listeners"
                         }
                     ]
                 },

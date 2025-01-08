@@ -8,6 +8,9 @@
 package spec
 
 import (
+	"fmt"
+
+	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/types"
 )
 
@@ -280,7 +283,7 @@ func init() {
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{422, TooManyListeners, "there are already the maximum of number of listeners"},
+					{422, TooManyListeners, fmt.Sprintf("there are already %d listeners", core.MaxEventListeners)},
 				},
 			},
 			{
