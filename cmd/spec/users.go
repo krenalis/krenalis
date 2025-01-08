@@ -72,7 +72,7 @@ func init() {
 						Name:        "order",
 						Type:        types.Text(),
 						Placeholder: `"email"`,
-						Description: "The property by which to sort the users to be returned. It can be any property from the user schema with an sortable type, meaning it cannot be of type JSON, Array, Object, or Map.",
+						Description: "The name of the property by which to sort the users to be returned. It can be any property from the user schema with an sortable type, meaning it cannot be of type JSON, Array, Object, or Map.",
 					},
 					{
 						Name:        "orderDesc",
