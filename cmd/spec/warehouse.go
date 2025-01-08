@@ -36,7 +36,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "warehouse",
 		Name:        "Warehouse",
-		Description: "A workspace enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
+		Description: "A warehouse, which is associated with a [workspace](workspaces), stores [user](users) and [event](events) data. This data can be accessed or queried for export to external destinations.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Get the warehouse",

@@ -8680,7 +8680,7 @@
         {
             "id": "warehouse",
             "name": "Warehouse",
-            "description": "A workspace enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
+            "description": "A warehouse, which is associated with a [workspace](workspaces), stores [user](users) and [event](events) data. This data can be accessed or queried for export to external destinations.",
             "endpoints": [
                 {
                     "name": "Get the warehouse",
