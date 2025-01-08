@@ -251,6 +251,76 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.Website,
 		},
 		{
+			name: "GOOD: Source/Website/Users - with constant mapping",
+			action: ActionToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "\"a@b\"",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Website,
+		},
+		{
+			name: "GOOD: Source/Website/Users - with function",
+			action: ActionToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths:  []string{"user"},
+						OutPaths: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Website,
+			provider:                testProvider{},
+		},
+		{
+			name: "GOOD: Source/Website/Users - with constant function",
+			action: ActionToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": "a@",`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths:  []string{},
+						OutPaths: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Website,
+			provider:                testProvider{},
+		},
+		{
 			name: "GOOD: Source/Website/Events - valid action",
 			action: ActionToSet{
 				Name: "Import events",
@@ -399,6 +469,24 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 		},
 		{
+			name: "GOOD: Destination/App/Events - with a constant mapping",
+			action: ActionToSet{
+				Name:     "Dispatch events to app",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "\"a@b\"",
+					},
+				},
+			},
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+		},
+		{
 			name: "GOOD: Destination/App/Events - with a transformation function",
 			action: ActionToSet{
 				Name:     "Dispatch events to app",
@@ -415,6 +503,32 @@ func Test_validateAction(t *testing.T) {
 							`    }`}, "\n"),
 						Language: "Python",
 						InPaths:  []string{"traits"},
+						OutPaths: []string{"email_out"},
+					},
+				},
+			},
+			target:                  state.Events,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+		},
+		{
+			name: "GOOD: Destination/App/Events - with a constant transformation function",
+			action: ActionToSet{
+				Name:     "Dispatch events to app",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(event: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": "a@b",`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths:  []string{},
 						OutPaths: []string{"email_out"},
 					},
 				},
@@ -2499,6 +2613,37 @@ func Test_validateAction(t *testing.T) {
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
 			err:                     "matching properties cannot be property paths, can only be property names",
+		},
+		{
+			name: "BAD: Source/App/Users - with constant mapping (not allowed) and filter",
+			action: ActionToSet{
+				Name: "Import users",
+				Filter: &Filter{
+					Logical: OpAnd,
+					Conditions: []FilterCondition{
+						{
+							Property: "email_in",
+							Operator: OpIsNot,
+							Values:   []string{"a@b"},
+						},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: Transformation{
+					Mapping: map[string]string{
+						"email_out": "\"a@b\"",
+					},
+				},
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			err:                     "transformation must map at least one property",
 		},
 	}
 

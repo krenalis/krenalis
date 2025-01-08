@@ -101,6 +101,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, target)
 
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApps
+
 	// In cases where the input schema refers to events, that is when:
 	//
 	//  - user identities are imported from events
@@ -187,7 +189,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if len(mapping) == 0 {
 			return errors.BadRequest("transformation mapping must have mapped properties")
 		}
-		if !inSchema.Valid() && !dispatchEventsToApps {
+		if !inSchema.Valid() && !allowConstantTransformation {
 			return errors.BadRequest("input schema is required by the mapping")
 		}
 		if !outSchema.Valid() {
@@ -206,7 +208,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 	// Validate the transformation function.
 	if function := action.Transformation.Function; function != nil {
-		if !inSchema.Valid() && !dispatchEventsToApps {
+		if !inSchema.Valid() && !allowConstantTransformation {
 			return errors.BadRequest("input schema is required by the transformation function")
 		}
 		if !outSchema.Valid() {
@@ -232,11 +234,11 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		default:
 			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
 		}
-		err := validateTransformationFunctionPaths("input", inSchema, function.InPaths, dispatchEventsToApps)
+		err := validateTransformationFunctionPaths("input", inSchema, function.InPaths, allowConstantTransformation)
 		if err != nil {
 			return errors.BadRequest("%s", err.Error())
 		}
-		err = validateTransformationFunctionPaths("output", outSchema, function.OutPaths, dispatchEventsToApps)
+		err = validateTransformationFunctionPaths("output", outSchema, function.OutPaths, allowConstantTransformation)
 		if err != nil {
 			return errors.BadRequest("%s", err.Error())
 		}
@@ -671,10 +673,10 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		return errors.BadRequest("action must have a transformation")
 	}
 
-	// Transformations must have at least one property in the input schema,
-	// except when importing identities from events and when dispatching events
-	// to apps, where "constant" transformation functions are supported.
-	if !importUserIdentitiesFromEvents && !dispatchEventsToApps {
+	// If constant transformations are not allowed, there must be at least one
+	// property used as input to the transformation, either in mappings or
+	// functions.
+	if !allowConstantTransformation {
 		if action.Transformation.Mapping != nil && mappingInPaths == 0 {
 			return errors.BadRequest("transformation must map at least one property")
 		}
@@ -873,8 +875,10 @@ func validateLastChangeTimeFormat(format string) error {
 //
 // io specifies whether the validation relates to "input" or "output", schema is
 // the schema of the input or output action, paths are the function paths for
-// input or output, and dispatchEventsToApps indicates if the action dispatches
-// events to apps.
+// input or output.
+//
+// allowConstantTransformation indicates if the transformation functions allows
+// constant transformations or not.
 //
 // In more detail:
 //
@@ -889,12 +893,12 @@ func validateLastChangeTimeFormat(format string) error {
 //     their specific elements.
 //
 // It panics if the schema is valid and is not an Object.
-func validateTransformationFunctionPaths(io string, schema types.Type, paths []string, dispatchEventsToApps bool) error {
+func validateTransformationFunctionPaths(io string, schema types.Type, paths []string, allowConstantTransformation bool) error {
 	if len(paths) == 0 {
 		if paths == nil {
 			return fmt.Errorf("%s properties of transformation function cannot be null", io)
 		}
-		if dispatchEventsToApps && io == "input" {
+		if allowConstantTransformation && io == "input" {
 			return nil
 		}
 		return fmt.Errorf("there are no %s properties in transformation function", io)
