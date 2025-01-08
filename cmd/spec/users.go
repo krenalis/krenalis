@@ -45,7 +45,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "users",
 		Name: "Users",
-		Description: "Users are the users associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouses), and that can be queried or exported to data destinations.\n\n" +
+		Description: "Users are the users associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse), and that can be queried or exported to data destinations.\n\n" +
 			"User identities represent the users as they are imported from the various sources, while the actual users are the users resolved – and possibly merged – by [identity resolution](identity-resolution).",
 		Endpoints: []*Endpoint{
 			{

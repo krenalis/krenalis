@@ -170,8 +170,9 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "events",
-		Name: "Events",
+		ID:          "events",
+		Name:        "Events",
+		Description: "Events are the events associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse).",
 		Endpoints: []*Endpoint{
 			{
 				Name: "List all events",

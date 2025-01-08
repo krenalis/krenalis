@@ -2788,7 +2788,7 @@
         {
             "id": "events",
             "name": "Events",
-            "description": "",
+            "description": "Events are the events associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse).",
             "endpoints": [
                 {
                     "name": "List all events",
@@ -8126,7 +8126,7 @@
         {
             "id": "users",
             "name": "Users",
-            "description": "Users are the users associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouses), and that can be queried or exported to data destinations.\n\nUser identities represent the users as they are imported from the various sources, while the actual users are the users resolved – and possibly merged – by [identity resolution](identity-resolution).",
+            "description": "Users are the users associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse), and that can be queried or exported to data destinations.\n\nUser identities represent the users as they are imported from the various sources, while the actual users are the users resolved – and possibly merged – by [identity resolution](identity-resolution).",
             "endpoints": [
                 {
                     "name": "List all users",
