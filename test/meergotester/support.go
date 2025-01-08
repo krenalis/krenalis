@@ -285,7 +285,7 @@ func (c *Meergo) PreviewUserSchemaUpdate(schema types.Type, rePaths map[string]a
 	var response struct {
 		Queries []string
 	}
-	c.MustCall("POST", "/api/change-user-schema-queries", req, &response)
+	c.MustCall("PUT", "/api/users/schema/preview", req, &response)
 	return response.Queries
 }
 
@@ -299,7 +299,7 @@ func (c *Meergo) PreviewUserSchemaUpdateErr(schema types.Type, rePaths map[strin
 	var response struct {
 		Queries []string
 	}
-	err := c.Call("POST", "/api/change-user-schema-queries", req, &response)
+	err := c.Call("PUT", "/api/users/schema/preview", req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,7 @@ func (c *Meergo) UpdateUserSchema(schema types.Type, primarySources map[string]i
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	c.MustCall("PUT", "/api/user-schema", req, nil)
+	c.MustCall("PUT", "/api/users/schema", req, nil)
 }
 
 // UpdateUserSchemaErr is like UpdateUserSchema but returns an error instead of
@@ -443,7 +443,7 @@ func (c *Meergo) UpdateUserSchemaErr(schema types.Type, primarySources map[strin
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
-	return c.Call("PUT", "/api/user-schema", req, nil)
+	return c.Call("PUT", "/api/users/schema", req, nil)
 }
 
 func (c *Meergo) UpdateWarehouse(mode string, settings []byte) {

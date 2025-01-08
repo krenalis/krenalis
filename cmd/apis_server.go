@@ -115,14 +115,13 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /members/current":                                             api.Member,           /* only UI */
 		"GET    /members/invitations/{token}":                                 api.MemberInvitation, /* only UI */
 		"GET    /transformation-languages":                                    api.TransformationLanguages,
-		"GET    /user-schema":                                                 workspace.UserSchema,
-		"GET    /users/{user}/identities":                                     workspace.Identities,
-		"GET    /users/{user}/traits":                                         workspace.Traits,
+		"GET    /users/{id}/identities":                                       workspace.Identities,
+		"GET    /users/{id}/traits":                                           workspace.Traits,
+		"GET    /users/schema":                                                workspace.UserSchema,
 		"GET    /warehouse":                                                   workspace.Warehouse,
 		"GET    /warehouse/types":                                             api.WarehouseTypes,
 		"GET    /workspaces":                                                  organization.Workspaces,
 		"GET    /workspaces/current":                                          organization.Workspace,
-		"POST   /change-user-schema-queries":                                  workspace.PreviewUserSchemaUpdate,
 		"POST   /connections":                                                 workspace.CreateConnection,
 		"POST   /connections/{connection}/actions":                            connection.CreateAction,
 		"POST   /connections/{connection}/actions/{action}/executions":        action.Execute,
@@ -161,7 +160,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"PUT    /keys/{key}":                                                  organization.UpdateAPIKey, /* only UI */
 		"PUT    /members/current":                                             organization.UpdateMember, /* only UI */
 		"PUT    /members/invitations/{token}":                                 api.AcceptInvitation,      /* only UI */
-		"PUT    /user-schema":                                                 workspace.UpdateUserSchema,
+		"PUT    /users/schema":                                                workspace.UpdateUserSchema,
+		"PUT    /users/schema/preview":                                        workspace.PreviewUserSchemaUpdate,
 		"PUT    /warehouse":                                                   workspace.UpdateWarehouse,
 		"PUT    /warehouse/mode":                                              workspace.UpdateWarehouseMode,
 		"PUT    /warehouse/test":                                              workspace.TestWarehouseUpdate,

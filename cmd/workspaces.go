@@ -452,7 +452,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	user := r.PathValue("user")
+	userID := r.PathValue("id")
 	var first = 0
 	var limit = 1000
 	query := r.URL.Query()
@@ -468,7 +468,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, count, err := ws.Identities(r.Context(), user, first, limit)
+	identities, count, err := ws.Identities(r.Context(), userID, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -652,8 +652,8 @@ func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, err
 	}
-	user := r.PathValue("user")
-	traits, err := ws.Traits(r.Context(), user)
+	userID := r.PathValue("id")
+	traits, err := ws.Traits(r.Context(), userID)
 	if err != nil {
 		return nil, err
 	}

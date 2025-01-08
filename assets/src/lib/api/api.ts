@@ -710,7 +710,7 @@ class Workspaces {
 	};
 
 	userSchema = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/user-schema`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/users/schema`, http.GET, this.workspaceID);
 	};
 
 	identifiersSchema = async (): Promise<ObjectType> => {
@@ -776,7 +776,7 @@ class Workspaces {
 	};
 
 	updateUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
-		return await call(`${this.apiURL}/user-schema`, http.PUT, this.workspaceID, {
+		return await call(`${this.apiURL}/users/schema`, http.PUT, this.workspaceID, {
 			schema,
 			primarySources,
 			rePaths,
@@ -787,7 +787,7 @@ class Workspaces {
 		schema: ObjectType,
 		rePaths: RePaths,
 	): Promise<PreviewUserSchemaUpdateResponse> => {
-		return await call(`${this.apiURL}/change-user-schema-queries`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/users/schema/preview`, http.PUT, this.workspaceID, {
 			schema,
 			rePaths,
 		});
