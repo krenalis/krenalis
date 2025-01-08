@@ -317,7 +317,7 @@ func init() {
 			},
 			{
 				Name:        "Delete an event listener",
-				Description: "Deletes an event listener. It does nothing if the event lister does not exist.",
+				Description: "Deletes an event listener. It does nothing if the event listener does not exist.",
 				Method:      DELETE,
 				URL:         "/v0/events/listeners/:id",
 				Parameters: []types.Property{

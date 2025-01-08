@@ -4480,7 +4480,7 @@
                 },
                 {
                     "name": "Delete an event listener",
-                    "description": "Deletes an event listener. It does nothing if the event lister does not exist.",
+                    "description": "Deletes an event listener. It does nothing if the event listener does not exist.",
                     "method": "DELETE",
                     "url": "/v0/events/listeners/:id",
                     "parameters": [
