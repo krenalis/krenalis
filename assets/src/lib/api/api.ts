@@ -77,7 +77,7 @@ class API {
 	};
 
 	eventsSchema = async (): Promise<ObjectType> => {
-		return await call(`${this.apiURL}/event-schema`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/events/schema`, http.GET, this.workspaceID);
 	};
 
 	validateExpression = async (
@@ -523,7 +523,7 @@ class EventListeners {
 	}
 
 	create = async (size: number, filter: Filter): Promise<CreateEventListenerResponse> => {
-		return await call(`${this.apiURL}/event-listeners`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
 			size,
 			filter,
 		});
@@ -531,7 +531,7 @@ class EventListeners {
 
 	delete = async (eventListener: string): Promise<void> => {
 		return await call(
-			`${this.apiURL}/event-listeners/${encodeURIComponent(eventListener)}`,
+			`${this.apiURL}/events/listeners/${encodeURIComponent(eventListener)}`,
 			http.DELETE,
 			this.workspaceID,
 		);
@@ -539,7 +539,7 @@ class EventListeners {
 
 	events = async (eventListener: string): Promise<EventListenerEventsResponse> => {
 		return await call(
-			`${this.apiURL}/event-listeners/${encodeURIComponent(eventListener)}/events`,
+			`${this.apiURL}/events/listeners/${encodeURIComponent(eventListener)}`,
 			http.GET,
 			this.workspaceID,
 		);

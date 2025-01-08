@@ -415,7 +415,7 @@ func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Re
 	if err != nil {
 		return nil, err
 	}
-	ws.DeleteEventListener(r.PathValue("listener"))
+	ws.DeleteEventListener(r.PathValue("id"))
 	return nil, nil
 }
 
@@ -512,7 +512,7 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	listenedEvents, discarded, err := ws.ListenedEvents(r.PathValue("listener"))
+	listenedEvents, discarded, err := ws.ListenedEvents(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}

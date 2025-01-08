@@ -83,7 +83,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"DELETE /connections/{connection}/actions/{action}":                   action.Delete,
 		"DELETE /connections/{connection}/keys/{key}":                         connection.DeleteWriteKey,
 		"DELETE /connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
-		"DELETE /event-listeners/{listener}":                                  workspace.DeleteEventListener,
+		"DELETE /events/listeners/{id}":                                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                                  organization.DeleteAPIKey, /* only UI */
 		"DELETE /members/{member}":                                            organization.DeleteMember, /* only UI */
 		"DELETE /workspaces/current":                                          workspace.Delete,
@@ -106,8 +106,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connectors":                                                  api.Connectors,
 		"GET    /connectors/{name}":                                           api.Connector,
 		"GET    /connectors/{name}/oauth":                                     connector.AuthCodeURL,
-		"GET    /event-listeners/{listener}/events":                           workspace.ListenedEvents,
-		"GET    /event-schema":                                                api.EventSchema,
+		"GET    /events/listeners/{id}":                                       workspace.ListenedEvents,
+		"GET    /events/schema":                                               api.EventSchema,
 		"GET    /identifiers-schema":                                          workspace.IdentifiersSchema,
 		"GET    /identity-resolution/execution":                               workspace.LastIdentityResolution,
 		"GET    /keys":                                                        organization.APIKeys, /* only UI */
@@ -115,9 +115,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /members/current":                                             api.Member,           /* only UI */
 		"GET    /members/invitations/{token}":                                 api.MemberInvitation, /* only UI */
 		"GET    /transformation-languages":                                    api.TransformationLanguages,
+		"GET    /users/schema":                                                workspace.UserSchema,
 		"GET    /users/{id}/identities":                                       workspace.Identities,
 		"GET    /users/{id}/traits":                                           workspace.Traits,
-		"GET    /users/schema":                                                workspace.UserSchema,
 		"GET    /warehouse":                                                   workspace.Warehouse,
 		"GET    /warehouse/types":                                             api.WarehouseTypes,
 		"GET    /workspaces":                                                  organization.Workspaces,
@@ -135,8 +135,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{connection}/records":                            connection.Records,
 		"POST   /connections/{connection}/sheets":                             connection.Sheets,
 		"POST   /connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
-		"POST   /event-listeners":                                             workspace.CreateEventListener,
 		"POST   /events":                                                      workspace.Events,
+		"POST   /events/listeners":                                            workspace.CreateEventListener,
 		"POST   /expressions-properties":                                      api.ExpressionsProperties, /* only UI */
 		"POST   /identity-resolutions":                                        workspace.StartIdentityResolution,
 		"POST   /keys":                                                        organization.CreateAPIKey, /* only UI */
