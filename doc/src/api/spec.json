@@ -88,8 +88,8 @@
             "description": "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
             "endpoints": [
                 {
-                    "name": "List the app users",
-                    "description": "Returns the users of an app.",
+                    "name": "Retrieve app users",
+                    "description": "Retrieves users directly from the app. These are the users as they appear in the app.\n\nFor users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
                     "method": "POST",
                     "url": "/v0/connections/:id/users",
                     "parameters": [
@@ -2825,8 +2825,8 @@
             "description": "Events are the events associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse).",
             "endpoints": [
                 {
-                    "name": "List all events",
-                    "description": "This endpoint retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. If a filter is provided, only events that match the filter criteria will be returned.",
+                    "name": "Retrieve all events",
+                    "description": "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. If a filter is provided, only events that match the filter criteria will be returned.",
                     "method": "POST",
                     "url": "/v0/events",
                     "parameters": [
@@ -3842,7 +3842,7 @@
                     ]
                 },
                 {
-                    "name": "Retrieve observed events",
+                    "name": "List observed events",
                     "description": "Returns the events captured by the specified listener along with the count of discarded events.",
                     "method": "GET",
                     "url": "/v0/events/listeners/:id",
@@ -8166,8 +8166,8 @@
             "description": "Users are the users associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse), and that can be queried or exported to data destinations.\n\nUser identities represent the users as they are imported from the various sources, while the actual users are the users resolved – and possibly merged – by [identity resolution](identity-resolution).",
             "endpoints": [
                 {
-                    "name": "List all users",
-                    "description": "This endpoint retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. If a filter is provided, only users that match the filter criteria will be returned.",
+                    "name": "Retrieve all users",
+                    "description": "Retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. If a filter is provided, only users that match the filter criteria will be returned.",
                     "method": "POST",
                     "url": "/v0/users",
                     "parameters": [
@@ -8375,8 +8375,8 @@
                     ]
                 },
                 {
-                    "name": "Retrieve the traits of a user ",
-                    "description": "Retrieves the traits of a user given its identifier.",
+                    "name": "Retrieve user traits",
+                    "description": "Retrieves, from the workspace's data warehouse, the traits of a user given its identifier.",
                     "method": "GET",
                     "url": "/v0/users/:id/traits",
                     "parameters": [
@@ -9149,7 +9149,7 @@
                 },
                 {
                     "name": "Retrieve user identities",
-                    "description": "Retrieves the identities of a user given its identifier.",
+                    "description": "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.",
                     "method": "GET",
                     "url": "/v0/users/:id/identities",
                     "parameters": [

@@ -19,10 +19,11 @@ func init() {
 		Description: "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "List the app users",
-				Description: "Returns the users of an app.",
-				Method:      POST,
-				URL:         "/v0/connections/:id/users",
+				Name: "Retrieve app users",
+				Description: "Retrieves users directly from the app. These are the users as they appear in the app.\n\n" +
+					"For users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
+				Method: POST,
+				URL:    "/v0/connections/:id/users",
 				Parameters: []types.Property{
 					{
 						Name:           "schema",

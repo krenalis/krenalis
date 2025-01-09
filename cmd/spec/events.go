@@ -179,8 +179,8 @@ func init() {
 		Description: "Events are the events associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse).",
 		Endpoints: []*Endpoint{
 			{
-				Name: "List all events",
-				Description: "This endpoint retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. " +
+				Name: "Retrieve all events",
+				Description: "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. " +
 					"If a filter is provided, only events that match the filter criteria will be returned.",
 				Method: POST,
 				URL:    "/v0/events",
@@ -288,7 +288,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrieve observed events",
+				Name:        "List observed events",
 				Description: "Returns the events captured by the specified listener along with the count of discarded events.",
 				Method:      GET,
 				URL:         "/v0/events/listeners/:id",

@@ -55,8 +55,8 @@ func init() {
 			"User identities represent the users as they are imported from the various sources, while the actual users are the users resolved – and possibly merged – by [identity resolution](identity-resolution).",
 		Endpoints: []*Endpoint{
 			{
-				Name: "List all users",
-				Description: "This endpoint retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. " +
+				Name: "Retrieve all users",
+				Description: "Retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. " +
 					"If a filter is provided, only users that match the filter criteria will be returned.",
 				Method: POST,
 				URL:    "/v0/users",
@@ -119,8 +119,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrieve the traits of a user ",
-				Description: "Retrieves the traits of a user given its identifier.",
+				Name:        "Retrieve user traits",
+				Description: "Retrieves, from the workspace's data warehouse, the traits of a user given its identifier.",
 				Method:      GET,
 				URL:         "/v0/users/:id/traits",
 				Parameters: []types.Property{
@@ -196,7 +196,7 @@ func init() {
 			},
 			{
 				Name:        "Retrieve user identities",
-				Description: "Retrieves the identities of a user given its identifier.",
+				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.",
 				Method:      GET,
 				URL:         "/v0/users/:id/identities",
 				Parameters: []types.Property{
