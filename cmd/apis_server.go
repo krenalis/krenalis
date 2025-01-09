@@ -87,11 +87,11 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"DELETE /keys/{key}":                                                  organization.DeleteAPIKey, /* only UI */
 		"DELETE /members/{member}":                                            organization.DeleteMember, /* only UI */
 		"DELETE /workspaces/current":                                          workspace.Delete,
-		"GET    /action-errors":                                               workspace.ActionErrors,
-		"GET    /action-metrics/dates":                                        workspace.ActionMetricsPerDate,
-		"GET    /action-metrics/days":                                         workspace.ActionMetricsPerDay,
-		"GET    /action-metrics/hours":                                        workspace.ActionMetricsPerHour,
-		"GET    /action-metrics/minutes":                                      workspace.ActionMetricsPerMinute,
+		"GET    /actions/errors/{start}/{end}":                                workspace.ActionErrors,
+		"GET    /actions/metrics/dates/{start}/{end}":                         workspace.ActionMetricsPerDate,
+		"GET    /actions/metrics/days/{days}":                                 workspace.ActionMetricsPerDay,
+		"GET    /actions/metrics/hours/{hours}":                               workspace.ActionMetricsPerHour,
+		"GET    /actions/metrics/minutes/{minutes}":                           workspace.ActionMetricsPerMinute,
 		"GET    /connections":                                                 workspace.Connections,
 		"GET    /connections/auth-token":                                      workspace.AuthToken,
 		"GET    /connections/auth-url":                                        connector.AuthCodeURL,

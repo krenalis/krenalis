@@ -34,37 +34,21 @@ func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 
-	q := r.URL.Query()
-
 	// Parse start.
-	var start time.Time
-	if s, ok := q["start"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'start' parameter is allowed")
-		}
-		start, err = iso8601.ParseString(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'start' parameter is not a valid time")
-		}
-		start = start.UTC()
-	} else {
-		return nil, errors.BadRequest("'start' parameter is missing")
+	s := r.PathValue("start")
+	start, err := iso8601.ParseString(s)
+	if err != nil {
+		return nil, errors.BadRequest("start is not valid")
 	}
 
 	// Parse end.
-	var end time.Time
-	if s, ok := q["end"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'end' parameter is allowed")
-		}
-		end, err = iso8601.ParseString(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'end' parameter is not a valid time")
-		}
-		end = end.UTC()
-	} else {
-		end = time.Now().UTC()
+	e := r.PathValue("end")
+	end, err := iso8601.ParseString(e)
+	if err != nil {
+		return nil, errors.BadRequest("end is not valid")
 	}
+
+	q := r.URL.Query()
 
 	// Parse actions.
 	var actions []int
@@ -131,31 +115,21 @@ func (workspace workspace) ActionMetricsPerDate(_ http.ResponseWriter, r *http.R
 		return nil, err
 	}
 
-	q := r.URL.Query()
-
 	// Parse start.
-	var start time.Time
-	if s, ok := q["start"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'start' parameter is allowed")
-		}
-		start, err = iso8601.ParseString(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'start' parameter is not valid")
-		}
+	s := r.PathValue("start")
+	start, err := iso8601.ParseString(s)
+	if err != nil {
+		return nil, errors.BadRequest("start is not valid")
 	}
 
 	// Parse end.
-	var end time.Time
-	if s, ok := q["end"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'end' parameter is allowed")
-		}
-		end, err = iso8601.ParseString(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'end' parameter is not valid")
-		}
+	e := r.PathValue("end")
+	end, err := iso8601.ParseString(e)
+	if err != nil {
+		return nil, errors.BadRequest("end is not valid")
 	}
+
+	q := r.URL.Query()
 
 	// Parse actions.
 	var actions []int
@@ -192,19 +166,14 @@ func (workspace workspace) ActionMetricsPerDay(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 
-	q := r.URL.Query()
-
 	// Parse days.
-	days := 30
-	if s, ok := q["days"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'days' parameter is allowed")
-		}
-		days, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'days' parameter is not valid")
-		}
+	d := r.PathValue("days")
+	days, err := strconv.Atoi(d)
+	if err != nil {
+		return nil, errors.BadRequest("days is not valid")
 	}
+
+	q := r.URL.Query()
 
 	// Parse actions.
 	var actions []int
@@ -241,19 +210,14 @@ func (workspace workspace) ActionMetricsPerHour(_ http.ResponseWriter, r *http.R
 		return nil, err
 	}
 
-	q := r.URL.Query()
-
 	// Parse hours.
-	hours := 48
-	if s, ok := q["hours"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'hours' parameter is allowed")
-		}
-		hours, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'hours' parameter is not valid")
-		}
+	h := r.PathValue("hours")
+	hours, err := strconv.Atoi(h)
+	if err != nil {
+		return nil, errors.BadRequest("hours is not valid")
 	}
+
+	q := r.URL.Query()
 
 	// Parse actions.
 	var actions []int
@@ -290,19 +254,14 @@ func (workspace workspace) ActionMetricsPerMinute(_ http.ResponseWriter, r *http
 		return nil, err
 	}
 
-	q := r.URL.Query()
-
 	// Parse minutes.
-	minutes := 60
-	if s, ok := q["minutes"]; ok {
-		if len(s) > 1 {
-			return nil, errors.BadRequest("only one 'minutes' parameter is allowed")
-		}
-		minutes, err = strconv.Atoi(s[0])
-		if err != nil {
-			return nil, errors.BadRequest("'minutes' parameter is not valid")
-		}
+	m := r.PathValue("minutes")
+	minutes, err := strconv.Atoi(m)
+	if err != nil {
+		return nil, errors.BadRequest("minutes is not valid")
 	}
+
+	q := r.URL.Query()
 
 	// Parse actions.
 	var actions []int

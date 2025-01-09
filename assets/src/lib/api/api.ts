@@ -822,7 +822,7 @@ class Workspaces {
 		const sd = start.toISOString().split('T')[0];
 		const ed = end.toISOString().split('T')[0];
 		const r = await call(
-			`${this.apiURL}/action-metrics/dates?start=${encodeURIComponent(sd)}&end=${encodeURIComponent(ed)}&${actionsQueryString}`,
+			`${this.apiURL}/actions/metrics/dates/${encodeURIComponent(sd)}/${encodeURIComponent(ed)}?${actionsQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -840,7 +840,7 @@ class Workspaces {
 			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-metrics/days?days=${encodeURIComponent(days)}&${actionsQueryString}`,
+			`${this.apiURL}/actions/metrics/days/${encodeURIComponent(days)}?${actionsQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -858,7 +858,7 @@ class Workspaces {
 			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-metrics/hours?hours=${encodeURIComponent(hours)}&${actionsQueryString}`,
+			`${this.apiURL}/actions/metrics/hours/${encodeURIComponent(hours)}?${actionsQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -876,7 +876,7 @@ class Workspaces {
 			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r = await call(
-			`${this.apiURL}/action-metrics/minutes?minutes=${encodeURIComponent(minutes)}&${actionsQueryString}`,
+			`${this.apiURL}/actions/metrics/minutes/${encodeURIComponent(minutes)}?${actionsQueryString}`,
 			http.GET,
 			this.workspaceID,
 		);
