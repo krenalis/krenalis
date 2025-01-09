@@ -375,7 +375,7 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 
 func (c *Meergo) TableSchema(conn int, table string) types.Type {
 	var schema types.Type
-	method := fmt.Sprintf("/api/connections/%d/tables/%s/schema", conn, url.PathEscape(table))
+	method := fmt.Sprintf("/api/connections/%d/tables/%s", conn, url.PathEscape(table))
 	c.MustCall("GET", method, nil, &schema)
 	return schema
 }

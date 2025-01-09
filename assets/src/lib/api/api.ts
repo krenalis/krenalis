@@ -221,7 +221,7 @@ class Connections {
 
 	execQuery = async (connection: number, query: string, limit: number): Promise<ExecQueryResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/query/executions`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/query`,
 			http.POST,
 			this.workspaceID,
 			{
@@ -450,9 +450,7 @@ class Connections {
 
 	tableSchema = async (connection: number, tableName: string): Promise<ObjectType> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables/${encodeURIComponent(
-				tableName,
-			)}/schema`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/tables/${encodeURIComponent(tableName)}`,
 			http.GET,
 			this.workspaceID,
 		);

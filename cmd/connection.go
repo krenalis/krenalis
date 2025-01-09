@@ -139,7 +139,7 @@ func (connection connection) DeleteWriteKey(_ http.ResponseWriter, r *http.Reque
 
 // ExecQuery executes a query on a database connection.
 func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -306,11 +306,11 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 
 // TableSchema returns the schema of a table of a database connection.
 func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	return c.TableSchema(r.Context(), r.PathValue("table"))
+	return c.TableSchema(r.Context(), r.PathValue("name"))
 }
 
 // UnlinkConnection unlink a connection from another connection and vice versa.
