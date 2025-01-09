@@ -1117,7 +1117,7 @@
             "endpoints": [
                 {
                     "name": "Create a connection",
-                    "description": "Create a new connection.",
+                    "description": "Creates a new connection.",
                     "method": "POST",
                     "url": "/v0/connections",
                     "parameters": [
@@ -1320,7 +1320,7 @@
                 },
                 {
                     "name": "Update a connection",
-                    "description": "Update a connection.",
+                    "description": "Updates a connection.",
                     "method": "PUT",
                     "url": "/v0/connections/:id",
                     "parameters": [
@@ -1588,7 +1588,7 @@
                 },
                 {
                     "name": "Get a connection",
-                    "description": "Get a connection.",
+                    "description": "Gets a connection.",
                     "method": "GET",
                     "url": "/v0/connections/:id",
                     "parameters": [
@@ -1771,7 +1771,7 @@
                 },
                 {
                     "name": "Delete a connection",
-                    "description": "Delete a connection.",
+                    "description": "Deletes a connection.",
                     "method": "DELETE",
                     "url": "/v0/connections/:id",
                     "parameters": [

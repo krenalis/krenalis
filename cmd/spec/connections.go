@@ -150,7 +150,7 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create a connection",
-				Description: "Create a new connection.",
+				Description: "Creates a new connection.",
 				Method:      POST,
 				URL:         "/v0/connections",
 				Parameters: []types.Property{
@@ -231,7 +231,7 @@ func init() {
 			},
 			{
 				Name:        "Update a connection",
-				Description: "Update a connection.",
+				Description: "Updates a connection.",
 				Method:      PUT,
 				URL:         "/v0/connections/:id",
 				Parameters: []types.Property{
@@ -267,7 +267,7 @@ func init() {
 			},
 			{
 				Name:        "Get a connection",
-				Description: "Get a connection.",
+				Description: "Gets a connection.",
 				Method:      GET,
 				URL:         "/v0/connections/:id",
 				Parameters: []types.Property{
@@ -283,7 +283,7 @@ func init() {
 			},
 			{
 				Name:        "Delete a connection",
-				Description: "Delete a connection.",
+				Description: "Deletes a connection.",
 				Method:      DELETE,
 				URL:         "/v0/connections/:id",
 				Parameters: []types.Property{
