@@ -59,7 +59,7 @@ func (c *Meergo) CompletePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/complete-path/%s", storage, url.PathEscape(path))
+	method := fmt.Sprintf("/api/connections/%d/files/%s/absolute", storage, url.PathEscape(path))
 	c.MustCall("GET", method, nil, &response)
 	return response.Path
 }
@@ -264,7 +264,6 @@ func (c *Meergo) Executions(conn int) []Execution {
 
 func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
 	req := map[string]any{
-		"path":           path,
 		"format":         format,
 		"sheet":          sheet,
 		"compression":    compression,
@@ -275,7 +274,7 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/records", storage)
+	method := fmt.Sprintf("/api/connections/%d/files/%s", storage, url.PathEscape(path))
 	c.MustCall("POST", method, req, &response)
 	return response.Records, response.Schema
 }
@@ -362,7 +361,6 @@ func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
 
 func (c *Meergo) Sheets(storage int, path string, format string, compression Compression, settings json.RawMessage) []string {
 	request := map[string]any{
-		"path":           path,
 		"format":         format,
 		"compression":    compression,
 		"formatSettings": settings,
@@ -370,7 +368,7 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/sheets", storage)
+	method := fmt.Sprintf("/api/connections/%d/files/%s/sheets", storage, url.PathEscape(path))
 	c.MustCall("POST", method, request, &response)
 	return response.Sheets
 }

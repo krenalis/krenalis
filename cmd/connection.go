@@ -79,7 +79,7 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 
 // CompletePath returns the complete path of a storage path.
 func (connection connection) CompletePath(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -170,12 +170,12 @@ func (connection connection) Executions(_ http.ResponseWriter, r *http.Request) 
 // File returns the records and schema of the file located at the specified path
 // within a connection.
 func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
+	path := r.PathValue("path")
 	var body struct {
-		Path           string           `json:"path"`
 		Format         string           `json:"format"`
 		Sheet          string           `json:"sheet"`
 		Compression    core.Compression `json:"compression"`
@@ -186,7 +186,7 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	records, schema, err := c.File(r.Context(), body.Path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
+	records, schema, err := c.File(r.Context(), path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -283,12 +283,12 @@ func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (an
 
 // Sheets returns the sheets of a file at the given path.
 func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
+	path := r.PathValue("path")
 	var body struct {
-		Path           string           `json:"path"`
 		Format         string           `json:"format"`
 		Compression    core.Compression `json:"compression"`
 		FormatSettings json.Value       `json:"formatSettings"`
@@ -297,7 +297,7 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	sheets, err := c.Sheets(r.Context(), body.Path, body.Format, body.Compression, body.FormatSettings)
+	sheets, err := c.Sheets(r.Context(), path, body.Format, body.Compression, body.FormatSettings)
 	if err != nil {
 		return nil, err
 	}

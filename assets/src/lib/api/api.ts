@@ -241,11 +241,10 @@ class Connections {
 		limit: number,
 	): Promise<RecordsResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/records`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}`,
 			http.POST,
 			this.workspaceID,
 			{
-				path,
 				format,
 				sheet,
 				compression,
@@ -263,11 +262,10 @@ class Connections {
 		formatSettings: ConnectorSettings,
 	): Promise<SheetsResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/sheets`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/files/${encodeURIComponent(path)}/sheets`,
 			http.POST,
 			this.workspaceID,
 			{
-				path,
 				format,
 				compression,
 				formatSettings,
@@ -442,9 +440,9 @@ class Connections {
 
 	completePath = async (storageConnection: number, path: string): Promise<CompletePathResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/complete-path/${encodeURIComponent(
+			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/files/${encodeURIComponent(
 				path,
-			)}`,
+			)}/absolute`,
 			http.GET,
 			this.workspaceID,
 		);
