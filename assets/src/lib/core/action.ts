@@ -1144,23 +1144,39 @@ const computeDefaultAction = (
 	return action;
 };
 
-const computeActionTypeFields = (connection: TransformedConnection, actionType: ActionType) => {
+const computeActionTypeFields = (
+	connection: TransformedConnection,
+	actionType: ActionType,
+	outpuSchema: ObjectType,
+) => {
 	const fields: ActionTypeField[] = [];
-	// Filters are always allowed except for actions that import users from
-	// databases.
+
+	// Filters are always allowed except for actions that import users
+	// from databases.
 	if (!(connection.role === 'Source' && connection.type === 'Database' && actionType.target === 'Users')) {
 		fields.push('Filter');
 	}
-	if (
-		connection.type === 'App' ||
-		connection.type === 'Database' ||
-		(connection.type === 'FileStorage' && connection.role === 'Source') ||
-		((connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') &&
-			connection.role === 'Source' &&
-			(actionType.target === 'Users' || actionType.target === 'Groups'))
-	) {
+
+	if (connection.type === 'App') {
+		if (connection.role === 'Source') {
+			fields.push('Transformation');
+		} else {
+			if (actionType.target === 'Users' || actionType.target === 'Groups') {
+				fields.push('Transformation');
+			} else if (actionType.target === 'Events' && outpuSchema != null) {
+				fields.push('Transformation');
+			}
+		}
+	} else if (connection.type === 'Database') {
 		fields.push('Transformation');
+	} else if (connection.type === 'FileStorage' && connection.role === 'Source') {
+		fields.push('Transformation');
+	} else if (connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') {
+		if (connection.role === 'Source' && (actionType.target === 'Users' || actionType.target === 'Groups')) {
+			fields.push('Transformation');
+		}
 	}
+
 	if (
 		connection.type === 'App' &&
 		connection.role === 'Destination' &&
@@ -1171,9 +1187,11 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		fields.push('ExportMode');
 		fields.push('Filter');
 	}
+
 	if (connection.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}
+
 	if (connection.type === 'FileStorage') {
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
@@ -1183,9 +1201,11 @@ const computeActionTypeFields = (connection: TransformedConnection, actionType: 
 		}
 		fields.push('File');
 	}
+
 	if (connection.type === 'Database' && connection.role === 'Destination') {
 		fields.push('Table');
 	}
+
 	return fields;
 };
 

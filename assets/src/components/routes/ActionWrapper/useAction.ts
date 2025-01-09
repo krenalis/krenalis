@@ -79,6 +79,15 @@ const useAction = (
 	}, [actionType]);
 
 	useEffect(() => {
+		const handleException = (err: Error | string) => {
+			setTimeout(() => {
+				setIsLoading(false);
+				closeFullscreen();
+				redirect(`connections/${connection.id}/actions`);
+				handleError(err);
+			}, 300);
+		};
+
 		const setupAction = async () => {
 			// Get the action type.
 			let actionType: ActionType;
@@ -98,10 +107,7 @@ const useAction = (
 				actionType = { ...providedActionType };
 			}
 
-			// Compute which fields are supported by the action type.
-			const fields = computeActionTypeFields(connection, actionType);
-
-			// Compute the action schemas.
+			// Fetch the action schemas.
 			let inputSchema: ObjectType;
 			let outputSchema: ObjectType;
 			let inputMatchingSchema: ObjectType;
@@ -118,6 +124,17 @@ const useAction = (
 				outputSchema = schemas.out;
 				inputMatchingSchema = schemas.matchings ? schemas.matchings.internal : null;
 				outputMatchingSchema = schemas.matchings ? schemas.matchings.external : null;
+			} catch (err) {
+				handleException(err);
+				return;
+			}
+
+			// Compute which fields are supported by the action type.
+			const fields = computeActionTypeFields(connection, actionType, outputSchema);
+
+			try {
+				// Handle cases that requires additional steps to
+				// retrieve the schemas.
 
 				// If the action type is an import from a database
 				// source, the input schema is the schema of the
@@ -204,12 +221,7 @@ const useAction = (
 					}
 				}
 			} catch (err) {
-				setTimeout(() => {
-					setIsLoading(false);
-					closeFullscreen();
-					redirect(`connections/${connection.id}/actions`);
-					handleError(err);
-				}, 300);
+				handleException(err);
 				return;
 			}
 
@@ -227,7 +239,8 @@ const useAction = (
 			if (isEditing) {
 				transformedAction = transformAction(providedAction, outputSchema);
 				if (transformedAction.transformation.function != null) {
-					// Set the initial value of the selected properties.
+					// Set the initial value of the selected properties
+					// of the function.
 					const func = transformedAction.transformation.function;
 					setSelectedInPaths(func.inPaths);
 					setSelectedOutPaths(func.outPaths);
