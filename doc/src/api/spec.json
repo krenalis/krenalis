@@ -9325,7 +9325,7 @@
                                     "name": "Text"
                                 }
                             },
-                            "description": "The set of renamed and deleted paths. If a property path has been renamed in the new schema, `rePaths` maps the old path to the new one. If a property path has been removed, `rePaths` specifies the old path as the key with null as the value."
+                            "description": "Specifies renamed properties and additional information that cannot be expressed through the `schema` parameter alone.\n\nIn particular:\n\n- If a property in `schema` has been renamed, the new path must be added as a key in `rePaths` and the old path as the associated value. Otherwise, instead of performing a rename operation, a new property with the new path would be created, and the property with the old path would be deleted.\n- If a property in `schema` has been added with the same path of an already existent one which should be removed, then the path of the new property must be added as a key in `rePaths` and `null` as the associated value. Otherwise, instead of creating a new property and deleting the old one, it would be interpreted as a rename operation."
                         }
                     ],
                     "moreParameters": [],
@@ -9391,7 +9391,7 @@
                                     "name": "Text"
                                 }
                             },
-                            "description": "The set of renamed and deleted paths. If a property path has been renamed in the new schema, `rePaths` maps the old path to the new one. If a property path has been removed, `rePaths` specifies the old path as the key with null as the value."
+                            "description": "Specifies renamed properties and additional information that cannot be expressed through the `schema` parameter alone.\n\nIn particular:\n\n- If a property in `schema` has been renamed, the new path must be added as a key in `rePaths` and the old path as the associated value. Otherwise, instead of performing a rename operation, a new property with the new path would be created, and the property with the old path would be deleted.\n- If a property in `schema` has been added with the same path of an already existent one which should be removed, then the path of the new property must be added as a key in `rePaths` and `null` as the associated value. Otherwise, instead of creating a new property and deleting the old one, it would be interpreted as a rename operation."
                         }
                     ],
                     "moreParameters": [],

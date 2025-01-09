@@ -48,6 +48,13 @@ func init() {
 		},
 	})
 
+	const rePathsDescription = "Specifies renamed properties and additional information that cannot be expressed through the `schema` parameter alone.\n" +
+		"\n" +
+		"In particular:\n" +
+		"\n" +
+		"- If a property in `schema` has been renamed, the new path must be added as a key in `rePaths` and the old path as the associated value. Otherwise, instead of performing a rename operation, a new property with the new path would be created, and the property with the old path would be deleted.\n" +
+		"- If a property in `schema` has been added with the same path of an already existent one which should be removed, then the path of the new property must be added as a key in `rePaths` and `null` as the associated value. Otherwise, instead of creating a new property and deleting the old one, it would be interpreted as a rename operation."
+
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "users",
 		Name: "Users",
@@ -277,8 +284,7 @@ func init() {
 						Name:        "rePaths",
 						Type:        types.Map(types.Text()),
 						Placeholder: `{ "city": "address.city", "street3": null }`,
-						Description: "The set of renamed and deleted paths. If a property path has been renamed in the new schema, `rePaths` maps the old path to the new one. " +
-							"If a property path has been removed, `rePaths` specifies the old path as the key with null as the value.",
+						Description: rePathsDescription,
 					},
 				},
 				Errors: []Error{
@@ -308,8 +314,7 @@ func init() {
 						Name:        "rePaths",
 						Type:        types.Map(types.Text()),
 						Placeholder: `{ "city": "address.city", "street3": null }`,
-						Description: "The set of renamed and deleted paths. If a property path has been renamed in the new schema, `rePaths` maps the old path to the new one. " +
-							"If a property path has been removed, `rePaths` specifies the old path as the key with null as the value.",
+						Description: rePathsDescription,
 					},
 				},
 				Response: &Response{
