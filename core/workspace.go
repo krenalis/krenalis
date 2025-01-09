@@ -386,6 +386,66 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	return &connection, nil
 }
 
+// authorizedOAuthAccount represents an authorized OAuth account that can be
+// used to create a new connection.
+type authorizedOAuthAccount struct {
+	Workspace    int
+	Connector    string
+	Code         string
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    time.Time
+}
+
+// AuthToken returns an authorization token, given an authorization code and
+// the redirection URI used to obtain that code, that can be used to add a new
+// connection to the workspace for the specified connector.
+//
+// It returns an errors.NotFound error if the workspace does not exist anymore.
+// It returns an errors.UnprocessableError error with code ConnectorNotExist if
+// the connector does not exist.
+func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI, code string) (string, error) {
+
+	this.core.mustBeOpen()
+
+	if connector == "" {
+		return "", errors.BadRequest("connector name is empty")
+	}
+	if code == "" {
+		return "", errors.BadRequest("authorization code is empty")
+	}
+
+	c, ok := this.core.state.Connector(connector)
+	if !ok {
+		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
+	}
+	if c.OAuth == nil {
+		return "", errors.BadRequest("connector %s does not support authorization", connector)
+	}
+
+	region := this.workspace.PrivacyRegion
+	auth, err := this.core.connectors.GrantAuthorization(ctx, c, code, redirectionURI, region)
+	if err != nil {
+		return "", err
+	}
+
+	account, err := json.Marshal(authorizedOAuthAccount{
+		Workspace:    this.workspace.ID,
+		Connector:    connector,
+		Code:         auth.AccountCode,
+		AccessToken:  auth.AccessToken,
+		RefreshToken: auth.RefreshToken,
+		ExpiresIn:    auth.ExpiresIn,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// TODO(marco): Encrypt the token.
+
+	return base62.EncodeToString(account), nil
+}
+
 // Connections returns the connections of the workspace.
 func (this *Workspace) Connections() []*Connection {
 	this.core.mustBeOpen()
@@ -420,16 +480,16 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
-// CreateConnection creates a new connection. oAuthToken is an OAuth token
-// returned by the OAuthToken method and must be empty if the connector does not
-// support OAuth authentication.
+// CreateConnection creates a new connection. authToken is an authorization
+// token returned by the AuthToken method and must be empty if the connector
+// does not support authorization.
 //
 // It returns an errors.UnprocessableError error with code
 //
 //   - ConnectorNotExist, if the connector does not exist.
 //   - LinkedConnectionNotExist, if a linked connection does not exist.
 //   - InvalidSettings, if the settings are not valid.
-func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, oAuthToken string) (int, error) {
+func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, authToken string) (int, error) {
 
 	this.core.mustBeOpen()
 
@@ -543,27 +603,27 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 	}
 
-	// Validate OAuth.
-	if (oAuthToken == "") != (c.OAuth == nil) {
-		if oAuthToken == "" {
-			return 0, errors.BadRequest("OAuth is required by connector %s", n.Connector)
+	// Validate the authorization token.
+	if (authToken == "") != (c.OAuth == nil) {
+		if authToken == "" {
+			return 0, errors.BadRequest("authorization token is required by connector %s", n.Connector)
 		}
-		return 0, errors.BadRequest("connector %s does not support OAuth", n.Connector)
+		return 0, errors.BadRequest("connector %s does not support authorization", n.Connector)
 	}
 
 	// Set the OAuth account. It can be an existing account or an account that needs to be created.
-	if oAuthToken != "" {
-		data, err := base62.DecodeString(oAuthToken)
+	if authToken != "" {
+		data, err := base62.DecodeString(authToken)
 		if err != nil {
-			return 0, errors.BadRequest("OAuth is not valid")
+			return 0, errors.BadRequest("authorization token is not valid")
 		}
 		var account authorizedOAuthAccount
 		err = json.Unmarshal(data, &account)
 		if err != nil {
-			return 0, errors.BadRequest("OAuth is not valid")
+			return 0, errors.BadRequest("authorization token is not valid")
 		}
 		if account.Workspace != this.workspace.ID || account.Connector != c.Name {
-			return 0, errors.BadRequest("OAuth is not valid")
+			return 0, errors.BadRequest("authorization token is not valid")
 		}
 		n.Account.Code = account.Code
 		a, ok := this.workspace.AccountByCode(account.Code)
@@ -961,66 +1021,6 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 	return observedEvents, discarded, nil
 }
 
-// authorizedOAuthAccount represents an authorized OAuth account that can be
-// used to create a new connection.
-type authorizedOAuthAccount struct {
-	Workspace    int
-	Connector    string
-	Code         string
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    time.Time
-}
-
-// OAuthToken returns an OAuth token, given an OAuth authorization code and the
-// redirection URI used to obtain that code, that can be used to add a new
-// connection to the workspace for the specified connector.
-//
-// It returns an errors.NotFound error if the workspace does not exist anymore.
-// It returns an errors.UnprocessableError error with code ConnectorNotExist if
-// the connector does not exist.
-func (this *Workspace) OAuthToken(ctx context.Context, code, redirectionURI string, connector string) (string, error) {
-
-	this.core.mustBeOpen()
-
-	if code == "" {
-		return "", errors.BadRequest("authorization code is empty")
-	}
-	if connector == "" {
-		return "", errors.BadRequest("connector name is empty")
-	}
-
-	c, ok := this.core.state.Connector(connector)
-	if !ok {
-		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
-	}
-	if c.OAuth == nil {
-		return "", errors.BadRequest("connector %s does not support OAuth", connector)
-	}
-
-	region := this.workspace.PrivacyRegion
-	auth, err := this.core.connectors.GrantAuthorization(ctx, c, code, redirectionURI, region)
-	if err != nil {
-		return "", err
-	}
-
-	account, err := json.Marshal(authorizedOAuthAccount{
-		Workspace:    this.workspace.ID,
-		Connector:    connector,
-		Code:         auth.AccountCode,
-		AccessToken:  auth.AccessToken,
-		RefreshToken: auth.RefreshToken,
-		ExpiresIn:    auth.ExpiresIn,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	// TODO(marco): Encrypt the token.
-
-	return base62.EncodeToString(account), nil
-}
-
 // TestWarehouseUpdate tests the update of the workspace's warehouse.
 //
 // It returns an errors.UnprocessableError with code:
@@ -1301,7 +1301,7 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 //   - ConnectorNotExist, if the connector does not exist.
 //   - EventNotExist, if the event does not exist.
 //   - InvalidSettings, if the settings are not valid.
-func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, oAuth string) ([]byte, error) {
+func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, authToken string) ([]byte, error) {
 
 	this.core.mustBeOpen()
 
@@ -1320,28 +1320,28 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		return nil, errors.BadRequest("connector %s does not have settings", connector)
 	}
 
-	if (oAuth == "") != (c.OAuth == nil) {
-		if oAuth == "" {
-			return nil, errors.BadRequest("OAuth is required by connector %s", c.Name)
+	if (authToken == "") != (c.OAuth == nil) {
+		if authToken == "" {
+			return nil, errors.BadRequest("authorization token is required by connector %s", c.Name)
 		}
-		return nil, errors.BadRequest("connector %s does not support OAuth", c.Name)
+		return nil, errors.BadRequest("connector %s does not support authorization", c.Name)
 	}
 
 	// Decode oAuth.
 	var a authorizedOAuthAccount
-	if oAuth != "" {
-		data, err := base62.DecodeString(oAuth)
+	if authToken != "" {
+		data, err := base62.DecodeString(authToken)
 		if err != nil {
-			return nil, errors.BadRequest("oAuth is not valid")
+			return nil, errors.BadRequest("authorization token is not valid")
 		}
 		err = json.Unmarshal(data, &a)
 		if err != nil {
-			return nil, errors.BadRequest("oAuth is not valid")
+			return nil, errors.BadRequest("authorization token is not valid")
 		}
 	}
 
 	var clientSecret string
-	if oAuth != "" {
+	if authToken != "" {
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connectors.ConnectorConfig{

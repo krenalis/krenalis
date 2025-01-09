@@ -48,7 +48,7 @@ const ConnectorSettings = () => {
 
 	const confirmationButtonsRef = useRef<FeedbackButtonRef[]>([]);
 
-	let connectorName: string, connectionRole: ConnectionRole, OAuthToken: string;
+	let connectorName: string, connectionRole: ConnectionRole, authToken: string;
 	const url = new URL(document.location.href);
 	connectorName = decodeURIComponent(url.pathname.split('/').pop());
 	const roleParam = url.searchParams.get('role') as ConnectionRole | null | '';
@@ -57,11 +57,11 @@ const ConnectorSettings = () => {
 	} else {
 		connectionRole = roleParam;
 	}
-	const token = url.searchParams.get('oauthToken');
+	const token = url.searchParams.get('authToken');
 	if (token == null) {
-		OAuthToken = '';
+		authToken = '';
 	} else {
-		OAuthToken = token;
+		authToken = token;
 	}
 
 	useEffect(() => {
@@ -104,7 +104,7 @@ const ConnectorSettings = () => {
 			if (connector.hasSettings === false) return;
 			let ui: ConnectorUIResponse;
 			try {
-				ui = await api.connectors.ui(selectedWorkspace, connectorName, connectionRole, OAuthToken);
+				ui = await api.connectors.ui(selectedWorkspace, connectorName, connectionRole, authToken);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
@@ -176,7 +176,7 @@ const ConnectorSettings = () => {
 					settings: settings,
 					linkedConnections: null,
 				};
-				id = await api.workspaces.createConnection(connection, OAuthToken);
+				id = await api.workspaces.createConnection(connection, authToken);
 			} catch (err) {
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectorNotExist') {
@@ -204,7 +204,7 @@ const ConnectorSettings = () => {
 				eventName,
 				settings,
 				connectionRole,
-				OAuthToken,
+				authToken,
 			);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {

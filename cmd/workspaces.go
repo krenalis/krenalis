@@ -364,13 +364,13 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	}
 	var body struct {
 		Connection core.ConnectionToAdd `json:"connection"`
-		OAuthToken string               `json:"oauthToken"`
+		AuthToken  string               `json:"authToken"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return ws.CreateConnection(r.Context(), body.Connection, body.OAuthToken)
+	return ws.CreateConnection(r.Context(), body.Connection, body.AuthToken)
 }
 
 // CreateEventListener creates an event listener for a workspace that listens to
@@ -526,19 +526,19 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 	}, nil
 }
 
-// OAuthToken returns an OAuth token, given an OAuth authorization code and the
-// redirection URI used to obtain that code, that can be used to add a new
+// AuthToken returns an authorization token, given an authorization code and
+// the redirection URI used to obtain that code, that can be used to add a new
 // connection to the workspace for the specified connector.
-func (workspace workspace) OAuthToken(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
 	query := r.URL.Query()
-	oauthCode := query.Get("oauthCode")
-	redirectURI := query.Get("redirectURI")
 	connector := query.Get("connector")
-	return ws.OAuthToken(r.Context(), oauthCode, redirectURI, connector)
+	redirectURI := query.Get("redirectURI")
+	authCode := query.Get("authCode")
+	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
 }
 
 // PreviewUserSchemaUpdate previews a user schema update and returns the queries
@@ -581,11 +581,11 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 		return nil, err
 	}
 	var body struct {
-		Connector  string     `json:"connector"`
-		Event      string     `json:"event"`
-		Settings   json.Value `json:"settings"`
-		Role       string     `json:"role"`
-		OAuthToken string     `json:"oauthToken"`
+		Connector string     `json:"connector"`
+		Event     string     `json:"event"`
+		Settings  json.Value `json:"settings"`
+		Role      string     `json:"role"`
+		AuthToken string     `json:"authToken"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -604,7 +604,7 @@ func (workspace workspace) ServeUI(w http.ResponseWriter, r *http.Request) (any,
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", body.Role)
 	}
-	ui, err := ws.ServeUI(r.Context(), body.Event, body.Settings, body.Connector, role, body.OAuthToken)
+	ui, err := ws.ServeUI(r.Context(), body.Event, body.Settings, body.Connector, role, body.AuthToken)
 	if err != nil {
 		return nil, err
 	}

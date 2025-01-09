@@ -350,7 +350,7 @@ func (core *Core) Connector(ctx context.Context, name string) (*Connector, error
 		FileExtension:          c.FileExtension,
 		SampleQuery:            c.SampleQuery,
 		WebhooksPer:            WebhooksPer(c.WebhooksPer),
-		OAuth:                  c.OAuth != nil,
+		RequiresAuth:           c.OAuth != nil,
 	}
 	if connector.TermForUsers == "" {
 		connector.TermForUsers = "users"
@@ -395,7 +395,7 @@ func (core *Core) Connectors(ctx context.Context) []*Connector {
 			FileExtension:          c.FileExtension,
 			SampleQuery:            c.SampleQuery,
 			WebhooksPer:            WebhooksPer(c.WebhooksPer),
-			OAuth:                  c.OAuth != nil,
+			RequiresAuth:           c.OAuth != nil,
 		}
 		if connector.TermForUsers == "" {
 			connector.TermForUsers = "users"

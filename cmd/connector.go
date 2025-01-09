@@ -24,12 +24,13 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 	if _, _, err := connector.credentials(r); err != nil {
 		return nil, err
 	}
-	c, err := connector.name(r)
+	q := r.URL.Query()
+	c, err := connector.core.Connector(r.Context(), q.Get("connector"))
 	if err != nil {
 		return nil, err
 	}
 	var role core.Role
-	switch r.URL.Query().Get("role") {
+	switch q.Get("role") {
 	case "Source":
 		role = core.Source
 	case "Destination":
@@ -37,7 +38,7 @@ func (connector connector) AuthCodeURL(_ http.ResponseWriter, r *http.Request) (
 	default:
 		return nil, errors.BadRequest("unexpected connection role '%s'", role)
 	}
-	redirectURI := r.URL.Query().Get("redirecturi")
+	redirectURI := q.Get("redirectURI")
 	authCodeURL, err := c.AuthCodeURL(role, redirectURI)
 	if err != nil {
 		return nil, err

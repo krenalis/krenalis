@@ -149,10 +149,14 @@ func init() {
 		Description: "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Create a connection",
-				Description: "Creates a new connection.",
-				Method:      POST,
-				URL:         "/v0/connections",
+				Name: "Create a connection",
+				Description: "Creates a new connection.\n\n" +
+					"For connectors that require authorization, follow these steps to create the connection:\n\n" +
+					"1. [Get the auth URL](/api/connections#get-auth-url) and redirect the user to it.\n" +
+					"2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n" +
+					"3. Create the connection by passing the auth token as the `authToken` argument.",
+				Method: POST,
+				URL:    "/v0/connections",
 				Parameters: []types.Property{
 					nameParameter,
 					roleParameter,
@@ -171,6 +175,12 @@ func init() {
 					websiteHostParameter,
 					linkedConnectionsParameter,
 					settingsParameter,
+					{
+						Name:        "authToken",
+						Type:        types.Text(),
+						Placeholder: `"eyJz93a...k4F5sdtW"`,
+						Description: "The authorization token. Is required if the connector requires authorization.",
+					},
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -190,16 +200,58 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get an OAuth token",
-				Description: "Retrieves an OAuth token that can be used to create a connection that requires OAuth authentication.",
+				Name:        "Get auth URL",
+				Description: "Gets the URL for an app connector that directs to the authorization page of the app.\n\n",
 				Method:      GET,
-				URL:         "/v0/connections/oauth",
+				URL:         "/v0/connections/auth-url",
 				Parameters: []types.Property{
 					{
-						Name:           "oauthCode",
+						Name:           "connector",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Description:    "The OAuth authorization code to complete the authentication process.",
+						Placeholder:    `"HubSpot"`,
+						Description:    "The connector's name. It must be an app connector that requires authorization.",
+					},
+					{
+						Name:           "role",
+						Type:           types.Text().WithValues("Source", "Destination"),
+						CreateRequired: true,
+						Placeholder:    `"Source"`,
+						Description:    "The role for which to request authorization.",
+					},
+					{
+						Name:           "redirectURI",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Placeholder:    `"https://example.com/oauth"`,
+						Description:    "The URL to which redirect after granting permissions.",
+					},
+				},
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name:        "url",
+							Type:        types.Text(),
+							Placeholder: `"https://app.hubspot.com/oauth/authorize"`,
+							Description: "The authorization URL that directs to the consent page of the app. This page requests explicit permissions for the role.",
+						},
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "connector does not exist"},
+				},
+			},
+			{
+				Name:        "Retrieve auth token",
+				Description: "Retrieves an authorization token that can be used to create a connection.",
+				Method:      GET,
+				URL:         "/v0/connections/auth-token",
+				Parameters: []types.Property{
+					{
+						Name:           "connector",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Description:    "The name of the connector for which the connection will be created.",
 					},
 					{
 						Name:           "redirectURI",
@@ -208,10 +260,10 @@ func init() {
 						Description:    "The URI where the user will be redirected after authorization.",
 					},
 					{
-						Name:           "connector",
+						Name:           "oauthCode",
 						Type:           types.Text(),
 						CreateRequired: true,
-						Description:    "The name of the connector for which the connection will be created.",
+						Description:    "The authorization code to complete the authorization process.",
 					},
 				},
 				Response: &Response{

@@ -68,7 +68,7 @@ const ConnectorsList = () => {
 					<SlTooltip content={`Add ${c.name}`}>
 						<Link
 							path={
-								c.oAuth
+								c.requiresAuth
 									? null
 									: c.isFile
 										? `connectors/file/${c.name}?role=${connectionRole}`
@@ -78,7 +78,9 @@ const ConnectorsList = () => {
 							<SlButton
 								size='medium'
 								variant='default'
-								onClick={c.oAuth ? () => authorizeWithOAuth(c.name, connectionRole as Role) : null}
+								onClick={
+									c.requiresAuth ? () => authorizeWithOAuth(c.name, connectionRole as Role) : null
+								}
 								circle
 							>
 								<SlIcon name='plus' />

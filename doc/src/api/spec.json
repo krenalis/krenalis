@@ -1118,6 +1118,7 @@
                 {
                     "name": "Create a connection",
                     "description": "Creates a new connection.",
+                    "description": "Creates a new connection.\n\nFor connectors that require authorization, follow these steps to create the connection:\n\n1. [Get the auth URL](/api/connections#get-auth-url) and redirect the user to it.\n2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n3. Create the connection by passing the auth token as the `authToken` argument.",
                     "method": "POST",
                     "url": "/v0/connections",
                     "parameters": [
@@ -1220,6 +1221,14 @@
                             },
                             "nullable": true,
                             "description": "The specific settings of the connection, which vary based on the connector specified in the `connector` field. Please refer to the documentation for the [connector](/connectors/) to understand the available settings and their corresponding values.\n\nIf the connector does not require any settings, the `settings` field may be omitted or set to null."
+                        },
+                        {
+                            "name": "authToken",
+                            "placeholder": "\"eyJz93a...k4F5sdtW\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "description": "The authorization token. Is required if the connector requires authorization."
                         }
                     ],
                     "moreParameters": [],
@@ -1261,18 +1270,78 @@
                     ]
                 },
                 {
-                    "name": "Get an OAuth token",
-                    "description": "Retrieves an OAuth token that can be used to create a connection that requires OAuth authentication.",
+                    "name": "Get auth URL",
+                    "description": "Gets the URL for an app connector that directs to the authorization page of the app.\n\n",
                     "method": "GET",
-                    "url": "/v0/connections/oauth",
+                    "url": "/v0/connections/auth-url",
                     "parameters": [
                         {
-                            "name": "oauthCode",
+                            "name": "connector",
+                            "placeholder": "\"HubSpot\"",
                             "type": {
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The OAuth authorization code to complete the authentication process."
+                            "description": "The connector's name. It must be an app connector that requires authorization."
+                        },
+                        {
+                            "name": "role",
+                            "placeholder": "\"Source\"",
+                            "type": {
+                                "name": "Text",
+                                "values": [
+                                    "Source",
+                                    "Destination"
+                                ]
+                            },
+                            "createRequired": true,
+                            "description": "The role for which to request authorization."
+                        },
+                        {
+                            "name": "redirectURI",
+                            "placeholder": "\"https://example.com/oauth\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The URL to which redirect after granting permissions."
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "url",
+                                "placeholder": "\"https://app.hubspot.com/oauth/authorize\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The authorization URL that directs to the consent page of the app. This page requests explicit permissions for the role."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "connector does not exist"
+                        }
+                    ]
+                },
+                {
+                    "name": "Retrieve auth token",
+                    "description": "Retrieves an authorization token that can be used to create a connection.",
+                    "method": "GET",
+                    "url": "/v0/connections/auth-token",
+                    "parameters": [
+                        {
+                            "name": "connector",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The name of the connector for which the connection will be created."
                         },
                         {
                             "name": "redirectURI",
@@ -1283,12 +1352,12 @@
                             "description": "The URI where the user will be redirected after authorization."
                         },
                         {
-                            "name": "connector",
+                            "name": "oauthCode",
                             "type": {
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The name of the connector for which the connection will be created."
+                            "description": "The authorization code to complete the authorization process."
                         }
                     ],
                     "moreParameters": [],
@@ -1977,12 +2046,12 @@
                                                 "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
                                             },
                                             {
-                                                "name": "oAuth",
+                                                "name": "requiresAuth",
                                                 "placeholder": "true",
                                                 "type": {
                                                     "name": "Boolean"
                                                 },
-                                                "description": "Indicates, for app connections, whether it supports authentication with OAuth 2.0. It is false if the connector is not an app or does not support OAuth."
+                                                "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
                                             }
                                         ]
                                     }
@@ -2163,72 +2232,12 @@
                                 "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
                             },
                             {
-                                "name": "oAuth",
+                                "name": "requiresAuth",
                                 "placeholder": "true",
                                 "type": {
                                     "name": "Boolean"
                                 },
-                                "description": "Indicates, for app connections, whether it supports authentication with OAuth 2.0. It is false if the connector is not an app or does not support OAuth."
-                            }
-                        ]
-                    },
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "connector does not exist"
-                        }
-                    ]
-                },
-                {
-                    "name": "Get OAuth consent URL",
-                    "description": "Gets the URL for an app connector that directs to the consent page of the app's OAuth 2.0 provider.",
-                    "method": "GET",
-                    "url": "/v0/connectors/:name/oauth",
-                    "parameters": [
-                        {
-                            "name": "name",
-                            "placeholder": "\"HubSpot\"",
-                            "type": {
-                                "name": "Text"
-                            },
-                            "createRequired": true,
-                            "description": "The connector's name. It must be an app connector that supports authorization with OAuth."
-                        },
-                        {
-                            "name": "role",
-                            "placeholder": "\"Source\"",
-                            "type": {
-                                "name": "Text",
-                                "values": [
-                                    "Source",
-                                    "Destination"
-                                ]
-                            },
-                            "createRequired": true,
-                            "description": "The role for which to request authorization."
-                        },
-                        {
-                            "name": "redirecturi",
-                            "placeholder": "\"https://example.com/oauth\"",
-                            "type": {
-                                "name": "Text"
-                            },
-                            "createRequired": true,
-                            "description": "The URL to which redirect after granting permissions."
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": {
-                        "description": "",
-                        "parameters": [
-                            {
-                                "name": "url",
-                                "placeholder": "\"https://app.hubspot.com/oauth/authorize\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The OAuth consent URL that directs to the consent page of the app's OAuth 2.0 provider. This page requests explicit permissions for the scopes required by the role."
+                                "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
                             }
                         ]
                     },

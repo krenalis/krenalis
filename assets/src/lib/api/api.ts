@@ -709,17 +709,17 @@ class Workspaces {
 		return await call(`${this.apiURL}/identifiers-schema`, http.GET, this.workspaceID);
 	};
 
-	createConnection = async (connection: ConnectionToAdd, oauthToken: string): Promise<number> => {
+	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/connections`, http.POST, this.workspaceID, {
 			connection,
-			oauthToken,
+			authToken: authToken,
 		});
 	};
 
-	oauthToken = async (connector: string, oauthCode: string): Promise<string> => {
+	authToken = async (connector: string, authCode: string): Promise<string> => {
 		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
 		return await call(
-			`${this.apiURL}/connections/oauth?oauthCode=${encodeURIComponent(oauthCode)}&redirectURI=${encodeURIComponent(redirectURI)}&connector=${encodeURIComponent(connector)}`,
+			`${this.apiURL}/connections/auth-token?connector=${encodeURIComponent(connector)}&redirectURI=${encodeURIComponent(redirectURI)}&authCode=${encodeURIComponent(authCode)}`,
 			http.GET,
 			this.workspaceID,
 		);
@@ -902,7 +902,7 @@ class Connectors {
 	authCodeURL = async (connector: string, role: Role): Promise<authCodeURLResponse> => {
 		const redirectURI = `${this.origin}${UI_BASE_PATH}oauth/authorize`;
 		return await call(
-			`${this.apiURL}/connectors/${connector}/oauth?role=${role}&redirecturi=${encodeURIComponent(redirectURI)}`,
+			`${this.apiURL}/connections/auth-url?connector=${encodeURIComponent(connector)}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,
 		);
 	};
@@ -919,12 +919,12 @@ class Connectors {
 		workspace: number,
 		connector: string,
 		role: ConnectionRole,
-		oauthToken: string,
+		authToken: string,
 	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/ui`, http.POST, workspace, {
 			connector,
 			role,
-			oauthToken,
+			authToken,
 		});
 	};
 
@@ -934,14 +934,14 @@ class Connectors {
 		event: string,
 		settings: ConnectorSettings,
 		role: ConnectionRole,
-		oauthToken: string,
+		authToken: string,
 	): Promise<ConnectorUIResponse> => {
 		return await call(`${this.apiURL}/ui-event`, http.POST, workspace, {
 			connector,
 			event,
 			settings,
 			role,
-			oauthToken,
+			authToken,
 		});
 	};
 }

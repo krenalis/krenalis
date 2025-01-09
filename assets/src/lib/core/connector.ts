@@ -12,7 +12,7 @@ class TransformedConnector {
 	fileExtension: string;
 	sampleQuery: string;
 	webhooksPer: WebhooksPer;
-	oAuth: boolean;
+	requiresAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
 	sendingMode: SendingMode | null;
@@ -28,7 +28,7 @@ class TransformedConnector {
 		fileExtension: string,
 		sampleQuery: string,
 		webhooksPer: WebhooksPer,
-		oAuth: boolean,
+		requiresAuth: boolean,
 		sourceDescription: string,
 		destinationDescription: string,
 		termForUsers: string,
@@ -45,7 +45,7 @@ class TransformedConnector {
 		this.fileExtension = fileExtension;
 		this.sampleQuery = sampleQuery;
 		this.webhooksPer = webhooksPer;
-		this.oAuth = oAuth;
+		this.requiresAuth = requiresAuth;
 		this.sourceDescription = sourceDescription;
 		this.destinationDescription = destinationDescription;
 		this.termForUsers = termForUsers;

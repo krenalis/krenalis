@@ -85,7 +85,7 @@ const useApp = (
 						c.fileExtension,
 						c.sampleQuery,
 						c.webhooksPer,
-						c.oauth,
+						c.requiresAuth,
 						c.sourceDescription,
 						c.destinationDescription,
 						c.termForUsers,

@@ -17,7 +17,7 @@ interface Connector {
 	fileExtension: string;
 	sampleQuery: string;
 	webhooksPer: WebhooksPer;
-	oauth: boolean;
+	requiresAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
 	sendingMode: SendingMode | null;

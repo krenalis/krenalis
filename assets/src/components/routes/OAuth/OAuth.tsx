@@ -52,17 +52,17 @@ const OAuth = () => {
 				}, 1000);
 				return;
 			}
-			const oauthCode = url.searchParams.get('code');
-			if (oauthCode == null || oauthCode === '') {
+			const authCode = url.searchParams.get('code');
+			if (authCode == null || authCode === '') {
 				setErrorMessage(`${connector.name} didn't respond with a valid authentication code.`);
 				return;
 			}
 			const connectionRole = localStorage.getItem('meergo_ui_add_connection_role');
 			localStorage.removeItem('meergo_ui_add_connection_id');
 			localStorage.removeItem('meergo_ui_add_connection_role');
-			let oauthToken: string;
+			let authToken: string;
 			try {
-				oauthToken = await api.workspaces.oauthToken(connectorName, oauthCode);
+				authToken = await api.workspaces.authToken(connectorName, authCode);
 			} catch (err) {
 				console.error(err);
 				setErrorMessage(
@@ -72,7 +72,7 @@ const OAuth = () => {
 			}
 			setTimeout(() => {
 				setRedirectURL(
-					`connectors/${encodeURIComponent(connectorName)}?role=${connectionRole}&oauthToken=${oauthToken}`,
+					`connectors/${encodeURIComponent(connectorName)}?role=${connectionRole}&authToken=${authToken}`,
 				);
 			}, 1000);
 		};

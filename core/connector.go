@@ -35,7 +35,7 @@ type Connector struct {
 	FileExtension          string        `json:"fileExtension"`
 	SampleQuery            string        `json:"sampleQuery"`
 	WebhooksPer            WebhooksPer   `json:"webhooksPer"`
-	OAuth                  bool          `json:"oauth"`
+	RequiresAuth           bool          `json:"requiresAuth"`
 }
 
 // ConnectorType represents a connector type.

@@ -111,10 +111,10 @@ func init() {
 				"It is `\"None\"` if the connector is not an app or does not support webhooks.",
 		},
 		{
-			Name:        "oAuth",
+			Name:        "requiresAuth",
 			Type:        types.Boolean(),
 			Placeholder: `true`,
-			Description: "Indicates, for app connections, whether it supports authentication with OAuth 2.0. It is false if the connector is not an app or does not support OAuth.",
+			Description: "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization.",
 		},
 	}
 
@@ -153,48 +153,6 @@ func init() {
 				},
 				Response: &Response{
 					Parameters: getReturnsParameters,
-				},
-				Errors: []Error{
-					{404, NotFound, "connector does not exist"},
-				},
-			},
-			{
-				Name:        "Get OAuth consent URL",
-				Description: "Gets the URL for an app connector that directs to the consent page of the app's OAuth 2.0 provider.",
-				Method:      GET,
-				URL:         "/v0/connectors/:name/oauth",
-				Parameters: []types.Property{
-					{
-						Name:           "name",
-						Type:           types.Text(),
-						CreateRequired: true,
-						Placeholder:    `"HubSpot"`,
-						Description:    "The connector's name. It must be an app connector that supports authorization with OAuth.",
-					},
-					{
-						Name:           "role",
-						Type:           types.Text().WithValues("Source", "Destination"),
-						CreateRequired: true,
-						Placeholder:    `"Source"`,
-						Description:    "The role for which to request authorization.",
-					},
-					{
-						Name:           "redirecturi",
-						Type:           types.Text(),
-						CreateRequired: true,
-						Placeholder:    `"https://example.com/oauth"`,
-						Description:    "The URL to which redirect after granting permissions.",
-					},
-				},
-				Response: &Response{
-					Parameters: []types.Property{
-						{
-							Name:        "url",
-							Type:        types.Text(),
-							Placeholder: `"https://app.hubspot.com/oauth/authorize"`,
-							Description: "The OAuth consent URL that directs to the consent page of the app's OAuth 2.0 provider. This page requests explicit permissions for the scopes required by the role.",
-						},
-					},
 				},
 				Errors: []Error{
 					{404, NotFound, "connector does not exist"},
