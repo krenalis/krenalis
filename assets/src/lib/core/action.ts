@@ -312,31 +312,12 @@ const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMappi
 	return [base, path];
 };
 
-const hasTransformationFunction = (action: ActionToSet) => {
-	return action.transformation?.function != null;
-};
-
-const hasTransformationMapping = (action: ActionToSet) => {
-	return action.transformation?.mapping != null;
-};
-
-const hasSchemas = (action: ActionToSet) => {
-	if (action.inSchema == null || action.outSchema == null) {
-		return false;
-	}
-	return action.inSchema.properties.length > 0 && action.outSchema.properties.length > 0;
-};
-
-const hasEmptyMapping = (action: ActionToSet) => {
-	return (
-		(!hasTransformationMapping(action) && !hasTransformationFunction(action)) ||
-		(hasTransformationMapping(action) && !hasSchemas(action))
-	);
-};
-
 const hasValidTransformation = (action: ActionToSet) => {
-	return (hasTransformationFunction(action) || hasTransformationMapping(action)) && hasSchemas(action);
+	return action.transformation?.function != null || action.transformation?.mapping != null;
 };
+
+const errInvalidTransformation = new Error('Action must have a valid transformation');
+const errTransformationNotSupported = new Error('Action does not support transformations');
 
 const validateTransformation = (
 	connection: TransformedConnection,
@@ -347,47 +328,25 @@ const validateTransformation = (
 		if (connection.isApp) {
 			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
-					if (hasEmptyMapping(action)) {
-						throw new Error(
-							'There are no properties in the mapping expressions; use at least one property in an expression',
-						);
-					}
-					throw new Error('Action must have a valid transformation');
+					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isDatabase) {
 			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
-					if (hasEmptyMapping(action)) {
-						throw new Error(
-							'There are no properties in the mapping expressions; use at least one property in an expression',
-						);
-					}
-					throw new Error('Action must have a valid transformation');
+					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isFileStorage) {
 			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
-					if (hasEmptyMapping(action)) {
-						throw new Error(
-							'There are no properties in the mapping expressions; use at least one property in an expression',
-						);
-					}
-					throw new Error('Action must have a valid transformation');
+					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isMobile || connection.isServer || connection.isWebsite) {
-			if (actionType.target === 'Users' || actionType.target === 'Groups') {
-				if (hasValidTransformation(action)) {
-					if (hasTransformationFunction(action)) {
-						throw new Error(`Action supports only transformations via mapping`);
-					}
-				}
-			}
 			if (actionType.target === 'Events') {
 				if (hasValidTransformation(action)) {
-					throw new Error('Action does not support transformations');
+					throw errTransformationNotSupported;
 				}
 			}
 		}
@@ -395,29 +354,24 @@ const validateTransformation = (
 		if (connection.isApp) {
 			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
-					if (hasEmptyMapping(action)) {
-						throw new Error(
-							'There are no properties in the mapping expressions; use at least one property in an expression',
-						);
-					}
-					throw new Error('Action must have a valid transformation');
+					throw errInvalidTransformation;
+				}
+			}
+			if (actionType.target === 'Events' && actionType.outputSchema == null) {
+				if (hasValidTransformation(action)) {
+					throw errTransformationNotSupported;
 				}
 			}
 		} else if (connection.isDatabase) {
 			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (!hasValidTransformation(action)) {
-					if (hasEmptyMapping(action)) {
-						throw new Error(
-							'There are no properties in the mapping expressions; use at least one property in an expression',
-						);
-					}
-					throw new Error('Action must have a valid transformation');
+					throw errInvalidTransformation;
 				}
 			}
 		} else if (connection.isFileStorage) {
 			if (actionType.target === 'Users' || actionType.target === 'Groups') {
 				if (hasValidTransformation(action)) {
-					throw new Error('Action does not support transformations');
+					throw errTransformationNotSupported;
 				}
 			}
 		}
@@ -624,6 +578,9 @@ const transformInActionToSet = async (
 		}
 	}
 
+	const allowsConstantTransformation =
+		(connection.isSource && connection.isEventBased && actionType.target === 'Users') ||
+		(connection.isDestination && connection.isApp && actionType.target === 'Events');
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { name: 'Object', properties: [] };
 		const outputSchema: ObjectType = { name: 'Object', properties: [] };
@@ -691,6 +648,11 @@ const transformInActionToSet = async (
 				inputSchema.properties!.push(fullProperty);
 			}
 		}
+		if (inputProperties.length === 0 && !allowsConstantTransformation) {
+			throw new Error(
+				'There are no properties in the mapping expressions; use at least one property in an expression',
+			);
+		}
 		if (expressions.length > 0) {
 			mapping = mappingToSave;
 		}
@@ -718,7 +680,7 @@ const transformInActionToSet = async (
 			inPaths.push(p);
 		}
 
-		if (inPaths.length === 0) {
+		if (inPaths.length === 0 && !allowsConstantTransformation) {
 			throw new Error('You must select at least one input property');
 		}
 
