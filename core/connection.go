@@ -1879,9 +1879,8 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	if eventType != "" && target != Events {
 		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
 	}
-	// Perform a validation based on the connection's type and role.
-	// (Refer to the specifications in the file "core/Actions.md" for more
-	// details)
+	// Perform a validation based on the connection's type and role (refer to
+	// the specifications in the file "core/Actions.csv" for more details).
 	c := this.connection
 	connector := c.Connector()
 	var supported bool
