@@ -502,7 +502,7 @@ func Test_parseUUID(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.s, func(t *testing.T) {
-			gotUUID, gotOk := parseUUID(test.s)
+			gotUUID, gotOk := ParseUUID(test.s)
 			if gotUUID != test.uuid {
 				t.Fatalf("expected UUID %s, got %s", test.uuid, gotUUID)
 			}

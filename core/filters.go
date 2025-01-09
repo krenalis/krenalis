@@ -22,7 +22,6 @@ import (
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
-	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 )
 
@@ -154,7 +153,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.YearKind:
 				v, _ = parseYear(value)
 			case types.UUIDKind:
-				v, _ = parseUUID(value)
+				v, _ = ParseUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
 				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
@@ -404,21 +403,6 @@ func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
 }
 
-// parseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-// Keep in sync with the function on the "core/connectors" package.
-func parseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
-}
-
 // parseUint parses an Uint(64) from s and returns the Uint(64) value and true.
 // If s is not a valid Uint(64), it returns 0 and false.
 func parseUint(s string) (uint, bool) {
@@ -641,7 +625,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			case types.YearKind:
 				_, valid = parseYear(value)
 			case types.UUIDKind:
-				_, valid = parseUUID(value)
+				_, valid = ParseUUID(value)
 			case types.JSONKind, types.TextKind:
 				valid = utf8.ValidString(value)
 			case types.InetKind:

@@ -120,6 +120,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /members/invitations/{token}":                                 api.MemberInvitation, /* only UI */
 		"GET    /transformation-languages":                                    api.TransformationLanguages,
 		"GET    /users/schema":                                                workspace.UserSchema,
+		"GET    /users/{id}/events":                                           workspace.UserEvents,
 		"GET    /users/{id}/identities":                                       workspace.Identities,
 		"GET    /users/{id}/traits":                                           workspace.Traits,
 		"GET    /warehouse":                                                   workspace.Warehouse,

@@ -885,7 +885,7 @@ func (this *Workspace) IdentifiersSchema() types.Type {
 //   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) Identities(ctx context.Context, user string, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := parseUUID(user); !ok {
+	if _, ok := ParseUUID(user); !ok {
 		return nil, 0, errors.BadRequest("user %q is not a valid user identifier", user)
 	}
 	if first < 0 {
@@ -1411,7 +1411,7 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 	ws := this.workspace
 
 	// Validate the user.
-	if _, ok := parseUUID(user); !ok {
+	if _, ok := ParseUUID(user); !ok {
 		return nil, errors.BadRequest("user %q is not a valid user identifier", user)
 	}
 

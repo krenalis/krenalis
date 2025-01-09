@@ -30,7 +30,7 @@ func init() {
 		Description: "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Retrive a file",
+				Name:        "Retrieve a file",
 				Description: "Returns schema and first rows of a file.",
 				Method:      POST,
 				URL:         "/v0/connections/:id/files/:path",
@@ -157,7 +157,7 @@ func init() {
 				},
 			},
 			{
-				Name: "Retrive the absolute path",
+				Name: "Retrieve the absolute path",
 				Description: "Returns the absolute path of a file based on its path relative to the connection’s root.\n\n" +
 					"While this complete path isn’t used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
 				Method: GET,

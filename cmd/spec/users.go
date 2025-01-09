@@ -13,6 +13,12 @@ import (
 
 func init() {
 
+	eventsParameter := types.Array(types.Object(append([]types.Property{
+		{Name: "id", Type: types.UUID(), Placeholder: `"b1d868f3-43f6-4965-bbd2-85ca8dd609b3"`},
+		{Name: "user", Type: types.UUID(), ReadOptional: true, Placeholder: `"9102d2a1-0714-4c13-bafd-8a38bc3d0cff"`},
+		{Name: "connection", Type: types.Int(32), Placeholder: "1371036433"},
+	}, eventProperties...)))
+
 	identityType := types.Object([]types.Property{
 		{
 			Name:        "connection",
@@ -113,8 +119,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrive the traits of a user ",
-				Description: "Returns the traits of a user given its identifier.",
+				Name:        "Retrieve the traits of a user ",
+				Description: "Retrieves the traits of a user given its identifier.",
 				Method:      GET,
 				URL:         "/v0/users/:id/traits",
 				Parameters: []types.Property{
@@ -144,8 +150,53 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrive the identities of a user",
-				Description: "Returns the identities of a user given its identifier.",
+				Name: "Retrieve user events",
+				Description: "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\n" +
+					"This endpoint provides a streamlined, user-focused alternative to the [/events](/api/events#list-all-events) endpoint.\n" +
+					"While the [/events](/api/events#list-all-events) endpoint offers advanced filtering and sorting options, this endpoint is designed for simple access to a single user’s event history.",
+				Method: GET,
+				URL:    "/v0/users/:id/events",
+				Parameters: []types.Property{
+					{
+						Name:           "id",
+						Type:           types.UUID(),
+						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
+						UpdateRequired: true,
+						Description:    "The ID of the user.",
+					},
+					{
+						Name:           "properties",
+						Type:           types.Array(types.Text()),
+						UpdateRequired: true,
+						Description: "The names of the properties to return. At least one property must be provided.\n\n" +
+							"The properties can be specified in the query string in two ways:\n" +
+							"* `properties=timestamp,event`\n* `properties=timestamp&properties=event`",
+					},
+					{
+						Name:        "limit",
+						Type:        types.Int(32),
+						Description: "The maximum number of events to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 100.",
+					},
+				},
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name:        "events",
+							Type:        eventsParameter,
+							Placeholder: `...`,
+							Description: "The most recent events of the user. An empty array is returned if no events are available or if the specified user does not exist.",
+						},
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+					{422, WarehouseError, "error occurred with the data warehouse"},
+				},
+			},
+			{
+				Name:        "Retrieve user identities",
+				Description: "Retrieves the identities of a user given its identifier.",
 				Method:      GET,
 				URL:         "/v0/users/:id/identities",
 				Parameters: []types.Property{
@@ -164,7 +215,7 @@ func init() {
 					{
 						Name:        "limit",
 						Type:        types.Int(32),
-						Description: "The maximum number of identities to return. It must be between 0 and 1000, with a default value of 1000.",
+						Description: "The maximum number of identities to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 1000.",
 					},
 				},
 				Response: &Response{

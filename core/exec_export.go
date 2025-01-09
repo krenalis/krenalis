@@ -477,7 +477,7 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		case types.UUIDKind:
 			return v, nil
 		case types.TextKind:
-			u, ok := parseUUID(v.(string))
+			u, ok := ParseUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inName, exName)
 			}

@@ -799,6 +799,21 @@ func (core *Core) onExecuteAction(n state.ExecuteAction) {
 	}()
 }
 
+// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
+// and returns it in the canonical form without uppercase letters. The boolean
+// return value reports whether s is a UUID in the standard form.
+// Keep in sync with the function on the "core/connectors" package.
+func ParseUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
 func containsNUL(s string) bool {
 	return strings.ContainsRune(s, '\x00')
 }

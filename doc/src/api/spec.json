@@ -561,7 +561,7 @@
             "description": "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
             "endpoints": [
                 {
-                    "name": "Retrive a file",
+                    "name": "Retrieve a file",
                     "description": "Returns schema and first rows of a file.",
                     "method": "POST",
                     "url": "/v0/connections/:id/files/:path",
@@ -796,7 +796,7 @@
                     ]
                 },
                 {
-                    "name": "Retrive the absolute path",
+                    "name": "Retrieve the absolute path",
                     "description": "Returns the absolute path of a file based on its path relative to the connection’s root.\n\nWhile this complete path isn’t used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
                     "method": "GET",
                     "url": "/v0/connections/:id/files/:path/absolute",
@@ -2999,654 +2999,657 @@
                                 "name": "events",
                                 "placeholder": "...",
                                 "type": {
-                                    "name": "Object",
-                                    "properties": [
-                                        {
-                                            "name": "id",
-                                            "placeholder": "\"b1d868f3-43f6-4965-bbd2-85ca8dd609b3\"",
-                                            "type": {
-                                                "name": "UUID"
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Object",
+                                        "properties": [
+                                            {
+                                                "name": "id",
+                                                "placeholder": "\"b1d868f3-43f6-4965-bbd2-85ca8dd609b3\"",
+                                                "type": {
+                                                    "name": "UUID"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "user",
-                                            "placeholder": "\"9102d2a1-0714-4c13-bafd-8a38bc3d0cff\"",
-                                            "type": {
-                                                "name": "UUID"
+                                            {
+                                                "name": "user",
+                                                "placeholder": "\"9102d2a1-0714-4c13-bafd-8a38bc3d0cff\"",
+                                                "type": {
+                                                    "name": "UUID"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "connection",
-                                            "placeholder": "1371036433",
-                                            "type": {
-                                                "name": "Int",
-                                                "bitSize": 32
+                                            {
+                                                "name": "connection",
+                                                "placeholder": "1371036433",
+                                                "type": {
+                                                    "name": "Int",
+                                                    "bitSize": 32
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "anonymousId",
-                                            "placeholder": "\"3e93e10e-5ca0-4a8c-bef6-cf9197b37729\"",
-                                            "type": {
-                                                "name": "Text"
+                                            {
+                                                "name": "anonymousId",
+                                                "placeholder": "\"3e93e10e-5ca0-4a8c-bef6-cf9197b37729\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "category",
-                                            "type": {
-                                                "name": "Text"
+                                            {
+                                                "name": "category",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "context",
-                                            "type": {
-                                                "name": "Object",
-                                                "properties": [
-                                                    {
-                                                        "name": "app",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "name",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                            {
+                                                "name": "context",
+                                                "type": {
+                                                    "name": "Object",
+                                                    "properties": [
+                                                        {
+                                                            "name": "app",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "version",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "build",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "build",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "namespace",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "namespace",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "browser",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "name",
-                                                                    "type": {
-                                                                        "name": "Text",
-                                                                        "values": [
-                                                                            "None",
-                                                                            "Chrome",
-                                                                            "Safari",
-                                                                            "Edge",
-                                                                            "Firefox",
-                                                                            "Samsung Internet",
-                                                                            "Opera",
-                                                                            "Other"
-                                                                        ]
+                                                        {
+                                                            "name": "browser",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text",
+                                                                            "values": [
+                                                                                "None",
+                                                                                "Chrome",
+                                                                                "Safari",
+                                                                                "Edge",
+                                                                                "Firefox",
+                                                                                "Samsung Internet",
+                                                                                "Opera",
+                                                                                "Other"
+                                                                            ]
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "other",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "other",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "version",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "campaign",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "name",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                        {
+                                                            "name": "campaign",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "source",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "source",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "medium",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "medium",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "term",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "term",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "content",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "content",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "device",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "id",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                        {
+                                                            "name": "device",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "advertisingId",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "advertisingId",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "adTrackingEnabled",
-                                                                    "type": {
-                                                                        "name": "Boolean"
+                                                                    {
+                                                                        "name": "adTrackingEnabled",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "manufacturer",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "manufacturer",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "model",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "model",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "name",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "type",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "type",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "token",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "token",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "ip",
-                                                        "type": {
-                                                            "name": "Inet"
+                                                        {
+                                                            "name": "ip",
+                                                            "type": {
+                                                                "name": "Inet"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "library",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "name",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                        {
+                                                            "name": "library",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "version",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "locale",
-                                                        "type": {
-                                                            "name": "Text"
+                                                        {
+                                                            "name": "locale",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "location",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "city",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                        {
+                                                            "name": "location",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "city",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "country",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "country",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "latitude",
-                                                                    "type": {
-                                                                        "name": "Float",
-                                                                        "bitSize": 64
+                                                                    {
+                                                                        "name": "latitude",
+                                                                        "type": {
+                                                                            "name": "Float",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "longitude",
-                                                                    "type": {
-                                                                        "name": "Float",
-                                                                        "bitSize": 64
+                                                                    {
+                                                                        "name": "longitude",
+                                                                        "type": {
+                                                                            "name": "Float",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "speed",
-                                                                    "type": {
-                                                                        "name": "Float",
-                                                                        "bitSize": 64
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "speed",
+                                                                        "type": {
+                                                                            "name": "Float",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "network",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "bluetooth",
-                                                                    "type": {
-                                                                        "name": "Boolean"
+                                                        {
+                                                            "name": "network",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "bluetooth",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "carrier",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "carrier",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "cellular",
-                                                                    "type": {
-                                                                        "name": "Boolean"
+                                                                    {
+                                                                        "name": "cellular",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "wifi",
-                                                                    "type": {
-                                                                        "name": "Boolean"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "wifi",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "os",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "name",
-                                                                    "type": {
-                                                                        "name": "Text",
-                                                                        "values": [
-                                                                            "None",
-                                                                            "Android",
-                                                                            "Windows",
-                                                                            "iOS",
-                                                                            "macOS",
-                                                                            "Linux",
-                                                                            "Chrome OS",
-                                                                            "Other"
-                                                                        ]
+                                                        {
+                                                            "name": "os",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text",
+                                                                            "values": [
+                                                                                "None",
+                                                                                "Android",
+                                                                                "Windows",
+                                                                                "iOS",
+                                                                                "macOS",
+                                                                                "Linux",
+                                                                                "Chrome OS",
+                                                                                "Other"
+                                                                            ]
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "version",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "page",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "path",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                        {
+                                                            "name": "page",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "path",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "referrer",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "referrer",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "search",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "search",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "title",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                                    {
+                                                                        "name": "title",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "url",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "referrer",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "id",
-                                                                    "type": {
-                                                                        "name": "Text"
+                                                        {
+                                                            "name": "referrer",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "type",
-                                                                    "type": {
-                                                                        "name": "Text"
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "type",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "screen",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "width",
-                                                                    "type": {
-                                                                        "name": "Int",
-                                                                        "bitSize": 16
+                                                        {
+                                                            "name": "screen",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": {
+                                                                            "name": "Int",
+                                                                            "bitSize": 16
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "height",
-                                                                    "type": {
-                                                                        "name": "Int",
-                                                                        "bitSize": 16
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": {
+                                                                            "name": "Int",
+                                                                            "bitSize": 16
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "density",
-                                                                    "type": {
-                                                                        "name": "Decimal",
-                                                                        "precision": 3,
-                                                                        "scale": 2
-                                                                    },
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "density",
+                                                                        "type": {
+                                                                            "name": "Decimal",
+                                                                            "precision": 3,
+                                                                            "scale": 2
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "session",
-                                                        "type": {
-                                                            "name": "Object",
-                                                            "properties": [
-                                                                {
-                                                                    "name": "id",
-                                                                    "type": {
-                                                                        "name": "Int",
-                                                                        "bitSize": 64
+                                                        {
+                                                            "name": "session",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": {
+                                                                            "name": "Int",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
                                                                     },
-                                                                    "description": ""
-                                                                },
-                                                                {
-                                                                    "name": "start",
-                                                                    "type": {
-                                                                        "name": "Boolean"
-                                                                    },
-                                                                    "readOptional": true,
-                                                                    "description": ""
-                                                                }
-                                                            ]
+                                                                    {
+                                                                        "name": "start",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "readOptional": true,
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "timezone",
-                                                        "type": {
-                                                            "name": "Text"
+                                                        {
+                                                            "name": "timezone",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
                                                         },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    },
-                                                    {
-                                                        "name": "userAgent",
-                                                        "type": {
-                                                            "name": "Text"
-                                                        },
-                                                        "readOptional": true,
-                                                        "description": ""
-                                                    }
-                                                ]
+                                                        {
+                                                            "name": "userAgent",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        }
+                                                    ]
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "event",
-                                            "type": {
-                                                "name": "Text"
+                                            {
+                                                "name": "event",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "groupId",
-                                            "type": {
-                                                "name": "Text"
+                                            {
+                                                "name": "groupId",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "messageId",
-                                            "type": {
-                                                "name": "Text"
+                                            {
+                                                "name": "messageId",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "name",
-                                            "type": {
-                                                "name": "Text"
+                                            {
+                                                "name": "name",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "properties",
-                                            "type": {
-                                                "name": "JSON"
+                                            {
+                                                "name": "properties",
+                                                "type": {
+                                                    "name": "JSON"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "receivedAt",
-                                            "type": {
-                                                "name": "DateTime"
+                                            {
+                                                "name": "receivedAt",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "sentAt",
-                                            "type": {
-                                                "name": "DateTime"
+                                            {
+                                                "name": "sentAt",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "originalTimestamp",
-                                            "type": {
-                                                "name": "DateTime"
+                                            {
+                                                "name": "originalTimestamp",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "timestamp",
-                                            "type": {
-                                                "name": "DateTime"
+                                            {
+                                                "name": "timestamp",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "traits",
-                                            "type": {
-                                                "name": "JSON"
+                                            {
+                                                "name": "traits",
+                                                "type": {
+                                                    "name": "JSON"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
                                             },
-                                            "readOptional": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "type",
-                                            "type": {
-                                                "name": "Text",
-                                                "values": [
-                                                    "alias",
-                                                    "identify",
-                                                    "group",
-                                                    "page",
-                                                    "screen",
-                                                    "track"
-                                                ]
+                                            {
+                                                "name": "type",
+                                                "type": {
+                                                    "name": "Text",
+                                                    "values": [
+                                                        "alias",
+                                                        "identify",
+                                                        "group",
+                                                        "page",
+                                                        "screen",
+                                                        "track"
+                                                    ]
+                                                },
+                                                "description": ""
                                             },
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "userId",
-                                            "type": {
-                                                "name": "Text"
-                                            },
-                                            "nullable": true,
-                                            "description": ""
-                                        }
-                                    ]
+                                            {
+                                                "name": "userId",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "nullable": true,
+                                                "description": ""
+                                            }
+                                        ]
+                                    }
                                 },
                                 "description": ""
                             }
@@ -3839,7 +3842,7 @@
                     ]
                 },
                 {
-                    "name": "Retrive observed events",
+                    "name": "Retrieve observed events",
                     "description": "Returns the events captured by the specified listener along with the count of discarded events.",
                     "method": "GET",
                     "url": "/v0/events/listeners/:id",
@@ -8372,8 +8375,8 @@
                     ]
                 },
                 {
-                    "name": "Retrive the traits of a user ",
-                    "description": "Returns the traits of a user given its identifier.",
+                    "name": "Retrieve the traits of a user ",
+                    "description": "Retrieves the traits of a user given its identifier.",
                     "method": "GET",
                     "url": "/v0/users/:id/traits",
                     "parameters": [
@@ -8428,8 +8431,725 @@
                     ]
                 },
                 {
-                    "name": "Retrive the identities of a user",
-                    "description": "Returns the identities of a user given its identifier.",
+                    "name": "Retrieve user events",
+                    "description": "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\nThis endpoint provides a streamlined, user-focused alternative to the [/events](/api/events#list-all-events) endpoint.\nWhile the [/events](/api/events#list-all-events) endpoint offers advanced filtering and sorting options, this endpoint is designed for simple access to a single user’s event history.",
+                    "method": "GET",
+                    "url": "/v0/users/:id/events",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "placeholder": "\"86de98fe-8f26-49ac-87dc-8a14997a97d9\"",
+                            "type": {
+                                "name": "UUID"
+                            },
+                            "updateRequired": true,
+                            "description": "The ID of the user."
+                        },
+                        {
+                            "name": "properties",
+                            "type": {
+                                "name": "Array",
+                                "elementType": {
+                                    "name": "Text"
+                                }
+                            },
+                            "updateRequired": true,
+                            "description": "The names of the properties to return. At least one property must be provided.\n\nThe properties can be specified in the query string in two ways:\n* `properties=timestamp,event`\n* `properties=timestamp&properties=event`"
+                        },
+                        {
+                            "name": "limit",
+                            "type": {
+                                "name": "Int",
+                                "bitSize": 32
+                            },
+                            "description": "The maximum number of events to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 100."
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "events",
+                                "placeholder": "...",
+                                "type": {
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Object",
+                                        "properties": [
+                                            {
+                                                "name": "id",
+                                                "placeholder": "\"b1d868f3-43f6-4965-bbd2-85ca8dd609b3\"",
+                                                "type": {
+                                                    "name": "UUID"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "user",
+                                                "placeholder": "\"9102d2a1-0714-4c13-bafd-8a38bc3d0cff\"",
+                                                "type": {
+                                                    "name": "UUID"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "connection",
+                                                "placeholder": "1371036433",
+                                                "type": {
+                                                    "name": "Int",
+                                                    "bitSize": 32
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "anonymousId",
+                                                "placeholder": "\"3e93e10e-5ca0-4a8c-bef6-cf9197b37729\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "category",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "context",
+                                                "type": {
+                                                    "name": "Object",
+                                                    "properties": [
+                                                        {
+                                                            "name": "app",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "build",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "namespace",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "browser",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text",
+                                                                            "values": [
+                                                                                "None",
+                                                                                "Chrome",
+                                                                                "Safari",
+                                                                                "Edge",
+                                                                                "Firefox",
+                                                                                "Samsung Internet",
+                                                                                "Opera",
+                                                                                "Other"
+                                                                            ]
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "other",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "campaign",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "source",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "medium",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "term",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "content",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "device",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "advertisingId",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "adTrackingEnabled",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "manufacturer",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "model",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "type",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "token",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "ip",
+                                                            "type": {
+                                                                "name": "Inet"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "library",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "locale",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "location",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "city",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "country",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "latitude",
+                                                                        "type": {
+                                                                            "name": "Float",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "longitude",
+                                                                        "type": {
+                                                                            "name": "Float",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "speed",
+                                                                        "type": {
+                                                                            "name": "Float",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "network",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "bluetooth",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "carrier",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "cellular",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "wifi",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "os",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": {
+                                                                            "name": "Text",
+                                                                            "values": [
+                                                                                "None",
+                                                                                "Android",
+                                                                                "Windows",
+                                                                                "iOS",
+                                                                                "macOS",
+                                                                                "Linux",
+                                                                                "Chrome OS",
+                                                                                "Other"
+                                                                            ]
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "version",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "page",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "path",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "referrer",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "search",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "title",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "url",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "referrer",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "type",
+                                                                        "type": {
+                                                                            "name": "Text"
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "screen",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "width",
+                                                                        "type": {
+                                                                            "name": "Int",
+                                                                            "bitSize": 16
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "height",
+                                                                        "type": {
+                                                                            "name": "Int",
+                                                                            "bitSize": 16
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "density",
+                                                                        "type": {
+                                                                            "name": "Decimal",
+                                                                            "precision": 3,
+                                                                            "scale": 2
+                                                                        },
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "session",
+                                                            "type": {
+                                                                "name": "Object",
+                                                                "properties": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": {
+                                                                            "name": "Int",
+                                                                            "bitSize": 64
+                                                                        },
+                                                                        "description": ""
+                                                                    },
+                                                                    {
+                                                                        "name": "start",
+                                                                        "type": {
+                                                                            "name": "Boolean"
+                                                                        },
+                                                                        "readOptional": true,
+                                                                        "description": ""
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "timezone",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        },
+                                                        {
+                                                            "name": "userAgent",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "readOptional": true,
+                                                            "description": ""
+                                                        }
+                                                    ]
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "event",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "groupId",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "messageId",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "name",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "properties",
+                                                "type": {
+                                                    "name": "JSON"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "receivedAt",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "sentAt",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "originalTimestamp",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "timestamp",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "traits",
+                                                "type": {
+                                                    "name": "JSON"
+                                                },
+                                                "readOptional": true,
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "type",
+                                                "type": {
+                                                    "name": "Text",
+                                                    "values": [
+                                                        "alias",
+                                                        "identify",
+                                                        "group",
+                                                        "page",
+                                                        "screen",
+                                                        "track"
+                                                    ]
+                                                },
+                                                "description": ""
+                                            },
+                                            {
+                                                "name": "userId",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "nullable": true,
+                                                "description": ""
+                                            }
+                                        ]
+                                    }
+                                },
+                                "description": "The most recent events of the user. An empty array is returned if no events are available or if the specified user does not exist."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 422,
+                            "code": "MaintenanceMode",
+                            "message": "data warehouse is in maintenance mode"
+                        },
+                        {
+                            "status": 422,
+                            "code": "WarehouseError",
+                            "message": "error occurred with the data warehouse"
+                        }
+                    ]
+                },
+                {
+                    "name": "Retrieve user identities",
+                    "description": "Retrieves the identities of a user given its identifier.",
                     "method": "GET",
                     "url": "/v0/users/:id/identities",
                     "parameters": [
@@ -8456,7 +9176,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "description": "The maximum number of identities to return. It must be between 0 and 1000, with a default value of 1000."
+                            "description": "The maximum number of identities to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 1000."
                         }
                     ],
                     "moreParameters": [],

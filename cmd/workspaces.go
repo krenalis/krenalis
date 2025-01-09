@@ -457,7 +457,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	var limit = 1000
 	query := r.URL.Query()
 	if v, ok := query["first"]; ok {
-		first, err = strconv.Atoi(v[0])
+		first, _ = strconv.Atoi(v[0])
 		if err != nil {
 			return nil, errors.BadRequest("first is not valid")
 		}
@@ -747,6 +747,58 @@ func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Re
 	}
 	err = ws.UpdateWarehouseMode(r.Context(), body.Mode, body.CancelIncompatibleOperations)
 	return nil, err
+}
+
+// UserEvents returns the events of a user.
+func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the user ID.
+	id := r.PathValue("id")
+	if _, ok := core.ParseUUID(id); !ok {
+		return nil, errors.BadRequest("value %q is not a valid user identifier", id)
+	}
+
+	q := r.URL.Query()
+
+	// Parse limit.
+	limit := 100
+	if v, ok := q["limit"]; ok {
+		limit, _ := strconv.Atoi(v[0])
+		if limit <= 0 || limit > 1000 {
+			return nil, errors.BadRequest("limit is not valid")
+		}
+	}
+
+	// Parse the properties.
+	properties, ok := q["properties"]
+	if !ok {
+		return nil, errors.BadRequest("no properties were provided to return")
+	}
+
+	filter := &core.Filter{
+		Logical: core.OpAnd,
+		Conditions: []core.FilterCondition{
+			{
+				Property: "user",
+				Operator: core.OpIs,
+				Values:   []string{id},
+			},
+		},
+	}
+
+	evts, err := ws.Events(r.Context(), properties, filter, "timestamp", true, 0, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	events, _ := types.Marshal(evts, types.Array(events.Schema))
+
+	return map[string]any{"events": events}, nil
 }
 
 // UserSchema returns the user schema of a workspace.
