@@ -110,7 +110,7 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 
 // CreateWriteKey creates a new write key for a connection.
 func (connection connection) CreateWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any
 
 // DeleteWriteKey deletes a write key of a connection.
 func (connection connection) DeleteWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +386,7 @@ func (connection connection) AppUserSchemas(_ http.ResponseWriter, r *http.Reque
 
 // WriteKeys returns the write keys of a connection.
 func (connection connection) WriteKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}

@@ -80,9 +80,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
 		"DELETE /connections/{connection}/actions/{action}":                   action.Delete,
-		"DELETE /connections/{connection}/keys/{key}":                         connection.DeleteWriteKey,
 		"DELETE /connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
 		"DELETE /connections/{id}":                                            connection.Delete,
+		"DELETE /connections/{id}/keys/{key}":                                 connection.DeleteWriteKey,
 		"DELETE /events/listeners/{id}":                                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                                  organization.DeleteAPIKey, /* only UI */
 		"DELETE /members/{member}":                                            organization.DeleteMember, /* only UI */
@@ -99,10 +99,10 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas,
 		"GET    /connections/{connection}/actions/{action}":                   connection.Action,
 		"GET    /connections/{connection}/executions":                         connection.Executions,
-		"GET    /connections/{connection}/keys":                               connection.WriteKeys,
 		"GET    /connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
 		"GET    /connections/{id}":                                            workspace.Connection,
 		"GET    /connections/{id}/files/{path}/absolute":                      connection.CompletePath,
+		"GET    /connections/{id}/keys":                                       connection.WriteKeys,
 		"GET    /connections/{id}/schemas/event/{type}":                       connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/group":                              connection.AppGroupSchemas,
 		"GET    /connections/{id}/schemas/user":                               connection.AppUserSchemas,
@@ -132,11 +132,11 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{connection}/actions/{action}/executions":        action.Execute,
 		"POST   /connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
 		"POST   /connections/{connection}/identities":                         connection.Identities,
-		"POST   /connections/{connection}/keys":                               connection.CreateWriteKey,
 		"POST   /connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
 		"POST   /connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
 		"POST   /connections/{id}/files/{path}":                               connection.File,
 		"POST   /connections/{id}/files/{path}/sheets":                        connection.Sheets,
+		"POST   /connections/{id}/keys":                                       connection.CreateWriteKey,
 		"POST   /connections/{id}/preview-send-event":                         connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                                      connection.ExecQuery,
 		"POST   /connections/{id}/users":                                      connection.AppUsers,
