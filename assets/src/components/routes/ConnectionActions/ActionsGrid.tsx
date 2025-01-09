@@ -222,7 +222,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			<div className='connection-actions__buttons'>
 				{(a.target === 'Users' || a.target === 'Groups') && isActionExecutionSupported && (
 					<>
-						<SlDropdown>
+						<SlDropdown hoist={true}>
 							<SlButton
 								slot='trigger'
 								variant='default'
