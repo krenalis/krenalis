@@ -59,7 +59,6 @@ const useConnectionIdentities = () => {
 			},
 			{
 				name: 'Action',
-				explanation: 'The ID of the action which imported this identity (TODO: this will be revised)',
 			},
 			{
 				name: connection.connector.getIdentityIDLabel(),
