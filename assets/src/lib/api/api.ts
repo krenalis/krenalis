@@ -488,21 +488,17 @@ class Connections {
 		);
 	};
 
-	unlinkConnection = async (connection: number, connection2: number): Promise<void> => {
+	unlinkConnection = async (src: number, dst: number): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/linked-connections/${encodeURIComponent(
-				connection2,
-			)}`,
+			`${this.apiURL}/connections/${encodeURIComponent(src)}/links/${encodeURIComponent(dst)}`,
 			http.DELETE,
 			this.workspaceID,
 		);
 	};
 
-	linkConnection = async (connection: number, connection2: number): Promise<void> => {
+	linkConnection = async (src: number, dst: number): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/linked-connections/${encodeURIComponent(
-				connection2,
-			)}`,
+			`${this.apiURL}/connections/${encodeURIComponent(src)}/links/${encodeURIComponent(dst)}`,
 			http.POST,
 			this.workspaceID,
 		);

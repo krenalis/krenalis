@@ -219,15 +219,19 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 
 // LinkConnection links a connection to another connection and vice versa.
 func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	src, err := connection.src(r)
 	if err != nil {
 		return nil, err
 	}
-	c2, err := connection.connection2(r)
-	if err != nil {
-		return nil, err
+	v := r.PathValue("dst")
+	if v[0] == '+' {
+		return 0, errors.NotFound("")
 	}
-	err = c.LinkConnection(r.Context(), c2)
+	dst, _ := strconv.Atoi(v)
+	if dst <= 0 {
+		return 0, errors.NotFound("")
+	}
+	err = src.LinkConnection(r.Context(), dst)
 	return nil, err
 }
 
@@ -315,15 +319,19 @@ func (connection connection) TableSchema(_ http.ResponseWriter, r *http.Request)
 
 // UnlinkConnection unlink a connection from another connection and vice versa.
 func (connection connection) UnlinkConnection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	src, err := connection.src(r)
 	if err != nil {
 		return nil, err
 	}
-	c2, err := connection.connection2(r)
-	if err != nil {
-		return nil, err
+	v := r.PathValue("dst")
+	if v[0] == '+' {
+		return 0, errors.NotFound("")
 	}
-	err = c.UnlinkConnection(r.Context(), c2)
+	dst, _ := strconv.Atoi(v)
+	if dst <= 0 {
+		return 0, errors.NotFound("")
+	}
+	err = src.UnlinkConnection(r.Context(), dst)
 	return nil, err
 }
 
@@ -439,6 +447,22 @@ func (connection connection) id(r *http.Request) (*core.Connection, error) {
 		return nil, err
 	}
 	v := r.PathValue("id")
+	if v[0] == '+' {
+		return nil, errors.NotFound("")
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.NotFound("")
+	}
+	return ws.Connection(id)
+}
+
+func (connection connection) src(r *http.Request) (*core.Connection, error) {
+	ws, err := workspace{connection.apisServer}.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("src")
 	if v[0] == '+' {
 		return nil, errors.NotFound("")
 	}

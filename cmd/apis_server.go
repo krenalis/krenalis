@@ -80,9 +80,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
 		"DELETE /connections/{connection}/actions/{action}":                   action.Delete,
-		"DELETE /connections/{connection}/linked-connections/{connection2}":   connection.UnlinkConnection,
 		"DELETE /connections/{id}":                                            connection.Delete,
 		"DELETE /connections/{id}/keys/{key}":                                 connection.DeleteWriteKey,
+		"DELETE /connections/{src}/links/{dst}":                               connection.UnlinkConnection,
 		"DELETE /events/listeners/{id}":                                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                                  organization.DeleteAPIKey, /* only UI */
 		"DELETE /members/{member}":                                            organization.DeleteMember, /* only UI */
@@ -130,8 +130,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections":                                                 workspace.CreateConnection,
 		"POST   /connections/{connection}/actions":                            connection.CreateAction,
 		"POST   /connections/{connection}/actions/{action}/executions":        action.Execute,
-		"POST   /connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
-		"POST   /connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
+		"POST   /connections/{connection}/actions/{action}/ui-event":          action.ServeUI,     /* only UI */
 		"POST   /connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
 		"POST   /connections/{id}/files/{path}":                               connection.File,
 		"POST   /connections/{id}/files/{path}/sheets":                        connection.Sheets,
@@ -140,6 +139,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{id}/preview-send-event":                         connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                                      connection.ExecQuery,
 		"POST   /connections/{id}/users":                                      connection.AppUsers,
+		"POST   /connections/{src}/links/{dst}":                               connection.LinkConnection,
 		"POST   /events":                                                      workspace.Events,
 		"POST   /events/listeners":                                            workspace.CreateEventListener,
 		"POST   /expressions-properties":                                      api.ExpressionsProperties, /* only UI */
