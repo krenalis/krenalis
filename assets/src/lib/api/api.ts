@@ -764,7 +764,7 @@ class Workspaces {
 	};
 
 	startIdentityResolution = async (): Promise<void> => {
-		return await call(`${this.apiURL}/identity-resolutions`, http.POST, this.workspaceID);
+		return await call(`${this.apiURL}/identity-resolution/start`, http.POST, this.workspaceID);
 	};
 
 	updateUserSchema = async (schema: ObjectType, primarySources: PrimarySources, rePaths: RePaths): Promise<void> => {
@@ -886,7 +886,7 @@ class Workspaces {
 	};
 
 	lastIdentityResolution = async (): Promise<LastIdentityResolution> => {
-		return await call(`${this.apiURL}/identity-resolution/execution`, http.GET, this.workspaceID);
+		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
 	};
 }
 

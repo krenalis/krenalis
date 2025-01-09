@@ -105,7 +105,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Update the workspace identifiers and run the Identity Resolution.
 	c.UpdateIdentityResolution(true, []string{"email"})
-	c.ResolveIdentities()
+	c.StartIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
 	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)

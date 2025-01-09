@@ -541,6 +541,20 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
 }
 
+// IdentityResolutionSettings returns the identity resolution settings of the
+// workspace.
+func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	runOnBatchImport, identifiers := ws.IdentityResolutionSettings()
+	return map[string]any{
+		"runOnBatchImport": runOnBatchImport,
+		"identifiers":      identifiers,
+	}, nil
+}
+
 // PreviewUserSchemaUpdate previews a user schema update and returns the queries
 // that would be executed.
 func (workspace workspace) PreviewUserSchemaUpdate(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -675,8 +689,9 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 	return nil, err
 }
 
-// UpdateIdentityResolution updates the identity resolution of the workspace.
-func (workspace workspace) UpdateIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
+// UpdateIdentityResolutionSettings updates the identity resolution settings of
+// the workspace.
+func (workspace workspace) UpdateIdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
@@ -689,7 +704,7 @@ func (workspace workspace) UpdateIdentityResolution(_ http.ResponseWriter, r *ht
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateIdentityResolution(r.Context(), body.RunOnBatchImport, body.Identifiers)
+	err = ws.UpdateIdentityResolutionSettings(r.Context(), body.RunOnBatchImport, body.Identifiers)
 	return nil, err
 }
 

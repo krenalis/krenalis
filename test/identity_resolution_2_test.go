@@ -150,11 +150,11 @@ func TestIdentityResolution2(t *testing.T) {
 	c.WaitForExecutionsCompletion(sourceC, exec3)
 
 	// Resolve the identities.
-	c.ResolveIdentities()
+	c.StartIdentityResolution()
 
 	// Test that the execution of the Identity Resolution has ended and that its
 	// duration has a reasonable value.
-	startTime, endTime := c.IdentityResolutionExecution()
+	startTime, endTime := c.LastIdentityResolution()
 	if startTime == nil {
 		t.Fatalf("startTime should be a valid timestamp, got nil")
 	}
@@ -202,7 +202,7 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 	c.UpdateUserSchema(schema, primarySources, nil)
 
-	c.ResolveIdentities()
+	c.StartIdentityResolution()
 
 	users, _, count = c.Users(types.PropertyNames(schema), "", false, 0, 100)
 	if count != 1 {

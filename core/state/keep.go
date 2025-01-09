@@ -98,8 +98,8 @@ func (state *State) keep() {
 			state.updateAction(n)
 		case "UpdateConnection":
 			state.updateConnection(n)
-		case "UpdateIdentityResolution":
-			state.updateIdentityResolution(n)
+		case "UpdateIdentityResolutionSettings":
+			state.updateIdentityResolutionSettings(n)
 		case "UpdateUserSchema":
 			state.updateUserSchema(n)
 		case "UpdateWarehouse":
@@ -1091,17 +1091,18 @@ func (state *State) updateConnection(n notification) {
 	dispatchNotification(state, e)
 }
 
-// UpdateIdentityResolution is the event sent when the identity resolution of a
-// workspace is updated.
-type UpdateIdentityResolution struct {
+// UpdateIdentityResolutionSettings is the event sent when the identity
+// resolution settings of a workspace are updated.
+type UpdateIdentityResolutionSettings struct {
 	Workspace                      int
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 }
 
-// updateIdentityResolution updates the identity resolution of a workspace.
-func (state *State) updateIdentityResolution(n notification) {
-	e := UpdateIdentityResolution{}
+// updateIdentityResolutionSettings updates the identity resolution settings of
+// a workspace.
+func (state *State) updateIdentityResolutionSettings(n notification) {
+	e := UpdateIdentityResolutionSettings{}
 	if !decodeNotification(n, &e) {
 		return
 	}

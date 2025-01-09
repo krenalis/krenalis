@@ -285,12 +285,12 @@ func (c *Meergo) IdentifiersSchema() types.Type {
 	return schema
 }
 
-func (c *Meergo) IdentityResolutionExecution() (startTime, endTime *time.Time) {
+func (c *Meergo) LastIdentityResolution() (startTime, endTime *time.Time) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
 	}
-	c.MustCall("GET", "/api/identity-resolution/execution", nil, &response)
+	c.MustCall("GET", "/api/identity-resolution/latest", nil, &response)
 	return response.StartTime, response.EndTime
 }
 
@@ -327,8 +327,8 @@ func (c *Meergo) RepairWarehouse() {
 	c.MustCall("POST", "/api/warehouse/repair", nil, nil)
 }
 
-func (c *Meergo) ResolveIdentities() {
-	c.MustCall("POST", "/api/identity-resolutions", nil, nil)
+func (c *Meergo) StartIdentityResolution() {
+	c.MustCall("POST", "/api/identity-resolution/start", nil, nil)
 	// TODO(Gianluca): a timeout is used here until we implement a reliable
 	// mechanism to check the current status of Identity Resolution.
 	time.Sleep(3 * time.Second)

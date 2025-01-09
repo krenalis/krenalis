@@ -113,7 +113,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /events/listeners/{id}":                                       workspace.ListenedEvents,
 		"GET    /events/schema":                                               api.EventSchema,
 		"GET    /identifiers-schema":                                          workspace.IdentifiersSchema,
-		"GET    /identity-resolution/execution":                               workspace.LastIdentityResolution,
+		"GET    /identity-resolution/latest":                                  workspace.LastIdentityResolution,
+		"GET    /identity-resolution/settings":                                workspace.IdentityResolutionSettings,
 		"GET    /keys":                                                        organization.APIKeys, /* only UI */
 		"GET    /members":                                                     organization.Members, /* only UI */
 		"GET    /members/current":                                             api.Member,           /* only UI */
@@ -143,7 +144,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /events":                                                      workspace.Events,
 		"POST   /events/listeners":                                            workspace.CreateEventListener,
 		"POST   /expressions-properties":                                      api.ExpressionsProperties, /* only UI */
-		"POST   /identity-resolutions":                                        workspace.StartIdentityResolution,
+		"POST   /identity-resolution/start":                                   workspace.StartIdentityResolution,
 		"POST   /keys":                                                        organization.CreateAPIKey, /* only UI */
 		"POST   /members/invitations":                                         organization.InviteMember, /* only UI */
 		"POST   /members/login":                                               s.login,                   /* only UI */
@@ -160,7 +161,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"PUT    /connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
 		"PUT    /connections/{connection}/actions/{action}/status":            action.SetStatus,
 		"PUT    /connections/{id}":                                            connection.Update,
-		"PUT    /identity-resolution/settings":                                workspace.UpdateIdentityResolution,
+		"PUT    /identity-resolution/settings":                                workspace.UpdateIdentityResolutionSettings,
 		"PUT    /keys/{key}":                                                  organization.UpdateAPIKey, /* only UI */
 		"PUT    /members/current":                                             organization.UpdateMember, /* only UI */
 		"PUT    /members/invitations/{token}":                                 api.AcceptInvitation,      /* only UI */

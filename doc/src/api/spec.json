@@ -4646,93 +4646,6 @@
             "description": "Identities are the users obtained from sources like apps, databases, files, or events. These identities are filtered and transformed according to a defined action. Once identity resolution is complete, the collected identities from all connections are unified to form the workspace users.",
             "endpoints": [
                 {
-                    "name": "Update identity resolution",
-                    "description": "",
-                    "method": "PUT",
-                    "url": "/v0/identity-resolution",
-                    "parameters": [
-                        {
-                            "name": "runOnBatchImport",
-                            "placeholder": "true",
-                            "type": {
-                                "name": "Boolean"
-                            },
-                            "description": "Indicates if identity resolution is automatically run when a batch import is completed. By default is false."
-                        },
-                        {
-                            "name": "identifiers",
-                            "placeholder": "[ \"customer_id\", \"email\" ]",
-                            "type": {
-                                "name": "Array",
-                                "elementType": {
-                                    "name": "Text"
-                                }
-                            },
-                            "nullable": true,
-                            "description": "The identifiers in the specified order. An identifier must be a property in the user schema with a type of `Int`, `Uint`, `UUID`, `Inet`, `Text`, or `Decimal` with zero scale. Identifiers cannot be repeated."
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": null,
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "PropertyNotExist",
-                            "message": "property does not exist in the user schema"
-                        },
-                        {
-                            "status": 422,
-                            "code": "TypeNotAllowed",
-                            "message": "a property has a type which is not allowed for identifiers"
-                        }
-                    ]
-                },
-                {
-                    "name": "Get identity resolution",
-                    "description": "",
-                    "method": "GET",
-                    "url": "/v0/identity-resolution",
-                    "parameters": [],
-                    "moreParameters": [],
-                    "response": {
-                        "description": "",
-                        "parameters": [
-                            {
-                                "name": "runOnBatchImport",
-                                "placeholder": "true",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "Indicates if identity resolution is automatically run when a batch import is completed. By default is false."
-                            },
-                            {
-                                "name": "identifiers",
-                                "placeholder": "[ \"customer_id\", \"email\" ]",
-                                "type": {
-                                    "name": "Array",
-                                    "elementType": {
-                                        "name": "Text"
-                                    }
-                                },
-                                "nullable": true,
-                                "description": "The identifiers in the specified order."
-                            }
-                        ]
-                    },
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "workspace does not exist"
-                        }
-                    ]
-                },
-                {
                     "name": "Start identity resolution",
                     "description": "Starts identity resolution that resolves the identities of the workspace.",
                     "method": "POST",
@@ -4803,6 +4716,92 @@
                             "status": 422,
                             "code": "WarehouseError",
                             "message": "error occurred with the data warehouse"
+                        }
+                    ]
+                },
+                {
+                    "name": "Update identity resolution settings",
+                    "description": "",
+                    "method": "PUT",
+                    "url": "/v0/identity-resolution/settings",
+                    "parameters": [
+                        {
+                            "name": "runOnBatchImport",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Indicates if identity resolution is automatically run when a batch import is completed.By default is false."
+                        },
+                        {
+                            "name": "identifiers",
+                            "placeholder": "[ \"customer_id\", \"email\" ]",
+                            "type": {
+                                "name": "Array",
+                                "elementType": {
+                                    "name": "Text"
+                                }
+                            },
+                            "nullable": true,
+                            "description": "The identifiers in the specified order. An identifier must be a property in the user schema with a type of `Int`, `Uint`, `UUID`, `Inet`, `Text`, or `Decimal` with zero scale. Identifiers cannot be repeated."
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": null,
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 422,
+                            "code": "PropertyNotExist",
+                            "message": "property does not exist in the user schema"
+                        },
+                        {
+                            "status": 422,
+                            "code": "TypeNotAllowed",
+                            "message": "a property has a type which is not allowed for identifiers"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get idegener   ntity resolution settings",
+                    "description": "",
+                    "method": "GET",
+                    "url": "/v0/identity-resolution/settings",
+                    "parameters": [],
+                    "moreParameters": [],
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "runOnBatchImport",
+                                "placeholder": "true",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates if identity resolution is automatically run when a batch import is completed.By default is false."
+                            },
+                            {
+                                "name": "identifiers",
+                                "placeholder": "[ \"customer_id\", \"email\" ]",
+                                "type": {
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Text"
+                                    }
+                                },
+                                "description": "The identifiers in the specified order."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
                         }
                     ]
                 }

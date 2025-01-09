@@ -24,6 +24,13 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// IdentityResolutionSettings returns the identity resolution settings of the
+// workspace.
+func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
+	ws := this.workspace
+	return ws.ResolveIdentitiesOnBatchImport, ws.Identifiers
+}
+
 // PreviewUserSchemaUpdate previews a user schema update and returns the queries
 // that would be executed to update the user schema of the workspace, without
 // making any actual changes to the data or the schema.

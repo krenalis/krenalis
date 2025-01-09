@@ -1052,7 +1052,8 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte)
 	return nil
 }
 
-// UpdateIdentityResolution updates the identity resolution of the workspace.
+// UpdateIdentityResolutionSettings updates the identity resolution settings of
+// the workspace.
 //
 // runOnBatchImport determines whether the identities should be resolved
 // automatically every time a batch import is completed.
@@ -1068,7 +1069,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte)
 //     schema.
 //   - TypeNotAllowed, if an identifier path's type, as defined in the user
 //     schema, is not allowed for identifiers.
-func (this *Workspace) UpdateIdentityResolution(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
+func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, runOnBatchImport bool, identifiers []string) error {
 
 	this.core.mustBeOpen()
 
@@ -1085,7 +1086,7 @@ func (this *Workspace) UpdateIdentityResolution(ctx context.Context, runOnBatchI
 		identifiers = []string{}
 	}
 	ws := this.workspace
-	n := state.UpdateIdentityResolution{
+	n := state.UpdateIdentityResolutionSettings{
 		Workspace:                      ws.ID,
 		ResolveIdentitiesOnBatchImport: runOnBatchImport,
 		Identifiers:                    identifiers,
