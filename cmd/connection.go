@@ -195,7 +195,7 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 
 // Identities returns the user identities of a connection.
 func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}

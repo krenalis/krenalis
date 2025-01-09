@@ -131,11 +131,11 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{connection}/actions":                            connection.CreateAction,
 		"POST   /connections/{connection}/actions/{action}/executions":        action.Execute,
 		"POST   /connections/{connection}/actions/{action}/ui-event":          action.ServeUI, /* only UI */
-		"POST   /connections/{connection}/identities":                         connection.Identities,
 		"POST   /connections/{connection}/linked-connections/{connection2}":   connection.LinkConnection,
 		"POST   /connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
 		"POST   /connections/{id}/files/{path}":                               connection.File,
 		"POST   /connections/{id}/files/{path}/sheets":                        connection.Sheets,
+		"POST   /connections/{id}/identities":                                 connection.Identities,
 		"POST   /connections/{id}/keys":                                       connection.CreateWriteKey,
 		"POST   /connections/{id}/preview-send-event":                         connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                                      connection.ExecQuery,

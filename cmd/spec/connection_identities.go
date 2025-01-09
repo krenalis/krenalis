@@ -16,13 +16,12 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "connection-identities",
 		Name: "Connection identities",
-		Description: "Identities are the users obtained from sources like apps, databases, files, or events. " +
-			"These identities are filtered and transformed according to a defined action. " +
-			"Once identity resolution is complete, the collected identities from all connections are unified to form the workspace users.",
+		Description: "Users from sources such as apps, databases, files, or events are filtered and transformed based on defined actions into user identities within the workspace.\n\n" +
+			"Then, identity resolution combines all user identities from different source connections into a single user profile.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "List the connection identities",
-				Description: "Retrieves the identities associated with a connection.",
+				Name:        "Retrieve user identities",
+				Description: "Retrieves, from the workspace's data warehouse, the user identities imported by a connection.",
 				Method:      POST,
 				URL:         "/v0/connections/:id/identities",
 				Parameters: []types.Property{
@@ -31,20 +30,20 @@ func init() {
 						Type:           types.Int(32),
 						Placeholder:    "1371036433",
 						UpdateRequired: true,
-						Description:    "The source connection from which to retrive the identities.",
+						Description:    "The source connection from which to retrieve the user identities.",
 					},
 					{
 						Name:        "first",
 						Type:        types.Int(32),
 						Placeholder: `0`,
-						Description: "The number of identities to skip before starting to return results. The default value is 0.",
+						Description: "The number of user identities to skip before starting to return results. The default value is 0.",
 					},
 					{
 						Name:           "limit",
 						Type:           types.Int(32).WithIntRange(1, 1000),
 						CreateRequired: true,
 						Placeholder:    `1000`,
-						Description:    "The maximum number of identities to return. The value must be within the range [1, 1000].",
+						Description:    "The maximum number of user identities to return. The value must be within the range [1, 1000].",
 					},
 				},
 				Response: &Response{
@@ -53,13 +52,13 @@ func init() {
 							Name:        "identities",
 							Type:        types.Array(types.Map(types.JSON())),
 							Placeholder: `[ { ... } ]`,
-							Description: "The connection's identities.",
+							Description: "The connection's user identities.",
 						},
 						{
 							Name:        "count",
 							Type:        types.Int(32),
 							Placeholder: `23`,
-							Description: "The estimated total number of identities in the connection.",
+							Description: "The estimated total number of user identities in the connection.",
 						},
 					},
 				},
