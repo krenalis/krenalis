@@ -249,7 +249,7 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return org.Workspaces(), nil
+	return map[string]any{"workspaces": org.Workspaces()}, nil
 }
 
 func (organization organization) key(r *http.Request) (int, error) {

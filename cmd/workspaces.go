@@ -312,7 +312,7 @@ func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (
 	if err != nil {
 		return nil, err
 	}
-	return ws.Connections(), nil
+	return map[string]any{"connections": ws.Connections()}, nil
 }
 
 // CreateConnection creates a connection for a workspace.

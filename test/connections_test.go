@@ -25,22 +25,24 @@ func TestConnections(t *testing.T) {
 	defer c.Stop()
 
 	// Ensure that there are no connections.
-	var connections []any
-	c.MustCall("GET", "/api/connections", nil, &connections)
-	if len(connections) != 0 {
-		t.Fatalf("expected 0 connections, got %d", len(connections))
+	var res struct {
+		Connections []any
+	}
+	c.MustCall("GET", "/api/connections", nil, &res)
+	if len(res.Connections) != 0 {
+		t.Fatalf("expected 0 connections, got %d", len(res.Connections))
 	}
 
 	// Create a Dummy (source) connection.
 	dummyID := c.CreateDummy("Dummy (source)", meergotester.Source)
 
 	// Check if the Dummy connection has been created successfully.
-	connections = nil
-	c.MustCall("GET", "/api/connections", nil, &connections)
-	if len(connections) != 1 {
-		t.Fatalf("expected 1 connections, got %d", len(connections))
+	res.Connections = nil
+	c.MustCall("GET", "/api/connections", nil, &res)
+	if len(res.Connections) != 1 {
+		t.Fatalf("expected 1 connections, got %d", len(res.Connections))
 	}
-	dummy := connections[0].(map[string]any)
+	dummy := res.Connections[0].(map[string]any)
 	expectedName := "Dummy (source)"
 	gotName := dummy["name"].(string)
 	if expectedName != gotName {

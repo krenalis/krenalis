@@ -42,8 +42,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	connector := api.name(r)
-	return api.core.Connector(r.Context(), connector)
+	return api.core.Connector(r.Context(), api.name(r))
 }
 
 // Connectors returns the connectors.
@@ -51,7 +50,7 @@ func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if _, _, err := api.credentials(r); err != nil {
 		return nil, err
 	}
-	return api.core.Connectors(r.Context()), nil
+	return map[string]any{"connectors": api.core.Connectors(r.Context())}, nil
 }
 
 // EventSchema returns the events schema.

@@ -172,8 +172,8 @@ class Connections {
 	}
 
 	find = async (): Promise<Connection[]> => {
-		const connections = await call(`${this.apiURL}/connections`, http.GET, this.workspaceID);
-		return connections as Connection[];
+		const res = await call(`${this.apiURL}/connections`, http.GET, this.workspaceID);
+		return res.connections as Connection[];
 	};
 
 	get = async (connection: number): Promise<Connection> => {
@@ -637,7 +637,8 @@ class Workspaces {
 	}
 
 	list = async (): Promise<Workspace[]> => {
-		return await call(`${this.apiURL}/workspaces`, http.GET, this.workspaceID);
+		const res = await call(`${this.apiURL}/workspaces`, http.GET, this.workspaceID);
+		return res.workspaces as Workspace[];
 	};
 
 	create = async (
@@ -911,7 +912,8 @@ class Connectors {
 	};
 
 	find = async (): Promise<Connector[]> => {
-		return await call(`${this.apiURL}/connectors`, http.GET);
+		const res = await call(`${this.apiURL}/connectors`, http.GET);
+		return res.connectors as Connector[];
 	};
 
 	get = async (connector: string): Promise<Connector> => {
