@@ -81,7 +81,11 @@
           Possible values:
           {% for i, v := range values %}{% if i > 0 and i !=last %},{% else if i == last %} or{% end %} <code>"{{ v }}"</code>{% end %}.
         {% else if t.charLen %}
-          It {% if inReturns %}is not{% else %}cannot be{% end %} longer than {{ t.charLen }} characters.
+          {% if (not inReturns) and (p.createRequired or p.updateRequired) %}
+            Must be a non-empty string with a maximum of {{ t.charLen }} characters.
+          {% else %}
+            It {% if inReturns %}is not{% else %}cannot be{% end %} longer than {{ t.charLen }} characters.
+          {% end if %}
         {% else if re, ok := t.regexp.(string); ok %}
           It {% if inReturns %}matches{% else %}must match{% end %} the regular expression <code>/{{ re }}/</code>.
         {% end %}
