@@ -832,9 +832,7 @@ func (this *Workspace) DeleteEventListener(listener string) {
 //
 // It returns an errors.NotFoundError error, if the workspace does not exist
 // anymore. It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// MaintenanceMode if the data warehouse is in maintenance mode.
 func (this *Workspace) Events(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]map[string]any, error) {
 
 	this.core.mustBeOpen()
@@ -910,10 +908,10 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
+		if err, ok := err.(*datastore.UnavailableError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			slog.Error("cannot get users from the data warehouse", "workspace", this.workspace.ID, "err", err)
-			return nil, errors.Unprocessable(WarehouseError, "%s", err)
+			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
 	}
@@ -939,10 +937,8 @@ func (this *Workspace) IdentifiersSchema() types.Type {
 // and 0 < limit <= 1000.
 //
 // It returns an errors.NotFoundError error, if the user does not exist.
-// It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, user string, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
 	if _, ok := ParseUUID(user); !ok {
@@ -984,16 +980,14 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 //   - if it is in progress, returns its start time and nil for the end time;
 //   - if no Identity Resolution has ever been executed, returns nil and nil.
 //
-// It returns an errors.UnprocessableError error with code:
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
 func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	this.core.mustBeOpen()
 	startTime, endTime, err = this.store.LastIdentityResolution(ctx)
 	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return nil, nil, errors.Unprocessable(WarehouseError, "%s", err)
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return nil, nil, errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrMaintenanceMode {
 			return nil, nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
@@ -1028,7 +1022,6 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
@@ -1041,8 +1034,8 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte)
 	}
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrDifferentWarehouse {
 			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
@@ -1140,7 +1133,6 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings []byte, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
@@ -1162,8 +1154,8 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrDifferentWarehouse {
 			return errors.Unprocessable(DifferentWarehouse, "the data warehouse is a different data warehouse")
@@ -1277,15 +1269,12 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 
 // RepairWarehouse repairs the database objects needed by Meergo on the
 // workspace's data warehouse.
-//
-// It returns an errors.UnprocessableError error with code WarehouseError,
-// if an error occurred during the repairing of the data warehouse.
 func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()
 	err := this.store.Repair(ctx, this.workspace.UserSchema)
 	if err != nil {
-		if err, ok := (err).(*datastore.WarehouseError); ok {
-			return errors.Unprocessable(WarehouseError, "%s", err)
+		if err, ok := (err).(*datastore.UnavailableError); ok {
+			return errors.Unavailable("%s", err)
 		}
 		return err
 	}
@@ -1401,10 +1390,8 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 // Traits returns the traits of a user.
 //
 // It returns an errors.NotFoundError error, if the user does not exist.
-// It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
 func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, error) {
 
 	this.core.mustBeOpen()
@@ -1433,10 +1420,10 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
+		if err, ok := err.(*datastore.UnavailableError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
-			return nil, errors.Unprocessable(WarehouseError, "%s", err)
+			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
 	}
@@ -1513,7 +1500,6 @@ type User struct {
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
 //   - PropertyNotExist, if a property does not exist.
-//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) Users(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]User, types.Type, int, error) {
 
 	this.core.mustBeOpen()
@@ -1592,10 +1578,10 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		if err == datastore.ErrMaintenanceMode {
 			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.WarehouseError); ok {
+		if err, ok := err.(*datastore.UnavailableError); ok {
 			// TODO(marco): log the error in a log specific of the workspace.
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
-			return nil, types.Type{}, 0, errors.Unprocessable(WarehouseError, "%s", err)
+			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
 		}
 		return nil, types.Type{}, 0, err
 	}
@@ -1634,10 +1620,8 @@ func (this *Workspace) Warehouse() (string, json.Value) {
 //
 // If there are no identities, a nil slice is returned.
 //
-// It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
 func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, first, limit int) ([]UserIdentity, int, error) {
 
 	// Retrieve the identities from the data warehouse.

@@ -150,7 +150,6 @@ func init() {
 				Errors: []Error{
 					{422, WarehouseTypeNotExist, "warehouse type does not exist"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 					{422, WarehouseNonInitializable, "data warehouse cannot be initialized"},
 				},
 			},
@@ -180,7 +179,6 @@ func init() {
 				Errors: []Error{
 					{422, WarehouseTypeNotExist, "warehouse type does not exist"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 					{422, WarehouseNonInitializable, "data warehouse cannot be initialized"},
 				},
 			},

@@ -122,7 +122,6 @@ func init() {
 					{422, OrderNotExist, "order does not exist in schema"},
 					{422, OrderTypeNotSortable, "cannot sort by non-sortable type"},
 					{422, PropertyNotExist, "property does not exist in the user schema"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -153,7 +152,6 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -198,7 +196,6 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -239,7 +236,6 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -294,7 +290,6 @@ func init() {
 					{422, IdentityResolutionInProgress, "identity resolution is currently in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -330,7 +325,6 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 		},

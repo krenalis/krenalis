@@ -72,7 +72,6 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{422, DifferentWarehouse, "data warehouse is a different data warehouse"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -89,7 +88,6 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{422, DifferentWarehouse, "data warehouse is a different data warehouse"},
 					{422, InvalidWarehouseSettings, "data warehouse settings are not valid"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{
@@ -113,7 +111,6 @@ func init() {
 				URL:    "/v0/warehouse/repair",
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 			{

@@ -86,7 +86,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			return newActionError(metrics.ReceiveStep, err)
 		}
 		switch err := err.(type) {
-		case *datastore.WarehouseError:
+		case *datastore.UnavailableError:
 			// TODO(marco): log the error in a log specific of the workspace.
 			ws := action.Connection().Workspace()
 			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)

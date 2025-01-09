@@ -137,7 +137,6 @@ const (
 	TypeNotAllowed               = "TypeNotAllowed"
 	UnsupportedColumnType        = "UnsupportedColumnType"
 	UnsupportedLanguage          = "UnsupportedLanguage"
-	WarehouseError               = "WarehouseError"
 	WarehouseNonInitializable    = "WarehouseNonInitializable"
 	WarehouseTypeNotExist        = "WarehouseTypeNotExist"
 	WorkspaceNotExist            = "WorkspaceNotExist"

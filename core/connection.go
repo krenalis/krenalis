@@ -1230,10 +1230,8 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
 //
-// It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code MaintenanceMode, if
+// the data warehouse is in maintenance mode.
 func (this *Connection) Identities(ctx context.Context, first, limit int) ([]UserIdentity, int, error) {
 	this.core.mustBeOpen()
 	if first < 0 {

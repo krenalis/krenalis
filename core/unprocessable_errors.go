@@ -49,7 +49,6 @@ const (
 	TypeNotAllowed               errors.Code = "TypeNotAllowed"
 	UnsupportedColumnType        errors.Code = "UnsupportedColumnType"
 	UnsupportedLanguage          errors.Code = "UnsupportedLanguage"
-	WarehouseError               errors.Code = "WarehouseError"
 	WarehouseNonInitializable    errors.Code = "WarehouseNonInitializable"
 	WarehouseTypeNotExist        errors.Code = "WarehouseTypeNotExist"
 	WorkspaceNotExist            errors.Code = "WorkspaceNotExist"

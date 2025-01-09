@@ -66,7 +66,6 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-					{422, WarehouseError, "error occurred with the data warehouse"},
 				},
 			},
 		},

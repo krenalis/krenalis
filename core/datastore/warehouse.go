@@ -15,17 +15,17 @@ import (
 	"github.com/meergo/meergo"
 )
 
-// WarehouseError represents an error with the data warehouse.
-type WarehouseError struct {
+// UnavailableError represents an error with the data warehouse.
+type UnavailableError struct {
 	Err error
 }
 
-func (err *WarehouseError) Error() string {
+func (err *UnavailableError) Error() string {
 	return fmt.Sprintf("data warehouse: %s", err.Err)
 }
 
-// wrapWarehouseError wraps err in a *WarehouseError, if it is a generic error.
-func wrapWarehouseError(err error) error {
+// unavailableError wraps err in a *UnavailableError, if it is a generic error.
+func unavailableError(err error) error {
 	switch err.(type) {
 	case
 		nil,
@@ -33,7 +33,7 @@ func wrapWarehouseError(err error) error {
 		*meergo.WarehouseSettingsError:
 		return err
 	}
-	return &WarehouseError{Err: err}
+	return &UnavailableError{Err: err}
 }
 
 // getWarehouseInstance returns a warehouse instance for the warehouse type with
@@ -51,63 +51,63 @@ func getWarehouseInstance(name string, settings []byte) (warehouse, error) {
 }
 
 // warehouse wraps a meergo.Warehouse, returning any error from its methods
-// wrapped in a WarehouseError.
+// wrapped in a UnavailableError.
 type warehouse struct {
 	inner meergo.Warehouse
 }
 
 func (dw warehouse) AlterUserColumns(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) error {
-	return wrapWarehouseError(dw.inner.AlterUserColumns(ctx, columns, operations))
+	return unavailableError(dw.inner.AlterUserColumns(ctx, columns, operations))
 }
 
 func (dw warehouse) AlterUserColumnsQueries(ctx context.Context, columns []meergo.Column, operations []meergo.AlterOperation) ([]string, error) {
 	queries, err := dw.inner.AlterUserColumnsQueries(ctx, columns, operations)
-	err = wrapWarehouseError(err)
+	err = unavailableError(err)
 	return queries, err
 }
 
 func (dw warehouse) CanInitialize(ctx context.Context) error {
-	return wrapWarehouseError(dw.inner.CanInitialize(ctx))
+	return unavailableError(dw.inner.CanInitialize(ctx))
 }
 
 func (dw warehouse) Close() error {
-	return wrapWarehouseError(dw.inner.Close())
+	return unavailableError(dw.inner.Close())
 }
 
 func (dw warehouse) Delete(ctx context.Context, table string, where meergo.Expr) error {
-	return wrapWarehouseError(dw.inner.Delete(ctx, table, where))
+	return unavailableError(dw.inner.Delete(ctx, table, where))
 }
 
 func (dw warehouse) Initialize(ctx context.Context, userColumns []meergo.Column) error {
-	return wrapWarehouseError(dw.inner.Initialize(ctx, userColumns))
+	return unavailableError(dw.inner.Initialize(ctx, userColumns))
 }
 
 func (dw warehouse) LastIdentityResolution(ctx context.Context) (*time.Time, *time.Time, error) {
 	startTime, endTime, err := dw.inner.LastIdentityResolution(ctx)
-	err = wrapWarehouseError(err)
+	err = unavailableError(err)
 	return startTime, endTime, err
 }
 
 func (dw warehouse) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
-	return wrapWarehouseError(dw.inner.Merge(ctx, table, rows, deleted))
+	return unavailableError(dw.inner.Merge(ctx, table, rows, deleted))
 }
 
 func (dw warehouse) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
-	return wrapWarehouseError(dw.inner.MergeIdentities(ctx, columns, rows))
+	return unavailableError(dw.inner.MergeIdentities(ctx, columns, rows))
 }
 
 func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withCount bool) (meergo.Rows, int, error) {
 	rows, count, err := dw.inner.Query(ctx, query, withCount)
-	err = wrapWarehouseError(err)
+	err = unavailableError(err)
 	return rows, count, err
 }
 
 func (dw warehouse) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {
-	return wrapWarehouseError(dw.inner.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources))
+	return unavailableError(dw.inner.ResolveIdentities(ctx, identifiers, userColumns, userPrimarySources))
 }
 
 func (dw warehouse) Repair(ctx context.Context, userColumns []meergo.Column) error {
-	return wrapWarehouseError(dw.inner.Repair(ctx, userColumns))
+	return unavailableError(dw.inner.Repair(ctx, userColumns))
 }
 
 func (dw warehouse) Settings() []byte {
@@ -115,5 +115,5 @@ func (dw warehouse) Settings() []byte {
 }
 
 func (dw warehouse) Truncate(ctx context.Context, table string) error {
-	return wrapWarehouseError(dw.inner.Truncate(ctx, table))
+	return unavailableError(dw.inner.Truncate(ctx, table))
 }

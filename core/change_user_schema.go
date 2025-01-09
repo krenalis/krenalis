@@ -37,10 +37,8 @@ func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
 //
 // See the documentation of UpdateUserSchema for more details about this method.
 //
-// It returns an errors.UnprocessableError error with code:
-//
-//   - InvalidSchemaUpdate, if the schema update is invalid.
-//   - WarehouseError, if an error occurred with the data warehouse.
+// It returns an errors.UnprocessableError error with code InvalidSchemaUpdate
+// if the schema update is invalid.
 func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types.Type, rePaths map[string]any) ([]string, error) {
 	this.core.mustBeOpen()
 	if !schema.Valid() {
@@ -64,8 +62,8 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 	}
 	queries, err := this.store.PreviewUserSchemaUpdate(ctx, schema, operations)
 	if err != nil {
-		if err, ok := err.(*datastore.WarehouseError); ok {
-			return nil, errors.Unprocessable(WarehouseError, "%s", err)
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
 	}
@@ -104,7 +102,6 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 //     progress on the warehouse.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidSchemaUpdate, if the schema update is invalid.
-//   - WarehouseError, if an error occurred with the data warehouse.
 func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, primarySources map[string]int, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
@@ -224,8 +221,8 @@ Identifiers:
 			if err == datastore.ErrInspectionMode {
 				return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
 			}
-			if err, ok := err.(*datastore.WarehouseError); ok {
-				return errors.Unprocessable(WarehouseError, "%s", err)
+			if err, ok := err.(*datastore.UnavailableError); ok {
+				return errors.Unavailable("%s", err)
 			}
 			return err
 		}

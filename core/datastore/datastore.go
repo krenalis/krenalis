@@ -74,8 +74,8 @@ func New(st *state.State) *Datastore {
 //
 // It returns a *meergo.WarehouseSettingsError error if the settings are not
 // valid, a *meergo.WarehouseNonInitializableError if the data warehouse is not
-// initializable, and a *meergo.WarehouseError if an error occurred with the
-// data warehouse.
+// initializable, and *UnavailableError if an error occurred with the data
+// warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, name string, settings []byte) error {
 	ds.mustBeOpen()
 	dw, err := getWarehouseInstance(name, settings)

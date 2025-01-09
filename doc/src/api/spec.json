@@ -947,11 +947,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 }
@@ -3673,11 +3668,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -4711,11 +4701,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -8373,11 +8358,6 @@
                             "status": 422,
                             "code": "PropertyNotExist",
                             "message": "property does not exist in the user schema"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -8429,11 +8409,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9146,11 +9121,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9261,11 +9231,6 @@
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9367,11 +9332,6 @@
                             "status": 422,
                             "code": "InvalidSchemaUpdate",
                             "message": "cannot update the schema as specified"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9428,11 +9388,6 @@
                             "status": 422,
                             "code": "InvalidSchemaUpdate",
                             "message": "cannot update the schema as specified"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 }
@@ -9538,11 +9493,6 @@
                             "status": 422,
                             "code": "InvalidWarehouseSettings",
                             "message": "data warehouse settings are not valid"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9579,11 +9529,6 @@
                             "status": 422,
                             "code": "InvalidWarehouseSettings",
                             "message": "data warehouse settings are not valid"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9638,11 +9583,6 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         }
                     ]
                 },
@@ -9850,11 +9790,6 @@
                         },
                         {
                             "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
-                        },
-                        {
-                            "status": 422,
                             "code": "WarehouseNonInitializable",
                             "message": "data warehouse cannot be initialized"
                         }
@@ -9997,11 +9932,6 @@
                             "status": 422,
                             "code": "InvalidWarehouseSettings",
                             "message": "data warehouse settings are not valid"
-                        },
-                        {
-                            "status": 422,
-                            "code": "WarehouseError",
-                            "message": "error occurred with the data warehouse"
                         },
                         {
                             "status": 422,
