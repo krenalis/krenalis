@@ -123,11 +123,8 @@ func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (i
 }
 
 func (c *Meergo) CreateConnection(connection ConnectionToCreate) int {
-	data := map[string]any{
-		"connection": connection,
-	}
 	var id int
-	c.MustCall("POST", "/api/connections", data, &id)
+	c.MustCall("POST", "/api/connections", connection, &id)
 	return id
 }
 

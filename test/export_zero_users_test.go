@@ -105,11 +105,9 @@ func TestExportZeroUsers(t *testing.T) {
 		}
 
 		c.MustCall("PUT", "/api/connections/"+strconv.Itoa(fsID), map[string]any{
-			"connection": map[string]any{
-				"name":        "Storage",
-				"enabled":     true,
-				"compression": core.NoCompression,
-			},
+			"name":        "Storage",
+			"enabled":     true,
+			"compression": core.NoCompression,
 		}, nil)
 
 		// Execute the action that export users.

@@ -322,14 +322,14 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 		return nil, err
 	}
 	var body struct {
-		Connection core.ConnectionToAdd `json:"connection"`
-		AuthToken  string               `json:"authToken"`
+		core.ConnectionToAdd
+		AuthToken string `json:"authToken"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return ws.CreateConnection(r.Context(), body.Connection, body.AuthToken)
+	return ws.CreateConnection(r.Context(), body.ConnectionToAdd, body.AuthToken)
 }
 
 // CreateEventListener creates an event listener for a workspace that listens to

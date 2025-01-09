@@ -186,9 +186,12 @@ class Connections {
 	};
 
 	update = async (id: number, connection: ConnectionToSet) => {
-		return await call(`${this.apiURL}/connections/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, {
+		return await call(
+			`${this.apiURL}/connections/${encodeURIComponent(id)}`,
+			http.PUT,
+			this.workspaceID,
 			connection,
-		});
+		);
 	};
 
 	delete = async (connection: number): Promise<void> => {
@@ -711,7 +714,7 @@ class Workspaces {
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<number> => {
 		return await call(`${this.apiURL}/connections`, http.POST, this.workspaceID, {
-			connection,
+			...connection,
 			authToken: authToken,
 		});
 	};

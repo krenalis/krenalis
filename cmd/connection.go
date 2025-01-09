@@ -342,13 +342,13 @@ func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 	var body struct {
-		Connection core.ConnectionToSet `json:"connection"`
+		core.ConnectionToSet
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = c.Update(r.Context(), body.Connection)
+	err = c.Update(r.Context(), body.ConnectionToSet)
 	return nil, err
 }
 
