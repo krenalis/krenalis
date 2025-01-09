@@ -103,10 +103,6 @@
 	cursor: default;
 }
 
-.workspace-selector__dialog-search::part(input)::placeholder {
-	color: var(--sl-color-neutral-400);
-}
-
 .workspace-selector__dialog-view-all {
 	color: var(--sl-color-primary-600);
 	font-weight: 600;

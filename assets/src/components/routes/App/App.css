@@ -251,7 +251,7 @@ sl-drawer::part(body)::-webkit-scrollbar-track {
 sl-input::part(input)::placeholder,
 sl-textarea::part(textarea)::placeholder {
 	color: var(--sl-color-neutral-400);
-	font-weight: 400;
+	font-weight: 100;
 }
 
 /* || Forms */
