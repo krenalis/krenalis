@@ -147,48 +147,6 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get group schemas",
-				Description: "Returns the source and destination user schemas for a connection. The connection must be an app connection that supports users.",
-				Method:      GET,
-				URL:         "/v0/connections/:id/schemas/group",
-				Parameters: []types.Property{
-					{
-						Name:           "id",
-						Type:           types.Int(32),
-						Placeholder:    "1371036433",
-						UpdateRequired: true,
-						Description:    "The ID of the app connection. It must support groups.",
-					},
-				},
-				Response: &Response{
-					Parameters: []types.Property{
-						{
-							Name: "schemas",
-							Type: types.Object([]types.Property{
-								{
-									Name:        "source",
-									Type:        types.Parameter("Schema"),
-									Placeholder: `{ ... }`,
-									Description: "The source schema. It is always non-null.",
-								},
-								{
-									Name:        "destination",
-									Type:        types.Parameter("Schema"),
-									Placeholder: `{ ... }`,
-									Description: "The destination schema. It is null for source connections.",
-								},
-							}),
-							Placeholder: `...`,
-							Description: "The group schemas of the app connection.",
-						},
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "connection does not exist"},
-				},
-			},
-			{
 				Name:        "Get event type schema",
 				Description: "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
 				Method:      GET,

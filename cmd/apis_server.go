@@ -105,7 +105,6 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{id}/files/{path}/absolute":                      connection.CompletePath,
 		"GET    /connections/{id}/keys":                                       connection.WriteKeys,
 		"GET    /connections/{id}/schemas/event/{type}":                       connection.AppEventSchema,
-		"GET    /connections/{id}/schemas/group":                              connection.AppGroupSchemas,
 		"GET    /connections/{id}/schemas/user":                               connection.AppUserSchemas,
 		"GET    /connections/{id}/tables/{name}":                              connection.TableSchema,
 		"GET    /connectors":                                                  api.Connectors,

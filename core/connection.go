@@ -453,6 +453,10 @@ func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (t
 // must be an app connection that supports groups. For a source, it returns only
 // the source schema. For a destination, it returns both the source and
 // destination schemas.
+//
+// TODO(Gianluca): this method is currently unused, and it has been kept for the
+// future, when we will re-expose the endpoint to retrieve group schemas. See
+// the issue https://github.com/meergo/meergo/issues/895.
 func (this *Connection) AppGroupSchemas(ctx context.Context) (src, dst types.Type, err error) {
 	this.core.mustBeOpen()
 	return this.appSchemas(ctx, state.Groups)

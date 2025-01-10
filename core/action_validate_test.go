@@ -2061,7 +2061,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "output schema contains unused properties: last_name",
 		},
 		{
-			name: "BAD: Source/App/Groups - target Groups is not supported",
+			name: "GOOD: Source/App/Groups - target Groups is not supported, but this should be checked before validating the action, not by the action validation itself",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2079,7 +2079,6 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Groups,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "target Groups is not supported by this installation of Meergo",
 		},
 		{
 			name: "BAD: Source/App/Users - input schema cannot contain a property with a placeholder",

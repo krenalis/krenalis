@@ -366,19 +366,6 @@ func (connection connection) AppEventSchema(_ http.ResponseWriter, r *http.Reque
 	return map[string]any{"schema": schema}, nil
 }
 
-// AppGroupSchemas returns the group schemas for an app connection.
-func (connection connection) AppGroupSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.id(r)
-	if err != nil {
-		return nil, err
-	}
-	src, dst, err := c.AppGroupSchemas(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"schemas": map[string]any{"source": src, "destination": dst}}, nil
-}
-
 // AppUserSchemas returns the user schemas for an app connection.
 func (connection connection) AppUserSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)

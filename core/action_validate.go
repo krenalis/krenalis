@@ -64,11 +64,6 @@ type validationState struct {
 //   - UnsupportedLanguage, if the transformation language is not supported.
 func validateAction(action ActionToSet, target state.Target, v validationState) error {
 
-	if target == state.Groups {
-		// TODO(Gianluca): https://github.com/meergo/meergo/issues/895.
-		return errors.BadRequest("target Groups is not supported by this installation of Meergo")
-	}
-
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 

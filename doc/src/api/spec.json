@@ -296,68 +296,6 @@
                     ]
                 },
                 {
-                    "name": "Get group schemas",
-                    "description": "Returns the source and destination user schemas for a connection. The connection must be an app connection that supports users.",
-                    "method": "GET",
-                    "url": "/v0/connections/:id/schemas/group",
-                    "parameters": [
-                        {
-                            "name": "id",
-                            "placeholder": "1371036433",
-                            "type": {
-                                "name": "Int",
-                                "bitSize": 32
-                            },
-                            "updateRequired": true,
-                            "description": "The ID of the app connection. It must support groups."
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": {
-                        "description": "",
-                        "parameters": [
-                            {
-                                "name": "schemas",
-                                "placeholder": "...",
-                                "type": {
-                                    "name": "Object",
-                                    "properties": [
-                                        {
-                                            "name": "source",
-                                            "placeholder": "{ ... }",
-                                            "type": {
-                                                "name": "Schema"
-                                            },
-                                            "description": "The source schema. It is always non-null."
-                                        },
-                                        {
-                                            "name": "destination",
-                                            "placeholder": "{ ... }",
-                                            "type": {
-                                                "name": "Schema"
-                                            },
-                                            "description": "The destination schema. It is null for source connections."
-                                        }
-                                    ]
-                                },
-                                "description": "The group schemas of the app connection."
-                            }
-                        ]
-                    },
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "connection does not exist"
-                        }
-                    ]
-                },
-                {
                     "name": "Get event type schema",
                     "description": "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
                     "method": "GET",
