@@ -29,7 +29,7 @@ func init() {
 						Name:           "connection",
 						Type:           types.Int(32),
 						Placeholder:    "1371036433",
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description:    "The source connection from which to retrieve the user identities.",
 					},
 					{

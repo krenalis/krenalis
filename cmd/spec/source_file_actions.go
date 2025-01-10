@@ -47,9 +47,10 @@ func init() {
 	}
 
 	sheetParameter := types.Property{
-		Name:        "sheet",
-		Type:        types.Text(),
-		Placeholder: `"Sheet1"`,
+		Name:           "sheet",
+		Type:           types.Text(),
+		Placeholder:    `"Sheet1"`,
+		UpdateRequired: true,
 		Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 			"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
 	}
@@ -148,7 +149,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source file action.",
 					},
@@ -199,14 +200,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source file action on users.",
 					},
 					{
 						Name:           "schedulePeriod",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "60",
 						Description: "The schedule period in minutes.\n\n" +
 							"Possible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`.",
@@ -310,14 +311,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source file action.",
 					},
 					{
 						Name:           "reload",
 						Type:           types.Boolean(),
-						UpdateRequired: false,
+						CreateRequired: false,
 						Placeholder:    "false",
 						Description: " Indicates whether the users should be re-imported from scratch. " +
 							"If set to false or omitted, only new users and those modified since the last import are processed.",
@@ -352,7 +353,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source file action.",
 					},

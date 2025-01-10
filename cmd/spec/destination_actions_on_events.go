@@ -94,14 +94,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the destination action on event.",
 					},
 					{
 						Name:           "name",
 						Type:           types.Text().WithCharLen(60),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    `"Mixpanel"`,
 						Description:    "The action's name.",
 					},
@@ -200,7 +200,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the destination action on event.",
 					},

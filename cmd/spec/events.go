@@ -189,9 +189,10 @@ func init() {
 				URL:    "/v0/events/batch",
 				Parameters: []types.Property{
 					{
-						Name:        "connection",
-						Type:        types.Int(32),
-						Placeholder: "1371036433",
+						Name:           "connection",
+						Type:           types.Int(32),
+						Placeholder:    "1371036433",
+						UpdateRequired: true,
 						Description: "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\n" +
 							"It is required only if the call is authenticated using an API key. If authentication is done with a write key, it is not needed, as the connection is that of the write key.",
 					},

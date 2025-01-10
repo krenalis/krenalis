@@ -68,8 +68,8 @@ type Property struct {
 	Name           string
 	Placeholder    string
 	Type           Type
-	CreateRequired bool
-	UpdateRequired bool
+	CreateRequired bool // true is the parameter is required.
+	UpdateRequired bool // true if the parameter is conditionally required.
 	ReadOptional   bool
 	Nullable       bool
 	Description    string
@@ -176,7 +176,6 @@ var filterType = types.Object([]types.Property{
 		Name:           "logical",
 		Type:           types.Text().WithValues("and", "or"),
 		CreateRequired: true,
-		UpdateRequired: true,
 		Placeholder:    "and",
 	},
 	{
@@ -186,14 +185,12 @@ var filterType = types.Object([]types.Property{
 				Name:           "property",
 				Type:           types.Text(),
 				CreateRequired: true,
-				UpdateRequired: true,
 				Description:    "The name or path of the property. If the property has a JSON type, it can include a JSON path.",
 			},
 			{
 				Name:           "operator",
 				Type:           types.Text().WithValues(filterOperators...),
 				CreateRequired: true,
-				UpdateRequired: true,
 				Description:    "The condition's operator. The allowed values depend on the property's type.",
 			},
 			{
@@ -203,7 +200,6 @@ var filterType = types.Object([]types.Property{
 			},
 		})),
 		CreateRequired: true,
-		UpdateRequired: true,
 		Placeholder:    "and",
 		Description:    "A filter's condition.",
 	},

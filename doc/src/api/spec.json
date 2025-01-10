@@ -99,7 +99,7 @@
                             "type": {
                                 "name": "Schema"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The schema that the returned users must satisfy."
                         },
                         {
@@ -169,7 +169,7 @@
                             "type": {
                                 "name": "Text"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The event type."
                         },
                         {
@@ -178,7 +178,7 @@
                             "type": {
                                 "name": "JSON"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The event that would be sent. It must conform to the schema of the event type."
                         },
                         {
@@ -246,7 +246,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the app connection. It must support users."
                         }
                     ],
@@ -308,7 +308,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the destination app connection. It must support events."
                         },
                         {
@@ -317,7 +317,7 @@
                             "type": {
                                 "name": "Text"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the event type."
                         }
                     ],
@@ -373,7 +373,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source database connection on which the query will be executed."
                         },
                         {
@@ -382,7 +382,7 @@
                             "type": {
                                 "name": "Text"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The query to execute on the connection's database to read the result schema along with sample rows for reference. It must contain the \"limit\" placeholder and cannot be longer than 16,777,215 characters."
                         },
                         {
@@ -451,7 +451,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The database destination connection where the table is located."
                         },
                         {
@@ -460,7 +460,7 @@
                             "type": {
                                 "name": "Text"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The name of the table."
                         }
                     ],
@@ -511,7 +511,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The file storage source connection from which to read the file."
                         },
                         {
@@ -544,6 +544,7 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "updateRequired": true,
                             "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                         },
                         {
@@ -640,7 +641,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The file storage source connection from which to read the file."
                         },
                         {
@@ -746,7 +747,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the file storage connection for which the path should be retrieved."
                         },
                         {
@@ -816,7 +817,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The source connection from which to retrieve the user identities."
                         },
                         {
@@ -1106,6 +1107,7 @@
                                     "AC-B"
                                 ]
                             },
+                            "updateRequired": true,
                             "nullable": true,
                             "description": "The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. It is required and can only be provided for source mobile and website connections."
                         },
@@ -1120,6 +1122,7 @@
                                     "Combined"
                                 ]
                             },
+                            "updateRequired": true,
                             "nullable": true,
                             "description": "The mode for sending events. It is required and can only be provided with destination app connections that support it. In this case, it must be one of the sending modes supported by the app."
                         },
@@ -1160,6 +1163,7 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "updateRequired": true,
                             "description": "The authorization token. Is required if the connector requires authorization."
                         }
                     ],
@@ -1332,7 +1336,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the connection."
                         },
                         {
@@ -1365,6 +1369,7 @@
                                     "AC-B"
                                 ]
                             },
+                            "updateRequired": true,
                             "nullable": true,
                             "description": "The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. It is required and can only be provided for source mobile and website connections."
                         },
@@ -1379,6 +1384,7 @@
                                     "Combined"
                                 ]
                             },
+                            "updateRequired": true,
                             "nullable": true,
                             "description": "The mode for sending events. It is required and can only be provided with destination app connections that support it. In this case, it must be one of the sending modes supported by the app."
                         },
@@ -1432,7 +1438,7 @@
                                                     "name": "Int",
                                                     "bitSize": 32
                                                 },
-                                                "updateRequired": true,
+                                                "createRequired": true,
                                                 "description": "The ID of the connection."
                                             },
                                             {
@@ -1600,7 +1606,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the connection."
                         }
                     ],
@@ -1615,7 +1621,7 @@
                                     "name": "Int",
                                     "bitSize": 32
                                 },
-                                "updateRequired": true,
+                                "createRequired": true,
                                 "description": "The ID of the connection."
                             },
                             {
@@ -1783,7 +1789,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the connection."
                         }
                     ],
@@ -2239,7 +2245,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -2256,7 +2261,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -2291,7 +2295,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -2309,7 +2312,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -2392,7 +2394,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the destination action on event."
                         },
                         {
@@ -2402,7 +2404,7 @@
                                 "name": "Text",
                                 "charLen": 60
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The action's name."
                         },
                         {
@@ -2430,7 +2432,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -2447,7 +2448,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -2482,7 +2482,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -2500,7 +2499,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -2620,7 +2618,6 @@
                                                 ]
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": ""
                                         },
                                         {
@@ -2637,7 +2634,6 @@
                                                                 "name": "Text"
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                         },
                                                         {
@@ -2672,7 +2668,6 @@
                                                                 ]
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The condition's operator. The allowed values depend on the property's type."
                                                         },
                                                         {
@@ -2690,7 +2685,6 @@
                                                 }
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": "A filter's condition."
                                         }
                                     ]
@@ -2744,7 +2738,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the destination action on event."
                         }
                     ],
@@ -2783,6 +2777,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
+                            "updateRequired": true,
                             "description": "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with a write key, it is not needed, as the connection is that of the write key."
                         },
                         {
@@ -4649,7 +4644,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -4666,7 +4660,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -4701,7 +4694,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -4719,7 +4711,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -5518,7 +5509,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -5535,7 +5525,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -5570,7 +5559,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -5588,7 +5576,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -7244,7 +7231,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -7261,7 +7247,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -7296,7 +7281,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -7314,7 +7298,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -7369,7 +7352,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source action on event."
                         },
                         {
@@ -7379,7 +7362,7 @@
                                 "name": "Text",
                                 "charLen": 60
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The action's name."
                         },
                         {
@@ -7407,7 +7390,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -7424,7 +7406,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -7459,7 +7440,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -7477,7 +7457,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -7574,7 +7553,6 @@
                                                 ]
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": ""
                                         },
                                         {
@@ -7591,7 +7569,6 @@
                                                                 "name": "Text"
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                         },
                                                         {
@@ -7626,7 +7603,6 @@
                                                                 ]
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The condition's operator. The allowed values depend on the property's type."
                                                         },
                                                         {
@@ -7644,7 +7620,6 @@
                                                 }
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": "A filter's condition."
                                         }
                                     ]
@@ -7680,7 +7655,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source action on event."
                         }
                     ],
@@ -7757,7 +7732,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -7774,7 +7748,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -7809,7 +7782,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -7827,7 +7799,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -7914,7 +7885,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source app action on users."
                         },
                         {
@@ -7924,7 +7895,7 @@
                                 "name": "Text",
                                 "charLen": 60
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The action's name."
                         },
                         {
@@ -7952,7 +7923,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -7969,7 +7939,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -8004,7 +7973,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -8022,7 +7990,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -8088,7 +8055,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the action."
                         },
                         {
@@ -8097,7 +8064,7 @@
                             "type": {
                                 "name": "Boolean"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "Indicates if the action is enabled. If false, no scheduled import is executed."
                         }
                     ],
@@ -8129,7 +8096,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source app action on users."
                         },
                         {
@@ -8139,7 +8106,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The schedule period in minutes.\n\nPossible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`."
                         }
                     ],
@@ -8239,7 +8206,6 @@
                                                 ]
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": ""
                                         },
                                         {
@@ -8256,7 +8222,6 @@
                                                                 "name": "Text"
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                         },
                                                         {
@@ -8291,7 +8256,6 @@
                                                                 ]
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The condition's operator. The allowed values depend on the property's type."
                                                         },
                                                         {
@@ -8309,7 +8273,6 @@
                                                 }
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": "A filter's condition."
                                         }
                                     ]
@@ -8369,7 +8332,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source app action on users."
                         },
                         {
@@ -8442,7 +8405,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source app action on users."
                         }
                     ],
@@ -8612,7 +8575,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source database action."
                         },
                         {
@@ -8622,7 +8585,7 @@
                                 "name": "Text",
                                 "charLen": 60
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The action's name."
                         },
                         {
@@ -8725,7 +8688,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source database action on users."
                         },
                         {
@@ -8735,7 +8698,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The schedule period in minutes.\n\nPossible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`."
                         }
                     ],
@@ -8902,7 +8865,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source database action."
                         },
                         {
@@ -8975,7 +8938,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source database action."
                         }
                     ],
@@ -9052,7 +9015,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -9069,7 +9031,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -9104,7 +9065,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -9122,7 +9082,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -9188,6 +9147,7 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "updateRequired": true,
                             "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                         },
                         {
@@ -9270,7 +9230,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source file action."
                         },
                         {
@@ -9326,7 +9286,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -9343,7 +9302,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -9378,7 +9336,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -9396,7 +9353,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -9429,6 +9385,7 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "updateRequired": true,
                             "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                         },
                         {
@@ -9489,7 +9446,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source file action on users."
                         },
                         {
@@ -9499,7 +9456,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The schedule period in minutes.\n\nPossible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`."
                         }
                     ],
@@ -9636,7 +9593,6 @@
                                                 ]
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": ""
                                         },
                                         {
@@ -9653,7 +9609,6 @@
                                                                 "name": "Text"
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                         },
                                                         {
@@ -9688,7 +9643,6 @@
                                                                 ]
                                                             },
                                                             "createRequired": true,
-                                                            "updateRequired": true,
                                                             "description": "The condition's operator. The allowed values depend on the property's type."
                                                         },
                                                         {
@@ -9706,7 +9660,6 @@
                                                 }
                                             },
                                             "createRequired": true,
-                                            "updateRequired": true,
                                             "description": "A filter's condition."
                                         }
                                     ]
@@ -9754,6 +9707,7 @@
                                 "type": {
                                     "name": "Text"
                                 },
+                                "updateRequired": true,
                                 "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
                             },
                             {
@@ -9798,7 +9752,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source file action."
                         },
                         {
@@ -9871,7 +9825,7 @@
                                 "name": "Int",
                                 "bitSize": 32
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the source file action."
                         }
                     ],
@@ -9978,7 +9932,6 @@
                                             ]
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": ""
                                     },
                                     {
@@ -9995,7 +9948,6 @@
                                                             "name": "Text"
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
                                                     },
                                                     {
@@ -10030,7 +9982,6 @@
                                                             ]
                                                         },
                                                         "createRequired": true,
-                                                        "updateRequired": true,
                                                         "description": "The condition's operator. The allowed values depend on the property's type."
                                                     },
                                                     {
@@ -10048,7 +9999,6 @@
                                             }
                                         },
                                         "createRequired": true,
-                                        "updateRequired": true,
                                         "description": "A filter's condition."
                                     }
                                 ]
@@ -10160,7 +10110,7 @@
                             "type": {
                                 "name": "UUID"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the user."
                         }
                     ],
@@ -10211,7 +10161,7 @@
                             "type": {
                                 "name": "UUID"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the user."
                         },
                         {
@@ -10222,7 +10172,7 @@
                                     "name": "Text"
                                 }
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The names of the properties to return. At least one property must be provided.\n\nThe properties can be specified in the query string in two ways:\n* `properties=timestamp,event`\n* `properties=timestamp&properties=event`"
                         },
                         {
@@ -10923,7 +10873,7 @@
                             "type": {
                                 "name": "UUID"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The ID of the user."
                         },
                         {
@@ -11060,7 +11010,7 @@
                             "type": {
                                 "name": "Schema"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The new user schema. It must include at least one property."
                         },
                         {
@@ -11133,7 +11083,7 @@
                             "type": {
                                 "name": "Schema"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The new user schema. It must include at least one property."
                         },
                         {
@@ -11213,7 +11163,7 @@
                                 "type": {
                                     "name": "Warehouse"
                                 },
-                                "updateRequired": true,
+                                "createRequired": true,
                                 "description": "The settings of the data warehouse."
                             }
                         ]
@@ -11238,7 +11188,7 @@
                             "type": {
                                 "name": "Warehouse"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The settings of the data warehouse."
                         },
                         {
@@ -11252,7 +11202,7 @@
                                     "Maintenance"
                                 ]
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The mode of the data warehouse."
                         },
                         {
@@ -11295,7 +11245,7 @@
                             "type": {
                                 "name": "Warehouse"
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The settings of the data warehouse."
                         }
                     ],
@@ -11336,7 +11286,7 @@
                                     "Maintenance"
                                 ]
                             },
-                            "updateRequired": true,
+                            "createRequired": true,
                             "description": "The mode of the data warehouse."
                         },
                         {
@@ -11559,7 +11509,7 @@
                                     "name": "Int",
                                     "bitSize": 32
                                 },
-                                "updateRequired": true,
+                                "createRequired": true,
                                 "description": "The ID of the workspace."
                             }
                         ]
@@ -11836,7 +11786,7 @@
                                                     "name": "Int",
                                                     "bitSize": 32
                                                 },
-                                                "updateRequired": true,
+                                                "createRequired": true,
                                                 "description": "The ID of the workspace."
                                             },
                                             {
@@ -11984,7 +11934,7 @@
                                     "name": "Int",
                                     "bitSize": 32
                                 },
-                                "updateRequired": true,
+                                "createRequired": true,
                                 "description": "The ID of the workspace."
                             },
                             {

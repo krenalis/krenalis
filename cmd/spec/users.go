@@ -134,7 +134,7 @@ func init() {
 						Name:           "id",
 						Type:           types.UUID(),
 						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
 				},
@@ -166,13 +166,13 @@ func init() {
 						Name:           "id",
 						Type:           types.UUID(),
 						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
 					{
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description: "The names of the properties to return. At least one property must be provided.\n\n" +
 							"The properties can be specified in the query string in two ways:\n" +
 							"* `properties=timestamp,event`\n* `properties=timestamp&properties=event`",
@@ -208,7 +208,7 @@ func init() {
 						Name:           "id",
 						Type:           types.UUID(),
 						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
 					{
@@ -265,7 +265,7 @@ func init() {
 					{
 						Name:           "schema",
 						Type:           types.Parameter("Schema"),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description:    "The new user schema. It must include at least one property.",
 					},
 					{
@@ -302,7 +302,7 @@ func init() {
 					{
 						Name:           "schema",
 						Type:           types.Parameter("Schema"),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Description:    "The new user schema. It must include at least one property.",
 					},
 					{

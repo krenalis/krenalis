@@ -16,7 +16,7 @@ func init() {
 	idParameter := types.Property{
 		Name:           "id",
 		Type:           types.Int(32),
-		UpdateRequired: true,
+		CreateRequired: true,
 		Placeholder:    "1371036433",
 		Description:    "The ID of the workspace.",
 	}

@@ -80,14 +80,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source action on event.",
 					},
 					{
 						Name:           "name",
 						Type:           types.Text().WithCharLen(60),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    `"Site example.com"`,
 						Description:    "The action's name.",
 					},
@@ -161,7 +161,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source action on event.",
 					},

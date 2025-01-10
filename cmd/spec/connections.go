@@ -16,7 +16,7 @@ func init() {
 	idParameter := types.Property{
 		Name:           "id",
 		Type:           types.Int(32),
-		UpdateRequired: true,
+		CreateRequired: true,
 		Placeholder:    "1371036433",
 		Description:    "The ID of the connection.",
 	}
@@ -41,18 +41,20 @@ func init() {
 		Description: "Indicate if the connection is enabled.",
 	}
 	strategyParameter := types.Property{
-		Name:        "strategy",
-		Type:        types.Text().WithValues("AB-C", "ABC", "A-B-C", "AC-B"),
-		Placeholder: `"AB-C"`,
-		Nullable:    true,
+		Name:           "strategy",
+		Type:           types.Text().WithValues("AB-C", "ABC", "A-B-C", "AC-B"),
+		Placeholder:    `"AB-C"`,
+		UpdateRequired: true,
+		Nullable:       true,
 		Description: `The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. ` +
 			`It is required and can only be provided for source mobile and website connections.`,
 	}
 	sendingModeParameter := types.Property{
-		Name:        "sendingMode",
-		Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
-		Placeholder: `"Cloud"`,
-		Nullable:    true,
+		Name:           "sendingMode",
+		Type:           types.Text().WithValues("Cloud", "Device", "Combined"),
+		Placeholder:    `"Cloud"`,
+		UpdateRequired: true,
+		Nullable:       true,
 		Description: `The mode for sending events. It is required and can only be provided with destination app connections that support it. ` +
 			`In this case, it must be one of the sending modes supported by the app.`,
 	}
@@ -176,10 +178,11 @@ func init() {
 					linkedConnectionsParameter,
 					settingsParameter,
 					{
-						Name:        "authToken",
-						Type:        types.Text(),
-						Placeholder: `"eyJz93a...k4F5sdtW"`,
-						Description: "The authorization token. Is required if the connector requires authorization.",
+						Name:           "authToken",
+						Type:           types.Text(),
+						Placeholder:    `"eyJz93a...k4F5sdtW"`,
+						UpdateRequired: true,
+						Description:    "The authorization token. Is required if the connector requires authorization.",
 					},
 				},
 				Response: &Response{

@@ -108,14 +108,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source database action.",
 					},
 					{
 						Name:           "name",
 						Type:           types.Text().WithCharLen(60),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    `"HubSpot"`,
 						Description:    "The action's name.",
 					},
@@ -178,14 +178,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source database action on users.",
 					},
 					{
 						Name:           "schedulePeriod",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "60",
 						Description: "The schedule period in minutes.\n\n" +
 							"Possible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`.",
@@ -294,14 +294,14 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source database action.",
 					},
 					{
 						Name:           "reload",
 						Type:           types.Boolean(),
-						UpdateRequired: false,
+						CreateRequired: false,
 						Placeholder:    "false",
 						Description: " Indicates whether the users should be re-imported from scratch. " +
 							"If set to false or omitted, only new users and those modified since the last import are processed.",
@@ -336,7 +336,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						UpdateRequired: true,
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source database action.",
 					},

@@ -17,7 +17,7 @@ func init() {
 		Name:           "mode",
 		Type:           types.Text().WithValues("Normal", "Inspection", "Maintenance"),
 		Placeholder:    `"Normal"`,
-		UpdateRequired: true,
+		CreateRequired: true,
 		Description:    "The mode of the data warehouse.",
 	}
 	cancelIncompatibleOperationsParameter := types.Property{
@@ -29,7 +29,7 @@ func init() {
 		Name:           "settings",
 		Type:           types.Parameter("Warehouse"),
 		Placeholder:    "{...}",
-		UpdateRequired: true,
+		CreateRequired: true,
 		Description:    "The settings of the data warehouse.",
 	}
 
