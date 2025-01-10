@@ -10,7 +10,6 @@ package collector
 import (
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,6 +21,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/datastore"
+	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/events/dispatcher"
 	"github.com/meergo/meergo/core/filters"
@@ -43,22 +43,9 @@ const maxmindDBPath = "GeoLite2-City.mmdb"
 // Errors handled by the HTTP server of the collector.
 var (
 	errMethodNotAllowed   = errors.New("method not allowed")
-	errNotFound           = errors.New("not found")
-	errServiceUnavailable = errors.New("service unavailable")
-	errUnauthorized       = errors.New("unauthorized")
+	errNotFound           = errors.NotFound("")
+	errServiceUnavailable = errors.Unavailable("")
 )
-
-type badRequestError struct {
-	msg string
-}
-
-func (err *badRequestError) Error() string {
-	return err.msg
-}
-
-func newBadRequestError(format string, a ...any) error {
-	return &badRequestError{fmt.Sprintf(format, a...)}
-}
 
 // ValidationError is the interface implemented by validation errors.
 type ValidationError interface {
@@ -203,6 +190,10 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = c.serveEvents(w, r)
 	}
 	if err != nil {
+		if err, ok := err.(errors.ResponseWriterTo); ok {
+			_ = err.WriteTo(w)
+			return
+		}
 		switch err {
 		case errMethodNotAllowed:
 			if serveSettings {
@@ -211,21 +202,11 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Allow", "POST, OPTIONS")
 			}
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		case errNotFound:
-			http.Error(w, "Not Found", http.StatusNotFound)
 		case errPayloadTooLarge:
 			http.Error(w, "Request Entity Too Large", http.StatusRequestEntityTooLarge)
 		case errReadBody:
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		case errServiceUnavailable:
-			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-		case errUnauthorized:
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		default:
-			if err, ok := err.(*badRequestError); ok {
-				http.Error(w, fmt.Sprintf("Bad Request: %s", err.msg), http.StatusBadRequest)
-				return
-			}
 			if serveSettings {
 				slog.Error("collector: an error occurred serving the settings", "err", err)
 			} else {

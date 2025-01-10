@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
@@ -73,24 +74,24 @@ func Test_Decoder(t *testing.T) {
 		expected       []expectedEvent     // Can be empty or nil, if no events are expected.
 		err            error               // Expected error from the newDecoder function.
 	}{
-		{body: ``, err: newBadRequestError("request's body is empty")},
-		{body: `{`, err: newBadRequestError("error parsing the request body as JSON: unexpected EOF")},
-		{body: `{}`, err: newBadRequestError("property 'batch' is missing")},
-		{body: `{"batch":null}`, err: newBadRequestError("property 'batch' is not a valid array")},
-		{body: `{"batch":{}}`, err: newBadRequestError("property 'batch' is not a valid array")},
-		{body: `{"batch":[]"}`, err: newBadRequestError("error parsing the request body as JSON: missing character ',' after object or array value")},
-		{body: `{"batch":[],"writeKey":true}`, err: newBadRequestError("property 'writeKey' is not a valid string")},
-		{body: `{"batch":[],"writeKey":""}`, err: newBadRequestError("property 'writeKey' cannot be empty")},
+		{body: ``, err: errors.BadRequest("request's body is empty")},
+		{body: `{`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
+		{body: `{}`, err: errors.BadRequest("property 'batch' is missing")},
+		{body: `{"batch":null}`, err: errors.BadRequest("property 'batch' is not a valid array")},
+		{body: `{"batch":{}}`, err: errors.BadRequest("property 'batch' is not a valid array")},
+		{body: `{"batch":[]"}`, err: errors.BadRequest("error parsing the request body as JSON: missing character ',' after object or array value")},
+		{body: `{"batch":[],"writeKey":true}`, err: errors.BadRequest("property 'writeKey' is not a valid string")},
+		{body: `{"batch":[],"writeKey":""}`, err: errors.BadRequest("property 'writeKey' cannot be empty")},
 		{body: `{"batch":[],"writeKey":"vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"}`, writeKey: writeKey},
 		{body: `{"batch":[]}`},
 		{body: `{"b\u0061tch":[]}`},
-		{body: `{"batch":[],"sentAt":""}`, err: newBadRequestError("property 'sentAt' is not a valid ISO 8601 timestamp")},
-		{body: `{"batch":[],"sentAt":"0000-01-01T12:56:23"}`, err: newBadRequestError("property 'sentAt' has an invalid year value")},
-		{body: `{"batch":[],"sentAt":"10000-01-01T12:56:23"}`, err: newBadRequestError("property 'sentAt' has an invalid year value")},
+		{body: `{"batch":[],"sentAt":""}`, err: errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")},
+		{body: `{"batch":[],"sentAt":"0000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
+		{body: `{"batch":[],"sentAt":"10000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
 		{body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
 		{body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
 		{body: `{"batch":[],"foo":"boo"}`},
-		{body: `{"batch":[],"context":null}`, err: newBadRequestError("property 'context' is not a valid object")},
+		{body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
 		{body: `{"batch":[],"context":{}}`},
 		{body: `{"batch":[],"context":{"foo":"boo"}}`},
 
@@ -282,9 +283,9 @@ func Test_Decoder(t *testing.T) {
 				`{"type":"page","messageId":"ce93dc4b-72f1-43ac-8b82-bfe7eaaf6fe9","userId":"bob"}` +
 				`]}`,
 			expected: []expectedEvent{{
-				err: newBadRequestError("property 'event' is not a valid string"),
+				err: errors.BadRequest("property 'event' is not a valid string"),
 			}, {
-				err: newBadRequestError("expected an object for the event, but found number instead"),
+				err: errors.BadRequest("expected an object for the event, but found number instead"),
 			}, {
 				event: events.Event{
 					"messageId":  "ce93dc4b-72f1-43ac-8b82-bfe7eaaf6fe9",

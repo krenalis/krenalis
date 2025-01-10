@@ -23,6 +23,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/decimal"
@@ -36,9 +37,9 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var errSkip = newBadRequestError("skipped event")
-var errPayloadTooLarge = newBadRequestError("body too large")
-var errReadBody = newBadRequestError("failed to read body")
+var errSkip = errors.BadRequest("skipped event")
+var errPayloadTooLarge = errors.BadRequest("body too large")
+var errReadBody = errors.BadRequest("failed to read body")
 
 type skipFunc func(id uuid.UUID) bool
 
@@ -98,7 +99,7 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 			case '{':
 			default:
 				_ = d.dec.SkipValue()
-				yield(nil, newBadRequestError("expected an object for the event, but found %s instead", k))
+				yield(nil, errors.BadRequest("expected an object for the event, but found %s instead", k))
 			}
 			event, err := d.decodeEvent(connectionID, connectionType)
 			if err != nil {
@@ -131,17 +132,17 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 	// Validate the content type.
 	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || (mt != "application/json" && mt != "text/plain") || len(params) > 1 {
-		return newBadRequestError("request's content type must be 'application/json' or 'text/plain'")
+		return errors.BadRequest("request's content type must be 'application/json' or 'text/plain'")
 	}
 	if charset, ok := params["charset"]; ok && strings.ToLower(charset) != "utf-8" {
-		return newBadRequestError("request's content type charset must be 'utf-8'")
+		return errors.BadRequest("request's content type charset must be 'utf-8'")
 	}
 
 	// Validate the content length.
 	if cl := r.Header.Get("Content-Length"); cl != "" {
 		length, _ := strconv.Atoi(cl)
 		if length < 1 || length > maxRequestSize {
-			return newBadRequestError("request's content length must be in the range [1,%d]", maxRequestSize)
+			return errors.BadRequest("request's content length must be in the range [1,%d]", maxRequestSize)
 		}
 	}
 
@@ -163,7 +164,7 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 		d.typ = "batch"
 	case "alias", "group", "identify", "page", "screen", "track":
 	default:
-		return errNotFound
+		return errors.NotFound("")
 	}
 
 	// Read the body and check that is not be longer than maxRequestSize bytes and,
@@ -186,7 +187,7 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 			return errRead(err)
 		}
 		if tok.Kind() != '{' {
-			return newBadRequestError("request's content is not a valid JSON object")
+			return errors.BadRequest("request's content is not a valid JSON object")
 		}
 		for {
 			tok, err = d.dec.ReadToken()
@@ -204,13 +205,13 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 					return errRead(err)
 				}
 				if !batch.IsArray() {
-					return newBadRequestError("property 'batch' is not a valid array")
+					return errors.BadRequest("property 'batch' is not a valid array")
 				}
 				d.batch = batch
 			case "context":
 				kind := d.dec.PeekKind()
 				if kind != '{' {
-					return newBadRequestError("property 'context' is not a valid object")
+					return errors.BadRequest("property 'context' is not a valid object")
 				}
 				d.context, err = d.decodeContext(true)
 				if err != nil {
@@ -218,34 +219,34 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 				}
 			case "sentAt":
 				if !d.sentAt.IsZero() {
-					return newBadRequestError("property 'sentAt' is specified multiple times")
+					return errors.BadRequest("property 'sentAt' is specified multiple times")
 				}
 				if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
-					return newBadRequestError("property 'sentAt' is not a valid string")
+					return errors.BadRequest("property 'sentAt' is not a valid string")
 				}
 				d.sentAt, err = iso8601.ParseString(tok.String())
 				if err != nil {
-					return newBadRequestError("property 'sentAt' is not a valid ISO 8601 timestamp")
+					return errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")
 				}
 				d.sentAt = d.sentAt.UTC()
 				if y := d.sentAt.Year(); y < 1 || y > 9999 {
-					return newBadRequestError("property 'sentAt' has an invalid year value")
+					return errors.BadRequest("property 'sentAt' has an invalid year value")
 				}
 			case "writeKey":
 				if d.writeKey != "" {
-					return newBadRequestError("property 'writeKey' is specified multiple times")
+					return errors.BadRequest("property 'writeKey' is specified multiple times")
 				}
 				if tok, _ = d.dec.ReadToken(); tok.Kind() != '"' {
-					return newBadRequestError("property 'writeKey' is not a valid string")
+					return errors.BadRequest("property 'writeKey' is not a valid string")
 				}
 				d.writeKey = tok.String()
 				if d.writeKey == "" {
-					return newBadRequestError("property 'writeKey' cannot be empty")
+					return errors.BadRequest("property 'writeKey' cannot be empty")
 				}
 			}
 		}
 		if d.batch == nil {
-			return newBadRequestError("property 'batch' is missing")
+			return errors.BadRequest("property 'batch' is missing")
 		}
 		d.payload.Reset()
 		d.payload.Write(d.batch)
@@ -298,7 +299,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		case "groupId", "userId":
 			if kind == 'n' {
 				if _, ok := event[name]; ok {
-					return nil, newBadRequestError("property '%s' is specified multiple times", name)
+					return nil, errors.BadRequest("property '%s' is specified multiple times", name)
 				}
 				_ = d.dec.SkipValue()
 				continue
@@ -306,10 +307,10 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			fallthrough
 		case "anonymousId", "category", "event", "messageId", "name", "sentAt", "timestamp", "type", "previousId":
 			if _, ok := event[name]; ok {
-				return nil, newBadRequestError("property '%s' is specified multiple times", name)
+				return nil, errors.BadRequest("property '%s' is specified multiple times", name)
 			}
 			if kind != '"' {
-				return nil, newBadRequestError("property '%s' is not a valid string", name)
+				return nil, errors.BadRequest("property '%s' is not a valid string", name)
 			}
 			tok, _ = d.dec.ReadToken()
 			s := tok.String()
@@ -329,21 +330,21 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 			case "sentAt":
 				sentAt, err := iso8601.ParseString(s)
 				if err != nil {
-					return nil, newBadRequestError("property 'sentAt' is not a valid ISO 8601 timestamp")
+					return nil, errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")
 				}
 				sentAt = sentAt.UTC()
 				if y := sentAt.Year(); y < 1 || y > 9999 {
-					return nil, newBadRequestError("property 'sentAt' has an invalid year value")
+					return nil, errors.BadRequest("property 'sentAt' has an invalid year value")
 				}
 				event["sentAt"] = sentAt
 			case "timestamp":
 				timestamp, err := iso8601.ParseString(s)
 				if err != nil {
-					return nil, newBadRequestError("property 'timestamp' is not a valid ISO 8601 timestamp")
+					return nil, errors.BadRequest("property 'timestamp' is not a valid ISO 8601 timestamp")
 				}
 				timestamp = timestamp.UTC()
 				if y := timestamp.Year(); y < 1 || y > 9999 {
-					return nil, newBadRequestError("property 'timestamp' has an invalid year value")
+					return nil, errors.BadRequest("property 'timestamp' has an invalid year value")
 				}
 				event["timestamp"] = timestamp
 			case "type":
@@ -351,28 +352,28 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 				switch s {
 				case "track", "page", "screen", "identify", "group", "alias":
 				default:
-					return nil, newBadRequestError("property 'type' is not a valid event type")
+					return nil, errors.BadRequest("property 'type' is not a valid event type")
 				}
 			default:
 				event[name] = s
 			}
 		case "integrations", "traits", "properties":
 			if _, ok := event[name]; ok {
-				return nil, newBadRequestError("property '%s' is specified multiple times", name)
+				return nil, errors.BadRequest("property '%s' is specified multiple times", name)
 			}
 			if kind == 'n' {
 				continue
 			}
 			if kind != '{' {
-				return nil, newBadRequestError("property '%s' is not a valid object", name)
+				return nil, errors.BadRequest("property '%s' is not a valid object", name)
 			}
 			event[name], _ = d.dec.ReadValue()
 		case "context":
 			if _, ok := event["context"]; ok {
-				return nil, newBadRequestError("property 'context' is specified multiple times")
+				return nil, errors.BadRequest("property 'context' is specified multiple times")
 			}
 			if kind != '{' {
-				return nil, newBadRequestError("property 'context' is not an valid object")
+				return nil, errors.BadRequest("property 'context' is not an valid object")
 			}
 			context, err = d.decodeContext(false)
 			if err != nil {
@@ -393,7 +394,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	typ, ok := event["type"].(string)
 	if !ok {
 		if d.typ == "batch" {
-			return nil, newBadRequestError("property 'type' is required for a batch request")
+			return nil, errors.BadRequest("property 'type' is required for a batch request")
 		}
 		event["type"] = d.typ
 		typ = d.typ
@@ -417,9 +418,9 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	if _, ok := event["anonymousId"]; !ok {
 		if event["userId"] == nil {
 			if isIdentify || isAlias {
-				return nil, newBadRequestError("property 'userId' is required for an %s event", typ)
+				return nil, errors.BadRequest("property 'userId' is required for an %s event", typ)
 			}
-			return nil, newBadRequestError("either 'anonymousId' or 'userId' properties are required for a %s event", typ)
+			return nil, errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a %s event", typ)
 		}
 		event["anonymousId"] = uuid.NewString()
 	}
@@ -427,7 +428,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	// Category.
 	if !isPage {
 		if _, ok := event["category"]; ok {
-			return nil, newBadRequestError("property 'category' is not permitted for a %s event", typ)
+			return nil, errors.BadRequest("property 'category' is not permitted for a %s event", typ)
 		}
 	}
 
@@ -454,7 +455,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	if ip, ok := context["ip"].(string); ok {
 		requestIP, context["ip"], err = parseIP(ip)
 		if err != nil {
-			return nil, newBadRequestError("property 'ip' is not a valid IP address")
+			return nil, errors.BadRequest("property 'ip' is not a valid IP address")
 		}
 	} else {
 		if connectionType != state.Server {
@@ -523,22 +524,22 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	// Event.
 	if _, ok := event["event"]; ok {
 		if !isTrack {
-			return nil, newBadRequestError("property 'event' is not permitted for a %s event", typ)
+			return nil, errors.BadRequest("property 'event' is not permitted for a %s event", typ)
 		}
 	} else {
 		if isTrack {
-			return nil, newBadRequestError("property 'event' is required for a track event")
+			return nil, errors.BadRequest("property 'event' is required for a track event")
 		}
 	}
 
 	// GroupId.
 	if _, ok := event["groupId"]; ok {
 		if !isGroup {
-			return nil, newBadRequestError("property 'groupId' is not permitted for a %s event", typ)
+			return nil, errors.BadRequest("property 'groupId' is not permitted for a %s event", typ)
 		}
 	} else {
 		if isGroup {
-			return nil, newBadRequestError("property 'groupId' is required for a group event")
+			return nil, errors.BadRequest("property 'groupId' is required for a group event")
 		}
 	}
 
@@ -556,18 +557,18 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 	// Name.
 	if !isScreen && !isPage {
 		if _, ok := event["name"]; ok {
-			return nil, newBadRequestError("property 'name' is not permitted for a %s event", typ)
+			return nil, errors.BadRequest("property 'name' is not permitted for a %s event", typ)
 		}
 	}
 
 	// PreviousId.
 	if isAlias {
 		if _, ok := event["previousId"]; !ok {
-			return nil, newBadRequestError("property 'previousId' is required for an alias event")
+			return nil, errors.BadRequest("property 'previousId' is required for an alias event")
 		}
 	} else {
 		if _, ok := event["previousId"]; ok {
-			return nil, newBadRequestError("property 'previousId' is not permitted for a %s event", typ)
+			return nil, errors.BadRequest("property 'previousId' is not permitted for a %s event", typ)
 		}
 	}
 
@@ -578,7 +579,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		}
 	} else {
 		if _, ok := event["properties"]; ok {
-			return nil, newBadRequestError("property 'properties' is not permitted for a %s event", typ)
+			return nil, errors.BadRequest("property 'properties' is not permitted for a %s event", typ)
 		}
 	}
 
@@ -614,7 +615,7 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 		}
 	} else {
 		if _, ok := event["traits"]; ok {
-			return nil, newBadRequestError("property 'traits' must be specified as 'context.traits' for a %s event", typ)
+			return nil, errors.BadRequest("property 'traits' must be specified as 'context.traits' for a %s event", typ)
 		}
 		if traits, ok := context["traits"]; ok {
 			event["traits"] = traits
@@ -645,19 +646,19 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 		}
 		name = tok.String()
 		if _, ok := context[name]; ok {
-			return nil, newBadRequestError("property 'context.%s' is is specified multiple times", name)
+			return nil, errors.BadRequest("property 'context.%s' is is specified multiple times", name)
 		}
 		kind = d.dec.PeekKind()
 		switch name {
 		case "direct", "sessionStart":
 			if kind != 't' && kind != 'f' {
-				return nil, newBadRequestError("property 'context.%s' is not a valid boolean", name)
+				return nil, errors.BadRequest("property 'context.%s' is not a valid boolean", name)
 			}
 			context[name] = kind == 't'
 			_ = d.dec.SkipValue()
 		case "ip", "locale", "groupId", "timezone", "userAgent":
 			if kind != '"' {
-				return nil, newBadRequestError("property 'context.%s' is not a valid string", name)
+				return nil, errors.BadRequest("property 'context.%s' is not a valid string", name)
 			}
 			tok, _ = d.dec.ReadToken()
 			s := tok.String()
@@ -669,19 +670,19 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 			}
 		case "sessionId":
 			if kind != '0' {
-				return nil, newBadRequestError("property 'context.sessionId' is not a valid number")
+				return nil, errors.BadRequest("property 'context.sessionId' is not a valid number")
 			}
 			tok, _ = d.dec.ReadToken()
 			context["sessionId"], err = tok.Int()
 			if err != nil {
-				return nil, newBadRequestError("property 'sessionId' is not a 64-bit integer")
+				return nil, errors.BadRequest("property 'sessionId' is not a 64-bit integer")
 			}
 		case "traits":
 			if kind == 'n' {
 				continue
 			}
 			if kind != '{' {
-				return nil, newBadRequestError("property 'context.traits' is not a valid object")
+				return nil, errors.BadRequest("property 'context.traits' is not a valid object")
 			}
 			context["traits"], _ = d.dec.ReadValue()
 		default:
@@ -691,7 +692,7 @@ func (d *decoder) decodeContext(isDefault bool) (map[string]any, error) {
 				continue
 			}
 			if d.dec.PeekKind() != '{' {
-				return nil, newBadRequestError("property 'context.%s' is not a valid object", section.name)
+				return nil, errors.BadRequest("property 'context.%s' is not a valid object", section.name)
 			}
 			v, err := d.decodeContextSection(section, isDefault)
 			if err != nil {
@@ -847,7 +848,7 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 		switch typ.Kind() {
 		case types.TextKind:
 			if tok.Kind() != '"' {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a string", section.name, name)
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a string", section.name, name)
 			}
 			v = tok.String()
 			if v == "" {
@@ -859,26 +860,26 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 			case 't':
 				v = true
 			default:
-				return nil, newBadRequestError("property 'context.%s.%s' is not a boolean", section.name, name)
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a boolean", section.name, name)
 			}
 		case types.IntKind:
 			if tok.Kind() != '0' {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a number", section.name, name)
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a number", section.name, name)
 			}
 			v, err = tok.Int()
 			if err != nil {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a valid %d-bit integer", section.name, name, typ.BitSize())
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a valid %d-bit integer", section.name, name, typ.BitSize())
 			}
 			if v == 0 {
 				continue
 			}
 		case types.FloatKind:
 			if tok.Kind() != '0' {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a number", section.name, name)
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a number", section.name, name)
 			}
 			v, err = tok.Float(typ.BitSize())
 			if err != nil {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a valid %d-bit floating-point number",
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a valid %d-bit floating-point number",
 					section.name, name, typ.BitSize())
 			}
 			if v == 0.0 {
@@ -886,15 +887,15 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 			}
 		case types.DecimalKind:
 			if tok.Kind() != '0' {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a number", section.name, name)
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a number", section.name, name)
 			}
 			f, err := tok.Float(64)
 			if err != nil {
-				return nil, newBadRequestError("property 'context.%s.%s' is not a valid 64-bit floating-point number", section.name, name)
+				return nil, errors.BadRequest("property 'context.%s.%s' is not a valid 64-bit floating-point number", section.name, name)
 			}
 			d, err := decimal.Float64(f, typ.Precision(), typ.Scale())
 			if err != nil {
-				return nil, newBadRequestError("property 'context.%s.%s' exceeds the allowed precision of %d",
+				return nil, errors.BadRequest("property 'context.%s.%s' exceeds the allowed precision of %d",
 					section.name, name, typ.Precision())
 			}
 			if d.Sign() == 0 {
@@ -946,16 +947,16 @@ func (d *decoder) decodeContextSection(section *contextSection, isDefault bool) 
 }
 
 // errRead checks if the provided error is a *jsontext.SyntacticError. If it is,
-// returns errBadRequest; otherwise, it returns errReadBody.
+// returns *errors.BadRequestError; otherwise, it returns errReadBody.
 func errRead(err error) error {
 	if _, ok := err.(*json.SyntaxError); ok {
-		return newBadRequestError("error parsing the request body as JSON: %s", err)
+		return errors.BadRequest("error parsing the request body as JSON: %s", err)
 	}
 	if err == io.EOF {
-		return newBadRequestError("request's body is empty")
+		return errors.BadRequest("request's body is empty")
 	}
 	if err == io.ErrUnexpectedEOF {
-		return newBadRequestError("error parsing the request body as JSON: it is not terminated")
+		return errors.BadRequest("error parsing the request body as JSON: it is not terminated")
 	}
 	return errReadBody
 }
@@ -980,7 +981,7 @@ func makeEventID(source int, messageId string) uuid.UUID {
 func parseIP(ip string) (net.IP, string, error) {
 	addr := net.ParseIP(ip).To16()
 	if addr == nil {
-		return nil, "", newBadRequestError("invalid IP")
+		return nil, "", errors.BadRequest("invalid IP")
 	}
 	return addr, addr.String(), nil
 }
