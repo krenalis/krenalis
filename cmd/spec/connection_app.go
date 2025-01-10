@@ -73,7 +73,7 @@ func init() {
 						Type:           types.Text(),
 						Placeholder:    `"addToCart"`,
 						CreateRequired: true,
-						Description:    "The event type.",
+						Description:    "The ID of the event type.",
 					},
 					{
 						Name:           "event",

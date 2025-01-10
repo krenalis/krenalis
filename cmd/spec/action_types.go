@@ -63,7 +63,7 @@ func init() {
 									Type:        types.Text(),
 									Placeholder: `null`,
 									Nullable:    true,
-									Description: "The event type of the action. It is null if target is not `\"Users\"` or `\"Groups\"`.",
+									Description: "The ID of the event type of the action. It is null if target is not `\"Users\"` or `\"Groups\"`.",
 								},
 							})),
 							Placeholder: "...",

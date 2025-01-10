@@ -69,7 +69,7 @@
                                                     "name": "Text"
                                                 },
                                                 "nullable": true,
-                                                "description": "The event type of the action. It is null if target is not `\"Users\"` or `\"Groups\"`."
+                                                "description": "The ID of the event type of the action. It is null if target is not `\"Users\"` or `\"Groups\"`."
                                             }
                                         ]
                                     }
@@ -170,7 +170,7 @@
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The event type."
+                            "description": "The ID of the event type."
                         },
                         {
                             "name": "event",
