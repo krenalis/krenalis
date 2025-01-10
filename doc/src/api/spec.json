@@ -2426,6 +2426,11 @@
                         },
                         {
                             "status": 422,
+                            "code": "EventTypeNotExists",
+                            "message": "connection does not have event type"
+                        },
+                        {
+                            "status": 422,
                             "code": "ConnectorNotExist",
                             "message": "connector does not exist"
                         },

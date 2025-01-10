@@ -111,6 +111,7 @@ const (
 	EmailSendFailed              = "EmailSendFailed"
 	EventNotExist                = "EventNotExist"
 	EventTypeNotExist            = "EventTypeNotExist"
+	EventTypeNotExists           = "EventTypeNotExists"
 	ExecutionInProgress          = "ExecutionInProgress"
 	FormatNotExist               = "FormatNotExist"
 	IdentityResolutionInProgress = "IdentityResolutionInProgress"

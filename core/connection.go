@@ -598,6 +598,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 // anymore, and returns an errors.UnprocessableError error with code
 //
 //   - ConnectionNotExist, if the connection does not exist.
+//   - EventTypeNotExists, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the action does not exist.
 //   - InvalidSettings, if the settings are not valid.
 //   - TargetExist, if an action already exists for a target for the connection.
@@ -612,6 +613,12 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		format, _ = this.core.state.Connector(action.Format)
 	}
 
+	// Validate the target and the event type.
+	_, err := this.validateTargetAndEventType(ctx, target, eventType)
+	if err != nil {
+		return 0, err
+	}
+
 	// Validate the action.
 	v := validationState{}
 	v.connection.role = this.connection.Role
@@ -622,7 +629,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		v.format.hasSettings = format.HasSettings
 	}
 	v.provider = this.core.transformerProvider
-	err := validateAction(action, state.Target(target), v)
+	err = validateAction(action, state.Target(target), v)
 	if err != nil {
 		return 0, err
 	}
