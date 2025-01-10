@@ -14,12 +14,9 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
@@ -258,43 +255,6 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 	return ui, nil
 }
 
-func (mp *Mixpanel) call(ctx context.Context, method, path string, body io.Reader, expectedStatus int, response any) error {
-
-	u := "https://api.mixpanel.com"
-	if mp.conf.Region == meergo.PrivacyRegionEurope {
-		u = "https://api-eu.mixpanel.com"
-	}
-	u += path + "?strict=0&project_id=" + mp.settings.ProjectID
-
-	req, err := http.NewRequestWithContext(ctx, method, u, body)
-	if err != nil {
-		return err
-	}
-
-	req.SetBasicAuth(mp.settings.Username, mp.settings.Secret)
-	req.Header.Set("Content-Type", "application/x-ndjson")
-
-	res, err := mp.conf.HTTPClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != expectedStatus {
-		mpErr := &mixpanelError{}
-		err := json.Decode(res.Body, mpErr)
-		if err != nil {
-			return err
-		}
-		return mpErr
-	}
-
-	if response != nil {
-		return json.Decode(res.Body, response)
-	}
-
-	return nil
-}
-
 // saveSettings validates and saves the settings.
 func (mp *Mixpanel) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
@@ -331,31 +291,4 @@ func formatTimestamp(t time.Time) string {
 		return "0." + ms
 	}
 	return ms[:l-3] + "." + ms[l-3:]
-}
-
-type mixpanelError struct {
-	Code               int    `json:"code"`
-	ErrorText          string `json:"error"`
-	NumRecordsImported int    `json:"num_records_imported"`
-	Status             string `json:"status"`
-	FailedRecords      []struct {
-		Index    int    `json:"index"`
-		InsertID string `json:"insert_id"`
-		Field    string `json:"field"`
-		Message  string `json:"message"`
-	} `json:"failed_records"`
-}
-
-func (err *mixpanelError) Error() string {
-	if err.ErrorText != "" {
-		return fmt.Sprintf("unexpected error from Mixpanel (%s): %s", err.Status, err.ErrorText)
-	}
-	var msg strings.Builder
-	for i, record := range err.FailedRecords {
-		if i > 0 {
-			msg.WriteString(", ")
-		}
-		_, _ = io.WriteString(&msg, record.Message)
-	}
-	return fmt.Sprintf("unexpected error from Mixpanel (%s): %s", err.Status, &msg)
 }
