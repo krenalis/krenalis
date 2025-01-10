@@ -330,7 +330,7 @@ func (this *Action) SetStatus(ctx context.Context, enabled bool) error {
 
 // Update updates the action.
 //
-// Refer to the specifications in the file "core/Actions.md" for more details.
+// Refer to the specifications in the file "core/Actions.csv" for more details.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -650,7 +650,7 @@ func (this *Action) setExecutionCursor(ctx context.Context, cursor time.Time) er
 // action (using the method Connection.CreateAction) or updating an existing one
 // (using the method Action.Update).
 //
-// Refer to the specifications in the file "core/Actions.md" for more details.
+// Refer to the specifications in the file "core/Actions.csv" for more details.
 type ActionToSet struct {
 
 	// Name must be a non-empty valid UTF-8 encoded string and cannot be longer
