@@ -727,8 +727,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	// Format settings.
 	if format != nil && format.HasSettings {
 		conf := &connectors.ConnectorConfig{
-			Role:   this.connection.Role,
-			Region: this.connection.Workspace().PrivacyRegion,
+			Role: this.connection.Role,
 		}
 		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {

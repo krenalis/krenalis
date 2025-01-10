@@ -1,16 +1,16 @@
 
 ## App connectors
 
-| Method         | Settings       | SetSettings    | OAuthAccount           | HTTPClient             | Region                 |
-|----------------|----------------|----------------|------------------------|------------------------|------------------------|
-| EventRequest   | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
-| EventTypes     | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
-| OAuthAccount   | -              | -              | -                      | ✓                      | ✓                      |
-| ReceiveWebhook | ✓ (connection) | ✓ (connection) | ✓ (account,connection) | ✓ (account,connection) | ✓ (account,connection) |
-| Records        | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
-| Schema         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
-| ServeUI        | -/✓            | -/✓            | ✓                      | ✓                      | -/✓                    |
-| Upsert         | ✓              | ✓              | ✓                      | ✓                      | ✓                      |
+| Method         | Settings       | SetSettings    | OAuthAccount           | HTTPClient             |
+|----------------|----------------|----------------|------------------------|------------------------|
+| EventRequest   | ✓              | ✓              | ✓                      | ✓                      |
+| EventTypes     | ✓              | ✓              | ✓                      | ✓                      |
+| OAuthAccount   | -              | -              | -                      | ✓                      |
+| ReceiveWebhook | ✓ (connection) | ✓ (connection) | ✓ (account,connection) | ✓ (account,connection) |
+| Records        | ✓              | ✓              | ✓                      | ✓                      |
+| Schema         | ✓              | ✓              | ✓                      | ✓                      |
+| ServeUI        | -/✓            | -/✓            | ✓                      | ✓                      |
+| Upsert         | ✓              | ✓              | ✓                      | ✓                      |
 
 
 ## Database connectors
@@ -26,31 +26,31 @@
 
 ## File connectors
 
-| Method           | Settings | SetSettings |
-|------------------|----------|-------------|
-| ContentType      | ✓        | ✓           |
-| Read             | ✓        | -           |
-| ServeUI          | -/✓      | -/✓         |
-| Sheets           | ✓        | -           |
-| Write            | ✓        | ✓           |
+| Method      | Settings | SetSettings |
+|-------------|----------|-------------|
+| ContentType | ✓        | ✓           |
+| Read        | ✓        | -           |
+| ServeUI     | -/✓      | -/✓         |
+| Sheets      | ✓        | -           |
+| Write       | ✓        | ✓           |
 
 
 ## FileStorage connectors
 
-| Method           | Settings | SetSettings |
-|------------------|----------|-------------|
-| CompletePath     | ✓        | ✓           |
-| Reader           | ✓        | ✓           |
-| ServeUI          | -/✓      | -/✓         |
-| Write            | ✓        | ✓           |
+| Method       | Settings | SetSettings |
+|--------------|----------|-------------|
+| CompletePath | ✓        | ✓           |
+| Reader       | ✓        | ✓           |
+| ServeUI      | -/✓      | -/✓         |
+| Write        | ✓        | ✓           |
 
 
 ## Stream connectors
 
-| Method           | Settings | SetSettings |
-|------------------|----------|-------------|
-| Close            | ✓        | ✓           |
-| Receive          | ✓        | ✓           |
-| Send             | ✓        | ✓           |
-| ServeUI          | -/✓      | -/✓         |
+| Method  | Settings | SetSettings |
+|---------|----------|-------------|
+| Close   | ✓        | ✓           |
+| Receive | ✓        | ✓           |
+| Send    | ✓        | ✓           |
+| ServeUI | -/✓      | -/✓         |
 

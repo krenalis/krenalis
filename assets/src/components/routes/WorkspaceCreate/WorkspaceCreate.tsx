@@ -4,7 +4,6 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { DisplayedProperties } from '../../../lib/api/types/workspace';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -16,7 +15,6 @@ import * as icons from '../../../constants/icons';
 
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
-	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>('PostgreSQL');
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
 	const [isCheckingWarehouse, setIsCheckingWarehouse] = useState<boolean>(false);
@@ -25,8 +23,6 @@ const WorkspaceCreate = () => {
 	const { handleError, api, setSelectedWorkspace, setIsLoadingState, redirect, showStatus } = useContext(appContext);
 
 	const onNameInput = (e) => setName(e.target.value);
-
-	const onUseEuropeRegionChange = () => setUseEuropeRegion(!useEuropeRegion);
 
 	const onChangeWarehouse = (e) => {
 		setSelectedWarehouse(e.target.value);
@@ -37,7 +33,6 @@ const WorkspaceCreate = () => {
 	};
 
 	const onTestWorkspaceCreation = async () => {
-		const privacyRegion = useEuropeRegion ? 'Europe' : '';
 		try {
 			validateWorkspaceName(name);
 		} catch (err) {
@@ -54,7 +49,6 @@ const WorkspaceCreate = () => {
 		try {
 			await api.workspaces.testCreation(
 				name,
-				privacyRegion,
 				InitialSchema as ObjectType,
 				displayedProperties,
 				selectedWarehouse,
@@ -79,7 +73,6 @@ const WorkspaceCreate = () => {
 	};
 
 	const onCreateWorkspace = async () => {
-		const privacyRegion = useEuropeRegion ? 'Europe' : '';
 		try {
 			validateWorkspaceName(name);
 		} catch (err) {
@@ -97,7 +90,6 @@ const WorkspaceCreate = () => {
 		try {
 			const res = await api.workspaces.create(
 				name,
-				privacyRegion,
 				InitialSchema as ObjectType,
 				displayedProperties,
 				selectedWarehouse,
@@ -126,13 +118,6 @@ const WorkspaceCreate = () => {
 				value={name}
 				onSlInput={onNameInput}
 			/>
-			<SlCheckbox
-				className='workspace-add__europe-region'
-				checked={useEuropeRegion}
-				onSlChange={onUseEuropeRegionChange}
-			>
-				Use the European Privacy Region <span>(can be changed later)</span>
-			</SlCheckbox>
 			<SlSelect value={selectedWarehouse} onSlChange={onChangeWarehouse} label='Warehouse'>
 				<SlOption value='PostgreSQL'>PostgreSQL</SlOption>
 				<SlOption value='Snowflake'>Snowflake</SlOption>

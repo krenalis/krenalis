@@ -634,8 +634,7 @@ func (workspace workspace) Traits(_ http.ResponseWriter, r *http.Request) (any, 
 	return map[string]any{"traits": traits}, nil
 }
 
-// Update updates the name, the privacy region and the displayed properties of a
-// workspace.
+// Update updates the name and the displayed properties of a workspace.
 func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -643,14 +642,13 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 	}
 	var body struct {
 		Name                string                   `json:"name"`
-		PrivacyRegion       core.PrivacyRegion       `json:"privacyRegion"`
 		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.Update(r.Context(), body.Name, body.PrivacyRegion, body.DisplayedProperties)
+	err = ws.Update(r.Context(), body.Name, body.DisplayedProperties)
 	return nil, err
 }
 

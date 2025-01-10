@@ -234,14 +234,13 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 
 // GrantAuthorization grants an OAuth authorization from an app connector
 // provided an authorization code and a redirection URI.
-func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string, region state.PrivacyRegion) (*Authorization, error) {
+func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
 	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector.OAuth, code, redirectionURI)
 	if err != nil {
 		return nil, err
 	}
 	app, err := meergo.RegisteredApp(connector.Name).New(&meergo.AppConfig{
 		HTTPClient: connectors.http.Client(connector.OAuth.ClientSecret, accessToken, connector.BackoffPolicy),
-		Region:     meergo.PrivacyRegion(region),
 	})
 	if err != nil {
 		return nil, err
@@ -280,7 +279,6 @@ func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, r
 	if connector.OAuth != nil {
 		config.HTTPClient = connectors.http.Client(connector.OAuth.ClientSecret, account.AccessToken, connector.BackoffPolicy)
 	}
-	config.Region = meergo.PrivacyRegion(account.Workspace().PrivacyRegion)
 	inner, err := meergo.RegisteredApp(connector.Name).New(config)
 	if err != nil {
 		return nil, err
@@ -317,7 +315,6 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   connectors.http.ConnectionClient(connection.ID),
-		Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:   webhookURL(connection, accountID),
 	})
 	if err != nil {

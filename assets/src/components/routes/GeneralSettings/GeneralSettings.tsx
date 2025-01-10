@@ -8,7 +8,6 @@ import appContext from '../../../context/AppContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
@@ -19,7 +18,6 @@ import { Combobox } from '../../base/Combobox/Combobox';
 const GeneralSettings = () => {
 	const [userSchema, setUserSchema] = useState<ObjectType>();
 	const [name, setName] = useState<string>('');
-	const [useEuropeRegion, setUseEuropeRegion] = useState<boolean>(false);
 	const [image, setImage] = useState<string>();
 	const [firstName, setFirstName] = useState<string>();
 	const [lastName, setLastName] = useState<string>();
@@ -42,7 +40,6 @@ const GeneralSettings = () => {
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);
 		setName(ws.name);
-		setUseEuropeRegion(ws.privacyRegion === 'Europe');
 		setImage(ws.displayedProperties.image);
 		setFirstName(ws.displayedProperties.firstName);
 		setLastName(ws.displayedProperties.lastName);
@@ -83,8 +80,6 @@ const GeneralSettings = () => {
 
 	const onNameInput = (e) => setName(e.target.value);
 
-	const onUseEuropeRegionChange = () => setUseEuropeRegion(!useEuropeRegion);
-
 	const updateProperty = (name: string, value: string) => {
 		switch (name) {
 			case 'image':
@@ -110,7 +105,6 @@ const GeneralSettings = () => {
 	};
 
 	const onSave = async () => {
-		const privacyRegion = useEuropeRegion ? 'Europe' : '';
 		const displayedProperties = {
 			image,
 			firstName,
@@ -118,7 +112,7 @@ const GeneralSettings = () => {
 			information,
 		};
 		try {
-			await api.workspaces.update(name, privacyRegion, displayedProperties);
+			await api.workspaces.update(name, displayedProperties);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -163,13 +157,6 @@ const GeneralSettings = () => {
 				value={name}
 				onSlInput={onNameInput}
 			/>
-			<SlCheckbox
-				className='general-settings__use-europe-region'
-				checked={useEuropeRegion}
-				onSlChange={onUseEuropeRegionChange}
-			>
-				Use the European Privacy Region for app connections, if allowed
-			</SlCheckbox>
 			<div className='general-settings__displayed-properties'>
 				<div className='general-settings__displayed-properties-title'>Displayed user properties</div>
 				<div className='general-settings__displayed-properties-description'>

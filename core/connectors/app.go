@@ -67,7 +67,6 @@ func (connectors *Connectors) App(connection *state.Connection) *App {
 		SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   app.httpClient,
-		Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 		WebhookURL:   webhookURL(connection, accountID),
 	})
 	return app

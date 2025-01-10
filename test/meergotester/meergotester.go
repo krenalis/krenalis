@@ -387,7 +387,7 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 	} else {
 		userSchema = minimalUserSchema
 	}
-	id, err := c.createWorkspace("Test workspace", PrivacyRegionNotSpecified, userSchema, displayedProperties)
+	id, err := c.createWorkspace("Test workspace", userSchema, displayedProperties)
 	if err != nil {
 		t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -476,10 +476,9 @@ func init() {
 	}
 }
 
-func (c *Meergo) createWorkspace(name string, privacyRegion PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties) (int, error) {
+func (c *Meergo) createWorkspace(name string, userSchema types.Type, displayedProperties DisplayedProperties) (int, error) {
 	req := map[string]any{
 		"name":                name,
-		"privacyRegion":       privacyRegion,
 		"userSchema":          userSchema,
 		"displayedProperties": displayedProperties,
 		"warehouse": map[string]any{

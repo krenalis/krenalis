@@ -430,7 +430,6 @@ type Workspace struct {
 	accounts                       map[int]*Account
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
-	PrivacyRegion                  PrivacyRegion
 	DisplayedProperties            DisplayedProperties
 	actionsToPurge                 []int
 }
@@ -508,14 +507,6 @@ func (workspace *Workspace) Organization() *Organization {
 	return organization
 
 }
-
-// PrivacyRegion represents a privacy region.
-type PrivacyRegion string
-
-const (
-	PrivacyRegionNotSpecified PrivacyRegion = ""
-	PrivacyRegionEurope       PrivacyRegion = "Europe"
-)
 
 // DisplayedProperties represents the displayed properties.
 type DisplayedProperties struct {

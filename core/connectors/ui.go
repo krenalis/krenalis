@@ -70,7 +70,6 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			SetSettings:  setConnectionSettingsFunc(connectors.state, connection),
 			OAuthAccount: accountCode,
 			HTTPClient:   connectors.http.ConnectionClient(connection.ID),
-			Region:       meergo.PrivacyRegion(connection.Workspace().PrivacyRegion),
 			WebhookURL:   webhookURL(connection, accountID)})
 	case state.Database:
 		var database meergo.Database
@@ -117,9 +116,8 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 }
 
 type ConnectorConfig struct {
-	Role   state.Role
-	Region state.PrivacyRegion
-	OAuth  struct {
+	Role  state.Role
+	OAuth struct {
 		Account      string
 		ClientSecret string
 		AccessToken  string
@@ -143,7 +141,6 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 		inner, err = meergo.RegisteredApp(c.Name).New(&meergo.AppConfig{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken, c.BackoffPolicy),
-			Region:       meergo.PrivacyRegion(conf.Region),
 		})
 	case state.Database:
 		var database meergo.Database

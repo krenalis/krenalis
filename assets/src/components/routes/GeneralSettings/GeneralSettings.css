@@ -14,16 +14,6 @@
 	font-weight: 400;
 }
 
-.general-settings__use-europe-region {
-	margin-top: 25px;
-	margin-bottom: 15px;
-}
-
-.general-settings__use-europe-region > span {
-	font-size: 13px;
-	opacity: 0.8;
-}
-
 .general-settings__displayed-properties {
 	margin: 30px 0 50px 0;
 }

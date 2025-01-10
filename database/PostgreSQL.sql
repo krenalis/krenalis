@@ -13,7 +13,6 @@ CREATE TABLE organizations (
 INSERT INTO organizations (name) VALUES ('ACME inc');
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
-CREATE TYPE privacy_region AS ENUM ('', 'Europe');
 
 CREATE TABLE workspaces (
     id integer NOT NULL,
@@ -25,7 +24,6 @@ CREATE TABLE workspaces (
     user_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     resolve_identities_on_batch_import boolean NOT NULL DEFAULT false,
     identifiers text[] NOT NULL DEFAULT '{}',
-    privacy_region privacy_region NOT NULL DEFAULT '',
     displayed_image varchar(100) NOT NULL DEFAULT '',
     displayed_first_name varchar(100) NOT NULL DEFAULT '',
     displayed_last_name varchar(100) NOT NULL DEFAULT '',

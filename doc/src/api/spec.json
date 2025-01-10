@@ -11443,18 +11443,6 @@
                             "description": "The user properties to be displayed in the user profile within the UI. If any of these fields are empty, no corresponding value will be shown in the UI."
                         },
                         {
-                            "name": "privacyRegion",
-                            "placeholder": "\"Europe\"",
-                            "type": {
-                                "name": "Text",
-                                "values": [
-                                    "",
-                                    "Europe"
-                                ]
-                            },
-                            "description": "The privacy region specifies the geographic region that an app connection within this workspace should use for storing and managing user data. This helps ensure compliance with data protection regulations and user privacy standards.\n\nHowever, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation."
-                        },
-                        {
                             "name": "warehouse",
                             "type": {
                                 "name": "Object",
@@ -11602,18 +11590,6 @@
                             "description": "The user properties to be displayed in the user profile within the UI. If any of these fields are empty, no corresponding value will be shown in the UI."
                         },
                         {
-                            "name": "privacyRegion",
-                            "placeholder": "\"Europe\"",
-                            "type": {
-                                "name": "Text",
-                                "values": [
-                                    "",
-                                    "Europe"
-                                ]
-                            },
-                            "description": "The privacy region specifies the geographic region that an app connection within this workspace should use for storing and managing user data. This helps ensure compliance with data protection regulations and user privacy standards.\n\nHowever, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation."
-                        },
-                        {
                             "name": "warehouse",
                             "type": {
                                 "name": "Object",
@@ -11692,18 +11668,6 @@
                             },
                             "createRequired": true,
                             "description": "The workspace's name."
-                        },
-                        {
-                            "name": "privacyRegion",
-                            "placeholder": "\"Europe\"",
-                            "type": {
-                                "name": "Text",
-                                "values": [
-                                    "",
-                                    "Europe"
-                                ]
-                            },
-                            "description": "The privacy region specifies the geographic region that an app connection within this workspace should use for storing and managing user data. This helps ensure compliance with data protection regulations and user privacy standards.\n\nHowever, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation."
                         },
                         {
                             "name": "displayedProperties",
@@ -11852,18 +11816,6 @@
                                                 "description": "The mode of the data warehouse."
                                             },
                                             {
-                                                "name": "privacyRegion",
-                                                "placeholder": "\"Europe\"",
-                                                "type": {
-                                                    "name": "Text",
-                                                    "values": [
-                                                        "",
-                                                        "Europe"
-                                                    ]
-                                                },
-                                                "description": "The privacy region specifies the geographic region that an app connection within this workspace should use for storing and managing user data. This helps ensure compliance with data protection regulations and user privacy standards.\n\nHowever, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation."
-                                            },
-                                            {
                                                 "name": "displayedProperties",
                                                 "type": {
                                                     "name": "Object",
@@ -11998,18 +11950,6 @@
                                     ]
                                 },
                                 "description": "The mode of the data warehouse."
-                            },
-                            {
-                                "name": "privacyRegion",
-                                "placeholder": "\"Europe\"",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "",
-                                        "Europe"
-                                    ]
-                                },
-                                "description": "The privacy region specifies the geographic region that an app connection within this workspace should use for storing and managing user data. This helps ensure compliance with data protection regulations and user privacy standards.\n\nHowever, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation."
                             },
                             {
                                 "name": "displayedProperties",

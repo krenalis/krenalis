@@ -229,10 +229,10 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 	return n.ID, n.Token, nil
 }
 
-// CreateWorkspace creates a workspace with the given name, privacy region, user
-// schema and displayed properties, and connects to a data warehouse of the
-// provided name and settings. Returns the identifier of the workspace that has
-// been created. name must be between 1 and 100 runes long.
+// CreateWorkspace creates a workspace with the given name, user schema and
+// displayed properties, and connects to a data warehouse of the provided name
+// and settings. Returns the identifier of the workspace that has been created.
+// name must be between 1 and 100 runes long.
 //
 // whMode specifies the initial mode of the workspace's data warehouse.
 //
@@ -245,12 +245,12 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string,
-	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
+	userSchema types.Type, displayedProperties DisplayedProperties,
 	whType string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
 
-	whSettings, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whType, whSettings, whMode)
+	whSettings, err := this.validateWorkspaceCreation(ctx, name, userSchema, displayedProperties, whType, whSettings, whMode)
 	if err != nil {
 		return 0, err
 	}
@@ -269,7 +269,6 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		Name:                           name,
 		UserSchema:                     userSchema,
 		ResolveIdentitiesOnBatchImport: true,
-		PrivacyRegion:                  state.PrivacyRegion(region),
 		DisplayedProperties:            state.DisplayedProperties(displayedProperties),
 	}
 	n.Warehouse.Type = whType
@@ -290,14 +289,13 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" user_schema, resolve_identities_on_batch_import, privacy_region,"+
-			" displayed_image, displayed_first_name, displayed_last_name, displayed_information,"+
+			" user_schema, resolve_identities_on_batch_import, displayed_image,"+
+			" displayed_first_name, displayed_last_name, displayed_information,"+
 			" warehouse_type, warehouse_mode, warehouse_settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
 			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,
-			n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
-			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Warehouse.Type,
-			n.Warehouse.Mode, n.Warehouse.Settings)
+			n.DisplayedProperties.Image, n.DisplayedProperties.FirstName, n.DisplayedProperties.LastName,
+			n.DisplayedProperties.Information, n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
@@ -483,10 +481,10 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 //     not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string,
-	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
-	whType string, whSettings []byte, mode WarehouseMode) error {
+	userSchema types.Type, displayedProperties DisplayedProperties, whType string,
+	whSettings []byte, mode WarehouseMode) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, region, userSchema, displayedProperties, whType, whSettings, mode)
+	_, err := this.validateWorkspaceCreation(ctx, name, userSchema, displayedProperties, whType, whSettings, mode)
 	return err
 }
 
@@ -598,7 +596,6 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
 		WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
-		PrivacyRegion:                  PrivacyRegion(ws.PrivacyRegion),
 		DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
 	}
 	return &workspace, nil
@@ -622,7 +619,6 @@ func (this *Organization) Workspaces() []*Workspace {
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
-			PrivacyRegion:                  PrivacyRegion(ws.PrivacyRegion),
 			DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
 		}
 		infos[i] = &workspace
@@ -641,7 +637,7 @@ func (this *Organization) Workspaces() []*Workspace {
 //     not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string,
-	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
+	userSchema types.Type, displayedProperties DisplayedProperties,
 	whType string, whSettings []byte, whMode WarehouseMode) ([]byte, error) {
 
 	// Validate the parameters.
@@ -650,11 +646,6 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 	if !userSchema.Valid() {
 		return nil, errors.BadRequest("user schema is invalid")
-	}
-	switch region {
-	case PrivacyRegionNotSpecified, PrivacyRegionEurope:
-	default:
-		return nil, errors.BadRequest("privacy region is not valid")
 	}
 	if err := validateDisplayedProperties(displayedProperties); err != nil {
 		return nil, errors.BadRequest("%s", err)

@@ -108,17 +108,8 @@ type AppConfig struct {
 	SetSettings  SetSettingsFunc
 	OAuthAccount string
 	HTTPClient   HTTPClient
-	Region       PrivacyRegion
 	WebhookURL   string
 }
-
-// PrivacyRegion represents a privacy region.
-type PrivacyRegion string
-
-const (
-	PrivacyRegionNotSpecified PrivacyRegion = ""
-	PrivacyRegionEurope       PrivacyRegion = "Europe"
-)
 
 // AppNewFunc represents functions that create new app connector instances.
 type AppNewFunc[T App] func(*AppConfig) (T, error)

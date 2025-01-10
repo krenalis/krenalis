@@ -1,8 +1,6 @@
 import { Identifiers } from './identifiers';
 import { WarehouseMode } from './warehouse';
 
-type PrivacyRegion = 'Europe' | '';
-
 type PrimarySources = Record<string, number>;
 
 interface DisplayedProperties {
@@ -17,7 +15,6 @@ interface Workspace {
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
-	privacyRegion: PrivacyRegion;
 	displayedProperties: DisplayedProperties;
 	warehouseMode: WarehouseMode;
 	userPrimarySources: PrimarySources;
@@ -33,4 +30,4 @@ interface LastIdentityResolution {
 }
 
 export default Workspace;
-export type { PrivacyRegion, CreateWorkspaceResponse, DisplayedProperties, PrimarySources, LastIdentityResolution };
+export type { CreateWorkspaceResponse, DisplayedProperties, PrimarySources, LastIdentityResolution };

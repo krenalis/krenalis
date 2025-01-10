@@ -23,7 +23,7 @@ const Settings = () => {
 						className='settings__setting'
 						icon={<SlIcon name='sliders2' />}
 						name={'General'}
-						description='Update your workspace name and privacy region or delete it'
+						description='Update your workspace name or delete it'
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>

@@ -144,7 +144,6 @@ type AppConfig struct {
     SetSettings  meergo.SetSettingsFunc
     OAuthAccount string
     HTTPClient   meergo.HTTPClient
-    Region       meergo.PrivacyRegion
     WebhookURL   string
 }
 ```
@@ -153,7 +152,6 @@ type AppConfig struct {
 - `SetSettings`: A function that enables the connector to update its settings as necessary.
 - `OAuthAccount`: The app's account associated with the OAuth authorization.
 - `HTTPClient`: The HTTP client used by the connector to make requests to the app. It seamlessly implements OAuth authorization if required and retries idempotent requests as specified.
-- `Region`: Indicates the privacy region of the workspace. The connector must adhere to the specified privacy region if supported. It defaults to `PrivacyRegionNotSpecified` if no region is specified, or `PrivacyRegionEurope` if the Europe region is specified.
 - `WebhookURL`: The URL where the webhook can be sent, provided the connector supports webhooks.
 
 ### Continue reading

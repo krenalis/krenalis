@@ -455,7 +455,6 @@ type CreateWorkspace struct {
 	Name                           string
 	UserSchema                     types.Type
 	ResolveIdentitiesOnBatchImport bool
-	PrivacyRegion                  PrivacyRegion
 	DisplayedProperties            DisplayedProperties
 	Warehouse                      struct {
 		Type     string
@@ -481,7 +480,6 @@ func (state *State) createWorkspace(n notification) {
 		UserPrimarySources:             map[string]int{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
-		PrivacyRegion:                  e.PrivacyRegion,
 		DisplayedProperties:            e.DisplayedProperties,
 		Warehouse:                      e.Warehouse,
 		actionsToPurge:                 []int{},
@@ -1176,16 +1174,15 @@ func (state *State) updateWarehouseMode(n notification) {
 	dispatchNotification(state, e)
 }
 
-// UpdateWorkspace is the event sent when the name, the privacy region and the
-// displayed properties of a workspace are updated.
+// UpdateWorkspace is the event sent when the name and the displayed properties
+// of a workspace are updated.
 type UpdateWorkspace struct {
 	Workspace           int
 	Name                string
-	PrivacyRegion       PrivacyRegion
 	DisplayedProperties DisplayedProperties
 }
 
-// updateWorkspace updates the name and the privacy region of a workspace.
+// updateWorkspace updates the name and the displayed properties of a workspace.
 func (state *State) updateWorkspace(n notification) {
 	e := UpdateWorkspace{}
 	if !decodeNotification(n, &e) {
@@ -1193,7 +1190,6 @@ func (state *State) updateWorkspace(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Name = e.Name
-		w.PrivacyRegion = e.PrivacyRegion
 		w.DisplayedProperties = e.DisplayedProperties
 	})
 	dispatchNotification(state, e)

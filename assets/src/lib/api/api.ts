@@ -22,7 +22,6 @@ import Workspace, {
 	DisplayedProperties,
 	LastIdentityResolution,
 	PrimarySources,
-	PrivacyRegion,
 } from './types/workspace';
 import {
 	ActionErrorsResponse,
@@ -643,7 +642,6 @@ class Workspaces {
 
 	create = async (
 		name: string,
-		privacyRegion: PrivacyRegion,
 		userSchema: ObjectType,
 		displayedProperties: DisplayedProperties,
 		warehouseType: string,
@@ -652,7 +650,6 @@ class Workspaces {
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
 			name: name,
-			privacyRegion: privacyRegion,
 			userSchema: userSchema,
 			displayedProperties: displayedProperties,
 			warehouse: {
@@ -665,7 +662,6 @@ class Workspaces {
 
 	testCreation = async (
 		name: string,
-		privacyRegion: PrivacyRegion,
 		userSchema: ObjectType,
 		displayedProperties: DisplayedProperties,
 		warehouseType: string,
@@ -674,7 +670,6 @@ class Workspaces {
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
 			name: name,
-			privacyRegion: privacyRegion,
 			userSchema: userSchema,
 			displayedProperties: displayedProperties,
 			warehouse: {
@@ -689,14 +684,9 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.GET, this.workspaceID);
 	};
 
-	update = async (
-		name: string,
-		privacyRegion: PrivacyRegion,
-		displayedProperties: DisplayedProperties,
-	): Promise<void> => {
+	update = async (name: string, displayedProperties: DisplayedProperties): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/current`, http.PUT, this.workspaceID, {
 			name,
-			privacyRegion,
 			displayedProperties,
 		});
 	};

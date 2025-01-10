@@ -188,7 +188,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
 			" warehouse_settings, user_schema, resolve_identities_on_batch_import,"+
-			" identifiers, privacy_region, displayed_image, displayed_first_name,displayed_last_name,"+
+			" identifiers, displayed_image, displayed_first_name,displayed_last_name,"+
 			" displayed_information, actions_to_purge FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
@@ -209,8 +209,8 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
 						&warehouseMode, &warehouseSettings, &userSchema,
 						&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers,
-						&ws.PrivacyRegion, &displayedImage, &displayedFirstName,
-						&displayedLastName, &displayedInformation, &ws.actionsToPurge); err != nil {
+						&displayedImage, &displayedFirstName, &displayedLastName,
+						&displayedInformation, &ws.actionsToPurge); err != nil {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]

@@ -205,13 +205,6 @@ type Matching struct {
 	Out string `json:"out"`
 }
 
-type PrivacyRegion string
-
-const (
-	PrivacyRegionNotSpecified PrivacyRegion = ""
-	PrivacyRegionEurope       PrivacyRegion = "Europe"
-)
-
 type Role int
 
 const (
@@ -407,6 +400,5 @@ type Workspace struct {
 	UserPrimarySources             map[string]int      `json:"userPrimarySources"`
 	ResolveIdentitiesOnBatchImport bool                `json:"ResolveIdentitiesOnBatchImport"`
 	Identifiers                    []string            `json:"identifiers"`
-	PrivacyRegion                  PrivacyRegion       `json:"privacyRegion"`
 	DisplayedProperties            DisplayedProperties `json:"displayedProperties"`
 }

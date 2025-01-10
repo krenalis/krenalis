@@ -56,15 +56,6 @@ func init() {
 			"Two users are considered the same if they have the same value for the first identity, or if neither user has a value for the first identity, the identity resolution moves to the next one, and so on.\n\n" +
 			"If no identifiers are specified, once identity resolution is performed, all users will be considered different from each other.",
 	}
-	privacyRegionParameter := types.Property{
-		Name:        "privacyRegion",
-		Type:        types.Text().WithValues("", "Europe"),
-		Placeholder: `"Europe"`,
-		Description: "The privacy region specifies the geographic region that an app connection within this workspace should use for storing and managing user data. " +
-			"This helps ensure compliance with data protection regulations and user privacy standards.\n\n" +
-			"However, a connection is not strictly required to use this region if it does not support it, or if your app account is tied to a different region. " +
-			"For more details, refer to the documentation of the specific connection's [connector](/connectors/) and the app documentation.",
-	}
 	warehouseTypeParameter := types.Property{
 		Name:        "type",
 		Type:        types.Text().WithValues("Snowflake", "PostgreSQL"),
@@ -128,7 +119,6 @@ func init() {
 					nameParameter,
 					userSchemaParameter,
 					displayedPropertiesParameter,
-					privacyRegionParameter,
 					{
 						Name: "warehouse",
 						Type: types.Object([]types.Property{
@@ -162,7 +152,6 @@ func init() {
 					nameParameter,
 					userSchemaParameter,
 					displayedPropertiesParameter,
-					privacyRegionParameter,
 					{
 						Name: "warehouse",
 						Type: types.Object([]types.Property{
@@ -189,7 +178,6 @@ func init() {
 				URL:         "/v0/workspaces/current",
 				Parameters: []types.Property{
 					nameParameter,
-					privacyRegionParameter,
 					displayedPropertiesParameter,
 				},
 				Errors: []Error{
@@ -213,7 +201,6 @@ func init() {
 								resolveIdentitiesOnBatchImport,
 								identifiers,
 								warehouseModeParameter,
-								privacyRegionParameter,
 								displayedPropertiesParameter,
 							})),
 							Placeholder: "...",
@@ -236,7 +223,6 @@ func init() {
 						resolveIdentitiesOnBatchImport,
 						identifiers,
 						warehouseModeParameter,
-						privacyRegionParameter,
 						displayedPropertiesParameter,
 					},
 				},

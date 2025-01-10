@@ -23,35 +23,6 @@ test(`Change the workspace name`, async ({ page }) => {
 	await expect(page.locator('.workspace-selector__value')).toContainText('Workspace');
 });
 
-test(`Change the privacy region`, async ({ page }) => {
-	await page.goto(`${uiURL}settings/general`);
-
-	const privacyRegion = page.locator('.general-settings__use-europe-region');
-	const privacyRegionLabel = page.locator('.general-settings__use-europe-region >> label');
-
-	await expect(privacyRegionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await privacyRegion.click();
-
-	await expect(privacyRegionLabel).toHaveClass(/checkbox--checked/);
-
-	await page.click('.general-settings__save-workspace-button');
-	await expect(privacyRegionLabel).toHaveClass(/checkbox--checked/);
-
-	await page.reload();
-	await expect(privacyRegionLabel).toHaveClass(/checkbox--checked/);
-
-	await privacyRegion.click();
-
-	await expect(privacyRegionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await page.click('.general-settings__save-workspace-button');
-	await expect(privacyRegionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await page.reload();
-	await expect(privacyRegionLabel).not.toHaveClass(/checkbox--checked/);
-});
-
 test(`Change the displayed properties`, async ({ page }) => {
 	await page.goto(`${uiURL}settings/general`);
 

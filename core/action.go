@@ -430,8 +430,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	// Format settings.
 	if format != nil && format.HasSettings {
 		conf := &connectors.ConnectorConfig{
-			Role:   this.action.Connection().Role,
-			Region: this.action.Connection().Workspace().PrivacyRegion,
+			Role: this.action.Connection().Role,
 		}
 		n.FormatSettings, err = this.core.connectors.UpdatedSettings(ctx, format, conf, action.FormatSettings)
 		if err != nil {

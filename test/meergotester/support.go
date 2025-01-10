@@ -384,14 +384,12 @@ func (c *Meergo) TestWarehouseUpdate(settings []byte) {
 	c.MustCall("PUT", "/api/warehouse/test", body, nil)
 }
 
-func (c *Meergo) TestWorkspaceCreation(name string,
-	region PrivacyRegion, userSchema types.Type, displayedProperties DisplayedProperties,
-	whType string, whSettings []byte, mode WarehouseMode) error {
+func (c *Meergo) TestWorkspaceCreation(name string, userSchema types.Type,
+	displayedProperties DisplayedProperties, whType string, whSettings []byte, mode WarehouseMode) error {
 	body := map[string]any{
 		"name":                name,
 		"userSchema":          userSchema,
 		"displayedProperties": displayedProperties,
-		"privacyRegion":       region,
 		"warehouse": map[string]any{
 			"type":     whType,
 			"mode":     mode,

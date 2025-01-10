@@ -56,17 +56,8 @@ type Workspace struct {
 	ResolveIdentitiesOnBatchImport bool                `json:"resolveIdentitiesOnBatchImport"`
 	Identifiers                    []string            `json:"identifiers,format:emitnull"`
 	WarehouseMode                  WarehouseMode       `json:"warehouseMode"`
-	PrivacyRegion                  PrivacyRegion       `json:"privacyRegion"`
 	DisplayedProperties            DisplayedProperties `json:"displayedProperties"`
 }
-
-// PrivacyRegion represents a privacy region.
-type PrivacyRegion string
-
-const (
-	PrivacyRegionNotSpecified PrivacyRegion = ""
-	PrivacyRegionEurope       PrivacyRegion = "Europe"
-)
 
 // DisplayedProperties represents the displayed properties.
 type DisplayedProperties struct {
@@ -423,8 +414,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
 
-	region := this.workspace.PrivacyRegion
-	auth, err := this.core.connectors.GrantAuthorization(ctx, c, code, redirectionURI, region)
+	auth, err := this.core.connectors.GrantAuthorization(ctx, c, code, redirectionURI)
 	if err != nil {
 		return "", err
 	}
@@ -649,8 +639,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			clientSecret = c.OAuth.ClientSecret
 		}
 		conf := &connectors.ConnectorConfig{
-			Role:   n.Role,
-			Region: state.PrivacyRegion(this.PrivacyRegion),
+			Role: n.Role,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -1335,8 +1324,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connectors.ConnectorConfig{
-		Role:   state.Role(role),
-		Region: this.workspace.PrivacyRegion,
+		Role: state.Role(role),
 	}
 	conf.OAuth.Account = a.Code
 	conf.OAuth.ClientSecret = clientSecret
@@ -1434,21 +1422,14 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 	return types.Marshal(records[0], ws.UserSchema)
 }
 
-// Update updates the name, the privacy region and the displayed properties of
-// the workspace. name must be between 1 and 100 runes long. displayedProperties
-// must contain valid displayed property names. A valid displayed property name
-// is an empty string, or alternatively a valid property name between 1 and 100
-// runes long.
-func (this *Workspace) Update(ctx context.Context, name string, region PrivacyRegion, displayedProperties DisplayedProperties) error {
+// Update updates the name and the displayed properties of the workspace. name
+// must be between 1 and 100 runes long. displayedProperties must contain valid
+// displayed property names. A valid displayed property name is an empty string,
+// or alternatively a valid property name between 1 and 100 runes long.
+func (this *Workspace) Update(ctx context.Context, name string, displayedProperties DisplayedProperties) error {
 	this.core.mustBeOpen()
 	if name == "" || utf8.RuneCountInString(name) > 100 {
 		return errors.BadRequest("name %q is not valid", name)
-	}
-	switch region {
-	case PrivacyRegionNotSpecified,
-		PrivacyRegionEurope:
-	default:
-		return errors.BadRequest("invalid privacy region %q", string(region))
 	}
 	if err := validateDisplayedProperties(displayedProperties); err != nil {
 		return errors.BadRequest("%s", err)
@@ -1457,14 +1438,13 @@ func (this *Workspace) Update(ctx context.Context, name string, region PrivacyRe
 	n := state.UpdateWorkspace{
 		Workspace:           ws.ID,
 		Name:                name,
-		PrivacyRegion:       state.PrivacyRegion(region),
 		DisplayedProperties: state.DisplayedProperties(displayedProperties),
 	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, privacy_region = $2, displayed_image = $3, "+
-			"displayed_first_name = $4, displayed_last_name = $5, displayed_information = $6 "+
-			"WHERE id = $7",
-			n.Name, n.PrivacyRegion, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, displayed_image = $2, "+
+			"displayed_first_name = $3, displayed_last_name = $4, displayed_information = $5 "+
+			"WHERE id = $6",
+			n.Name, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
 			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Workspace)
 		if err != nil {
 			return err

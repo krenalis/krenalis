@@ -54,9 +54,10 @@ type Mixpanel struct {
 }
 
 type innerSettings struct {
-	ProjectID string
-	Username  string
-	Secret    string
+	ProjectID           string
+	Username            string
+	Secret              string
+	UseEuropeanEndpoint bool
 }
 
 // New returns a new Mixpanel connector instance.
@@ -84,7 +85,7 @@ func (mp *Mixpanel) EventRequest(ctx context.Context, event meergo.Event, eventT
 		URL:      "https://api.mixpanel.com/",
 		Header:   http.Header{},
 	}
-	if mp.conf.Region == meergo.PrivacyRegionEurope {
+	if mp.settings.UseEuropeanEndpoint {
 		req.Endpoint = "api-eu"
 		req.URL = "https://api-eu.mixpanel.com/"
 	}
@@ -248,6 +249,7 @@ func (mp *Mixpanel) ServeUI(ctx context.Context, event string, settings json.Val
 			&meergo.Input{Name: "ProjectID", Label: "Project ID", Placeholder: "1234567", Type: "text", MinLength: 1, MaxLength: 20},
 			&meergo.Input{Name: "Username", Label: "Service Account Username", Placeholder: "youraccount.82us7b.mp-service-account", Type: "text", MinLength: 20, MaxLength: 100},
 			&meergo.Input{Name: "Secret", Label: "Service Account Secret", Placeholder: "OfCknZXmL1shKB7qhxdpvkwqQYwn4PQr", Type: "text", MinLength: 32, MaxLength: 100},
+			&meergo.Switch{Name: "UseEuropeanEndpoint", Label: "Use the European Endpoint"},
 		},
 		Settings: settings,
 	}
