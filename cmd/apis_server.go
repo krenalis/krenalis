@@ -141,7 +141,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{id}/users":                                      connection.AppUsers,
 		"POST   /connections/{src}/links/{dst}":                               connection.LinkConnection,
 		"POST   /events":                                                      workspace.Events,
+		"POST   /events/batch":                                                workspace.IngestEvents,
 		"POST   /events/listeners":                                            workspace.CreateEventListener,
+		"POST   /events/{type}":                                               workspace.IngestEvents,
 		"POST   /expressions-properties":                                      api.ExpressionsProperties, /* only UI */
 		"POST   /identity-resolution/start":                                   workspace.StartIdentityResolution,
 		"POST   /keys":                                                        organization.CreateAPIKey, /* only UI */

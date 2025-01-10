@@ -39,6 +39,7 @@ type Endpoint struct {
 	Name           string           `json:"name"`
 	Description    string           `json:"description"`
 	Method         Method           `json:"method"`
+	WriteKeyAuth   bool             `json:"writeKeyAuth,omitzero"`
 	URL            string           `json:"url"`
 	Parameters     []types.Property `json:"parameters"`
 	MoreParameters []types.Property `json:"moreParameters"`

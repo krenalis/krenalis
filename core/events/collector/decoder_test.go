@@ -94,6 +94,8 @@ func Test_Decoder(t *testing.T) {
 		{body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
 		{body: `{"batch":[],"context":{}}`},
 		{body: `{"batch":[],"context":{"foo":"boo"}}`},
+		{body: `{"batch":[],"connection":-2}`, err: errors.BadRequest("property 'connection' is not a valid connection identifier")},
+		{body: `{"batch":[],"connection":264826420}`},
 
 		// meergo.track('click'); anonymous
 		{

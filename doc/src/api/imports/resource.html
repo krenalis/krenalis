@@ -275,7 +275,11 @@
         <div>
           <div>curl -X {{ endpoint.method }} https://api.meergo.com{{ endpoint.url }} \</div>
           {% body := bodyParameters(endpoint.url.(string), endpoint.parameters.([]any)) %}
+          {% if endpoint.writeKeyAuth %}
+          <div>   -u &lt;YOUR_WRITE_KEY&gt;:{% if body %} \{% end %}</div>
+          {% else %}
           <div>   -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;"{% if body %} \{% end %}</div>
+          {% end %}
           {% if body %}
           {% last := len(body)-1 %}
           <div>   --json '{</div>

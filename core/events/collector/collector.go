@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -418,22 +419,96 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 
-	// Decode the request.
-	dec, err := newDecoder(r, c.skip)
-	if err != nil {
-		return err
+	var err error
+	var dec *decoder
+	var connection *state.Connection
+
+	if auth, ok := r.Header["Authorization"]; ok {
+
+		// Attempt to read and process the Authorization header.
+		if len(auth) > 1 {
+			return errors.BadRequest("request contains multiple Authorization headers")
+		}
+		token, found := strings.CutPrefix(auth[0], "Bearer ")
+
+		// Authenticate with an API key.
+		if found {
+			if token == "" {
+				return errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_API_KEY>'.")
+			}
+			key, ok := c.state.APIKeyByToken(token)
+			if !ok {
+				return errors.Unauthorized("API key in the Authorization header of the request does not exist")
+			}
+			if header, ok := r.Header["Meergo-Workspace"]; ok {
+				if key.Workspace > 0 {
+					return errors.BadRequest("Meergo-Workspace header cannot be provided with a workspace restricted key")
+				}
+				if len(header) > 1 {
+					return errors.BadRequest("request contains multiple Meergo-Warehouse headers")
+				}
+				var id int64
+				if header[0] != "" && header[0][0] != '+' {
+					id, _ = strconv.ParseInt(header[0], 10, 32)
+				}
+				if id <= 0 {
+					return errors.BadRequest("Meergo-Workspace header is invalid. It should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+				}
+				if _, ok = c.state.Workspace(int(id)); !ok {
+					return errors.NotFound("workspace %d does not exist", id)
+				}
+				key.Workspace = int(id)
+			}
+			// Decode the request.
+			dec, err = newDecoder(r, c.skip)
+			if err != nil {
+				return err
+			}
+			if dec.WriteKey() != "" {
+				return errors.BadRequest("property 'writeKey' cannot be provided when using API key authentication")
+			}
+			// Read the connection.
+			id, ok := dec.Connection()
+			if !ok {
+				return errors.BadRequest("parameter 'connection' is required when using API key authentication")
+			}
+			if key.Workspace == 0 {
+				connection, _ = c.state.Connection(id)
+			} else {
+				workspace, ok := c.state.Workspace(key.Workspace)
+				if !ok {
+					return errors.Unauthorized("API key in the Authorization header of the request does not exist")
+				}
+				connection, _ = workspace.Connection(id)
+			}
+			if connection == nil {
+				return errors.Unprocessable("ConnectionNotExist", "connection %d does not exist", id)
+			}
+		}
+
 	}
 
-	// Get the connection from the write key.
-	writeKey := dec.WriteKey()
-	var connection *state.Connection
-	if writeKey != "" {
-		connection, _ = c.connectionByKey(writeKey)
-	}
+	// Authenticate with a write key.
 	if connection == nil {
-		writeOK(w, origin)
-		return nil
+		// Decode the request.
+		dec, err = newDecoder(r, c.skip)
+		if err != nil {
+			return err
+		}
+		if _, ok := dec.Connection(); ok {
+			return errors.BadRequest("property 'connection' cannot be provided when using write key authentication")
+		}
+		// Get the connection from the write key.
+		writeKey := dec.WriteKey()
+		if writeKey != "" {
+			connection, _ = c.connectionByKey(writeKey)
+		}
+		if connection == nil {
+			writeOK(w, origin)
+			return nil
+		}
 	}
+
 	connectionType := connection.Connector().Type
 	ws := connection.Workspace()
 

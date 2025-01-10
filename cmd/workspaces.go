@@ -447,6 +447,12 @@ func (workspace workspace) IdentifiersSchema(_ http.ResponseWriter, r *http.Requ
 	return ws.IdentifiersSchema(), nil
 }
 
+// IngestEvents ingests a batch of events.
+func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) (any, error) {
+	workspace.core.ServeEvents(w, r)
+	return nil, nil
+}
+
 // LastIdentityResolution returns information about the last Identity
 // Resolution of a workspace.
 func (workspace workspace) LastIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {

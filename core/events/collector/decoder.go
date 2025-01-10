@@ -57,11 +57,12 @@ type decoder struct {
 		ip      net.IP
 		str     string
 	}
-	userAgent string
-	sentAt    time.Time
-	writeKey  string
-	context   map[string]any
-	typ       string
+	userAgent  string
+	sentAt     time.Time
+	writeKey   string
+	connection int
+	context    map[string]any
+	typ        string
 }
 
 // newDecoder returns a new decoder.
@@ -79,6 +80,15 @@ func newDecoder(r *http.Request, skip skipFunc) (*decoder, error) {
 		return nil, err
 	}
 	return d, nil
+}
+
+// Connection returns the connection property and a boolean indicating whether
+// the property is present.
+func (d *decoder) Connection() (int, bool) {
+	if d.connection == 0 {
+		return 0, false
+	}
+	return d.connection, true
 }
 
 // Events returns an iterator to iterate over events. connectionID and
@@ -156,6 +166,7 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 	d.userAgent = r.Header.Get("User-Agent")
 	d.sentAt = time.Time{}
 	d.writeKey = ""
+	d.connection = 0
 	d.context = nil
 
 	d.typ = r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
@@ -243,6 +254,15 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 				if d.writeKey == "" {
 					return errors.BadRequest("property 'writeKey' cannot be empty")
 				}
+			case "connection":
+				if tok, _ = d.dec.ReadToken(); tok.Kind() != '0' {
+					return errors.BadRequest("property 'connection' is not a number")
+				}
+				connection, _ := tok.Int()
+				if connection < 1 || connection > math.MaxInt32 {
+					return errors.BadRequest("property 'connection' is not a valid connection identifier")
+				}
+				d.connection = connection
 			}
 		}
 		if d.batch == nil {

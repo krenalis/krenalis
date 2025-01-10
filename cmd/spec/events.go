@@ -14,134 +14,136 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+var eventContextType = types.Object([]types.Property{
+	{
+		Name: "app",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text()},
+			{Name: "version", Type: types.Text()},
+			{Name: "build", Type: types.Text()},
+			{Name: "namespace", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "browser",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
+			{Name: "other", Type: types.Text()},
+			{Name: "version", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "campaign",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text()},
+			{Name: "source", Type: types.Text()},
+			{Name: "medium", Type: types.Text()},
+			{Name: "term", Type: types.Text()},
+			{Name: "content", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "device",
+		Type: types.Object([]types.Property{
+			{Name: "id", Type: types.Text()},
+			{Name: "advertisingId", Type: types.Text()},
+			{Name: "adTrackingEnabled", Type: types.Boolean()},
+			{Name: "manufacturer", Type: types.Text()},
+			{Name: "model", Type: types.Text()},
+			{Name: "name", Type: types.Text()},
+			{Name: "type", Type: types.Text()},
+			{Name: "token", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{Name: "ip", Type: types.Inet(), ReadOptional: true},
+	{
+		Name: "library",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text()},
+			{Name: "version", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{Name: "locale", Type: types.Text(), ReadOptional: true},
+	{
+		Name: "location",
+		Type: types.Object([]types.Property{
+			{Name: "city", Type: types.Text()},
+			{Name: "country", Type: types.Text()},
+			{Name: "latitude", Type: types.Float(64)},
+			{Name: "longitude", Type: types.Float(64)},
+			{Name: "speed", Type: types.Float(64)},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "network",
+		Type: types.Object([]types.Property{
+			{Name: "bluetooth", Type: types.Boolean()},
+			{Name: "carrier", Type: types.Text()},
+			{Name: "cellular", Type: types.Boolean()},
+			{Name: "wifi", Type: types.Boolean()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "os",
+		Type: types.Object([]types.Property{
+			{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
+			{Name: "version", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "page",
+		Type: types.Object([]types.Property{
+			{Name: "path", Type: types.Text()},
+			{Name: "referrer", Type: types.Text()},
+			{Name: "search", Type: types.Text()},
+			{Name: "title", Type: types.Text()},
+			{Name: "url", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "referrer",
+		Type: types.Object([]types.Property{
+			{Name: "id", Type: types.Text()},
+			{Name: "type", Type: types.Text()},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "screen",
+		Type: types.Object([]types.Property{
+			{Name: "width", Type: types.Int(16)},
+			{Name: "height", Type: types.Int(16)},
+			{Name: "density", Type: types.Decimal(3, 2)},
+		}),
+		ReadOptional: true,
+	},
+	{
+		Name: "session",
+		Type: types.Object([]types.Property{
+			{Name: "id", Type: types.Int(64)},
+			{Name: "start", Type: types.Boolean(), ReadOptional: true},
+		}),
+		ReadOptional: true,
+	},
+	{Name: "timezone", Type: types.Text(), ReadOptional: true},
+	{Name: "userAgent", Type: types.Text(), ReadOptional: true},
+})
+
 var eventProperties = []types.Property{
 	{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
 	{Name: "category", Type: types.Text(), ReadOptional: true},
 	{
 		Name: "context",
-		Type: types.Object([]types.Property{
-			{
-				Name: "app",
-				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text()},
-					{Name: "version", Type: types.Text()},
-					{Name: "build", Type: types.Text()},
-					{Name: "namespace", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "browser",
-				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithValues("None", "Chrome", "Safari", "Edge", "Firefox", "Samsung Internet", "Opera", "Other")},
-					{Name: "other", Type: types.Text()},
-					{Name: "version", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "campaign",
-				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text()},
-					{Name: "source", Type: types.Text()},
-					{Name: "medium", Type: types.Text()},
-					{Name: "term", Type: types.Text()},
-					{Name: "content", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "device",
-				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Text()},
-					{Name: "advertisingId", Type: types.Text()},
-					{Name: "adTrackingEnabled", Type: types.Boolean()},
-					{Name: "manufacturer", Type: types.Text()},
-					{Name: "model", Type: types.Text()},
-					{Name: "name", Type: types.Text()},
-					{Name: "type", Type: types.Text()},
-					{Name: "token", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{Name: "ip", Type: types.Inet(), ReadOptional: true},
-			{
-				Name: "library",
-				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text()},
-					{Name: "version", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{Name: "locale", Type: types.Text(), ReadOptional: true},
-			{
-				Name: "location",
-				Type: types.Object([]types.Property{
-					{Name: "city", Type: types.Text()},
-					{Name: "country", Type: types.Text()},
-					{Name: "latitude", Type: types.Float(64)},
-					{Name: "longitude", Type: types.Float(64)},
-					{Name: "speed", Type: types.Float(64)},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "network",
-				Type: types.Object([]types.Property{
-					{Name: "bluetooth", Type: types.Boolean()},
-					{Name: "carrier", Type: types.Text()},
-					{Name: "cellular", Type: types.Boolean()},
-					{Name: "wifi", Type: types.Boolean()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "os",
-				Type: types.Object([]types.Property{
-					{Name: "name", Type: types.Text().WithValues("None", "Android", "Windows", "iOS", "macOS", "Linux", "Chrome OS", "Other")},
-					{Name: "version", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "page",
-				Type: types.Object([]types.Property{
-					{Name: "path", Type: types.Text()},
-					{Name: "referrer", Type: types.Text()},
-					{Name: "search", Type: types.Text()},
-					{Name: "title", Type: types.Text()},
-					{Name: "url", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "referrer",
-				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Text()},
-					{Name: "type", Type: types.Text()},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "screen",
-				Type: types.Object([]types.Property{
-					{Name: "width", Type: types.Int(16)},
-					{Name: "height", Type: types.Int(16)},
-					{Name: "density", Type: types.Decimal(3, 2)},
-				}),
-				ReadOptional: true,
-			},
-			{
-				Name: "session",
-				Type: types.Object([]types.Property{
-					{Name: "id", Type: types.Int(64)},
-					{Name: "start", Type: types.Boolean(), ReadOptional: true},
-				}),
-				ReadOptional: true,
-			},
-			{Name: "timezone", Type: types.Text(), ReadOptional: true},
-			{Name: "userAgent", Type: types.Text(), ReadOptional: true},
-		}),
+		Type: eventContextType,
 	},
 	{Name: "event", Type: types.Text(), ReadOptional: true},
 	{Name: "groupId", Type: types.Text(), ReadOptional: true},
@@ -179,6 +181,105 @@ func init() {
 		Description: "Events are the events associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse).",
 		Endpoints: []*Endpoint{
 			{
+				Name: "Ingest batch events",
+				Description: "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and a write key:\n" +
+					"* For a website or mobile app, you must exclusively use a write key, as it only provides access to event ingestion endpoints.\n" +
+					"* For a server application, using a write key is recommended if you don’t need access to other endpoints.",
+				Method: POST,
+				URL:    "/v0/events/batch",
+				Parameters: []types.Property{
+					{
+						Name:        "connection",
+						Type:        types.Int(32),
+						Placeholder: "1371036433",
+						Description: "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\n" +
+							"It is required only if the call is authenticated using an API key. If authentication is done with a write key, it is not needed, as the connection is that of the write key.",
+					},
+					{
+						Name: "batch",
+						Type: types.Array(types.Object([]types.Property{
+							{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
+							{Name: "category", Type: types.Text()},
+							{
+								Name: "context",
+								Type: eventContextType,
+							},
+							{Name: "event", Type: types.Text()},
+							{Name: "groupId", Type: types.Text()},
+							{Name: "messageId", Type: types.Text()},
+							{Name: "name", Type: types.Text()},
+							{Name: "properties", Type: types.JSON()},
+							{Name: "receivedAt", Type: types.DateTime()},
+							{Name: "sentAt", Type: types.DateTime()},
+							{Name: "originalTimestamp", Type: types.DateTime()},
+							{Name: "timestamp", Type: types.DateTime()},
+							{Name: "traits", Type: types.JSON()},
+							{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+							{Name: "previousId", Type: types.Text()},
+							{Name: "userId", Type: types.Text()},
+							{Name: "integrations", Type: types.JSON(), Nullable: true},
+						})),
+						CreateRequired: true,
+						Description:    "The events to ingest.",
+					},
+					{
+						Name:        "context",
+						Type:        eventContextType,
+						Description: "The global context. If present, the context for each event is merged with this global context.",
+					},
+					{
+						Name:        "sentAt",
+						Type:        types.DateTime(),
+						Description: "The date on which the request was sent. The year must be in the range 1 to 9999. The sentAt value of each event, if present, overwrites this value.",
+					},
+					{
+						Name:        "writeKey",
+						Type:        types.Text(),
+						Description: "The write key of the connection.",
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+				},
+			},
+			{
+				Name: "Ingest event",
+				Description: "Ingests a single event.\n\n This endpoint supports authentication only with a **write key**. " +
+					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+				Method:       POST,
+				WriteKeyAuth: true,
+				URL:          "/v0/events/:type",
+				Parameters: []types.Property{
+					{
+						Name:           "type",
+						Type:           types.Text().WithValues("alias", "identify", "group", "page", "screen", "track"),
+						CreateRequired: true,
+						Description:    "The type of the event.",
+					},
+					{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
+					{Name: "category", Type: types.Text()},
+					{
+						Name: "context",
+						Type: eventContextType,
+					},
+					{Name: "event", Type: types.Text()},
+					{Name: "groupId", Type: types.Text()},
+					{Name: "messageId", Type: types.Text()},
+					{Name: "name", Type: types.Text()},
+					{Name: "properties", Type: types.JSON()},
+					{Name: "receivedAt", Type: types.DateTime()},
+					{Name: "sentAt", Type: types.DateTime()},
+					{Name: "originalTimestamp", Type: types.DateTime()},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "traits", Type: types.JSON()},
+					{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+					{Name: "previousId", Type: types.Text()},
+					{Name: "userId", Type: types.Text()},
+					{Name: "integrations", Type: types.JSON(), Nullable: true},
+				},
+			},
+			{
 				Name: "Retrieve all events",
 				Description: "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. " +
 					"If a filter is provided, only events that match the filter criteria will be returned.",
@@ -195,7 +296,6 @@ func init() {
 					{
 						Name:        "filter",
 						Type:        filterType,
-						Nullable:    true,
 						Description: "The filter applied to the events. If it's not null, only the events that match the filter will be returned.",
 					},
 					{
