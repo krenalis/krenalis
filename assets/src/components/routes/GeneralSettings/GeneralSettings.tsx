@@ -183,7 +183,7 @@ const GeneralSettings = () => {
 							onInput={onUpdateDisplayedProperty}
 							onSelect={onSelectDisplayedProperty}
 							items={userSchemaComboboxItems}
-							initialValue={firstName}
+							value={firstName}
 							name='firstName'
 							isExpression={false}
 							error={firstNameError && firstNameError}
@@ -197,7 +197,7 @@ const GeneralSettings = () => {
 							onInput={onUpdateDisplayedProperty}
 							onSelect={onSelectDisplayedProperty}
 							items={userSchemaComboboxItems}
-							initialValue={lastName}
+							value={lastName}
 							name='lastName'
 							isExpression={false}
 							error={lastNameError && lastNameError}
@@ -211,7 +211,7 @@ const GeneralSettings = () => {
 							onInput={onUpdateDisplayedProperty}
 							onSelect={onSelectDisplayedProperty}
 							items={userSchemaComboboxItems}
-							initialValue={information}
+							value={information}
 							name='information'
 							isExpression={false}
 							error={informationError && informationError}
@@ -225,7 +225,7 @@ const GeneralSettings = () => {
 							onInput={onUpdateDisplayedProperty}
 							onSelect={onSelectDisplayedProperty}
 							items={userSchemaComboboxItems}
-							initialValue={image}
+							value={image}
 							name='image'
 							isExpression={false}
 							error={imageError && imageError}

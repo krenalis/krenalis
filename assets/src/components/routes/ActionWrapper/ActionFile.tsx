@@ -749,7 +749,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			{actionType.fields.includes('FileOrderingProperty') && (
 				<div className='action__file-ordering'>
 					<Combobox
-						initialValue={action.fileOrderingPropertyPath}
+						value={action.fileOrderingPropertyPath}
 						onInput={onOrderingPropertyChange}
 						onSelect={onOrderingPropertySelect}
 						items={getOrderingPropertyPathComboboxItems(actionType.inputSchema)}

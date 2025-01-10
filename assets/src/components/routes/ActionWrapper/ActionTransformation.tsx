@@ -92,6 +92,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const isFirstCompilation = useRef(true);
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
+	const sharedMapping = useRef<TransformedMapping>();
 
 	const hasIdentityAndTimestamp = useMemo(() => {
 		return (
@@ -128,6 +129,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			setSelectedLanguage(action.transformation.function.language);
 		} else {
 			setTransformationType('mappings');
+			sharedMapping.current = action.transformation.mapping;
 		}
 	}, []);
 
@@ -382,6 +384,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const box = (
 		<TransformationBox
+			sharedMapping={sharedMapping}
 			transformationType={transformationType}
 			setTransformationType={setTransformationType}
 			workspaces={workspaces}
@@ -421,7 +424,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								onInput={onUpdateIdentityProperty}
 								onSelect={onUpdateIdentityProperty}
 								name='identityProperty'
-								initialValue={identityPropertyList.length === 0 ? '' : action.identityProperty!}
+								value={identityPropertyList.length === 0 ? '' : action.identityProperty!}
 								disabled={isTransformationDisabled || identityPropertyList.length === 0}
 								className='action__transformation-input-property'
 								isExpression={false}
@@ -445,7 +448,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								<Combobox
 									onInput={onUpdateLastChangeTimeProperty}
 									onSelect={onUpdateLastChangeTimeProperty}
-									initialValue={action.lastChangeTimeProperty!}
+									value={action.lastChangeTimeProperty!}
 									name='lastChangeTimeProperty'
 									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
@@ -521,6 +524,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 });
 
 interface TransformationBoxProps {
+	sharedMapping: React.MutableRefObject<TransformedMapping>;
 	transformationType: 'mappings' | 'function' | '';
 	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
 	workspaces: Workspace[];
@@ -580,6 +584,7 @@ const isMappingModified = (
 };
 
 const TransformationBox = ({
+	sharedMapping,
 	transformationType,
 	setTransformationType,
 	workspaces,
@@ -784,7 +789,8 @@ const TransformationBox = ({
 				>
 					<Combobox
 						onInput={onUpdateMapping}
-						initialValue={property.value}
+						value={property.value}
+						sharedMapping={sharedMapping}
 						name={k}
 						disabled={isTransformationDisabled || property.disabled === true}
 						className='action__transformation-input-property'

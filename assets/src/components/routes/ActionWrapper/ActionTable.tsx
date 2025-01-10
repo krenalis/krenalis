@@ -138,7 +138,7 @@ const ActionTable = () => {
 				>
 					<div className='action__table-key-property' ref={tableKeyRef}>
 						<Combobox
-							initialValue={action.tableKeyProperty}
+							value={action.tableKeyProperty}
 							onInput={onTableKeyPropertyUpdate}
 							name='table-key'
 							items={tableKeyComboboxItems}

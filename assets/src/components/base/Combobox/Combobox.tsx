@@ -11,10 +11,12 @@ import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/parseMapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
 import { MEERGO_FUNCTIONS, MeergoFunction } from '../../../constants/function';
+import { TransformedMapping } from '../../../lib/core/action';
 
 interface ComboboxProps {
-	initialValue: string;
+	value: string;
 	items: ComboboxItem[];
+	sharedMapping?: React.MutableRefObject<TransformedMapping>;
 	onInput: (name: string, value: string) => void;
 	onSelect: (name: string, value: string) => void;
 	name: string;
@@ -35,8 +37,9 @@ interface ComboboxProps {
 // passed value is only used as the initial value, and any subsequent updates
 // must be synced by the caller.
 const Combobox = ({
-	initialValue,
+	value,
 	items,
+	sharedMapping,
 	onInput: onInputFunc,
 	onSelect: onSelectFunc,
 	name,
@@ -51,7 +54,7 @@ const Combobox = ({
 	children,
 	...rest
 }: ComboboxProps) => {
-	const [value, setValue] = useState<string>(initialValue);
+	const [val, setVal] = useState<string>(value);
 	const [cursorPosition, setCursorPosition] = useState<number>();
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
@@ -131,7 +134,7 @@ const Combobox = ({
 
 	useEffect(() => {
 		if (controlled) {
-			setValue(initialValue);
+			setVal(value);
 			if (autoResize) {
 				// Resize the combobox after a delay to allow the shadow DOM to
 				// fully load.
@@ -140,7 +143,7 @@ const Combobox = ({
 				}, 50);
 			}
 		}
-	}, [initialValue]);
+	}, [value]);
 
 	useEffect(() => {
 		if (!isOpen || listRef.current == null || listWidth != null) {
@@ -176,6 +179,12 @@ const Combobox = ({
 			}, 50);
 		}
 	}, []);
+
+	useEffect(() => {
+		if (sharedMapping?.current) {
+			setVal(sharedMapping.current[name].value);
+		}
+	}, [sharedMapping?.current]);
 
 	useLayoutEffect(() => {
 		if (listRef.current == null || !isOpen) {
@@ -215,8 +224,8 @@ const Combobox = ({
 			setIsOpen(true);
 		}
 
-		let lastValue = value;
-		let newValue = e.target.value;
+		const lastValue = val;
+		let newValue: string = e.target.value;
 		let position = inputRef.current?.input.selectionStart;
 
 		// Autocompletion.
@@ -232,7 +241,13 @@ const Combobox = ({
 			}
 		}
 
-		setValue(newValue);
+		if (sharedMapping?.current) {
+			const sm = { ...sharedMapping.current };
+			sm[name].value = newValue;
+			sharedMapping.current = sm;
+		}
+		setVal(newValue);
+
 		setTimeout(() => {
 			inputRef.current.setSelectionRange(position, position);
 			updateCursorPosition();
@@ -272,11 +287,11 @@ const Combobox = ({
 	}, []);
 
 	let fragment = useMemo(() => {
-		return parseMapExpression(value == null ? '' : value, cursorPosition);
-	}, [value, cursorPosition, items]);
+		return parseMapExpression(val == null ? '' : val, cursorPosition);
+	}, [val, cursorPosition, items]);
 
 	let { filteredProperties, filteredFunctions } = useMemo(() => {
-		return filterComboboxItems(fragment, cursorPosition, value, items, isExpression ? functionItems : []);
+		return filterComboboxItems(fragment, cursorPosition, val, items, isExpression ? functionItems : []);
 	}, [fragment]);
 
 	let selectedFunction = useMemo(() => {
@@ -295,41 +310,41 @@ const Combobox = ({
 		e.stopPropagation();
 
 		let position = 0;
-		let val = '';
+		let v = '';
 		if (fragment.func != null && fragment.pos == null) {
-			const expressionStart = value.slice(0, cursorPosition);
-			const expressionEnd = value.slice(cursorPosition);
-			val = `${expressionStart}${term}${expressionEnd}`;
+			const expressionStart = val.slice(0, cursorPosition);
+			const expressionEnd = val.slice(cursorPosition);
+			v = `${expressionStart}${term}${expressionEnd}`;
 			position = cursorPosition + term.length;
 		} else if (fragment != null && fragment.pos != null) {
-			const expressionStart = value.slice(0, fragment.pos.start);
-			const expressionEnd = value.slice(fragment.pos.end);
-			val = `${expressionStart}${term}${expressionEnd}`;
-			if (value === '') {
+			const expressionStart = val.slice(0, fragment.pos.start);
+			const expressionEnd = val.slice(fragment.pos.end);
+			v = `${expressionStart}${term}${expressionEnd}`;
+			if (val === '') {
 				position = term.length;
 			} else {
 				position = fragment.pos.start + term.length;
 			}
 		} else {
-			val = value + term;
-			position = value.length + term.length;
+			v = val + term;
+			position = val.length + term.length;
 		}
 
 		if (type === 'function') {
 			// add parenthesis if necessary.
-			const expressionStart = val.slice(0, position);
-			const expressionEnd = val.slice(position);
-			const hasAlreadyParenthesis = val[position] === '(';
+			const expressionStart = v.slice(0, position);
+			const expressionEnd = v.slice(position);
+			const hasAlreadyParenthesis = v[position] === '(';
 			if (!hasAlreadyParenthesis) {
-				val = `${expressionStart}()${expressionEnd}`;
+				v = `${expressionStart}()${expressionEnd}`;
 				position += 1;
 			}
 		} else if (type === 'property') {
 			// remove parenthesis if necessary.
-			if (val[position] === '(' && val[position + 1] === ')') {
-				const expressionStart = val.slice(0, position);
-				const expressionEnd = val.slice(position + 2);
-				val = `${expressionStart}${expressionEnd}`;
+			if (v[position] === '(' && v[position + 1] === ')') {
+				const expressionStart = v.slice(0, position);
+				const expressionEnd = v.slice(position + 2);
+				v = `${expressionStart}${expressionEnd}`;
 			}
 		}
 		if (type === 'property' && fragment.func == null) {
@@ -341,7 +356,14 @@ const Combobox = ({
 			// argument to the function.
 			tabGroupRef.current.show('properties');
 		}
-		setValue(val);
+
+		if (sharedMapping?.current) {
+			const sm = { ...sharedMapping.current };
+			sm[name].value = v;
+			sharedMapping.current = sm;
+		}
+		setVal(v);
+
 		inputRef.current.focus();
 		setTimeout(() => {
 			if (autoResize) {
@@ -350,7 +372,7 @@ const Combobox = ({
 			inputRef.current.setSelectionRange(position, position);
 			updateCursorPosition();
 		});
-		onSelectFunc(name, val);
+		onSelectFunc(name, v);
 	};
 
 	const onTabClick = () => {
@@ -377,7 +399,7 @@ const Combobox = ({
 			<div className='combobox-input'>
 				<SlInput
 					data-is-combobox-input
-					value={value}
+					value={val}
 					onSlInput={disabled ? undefined : onInput}
 					onSlBlur={onInputBlur}
 					disabled={disabled}
@@ -387,7 +409,7 @@ const Combobox = ({
 					{...rest}
 				>
 					{children}
-					{error && value !== '' && (
+					{error && val !== '' && (
 						<SlIcon className='combobox-input__error-icon' name='exclamation-circle' slot='prefix'></SlIcon>
 					)}
 					{caret && (

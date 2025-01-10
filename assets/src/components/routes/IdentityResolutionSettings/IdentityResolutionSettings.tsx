@@ -183,7 +183,7 @@ const IdentityResolutionSettings = () => {
 									<Combobox
 										className='identifiers__identifier-input'
 										name={String(position)}
-										initialValue={identifier}
+										value={identifier}
 										onInput={onUpdateIdentifier}
 										onSelect={onUpdateIdentifier}
 										isExpression={false}

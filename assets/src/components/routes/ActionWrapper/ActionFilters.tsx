@@ -292,7 +292,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 				<Combobox
 					onInput={onInputPropertyFragment}
 					onSelect={onSelectPropertyFragment}
-					initialValue={isJSON ? base : condition.property}
+					value={isJSON ? base : condition.property}
 					className='action__filters-property'
 					size='small'
 					name={`property-${i}`}

@@ -116,7 +116,7 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 				<div className='action__matching-properties'>
 					<Combobox
 						onInput={onUpdateMatching}
-						initialValue={action.matching!.in}
+						value={action.matching!.in}
 						label={`User's schema property`}
 						name='in'
 						className='action__transformation-input-property'
@@ -130,7 +130,7 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 					<Combobox
 						onInput={onUpdateMatching}
 						label={`${connection.name}'s property`}
-						initialValue={action.matching!.out}
+						value={action.matching!.out}
 						name='out'
 						isExpression={false}
 						items={outMatchingItems}
