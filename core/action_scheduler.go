@@ -18,9 +18,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 )
 
-const numPeriods = 10
-
-var periods = [numPeriods]int16{5, 15, 30, 60, 120, 180, 360, 480, 720, 1440}
+var periods = [...]int16{5, 15, 30, 60, 120, 180, 360, 480, 720, 1440}
 
 type scIndex struct {
 	i int8
@@ -157,7 +155,7 @@ func (as *actionScheduler) onElectLeader(n state.ElectLeader) {
 // onSetActionSchedulePeriod is called when the schedule period of an action is
 // set.
 func (as *actionScheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePeriod) {
-	if as.executor != nil {
+	if as.executor == nil {
 		return
 	}
 	action, _ := as.core.state.Action(n.ID)
@@ -173,7 +171,7 @@ func (as *actionScheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePe
 type actionSchedulerExecutor struct {
 	core    *Core
 	mu      sync.Mutex // for the actions and indexes fields.
-	actions [numPeriods]map[int16][]*state.Action
+	actions [len(periods)]map[int16][]*state.Action
 	indexes map[int]scIndex
 	close   chan struct{}
 }
