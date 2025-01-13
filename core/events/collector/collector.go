@@ -231,16 +231,6 @@ func (c *Collector) identityAck(action int, ids []string, err error) {
 	c.metrics.FinalizePassed(action, len(ids))
 }
 
-// canCollectEvents reports whether the provided source connection can collect
-// events. It can collect events if it is enabled and has an enabled action, or
-// is enabled and has an enabled event destination with an enabled action on
-// events.
-func (c *Collector) canCollectEvents(connection *state.Connection) bool {
-	_, importEventsAction := c.importEventsAction(connection)
-	return connection.Enabled && (importEventsAction ||
-		c.hasImportUsersAction(connection) || c.hasEventDestinations(connection))
-}
-
 // connectionByKey returns an enable source mobile, server or website connection
 // given its key and true, if exists, otherwise returns nil and false.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
