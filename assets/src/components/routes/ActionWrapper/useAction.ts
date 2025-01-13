@@ -53,7 +53,7 @@ const useAction = (
 	useEffect(() => {
 		// Filter out the selected properties that are no longer in the
 		// schemas.
-		if (actionType == null) {
+		if (isLoading) {
 			return;
 		}
 		if (actionType.inputSchema) {
@@ -67,7 +67,7 @@ const useAction = (
 			setSelectedInPaths(inPaths);
 		}
 		if (actionType.outputSchema) {
-			const flatOut = flattenSchema(actionType.inputSchema);
+			const flatOut = flattenSchema(actionType.outputSchema);
 			const outPaths = [];
 			for (const p of selectedOutPaths) {
 				if (flatOut[p]) {
