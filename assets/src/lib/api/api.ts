@@ -781,7 +781,7 @@ class Workspaces {
 
 	actionErrors = async (
 		start: Date,
-		end: Date | null,
+		end: Date,
 		actions: number[],
 		first: number,
 		limit: number,
@@ -795,7 +795,7 @@ class Workspaces {
 			actionsQueryString += `actions=${encodeURIComponent(actions[i])}`;
 		}
 		const r: ActionErrorsResponse = await call(
-			`${this.apiURL}/action-errors?start=${encodeURIComponent(start.toISOString())}${end ? `&end=${encodeURIComponent(end.toISOString())}` : ''}&${actionsQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
+			`${this.apiURL}/actions/errors/${encodeURIComponent(start.toISOString())}/${encodeURIComponent(end.toISOString())}?${actionsQueryString}&first=${encodeURIComponent(first)}&limit=${encodeURIComponent(limit)}${step ? `&step=${encodeURIComponent(step)}` : ''}`,
 			http.GET,
 			this.workspaceID,
 		);
