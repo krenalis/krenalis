@@ -107,8 +107,9 @@ func TestIdentityResolution2(t *testing.T) {
 
 	addJSONAction := func(source int, filename string, properties map[string]bool) int {
 		return c.CreateAction(source, "Users", meergotester.ActionToSet{
-			Name: "Action",
-			Path: filename,
+			Name:    "Action",
+			Enabled: true,
+			Path:    filename,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.JSON()},
 				{Name: "name", Type: types.JSON()},

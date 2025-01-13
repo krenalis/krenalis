@@ -35,8 +35,9 @@ func Test_UserIdentities(t *testing.T) {
 	fs2 := c.CreateSourceFilesystem(storageDir)
 
 	action1 := c.CreateAction(fs1, "Users", meergotester.ActionToSet{
-		Name: "CSV 1",
-		Path: "users1.csv",
+		Name:    "CSV 1",
+		Enabled: true,
+		Path:    "users1.csv",
 		InSchema: types.Object([]types.Property{
 			{Name: "identity", Type: types.Text()},
 			{Name: "email", Type: types.Text()},
@@ -58,8 +59,9 @@ func Test_UserIdentities(t *testing.T) {
 	})
 
 	action2 := c.CreateAction(fs2, "Users", meergotester.ActionToSet{
-		Name: "CSV 2",
-		Path: "users2.csv",
+		Name:    "CSV 2",
+		Enabled: true,
+		Path:    "users2.csv",
 		InSchema: types.Object([]types.Property{
 			{Name: "identity", Type: types.Text()},
 			{Name: "email", Type: types.Text()},

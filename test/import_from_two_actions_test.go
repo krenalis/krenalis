@@ -44,8 +44,9 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 
 	// Create the first action for the CSV for importing "email" and "name".
 	actionFirstName := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
-		Name: "Import users' email and name from CSV on Filesystem",
-		Path: "users.csv",
+		Name:    "Import users' email and name from CSV on Filesystem",
+		Enabled: true,
+		Path:    "users.csv",
 		InSchema: types.Object([]types.Property{
 			{Name: "identity", Type: types.Text()},
 			{Name: "name", Type: types.Text()},
@@ -71,8 +72,9 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 
 	// Create the second action for the CSV for importing "email" and "lastName".
 	actionLastName := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
-		Name: "Import users' email and lastName from CSV on Filesystem",
-		Path: "users.csv",
+		Name:    "Import users' email and lastName from CSV on Filesystem",
+		Enabled: true,
+		Path:    "users.csv",
 		InSchema: types.Object([]types.Property{
 			{Name: "identity", Type: types.Text()},
 			{Name: "lastname", Type: types.Text()},

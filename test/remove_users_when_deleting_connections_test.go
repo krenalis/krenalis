@@ -30,7 +30,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 
 	// Create two identical actions for two different connections.
 	actionParams := meergotester.ActionToSet{
-		Name: "Import users from Dummy",
+		Enabled: true,
+		Name:    "Import users from Dummy",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text()},
 			{Name: "firstName", Type: types.Text()},

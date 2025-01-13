@@ -102,6 +102,7 @@ type Type struct {
 const (
 	NotFound = "NotFound"
 
+	ActionDisabled               = "ActionDisabled"
 	AlterSchemaInProgress        = "AlterSchemaInProgress"
 	AuthenticationFailed         = "AuthenticationFailed"
 	ConnectionDisabled           = "ConnectionDisabled"

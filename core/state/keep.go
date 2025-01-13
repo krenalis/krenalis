@@ -927,13 +927,6 @@ func (state *State) setAccount(n notification) {
 	})
 }
 
-// SetActionSchedulePeriod is the event sent when the schedule period of an
-// action is set.
-type SetActionSchedulePeriod struct {
-	ID             int
-	SchedulePeriod int16
-}
-
 // SetActionFormatSettings is the event sent when the format settings of an
 // action are changed.
 type SetActionFormatSettings struct {
@@ -950,6 +943,13 @@ func (state *State) setActionFormatSettings(n notification) {
 	state.replaceAction(e.Action, func(a *Action) {
 		a.FormatSettings = e.Settings
 	})
+}
+
+// SetActionSchedulePeriod is the event sent when the schedule period of an
+// action is set.
+type SetActionSchedulePeriod struct {
+	ID             int
+	SchedulePeriod int16
 }
 
 // setActionSchedulePeriod sets the schedule period of an action.

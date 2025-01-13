@@ -29,7 +29,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
 		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
-			Name: "Import users from Dummy",
+			Name:    "Import users from Dummy",
+			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "firstName", Type: types.Text()},
@@ -53,7 +54,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	{
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
 		exportUsersActionID := c.CreateAction(dummyDest, "Users", meergotester.ActionToSet{
-			Name: "Export users to Dummy",
+			Name:    "Export users to Dummy",
+			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			}),
@@ -82,7 +84,8 @@ func TestImportExportUsersToDummy(t *testing.T) {
 	{
 		dummySrc := c.CreateDummy("Dummy (source 2)", meergotester.Source)
 		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
-			Name: "Import users from Dummy",
+			Name:    "Import users from Dummy",
+			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "firstName", Type: types.Text()},

@@ -40,7 +40,8 @@ func Test_ImportFromManyConnections(t *testing.T) {
 
 		dummy = c.CreateDummy("Dummy", meergotester.Source)
 		dummyAction = c.CreateAction(dummy, "Users", meergotester.ActionToSet{
-			Name: "Import users from Dummy",
+			Name:    "Import users from Dummy",
+			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "firstName", Type: types.Text()},
@@ -87,8 +88,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		}
 		fs = c.CreateSourceFilesystem(storageDir)
 		csvAction = c.CreateAction(fs, "Users", meergotester.ActionToSet{
-			Name: "Import users from CSV on Filesystem",
-			Path: "users_genders.csv",
+			Name:    "Import users from CSV on Filesystem",
+			Enabled: true,
+			Path:    "users_genders.csv",
 			InSchema: types.Object([]types.Property{
 				{Name: "csv_id", Type: types.Text()},
 				{Name: "email", Type: types.Text()},

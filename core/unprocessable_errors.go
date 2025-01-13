@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	ActionDisabled               errors.Code = "ActionDisabled"
 	AlterSchemaInProgress        errors.Code = "AlterSchemaInProgress"
 	AuthenticationFailed         errors.Code = "AuthenticationFailed"
 	ConnectionDisabled           errors.Code = "ConnectionDisabled"

@@ -34,18 +34,7 @@ import {
 	parseText,
 } from '../../utils/filters';
 
-const SCHEDULE_PERIODS = {
-	5: '5m',
-	15: '15m',
-	30: '30m',
-	60: '1h',
-	120: '2h',
-	180: '3h',
-	360: '6h',
-	480: '8h',
-	720: '12h',
-	1440: '24h',
-};
+const SCHEDULE_PERIODS: SchedulePeriod[] = ['Off', '5m', '15m', '30m', '1h', '2h', '3h', '6h', '8h', '12h', '24h'];
 
 const FILTER_OPERATORS: FilterOperator[] = [
 	'is',

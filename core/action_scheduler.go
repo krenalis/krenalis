@@ -78,7 +78,7 @@ func (as *actionScheduler) onCreateAction(n state.CreateAction) {
 		return
 	}
 	action, _ := as.core.state.Action(n.ID)
-	if !toSchedule(action) {
+	if action.SchedulePeriod == 0 {
 		return
 	}
 	as.executor.AddAction(action)
@@ -101,7 +101,7 @@ func (as *actionScheduler) onDeleteConnection(n state.DeleteConnection) {
 	}
 	var actions []int
 	for _, action := range n.Connection().Actions() {
-		if toSchedule(action) {
+		if action.SchedulePeriod != 0 {
 			actions = append(actions, action.ID)
 		}
 	}
@@ -123,7 +123,7 @@ func (as *actionScheduler) onDeleteWorkspace(n state.DeleteWorkspace) {
 	var actions []int
 	for _, connection := range n.Workspace().Connections() {
 		for _, action := range connection.Actions() {
-			if toSchedule(action) {
+			if action.SchedulePeriod != 0 {
 				actions = append(actions, action.ID)
 			}
 		}
@@ -159,9 +159,6 @@ func (as *actionScheduler) onSetActionSchedulePeriod(n state.SetActionSchedulePe
 		return
 	}
 	action, _ := as.core.state.Action(n.ID)
-	if !toSchedule(action) {
-		return
-	}
 	as.executor.SetPeriod(action)
 }
 
@@ -190,12 +187,13 @@ func newActionSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Cont
 		se.actions[i] = map[int16][]*state.Action{}
 	}
 	for _, action := range se.core.state.Actions() {
-		if toSchedule(action) {
-			i := periodIndex(action.SchedulePeriod)
-			j := action.ScheduleStart % action.SchedulePeriod
-			se.actions[i][j] = append(se.actions[i][j], action)
-			se.indexes[action.ID] = scIndex{i, j}
+		if action.SchedulePeriod == 0 {
+			continue
 		}
+		i := periodIndex(action.SchedulePeriod)
+		j := action.ScheduleStart % action.SchedulePeriod
+		se.actions[i][j] = append(se.actions[i][j], action)
+		se.indexes[action.ID] = scIndex{i, j}
 	}
 
 	wg.Add(1)
@@ -291,19 +289,20 @@ func (se *actionSchedulerExecutor) SetPeriod(action *state.Action) {
 	se.mu.Lock()
 	index, ok := se.indexes[action.ID]
 	se.mu.Unlock()
-	if !ok {
-		return
+	if ok {
+		if periods[index.i] == action.SchedulePeriod {
+			return
+		}
+		se.RemoveAction(action.ID)
 	}
-	if periods[index.i] == action.SchedulePeriod {
-		return
+	if action.SchedulePeriod != 0 {
+		se.AddAction(action)
 	}
-	se.RemoveAction(action.ID)
-	se.AddAction(action)
 }
 
 // toExecute reports whether action can be executed.
 func toExecute(action *state.Action) bool {
-	if !action.Enabled {
+	if !action.Enabled || action.SchedulePeriod == 0 {
 		return false
 	}
 	c := action.Connection()
@@ -314,18 +313,6 @@ func toExecute(action *state.Action) bool {
 		return false
 	}
 	if _, ok := action.Execution(); ok {
-		return false
-	}
-	return true
-}
-
-// toSchedule reports whether action can be scheduled.
-func toSchedule(action *state.Action) bool {
-	if t := action.Target; t != state.Users && t != state.Groups {
-		return false
-	}
-	typ := action.Connection().Connector().Type
-	if typ != state.App && typ != state.Database && typ != state.FileStorage {
 		return false
 	}
 	return true

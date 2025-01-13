@@ -201,13 +201,15 @@ func (this *Action) Delete(ctx context.Context) error {
 }
 
 // Execute executes the action, which must be an app, database, or file storage
-// action with a target of Users or Groups, creating an execution and returning
-// its identifier.
+// action with a target of Users or Groups. It starts an execution and returns
+// its identifier. Both the action and its connection must be enabled and the
+// action must not already be executing.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
 // It returns an errors.UnprocessableError error with code
 //
+//   - ActionDisabled, if the action is disabled.
 //   - ConnectionDisabled, if the connection is disabled.
 //   - ExecutionInProgress, if the action is already in progress.
 //   - InspectionMode, if the data warehouse is in inspection mode.
@@ -215,12 +217,6 @@ func (this *Action) Delete(ctx context.Context) error {
 func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	this.core.mustBeOpen()
 	c := this.action.Connection()
-	if !c.Enabled {
-		return 0, errors.Unprocessable(ConnectionDisabled, "connection %d is disabled", c.ID)
-	}
-	if _, ok := this.action.Execution(); ok {
-		return 0, errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
-	}
 	if t := this.action.Target; t != state.Users && t != state.Groups {
 		return 0, errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
@@ -228,6 +224,15 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	case state.App, state.Database, state.FileStorage:
 	default:
 		return 0, errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
+	}
+	if !this.action.Enabled {
+		return 0, errors.Unprocessable(ActionDisabled, "action %d is disabled", c.ID)
+	}
+	if !c.Enabled {
+		return 0, errors.Unprocessable(ConnectionDisabled, "connection %d is disabled", c.ID)
+	}
+	if _, ok := this.action.Execution(); ok {
+		return 0, errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)
 	}
 	switch this.connection.store.Mode() {
 	case state.Inspection:
@@ -274,30 +279,32 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 }
 
 // SetSchedulePeriod sets the schedule period, in minutes, of the action. The
-// action must be a Users or Groups action and period can be 5, 15, 30, 60, 120,
-// 180, 360, 480, 720, or 1440.
-func (this *Action) SetSchedulePeriod(ctx context.Context, period SchedulePeriod) error {
+// action must be a Users or Groups action and period can be 0, 5, 15, 30, 60,
+// 120, 180, 360, 480, 720, or 1440. The schedular is disabled if period is nil.
+func (this *Action) SetSchedulePeriod(ctx context.Context, period *SchedulePeriod) error {
 	this.core.mustBeOpen()
 	switch this.action.Target {
 	case state.Users, state.Groups:
 	default:
 		return errors.BadRequest("cannot set schedule period of a %s action", this.action.Target)
 	}
-	switch period {
-	case 5, 15, 30, 60, 120, 180, 360, 480, 720, 1440:
-	default:
-		return errors.BadRequest("schedule period %d is not valid", period)
-	}
 	n := state.SetActionSchedulePeriod{
-		ID:             this.action.ID,
-		SchedulePeriod: int16(period),
+		ID: this.action.ID,
+	}
+	if period != nil {
+		switch *period {
+		case 5, 15, 30, 60, 120, 180, 360, 480, 720, 1440:
+			n.SchedulePeriod = int16(*period)
+		default:
+			return errors.BadRequest("schedule period %d is not valid", period)
+		}
 	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		result, err := tx.Exec(ctx, "UPDATE actions SET schedule_period = $1 WHERE id = $2 AND schedule_period <> $1", n.SchedulePeriod, n.ID)
 		if err != nil {
 			return err
 		}
-		if result.RowsAffected() == 0 {
+		if result.RowsAffected() == 0 && false {
 			return nil
 		}
 		return tx.Notify(ctx, n)
@@ -555,10 +562,12 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	}
 	_, this.Running = this.action.Execution()
 	if action.Target == state.Users || action.Target == state.Groups {
-		start := int(action.ScheduleStart)
-		period := SchedulePeriod(action.SchedulePeriod)
-		this.ScheduleStart = &start
-		this.SchedulePeriod = &period
+		if action.SchedulePeriod != 0 {
+			start := int(action.ScheduleStart)
+			period := SchedulePeriod(action.SchedulePeriod)
+			this.ScheduleStart = &start
+			this.SchedulePeriod = &period
+		}
 	}
 	this.InSchema = action.InSchema
 	this.OutSchema = action.OutSchema
@@ -657,10 +666,6 @@ type ActionToSet struct {
 	Name string `json:"name"`
 
 	// Enabled indicates whether the action is enabled or not.
-	//
-	// Depending on the type of the action, this flag controls the enabling of
-	// scheduling of action execution - for batch actions - or the enabling of
-	// events receive/dispatching - for event based actions.
 	Enabled bool `json:"enabled"`
 
 	// Filter is the filter of the action, if it has one, otherwise is nil.

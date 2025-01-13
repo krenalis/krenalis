@@ -147,8 +147,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	};
 
 	const onSchedulerPeriodChange = async (e: any, actionID: number) => {
-		const target = e.currentTarget;
-		const period = SCHEDULE_PERIODS[target.value];
+		const period = e.currentTarget.value === 'Off' ? null : e.currentTarget.value;
 		try {
 			await api.workspaces.connections.setActionSchedulePeriod(connection.id, actionID, period);
 		} catch (err) {
@@ -230,19 +229,17 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								className='connection-actions__scheduler-button'
 							>
 								<SlIcon slot='prefix' name='clock' />
-								Schedule: {a.schedulePeriod}
+								Schedule: {a.schedulePeriod || 'Off'}
 							</SlButton>
 							<SlMenu className='connection-actions__scheduler-options'>
 								<SlRadioGroup
 									size='small'
 									onSlChange={(e) => onSchedulerPeriodChange(e, a.id)}
-									value={Object.keys(SCHEDULE_PERIODS).find(
-										(k) => SCHEDULE_PERIODS[k] === a.schedulePeriod,
-									)}
+									value={a.schedulePeriod || 'Off'}
 								>
-									{Object.entries(SCHEDULE_PERIODS).map(([value, time]) => (
-										<SlRadio key={value} value={value}>
-											{time}
+									{SCHEDULE_PERIODS.map((period) => (
+										<SlRadio key={period} value={period}>
+											{period}
 										</SlRadio>
 									))}
 								</SlRadioGroup>

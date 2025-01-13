@@ -398,7 +398,7 @@ class Connections {
 	setActionSchedulePeriod = async (
 		connection: number,
 		action: number,
-		schedulePeriod: SchedulePeriod,
+		schedulePeriod: SchedulePeriod | null,
 	): Promise<void> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(

@@ -8044,7 +8044,7 @@
                 },
                 {
                     "name": "Set the status",
-                    "description": "Sets the status of a source app action. The status determines whether scheduled imports will be executed.",
+                    "description": "Sets the status of a source app action.",
                     "method": "PUT",
                     "url": "/v0/actions/:id/status",
                     "parameters": [
@@ -8065,7 +8065,7 @@
                                 "name": "Boolean"
                             },
                             "createRequired": true,
-                            "description": "Indicates if the action is enabled. If false, no scheduled import is executed."
+                            "description": "Indicates if the action is enabled.."
                         }
                     ],
                     "moreParameters": [],
@@ -8084,8 +8084,8 @@
                     ]
                 },
                 {
-                    "name": "Set the schedule period",
-                    "description": "Sets the frequency at which a source app action imports users. Both the action and its connection must be active for the import to run as scheduled.",
+                    "name": "Set schedule period",
+                    "description": "Sets the frequency at which a source app action imports users. Both the action and its connection must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
                     "method": "PUT",
                     "url": "/v0/actions/:id/schedule",
                     "parameters": [
@@ -8101,13 +8101,25 @@
                         },
                         {
                             "name": "schedulePeriod",
-                            "placeholder": "60",
+                            "placeholder": "\"1h\"",
                             "type": {
-                                "name": "Int",
-                                "bitSize": 32
+                                "name": "Text",
+                                "values": [
+                                    "5m",
+                                    "15m",
+                                    "30m",
+                                    "1h",
+                                    "2h",
+                                    "3h",
+                                    "6h",
+                                    "8h",
+                                    "12h",
+                                    "24h"
+                                ]
                             },
                             "createRequired": true,
-                            "description": "The schedule period in minutes.\n\nPossible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`."
+                            "nullable": true,
+                            "description": "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed."
                         }
                     ],
                     "moreParameters": [],
@@ -8188,6 +8200,37 @@
                                     "name": "Boolean"
                                 },
                                 "description": "Indicates if the action is running."
+                            },
+                            {
+                                "name": "scheduleStart",
+                                "placeholder": "15",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "nullable": true,
+                                "description": "The start time of the schedule in minutes. It indicates the minute, starting from 00:00, when the first scheduled execution of the day begins. Subsequent executions will occur based on the interval defined by the scheduler period. It is null if the scheduler is disabled."
+                            },
+                            {
+                                "name": "schedulePeriod",
+                                "placeholder": "\"1h\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "5m",
+                                        "15m",
+                                        "30m",
+                                        "1h",
+                                        "2h",
+                                        "3h",
+                                        "6h",
+                                        "8h",
+                                        "12h",
+                                        "24h"
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The schedule period. It determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic execution is executed."
                             },
                             {
                                 "name": "filter",
@@ -8321,7 +8364,7 @@
                 },
                 {
                     "name": "Import users from an app",
-                    "description": "Starts a source app action execution to import its users into the workspace’s data warehouse, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.",
+                    "description": "Starts a source app action execution to import its users into the workspace’s data warehouse, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\nBoth the action and its connection must be enabled.",
                     "method": "POST",
                     "url": "/v0/actions/:id/exec",
                     "parameters": [
@@ -8374,6 +8417,11 @@
                             "status": 422,
                             "code": "ConnectionDisabled",
                             "message": "connection is disabled"
+                        },
+                        {
+                            "status": 422,
+                            "code": "ActionDisabled",
+                            "message": "action is disabled"
                         },
                         {
                             "status": 422,
@@ -8676,8 +8724,8 @@
                     ]
                 },
                 {
-                    "name": "Set the schedule period",
-                    "description": "Sets the frequency at which a source database action imports users. Both the action and its connection must be active for the import to run as scheduled.",
+                    "name": "Set schedule period",
+                    "description": "Sets the frequency at which a source database action imports users. Both the action and its connection must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
                     "method": "PUT",
                     "url": "/v0/actions/:id/schedule",
                     "parameters": [
@@ -8693,13 +8741,25 @@
                         },
                         {
                             "name": "schedulePeriod",
-                            "placeholder": "60",
+                            "placeholder": "\"1h\"",
                             "type": {
-                                "name": "Int",
-                                "bitSize": 32
+                                "name": "Text",
+                                "values": [
+                                    "5m",
+                                    "15m",
+                                    "30m",
+                                    "1h",
+                                    "2h",
+                                    "3h",
+                                    "6h",
+                                    "8h",
+                                    "12h",
+                                    "24h"
+                                ]
                             },
                             "createRequired": true,
-                            "description": "The schedule period in minutes.\n\nPossible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`."
+                            "nullable": true,
+                            "description": "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed."
                         }
                     ],
                     "moreParameters": [],
@@ -8782,6 +8842,37 @@
                                 "description": "Indicates if the action is running."
                             },
                             {
+                                "name": "scheduleStart",
+                                "placeholder": "15",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "nullable": true,
+                                "description": "The start time of the schedule in minutes. It indicates the minute, starting from 00:00, when the first scheduled execution of the day begins. Subsequent executions will occur based on the interval defined by the scheduler period. It is null if the scheduler is disabled."
+                            },
+                            {
+                                "name": "schedulePeriod",
+                                "placeholder": "\"1h\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "5m",
+                                        "15m",
+                                        "30m",
+                                        "1h",
+                                        "2h",
+                                        "3h",
+                                        "6h",
+                                        "8h",
+                                        "12h",
+                                        "24h"
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The schedule period. It determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic execution is executed."
+                            },
+                            {
                                 "name": "query",
                                 "placeholder": "\"SELECT name, email, updated_at FROM customers\"",
                                 "type": {
@@ -8854,7 +8945,7 @@
                 },
                 {
                     "name": "Import users from a database",
-                    "description": "Starts a source database action execution to import users from the action's database into the workspace’s data warehouse, applying the action's transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.",
+                    "description": "Starts a source database action execution to import users from the action's database into the workspace’s data warehouse, applying the action's transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\nBoth the action and its connection must be enabled.",
                     "method": "POST",
                     "url": "/v0/actions/:id/exec",
                     "parameters": [
@@ -8907,6 +8998,11 @@
                             "status": 422,
                             "code": "ConnectionDisabled",
                             "message": "connection is disabled"
+                        },
+                        {
+                            "status": 422,
+                            "code": "ActionDisabled",
+                            "message": "action is disabled"
                         },
                         {
                             "status": 422,
@@ -9434,8 +9530,8 @@
                     ]
                 },
                 {
-                    "name": "Set the schedule period",
-                    "description": "Sets the frequency at which a source file action imports users. Both the action and its connection must be active for the import to run as scheduled.",
+                    "name": "Set schedule period",
+                    "description": "Sets the frequency at which a source file action imports users. Both the action and its connection must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
                     "method": "PUT",
                     "url": "/v0/actions/:id/schedule",
                     "parameters": [
@@ -9451,13 +9547,25 @@
                         },
                         {
                             "name": "schedulePeriod",
-                            "placeholder": "60",
+                            "placeholder": "\"1h\"",
                             "type": {
-                                "name": "Int",
-                                "bitSize": 32
+                                "name": "Text",
+                                "values": [
+                                    "5m",
+                                    "15m",
+                                    "30m",
+                                    "1h",
+                                    "2h",
+                                    "3h",
+                                    "6h",
+                                    "8h",
+                                    "12h",
+                                    "24h"
+                                ]
                             },
                             "createRequired": true,
-                            "description": "The schedule period in minutes.\n\nPossible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`."
+                            "nullable": true,
+                            "description": "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed."
                         }
                     ],
                     "moreParameters": [],
@@ -9542,21 +9650,34 @@
                             },
                             {
                                 "name": "scheduleStart",
-                                "placeholder": "10",
+                                "placeholder": "15",
                                 "type": {
                                     "name": "Int",
                                     "bitSize": 32
                                 },
-                                "description": "The schedule start"
+                                "nullable": true,
+                                "description": "The start time of the schedule in minutes. It indicates the minute, starting from 00:00, when the first scheduled execution of the day begins. Subsequent executions will occur based on the interval defined by the scheduler period. It is null if the scheduler is disabled."
                             },
                             {
                                 "name": "schedulePeriod",
-                                "placeholder": "60",
+                                "placeholder": "\"1h\"",
                                 "type": {
-                                    "name": "Int",
-                                    "bitSize": 32
+                                    "name": "Text",
+                                    "values": [
+                                        "5m",
+                                        "15m",
+                                        "30m",
+                                        "1h",
+                                        "2h",
+                                        "3h",
+                                        "6h",
+                                        "8h",
+                                        "12h",
+                                        "24h"
+                                    ]
                                 },
-                                "description": "The schedule period. It can be 5, 15, 30, 60, 120, 180, 360, 480, 720, and 1440."
+                                "nullable": true,
+                                "description": "The schedule period. It determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic execution is executed."
                             },
                             {
                                 "name": "inSchema",
@@ -9741,7 +9862,7 @@
                 },
                 {
                     "name": "Import users from a file",
-                    "description": "Starts a source file action execution to import users from the action's file into the workspace’s data warehouse, applying the action's transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.",
+                    "description": "Starts a source file action execution to import users from the action's file into the workspace’s data warehouse, applying the action's transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\nBoth the action and its connection must be enabled.",
                     "method": "POST",
                     "url": "/v0/actions/:id/exec",
                     "parameters": [
@@ -9794,6 +9915,11 @@
                             "status": 422,
                             "code": "ConnectionDisabled",
                             "message": "connection is disabled"
+                        },
+                        {
+                            "status": 422,
+                            "code": "ActionDisabled",
+                            "message": "action is disabled"
                         },
                         {
                             "status": 422,

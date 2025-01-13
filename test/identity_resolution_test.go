@@ -68,6 +68,7 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the action A.
 	actionA := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name:      "Action A",
+		Enabled:   true,
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
@@ -82,6 +83,7 @@ func TestIdentityResolution(t *testing.T) {
 	// Create the action B.
 	actionB := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
 		Name:      "Action B",
+		Enabled:   true,
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),

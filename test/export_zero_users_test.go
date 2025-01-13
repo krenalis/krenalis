@@ -36,7 +36,8 @@ func TestExportZeroUsers(t *testing.T) {
 	func() {
 		dummyDest := c.CreateDummy("Dummy (destination)", meergotester.Destination)
 		exportUsersActionID := c.CreateAction(dummyDest, "Users", meergotester.ActionToSet{
-			Name: "Export users to Dummy",
+			Name:    "Export users to Dummy",
+			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -83,8 +84,9 @@ func TestExportZeroUsers(t *testing.T) {
 
 		// Create an action for the Filesystem for exporting the users.
 		exportUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
-			Name: "Export users to the CSV on Filesystem",
-			Path: exportedFilename,
+			Name:    "Export users to the CSV on Filesystem",
+			Enabled: true,
+			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},

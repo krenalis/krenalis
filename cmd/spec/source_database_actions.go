@@ -170,8 +170,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Set the schedule period",
-				Description: "Sets the frequency at which a source database action imports users. Both the action and its connection must be active for the import to run as scheduled.",
+				Name:        "Set schedule period",
+				Description: "Sets the frequency at which a source database action imports users. Both the action and its connection must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id/schedule",
 				Parameters: []types.Property{
@@ -182,14 +182,7 @@ func init() {
 						Placeholder:    "705981339",
 						Description:    "The ID of the source database action on users.",
 					},
-					{
-						Name:           "schedulePeriod",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "60",
-						Description: "The schedule period in minutes.\n\n" +
-							"Possible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`.",
-					},
+					setSchedulerPeriodParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -242,6 +235,8 @@ func init() {
 							Placeholder: "false",
 							Description: "Indicates if the action is running.",
 						},
+						scheduleStartParameter,
+						schedulePeriodParameter,
 						{
 							Name:        "query",
 							Type:        types.Text(),
@@ -287,7 +282,8 @@ func init() {
 			{
 				Name: "Import users from a database",
 				Description: "Starts a source database action execution to import users from the action's database into the workspace’s data warehouse, applying the action's transformation.\n\n" +
-					"It returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.",
+					"It returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\n" +
+					"Both the action and its connection must be enabled.",
 				Method: POST,
 				URL:    "/v0/actions/:id/exec",
 				Parameters: []types.Property{
@@ -321,6 +317,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 					{422, ConnectionDisabled, "connection is disabled"},
+					{422, ActionDisabled, "action is disabled"},
 					{422, ExecutionInProgress, "action is already in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},

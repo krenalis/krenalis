@@ -40,7 +40,8 @@ func TestExportUsersToFile(t *testing.T) {
 	{
 		dummySrc := c.CreateDummy("Dummy (source)", meergotester.Source)
 		importUsersID := c.CreateAction(dummySrc, "Users", meergotester.ActionToSet{
-			Name: "Import users from Dummy",
+			Name:    "Import users from Dummy",
+			Enabled: true,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text()},
 				{Name: "firstName", Type: types.Text()},
@@ -84,8 +85,9 @@ func TestExportUsersToFile(t *testing.T) {
 
 	// Create an action for the CSV for exporting the users.
 	exportUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
-		Name: "Export users to the CSV on Filesystem",
-		Path: exportedFilename,
+		Name:    "Export users to the CSV on Filesystem",
+		Enabled: true,
+		Path:    exportedFilename,
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -127,8 +129,9 @@ func TestExportUsersToFile(t *testing.T) {
 		}
 
 		c.MustCall("PUT", "/api/connections/"+strconv.Itoa(fsID)+"/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
-			Name: "Export users to the CSV on Filesystem",
-			Path: exportedFilename,
+			Name:    "Export users to the CSV on Filesystem",
+			Enabled: true,
+			Path:    exportedFilename,
 			InSchema: types.Object([]types.Property{
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},

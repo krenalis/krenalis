@@ -11,6 +11,31 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+var scheduleStartParameter = types.Property{
+	Name:        "scheduleStart",
+	Type:        types.Int(32),
+	Placeholder: "15",
+	Nullable:    true,
+	Description: "The start time of the schedule in minutes. It indicates the minute, starting from 00:00, when the first scheduled execution of the day begins. Subsequent executions will occur based on the interval defined by the scheduler period. It is null if the scheduler is disabled.",
+}
+
+var schedulePeriodParameter = types.Property{
+	Name:        "schedulePeriod",
+	Type:        types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
+	Placeholder: `"1h"`,
+	Nullable:    true,
+	Description: "The schedule period. It determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic execution is executed.",
+}
+
+var setSchedulerPeriodParameter = types.Property{
+	Name:           "schedulePeriod",
+	Type:           types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
+	CreateRequired: true,
+	Placeholder:    `"1h"`,
+	Nullable:       true,
+	Description:    "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed.",
+}
+
 func init() {
 
 	filterParameter := types.Property{
@@ -141,7 +166,7 @@ func init() {
 			},
 			{
 				Name:        "Set the status",
-				Description: "Sets the status of a source app action. The status determines whether scheduled imports will be executed.",
+				Description: "Sets the status of a source app action.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id/status",
 				Parameters: []types.Property{
@@ -157,7 +182,7 @@ func init() {
 						Type:           types.Boolean(),
 						CreateRequired: true,
 						Placeholder:    "true",
-						Description:    "Indicates if the action is enabled. If false, no scheduled import is executed.",
+						Description:    "Indicates if the action is enabled..",
 					},
 				},
 				Errors: []Error{
@@ -166,8 +191,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Set the schedule period",
-				Description: "Sets the frequency at which a source app action imports users. Both the action and its connection must be active for the import to run as scheduled.",
+				Name:        "Set schedule period",
+				Description: "Sets the frequency at which a source app action imports users. Both the action and its connection must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id/schedule",
 				Parameters: []types.Property{
@@ -178,14 +203,7 @@ func init() {
 						Placeholder:    "705981339",
 						Description:    "The ID of the source app action on users.",
 					},
-					{
-						Name:           "schedulePeriod",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "60",
-						Description: "The schedule period in minutes.\n\n" +
-							"Possible values: `5`, `15`, `30`, `60`, `120`, `180`, `360`, `480`, `720`, `1440`.",
-					},
+					setSchedulerPeriodParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -238,6 +256,8 @@ func init() {
 							Placeholder: "false",
 							Description: "Indicates if the action is running.",
 						},
+						scheduleStartParameter,
+						schedulePeriodParameter,
 						filterParameter,
 						{
 							Name:        "inSchema",
@@ -264,7 +284,8 @@ func init() {
 			{
 				Name: "Import users from an app",
 				Description: "Starts a source app action execution to import its users into the workspace’s data warehouse, applying the action's filter and transformation.\n\n" +
-					"It returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.",
+					"It returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\n" +
+					"Both the action and its connection must be enabled.",
 				Method: POST,
 				URL:    "/v0/actions/:id/exec",
 				Parameters: []types.Property{
@@ -298,6 +319,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 					{422, ConnectionDisabled, "connection is disabled"},
+					{422, ActionDisabled, "action is disabled"},
 					{422, ExecutionInProgress, "action is already in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},

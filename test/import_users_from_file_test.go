@@ -45,8 +45,9 @@ func TestImportUsersFromFile(t *testing.T) {
 
 	// Create an action for the CSV for importing the users.
 	importUsersActionID := c.CreateAction(fsID, "Users", meergotester.ActionToSet{
-		Name: "Import users from CSV on Filesystem",
-		Path: "users.csv",
+		Name:    "Import users from CSV on Filesystem",
+		Enabled: true,
+		Path:    "users.csv",
 		InSchema: types.Object([]types.Property{
 			{Name: "identity", Type: types.Text()},
 			{Name: "name", Type: types.Text()},

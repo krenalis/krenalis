@@ -76,7 +76,7 @@ func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	var body struct {
-		SchedulePeriod core.SchedulePeriod `json:"schedulePeriod"`
+		SchedulePeriod *core.SchedulePeriod `json:"schedulePeriod"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
