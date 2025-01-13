@@ -18,6 +18,7 @@ import { Execution } from '../../../lib/api/types/responses';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import { Variant } from '../App/App.types';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -192,6 +193,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				<div className='connection-actions__action-name-description'>{linkedActionType.description}</div>
 			</div>
 		);
+
 		let conditionsCell: ReactNode;
 		if (a.filter != null) {
 			const cells: ReactNode[] = [];
@@ -216,11 +218,29 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		} else {
 			conditionsCell = '-';
 		}
+
 		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.id)} checked={a.enabled}></SlSwitch>;
+
+		let scheduleDotVariant: Variant = 'neutral';
+		if (a.enabled && a.schedulePeriod != null) {
+			scheduleDotVariant = 'success';
+		}
 		const actionsCell = (
 			<div className='connection-actions__buttons'>
 				{(a.target === 'Users' || a.target === 'Groups') && isActionExecutionSupported && (
 					<>
+						<FeedbackButton
+							ref={runButtonRefs.current[a.id]}
+							className='connection-actions__run-button'
+							size='small'
+							onClick={() => executeAction(a.id)}
+							loading={runningActions.includes(a.id)}
+							disabled={!a.enabled}
+							hoist={true}
+						>
+							<SlIcon slot='prefix' name='play' />
+							Run now
+						</FeedbackButton>
 						<SlDropdown hoist={true}>
 							<SlButton
 								slot='trigger'
@@ -230,6 +250,11 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 							>
 								<SlIcon slot='prefix' name='clock' />
 								Schedule: {a.schedulePeriod || 'Off'}
+								<SlIcon
+									slot='suffix'
+									className={`connection-actions__scheduler-dot connection-actions__scheduler-dot--${scheduleDotVariant}`}
+									name='circle-fill'
+								/>
 							</SlButton>
 							<SlMenu className='connection-actions__scheduler-options'>
 								<SlRadioGroup
@@ -245,17 +270,6 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								</SlRadioGroup>
 							</SlMenu>
 						</SlDropdown>
-						<FeedbackButton
-							ref={runButtonRefs.current[a.id]}
-							className='connection-actions__run-button'
-							size='small'
-							onClick={() => executeAction(a.id)}
-							loading={runningActions.includes(a.id)}
-							hoist={true}
-						>
-							<SlIcon slot='prefix' name='play' />
-							Run now
-						</FeedbackButton>
 					</>
 				)}
 				<SlButton variant='default' size='small' onClick={() => onManageClick(a)}>
@@ -271,10 +285,12 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				</SlButton>
 			</div>
 		);
+
 		const row: GridRow = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: String(a.id) };
 		if (a.id === newActionID.current && connection.actions!.length > 1) {
 			row.animation = 'fade-in';
 		}
+
 		rows.push(row);
 	}
 

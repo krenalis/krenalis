@@ -59,7 +59,26 @@
 }
 
 .connection-actions__scheduler-button::part(base) {
-	min-width: 130px;
+	min-width: 132px;
+	justify-content: left;
+}
+
+.connection-actions__scheduler-button::part(suffix) {
+	margin-left: auto;
+}
+
+.connection-actions__scheduler-button::part(label) {
+	padding-right: 6px;
+}
+
+.connection-actions__scheduler-dot {
+	font-size: 8px;
+	color: var(--sl-color-neutral-400);
+	transition: color 0.3s;
+}
+
+.connection-actions__scheduler-dot--success {
+	color: var(--sl-color-success-600);
 }
 
 .connection-actions__scheduler-options {
