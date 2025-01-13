@@ -134,7 +134,7 @@ func init() {
 			Name:        "health",
 			Type:        types.Text().WithValues("Healthy", "NoRecentData", "RecentError"),
 			Placeholder: `"Healthy"`,
-			Description: "The connection's healthy.",
+			Description: "The connection's health.",
 		},
 	}
 

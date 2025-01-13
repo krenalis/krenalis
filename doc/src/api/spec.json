@@ -1552,7 +1552,7 @@
                                                         "RecentError"
                                                     ]
                                                 },
-                                                "description": "The connection's healthy."
+                                                "description": "The connection's health."
                                             }
                                         ]
                                     }
@@ -1727,7 +1727,7 @@
                                         "RecentError"
                                     ]
                                 },
-                                "description": "The connection's healthy."
+                                "description": "The connection's health."
                             }
                         ]
                     },
