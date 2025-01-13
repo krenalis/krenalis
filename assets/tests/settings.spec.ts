@@ -23,32 +23,32 @@ test(`Change the workspace name`, async ({ page }) => {
 	await expect(page.locator('.workspace-selector__value')).toContainText('Workspace');
 });
 
-test(`Change the displayed properties`, async ({ page }) => {
+test(`Change the UI user profile properties`, async ({ page }) => {
 	await page.goto(`${uiURL}settings/general`);
 
-	const displayedFirstName = page.locator('.general-settings__displayed-first-name sl-input >> input');
-	const displayedLastName = page.locator('.general-settings__displayed-last-name sl-input >> input');
-	const displayedAdditionalLine = page.locator('.general-settings__displayed-information sl-input >> input');
-	const displayedImage = page.locator('.general-settings__displayed-image sl-input >> input');
+	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
+	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
+	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra sl-input >> input');
+	const userProfileImage = page.locator('.general-settings__user-profile-image sl-input >> input');
 
-	await displayedFirstName.fill('first_name');
-	await displayedLastName.fill('last_name');
-	await displayedAdditionalLine.fill('email');
-	await displayedImage.fill('dummy_id'); // Currently in the default schema we don't have any property for the image.
+	await userProfileFirstName.fill('first_name');
+	await userProfileLastName.fill('last_name');
+	await userProfileAdditionalLine.fill('email');
+	await userProfileImage.fill('dummy_id'); // Currently in the default schema we don't have any property for the image.
 
 	await page.click('.general-settings__save-workspace-button');
 
-	await expect(displayedFirstName).toHaveValue('first_name');
-	await expect(displayedLastName).toHaveValue('last_name');
-	await expect(displayedAdditionalLine).toHaveValue('email');
-	await expect(displayedImage).toHaveValue('dummy_id');
+	await expect(userProfileFirstName).toHaveValue('first_name');
+	await expect(userProfileLastName).toHaveValue('last_name');
+	await expect(userProfileAdditionalLine).toHaveValue('email');
+	await expect(userProfileImage).toHaveValue('dummy_id');
 
 	await page.reload();
 
-	await expect(displayedFirstName).toHaveValue('first_name');
-	await expect(displayedLastName).toHaveValue('last_name');
-	await expect(displayedAdditionalLine).toHaveValue('email');
-	await expect(displayedImage).toHaveValue('dummy_id');
+	await expect(userProfileFirstName).toHaveValue('first_name');
+	await expect(userProfileLastName).toHaveValue('last_name');
+	await expect(userProfileAdditionalLine).toHaveValue('email');
+	await expect(userProfileImage).toHaveValue('dummy_id');
 });
 
 test(`Change the automatic execution of the identity resolution`, async ({ page }) => {

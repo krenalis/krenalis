@@ -239,12 +239,12 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string,
-	userSchema types.Type, displayedProperties DisplayedProperties,
+	userSchema types.Type, uiPreferences UIPreferences,
 	whType string, whSettings []byte, whMode WarehouseMode) (int, error) {
 
 	this.core.mustBeOpen()
 
-	whSettings, err := this.validateWorkspaceCreation(ctx, name, userSchema, displayedProperties, whType, whSettings, whMode)
+	whSettings, err := this.validateWorkspaceCreation(ctx, name, userSchema, uiPreferences, whType, whSettings, whMode)
 	if err != nil {
 		return 0, err
 	}
@@ -263,7 +263,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		Name:                           name,
 		UserSchema:                     userSchema,
 		ResolveIdentitiesOnBatchImport: true,
-		DisplayedProperties:            state.DisplayedProperties(displayedProperties),
+		UIPreferences:                  state.UIPreferences(uiPreferences),
 	}
 	n.Warehouse.Type = whType
 	n.Warehouse.Mode = state.WarehouseMode(whMode)
@@ -283,13 +283,13 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		_, err := tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-			" user_schema, resolve_identities_on_batch_import, displayed_image,"+
-			" displayed_first_name, displayed_last_name, displayed_information,"+
-			" warehouse_type, warehouse_mode, warehouse_settings)"+
+			" user_schema, resolve_identities_on_batch_import, ui_user_profile_image, ui_user_profile_first_name, "+
+			" ui_user_profile_last_name, ui_user_profile_extra, warehouse_type, warehouse_mode, warehouse_settings)"+
 			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
 			n.ID, n.Organization, n.Name, encodedUserSchema, n.ResolveIdentitiesOnBatchImport,
-			n.DisplayedProperties.Image, n.DisplayedProperties.FirstName, n.DisplayedProperties.LastName,
-			n.DisplayedProperties.Information, n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
+			n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
+			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra,
+			n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
@@ -475,10 +475,10 @@ func (this *Organization) Members(ctx context.Context) ([]*Member, error) {
 //     not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string,
-	userSchema types.Type, displayedProperties DisplayedProperties, whType string,
+	userSchema types.Type, uiPreferences UIPreferences, whType string,
 	whSettings []byte, mode WarehouseMode) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, userSchema, displayedProperties, whType, whSettings, mode)
+	_, err := this.validateWorkspaceCreation(ctx, name, userSchema, uiPreferences, whType, whSettings, mode)
 	return err
 }
 
@@ -590,7 +590,7 @@ func (this *Organization) Workspace(id int) (*Workspace, error) {
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
 		WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
-		DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
+		UIPreferences:                  UIPreferences(ws.UIPreferences),
 	}
 	return &workspace, nil
 }
@@ -613,7 +613,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
-			DisplayedProperties:            DisplayedProperties(ws.DisplayedProperties),
+			UIPreferences:                  UIPreferences(ws.UIPreferences),
 		}
 		infos[i] = &workspace
 	}
@@ -631,7 +631,7 @@ func (this *Organization) Workspaces() []*Workspace {
 //     not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string,
-	userSchema types.Type, displayedProperties DisplayedProperties,
+	userSchema types.Type, uiPreferences UIPreferences,
 	whType string, whSettings []byte, whMode WarehouseMode) ([]byte, error) {
 
 	// Validate the parameters.
@@ -641,7 +641,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	if !userSchema.Valid() {
 		return nil, errors.BadRequest("user schema is invalid")
 	}
-	if err := validateDisplayedProperties(displayedProperties); err != nil {
+	if err := validateUIPreferences(uiPreferences); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 	if whType == "" {

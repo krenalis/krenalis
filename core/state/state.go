@@ -430,7 +430,7 @@ type Workspace struct {
 	accounts                       map[int]*Account
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
-	DisplayedProperties            DisplayedProperties
+	UIPreferences                  UIPreferences
 	actionsToPurge                 []int
 }
 
@@ -508,12 +508,14 @@ func (workspace *Workspace) Organization() *Organization {
 
 }
 
-// DisplayedProperties represents the displayed properties.
-type DisplayedProperties struct {
-	Image       string
-	FirstName   string
-	LastName    string
-	Information string
+// UIPreferences represents the UI preferences of a workspace.
+type UIPreferences struct {
+	UserProfile struct {
+		Image     string
+		FirstName string
+		LastName  string
+		Extra     string
+	}
 }
 
 // TimeLayouts represents the layouts used to format DateTime, Date, and Time

@@ -48,22 +48,23 @@ type Workspace struct {
 	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
-	ID                             int                 `json:"id"`
-	Name                           string              `json:"name"`
-	UserSchema                     types.Type          `json:"userSchema"`
-	UserPrimarySources             map[string]int      `json:"userPrimarySources,format:emitnull"`
-	ResolveIdentitiesOnBatchImport bool                `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string            `json:"identifiers,format:emitnull"`
-	WarehouseMode                  WarehouseMode       `json:"warehouseMode"`
-	DisplayedProperties            DisplayedProperties `json:"displayedProperties"`
+	ID                             int            `json:"id"`
+	Name                           string         `json:"name"`
+	UserSchema                     types.Type     `json:"userSchema"`
+	UserPrimarySources             map[string]int `json:"userPrimarySources,format:emitnull"`
+	ResolveIdentitiesOnBatchImport bool           `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string       `json:"identifiers,format:emitnull"`
+	WarehouseMode                  WarehouseMode  `json:"warehouseMode"`
+	UIPreferences                  UIPreferences  `json:"uiPreferences"`
 }
 
-// DisplayedProperties represents the displayed properties.
-type DisplayedProperties struct {
-	Image       string `json:"image"`
-	FirstName   string `json:"firstName"`
-	LastName    string `json:"lastName"`
-	Information string `json:"information"`
+type UIPreferences struct {
+	UserProfile struct {
+		Image     string `json:"image"`
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+		Extra     string `json:"extra"`
+	} `json:"userProfile"`
 }
 
 // ActionStep represents a step of an action.
@@ -1422,26 +1423,26 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 // must be between 1 and 100 runes long. displayedProperties must contain valid
 // displayed property names. A valid displayed property name is an empty string,
 // or alternatively a valid property name between 1 and 100 runes long.
-func (this *Workspace) Update(ctx context.Context, name string, displayedProperties DisplayedProperties) error {
+func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
 	if err := validateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	if err := validateDisplayedProperties(displayedProperties); err != nil {
+	if err := validateUIPreferences(uiPreferences); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	ws := this.workspace
 	n := state.UpdateWorkspace{
-		Workspace:           ws.ID,
-		Name:                name,
-		DisplayedProperties: state.DisplayedProperties(displayedProperties),
+		Workspace:     ws.ID,
+		Name:          name,
+		UIPreferences: state.UIPreferences(uiPreferences),
 	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, displayed_image = $2, "+
-			"displayed_first_name = $3, displayed_last_name = $4, displayed_information = $5 "+
-			"WHERE id = $6",
-			n.Name, n.DisplayedProperties.Image, n.DisplayedProperties.FirstName,
-			n.DisplayedProperties.LastName, n.DisplayedProperties.Information, n.Workspace)
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_user_profile_image = $2, "+
+			"ui_user_profile_first_name = $3, ui_user_profile_last_name = $4, "+
+			"ui_user_profile_extra = $5 WHERE id = $6",
+			n.Name, n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
+			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra, n.Workspace)
 		if err != nil {
 			return err
 		}
@@ -1835,20 +1836,20 @@ func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
 	return actions
 }
 
-// validateDisplayedProperties validates whether the given displayedProperties
-// are valid or not, returning an error if they are not.
-func validateDisplayedProperties(properties DisplayedProperties) error {
-	if n := properties.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid displayed image %q", n)
+// validateUIPreferences validates whether the given UI preferences are valid or
+// not, returning an error if they are not.
+func validateUIPreferences(preferences UIPreferences) error {
+	if n := preferences.UserProfile.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid user profile image %q", n)
 	}
-	if n := properties.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid displayed first name %q", n)
+	if n := preferences.UserProfile.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid user profile first name %q", n)
 	}
-	if n := properties.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid displayed last name %q", n)
+	if n := preferences.UserProfile.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid user profile last name %q", n)
 	}
-	if n := properties.Information; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid displayed information %q", n)
+	if n := preferences.UserProfile.Extra; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid user profile information %q", n)
 	}
 	return nil
 }

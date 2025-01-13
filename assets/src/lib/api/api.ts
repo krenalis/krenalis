@@ -19,7 +19,7 @@ import { Connector } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
 	CreateWorkspaceResponse,
-	DisplayedProperties,
+	UIPreferences,
 	LastIdentityResolution,
 	PrimarySources,
 } from './types/workspace';
@@ -643,40 +643,40 @@ class Workspaces {
 	create = async (
 		name: string,
 		userSchema: ObjectType,
-		displayedProperties: DisplayedProperties,
 		warehouseType: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
+		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, this.workspaceID, {
 			name: name,
 			userSchema: userSchema,
-			displayedProperties: displayedProperties,
 			warehouse: {
 				type: warehouseType,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
+			uiPreferences: uiPreferences,
 		});
 	};
 
 	testCreation = async (
 		name: string,
 		userSchema: ObjectType,
-		displayedProperties: DisplayedProperties,
 		warehouseType: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
+		uiPreferences: UIPreferences,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, this.workspaceID, {
 			name: name,
 			userSchema: userSchema,
-			displayedProperties: displayedProperties,
 			warehouse: {
 				type: warehouseType,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
+			uiPreferences: uiPreferences,
 		});
 	};
 
@@ -684,10 +684,10 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.GET, this.workspaceID);
 	};
 
-	update = async (name: string, displayedProperties: DisplayedProperties): Promise<void> => {
+	update = async (name: string, uiPreferences: UIPreferences): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/current`, http.PUT, this.workspaceID, {
 			name,
-			displayedProperties,
+			uiPreferences,
 		});
 	};
 

@@ -641,14 +641,14 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Name                string                   `json:"name"`
-		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
+		Name          string             `json:"name"`
+		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.Update(r.Context(), body.Name, body.DisplayedProperties)
+	err = ws.Update(r.Context(), body.Name, body.UIPreferences)
 	return nil, err
 }
 

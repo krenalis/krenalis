@@ -188,16 +188,13 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		state.workspaces = map[int]*Workspace{}
 		err = state.db.QueryScan(ctx, "SELECT id, organization, name, warehouse_type, warehouse_mode,"+
 			" warehouse_settings, user_schema, resolve_identities_on_batch_import,"+
-			" identifiers, displayed_image, displayed_first_name,displayed_last_name,"+
-			" displayed_information, actions_to_purge FROM workspaces",
+			" identifiers, ui_user_profile_image, ui_user_profile_first_name,"+
+			" ui_user_profile_last_name, ui_user_profile_extra, actions_to_purge "+
+			"FROM workspaces",
 			func(rows *postgres.Rows) error {
 				var organizationID int
 				var warehouseType string
 				var warehouseMode WarehouseMode
-				var displayedImage string
-				var displayedFirstName string
-				var displayedLastName string
-				var displayedInformation string
 				var userSchema []byte
 				var warehouseSettings []byte
 				for rows.Next() {
@@ -209,8 +206,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
 						&warehouseMode, &warehouseSettings, &userSchema,
 						&ws.ResolveIdentitiesOnBatchImport, &ws.Identifiers,
-						&displayedImage, &displayedFirstName, &displayedLastName,
-						&displayedInformation, &ws.actionsToPurge); err != nil {
+						&ws.UIPreferences.UserProfile.Image, &ws.UIPreferences.UserProfile.FirstName,
+						&ws.UIPreferences.UserProfile.LastName, &ws.UIPreferences.UserProfile.Extra,
+						&ws.actionsToPurge); err != nil {
 						return err
 					}
 					ws.organization = state.organizations[organizationID]
@@ -225,12 +223,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						return err
 					}
 					ws.UserPrimarySources = map[string]int{}
-					ws.DisplayedProperties = DisplayedProperties{
-						Image:       displayedImage,
-						FirstName:   displayedFirstName,
-						LastName:    displayedLastName,
-						Information: displayedInformation,
-					}
 					ws.organization.workspaces[ws.ID] = ws
 					state.workspaces[ws.ID] = ws
 				}

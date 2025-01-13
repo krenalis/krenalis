@@ -1,6 +1,6 @@
 import { TransformedMapping } from '../../../lib/core/action';
 
-const checkDisplayedProperty = (property: string, schema: TransformedMapping): string => {
+const checkUIPreferences = (property: string, schema: TransformedMapping): string => {
 	if (schema == null || property === '') {
 		return '';
 	}
@@ -13,4 +13,4 @@ const checkDisplayedProperty = (property: string, schema: TransformedMapping): s
 	return '';
 };
 
-export { checkDisplayedProperty };
+export { checkUIPreferences };

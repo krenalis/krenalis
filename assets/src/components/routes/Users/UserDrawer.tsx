@@ -92,21 +92,21 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	let userImage: any;
 	let userFirstName: any;
 	let userLastName: any;
-	let userInformation: any;
+	let userExtra: any;
 	if (traits && traits.size > 0) {
 		const t = Array.from(traits);
 		for (const [key, value] of t) {
-			if (key == workspace.displayedProperties.image) {
+			if (key == workspace.uiPreferences.userProfile.image) {
 				userImage = value;
 			}
-			if (key == workspace.displayedProperties.firstName) {
+			if (key == workspace.uiPreferences.userProfile.firstName) {
 				userFirstName = value;
 			}
-			if (key == workspace.displayedProperties.lastName) {
+			if (key == workspace.uiPreferences.userProfile.lastName) {
 				userLastName = value;
 			}
-			if (key == workspace.displayedProperties.information) {
-				userInformation = value;
+			if (key == workspace.uiPreferences.userProfile.extra) {
+				userExtra = value;
 			}
 		}
 	}
@@ -139,10 +139,10 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 				<div className='user-drawer__user-properties'>
 					<span className='user-drawer__first-name'>{userFirstName || ''}</span>{' '}
 					<span className='user-drawer__last-name'>{userLastName || ''}</span>
-					<div className='user-drawer__information'>{userInformation || ''}</div>
-					{userImage == null && userFirstName == null && userLastName == null && userInformation == null && (
+					<div className='user-drawer__information'>{userExtra || ''}</div>
+					{userImage == null && userFirstName == null && userLastName == null && userExtra == null && (
 						<div className='user-drawer__customize'>
-							You can customize the displayed properties in the{' '}
+							You can customize the properties to display in the{' '}
 							<Link path='settings/general'>
 								<span className='user-drawer__customize-link'>settings</span>
 							</Link>

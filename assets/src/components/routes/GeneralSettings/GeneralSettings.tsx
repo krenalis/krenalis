@@ -12,8 +12,9 @@ import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { flattenSchema } from '../../../lib/core/action';
-import { checkDisplayedProperty } from './GeneralSettings.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
+import { UIPreferences } from '../../../lib/api/types/workspace';
+import { checkUIPreferences } from './GeneralSettings.helpers';
 
 const GeneralSettings = () => {
 	const [userSchema, setUserSchema] = useState<ObjectType>();
@@ -21,7 +22,7 @@ const GeneralSettings = () => {
 	const [image, setImage] = useState<string>();
 	const [firstName, setFirstName] = useState<string>();
 	const [lastName, setLastName] = useState<string>();
-	const [information, setInformation] = useState<string>();
+	const [extra, setExtra] = useState<string>();
 	const [isDeleteConfirmationDialogOpen, setIsDeleteConfirmationDialogOpen] = useState<boolean>(false);
 
 	const deleteButtonRef = useRef<any>();
@@ -40,10 +41,10 @@ const GeneralSettings = () => {
 	useLayoutEffect(() => {
 		const ws = workspaces.find((workspace) => workspace.id === selectedWorkspace);
 		setName(ws.name);
-		setImage(ws.displayedProperties.image);
-		setFirstName(ws.displayedProperties.firstName);
-		setLastName(ws.displayedProperties.lastName);
-		setInformation(ws.displayedProperties.information);
+		setImage(ws.uiPreferences.userProfile.image);
+		setFirstName(ws.uiPreferences.userProfile.firstName);
+		setLastName(ws.uiPreferences.userProfile.lastName);
+		setExtra(ws.uiPreferences.userProfile.extra);
 	}, [selectedWorkspace]);
 
 	useEffect(() => {
@@ -64,55 +65,54 @@ const GeneralSettings = () => {
 
 	const flatUserSchema = useMemo(() => flattenSchema(userSchema), [userSchema]);
 
-	const imageError = useMemo<string>(() => checkDisplayedProperty(image, flatUserSchema), [flatUserSchema, image]);
+	const imageError = useMemo<string>(() => checkUIPreferences(image, flatUserSchema), [flatUserSchema, image]);
 	const firstNameError = useMemo<string>(
-		() => checkDisplayedProperty(firstName, flatUserSchema),
+		() => checkUIPreferences(firstName, flatUserSchema),
 		[flatUserSchema, firstName],
 	);
 	const lastNameError = useMemo<string>(
-		() => checkDisplayedProperty(lastName, flatUserSchema),
+		() => checkUIPreferences(lastName, flatUserSchema),
 		[flatUserSchema, lastName],
 	);
-	const informationError = useMemo<string>(
-		() => checkDisplayedProperty(information, flatUserSchema),
-		[flatUserSchema, information],
-	);
+	const extraError = useMemo<string>(() => checkUIPreferences(extra, flatUserSchema), [flatUserSchema, extra]);
 
 	const onNameInput = (e) => setName(e.target.value);
 
 	const updateProperty = (name: string, value: string) => {
 		switch (name) {
-			case 'image':
-				setImage(value);
-				break;
 			case 'firstName':
 				setFirstName(value);
 				break;
 			case 'lastName':
 				setLastName(value);
 				break;
-			case 'information':
-				setInformation(value);
+			case 'extra':
+				setExtra(value);
+			case 'image':
+				setImage(value);
+				break;
 		}
 	};
 
-	const onUpdateDisplayedProperty = (name: string, value: string) => {
+	const onUpdateUIPreferences = (name: string, value: string) => {
 		updateProperty(name, value);
 	};
 
-	const onSelectDisplayedProperty = (name: string, value: string) => {
+	const onSelectUIPreferences = (name: string, value: string) => {
 		updateProperty(name, value);
 	};
 
 	const onSave = async () => {
-		const displayedProperties = {
-			image,
-			firstName,
-			lastName,
-			information,
+		const uiPreferences: UIPreferences = {
+			userProfile: {
+				firstName,
+				lastName,
+				extra,
+				image,
+			},
 		};
 		try {
-			await api.workspaces.update(name, displayedProperties);
+			await api.workspaces.update(name, uiPreferences);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -157,18 +157,18 @@ const GeneralSettings = () => {
 				value={name}
 				onSlInput={onNameInput}
 			/>
-			<div className='general-settings__displayed-properties'>
-				<div className='general-settings__displayed-properties-title'>Displayed user properties</div>
-				<div className='general-settings__displayed-properties-description'>
+			<div className='general-settings__user-profile-properties'>
+				<div className='general-settings__user-profile-properties-title'>Displayed user properties</div>
+				<div className='general-settings__user-profile-properties-description'>
 					The properties of the user schema shown in the user pages
 				</div>
-				<div className='general-settings__displayed-properties-fields'>
+				<div className='general-settings__user-profile-properties-fields'>
 					{firstName !== undefined && (
 						<Combobox
-							className='general-settings__displayed-first-name'
+							className='general-settings__user-profile-first-name'
 							label='First name'
-							onInput={onUpdateDisplayedProperty}
-							onSelect={onSelectDisplayedProperty}
+							onInput={onUpdateUIPreferences}
+							onSelect={onSelectUIPreferences}
 							items={userSchemaComboboxItems}
 							value={firstName}
 							name='firstName'
@@ -179,10 +179,10 @@ const GeneralSettings = () => {
 					)}
 					{lastName !== undefined && (
 						<Combobox
-							className='general-settings__displayed-last-name'
+							className='general-settings__user-profile-last-name'
 							label='Last name'
-							onInput={onUpdateDisplayedProperty}
-							onSelect={onSelectDisplayedProperty}
+							onInput={onUpdateUIPreferences}
+							onSelect={onSelectUIPreferences}
 							items={userSchemaComboboxItems}
 							value={lastName}
 							name='lastName'
@@ -191,26 +191,26 @@ const GeneralSettings = () => {
 							caret={true}
 						/>
 					)}
-					{information !== undefined && (
+					{extra !== undefined && (
 						<Combobox
-							className='general-settings__displayed-information'
+							className='general-settings__user-profile-extra'
 							label='Additional line'
-							onInput={onUpdateDisplayedProperty}
-							onSelect={onSelectDisplayedProperty}
+							onInput={onUpdateUIPreferences}
+							onSelect={onSelectUIPreferences}
 							items={userSchemaComboboxItems}
-							value={information}
-							name='information'
+							value={extra}
+							name='extra'
 							isExpression={false}
-							error={informationError && informationError}
+							error={extraError && extraError}
 							caret={true}
 						/>
 					)}
 					{image !== undefined && (
 						<Combobox
-							className='general-settings__displayed-image'
+							className='general-settings__user-profile-image'
 							label='Image'
-							onInput={onUpdateDisplayedProperty}
-							onSelect={onSelectDisplayedProperty}
+							onInput={onUpdateUIPreferences}
+							onSelect={onSelectUIPreferences}
 							items={userSchemaComboboxItems}
 							value={image}
 							name='image'

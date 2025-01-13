@@ -71,21 +71,21 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	var body struct {
-		Name                string                   `json:"name"`
-		UserSchema          types.Type               `json:"userSchema"`
-		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
-		Warehouse           struct {
+		Name       string     `json:"name"`
+		UserSchema types.Type `json:"userSchema"`
+		Warehouse  struct {
 			Type     string             `json:"type"`
 			Mode     core.WarehouseMode `json:"mode"`
 			Settings json.Value         `json:"settings"`
 		} `json:"warehouse"`
+		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 	id, err := org.CreateWorkspace(r.Context(), body.Name, body.UserSchema,
-		body.DisplayedProperties, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
+		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
 		return nil, err
 	}
@@ -155,21 +155,21 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
-		Name                string                   `json:"name"`
-		UserSchema          types.Type               `json:"userSchema"`
-		DisplayedProperties core.DisplayedProperties `json:"displayedProperties"`
-		Warehouse           struct {
+		Name       string     `json:"name"`
+		UserSchema types.Type `json:"userSchema"`
+		Warehouse  struct {
 			Type     string             `json:"type"`
 			Mode     core.WarehouseMode `json:"mode"`
 			Settings json.Value         `json:"settings"`
 		} `json:"warehouse"`
+		UIPreferences core.UIPreferences `json:"uiPreferences"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.UserSchema,
-		body.DisplayedProperties, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
+		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	return nil, err
 }
 

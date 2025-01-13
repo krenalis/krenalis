@@ -24,10 +24,10 @@ CREATE TABLE workspaces (
     user_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     resolve_identities_on_batch_import boolean NOT NULL DEFAULT false,
     identifiers text[] NOT NULL DEFAULT '{}',
-    displayed_image varchar(100) NOT NULL DEFAULT '',
-    displayed_first_name varchar(100) NOT NULL DEFAULT '',
-    displayed_last_name varchar(100) NOT NULL DEFAULT '',
-    displayed_information varchar(100) NOT NULL DEFAULT '',
+    ui_user_profile_image varchar(100) NOT NULL DEFAULT '',
+    ui_user_profile_first_name varchar(100) NOT NULL DEFAULT '',
+    ui_user_profile_last_name varchar(100) NOT NULL DEFAULT '',
+    ui_user_profile_extra varchar(100) NOT NULL DEFAULT '',
     actions_to_purge int[] NOT NULL DEFAULT '{}',
     PRIMARY KEY (id)
 );

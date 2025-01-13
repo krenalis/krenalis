@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
-import { DisplayedProperties } from '../../../lib/api/types/workspace';
+import { UIPreferences } from '../../../lib/api/types/workspace';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -40,20 +40,22 @@ const WorkspaceCreate = () => {
 			return;
 		}
 		setIsCheckingWarehouse(true);
-		let displayedProperties: DisplayedProperties = {
-			firstName: 'first_name',
-			lastName: 'last_name',
-			information: 'email',
-			image: '',
+		let uiProperties: UIPreferences = {
+			userProfile: {
+				image: '',
+				firstName: 'first_name',
+				lastName: 'last_name',
+				extra: 'email',
+			},
 		};
 		try {
 			await api.workspaces.testCreation(
 				name,
 				InitialSchema as ObjectType,
-				displayedProperties,
 				selectedWarehouse,
 				'Normal',
 				warehouseSettings,
+				uiProperties,
 			);
 		} catch (err) {
 			setTimeout(() => {
@@ -81,20 +83,22 @@ const WorkspaceCreate = () => {
 		}
 		setIsAddingWorkspace(true);
 		let id: number;
-		let displayedProperties: DisplayedProperties = {
-			firstName: 'first_name',
-			lastName: 'last_name',
-			information: 'email',
-			image: '',
+		let uiPreferences: UIPreferences = {
+			userProfile: {
+				image: '',
+				firstName: 'first_name',
+				lastName: 'last_name',
+				extra: 'email',
+			},
 		};
 		try {
 			const res = await api.workspaces.create(
 				name,
 				InitialSchema as ObjectType,
-				displayedProperties,
 				selectedWarehouse,
 				'Normal',
 				warehouseSettings,
+				uiPreferences,
 			);
 			id = res.id;
 		} catch (err) {

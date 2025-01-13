@@ -453,12 +453,12 @@ type CreateWorkspace struct {
 	Name                           string
 	UserSchema                     types.Type
 	ResolveIdentitiesOnBatchImport bool
-	DisplayedProperties            DisplayedProperties
 	Warehouse                      struct {
 		Type     string
 		Mode     WarehouseMode
 		Settings json.RawMessage
 	}
+	UIPreferences UIPreferences
 }
 
 // createWorkspace creates a workspace.
@@ -478,8 +478,8 @@ func (state *State) createWorkspace(n notification) {
 		UserPrimarySources:             map[string]int{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
-		DisplayedProperties:            e.DisplayedProperties,
 		Warehouse:                      e.Warehouse,
+		UIPreferences:                  e.UIPreferences,
 		actionsToPurge:                 []int{},
 	}
 	state.mu.Lock()
@@ -1173,9 +1173,9 @@ func (state *State) updateWarehouseMode(n notification) {
 // UpdateWorkspace is the event sent when the name and the displayed properties
 // of a workspace are updated.
 type UpdateWorkspace struct {
-	Workspace           int
-	Name                string
-	DisplayedProperties DisplayedProperties
+	Workspace     int
+	Name          string
+	UIPreferences UIPreferences
 }
 
 // updateWorkspace updates the name and the displayed properties of a workspace.
@@ -1186,7 +1186,7 @@ func (state *State) updateWorkspace(n notification) {
 	}
 	state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Name = e.Name
-		w.DisplayedProperties = e.DisplayedProperties
+		w.UIPreferences = e.UIPreferences
 	})
 	dispatchNotification(state, e)
 }

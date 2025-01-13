@@ -3,11 +3,15 @@ import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, number>;
 
-interface DisplayedProperties {
+interface UserProfile {
 	image: string;
 	firstName: string;
 	lastName: string;
-	information: string;
+	extra: string;
+}
+
+interface UIPreferences {
+	userProfile: UserProfile;
 }
 
 interface Workspace {
@@ -15,9 +19,9 @@ interface Workspace {
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
-	displayedProperties: DisplayedProperties;
 	warehouseMode: WarehouseMode;
 	userPrimarySources: PrimarySources;
+	uiPreferences: UIPreferences;
 }
 
 interface CreateWorkspaceResponse {
@@ -30,4 +34,4 @@ interface LastIdentityResolution {
 }
 
 export default Workspace;
-export type { CreateWorkspaceResponse, DisplayedProperties, PrimarySources, LastIdentityResolution };
+export type { CreateWorkspaceResponse, UIPreferences, UserProfile, PrimarySources, LastIdentityResolution };

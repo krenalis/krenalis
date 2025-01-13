@@ -74,35 +74,39 @@ func init() {
 		Placeholder: "{...}",
 		Description: "The settings of the data warehouse.",
 	}
-	displayedPropertiesParameter := types.Property{
-		Name: "displayedProperties",
+	uiPreferencesParameter := types.Property{
+		Name: "uiPreferences",
 		Type: types.Object([]types.Property{
 			{
-				Name:        "image",
-				Type:        types.Text().WithCharLen(100),
-				Placeholder: `"customer_image"`,
-				Description: "The property name in the user schema that represents the user's image, in base64 format.",
-			},
-			{
-				Name:        "firstName",
-				Type:        types.Text().WithCharLen(100),
-				Placeholder: `"first_name"`,
-				Description: "The property name in the user schema for the user's first name.",
-			},
-			{
-				Name:        "lastName",
-				Type:        types.Text().WithCharLen(100),
-				Placeholder: `"last_name"`,
-				Description: "The property name in the user schema for the user's last name.",
-			},
-			{
-				Name:        "information",
-				Type:        types.Text().WithCharLen(100),
-				Placeholder: `"email"`,
-				Description: "The property name in the user schema for additional user information. For example, the user schema property that represents the email.",
+				Name: "userProfile",
+				Type: types.Object([]types.Property{
+					{
+						Name:        "image",
+						Type:        types.Text().WithCharLen(100),
+						Placeholder: `"customer_image"`,
+						Description: "The property name in the user schema that represents the user's image, in base64 format.",
+					},
+					{
+						Name:        "firstName",
+						Type:        types.Text().WithCharLen(100),
+						Placeholder: `"first_name"`,
+						Description: "The property name to in the user schema to display as first name in the profile header.",
+					},
+					{
+						Name:        "lastName",
+						Type:        types.Text().WithCharLen(100),
+						Placeholder: `"last_name"`,
+						Description: "The property name in the user schema for the user's last name.",
+					},
+					{
+						Name:        "extra",
+						Type:        types.Text().WithCharLen(100),
+						Placeholder: `"email"`,
+						Description: "The property name in the user schema for additional user information. For example, the user schema property that represents the email.",
+					},
+				}),
 			},
 		}),
-		Description: "The user properties to be displayed in the user profile within the UI. If any of these fields are empty, no corresponding value will be shown in the UI.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -118,7 +122,6 @@ func init() {
 				Parameters: []types.Property{
 					nameParameter,
 					userSchemaParameter,
-					displayedPropertiesParameter,
 					{
 						Name: "warehouse",
 						Type: types.Object([]types.Property{
@@ -131,6 +134,7 @@ func init() {
 							"As part of the workspace provisioning process, the specified database is initialized with the schema, including all necessary tables, views, and stored procedures. " +
 							"The target database must be empty prior to initialization.",
 					},
+					uiPreferencesParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -151,7 +155,6 @@ func init() {
 				Parameters: []types.Property{
 					nameParameter,
 					userSchemaParameter,
-					displayedPropertiesParameter,
 					{
 						Name: "warehouse",
 						Type: types.Object([]types.Property{
@@ -164,6 +167,7 @@ func init() {
 							"Since this method only tests the creation of a workspace, the data warehouse is not modified. " +
 							"The target database must be empty to make the check succeed.",
 					},
+					uiPreferencesParameter,
 				},
 				Errors: []Error{
 					{422, WarehouseTypeNotExist, "warehouse type does not exist"},
@@ -178,7 +182,7 @@ func init() {
 				URL:         "/v0/workspaces/current",
 				Parameters: []types.Property{
 					nameParameter,
-					displayedPropertiesParameter,
+					uiPreferencesParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -201,7 +205,7 @@ func init() {
 								resolveIdentitiesOnBatchImport,
 								identifiers,
 								warehouseModeParameter,
-								displayedPropertiesParameter,
+								uiPreferencesParameter,
 							})),
 							Placeholder: "...",
 							Description: "The workspaces of the organization.",
@@ -223,7 +227,7 @@ func init() {
 						resolveIdentitiesOnBatchImport,
 						identifiers,
 						warehouseModeParameter,
-						displayedPropertiesParameter,
+						uiPreferencesParameter,
 					},
 				},
 				Errors: []Error{
