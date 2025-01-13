@@ -134,14 +134,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if email == "" {
-		return 0, errors.BadRequest("email is empty")
-	}
-	if !utf8.ValidString(email) {
-		return 0, errors.BadRequest("email is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(email); n > 120 {
-		return 0, errors.BadRequest("email is longer than 120 runes")
+	if err := validateStringField("email", email, 120); err != nil {
+		return 0, errors.BadRequest("%s", err)
 	}
 	if !emailRegExp.MatchString(email) {
 		return 0, errors.BadRequest("email is not a valid email address")
@@ -184,8 +178,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 //   - WorkspaceNotExist, if the workspace does not exist.
 func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspace int) (int, string, error) {
 	this.core.mustBeOpen()
-	if containsNUL(name) || utf8.RuneCountInString(name) > 100 {
-		return 0, "", errors.BadRequest("name %q is not valid", name)
+	if err := validateStringField("name", name, 100); err != nil {
+		return 0, "", errors.BadRequest("%s", err)
 	}
 	if workspace < 0 || workspace > maxInt32 {
 		return 0, "", errors.BadRequest("workspace is not a valid workspace identifier")
@@ -498,8 +492,8 @@ func (this *Organization) UpdateAPIKey(ctx context.Context, id int, name string)
 	if id < 1 || id > maxInt32 {
 		return errors.BadRequest("identifier %d is not a valid API key identifier", id)
 	}
-	if containsNUL(name) || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
+	if err := validateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	result, err := this.core.db.Exec(ctx, "UPDATE api_keys SET name = $1 WHERE id = $2 AND organization = $3", name, id, this.organization.ID)
 	if err != nil {
@@ -641,8 +635,8 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	whType string, whSettings []byte, whMode WarehouseMode) ([]byte, error) {
 
 	// Validate the parameters.
-	if name == "" || utf8.RuneCountInString(name) > 100 || containsNUL(name) {
-		return nil, errors.BadRequest("name %q is not valid", name)
+	if err := validateStringField("name", name, 100); err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 	if !userSchema.Valid() {
 		return nil, errors.BadRequest("user schema is invalid")
@@ -783,14 +777,8 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 // validateMemberEmail validates a member's email and returns an error if it is
 // not valid.
 func validateMemberEmail(email string) error {
-	if email == "" {
-		return errors.New("email is empty")
-	}
-	if !utf8.ValidString(email) {
-		return errors.New("email is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(email); n > 120 {
-		return errors.New("email is longer than 120 runes")
+	if err := validateStringField("email", email, 120); err != nil {
+		return err
 	}
 	if !emailRegExp.MatchString(email) {
 		return errors.New("email is not a valid email address")
@@ -802,17 +790,8 @@ func validateMemberEmail(email string) error {
 // if the member is not valid.
 func validateMemberToSet(member MemberToSet, validateEmail bool, validatePassword bool) error {
 	// Validate name.
-	if member.Name == "" {
-		return errors.New("name is empty")
-	}
-	if containsNUL(member.Name) {
-		return errors.New("name contains NUL rune")
-	}
-	if !utf8.ValidString(member.Name) {
-		return errors.New("name is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(member.Name); n > 45 {
-		return errors.New("name is longer than 45 runes")
+	if err := validateStringField("name", member.Name, 45); err != nil {
+		return err
 	}
 	// Validate avatar.
 	if member.Avatar != nil {

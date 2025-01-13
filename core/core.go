@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -272,14 +273,8 @@ func (core *Core) AcceptInvitation(ctx context.Context, token string, name strin
 // name cannot be empty and cannot be longer than 45 runes.
 func (core *Core) AddOrganization(ctx context.Context, name string) (int, error) {
 	core.mustBeOpen()
-	if name == "" {
-		return 0, errors.BadRequest("name is empty")
-	}
-	if !utf8.ValidString(name) {
-		return 0, errors.BadRequest("name is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(name); n > 45 {
-		return 0, errors.BadRequest("name is longer than 45 runes")
+	if err := validateStringField("name", name, 45); err != nil {
+		return 0, errors.BadRequest("%s", err)
 	}
 	var id int
 	err := core.db.QueryRow(ctx, "INSERT INTO organizations (name) VALUES ($1)").Scan(&id)
@@ -814,16 +809,34 @@ func ParseUUID(s string) (string, bool) {
 	return id.String(), true
 }
 
-func containsNUL(s string) bool {
-	return strings.ContainsRune(s, '\x00')
-}
-
 func isValidInvitationToken(token string) bool {
 	if len(token) != 44 {
 		return false
 	}
 	_, err := base64.URLEncoding.DecodeString(token)
 	return err == nil
+}
+
+// validateStringField validates a string field identified by the provided name.
+// It returns an error if any of the following conditions are met:
+//   - The string s is empty.
+//   - The string s contains invalid UTF-8 runes.
+//   - The string s contains a NUL byte.
+//   - The string s exceeds maxLen runes.
+func validateStringField(name string, s string, maxLen int) error {
+	if s == "" {
+		return fmt.Errorf("%s is empty", name)
+	}
+	if !utf8.ValidString(s) {
+		return fmt.Errorf("%s contains invalid UTF-8 encoded characters", name)
+	}
+	if strings.ContainsRune(s, '\x00') {
+		return fmt.Errorf("%s contains the NUL byte", name)
+	}
+	if utf8.RuneCountInString(s) > maxLen {
+		return fmt.Errorf("%s is longer than %s runes", name, strings.ReplaceAll(strconv.Itoa(maxLen), ".", ","))
+	}
+	return nil
 }
 
 type OrganizationSort int

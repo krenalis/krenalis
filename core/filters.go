@@ -62,7 +62,7 @@ func convertLogicalFromWhere(op state.WhereLogical) FilterLogical {
 type FilterCondition struct {
 	Property string         `json:"property"`        // property's path.
 	Operator FilterOperator `json:"operator"`        // operator.
-	Values   []string       `json:"values,omitzero"` // values; a value cannot be longer than 60 runes and cannot contain the NUL rune.
+	Values   []string       `json:"values,omitzero"` // values; a value cannot be longer than 60 runes and cannot contain the NUL byte.
 }
 
 // FilterOperator represents a filter condition operator.
@@ -594,11 +594,8 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			k = p.Type.Elem().Kind()
 		}
 		for _, value := range cond.Values {
-			if containsNUL(value) {
-				return nil, errors.New("condition value contains the NUL rune")
-			}
-			if n := utf8.RuneCountInString(value); n > 60 {
-				return nil, errors.New("condition value is longer than 60 runes")
+			if err := validateStringField("condition value", value, 60); err != nil {
+				return nil, err
 			}
 			var valid bool
 			switch k {

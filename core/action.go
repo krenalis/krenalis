@@ -98,7 +98,7 @@ type Language string
 
 // TransformationFunction represents a transformation function.
 type TransformationFunction struct {
-	Source       string   `json:"source"`
+	Source       string   `json:"source"` // Source cannot be longer than MaxFunctionSourceSize runes.
 	Language     Language `json:"language"`
 	PreserveJSON bool     `json:"preserveJSON"`
 	InPaths      []string `json:"inPaths"`
@@ -689,15 +689,15 @@ type ActionToSet struct {
 	Transformation Transformation `json:"transformation"`
 
 	// Query is the query of the action, if it has one, otherwise it is the
-	// empty string.
+	// empty string. It cannot be longer than MaxQuerySize runes.
 	Query string `json:"query"`
 
 	// Format is the file format and corresponds to the name of a file connector.
 	// For non-file actions, this must be empty.
 	Format string `json:"format"`
 
-	// Path is the path of the file. It cannot be longer than 1024 runes,
-	// and it is empty for non-file actions.
+	// Path is the path of the file. It cannot be longer than MaxFilePathSize
+	// runes, and it is empty for non-file actions.
 	Path string `json:"path"`
 
 	// Sheet is the sheet name for multiple sheets file actions. It must be UTF-8
@@ -729,7 +729,7 @@ type ActionToSet struct {
 
 	// TableName is the name of the table for the export and it is defined for
 	// destination database-actions; in any other case, it is the empty string.
-	// It cannot be longer than 1024 runes.
+	// It cannot be longer than MaxTableNameSize runes.
 	TableName string `json:"tableName"`
 
 	// TableKeyProperty is the name of the property used as table key when
@@ -766,7 +766,7 @@ type ActionToSet struct {
 	//
 	// "Excel" format is only allowed for file actions.
 	//
-	// It cannot be longer than 64 runes.
+	// It cannot be longer than MaxLastChangeTimeFormatSize runes.
 	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
 
 	// FileOrderingPropertyPath is the property path for which to order users

@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
@@ -489,8 +488,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if connection.Connector == "" {
 		return 0, errors.BadRequest("connector name is empty")
 	}
-	if containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
-		return 0, errors.BadRequest("name %q is not valid", connection.Name)
+	if err := validateStringField("name", connection.Name, 100); err != nil {
+		return 0, errors.BadRequest("%s", err)
 	}
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
@@ -1233,11 +1232,11 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 // anymore.
 func (this *Workspace) Rename(ctx context.Context, name string) error {
 	this.core.mustBeOpen()
-	if name == "" || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
-	}
 	if name == this.workspace.Name {
 		return nil
+	}
+	if err := validateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	n := state.RenameWorkspace{
 		Workspace: this.workspace.ID,
@@ -1428,8 +1427,8 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 // or alternatively a valid property name between 1 and 100 runes long.
 func (this *Workspace) Update(ctx context.Context, name string, displayedProperties DisplayedProperties) error {
 	this.core.mustBeOpen()
-	if name == "" || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
+	if err := validateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	if err := validateDisplayedProperties(displayedProperties); err != nil {
 		return errors.BadRequest("%s", err)
@@ -1806,16 +1805,6 @@ func canBeIdentifier(t types.Type) bool {
 	}
 }
 
-// isValidDisplayedPropertyName reports whether property is a valid displayed
-// property name. A valid displayed property name is an empty string, or
-// alternatively a valid property name between 1 and 100 runes long.
-func isValidDisplayedPropertyName(property string) bool {
-	if property != "" && (utf8.RuneCountInString(property) > 100 || !types.IsValidPropertyName(property)) {
-		return false
-	}
-	return true
-}
-
 // UserIdentity represents a user identity.
 type UserIdentity struct {
 	// TODO(Gianluca): the Connection field is kept here redundantly (the action
@@ -1854,18 +1843,18 @@ func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
 
 // validateDisplayedProperties validates whether the given displayedProperties
 // are valid or not, returning an error if they are not.
-func validateDisplayedProperties(displayedProperties DisplayedProperties) error {
-	if !isValidDisplayedPropertyName(displayedProperties.Image) {
-		return fmt.Errorf("invalid displayed image %q", displayedProperties.Image)
+func validateDisplayedProperties(properties DisplayedProperties) error {
+	if n := properties.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid displayed image %q", n)
 	}
-	if !isValidDisplayedPropertyName(displayedProperties.FirstName) {
-		return fmt.Errorf("invalid displayed first name %q", displayedProperties.FirstName)
+	if n := properties.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid displayed first name %q", n)
 	}
-	if !isValidDisplayedPropertyName(displayedProperties.LastName) {
-		return fmt.Errorf("invalid displayed last name %q", displayedProperties.LastName)
+	if n := properties.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid displayed last name %q", n)
 	}
-	if !isValidDisplayedPropertyName(displayedProperties.Information) {
-		return fmt.Errorf("invalid displayed information %q", displayedProperties.Information)
+	if n := properties.Information; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
+		return fmt.Errorf("invalid displayed information %q", n)
 	}
 	return nil
 }

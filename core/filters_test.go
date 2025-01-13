@@ -738,7 +738,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "b", Operator: OpContains, Values: []string{"foo \x00"}},
 				},
 			},
-			err: errors.New("condition value contains the NUL rune"),
+			err: errors.New("condition value contains the NUL byte"),
 		},
 		{
 			filter: Filter{

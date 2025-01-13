@@ -187,11 +187,10 @@ func (file *File) storage() (meergo.FileStorage, error) {
 
 // IsValidSheetName reports whether name is a valid sheet name.
 func IsValidSheetName(name string) bool {
-	const maxLength = 31
-	if !utf8.ValidString(name) {
+	if name == "" || !utf8.ValidString(name) || strings.ContainsRune(name, '\x00') {
 		return false
 	}
-	if length := utf8.RuneCountInString(name); length < 1 || length > maxLength {
+	if utf8.RuneCountInString(name) > 31 {
 		return false
 	}
 	if name[0] == '\'' || name[len(name)-1] == '\'' {

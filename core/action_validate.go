@@ -28,6 +28,14 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+const (
+	MaxFilePathSize             = 1024   // maximum allowed length for a file path.
+	MaxFunctionSourceSize       = 50_000 // maximum allowed size for a transformation function source.
+	MaxLastChangeTimeFormatSize = 64     // maximum allowed size for a last change time format.
+	MaxQuerySize                = 1_000  // maximum allowed size for a database query.
+	MaxTableNameSize            = 1024   // maximum allowed length for a database table name.
+)
+
 // validationState is a state for the validation of an action.
 type validationState struct {
 
@@ -140,17 +148,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// First, do formal validations.
 
 	// Validate the name.
-	if action.Name == "" {
-		return errors.BadRequest("name is empty")
-	}
-	if !utf8.ValidString(action.Name) {
-		return errors.BadRequest("name is not UTF-8 encoded")
-	}
-	if containsNUL(action.Name) {
-		return errors.BadRequest("name contains NUL rune")
-	}
-	if n := utf8.RuneCountInString(action.Name); n > 60 {
-		return errors.BadRequest("name is longer than 60 runes")
+	if err := validateStringField("name", action.Name, 60); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	// Check that, if the schemas are valid, they have type Object.
 	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
@@ -209,11 +208,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !outSchema.Valid() {
 			return errors.BadRequest("output schema is required by the transformation function")
 		}
-		if function.Source == "" {
-			return errors.BadRequest("source of transformation function cannot be empty")
-		}
-		if containsNUL(function.Source) {
-			return errors.BadRequest("source of transformation function contains NUL rune")
+		if err := validateStringField("source of transformation function", function.Source, MaxFunctionSourceSize); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 		switch function.Language {
 		case "JavaScript":
@@ -242,14 +238,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 	// Validate the path.
 	if action.Path != "" {
-		if !utf8.ValidString(action.Path) {
-			return errors.BadRequest("path is not UTF-8 encoded")
-		}
-		if containsNUL(action.Path) {
-			return errors.BadRequest("path contains NUL rune")
-		}
-		if n := utf8.RuneCountInString(action.Path); n > 1024 {
-			return errors.BadRequest("path is longer than 1024 runes")
+		if err := validateStringField("path", action.Path, MaxFilePathSize); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 		switch v.connection.role {
 		case state.Source:
@@ -271,14 +261,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 	// Validate the table name.
 	if action.TableName != "" {
-		if !utf8.ValidString(action.TableName) {
-			return errors.BadRequest("table name is not UTF-8 encoded")
-		}
-		if containsNUL(action.TableName) {
-			return errors.BadRequest("table name contains NUL rune")
-		}
-		if n := utf8.RuneCountInString(action.TableName); n > 1024 {
-			return errors.BadRequest("table name is longer than 1024 runes")
+		if err := validateStringField("table name", action.TableName, MaxTableNameSize); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 	}
 	// Validate the sheet.
@@ -445,11 +429,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Check if the query is allowed.
 	if needsQuery := v.connection.connector.typ == state.Database && v.connection.role == state.Source; needsQuery {
-		if action.Query == "" {
-			return errors.BadRequest("query cannot be empty for database actions")
-		}
-		if containsNUL(action.Query) {
-			return errors.BadRequest("query contains NUL rune")
+		if err := validateStringField("query", action.Query, MaxQuerySize); err != nil {
+			return errors.BadRequest("%s", err)
 		}
 	} else {
 		if action.Query != "" {
@@ -847,20 +828,11 @@ func validateLastChangeTimeFormat(format string) error {
 		"Excel":
 		return nil
 	}
-	if format == "" {
-		return errors.New("last change time format is empty")
-	}
-	if utf8.RuneCountInString(format) > 64 {
-		return errors.New("last change time format is longer than 64 runes")
-	}
-	if !utf8.ValidString(format) {
-		return errors.New("last change time format contains invalid UTF-8 characters")
+	if err := validateStringField("last change time format", format, MaxLastChangeTimeFormatSize); err != nil {
+		return err
 	}
 	if !strings.Contains(format, "%") {
 		return fmt.Errorf("last change time format %q is not valid", format)
-	}
-	if containsNUL(format) {
-		return errors.New("last change time format contains the NUL rune")
 	}
 	return nil
 }

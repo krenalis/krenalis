@@ -546,7 +546,7 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 
 // CompletePath returns the complete representation of the given path, based
 // on the connector that must be a file with a storage. path cannot be empty,
-// cannot be longer than 1024 runes, and must be UTF-8 encoded.
+// cannot be longer than MaxFilePathSize runes, and must be UTF-8 encoded.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - InvalidPath, if path is not valid for the file storage connector.
@@ -558,14 +558,8 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if c.Connector().Type != state.FileStorage {
 		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
-	if path == "" {
-		return "", errors.BadRequest("path is empty")
-	}
-	if !utf8.ValidString(path) {
-		return "", errors.BadRequest("path is not UTF-8 encoded")
-	}
-	if n := utf8.RuneCountInString(path); n > 1024 {
-		return "", errors.BadRequest("path is longer than 1024 runes")
+	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
+		return "", errors.BadRequest("%s", err)
 	}
 	var replacer connectors.PlaceholderReplacer
 	switch c.Role {
@@ -980,14 +974,8 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	this.core.mustBeOpen()
 
-	if !utf8.ValidString(query) {
-		return nil, types.Type{}, errors.BadRequest("query is not UTF-8 encoded")
-	}
-	if containsNUL(query) {
-		return nil, types.Type{}, errors.BadRequest("query contains NUL rune")
-	}
-	if utf8.RuneCountInString(query) > queryMaxSize {
-		return nil, types.Type{}, errors.BadRequest("query is longer than 16,777,215 runes")
+	if err := validateStringField("query", query, queryMaxSize); err != nil {
+		return nil, types.Type{}, errors.BadRequest("%s", err)
 	}
 	if limit < 0 || limit > 100 {
 		return nil, types.Type{}, errors.BadRequest("limit %d is not valid", limit)
@@ -1116,7 +1104,7 @@ func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
 
 // File returns the records and schema of the file located at the specified path
 // within the connection. The connection must be a file storage connection. path
-// must be UTF-8 encoded with a length in range [1, 1024].
+// must be UTF-8 encoded with a length in range [1, MaxFilePathSize].
 //
 // format specifies the file format and must match the name of a file connector.
 // If the connector supports sheets, sheet must be a valid sheet name;
@@ -1146,18 +1134,10 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	if c.Connector().Type != state.FileStorage {
 		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
+
 	// Validate the path.
-	if path == "" {
-		return nil, types.Type{}, errors.BadRequest("path cannot be empty")
-	}
-	if !utf8.ValidString(path) {
-		return nil, types.Type{}, errors.BadRequest("path is not UTF-8 encoded")
-	}
-	if containsNUL(path) {
-		return nil, types.Type{}, errors.BadRequest("path contains NUL rune")
-	}
-	if n := utf8.RuneCountInString(path); n > 1024 {
-		return nil, types.Type{}, errors.BadRequest("path is longer than 1024 runes")
+	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
+		return nil, types.Type{}, errors.BadRequest("%s", err)
 	}
 
 	// Validate the format.
@@ -1512,11 +1492,11 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 // anymore.
 func (this *Connection) Rename(ctx context.Context, name string) error {
 	this.core.mustBeOpen()
-	if name == "" || utf8.RuneCountInString(name) > 100 {
-		return errors.BadRequest("name %q is not valid", name)
-	}
 	if name == this.connection.Name {
 		return nil
+	}
+	if err := validateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	n := state.RenameConnection{
 		Connection: this.connection.ID,
@@ -1569,7 +1549,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 
 // Sheets returns the sheets of the file located at the specified path within
 // the connection. The connection must be a file storage connection. path must
-// be UTF-8 encoded with a length in range [1, 1024].
+// be UTF-8 encoded with a length in range [1, MaxFilePathSize].
 //
 // format specifies the file format and must match the name of a file connector
 // that supports sheets. compression indicates if the file is compressed and
@@ -1587,14 +1567,8 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	if c.Connector().Type != state.FileStorage {
 		return nil, errors.BadRequest("connection %d is not a file storage", c.ID)
 	}
-	if path == "" {
-		return nil, errors.BadRequest("path is empty")
-	}
-	if containsNUL(path) {
-		return nil, errors.BadRequest("path contains NUL rune")
-	}
-	if !utf8.ValidString(path) {
-		return nil, errors.BadRequest("path is not UTF-8 encoded")
+	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 
 	// Validate the file format.
@@ -1638,7 +1612,7 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 
 // TableSchema returns the destination schema of the given table for the
 // connection. connection must be a destination database connection, and table
-// must be UTF-8 encoded with a length in range [1, 1024].
+// must be UTF-8 encoded with a length in range [1, MaxTableNameSize].
 //
 // If the table contains a column with an unsupported type, it returns an
 // errors.UnprocessableError error.
@@ -1652,8 +1626,8 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if c.Role != state.Destination {
 		return types.Type{}, errors.BadRequest("database %d is not a destination", c.ID)
 	}
-	if table == "" || utf8.RuneCountInString(table) > 1024 {
-		return types.Type{}, errors.BadRequest("table name is not valid")
+	if err := validateStringField("table name", table, MaxTableNameSize); err != nil {
+		return types.Type{}, errors.BadRequest("%s", err)
 	}
 	database := this.database()
 	defer database.Close()
@@ -1722,8 +1696,8 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 
 	this.core.mustBeOpen()
 
-	if connection.Name == "" || containsNUL(connection.Name) || utf8.RuneCountInString(connection.Name) > 100 {
-		return errors.BadRequest("name %q is not valid", connection.Name)
+	if err := validateStringField("name", connection.Name, 100); err != nil {
+		return errors.BadRequest("%s", err)
 	}
 	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
 		return errors.BadRequest("strategy %q is not valid", *s)
@@ -1996,19 +1970,19 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 }
 
 // parseWebsiteHost parses a website host from the format "host:port" and
-// returns the host and the port. The host cannot be empty, cannot contain the
-// NUL rune and cannot be longer than 255 characters. If a port is present, it
-// must be in the range [1,65535]. If no port is present, it defaults to
-// returning 443 as the port.
+// returns the host and the port. The host cannot be empty, cannot contain
+// invalid UTF-8 characters, cannot contain the NUL byte, and cannot be longer
+// than 255 characters. If a port is present, it must be in the range [1,65535].
+// If no port is present, it defaults to returning 443 as the port.
 func parseWebsiteHost(s string) (string, int, error) {
 	h, p, found := strings.Cut(s, ":")
-	if h == "" || len(s) > 255 || containsNUL(h) {
-		return "", 0, errors.New("website host is not valid")
+	if err := validateStringField("website host", h, 255); err != nil {
+		return "", 0, err
 	}
 	port := 443
 	if found {
 		if port, _ = strconv.Atoi(p); port < 1 || port > 65535 {
-			return "", 0, errors.New("website host is not valid")
+			return "", 0, errors.New("website host's port is not valid")
 		}
 	}
 	return h, port, nil

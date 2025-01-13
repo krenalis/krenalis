@@ -745,7 +745,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "name is empty",
 		},
 		{
-			name: "BAD: Source/App/Users - action name is not UTF-8 encoded",
+			name: "BAD: Source/App/Users - action name contains invalid UTF-8 encoded characters",
 			action: ActionToSet{
 				Name: "hello\xc5world",
 				InSchema: types.Object([]types.Property{
@@ -763,7 +763,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     "name is not UTF-8 encoded",
+			err:                     "name contains invalid UTF-8 encoded characters",
 		},
 		{
 			name: "BAD: Source/App/Users - name is too long",
@@ -917,7 +917,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			provider:                testProvider{},
-			err:                     "source of transformation function cannot be empty",
+			err:                     "source of transformation function is empty",
 		},
 		{
 			name: "BAD: Source/App/Users - transformation language is empty",
@@ -1342,7 +1342,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "input schema is required by the mapping",
 		},
 		{
-			name: "BAD: Destination/Database/Users - table name is not UTF-8 encoded",
+			name: "BAD: Destination/Database/Users - table name contains invalid UTF-8 encoded characters",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1361,10 +1361,10 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "table name is not UTF-8 encoded",
+			err:                     "table name contains invalid UTF-8 encoded characters",
 		},
 		{
-			name: "BAD: Destination/Database/Users - table name contains the NUL rune",
+			name: "BAD: Destination/Database/Users - table name contains the NUL byte",
 			action: ActionToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -1383,7 +1383,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "table name contains NUL rune",
+			err:                     "table name contains the NUL byte",
 		},
 		{
 			name: "BAD: Destination/FileStorage/Users - invalid compression",
@@ -2809,7 +2809,7 @@ func Test_validateLastChangeTimeFormat(t *testing.T) {
 		{format: "excel", err: `last change time format "excel" is not valid`},
 		{format: "Y-m-d", err: `last change time format "Y-m-d" is not valid`},
 		{format: "%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y", err: "last change time format is longer than 64 runes"},
-		{format: "%Y-%m-%d\x00%H:%M:%S", err: "last change time format contains the NUL rune"},
+		{format: "%Y-%m-%d\x00%H:%M:%S", err: "last change time format contains the NUL byte"},
 	}
 	for _, test := range tests {
 		t.Run(test.format, func(t *testing.T) {
