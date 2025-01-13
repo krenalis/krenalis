@@ -460,7 +460,7 @@ class Connections {
 
 	appUsers = async (connection: number, schema: ObjectType, cursor?: string): Promise<AppUsersResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/schemas/user`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/users`,
 			http.POST,
 			this.workspaceID,
 			{
