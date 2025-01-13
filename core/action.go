@@ -210,7 +210,6 @@ func (this *Action) Delete(ctx context.Context) error {
 // It returns an errors.UnprocessableError error with code
 //
 //   - ActionDisabled, if the action is disabled.
-//   - ConnectionDisabled, if the connection is disabled.
 //   - ExecutionInProgress, if the action is already in progress.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
@@ -227,9 +226,6 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	}
 	if !this.action.Enabled {
 		return 0, errors.Unprocessable(ActionDisabled, "action %d is disabled", c.ID)
-	}
-	if !c.Enabled {
-		return 0, errors.Unprocessable(ConnectionDisabled, "connection %d is disabled", c.ID)
 	}
 	if _, ok := this.action.Execution(); ok {
 		return 0, errors.Unprocessable(ExecutionInProgress, "action %d is already in progress", this.action.ID)

@@ -50,7 +50,6 @@ const addDummySource = async (page: Page): Promise<number> => {
 				{
 					name: 'Dummy',
 					role: 'Source',
-					enabled: true,
 					connector: 'Dummy',
 					strategy: null,
 					websiteHost: '',
@@ -74,7 +73,6 @@ const addDummyDestination = async (page: Page): Promise<number> => {
 				{
 					name: 'Dummy',
 					role: 'Destination',
-					enabled: true,
 					connector: 'Dummy',
 					strategy: null,
 					websiteHost: '',
@@ -98,7 +96,6 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 				{
 					name: 'PostgreSQL',
 					role: 'Source',
-					enabled: true,
 					connector: 'PostgreSQL',
 					strategy: null,
 					websiteHost: '',
@@ -115,20 +112,19 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 				'',
 			);
 		},
-		{ config: config},
+		{ config: config },
 	);
 	return id;
 };
 
 const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 	const id = await page.evaluate(
-		async ({ config}) => {
+		async ({ config }) => {
 			const api = new (window as any).API(config.baseURL, config.workspaceID) as API;
 			return await api.workspaces.createConnection(
 				{
 					name: 'PostgreSQL',
 					role: 'Destination',
-					enabled: true,
 					connector: 'PostgreSQL',
 					strategy: null,
 					websiteHost: '',
@@ -162,7 +158,6 @@ const addFileSystemSource = async (
 					{
 						name: 'Filesystem',
 						role: 'Source',
-						enabled: true,
 						connector: 'Filesystem',
 						strategy: null,
 						websiteHost: '',
@@ -193,7 +188,6 @@ const addFileSystemDestination = async (
 					{
 						name: 'Filesystem',
 						role: 'Destination',
-						enabled: true,
 						connector: 'Filesystem',
 						strategy: null,
 						websiteHost: '',
@@ -220,7 +214,6 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 				{
 					name: 'JavaScript',
 					role: 'Source',
-					enabled: true,
 					connector: 'JavaScript',
 					strategy: 'AB-C',
 					websiteHost: '',

@@ -355,7 +355,6 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 		Name:              c.Name,
 		Type:              ConnectorType(conn.Type),
 		Role:              Role(c.Role),
-		Enabled:           c.Enabled,
 		Connector:         conn.Name,
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
@@ -450,7 +449,6 @@ func (this *Workspace) Connections() []*Connection {
 			Name:              c.Name,
 			Type:              ConnectorType(conn.Type),
 			Role:              Role(c.Role),
-			Enabled:           c.Enabled,
 			Connector:         conn.Name,
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
@@ -535,7 +533,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		Workspace:         this.workspace.ID,
 		Name:              connection.Name,
 		Role:              state.Role(connection.Role),
-		Enabled:           connection.Enabled,
 		Connector:         connection.Connector,
 		Strategy:          (*state.Strategy)(connection.Strategy),
 		SendingMode:       (*state.SendingMode)(connection.SendingMode),
@@ -708,10 +705,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, enabled, connector, account,"+
+			"(id, workspace, name, type, role, connector, account,"+
 			" strategy, sending_mode, website_host, linked_connections, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
-			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Enabled, n.Connector, n.Account.ID,
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Connector, n.Account.ID,
 			n.Strategy, n.SendingMode, n.WebsiteHost, n.LinkedConnections, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_workspace_fkey" {
@@ -1698,9 +1695,6 @@ type ConnectionToAdd struct {
 
 	// Role is the role.
 	Role Role `json:"role"`
-
-	// Enable reports whether the connection is enabled or disabled when added.
-	Enabled bool `json:"enabled"`
 
 	// Connector is the name of the connector.
 	Connector string `json:"connector"`

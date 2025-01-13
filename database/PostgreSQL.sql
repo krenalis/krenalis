@@ -60,7 +60,6 @@ CREATE TABLE connections (
     name varchar(100) NOT NULL DEFAULT '',
     type connector_type NOT NULL,
     role role NOT NULL,
-    enabled boolean NOT NULL DEFAULT false,
     connector varchar DEFAULT NULL,
     account integer NOT NULL DEFAULT 0,
     strategy strategy DEFAULT NULL,

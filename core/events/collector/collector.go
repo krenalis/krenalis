@@ -124,7 +124,6 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, opStore even
 	st.AddListener(c.onDeleteWorkspace)
 	st.AddListener(c.onSetActionStatus)
 	st.AddListener(c.onUpdateAction)
-	st.AddListener(c.onUpdateConnection)
 	for _, ws := range st.Workspaces() {
 		store := ds.Store(ws.ID)
 		c.eventWriters.Store(ws.ID, store.NewEventWriter(c.eventAck))
@@ -133,8 +132,7 @@ func New(db *postgres.DB, st *state.State, ds *datastore.Datastore, opStore even
 		if action.Target != state.Users || !action.Enabled {
 			continue
 		}
-		connection := action.Connection()
-		if connection.Keys == nil || !connection.Enabled {
+		if action.Connection().Keys == nil {
 			continue
 		}
 		sa := newActionIdentityWriter(c.datastore, action, provider, c.identityAck)
@@ -235,7 +233,7 @@ func (c *Collector) identityAck(action int, ids []string, err error) {
 // given its key and true, if exists, otherwise returns nil and false.
 func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 	conn, ok := c.state.ConnectionByKey(key)
-	if ok && conn.Enabled && conn.Role == state.Source {
+	if ok && conn.Role == state.Source {
 		switch conn.Connector().Type {
 		case state.Mobile, state.Server, state.Website:
 			return conn, true
@@ -260,7 +258,7 @@ func (c *Collector) eventDestinations(connection *state.Connection) []*state.Act
 	var actions []*state.Action
 	for _, id := range connection.LinkedConnections {
 		c, ok := c.state.Connection(id)
-		if !ok || !c.Enabled {
+		if !ok {
 			continue
 		}
 		for _, action := range c.Actions() {
@@ -277,7 +275,7 @@ func (c *Collector) eventDestinations(connection *state.Connection) []*state.Act
 func (c *Collector) hasEventDestinations(connection *state.Connection) bool {
 	for _, id := range connection.LinkedConnections {
 		c, ok := c.state.Connection(id)
-		if !ok || !c.Enabled {
+		if !ok {
 			continue
 		}
 		for _, action := range c.Actions() {
@@ -629,8 +627,7 @@ func (c *Collector) onCreateAction(n state.CreateAction) {
 	if action.Target != state.Users || !action.Enabled {
 		return
 	}
-	connection := action.Connection()
-	if connection.Keys == nil || !connection.Enabled {
+	if action.Connection().Keys == nil {
 		return
 	}
 	go func() {
@@ -658,7 +655,7 @@ func (c *Collector) onDeleteAction(n state.DeleteAction) {
 // onDeleteConnection is called when a connection is deleted.
 func (c *Collector) onDeleteConnection(n state.DeleteConnection) {
 	connection := n.Connection()
-	if connection.Keys == nil || !connection.Enabled {
+	if connection.Keys == nil {
 		return
 	}
 	for _, action := range connection.Actions() {
@@ -710,7 +707,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	if connection.Keys == nil {
 		return
 	}
-	if !action.Enabled || !connection.Enabled {
+	if !action.Enabled {
 		if a, ok := c.actions.LoadAndDelete(action.ID); ok {
 			_ = a.(*actionIdentityWriter).Close(context.Background())
 		}
@@ -734,31 +731,6 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 	}
 	sa.mu.Unlock()
 	// TODO(marco): il cambio del warehouse mode come influisce sulla source action?
-}
-
-// onUpdateConnection is called when a connection is updated.
-func (c *Collector) onUpdateConnection(n state.UpdateConnection) {
-	connection, _ := c.state.Connection(n.Connection)
-	if connection.Keys == nil {
-		return
-	}
-	for _, action := range connection.Actions() {
-		if action.Target != state.Users || !action.Enabled {
-			continue
-		}
-		if connection.Enabled {
-			if _, ok := c.actions.Load(action.ID); !ok {
-				go func() {
-					sa := newActionIdentityWriter(c.datastore, action, c.transformerProvider, c.identityAck)
-					c.actions.Store(action.ID, sa)
-				}()
-			}
-			continue
-		}
-		if a, ok := c.actions.LoadAndDelete(action.ID); ok {
-			_ = a.(*actionIdentityWriter).Close(context.Background())
-		}
-	}
 }
 
 // Send a successful response to the client.

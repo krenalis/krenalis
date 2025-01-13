@@ -15,7 +15,6 @@ const (
 	ActionDisabled               errors.Code = "ActionDisabled"
 	AlterSchemaInProgress        errors.Code = "AlterSchemaInProgress"
 	AuthenticationFailed         errors.Code = "AuthenticationFailed"
-	ConnectionDisabled           errors.Code = "ConnectionDisabled"
 	ConnectionNotExist           errors.Code = "ConnectionNotExist"
 	ConnectorNotExist            errors.Code = "ConnectorNotExist"
 	ConnectionUniqueKey          errors.Code = "ConnectionUniqueKey"

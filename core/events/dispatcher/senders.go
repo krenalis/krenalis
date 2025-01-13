@@ -34,13 +34,8 @@ func startSenders(events <-chan *dispatchingEvent, sent chan<- *dispatchingEvent
 			for {
 				select {
 				case event := <-events:
-					c := event.action.Connection()
-					if !c.Enabled {
-						sent <- event
-						continue
-					}
 					if event.request.URL != "https://example.com/" {
-						app := conns.App(c)
+						app := conns.App(event.action.Connection())
 						res, err := app.SendEvent(ctx, event.request)
 						if err != nil {
 							if err != context.Canceled {

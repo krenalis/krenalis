@@ -24,7 +24,6 @@ class TransformedConnection {
 	role: ConnectionRole;
 	connector: TransformedConnector;
 	hasSettings: boolean;
-	enabled: boolean;
 	actionsCount: number;
 	health: Health;
 	storage: number;
@@ -46,7 +45,6 @@ class TransformedConnection {
 		role: ConnectionRole,
 		connector: TransformedConnector,
 		hasSettings: boolean,
-		enabled: boolean,
 		actionsCount: number,
 		health: Health,
 		storage: number,
@@ -67,7 +65,6 @@ class TransformedConnection {
 		this.role = role;
 		this.connector = connector;
 		this.hasSettings = hasSettings;
-		this.enabled = enabled;
 		this.actionsCount = actionsCount;
 		this.health = health;
 		this.storage = storage == null ? 0 : storage;
@@ -174,19 +171,15 @@ const getConnectionFullConnector = (
 };
 
 const getConnectionStatus = (connection: Connection): ConnectionStatus => {
-	if (!connection.enabled) {
-		return { text: 'Disabled', variant: 'neutral' };
-	} else {
-		switch (connection.health) {
-			case 'Healthy':
-				return { text: 'Working properly', variant: 'success' };
-			case 'NoRecentData':
-				return { text: 'No recent Data', variant: 'danger' };
-			case 'RecentError':
-				return { text: 'Recent error', variant: 'danger' };
-			default:
-				return { text: '', variant: '' };
-		}
+	switch (connection.health) {
+		case 'Healthy':
+			return { text: 'Working properly', variant: 'success' };
+		case 'NoRecentData':
+			return { text: 'No recent Data', variant: 'danger' };
+		case 'RecentError':
+			return { text: 'Recent error', variant: 'danger' };
+		default:
+			return { text: '', variant: '' };
 	}
 };
 

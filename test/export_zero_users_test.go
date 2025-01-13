@@ -72,7 +72,6 @@ func TestExportZeroUsers(t *testing.T) {
 		fsID := c.CreateConnection(meergotester.ConnectionToCreate{
 			Name:      "Filesystem",
 			Role:      meergotester.Destination,
-			Enabled:   true,
 			Connector: "Filesystem",
 			Settings: meergotester.JSONEncodeSettings(map[string]any{
 				"Root": storage.Root(),
@@ -108,7 +107,6 @@ func TestExportZeroUsers(t *testing.T) {
 
 		c.MustCall("PUT", "/api/connections/"+strconv.Itoa(fsID), map[string]any{
 			"name":        "Storage",
-			"enabled":     true,
 			"compression": core.NoCompression,
 		}, nil)
 

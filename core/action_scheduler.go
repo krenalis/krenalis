@@ -306,9 +306,6 @@ func toExecute(action *state.Action) bool {
 		return false
 	}
 	c := action.Connection()
-	if !c.Enabled {
-		return false
-	}
 	if c.Workspace().Warehouse.Mode != state.Normal {
 		return false
 	}

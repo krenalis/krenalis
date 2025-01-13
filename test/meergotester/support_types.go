@@ -89,7 +89,6 @@ type Strategy string
 type ConnectionToCreate struct {
 	Name              string          `json:"name"`
 	Role              Role            `json:"role"`
-	Enabled           bool            `json:"enabled"`
 	Connector         string          `json:"connector"`
 	Strategy          *Strategy       `json:"strategy"`
 	WebsiteHost       string          `json:"websiteHost"`

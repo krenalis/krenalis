@@ -349,7 +349,6 @@ type CreateConnection struct {
 	ID        int      // identifier
 	Name      string   // name
 	Role      Role     // role
-	Enabled   bool     // enabled or disabled
 	Connector string   // connector name
 	Account   struct { // account.
 		ID           int       // identifier, can be zero
@@ -416,7 +415,6 @@ func (state *State) createConnection(n notification) {
 		ID:                e.ID,
 		Name:              e.Name,
 		Role:              e.Role,
-		Enabled:           e.Enabled,
 		connector:         connector,
 		account:           a,
 		Strategy:          e.Strategy,
@@ -1067,7 +1065,6 @@ func (state *State) updateAction(n notification) {
 type UpdateConnection struct {
 	Connection  int
 	Name        string
-	Enabled     bool
 	Strategy    *Strategy
 	SendingMode *SendingMode
 	WebsiteHost string
@@ -1081,7 +1078,6 @@ func (state *State) updateConnection(n notification) {
 	}
 	state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Name = e.Name
-		c.Enabled = e.Enabled
 		c.Strategy = e.Strategy
 		c.SendingMode = e.SendingMode
 		c.WebsiteHost = e.WebsiteHost

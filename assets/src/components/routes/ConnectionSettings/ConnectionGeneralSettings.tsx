@@ -5,7 +5,6 @@ import { NotFoundError } from '../../../lib/api/errors';
 import DangerZone from '../../base/DangerZone/DangerZone';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Flex from '../../base/Flex/Flex';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -22,7 +21,6 @@ interface GeneralProps {
 const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	const [connectionToSet, setConnectionToSet] = useState<ConnectionToSet>({
 		name: connection.name,
-		enabled: connection.enabled,
 		strategy: connection.strategy,
 		websiteHost: connection.websiteHost,
 		sendingMode: connection.sendingMode,
@@ -57,12 +55,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 		const value = e.target.value;
 		const c = { ...connectionToSet };
 		c.sendingMode = value;
-		setConnectionToSet(c);
-	};
-
-	const onSwitchChange = () => {
-		const c = { ...connectionToSet };
-		c.enabled = !c.enabled;
 		setConnectionToSet(c);
 	};
 
@@ -167,14 +159,6 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					onSlInput={onWebsitehostChange}
 				/>
 			)}
-
-			<SlSwitch
-				className='connection-settings__enabling-field'
-				onSlChange={onSwitchChange}
-				checked={connectionToSet.enabled}
-			>
-				Enable connection
-			</SlSwitch>
 
 			<SlButton
 				className='connection-settings__update-button'

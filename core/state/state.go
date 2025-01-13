@@ -751,7 +751,6 @@ type Connection struct {
 	ID                int
 	Name              string
 	Role              Role
-	Enabled           bool
 	connector         *Connector
 	account           *Account
 	Strategy          *Strategy

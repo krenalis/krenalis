@@ -73,7 +73,6 @@ func TestExportUsersToFile(t *testing.T) {
 	fsID := c.CreateConnection(meergotester.ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      meergotester.Destination,
-		Enabled:   true,
 		Connector: "Filesystem",
 		Settings: meergotester.JSONEncodeSettings(map[string]any{
 			"Root": storage.Root(),

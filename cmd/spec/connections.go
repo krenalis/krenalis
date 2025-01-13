@@ -34,12 +34,6 @@ func init() {
 		Placeholder:    `"Source"`,
 		Description:    "Indicates if the connection is a source or a destination.",
 	}
-	enabledParameter := types.Property{
-		Name:        "enabled",
-		Type:        types.Boolean(),
-		Placeholder: "true",
-		Description: "Indicate if the connection is enabled.",
-	}
 	strategyParameter := types.Property{
 		Name:           "strategy",
 		Type:           types.Text().WithValues("AB-C", "ABC", "A-B-C", "AC-B"),
@@ -95,7 +89,6 @@ func init() {
 			Description: "The type of the connection's connector.",
 		},
 		roleParameter,
-		enabledParameter,
 		{
 			Name:        "connector",
 			Type:        types.Text(),
@@ -162,7 +155,6 @@ func init() {
 				Parameters: []types.Property{
 					nameParameter,
 					roleParameter,
-					enabledParameter,
 					{
 						Name:           "connector",
 						Type:           types.Text(),
@@ -292,7 +284,6 @@ func init() {
 				Parameters: []types.Property{
 					idParameter,
 					nameParameter,
-					enabledParameter,
 					strategyParameter,
 					sendingModeParameter,
 					websiteHostParameter,

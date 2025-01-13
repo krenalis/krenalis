@@ -251,7 +251,6 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 							size='small'
 							onClick={() => executeAction(a.id)}
 							loading={runningActions.includes(a.id)}
-							disabled={!connection.enabled}
 							hoist={true}
 						>
 							<SlIcon slot='prefix' name='play' />

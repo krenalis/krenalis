@@ -1079,14 +1079,6 @@
                             "description": "Indicates if the connection is a source or a destination."
                         },
                         {
-                            "name": "enabled",
-                            "placeholder": "true",
-                            "type": {
-                                "name": "Boolean"
-                            },
-                            "description": "Indicate if the connection is enabled."
-                        },
-                        {
                             "name": "connector",
                             "placeholder": "\"WebSite\"",
                             "type": {
@@ -1350,14 +1342,6 @@
                             "description": "The connection's name."
                         },
                         {
-                            "name": "enabled",
-                            "placeholder": "true",
-                            "type": {
-                                "name": "Boolean"
-                            },
-                            "description": "Indicate if the connection is enabled."
-                        },
-                        {
                             "name": "strategy",
                             "placeholder": "\"AB-C\"",
                             "type": {
@@ -1480,14 +1464,6 @@
                                                 },
                                                 "createRequired": true,
                                                 "description": "Indicates if the connection is a source or a destination."
-                                            },
-                                            {
-                                                "name": "enabled",
-                                                "placeholder": "true",
-                                                "type": {
-                                                    "name": "Boolean"
-                                                },
-                                                "description": "Indicate if the connection is enabled."
                                             },
                                             {
                                                 "name": "connector",
@@ -1663,14 +1639,6 @@
                                 },
                                 "createRequired": true,
                                 "description": "Indicates if the connection is a source or a destination."
-                            },
-                            {
-                                "name": "enabled",
-                                "placeholder": "true",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "Indicate if the connection is enabled."
                             },
                             {
                                 "name": "connector",
@@ -8415,11 +8383,6 @@
                         },
                         {
                             "status": 422,
-                            "code": "ConnectionDisabled",
-                            "message": "connection is disabled"
-                        },
-                        {
-                            "status": 422,
                             "code": "ActionDisabled",
                             "message": "action is disabled"
                         },
@@ -8993,11 +8956,6 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "action does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "ConnectionDisabled",
-                            "message": "connection is disabled"
                         },
                         {
                             "status": 422,
@@ -9910,11 +9868,6 @@
                             "status": 404,
                             "code": "NotFound",
                             "message": "action does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "ConnectionDisabled",
-                            "message": "connection is disabled"
                         },
                         {
                             "status": 422,

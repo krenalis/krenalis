@@ -19,7 +19,6 @@ interface Connection {
 	websiteHost: string;
 	sendingMode: SendingMode | null;
 	hasSettings: boolean;
-	enabled: boolean;
 	actionsCount: number;
 	health: Health;
 	actionTypes?: ActionType[];
@@ -36,7 +35,6 @@ type SendingMode = 'Cloud' | 'Device' | 'Combined';
 interface ConnectionToAdd {
 	name: string;
 	role: string;
-	enabled: boolean;
 	connector: string;
 	strategy?: Strategy | null;
 	websiteHost: string;
@@ -47,7 +45,6 @@ interface ConnectionToAdd {
 
 interface ConnectionToSet {
 	name: string;
-	enabled: boolean;
 	strategy?: Strategy | null;
 	websiteHost: string;
 	sendingMode?: SendingMode | null;

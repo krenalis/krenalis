@@ -287,14 +287,14 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 
 		// Read all connections.
 		state.connections = map[int]*Connection{}
-		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, enabled, connector,"+
+		err = state.db.QueryScan(ctx, "SELECT id, workspace, name, role, connector,"+
 			" account, strategy, sending_mode, website_host, linked_connections,"+
 			" settings, health FROM connections", func(rows *postgres.Rows) error {
 			for rows.Next() {
 				var workspaceID, account int
 				var connector string
 				c := Connection{}
-				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &c.Enabled, &connector,
+				if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &c.Role, &connector,
 					&account, &c.Strategy, &c.SendingMode, &c.WebsiteHost, &c.LinkedConnections, &c.Settings, &c.Health,
 				); err != nil {
 					return err

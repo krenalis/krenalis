@@ -168,7 +168,6 @@ const ConnectorSettings = () => {
 				const connection: ConnectionToAdd = {
 					name: name,
 					role: connectionRole,
-					enabled: true,
 					connector: connectorName,
 					strategy: strategy,
 					websiteHost: websiteHost,

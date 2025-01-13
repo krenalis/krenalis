@@ -321,7 +321,6 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
-					{422, ConnectionDisabled, "connection is disabled"},
 					{422, ActionDisabled, "action is disabled"},
 					{422, ExecutionInProgress, "action is already in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},

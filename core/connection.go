@@ -55,7 +55,6 @@ type Connection struct {
 	Name              string        `json:"name"`
 	Type              ConnectorType `json:"type"`
 	Role              Role          `json:"role"`
-	Enabled           bool          `json:"enabled"`
 	Connector         string        `json:"connector"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
@@ -1714,7 +1713,6 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	n := state.UpdateConnection{
 		Connection:  this.connection.ID,
 		Name:        connection.Name,
-		Enabled:     connection.Enabled,
 		Strategy:    (*state.Strategy)(connection.Strategy),
 		SendingMode: (*state.SendingMode)(connection.SendingMode),
 		WebsiteHost: connection.WebsiteHost,
@@ -1761,9 +1759,9 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, enabled = $2,"+
-			" strategy = $3, sending_mode = $4, website_host = $5 WHERE id = $6",
-			n.Name, n.Enabled, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1,"+
+			" strategy = $2, sending_mode = $3, website_host = $4 WHERE id = $5",
+			n.Name, n.Strategy, n.SendingMode, n.WebsiteHost, n.Connection)
 		if err != nil {
 			return err
 		}
@@ -2142,9 +2140,6 @@ type ConnectionToSet struct {
 	// Name is the name of the connection. It cannot be longer than 100 runes.
 	// If empty, the connection name will be the name of its connector.
 	Name string `json:"name"`
-
-	// Enable reports whether the connection is enabled or disabled when added.
-	Enabled bool `json:"enabled"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It can only be provided for source Mobile and Website

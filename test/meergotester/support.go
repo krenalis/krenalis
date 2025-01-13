@@ -132,7 +132,6 @@ func (c *Meergo) CreateDestinationFilesystem(storageDir string) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Destination,
-		Enabled:   true,
 		Connector: "Filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
@@ -144,7 +143,6 @@ func (c *Meergo) CreateDestinationPostgreSQL() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Destination,
-		Enabled:   true,
 		Connector: "PostgreSQL",
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
@@ -161,7 +159,6 @@ func (c *Meergo) CreateDummy(name string, role Role) int {
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
-		Enabled:   true,
 		Connector: "Dummy",
 		Settings:  []byte("{}"),
 	}
@@ -176,7 +173,6 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 	conn := ConnectionToCreate{
 		Name:      name,
 		Role:      role,
-		Enabled:   true,
 		Connector: "Dummy",
 		Settings:  JSONEncodeSettings(settings),
 	}
@@ -203,7 +199,6 @@ func (c *Meergo) CreateJavaScriptSource(name, host string, linkedConnections []i
 	return c.CreateConnection(ConnectionToCreate{
 		Name:              name,
 		Role:              Source,
-		Enabled:           true,
 		Connector:         "JavaScript",
 		Strategy:          &defaultStrategy,
 		WebsiteHost:       host,
@@ -215,7 +210,6 @@ func (c *Meergo) CreateSourceFilesystem(storageDir string) int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "Filesystem",
 		Role:      Source,
-		Enabled:   true,
 		Connector: "Filesystem",
 		Settings: JSONEncodeSettings(map[string]any{
 			"Root": storageDir,
@@ -227,7 +221,6 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 	return c.CreateConnection(ConnectionToCreate{
 		Name:      "PostgreSQL (destination)",
 		Role:      Source,
-		Enabled:   true,
 		Connector: "PostgreSQL",
 		Settings: JSONEncodeSettings(map[string]any{
 			"Host":     testsSettings.Database.Host,
