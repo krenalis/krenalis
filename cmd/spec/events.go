@@ -309,7 +309,7 @@ func init() {
 						Name:        "orderDesc",
 						Type:        types.Boolean(),
 						Placeholder: `false`,
-						Description: "The descending sorting order in which to return the events: if true, the events are sorted in descending order; otherwise, they are sorted in ascending order.",
+						Description: "Indicates if the returned events are sorted in descending order; if not true, they are sorted in ascending order.",
 					},
 					{
 						Name:        "first",

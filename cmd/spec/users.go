@@ -91,7 +91,7 @@ func init() {
 						Name:        "orderDesc",
 						Type:        types.Boolean(),
 						Placeholder: `false`,
-						Description: "The descending sorting order in which to return the users: if true, the users are sorted in descending order; otherwise, they are sorted in ascending order.",
+						Description: "Indicates if the returned users are sorted in descending order; if not true, they are sorted in ascending order.",
 					},
 					{
 						Name:        "first",
