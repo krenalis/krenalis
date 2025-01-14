@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/meergo/meergo"
 )
@@ -38,7 +39,7 @@ type Writer struct {
 	available int        // number of available (non-read) records; protected by mu
 
 	close struct {
-		closed    bool               // indicates if the writer has been closed
+		closed    atomic.Bool        // indicates if the writer has been closed
 		ctx       context.Context    // context passes to consumers
 		cancel    context.CancelFunc // function to cancel consumers executions
 		completed sync.Cond          // signal the completion of the current iteration
@@ -71,10 +72,9 @@ func New(ack AckFunc, target meergo.Targets, app meergo.AppRecords, name string)
 
 // Close closes the writer.
 func (w *Writer) Close(ctx context.Context) error {
-	if w.close.closed {
+	if w.close.closed.Swap(true) {
 		return nil
 	}
-	w.close.closed = true
 	stop := context.AfterFunc(ctx, w.close.cancel)
 	defer stop()
 	if trace {
@@ -119,7 +119,7 @@ func (w *Writer) Close(ctx context.Context) error {
 
 // Write writes a record with the provided identifier and properties.
 func (w *Writer) Write(ctx context.Context, id string, properties map[string]any) bool {
-	if w.close.closed {
+	if w.close.closed.Load() {
 		panic("core/connectors/appwriter: Write called on a closed writer")
 	}
 	var iter *consumer
@@ -151,7 +151,7 @@ func (w *Writer) Write(ctx context.Context, id string, properties map[string]any
 // compact compacts the records.
 func (w *Writer) compact() {
 	w.mu.Lock()
-	if w.close.closed {
+	if w.close.closed.Load() {
 		w.mu.Unlock()
 		return
 	}
