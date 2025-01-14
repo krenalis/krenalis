@@ -76,8 +76,10 @@ func init() {
 						Type:        types.Array(types.Text()),
 						Nullable:    true,
 						Placeholder: `[ "customer_id", "email" ]`,
-						Description: "The identifiers in the specified order. An identifier must be a property in the user schema " +
-							"with a type of `Int`, `Uint`, `UUID`, `Inet`, `Text`, or `Decimal` with zero scale. Identifiers cannot be repeated.",
+						Description: "The identifiers of the identity resolution, ordered from the highest precedence to the lowest precedence.\n\n" +
+							"An identifier must be a property path that refers to a property of the user schema of the workspace. " +
+							"The referred property must have type `Int`, `Uint`, `UUID`, `Inet`, `Text`, or `Decimal` with zero scale. Identifiers cannot be repeated.\n\n" +
+							"Not specifying any identifier means performing identity resolution without comparing any identifiers.",
 					},
 				},
 				Errors: []Error{
@@ -103,7 +105,8 @@ func init() {
 							Name:        "identifiers",
 							Type:        types.Array(types.Text()),
 							Placeholder: `[ "customer_id", "email" ]`,
-							Description: "The identifiers in the specified order.",
+							Description: "The identifiers of the identity resolution, ordered from the highest precedence to the lowest precedence.\n\n" +
+								"If no identifiers are returned, it means that the identity resolution is performed without comparing any identifiers.",
 						},
 					},
 				},
