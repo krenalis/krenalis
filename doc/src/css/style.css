@@ -113,16 +113,16 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article .api-spec .spec { align-items: start; box-sizing: border-box; column-gap: min(3rem, 5vw); display: grid; grid-template-columns: repeat(2, 1fr); row-gap: 2.5vw; overflow-y: scroll; }
 .article .api-spec .spec > :nth-child(2) { box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 10px; }
 
-.article .api-spec .aside-box { border-radius: 10px; border: 1px solid #d8dee4; background: #f5f6f8; width: 100%; font-size: .9em; }
-.article .api-spec .aside-box > :nth-child(1) { background: #ebeef1; border-bottom: 1px solid #d8dee4; text-transform: uppercase; font-size: .8em; padding: 10px 12px; font-weight: bold; width: 100%; }
-.article .api-spec .aside-box > ul { list-style: none; flex-direction: column; align-items: stretch; justify-content: normal; display: flex; font-family: Courier New, Courier, monospace; padding-left: 20px; }
-.article .api-spec .aside-box > ul > li { line-height: 1.8; }
-.article .api-spec .aside-box > ul a { color: #333; }
-.article .api-spec .aside-box > ul a > span { display: inline-block; text-align: right; width: 50px; }
-.article .api-spec .aside-box > ul a > span.api-method-get { color: #045AD0; }
-.article .api-spec .aside-box > ul a > span.api-method-post { color: #217005; }
-.article .api-spec .aside-box > ul a > span.api-method-put { color: #7A2D91; }
-.article .api-spec .aside-box > ul a > span.api-method-delete { color: #B13600; }
+.article .api-spec .endpoints-box { border-radius: 10px; border: 1px solid #d8dee4; background: #f5f6f8; width: 100%; font-size: .9em; }
+.article .api-spec .endpoints-box > :nth-child(1) { background: #ebeef1; border-bottom: 1px solid #d8dee4; text-transform: uppercase; font-size: .8em; padding: 10px 12px; font-weight: bold; width: 100%; }
+.article .api-spec .endpoints-box > ul { list-style: none; flex-direction: column; align-items: stretch; justify-content: normal; display: flex; font-family: Courier New, Courier, monospace; padding-left: 20px; }
+.article .api-spec .endpoints-box > ul > li { line-height: 1.8; }
+.article .api-spec .endpoints-box > ul a { color: #333; }
+.article .api-spec .endpoints-box > ul a > span { display: inline-block; text-align: right; width: 50px; }
+.article .api-spec .endpoints-box > ul a > span.api-method-get { color: #045AD0; }
+.article .api-spec .endpoints-box > ul a > span.api-method-post { color: #217005; }
+.article .api-spec .endpoints-box > ul a > span.api-method-put { color: #7A2D91; }
+.article .api-spec .endpoints-box > ul a > span.api-method-delete { color: #B13600; }
 
 .article .api-spec .api-request-box { border-radius: 10px; display: flex; flex-direction: column; font-size: .9em; overflow: hidden; width: 100%; }
 .article .api-spec .api-request-box > :nth-child(1) { background: #505865; color: #fff; font-family: Courier New, Courier, monospace; font-size: .9em; padding: 12px 12px 8px 12px; width: 100%; }
