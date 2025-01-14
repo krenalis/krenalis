@@ -38,7 +38,6 @@ type Writer struct {
 	ack    AckFunc           // ack function
 
 	mu        sync.Mutex // mutex for consumer, records, index, and available fields
-	consumers int        // number of running consumers
 	consumer  *consumer  // current consumer, if any; protected by mu
 	records   []record   // records in the queue; protected by mu
 	index     int        // read index in records for the current consumer; protected by mu
@@ -103,7 +102,6 @@ func (w *Writer) Close(ctx context.Context) error {
 			if trace {
 				fmt.Printf("Writer.Close: %d records available; create new consumer %p\n", w.available, consumer)
 			}
-			w.consumers++
 		}
 		w.mu.Unlock()
 		if consumer == nil {
@@ -140,7 +138,6 @@ func (w *Writer) Write(_ context.Context, id string, properties map[string]any) 
 	if w.consumer == nil && w.available >= maxAvailable {
 		iter = newConsumer(w)
 		w.consumer = iter
-		w.consumers++
 	}
 	if trace {
 		fmt.Printf("Writer.Write: write record id=%q, properties=%p, available=%d\n", id, properties, w.available)
@@ -320,9 +317,6 @@ func (w *Writer) consume(iter *consumer) {
 		}
 		w.ack(ids, err)
 	}
-	w.mu.Lock()
-	w.consumers--
-	w.mu.Unlock()
 	w.close.consumers.Done()
 	w.compact()
 }
