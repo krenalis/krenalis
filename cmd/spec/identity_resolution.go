@@ -69,7 +69,7 @@ func init() {
 						Type:        types.Boolean(),
 						Placeholder: `true`,
 						Description: "Indicates if identity resolution is automatically run when a batch import is completed." +
-							"By default is false.",
+							" By default is false.",
 					},
 					{
 						Name:        "identifiers",
@@ -97,7 +97,7 @@ func init() {
 							Type:        types.Boolean(),
 							Placeholder: `true`,
 							Description: "Indicates if identity resolution is automatically run when a batch import is completed." +
-								"By default is false.",
+								" By default is false.",
 						},
 						{
 							Name:        "identifiers",

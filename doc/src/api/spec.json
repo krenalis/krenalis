@@ -6467,7 +6467,7 @@
                             "type": {
                                 "name": "Boolean"
                             },
-                            "description": "Indicates if identity resolution is automatically run when a batch import is completed.By default is false."
+                            "description": "Indicates if identity resolution is automatically run when a batch import is completed. By default is false."
                         },
                         {
                             "name": "identifiers",
@@ -6518,7 +6518,7 @@
                                 "type": {
                                     "name": "Boolean"
                                 },
-                                "description": "Indicates if identity resolution is automatically run when a batch import is completed.By default is false."
+                                "description": "Indicates if identity resolution is automatically run when a batch import is completed. By default is false."
                             },
                             {
                                 "name": "identifiers",
