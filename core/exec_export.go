@@ -101,20 +101,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 	var writer connectors.Writer
 
-	// nonExistentUsers contains the destination users that no longer exist in the app.
-	var nonExistentUsers []string
-
 	ack := func(ids []string, err error) {
-		for _, id := range ids {
-			if err != nil && err != connectors.ErrRecordNotExist {
-				this.core.metrics.FinalizeFailed(action.ID, 1, err.Error())
-				continue
-			}
-			if err == connectors.ErrRecordNotExist {
-				nonExistentUsers = append(nonExistentUsers, id)
-			}
-			this.core.metrics.FinalizePassed(action.ID, 1)
+		if err != nil {
+			this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
+			return
 		}
+		this.core.metrics.FinalizePassed(action.ID, len(ids))
 	}
 
 	// Get the writer.
@@ -262,10 +254,6 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	}
 	if err != nil {
 		return newActionError(metrics.FinalizeStep, err)
-	}
-
-	if nonExistentUsers != nil {
-		err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, nil, nonExistentUsers)
 	}
 
 	return err

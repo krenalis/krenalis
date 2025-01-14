@@ -28,10 +28,6 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// ErrRecordNotExist is returned when a record with the specified identifier
-// does not exist in the application. It is returned in the Record.Err field.
-var ErrRecordNotExist = errors.New("record not exist")
-
 // App represents the app of an app connection.
 type App struct {
 	name        string
