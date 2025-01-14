@@ -60,10 +60,10 @@ type Workspace struct {
 
 type UIPreferences struct {
 	UserProfile struct {
-		Image     string `json:"image"`
-		FirstName string `json:"firstName"`
-		LastName  string `json:"lastName"`
-		Extra     string `json:"extra"`
+		Image     string `json:"image"`     // property path.
+		FirstName string `json:"firstName"` // property path.
+		LastName  string `json:"lastName"`  // property path.
+		Extra     string `json:"extra"`     // property path.
 	} `json:"userProfile"`
 }
 
@@ -1839,17 +1839,17 @@ func filterWorkspaceActions(ws *state.Workspace, actions []int) []int {
 // validateUIPreferences validates whether the given UI preferences are valid or
 // not, returning an error if they are not.
 func validateUIPreferences(preferences UIPreferences) error {
-	if n := preferences.UserProfile.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid user profile image %q", n)
+	if n := preferences.UserProfile.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid user profile 'image' %q", n)
 	}
-	if n := preferences.UserProfile.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid user profile first name %q", n)
+	if n := preferences.UserProfile.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid user profile 'firstName' %q", n)
 	}
-	if n := preferences.UserProfile.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid user profile last name %q", n)
+	if n := preferences.UserProfile.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid user profile 'lastName' %q", n)
 	}
-	if n := preferences.UserProfile.Extra; n != "" && (len(n) > 1024 || !types.IsValidPropertyName(n)) {
-		return fmt.Errorf("invalid user profile information %q", n)
+	if n := preferences.UserProfile.Extra; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
+		return fmt.Errorf("invalid user profile 'extra' %q", n)
 	}
 	return nil
 }

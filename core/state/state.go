@@ -511,10 +511,10 @@ func (workspace *Workspace) Organization() *Organization {
 // UIPreferences represents the UI preferences of a workspace.
 type UIPreferences struct {
 	UserProfile struct {
-		Image     string
-		FirstName string
-		LastName  string
-		Extra     string
+		Image     string // property path.
+		FirstName string // property path.
+		LastName  string // property path.
+		Extra     string // property path.
 	}
 }
 

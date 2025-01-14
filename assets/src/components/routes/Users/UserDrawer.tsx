@@ -94,21 +94,31 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 	let userLastName: any;
 	let userExtra: any;
 	if (traits && traits.size > 0) {
-		const t = Array.from(traits);
-		for (const [key, value] of t) {
-			if (key == workspace.uiPreferences.userProfile.image) {
-				userImage = value;
+		// TODO(Gianluca): this code needs to be revised.
+		// Currently 'traits' is a Map, but its elements are 'object'. This
+		// requires separate handling of the two cases.
+		function getValueFromPath(obj: Map<string, any>, path: string) {
+			if (path == '') {
+				return undefined;
 			}
-			if (key == workspace.uiPreferences.userProfile.firstName) {
-				userFirstName = value;
+			let v = obj;
+			for (const part of path.split('.')) {
+				if (v instanceof Map && v.has(part)) {
+					v = v.get(part);
+				}
+				if (typeof v === 'object' && v !== null && part in v) {
+					v = v[part];
+				}
 			}
-			if (key == workspace.uiPreferences.userProfile.lastName) {
-				userLastName = value;
+			if (typeof v != 'string') {
+				v = undefined;
 			}
-			if (key == workspace.uiPreferences.userProfile.extra) {
-				userExtra = value;
-			}
+			return v;
 		}
+		userImage = getValueFromPath(traits, workspace.uiPreferences.userProfile.image);
+		userFirstName = getValueFromPath(traits, workspace.uiPreferences.userProfile.firstName);
+		userLastName = getValueFromPath(traits, workspace.uiPreferences.userProfile.lastName);
+		userExtra = getValueFromPath(traits, workspace.uiPreferences.userProfile.extra);
 	}
 
 	const spinner = (

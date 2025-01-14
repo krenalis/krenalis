@@ -11536,7 +11536,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema that represents the user's image, in base64 format."
+                                                    "description": "The path of the property in the user schema that represents the user's image, in base64 format."
                                                 },
                                                 {
                                                     "name": "firstName",
@@ -11545,7 +11545,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name to in the user schema to display as first name in the profile header."
+                                                    "description": "The path of the property to in the user schema to display as first name in the profile header."
                                                 },
                                                 {
                                                     "name": "lastName",
@@ -11554,7 +11554,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema for the user's last name."
+                                                    "description": "The path of the property in the user schema for the user's last name."
                                                 },
                                                 {
                                                     "name": "extra",
@@ -11563,7 +11563,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema for additional user information. For example, the user schema property that represents the email."
+                                                    "description": "The path of the property in the user schema for additional user information. For example, the user schema property that represents the email."
                                                 }
                                             ]
                                         },
@@ -11692,7 +11692,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema that represents the user's image, in base64 format."
+                                                    "description": "The path of the property in the user schema that represents the user's image, in base64 format."
                                                 },
                                                 {
                                                     "name": "firstName",
@@ -11701,7 +11701,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name to in the user schema to display as first name in the profile header."
+                                                    "description": "The path of the property to in the user schema to display as first name in the profile header."
                                                 },
                                                 {
                                                     "name": "lastName",
@@ -11710,7 +11710,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema for the user's last name."
+                                                    "description": "The path of the property in the user schema for the user's last name."
                                                 },
                                                 {
                                                     "name": "extra",
@@ -11719,7 +11719,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema for additional user information. For example, the user schema property that represents the email."
+                                                    "description": "The path of the property in the user schema for additional user information. For example, the user schema property that represents the email."
                                                 }
                                             ]
                                         },
@@ -11783,7 +11783,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema that represents the user's image, in base64 format."
+                                                    "description": "The path of the property in the user schema that represents the user's image, in base64 format."
                                                 },
                                                 {
                                                     "name": "firstName",
@@ -11792,7 +11792,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name to in the user schema to display as first name in the profile header."
+                                                    "description": "The path of the property to in the user schema to display as first name in the profile header."
                                                 },
                                                 {
                                                     "name": "lastName",
@@ -11801,7 +11801,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema for the user's last name."
+                                                    "description": "The path of the property in the user schema for the user's last name."
                                                 },
                                                 {
                                                     "name": "extra",
@@ -11810,7 +11810,7 @@
                                                         "name": "Text",
                                                         "charLen": 100
                                                     },
-                                                    "description": "The property name in the user schema for additional user information. For example, the user schema property that represents the email."
+                                                    "description": "The path of the property in the user schema for additional user information. For example, the user schema property that represents the email."
                                                 }
                                             ]
                                         },
@@ -11938,7 +11938,7 @@
                                                                             "name": "Text",
                                                                             "charLen": 100
                                                                         },
-                                                                        "description": "The property name in the user schema that represents the user's image, in base64 format."
+                                                                        "description": "The path of the property in the user schema that represents the user's image, in base64 format."
                                                                     },
                                                                     {
                                                                         "name": "firstName",
@@ -11947,7 +11947,7 @@
                                                                             "name": "Text",
                                                                             "charLen": 100
                                                                         },
-                                                                        "description": "The property name to in the user schema to display as first name in the profile header."
+                                                                        "description": "The path of the property to in the user schema to display as first name in the profile header."
                                                                     },
                                                                     {
                                                                         "name": "lastName",
@@ -11956,7 +11956,7 @@
                                                                             "name": "Text",
                                                                             "charLen": 100
                                                                         },
-                                                                        "description": "The property name in the user schema for the user's last name."
+                                                                        "description": "The path of the property in the user schema for the user's last name."
                                                                     },
                                                                     {
                                                                         "name": "extra",
@@ -11965,7 +11965,7 @@
                                                                             "name": "Text",
                                                                             "charLen": 100
                                                                         },
-                                                                        "description": "The property name in the user schema for additional user information. For example, the user schema property that represents the email."
+                                                                        "description": "The path of the property in the user schema for additional user information. For example, the user schema property that represents the email."
                                                                     }
                                                                 ]
                                                             },
@@ -12083,7 +12083,7 @@
                                                             "name": "Text",
                                                             "charLen": 100
                                                         },
-                                                        "description": "The property name in the user schema that represents the user's image, in base64 format."
+                                                        "description": "The path of the property in the user schema that represents the user's image, in base64 format."
                                                     },
                                                     {
                                                         "name": "firstName",
@@ -12092,7 +12092,7 @@
                                                             "name": "Text",
                                                             "charLen": 100
                                                         },
-                                                        "description": "The property name to in the user schema to display as first name in the profile header."
+                                                        "description": "The path of the property to in the user schema to display as first name in the profile header."
                                                     },
                                                     {
                                                         "name": "lastName",
@@ -12101,7 +12101,7 @@
                                                             "name": "Text",
                                                             "charLen": 100
                                                         },
-                                                        "description": "The property name in the user schema for the user's last name."
+                                                        "description": "The path of the property in the user schema for the user's last name."
                                                     },
                                                     {
                                                         "name": "extra",
@@ -12110,7 +12110,7 @@
                                                             "name": "Text",
                                                             "charLen": 100
                                                         },
-                                                        "description": "The property name in the user schema for additional user information. For example, the user schema property that represents the email."
+                                                        "description": "The path of the property in the user schema for additional user information. For example, the user schema property that represents the email."
                                                     }
                                                 ]
                                             },
