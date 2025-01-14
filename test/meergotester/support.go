@@ -115,13 +115,19 @@ func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (i
 	default:
 		panic(fmt.Sprintf("invalid target %q", target))
 	}
-	data := map[string]any{
-		"target": target,
-		"action": action,
+	actionJSON, err := json.Marshal(action)
+	if err != nil {
+		panic(err)
 	}
+	var body map[string]any
+	err = json.Unmarshal(actionJSON, &body)
+	if err != nil {
+		panic(err)
+	}
+	body["target"] = target
 	var id int
 	method := fmt.Sprintf("/api/connections/%d/actions", conn)
-	err := c.Call("POST", method, data, &id)
+	err = c.Call("POST", method, body, &id)
 	if err != nil {
 		return 0, err
 	}
