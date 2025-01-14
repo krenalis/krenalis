@@ -34,9 +34,9 @@ require (
 	github.com/relvacode/iso8601 v1.6.0
 	github.com/segmentio/backo-go v1.1.0
 	github.com/snowflakedb/gosnowflake v1.12.0
-	github.com/testcontainers/testcontainers-go v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
+	github.com/testcontainers/testcontainers-go v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
 	github.com/twmb/franz-go v1.18.0
 	github.com/xuri/excelize/v2 v2.9.0
 	go.opentelemetry.io/otel v1.32.0
