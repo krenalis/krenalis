@@ -364,7 +364,7 @@ class Connections {
 			{
 				target,
 				eventType,
-				action,
+				...action,
 			},
 		);
 	};

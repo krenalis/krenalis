@@ -97,15 +97,15 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 		return nil, err
 	}
 	var body struct {
-		Target    core.Target      `json:"target"`
-		EventType string           `json:"eventType"`
-		Action    core.ActionToSet `json:"action"`
+		Target    core.Target `json:"target"`
+		EventType string      `json:"eventType"`
+		core.ActionToSet
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return c.CreateAction(r.Context(), body.Target, body.EventType, body.Action)
+	return c.CreateAction(r.Context(), body.Target, body.EventType, body.ActionToSet)
 }
 
 // CreateWriteKey creates a new write key for a connection.
