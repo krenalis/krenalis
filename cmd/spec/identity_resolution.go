@@ -87,7 +87,7 @@ func init() {
 				},
 			},
 			{
-				Name:   "Get idegener   ntity resolution settings",
+				Name:   "Get identity resolution settings",
 				Method: GET,
 				URL:    "/v0/identity-resolution/settings",
 				Response: &Response{

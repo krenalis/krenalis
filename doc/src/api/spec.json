@@ -6503,7 +6503,7 @@
                     ]
                 },
                 {
-                    "name": "Get idegener   ntity resolution settings",
+                    "name": "Get identity resolution settings",
                     "description": "",
                     "method": "GET",
                     "url": "/v0/identity-resolution/settings",
