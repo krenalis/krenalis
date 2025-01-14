@@ -2169,6 +2169,15 @@
                     "url": "/v0/actions",
                     "parameters": [
                         {
+                            "name": "eventType",
+                            "placeholder": "\"send_add_to_cart\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The action's event type.\n\n It must be one of the event types supported by the connection of the action."
+                        },
+                        {
                             "name": "name",
                             "placeholder": "\"Mixpanel\"",
                             "type": {

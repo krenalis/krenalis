@@ -34,6 +34,14 @@ func init() {
 				URL:         "/v0/actions",
 				Parameters: []types.Property{
 					{
+						Name:           "eventType",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Placeholder:    `"send_add_to_cart"`,
+						Description: "The action's event type.\n\n" +
+							" It must be one of the event types supported by the connection of the action.",
+					},
+					{
 						Name:           "name",
 						Type:           types.Text().WithCharLen(60),
 						CreateRequired: true,
