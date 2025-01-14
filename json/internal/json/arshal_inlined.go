@@ -35,7 +35,7 @@ var jsontextValueType = reflect.TypeFor[jsontext.Value]()
 
 // marshalInlinedFallbackAll marshals all the members in an inlined fallback.
 func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *jsonopts.Struct, f *structField, insertUnquotedName func([]byte) bool) error {
-	v := addressableValue{va.Field(f.index[0])} // addressable if struct value is addressable
+	v := addressableValue{va.Field(f.index[0]), va.forcedAddr} // addressable if struct value is addressable
 	if len(f.index) > 1 {
 		v = v.fieldByIndex(f.index[1:], false)
 		if !v.IsValid() {
@@ -103,16 +103,15 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 		}
 		return nil
 	} else {
-		m := v // must be a map[string]V
+		m := v // must be a map[~string]V
 		n := m.Len()
 		if n == 0 {
 			return nil
 		}
-		mk := newAddressableValue(stringType)
+		mk := newAddressableValue(m.Type().Key())
 		mv := newAddressableValue(m.Type().Elem())
 		marshalKey := func(mk addressableValue) error {
-			xe := export.Encoder(enc)
-			b, err := jsonwire.AppendQuote(enc.UnusedBuffer(), mk.String(), &xe.Flags)
+			b, err := jsonwire.AppendQuote(enc.UnusedBuffer(), mk.String(), &mo.Flags)
 			if err != nil {
 				return newMarshalErrorBefore(enc, m.Type().Key(), err)
 			}
@@ -166,7 +165,7 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 
 // unmarshalInlinedFallbackNext unmarshals only the next member in an inlined fallback.
 func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo *jsonopts.Struct, f *structField, quotedName, unquotedName []byte) error {
-	v := addressableValue{va.Field(f.index[0])} // addressable if struct value is addressable
+	v := addressableValue{va.Field(f.index[0]), va.forcedAddr} // addressable if struct value is addressable
 	if len(f.index) > 1 {
 		v = v.fieldByIndex(f.index[1:], true)
 	}
@@ -187,7 +186,7 @@ func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo
 					*b = append(*b, ',')
 				}
 			} else {
-				return newUnmarshalErrorAfter(dec, v.Type(), errRawInlinedNotObject)
+				return newUnmarshalErrorAfterWithSkipping(dec, uo, v.Type(), errRawInlinedNotObject)
 			}
 		}
 		*b = append(*b, quotedName...)
@@ -202,12 +201,15 @@ func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo
 	} else {
 		name := string(unquotedName) // TODO: Intern this?
 
-		m := v // must be a map[string]V
+		m := v // must be a map[~string]V
 		if m.IsNil() {
 			m.Set(reflect.MakeMap(m.Type()))
 		}
 		mk := reflect.ValueOf(name)
-		mv := newAddressableValue(v.Type().Elem()) // TODO: Cache across calls?
+		if mkt := m.Type().Key(); mkt != stringType {
+			mk = mk.Convert(mkt)
+		}
+		mv := newAddressableValue(m.Type().Elem()) // TODO: Cache across calls?
 		if v2 := m.MapIndex(mk); v2.IsValid() {
 			mv.Set(v2)
 		}

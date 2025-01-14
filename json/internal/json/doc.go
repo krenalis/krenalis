@@ -30,10 +30,10 @@
 // of how the JSON and Go type systems correspond.
 //
 // Arbitrary Go types can customize their JSON representation by implementing
-// [MarshalerV1], [MarshalerV2], [UnmarshalerV1], or [UnmarshalerV2].
+// [Marshaler], [MarshalerTo], [Unmarshaler], or [UnmarshalerFrom].
 // This provides authors of Go types with control over how their types are
 // serialized as JSON. Alternatively, users can implement functions that match
-// [MarshalFuncV1], [MarshalFuncV2], [UnmarshalFuncV1], or [UnmarshalFuncV2]
+// [MarshalFunc], [MarshalToFunc], [UnmarshalFunc], or [UnmarshalFromFunc]
 // to specify the JSON representation for arbitrary types.
 // This provides callers of JSON functionality with control over
 // how any arbitrary type is serialized as JSON.
@@ -107,9 +107,9 @@
 //     A Go embedded field is implicitly inlined unless an explicit JSON name
 //     is specified. The inlined field must be a Go struct
 //     (that does not implement any JSON methods), [jsontext.Value],
-//     map[string]T, or an unnamed pointer to such types. When marshaling,
+//     map[~string]T, or an unnamed pointer to such types. When marshaling,
 //     inlined fields from a pointer type are omitted if it is nil.
-//     Inlined fields of type [jsontext.Value] and map[string]T are called
+//     Inlined fields of type [jsontext.Value] and map[~string]T are called
 //     “inlined fallbacks” as they can represent all possible
 //     JSON object members not directly handled by the parent struct.
 //     Only one inlined fallback field may be specified in a struct,
@@ -119,7 +119,7 @@
 //   - unknown: The "unknown" option is a specialized variant
 //     of the inlined fallback to indicate that this Go struct field
 //     contains any number of unknown JSON object members. The field type must
-//     be a [jsontext.Value], map[string]T, or an unnamed pointer to such types.
+//     be a [jsontext.Value], map[~string]T, or an unnamed pointer to such types.
 //     If [DiscardUnknownMembers] is specified when marshaling,
 //     the contents of this field are ignored.
 //     If [RejectUnknownMembers] is specified when unmarshaling,

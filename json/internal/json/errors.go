@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/meergo/meergo/json/internal/json/internal/jsonflags"
+	"github.com/meergo/meergo/json/internal/json/internal/jsonopts"
 	"github.com/meergo/meergo/json/internal/json/internal/jsonwire"
 	"github.com/meergo/meergo/json/internal/json/jsontext"
 )
@@ -46,6 +48,15 @@ func isSyntacticError(err error) bool {
 	return ok
 }
 
+// isFatalError reports whether this error must terminate asharling.
+// All errors are considered fatal unless operating under
+// [jsonflags.ReportErrorsWithLegacySemantics] in which case only
+// syntactic errors and I/O errors are considered fatal.
+func isFatalError(err error, flags jsonflags.Flags) bool {
+	return !flags.Get(jsonflags.ReportErrorsWithLegacySemantics) ||
+		isSyntacticError(err) || export.IsIOError(err)
+}
+
 // SemanticError describes an error determining the meaning
 // of JSON data as Go data or vice-versa.
 //
@@ -64,6 +75,9 @@ type SemanticError struct {
 
 	// JSONKind is the JSON kind that could not be handled.
 	JSONKind jsontext.Kind // may be zero if unknown
+	// JSONValue is the JSON number or string that could not be unmarshaled.
+	// It is not populated during marshaling.
+	JSONValue jsontext.Value // may be nil if irrelevant or unknown
 	// GoType is the Go type that could not be handled.
 	GoType reflect.Type // may be nil if unknown
 
@@ -75,14 +89,19 @@ type SemanticError struct {
 type coder interface{ StackPointer() jsontext.Pointer }
 
 // newInvalidFormatError wraps err in a SemanticError because
-// the current type t cannot handle the provided format flag.
-func newInvalidFormatError(c coder, t reflect.Type, format string) error {
-	err := fmt.Errorf("invalid format flag %q", format)
+// the current type t cannot handle the provided options format.
+// This error must be called before producing or consuming the next value.
+//
+// If [jsonflags.ReportErrorsWithLegacySemantics] is specified,
+// then this automatically skips the next value when unmarshaling
+// to ensure that the value is fully consumed.
+func newInvalidFormatError(c coder, t reflect.Type, o *jsonopts.Struct) error {
+	err := fmt.Errorf("invalid format flag %q", o.Format)
 	switch c := c.(type) {
 	case *jsontext.Encoder:
 		err = newMarshalErrorBefore(c, t, err)
 	case *jsontext.Decoder:
-		err = newUnmarshalErrorBefore(c, t, err)
+		err = newUnmarshalErrorBeforeWithSkipping(c, o, t, err)
 	}
 	return err
 }
@@ -97,11 +116,25 @@ func newMarshalErrorBefore(e *jsontext.Encoder, t reflect.Type, err error) error
 
 // newUnmarshalErrorBefore wraps err in a SemanticError assuming that d
 // is positioned right before the next token or value, which causes an error.
+// It does not record the next JSON kind as this error is used to indicate
+// the receiving Go value is invalid to unmarshal into (and not a JSON error).
 func newUnmarshalErrorBefore(d *jsontext.Decoder, t reflect.Type, err error) error {
 	return &SemanticError{action: "unmarshal", GoType: t, Err: err,
 		ByteOffset:  d.InputOffset() + int64(export.Decoder(d).CountNextDelimWhitespace()),
-		JSONPointer: jsontext.Pointer(export.Decoder(d).AppendStackPointer(nil, +1)),
-		JSONKind:    d.PeekKind()}
+		JSONPointer: jsontext.Pointer(export.Decoder(d).AppendStackPointer(nil, +1))}
+}
+
+// newUnmarshalErrorBeforeWithSkipping is like [newUnmarshalErrorBefore],
+// but automatically skips the next value if
+// [jsonflags.ReportErrorsWithLegacySemantics] is specified.
+func newUnmarshalErrorBeforeWithSkipping(d *jsontext.Decoder, o *jsonopts.Struct, t reflect.Type, err error) error {
+	err = newUnmarshalErrorBefore(d, t, err)
+	if o.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		if err2 := export.Decoder(d).SkipValue(); err2 != nil {
+			return err2
+		}
+	}
+	return err
 }
 
 // newUnmarshalErrorAfter wraps err in a SemanticError assuming that d
@@ -112,6 +145,30 @@ func newUnmarshalErrorAfter(d *jsontext.Decoder, t reflect.Type, err error) erro
 		ByteOffset:  d.InputOffset() - int64(len(tokOrVal)),
 		JSONPointer: jsontext.Pointer(export.Decoder(d).AppendStackPointer(nil, -1)),
 		JSONKind:    jsontext.Value(tokOrVal).Kind()}
+}
+
+// newUnmarshalErrorAfter wraps err in a SemanticError assuming that d
+// is positioned right after the previous token or value, which caused an error.
+// It also stores a copy of the last JSON value if it is a string or number.
+func newUnmarshalErrorAfterWithValue(d *jsontext.Decoder, t reflect.Type, err error) error {
+	serr := newUnmarshalErrorAfter(d, t, err).(*SemanticError)
+	if serr.JSONKind == '"' || serr.JSONKind == '0' {
+		serr.JSONValue = jsontext.Value(export.Decoder(d).PreviousTokenOrValue()).Clone()
+	}
+	return serr
+}
+
+// newUnmarshalErrorAfterWithSkipping is like [newUnmarshalErrorAfter],
+// but automatically skips the remainder of the current value if
+// [jsonflags.ReportErrorsWithLegacySemantics] is specified.
+func newUnmarshalErrorAfterWithSkipping(d *jsontext.Decoder, o *jsonopts.Struct, t reflect.Type, err error) error {
+	err = newUnmarshalErrorAfter(d, t, err)
+	if o.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		if err2 := export.Decoder(d).SkipValueRemainder(); err2 != nil {
+			return err2
+		}
+	}
+	return err
 }
 
 // newSemanticErrorWithPosition wraps err in a SemanticError assuming that
@@ -273,6 +330,10 @@ func (e *SemanticError) Error() string {
 		if e.action == "" {
 			preposition = ""
 		}
+	}
+	if len(e.JSONValue) > 0 && len(e.JSONValue) < 100 {
+		sb.WriteByte(' ')
+		sb.Write(e.JSONValue)
 	}
 
 	// Format Go type.
