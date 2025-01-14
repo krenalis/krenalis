@@ -14,6 +14,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,8 +23,6 @@ import (
 )
 
 func Test_Writer(t *testing.T) {
-
-	t.Skip() // TODO(Gianluca): skipped because fails sometimes. See https://github.com/meergo/meergo/issues/1160.
 
 	tests := []struct {
 		num    int     // number of records to process
@@ -67,6 +66,9 @@ func Test_Writer(t *testing.T) {
 				t.Fatalf("Close: expected no error, got error %q", err)
 			}
 
+			app.mu.Lock()
+			defer app.mu.Unlock()
+
 			n := 0
 			for _, ack := range app.acks {
 				n += len(ack.ids)
@@ -103,6 +105,7 @@ type ack struct {
 type app struct {
 	t    *testing.T
 	rng  *rand.Rand
+	mu   sync.Mutex
 	acks []ack
 }
 
@@ -180,8 +183,10 @@ func (app *app) ack(ids []string, err error) {
 	if len(ids) == 0 {
 		app.t.Fatalf("ack: expected at least one id, got none")
 	}
+	app.mu.Lock()
 	if app.acks == nil {
 		app.acks = []ack{}
 	}
 	app.acks = append(app.acks, ack{ids: ids, err: err})
+	app.mu.Unlock()
 }
