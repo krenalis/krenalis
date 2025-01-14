@@ -278,7 +278,6 @@ func (w *Writer) consume(iter *consumer) {
 	errors, _ := err.(meergo.RecordsError)
 	var errorOf map[error][]string
 	w.mu.Lock()
-	w.consumers++
 	if w.consumer == iter {
 		// Upsert hasn’t started the iteration; mark it as completed.
 		if trace {
