@@ -296,17 +296,18 @@ func (w *Writer) consume(iter *consumer) {
 			fmt.Printf("Writer.consume: Upsert of consumer %p has returned, with error %#v\n", iter, err)
 		}
 		errorOf = make(map[error][]string)
+		var index int
 		for i := 0; i < len(w.records); i++ {
 			if w.records[i].consumer != iter {
 				continue
 			}
 			id := w.records[i].id
-			if errors == nil {
-				errorOf[err] = append(errorOf[err], id)
-			} else {
-				errorOf[errors[i]] = append(errorOf[errors[i]], id)
+			if errors != nil {
+				err = errors[index]
 			}
+			errorOf[err] = append(errorOf[err], id)
 			w.records[i] = record{}
+			index++
 		}
 		if assert {
 			w._assertAvailable(w.available)
