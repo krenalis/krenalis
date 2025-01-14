@@ -24,7 +24,13 @@ type AckFunc func(ids []string, err error)
 const maxAvailable = 1000
 const dontConsume = -1
 
-// Writer represents an app record writer.
+// Writer represents a writer for app records.
+// It implements the connectors.Writer interface.
+//
+// By calling the Write method for each record to be written, the records are
+// sent to the application, potentially in batches, and the ack function is
+// called for confirmation. To ensure that all records are successfully sent to
+// the app, the Close method must be called after all writes.
 type Writer struct {
 	target meergo.Targets    // target, can be Users or Groups
 	app    meergo.AppRecords // app connector
@@ -47,7 +53,7 @@ type Writer struct {
 	}
 }
 
-// record represents a record.
+// record represents a single user or group to be written and sent to the app.
 type record struct {
 	consumer   *consumer      // consumer that has consumed the record, if any
 	index      int            // range index of the consumer; it is 0 if consumer is nil
@@ -70,7 +76,9 @@ func New(ack AckFunc, target meergo.Targets, app meergo.AppRecords, name string)
 	return w
 }
 
-// Close closes the writer.
+// Close terminates the writer, ensuring that all records are processed
+// before returning, unless the provided context is canceled.
+// If processing all records fails, an error is returned.
 func (w *Writer) Close(ctx context.Context) error {
 	if w.close.closed.Swap(true) {
 		return nil
@@ -118,7 +126,8 @@ func (w *Writer) Close(ctx context.Context) error {
 }
 
 // Write writes a record with the provided identifier and properties.
-func (w *Writer) Write(ctx context.Context, id string, properties map[string]any) bool {
+// It panics if it called after w has been closed.
+func (w *Writer) Write(_ context.Context, id string, properties map[string]any) bool {
 	if w.close.closed.Load() {
 		panic("core/connectors/appwriter: Write called on a closed writer")
 	}
@@ -126,6 +135,8 @@ func (w *Writer) Write(ctx context.Context, id string, properties map[string]any
 	w.mu.Lock()
 	w.records = append(w.records, record{id: id, properties: properties})
 	w.available++
+	// If there are no consumers and at least maxAvailable records are present,
+	// prepare a new consumer to be started after releasing the lock.
 	if w.consumer == nil && w.available >= maxAvailable {
 		iter = newConsumer(w)
 		w.consumer = iter
@@ -148,7 +159,7 @@ func (w *Writer) Write(ctx context.Context, id string, properties map[string]any
 	return true
 }
 
-// compact compacts the records.
+// compact compacts the records. It does nothing if w has been closed.
 func (w *Writer) compact() {
 	w.mu.Lock()
 	if w.close.closed.Load() {
