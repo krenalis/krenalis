@@ -132,6 +132,7 @@
                     <li>
                         <div>API reference</div>
                         <ul>
+                            <li>{{ item(`api/index`, `Introduction`) }}</li>
                             <li>{{ item(`api/authentication`, `Authentication`) }}</li>
                             <li>{{ item(`api/workspaces`, `Workspaces`) }}</li>
                             <li>{{ item(`api/warehouse`, `Warehouse`) }}</li>
@@ -222,7 +223,7 @@
                 <a href="/"{% if not hasPrefix(filepath, "connectors/") and not hasPrefix(filepath, "developers/") and not hasPrefix(filepath, "api/") %} class="selected"{% end %}>Documentation</a>
                 <a href="/connectors/"{% if hasPrefix(filepath, "connectors/") %} class="selected"{% end %}>Connectors</a>
                 <a href="/developers/"{% if hasPrefix(filepath, "developers/") %} class="selected"{% end %}>Developers</a>
-                <a href="/api/authentication"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
+                <a href="/api/"{% if hasPrefix(filepath, "api/") %} class="selected"{% end %}>API reference</a>
             </nav>
             {{ Article() }}
         </div>
