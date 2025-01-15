@@ -138,28 +138,35 @@ func init() {
 		},
 	}
 
-	getReturnsConnection := append(listReturnsConnection, types.Property{
-		Name: "eventTypes",
-		Type: types.Array(types.Object([]types.Property{
-			{
-				Name:        "id",
-				Type:        types.Text(),
-				Description: "The event type ID, which uniquely identifies it in the context of the connection.",
-			},
-			{
-				Name:        "name",
-				Type:        types.Text(),
-				Description: "The name of the event type. Compared to the ID, the name is human-readable and suitable for display to a user, for example in an interface.",
-			},
-			{
-				Name:        "description",
-				Type:        types.Text(),
-				Description: "The description of the event type.",
-			},
-		})),
-		Nullable:    true,
-		Description: "The event types of the connection.\n\nIt has a null value if the connection is not a destination connection of type app.",
-	})
+	getReturnsConnection := append(listReturnsConnection,
+		types.Property{
+			Name:        "actions",
+			Type:        types.Array(types.Parameter("action")),
+			Description: "The actions of the connection.",
+		},
+		types.Property{
+			Name: "eventTypes",
+			Type: types.Array(types.Object([]types.Property{
+				{
+					Name:        "id",
+					Type:        types.Text(),
+					Description: "The event type ID, which uniquely identifies it in the context of the connection.",
+				},
+				{
+					Name:        "name",
+					Type:        types.Text(),
+					Description: "The name of the event type. Compared to the ID, the name is human-readable and suitable for display to a user, for example in an interface.",
+				},
+				{
+					Name:        "description",
+					Type:        types.Text(),
+					Description: "The description of the event type.",
+				},
+			})),
+			Nullable:    true,
+			Description: "The event types of the connection.\n\nIt has a null value if the connection is not a destination connection of type app.",
+		},
+	)
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "connections",

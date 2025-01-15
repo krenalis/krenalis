@@ -1730,6 +1730,16 @@
                                 "description": "The connection's health."
                             },
                             {
+                                "name": "actions",
+                                "type": {
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "action"
+                                    }
+                                },
+                                "description": "The actions of the connection."
+                            },
+                            {
                                 "name": "eventTypes",
                                 "type": {
                                     "name": "Array",
