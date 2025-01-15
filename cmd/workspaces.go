@@ -453,14 +453,14 @@ func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) 
 	return nil, nil
 }
 
-// LastIdentityResolution returns information about the last Identity
+// LatestIdentityResolution returns information about the latest Identity
 // Resolution of a workspace.
-func (workspace workspace) LastIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
+func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	startTime, endTime, err := ws.LastIdentityResolution(r.Context())
+	startTime, endTime, err := ws.LatestIdentityResolution(r.Context())
 	if err != nil {
 		return nil, err
 	}

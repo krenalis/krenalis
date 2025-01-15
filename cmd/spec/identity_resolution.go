@@ -32,8 +32,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrieve last identity resolution info",
-				Description: "Returns the start and end times of the last identity resolution.",
+				Name:        "Retrieve latest identity resolution info",
+				Description: "Returns the start and end times of the latest identity resolution.",
 				Method:      GET,
 				URL:         "/v0/identity-resolution/latest",
 				Response: &Response{

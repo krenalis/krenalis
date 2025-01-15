@@ -155,7 +155,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	// Test that the execution of the Identity Resolution has ended and that its
 	// duration has a reasonable value.
-	startTime, endTime := c.LastIdentityResolution()
+	startTime, endTime := c.LatestIdentityResolution()
 	if startTime == nil {
 		t.Fatalf("startTime should be a valid timestamp, got nil")
 	}

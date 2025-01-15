@@ -15,7 +15,7 @@ import { UserDrawer } from './UserDrawer';
 import { useUsersGrid } from './useUsersGrid';
 import { UserProperty } from './Users.types';
 import AppContext from '../../../context/AppContext';
-import { LastIdentityResolution } from '../../../lib/api/types/workspace';
+import { LatestIdentityResolution } from '../../../lib/api/types/workspace';
 
 const UsersList = () => {
 	const [selectedUser, setSelectedUser] = useState<string>('');
@@ -53,9 +53,9 @@ const UsersList = () => {
 	}, [usersProperties]);
 
 	const handleIdentityResolutionExecution = async () => {
-		let res: LastIdentityResolution;
+		let res: LatestIdentityResolution;
 		try {
-			res = await api.workspaces.lastIdentityResolution();
+			res = await api.workspaces.latestIdentityResolution();
 		} catch (err) {
 			handleError(err);
 			return;
@@ -169,7 +169,7 @@ const UsersList = () => {
 								<div className='users-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 							) : lastIRExecutionEnd ? (
 								<div className='users-list__identity-resolution-end-time'>
-									<span>Last Identity Resolution:</span>
+									<span>Latest Identity Resolution:</span>
 									<SlRelativeTime lang='en-US' date={lastIRExecutionEnd} />
 								</div>
 							) : (

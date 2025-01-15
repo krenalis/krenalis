@@ -229,9 +229,9 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, identifiers, 
 	return nil
 }
 
-// LastIdentityResolution returns information about the last Identity
+// LatestIdentityResolution returns information about the latest Identity
 // Resolution.
-func (warehouse *Snowflake) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (warehouse *Snowflake) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	db := warehouse.openDB()
 	conn, err := db.Conn(ctx)
 	if err != nil {

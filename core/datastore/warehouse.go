@@ -82,8 +82,8 @@ func (dw warehouse) Initialize(ctx context.Context, userColumns []meergo.Column)
 	return unavailableError(dw.inner.Initialize(ctx, userColumns))
 }
 
-func (dw warehouse) LastIdentityResolution(ctx context.Context) (*time.Time, *time.Time, error) {
-	startTime, endTime, err := dw.inner.LastIdentityResolution(ctx)
+func (dw warehouse) LatestIdentityResolution(ctx context.Context) (*time.Time, *time.Time, error) {
+	startTime, endTime, err := dw.inner.LatestIdentityResolution(ctx)
 	err = unavailableError(err)
 	return startTime, endTime, err
 }

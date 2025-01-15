@@ -112,7 +112,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /events/listeners/{id}":                                       workspace.ListenedEvents,
 		"GET    /events/schema":                                               api.EventSchema,
 		"GET    /identifiers-schema":                                          workspace.IdentifiersSchema,
-		"GET    /identity-resolution/latest":                                  workspace.LastIdentityResolution,
+		"GET    /identity-resolution/latest":                                  workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                                workspace.IdentityResolutionSettings,
 		"GET    /keys":                                                        organization.APIKeys, /* only UI */
 		"GET    /members":                                                     organization.Members, /* only UI */

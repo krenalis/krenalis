@@ -145,7 +145,7 @@ type Warehouse interface {
 	// tables on the warehouse with the corresponding columns.
 	Initialize(ctx context.Context, userColumns []Column) error
 
-	// LastIdentityResolution returns information about the last Identity
+	// LatestIdentityResolution returns information about the latest Identity
 	// Resolution.
 	//
 	// In particular:
@@ -154,7 +154,7 @@ type Warehouse interface {
 	//   start time and end time;
 	// - if it is in progress, returns its start time and nil for the end time;
 	// - if no Identity Resolution has ever been executed, returns nil and nil.
-	LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error)
+	LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error)
 
 	// Merge performs a table merge operation.
 	// If handles row updates, inserts, and deletions. table specifies the target

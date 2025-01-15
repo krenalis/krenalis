@@ -20,7 +20,7 @@ import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/war
 import Workspace, {
 	CreateWorkspaceResponse,
 	UIPreferences,
-	LastIdentityResolution,
+	LatestIdentityResolution,
 	PrimarySources,
 } from './types/workspace';
 import {
@@ -879,7 +879,7 @@ class Workspaces {
 		return r;
 	};
 
-	lastIdentityResolution = async (): Promise<LastIdentityResolution> => {
+	latestIdentityResolution = async (): Promise<LatestIdentityResolution> => {
 		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
 	};
 }

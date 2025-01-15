@@ -236,9 +236,9 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, identifiers,
 	return nil
 }
 
-// LastIdentityResolution returns information about the last Identity
+// LatestIdentityResolution returns information about the latest Identity
 // Resolution.
-func (warehouse *PostgreSQL) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (warehouse *PostgreSQL) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return nil, nil, err

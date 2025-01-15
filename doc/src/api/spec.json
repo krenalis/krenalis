@@ -6413,8 +6413,8 @@
                     ]
                 },
                 {
-                    "name": "Retrieve last identity resolution info",
-                    "description": "Returns the start and end times of the last identity resolution.",
+                    "name": "Retrieve latest identity resolution info",
+                    "description": "Returns the start and end times of the latest identity resolution.",
                     "method": "GET",
                     "url": "/v0/identity-resolution/latest",
                     "parameters": [],

@@ -956,7 +956,7 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 	return identities, count, nil
 }
 
-// LastIdentityResolution returns information about the last Identity
+// LatestIdentityResolution returns information about the latest Identity
 // Resolution of the workspace.
 //
 // In particular:
@@ -968,9 +968,9 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
 // the data warehouse is in maintenance mode.
-func (this *Workspace) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (this *Workspace) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	this.core.mustBeOpen()
-	startTime, endTime, err = this.store.LastIdentityResolution(ctx)
+	startTime, endTime, err = this.store.LatestIdentityResolution(ctx)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return nil, nil, errors.Unavailable("%s", err)

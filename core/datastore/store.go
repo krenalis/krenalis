@@ -270,7 +270,7 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 	return records, nil
 }
 
-// LastIdentityResolution returns information about the last Identity
+// LatestIdentityResolution returns information about the latest Identity
 // Resolution.
 //
 // In particular:
@@ -283,14 +283,14 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns a *DataWarehouseError error.
-func (store *Store) LastIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
+func (store *Store) LatestIdentityResolution(ctx context.Context) (startTime, endTime *time.Time, err error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer done()
-	return store.warehouse().LastIdentityResolution(ctx)
+	return store.warehouse().LatestIdentityResolution(ctx)
 }
 
 // DestinationUser represents a destination user to merge.

@@ -28,10 +28,10 @@ interface CreateWorkspaceResponse {
 	id: number;
 }
 
-interface LastIdentityResolution {
+interface LatestIdentityResolution {
 	startTime: string;
 	endTime: string;
 }
 
 export default Workspace;
-export type { CreateWorkspaceResponse, UIPreferences, UserProfile, PrimarySources, LastIdentityResolution };
+export type { CreateWorkspaceResponse, UIPreferences, UserProfile, PrimarySources, LatestIdentityResolution };

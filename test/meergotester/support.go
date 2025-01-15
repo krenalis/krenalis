@@ -293,7 +293,7 @@ func (c *Meergo) IdentifiersSchema() types.Type {
 	return schema
 }
 
-func (c *Meergo) LastIdentityResolution() (startTime, endTime *time.Time) {
+func (c *Meergo) LatestIdentityResolution() (startTime, endTime *time.Time) {
 	var response struct {
 		StartTime *time.Time `json:"startTime"`
 		EndTime   *time.Time `json:"endTime"`
