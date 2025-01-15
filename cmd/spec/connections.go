@@ -163,8 +163,10 @@ func init() {
 					Description: "The description of the event type.",
 				},
 			})),
-			Nullable:    true,
-			Description: "The event types of the connection.\n\nIt has a null value if the connection is not a destination connection of type app.",
+			Nullable: true,
+			Description: "The type of events that can be sent to a destination app connection.\n\n" +
+				"It has a null value if the connection is not a destination connection of type app or if it does not support events.\n\n" +
+				"Once you have retrieved an event type and its ID, you can obtain its schema through the method [`/connections/:id/schemas/event/:type`](connection-app#get-event-type-schema).",
 		},
 	)
 
