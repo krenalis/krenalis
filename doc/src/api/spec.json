@@ -1728,6 +1728,40 @@
                                     ]
                                 },
                                 "description": "The connection's health."
+                            },
+                            {
+                                "name": "eventTypes",
+                                "type": {
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Object",
+                                        "properties": [
+                                            {
+                                                "name": "id",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The event type ID, which uniquely identifies it in the context of the connection."
+                                            },
+                                            {
+                                                "name": "name",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The name of the event type. Compared to the ID, the name is human-readable and suitable for display to a user, for example in an interface."
+                                            },
+                                            {
+                                                "name": "description",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The description of the event type."
+                                            }
+                                        ]
+                                    }
+                                },
+                                "nullable": true,
+                                "description": "The event types of the connection.\n\nIt has a null value if the connection is not a destination connection of type app."
                             }
                         ]
                     },

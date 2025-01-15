@@ -66,6 +66,16 @@ type Connection struct {
 
 	// Actions is populated only by the (*Workspace).Connection method.
 	Actions *[]Action `json:"actions,omitzero"`
+
+	// EventTypes is populated only by the (*Workspace).Connection method.
+	EventTypes *[]EventType `json:"eventTypes,omitzero"`
+}
+
+// EventType represents an event type of a destination app connection.
+type EventType struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".

@@ -413,7 +413,7 @@ func (connection connection) connection(r *http.Request) (*core.Connection, erro
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Connection(id)
+	return ws.Connection(r.Context(), id)
 }
 
 func (connection connection) connection2(r *http.Request) (int, error) {
@@ -441,7 +441,7 @@ func (connection connection) id(r *http.Request) (*core.Connection, error) {
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Connection(id)
+	return ws.Connection(r.Context(), id)
 }
 
 func (connection connection) src(r *http.Request) (*core.Connection, error) {
@@ -457,7 +457,7 @@ func (connection connection) src(r *http.Request) (*core.Connection, error) {
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Connection(id)
+	return ws.Connection(r.Context(), id)
 }
 
 func (connection connection) target(r *http.Request) (core.Target, string, error) {

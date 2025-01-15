@@ -337,7 +337,7 @@ func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int,
 // Connection returns the connection with identifier id of the workspace.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
-func (this *Workspace) Connection(id int) (*Connection, error) {
+func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("connection identifier %d is not valid", id)
@@ -373,6 +373,24 @@ func (this *Workspace) Connection(id int) (*Connection, error) {
 	for i, a := range actions {
 		(*connection.Actions)[i].fromState(this.core, this.store, a)
 	}
+
+	// Set the event types.
+	if conn.Type == state.App && c.Role == state.Destination {
+		appEventTypes, err := connection.app().EventTypes(ctx)
+		if err != nil {
+			return nil, err
+		}
+		eventTypes := make([]EventType, len(appEventTypes))
+		for i, et := range appEventTypes {
+			eventTypes[i] = EventType{
+				ID:          et.ID,
+				Name:        et.Name,
+				Description: et.Description,
+			}
+		}
+		connection.EventTypes = &eventTypes
+	}
+
 	return &connection, nil
 }
 
