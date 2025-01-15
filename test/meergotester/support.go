@@ -196,14 +196,20 @@ func (c *Meergo) CreateDummyWithSettings(name string, role Role, settings DummyS
 }
 
 func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSet) int {
-	data := map[string]any{
-		"target":    "Events",
-		"eventType": eventType,
-		"action":    action,
+	actionJSON, err := json.Marshal(action)
+	if err != nil {
+		panic(err)
 	}
+	var body map[string]any
+	err = json.Unmarshal(actionJSON, &body)
+	if err != nil {
+		panic(err)
+	}
+	body["target"] = "Events"
+	body["eventType"] = eventType
 	var id int
 	method := fmt.Sprintf("/api/connections/%d/actions", conn)
-	c.MustCall("POST", method, data, &id)
+	c.MustCall("POST", method, body, &id)
 	return id
 }
 

@@ -21,8 +21,6 @@ import (
 
 func TestDispatchEventsToDummy(t *testing.T) {
 
-	t.Skip() // TODO(Gianluca): investigate and re-enable.
-
 	// Create an test HTTP server that will receive request sent to it from
 	// Dummy. The first received request is written on a channel.
 	request := make(chan string, 1)
