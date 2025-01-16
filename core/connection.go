@@ -268,6 +268,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			state.App:
 			var name, description string
 			if c.Role == state.Source {
+				// Source/App/Users.
 				name = "Import " + connector.TermForUsers
 				description = "Import the " + connector.TermForUsers
 				if connector.TermForUsers != "users" {
@@ -275,6 +276,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				}
 				description += " from " + connector.Name
 			} else {
+				// Destination/App/Users.
 				name = "Export " + connector.TermForUsers
 				description = "Export the users "
 				if connector.TermForUsers != "users" {
@@ -293,9 +295,13 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			state.FileStorage:
 			var name, description string
 			if c.Role == state.Source {
+				// Source/FileStorage/Users.
+				// Source/Database/Users.
 				name = "Import users"
 				description = "Import the users from " + connector.Name
 			} else {
+				// Destination/File/Users.
+				// Destination/Database/Users.
 				name = "Export users"
 				description = "Export the users to " + connector.Name
 			}
@@ -310,6 +316,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			state.Server,
 			state.Website:
 			if c.Role == state.Source {
+				// Source/Mobile/Users.
+				// Source/Server/Users.
+				// Source/Website/Users.
 				at := ActionType{
 					Name:        "Import users",
 					Description: "Import users from the events of the " + connector.Name,
@@ -325,6 +334,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			state.App:
 			var name, description string
 			if c.Role == state.Source {
+				// Source/App/Groups.
 				name = "Import " + connector.TermForGroups
 				description = "Import the " + connector.TermForGroups
 				if connector.TermForGroups != "groups" {
@@ -332,6 +342,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				}
 				description += " from " + connector.Name
 			} else {
+				// Destination/App/Groups.
 				name = "Export " + connector.TermForGroups
 				description = "Export the groups "
 				if connector.TermForGroups != "groups" {
@@ -350,9 +361,13 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			state.FileStorage:
 			var name, description string
 			if c.Role == state.Source {
+				// Source/FileStorage/Groups.
+				// Source/Database/Groups.
 				name = "Import groups"
 				description = "Import the groups from " + connector.Name
 			} else {
+				// Destination/File/Groups.
+				// Destination/Database/Groups.
 				name = "Export groups"
 				description = "Export the groups to " + connector.Name
 			}
@@ -367,6 +382,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 			state.Server,
 			state.Website:
 			if c.Role == state.Source {
+				// Source/Mobile/Groups.
+				// Source/Server/Groups.
+				// Source/Website/Groups.
 				at := ActionType{
 					Name:        "Import groups",
 					Description: "Import groups from the events of the " + connector.Name,
@@ -389,6 +407,9 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				case state.Website:
 					description += "website"
 				}
+				// Source/Mobile/Events.
+				// Source/Server/Events.
+				// Source/Website/Events.
 				at := ActionType{
 					Name:        "Import events",
 					Description: description,
@@ -405,6 +426,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 					}
 					return nil, err
 				}
+				// Destination/App/Events.
 				for _, et := range eventTypes {
 					id := et.ID
 					actionTypes = append(actionTypes, ActionType{
