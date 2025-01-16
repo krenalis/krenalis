@@ -37,10 +37,14 @@ const showUI = false
 
 func TestUI(t *testing.T) {
 
-	// TODO(Gianluca): UI tests have been skipped as they seem to fail, every
-	// now and then, for some unknown reason. See the issue
-	// https://github.com/meergo/meergo/issues/1200.
-	t.Skipf("the UI test have been skipped because they fail. See https://github.com/meergo/meergo/issues/1200")
+	// TODO(Gianluca): the UI tests have been temporarily disabled on OSX
+	// because for some reason (still unknown) they occasionally fail.
+	// See https://github.com/meergo/meergo/issues/1200.
+	if runtime.GOOS == "darwin" {
+		t.Skipf("the UI tests have been temporarily disabled on OSX because for" +
+			" some reason (still unknown) they occasionally fail." +
+			" See https://github.com/meergo/meergo/issues/1200")
+	}
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
