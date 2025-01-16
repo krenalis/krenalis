@@ -322,30 +322,39 @@ func (core *Core) Close() {
 // Connector returns the connector with the provided name.
 //
 // It returns an errors.NotFoundError error if the connector does not exist.
-func (core *Core) Connector(ctx context.Context, name string) (*Connector, error) {
+func (core *Core) Connector(name string) (*Connector, error) {
 	core.mustBeOpen()
 	c, ok := core.state.Connector(name)
 	if !ok {
 		return nil, errors.NotFound("connector %q does not exist", name)
 	}
 	connector := Connector{
-		core:                   core,
-		connector:              c,
-		Name:                   c.Name,
-		SourceDescription:      c.SourceDescription,
-		DestinationDescription: c.DestinationDescription,
-		TermForUsers:           c.TermForUsers,
-		TermForGroups:          c.TermForGroups,
-		Type:                   ConnectorType(c.Type),
-		SendingMode:            (*SendingMode)(c.SendingMode),
-		HasSheets:              c.HasSheets,
-		HasSettings:            c.HasSettings,
-		IdentityIDLabel:        c.IdentityIDLabel,
-		Icon:                   c.Icon,
-		FileExtension:          c.FileExtension,
-		SampleQuery:            c.SampleQuery,
-		WebhooksPer:            WebhooksPer(c.WebhooksPer),
-		RequiresAuth:           c.OAuth != nil,
+		core:            core,
+		connector:       c,
+		Name:            c.Name,
+		Type:            ConnectorType(c.Type),
+		IdentityIDLabel: c.IdentityIDLabel,
+		HasSheets:       c.HasSheets,
+		FileExtension:   c.FileExtension,
+		RequiresAuth:    c.OAuth != nil,
+		TermForUsers:    c.TermForUsers,
+		TermForGroups:   c.TermForGroups,
+		Icon:            c.Icon,
+	}
+	if c.Role == state.Source || c.Role == state.Both {
+		connector.Source = &SourceConnector{
+			Description: c.SourceDescription,
+			HasSettings: c.HasSourceSettings,
+			SampleQuery: c.SampleQuery,
+			WebhooksPer: WebhooksPer(c.WebhooksPer),
+		}
+	}
+	if c.Role == state.Destination || c.Role == state.Both {
+		connector.Destination = &DestinationConnector{
+			Description: c.DestinationDescription,
+			HasSettings: c.HasDestinationSettings,
+			SendingMode: (*SendingMode)(c.SendingMode),
+		}
 	}
 	if connector.TermForUsers == "" {
 		connector.TermForUsers = "users"
@@ -368,29 +377,38 @@ func (core *Core) Connector(ctx context.Context, name string) (*Connector, error
 }
 
 // Connectors returns the connectors.
-func (core *Core) Connectors(ctx context.Context) []*Connector {
+func (core *Core) Connectors() []*Connector {
 	core.mustBeOpen()
 	cc := core.state.Connectors()
 	connectors := make([]*Connector, len(cc))
 	for i, c := range cc {
 		connector := Connector{
-			core:                   core,
-			connector:              c,
-			Name:                   c.Name,
-			SourceDescription:      c.SourceDescription,
-			DestinationDescription: c.DestinationDescription,
-			TermForUsers:           c.TermForUsers,
-			TermForGroups:          c.TermForGroups,
-			Type:                   ConnectorType(c.Type),
-			SendingMode:            (*SendingMode)(c.SendingMode),
-			HasSheets:              c.HasSheets,
-			HasSettings:            c.HasSettings,
-			IdentityIDLabel:        c.IdentityIDLabel,
-			Icon:                   c.Icon,
-			FileExtension:          c.FileExtension,
-			SampleQuery:            c.SampleQuery,
-			WebhooksPer:            WebhooksPer(c.WebhooksPer),
-			RequiresAuth:           c.OAuth != nil,
+			core:            core,
+			connector:       c,
+			Name:            c.Name,
+			Type:            ConnectorType(c.Type),
+			IdentityIDLabel: c.IdentityIDLabel,
+			HasSheets:       c.HasSheets,
+			FileExtension:   c.FileExtension,
+			RequiresAuth:    c.OAuth != nil,
+			TermForUsers:    c.TermForUsers,
+			TermForGroups:   c.TermForGroups,
+			Icon:            c.Icon,
+		}
+		if c.Role == state.Source || c.Role == state.Both {
+			connector.Source = &SourceConnector{
+				Description: c.SourceDescription,
+				HasSettings: c.HasSourceSettings,
+				SampleQuery: c.SampleQuery,
+				WebhooksPer: WebhooksPer(c.WebhooksPer),
+			}
+		}
+		if c.Role == state.Destination || c.Role == state.Both {
+			connector.Destination = &DestinationConnector{
+				Description: c.DestinationDescription,
+				HasSettings: c.HasDestinationSettings,
+				SendingMode: (*SendingMode)(c.SendingMode),
+			}
 		}
 		if connector.TermForUsers == "" {
 			connector.TermForUsers = "users"

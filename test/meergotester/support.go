@@ -172,7 +172,9 @@ func (c *Meergo) CreateDummy(name string, role Role) int {
 		Name:      name,
 		Role:      role,
 		Connector: "Dummy",
-		Settings:  []byte("{}"),
+	}
+	if role == Destination {
+		conn.Settings = []byte("{}")
 	}
 	if role == Destination {
 		mode := Cloud

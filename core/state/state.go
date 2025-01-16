@@ -529,17 +529,19 @@ type TimeLayouts struct {
 // Connector represents a connector.
 type Connector struct {
 	Name                   string
+	Icon                   string
+	Type                   ConnectorType
+	Role                   Role
 	SourceDescription      string
 	DestinationDescription string
 	TermForUsers           string
 	TermForGroups          string
-	Type                   ConnectorType
 	Targets                ConnectorTargets
 	SendingMode            *SendingMode
 	HasSheets              bool
-	HasSettings            bool
+	HasSourceSettings      bool
+	HasDestinationSettings bool
 	IdentityIDLabel        string
-	Icon                   string
 	TimeLayouts            TimeLayouts
 	FileExtension          string
 	SampleQuery            string
@@ -886,8 +888,9 @@ func (health Health) Value() (driver.Value, error) {
 type Role int
 
 const (
-	Source      Role = iota + 1 // source
-	Destination                 // destination
+	Both        Role = iota // both
+	Source                  // source
+	Destination             // destination
 )
 
 // Scan implements the sql.Scanner interface.
@@ -898,6 +901,8 @@ func (role *Role) Scan(src any) error {
 	}
 	var r Role
 	switch s {
+	case "Both":
+		r = Both
 	case "Source":
 		r = Source
 	case "Destination":

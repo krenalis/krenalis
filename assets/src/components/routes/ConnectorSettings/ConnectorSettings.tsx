@@ -39,7 +39,7 @@ const ConnectorSettings = () => {
 	const [sendingMode, setSendingMode] = useState<SendingModeType | null>(null);
 	const [fields, setFields] = useState<ConnectorFieldInterface[]>([]);
 	const [buttons, setButtons] = useState<ConnectorButton[]>([]);
-	const [settings, setSettings] = useState<ConnectorSettings>({});
+	const [settings, setSettings] = useState<ConnectorSettings | null>(null);
 	const [newConnectionID, setNewConnectionID] = useState<number>(0);
 	const [notFound, setNotFound] = useState<boolean>(false);
 
@@ -101,7 +101,7 @@ const ConnectorSettings = () => {
 			if (connectionRole !== 'Source' && supportedModes.length > 0) {
 				setSendingMode(supportedModes[0]);
 			}
-			if (connector.hasSettings === false) return;
+			if (!connector.hasSettings(connectionRole)) return;
 			let ui: ConnectorUIResponse;
 			try {
 				ui = await api.connectors.ui(selectedWorkspace, connectorName, connectionRole, authToken);
@@ -387,7 +387,7 @@ const ConnectorSettings = () => {
 							</>
 						)}
 					</div>
-					{fieldsToRender.length > 0 ? (
+					{connector.hasSettings(connectionRole) ? (
 						<ConnectorUI
 							fields={fieldsToRender}
 							buttons={buttonsToRender}

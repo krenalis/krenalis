@@ -1,58 +1,53 @@
-import { ConnectorTarget, ConnectorType, SendingMode, WebhooksPer } from '../api/types/connector';
+import {
+	SourceConnector,
+	DestinationConnector,
+	ConnectorTarget,
+	ConnectorType,
+	SendingMode,
+} from '../api/types/connector';
 import * as icons from '../../constants/icons';
+import { Role } from '../api/types/types';
 
 class TransformedConnector {
 	name: string;
-	sourceDescription: string;
-	destinationDescription: string;
 	type: ConnectorType;
+	source: SourceConnector | null;
+	destination: DestinationConnector | null;
+	targets: ConnectorTarget[];
+	identityIDLabel: string;
 	hasSheets: boolean;
-	hasSettings: boolean;
-	icon: string;
 	fileExtension: string;
-	sampleQuery: string;
-	webhooksPer: WebhooksPer;
 	requiresAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
-	sendingMode: SendingMode | null;
-	targets: ConnectorTarget[];
-	identityIDLabel: string;
+	icon: string;
 
 	constructor(
 		name: string,
 		type: ConnectorType,
-		hasSheets: boolean,
-		hasSettings: boolean,
-		icon: string,
-		fileExtension: string,
-		sampleQuery: string,
-		webhooksPer: WebhooksPer,
-		requiresAuth: boolean,
-		sourceDescription: string,
-		destinationDescription: string,
-		termForUsers: string,
-		termForGroups: string,
-		sendingMode: SendingMode,
+		source: SourceConnector | null,
+		destination: DestinationConnector | null,
 		targets: ConnectorTarget[],
 		identityIDLabel: string,
+		hasSheets: boolean,
+		fileExtension: string,
+		requiresAuth: boolean,
+		termForUsers: string,
+		termForGroups: string,
+		icon: string,
 	) {
 		this.name = name;
 		this.type = type;
-		this.hasSheets = hasSheets;
-		this.hasSettings = hasSettings;
-		this.icon = icon ? icon : icons.PLUG;
-		this.fileExtension = fileExtension;
-		this.sampleQuery = sampleQuery;
-		this.webhooksPer = webhooksPer;
-		this.requiresAuth = requiresAuth;
-		this.sourceDescription = sourceDescription;
-		this.destinationDescription = destinationDescription;
-		this.termForUsers = termForUsers;
-		this.termForGroups = termForGroups;
-		this.sendingMode = sendingMode;
+		this.source = source;
+		this.destination = destination;
 		this.targets = targets;
 		this.identityIDLabel = identityIDLabel;
+		this.hasSheets = hasSheets;
+		this.fileExtension = fileExtension;
+		this.requiresAuth = requiresAuth;
+		this.termForUsers = termForUsers;
+		this.termForGroups = termForGroups;
+		this.icon = icon ? icon : icons.PLUG;
 	}
 
 	get isApp() {
@@ -88,13 +83,16 @@ class TransformedConnector {
 	}
 
 	get supportedSendingModes(): SendingMode[] {
-		switch (this.sendingMode) {
+		if (this.destination == null) {
+			return [];
+		}
+		switch (this.destination.sendingMode) {
 			case null:
 				return [];
 			case 'Combined':
 				return ['Cloud', 'Device', 'Combined'];
 			default:
-				return [this.sendingMode];
+				return [this.destination.sendingMode];
 		}
 	}
 
@@ -111,6 +109,12 @@ class TransformedConnector {
 			identityIDLabel = 'User ID';
 		}
 		return identityIDLabel;
+	}
+
+	hasSettings(role: Role): boolean {
+		return (
+			(role === 'Source' && this.source.hasSettings) || (role === 'Destination' && this.destination.hasSettings)
+		);
 	}
 }
 

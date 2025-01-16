@@ -8,21 +8,38 @@ type ConnectorTarget = 'Events' | 'Users' | 'Groups';
 
 interface Connector {
 	name: string;
-	sourceDescription: string;
-	destinationDescription: string;
 	type: ConnectorType;
+	source: SourceConnector | null;
+	destination: DestinationConnector | null;
+	targets: ConnectorTarget[];
+	identityIDLabel: string;
 	hasSheets: boolean;
-	hasSettings: boolean;
-	icon: string;
 	fileExtension: string;
-	sampleQuery: string;
-	webhooksPer: WebhooksPer;
 	requiresAuth: boolean;
 	termForUsers: string;
 	termForGroups: string;
-	sendingMode: SendingMode | null;
-	targets: ConnectorTarget[];
-	identityIDLabel: string;
+	icon: string;
 }
 
-export type { Connector, ConnectorType, WebhooksPer, SendingMode, ConnectorTarget };
+interface SourceConnector {
+	description: string;
+	hasSettings: boolean;
+	sampleQuery: string;
+	WebhooksPer: WebhooksPer;
+}
+
+interface DestinationConnector {
+	description: string;
+	hasSettings: boolean;
+	sendingMode: SendingMode | null;
+}
+
+export type {
+	Connector,
+	SourceConnector,
+	DestinationConnector,
+	ConnectorType,
+	WebhooksPer,
+	SendingMode,
+	ConnectorTarget,
+};

@@ -119,12 +119,6 @@ func init() {
 		},
 		linkedConnectionsParameter,
 		{
-			Name:        "hasSettings",
-			Type:        types.Boolean(),
-			Placeholder: `true`,
-			Description: "It indicates if the connection has settings.",
-		},
-		{
 			Name:        "actionsCount",
 			Type:        types.Int(32),
 			Placeholder: `3`,

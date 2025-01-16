@@ -51,8 +51,10 @@ const (
 type AppInfo struct {
 	Name                   string
 	Targets                Targets
-	SourceDescription      string // It should complete the sentence "Add an action to ...".
-	DestinationDescription string // It should complete the sentence "Add an action to ...".
+	Role                   Role   // role, can be Both, Source, or Destination.
+	SourceDescription      string // it should complete the sentence "Add an action to ...".
+	DestinationDescription string // it should complete the sentence "Add an action to ...".
+	HasSettings            Role   // specifies whether the connection has settings when used as data source, a destination, or both.
 	TermForUsers           string
 	TermForGroups          string
 	IdentityIDLabel        string

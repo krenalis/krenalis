@@ -134,7 +134,7 @@ interface ActionToSet {
 	exportOnDuplicates?: boolean;
 	compression: Compression;
 	format: string;
-	formatSettings?: ConnectorSettings;
+	formatSettings?: ConnectorSettings | null;
 }
 
 interface ActionError {

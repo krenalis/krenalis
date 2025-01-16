@@ -1443,14 +1443,6 @@
                                                 "description": "The connections (IDs) to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
                                             },
                                             {
-                                                "name": "hasSettings",
-                                                "placeholder": "true",
-                                                "type": {
-                                                    "name": "Boolean"
-                                                },
-                                                "description": "It indicates if the connection has settings."
-                                            },
-                                            {
                                                 "name": "actionsCount",
                                                 "placeholder": "3",
                                                 "type": {
@@ -1618,14 +1610,6 @@
                                 "description": "The connections (IDs) to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
                             },
                             {
-                                "name": "hasSettings",
-                                "placeholder": "true",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "It indicates if the connection has settings."
-                            },
-                            {
                                 "name": "actionsCount",
                                 "placeholder": "3",
                                 "type": {
@@ -1772,38 +1756,6 @@
                                                 "description": "The connector's name."
                                             },
                                             {
-                                                "name": "sourceDescription",
-                                                "placeholder": "\"import contacts as users and companies as groups from HubSpot\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
-                                            },
-                                            {
-                                                "name": "destinationDescription",
-                                                "placeholder": "\"export users as contacts and groups as companies to HubSpot\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "A brief description of the connector when it is used as a destination. It should complete the sentence \"Add an action to ...\"."
-                                            },
-                                            {
-                                                "name": "termForUsers",
-                                                "placeholder": "\"contacts\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\". It will be empty if the connector is not an app or if the app does not handle users."
-                                            },
-                                            {
-                                                "name": "termForGroups",
-                                                "placeholder": "\"companies\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
-                                            },
-                                            {
                                                 "name": "type",
                                                 "placeholder": "\"App\"",
                                                 "type": {
@@ -1822,6 +1774,112 @@
                                                 "description": "The type of connector."
                                             },
                                             {
+                                                "name": "source",
+                                                "placeholder": "...",
+                                                "type": {
+                                                    "name": "Object",
+                                                    "properties": [
+                                                        {
+                                                            "name": "description",
+                                                            "placeholder": "\"import contacts as users and companies as groups from HubSpot\"",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
+                                                        },
+                                                        {
+                                                            "name": "hasSettings",
+                                                            "placeholder": "true",
+                                                            "type": {
+                                                                "name": "Boolean"
+                                                            },
+                                                            "description": "It indicates if the connector has settings when it is used as a source."
+                                                        },
+                                                        {
+                                                            "name": "sampleQuery",
+                                                            "placeholder": "\"\"",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
+                                                        },
+                                                        {
+                                                            "name": "webhooksPer",
+                                                            "placeholder": "\"None\"",
+                                                            "type": {
+                                                                "name": "Text",
+                                                                "values": [
+                                                                    "None",
+                                                                    "Account",
+                                                                    "Connection",
+                                                                    "Connector"
+                                                                ]
+                                                            },
+                                                            "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
+                                                        }
+                                                    ]
+                                                },
+                                                "nullable": true,
+                                                "description": "The characteristics of the connector when it is used as a data source. This will be null if the connector cannot function as a data source."
+                                            },
+                                            {
+                                                "name": "destination",
+                                                "placeholder": "...",
+                                                "type": {
+                                                    "name": "Object",
+                                                    "properties": [
+                                                        {
+                                                            "name": "description",
+                                                            "placeholder": "\"export users as contacts and groups as companies to HubSpot\"",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "description": "A brief description of the connector when it is used as a destination. It should complete the sentence \"Add an action to ...\"."
+                                                        },
+                                                        {
+                                                            "name": "hasSettings",
+                                                            "placeholder": "true",
+                                                            "type": {
+                                                                "name": "Boolean"
+                                                            },
+                                                            "description": "It indicates if the connector has settings when it is used as a destination."
+                                                        },
+                                                        {
+                                                            "name": "sendingMode",
+                                                            "placeholder": "null",
+                                                            "type": {
+                                                                "name": "Text",
+                                                                "values": [
+                                                                    "Cloud",
+                                                                    "Device",
+                                                                    "Combined"
+                                                                ]
+                                                            },
+                                                            "nullable": true,
+                                                            "description": "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events."
+                                                        }
+                                                    ]
+                                                },
+                                                "nullable": true,
+                                                "description": "The characteristics of the connector when it is used as a data destination. This will be null if the connector cannot function as a data destination."
+                                            },
+                                            {
+                                                "name": "termForUsers",
+                                                "placeholder": "\"contacts\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\". It will be empty if the connector is not an app or if the app does not handle users."
+                                            },
+                                            {
+                                                "name": "termForGroups",
+                                                "placeholder": "\"companies\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                                            },
+                                            {
                                                 "name": "targets",
                                                 "placeholder": "[ \"Users\", \"Groups\" ]",
                                                 "type": {
@@ -1838,34 +1896,12 @@
                                                 "description": "The targets supported by the app connector. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`.\n\nIt will be empty if the connector is not an app."
                                             },
                                             {
-                                                "name": "sendingMode",
-                                                "placeholder": "null",
-                                                "type": {
-                                                    "name": "Text",
-                                                    "values": [
-                                                        "Cloud",
-                                                        "Device",
-                                                        "Combined"
-                                                    ]
-                                                },
-                                                "nullable": true,
-                                                "description": "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events."
-                                            },
-                                            {
                                                 "name": "hasSheets",
                                                 "placeholder": "false",
                                                 "type": {
                                                     "name": "Boolean"
                                                 },
                                                 "description": "It indicates, for file connectors, if it supports sheets. It is false if the connector is not a file connector or does not support sheets."
-                                            },
-                                            {
-                                                "name": "hasSettings",
-                                                "placeholder": "true",
-                                                "type": {
-                                                    "name": "Boolean"
-                                                },
-                                                "description": "It indicates if the connector has settings."
                                             },
                                             {
                                                 "name": "identityIDLabel",
@@ -1876,14 +1912,6 @@
                                                 "description": "The descriptive name of the identifier used by the app to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an app."
                                             },
                                             {
-                                                "name": "icon",
-                                                "placeholder": "\"<svg icon>\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
-                                            },
-                                            {
                                                 "name": "fileExtension",
                                                 "placeholder": "\"\"",
                                                 "type": {
@@ -1892,34 +1920,20 @@
                                                 "description": "The main extension of the file type that the connector reads and writes. It is used as a placeholder in the input field, where the user specifies the file name to read or write.\n\nIt is empty if the connector is not a file connector."
                                             },
                                             {
-                                                "name": "sampleQuery",
-                                                "placeholder": "\"\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
-                                            },
-                                            {
-                                                "name": "webhooksPer",
-                                                "placeholder": "\"None\"",
-                                                "type": {
-                                                    "name": "Text",
-                                                    "values": [
-                                                        "None",
-                                                        "Account",
-                                                        "Connection",
-                                                        "Connector"
-                                                    ]
-                                                },
-                                                "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
-                                            },
-                                            {
                                                 "name": "requiresAuth",
                                                 "placeholder": "true",
                                                 "type": {
                                                     "name": "Boolean"
                                                 },
                                                 "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
+                                            },
+                                            {
+                                                "name": "icon",
+                                                "placeholder": "\"<svg icon>\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
                                             }
                                         ]
                                     }
@@ -1942,6 +1956,7 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "createRequired": true,
                             "description": "The connector's name."
                         }
                     ],
@@ -1956,38 +1971,6 @@
                                     "name": "Text"
                                 },
                                 "description": "The connector's name."
-                            },
-                            {
-                                "name": "sourceDescription",
-                                "placeholder": "\"import contacts as users and companies as groups from HubSpot\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
-                            },
-                            {
-                                "name": "destinationDescription",
-                                "placeholder": "\"export users as contacts and groups as companies to HubSpot\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "A brief description of the connector when it is used as a destination. It should complete the sentence \"Add an action to ...\"."
-                            },
-                            {
-                                "name": "termForUsers",
-                                "placeholder": "\"contacts\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\". It will be empty if the connector is not an app or if the app does not handle users."
-                            },
-                            {
-                                "name": "termForGroups",
-                                "placeholder": "\"companies\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
                             },
                             {
                                 "name": "type",
@@ -2008,6 +1991,112 @@
                                 "description": "The type of connector."
                             },
                             {
+                                "name": "source",
+                                "placeholder": "...",
+                                "type": {
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "description",
+                                            "placeholder": "\"import contacts as users and companies as groups from HubSpot\"",
+                                            "type": {
+                                                "name": "Text"
+                                            },
+                                            "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
+                                        },
+                                        {
+                                            "name": "hasSettings",
+                                            "placeholder": "true",
+                                            "type": {
+                                                "name": "Boolean"
+                                            },
+                                            "description": "It indicates if the connector has settings when it is used as a source."
+                                        },
+                                        {
+                                            "name": "sampleQuery",
+                                            "placeholder": "\"\"",
+                                            "type": {
+                                                "name": "Text"
+                                            },
+                                            "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
+                                        },
+                                        {
+                                            "name": "webhooksPer",
+                                            "placeholder": "\"None\"",
+                                            "type": {
+                                                "name": "Text",
+                                                "values": [
+                                                    "None",
+                                                    "Account",
+                                                    "Connection",
+                                                    "Connector"
+                                                ]
+                                            },
+                                            "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
+                                        }
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The characteristics of the connector when it is used as a data source. This will be null if the connector cannot function as a data source."
+                            },
+                            {
+                                "name": "destination",
+                                "placeholder": "...",
+                                "type": {
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "description",
+                                            "placeholder": "\"export users as contacts and groups as companies to HubSpot\"",
+                                            "type": {
+                                                "name": "Text"
+                                            },
+                                            "description": "A brief description of the connector when it is used as a destination. It should complete the sentence \"Add an action to ...\"."
+                                        },
+                                        {
+                                            "name": "hasSettings",
+                                            "placeholder": "true",
+                                            "type": {
+                                                "name": "Boolean"
+                                            },
+                                            "description": "It indicates if the connector has settings when it is used as a destination."
+                                        },
+                                        {
+                                            "name": "sendingMode",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Text",
+                                                "values": [
+                                                    "Cloud",
+                                                    "Device",
+                                                    "Combined"
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events."
+                                        }
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The characteristics of the connector when it is used as a data destination. This will be null if the connector cannot function as a data destination."
+                            },
+                            {
+                                "name": "termForUsers",
+                                "placeholder": "\"contacts\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The term used by an app to indicate the users. For example \"clients\", \"customers\" or \"users\". It will be empty if the connector is not an app or if the app does not handle users."
+                            },
+                            {
+                                "name": "termForGroups",
+                                "placeholder": "\"companies\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
+                            },
+                            {
                                 "name": "targets",
                                 "placeholder": "[ \"Users\", \"Groups\" ]",
                                 "type": {
@@ -2024,34 +2113,12 @@
                                 "description": "The targets supported by the app connector. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`.\n\nIt will be empty if the connector is not an app."
                             },
                             {
-                                "name": "sendingMode",
-                                "placeholder": "null",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "Cloud",
-                                        "Device",
-                                        "Combined"
-                                    ]
-                                },
-                                "nullable": true,
-                                "description": "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events."
-                            },
-                            {
                                 "name": "hasSheets",
                                 "placeholder": "false",
                                 "type": {
                                     "name": "Boolean"
                                 },
                                 "description": "It indicates, for file connectors, if it supports sheets. It is false if the connector is not a file connector or does not support sheets."
-                            },
-                            {
-                                "name": "hasSettings",
-                                "placeholder": "true",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "It indicates if the connector has settings."
                             },
                             {
                                 "name": "identityIDLabel",
@@ -2062,14 +2129,6 @@
                                 "description": "The descriptive name of the identifier used by the app to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an app."
                             },
                             {
-                                "name": "icon",
-                                "placeholder": "\"<svg icon>\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
-                            },
-                            {
                                 "name": "fileExtension",
                                 "placeholder": "\"\"",
                                 "type": {
@@ -2078,34 +2137,20 @@
                                 "description": "The main extension of the file type that the connector reads and writes. It is used as a placeholder in the input field, where the user specifies the file name to read or write.\n\nIt is empty if the connector is not a file connector."
                             },
                             {
-                                "name": "sampleQuery",
-                                "placeholder": "\"\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector."
-                            },
-                            {
-                                "name": "webhooksPer",
-                                "placeholder": "\"None\"",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "None",
-                                        "Account",
-                                        "Connection",
-                                        "Connector"
-                                    ]
-                                },
-                                "description": "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\nIt is `\"None\"` if the connector is not an app or does not support webhooks."
-                            },
-                            {
                                 "name": "requiresAuth",
                                 "placeholder": "true",
                                 "type": {
                                     "name": "Boolean"
                                 },
                                 "description": "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization."
+                            },
+                            {
+                                "name": "icon",
+                                "placeholder": "\"<svg icon>\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon."
                             }
                         ]
                     },

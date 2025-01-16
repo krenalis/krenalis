@@ -60,7 +60,6 @@ type Connection struct {
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	WebsiteHost       string        `json:"websiteHost"`
 	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
-	HasSettings       bool          `json:"hasSettings"`
 	ActionsCount      int           `json:"actionsCount"`
 	Health            Health        `json:"health"`
 
@@ -698,7 +697,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	if format != nil {
 		v.format.typ = format.Type
 		v.format.hasSheets = format.HasSheets
-		v.format.hasSettings = format.HasSettings
+		v.format.hasSettings = this.connection.Role == state.Source && format.HasSourceSettings || this.connection.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.transformerProvider
 	err = validateAction(action, state.Target(target), v)
@@ -793,7 +792,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	}
 
 	// Format settings.
-	if format != nil && format.HasSettings {
+	if format != nil && action.FormatSettings != nil {
 		conf := &connectors.ConnectorConfig{
 			Role: this.connection.Role,
 		}
@@ -1238,15 +1237,15 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	}
 
 	// Validate the settings.
-	if formatConnector.HasSettings {
+	if formatConnector.HasSourceSettings {
 		if settings == nil {
-			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has settings", formatConnector.Name)
+			return nil, types.Type{}, errors.BadRequest("format settings must be provided because connector %s has source settings", formatConnector.Name)
 		}
 		if !json.Valid(settings) || !settings.IsObject() {
 			return nil, types.Type{}, errors.BadRequest("format settings are not a valid JSON Object")
 		}
 	} else if settings != nil {
-		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no settings", formatConnector.Name)
+		return nil, types.Type{}, errors.BadRequest("format settings cannot be provided because connector %s has no source settings", formatConnector.Name)
 	}
 
 	// Validate the limit.
@@ -1600,11 +1599,15 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	connector := this.connection.Connector()
-	if !connector.HasSettings {
-		return nil, errors.BadRequest("connector %s does not have settings", connector.Name)
+	c := this.connection
+	connector := c.Connector()
+	if c.Role == state.Source && !connector.HasSourceSettings {
+		return nil, errors.BadRequest("connector %s does not have source settings", connector.Name)
 	}
-	ui, err := this.core.connectors.ServeConnectionUI(ctx, this.connection, event, settings)
+	if c.Role == state.Destination && !connector.HasDestinationSettings {
+		return nil, errors.BadRequest("connector %s does not have destination settings", connector.Name)
+	}
+	ui, err := this.core.connectors.ServeConnectionUI(ctx, c, event, settings)
 	if err != nil {
 		if err == meergo.ErrUIEventNotExist {
 			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, connector.Name)
@@ -1655,7 +1658,7 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	}
 
 	// Validate the settings.
-	if formatConnector.HasSettings {
+	if formatConnector.HasSourceSettings {
 		if settings == nil {
 			return nil, errors.BadRequest("format settings must be provided because format %s has settings", formatConnector.Name)
 		}

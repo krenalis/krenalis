@@ -98,8 +98,13 @@ The `AppInfo` type describes information about the app connector:
 
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
 - `Targets`: targets supported by the app connector. Can contain `Events`, `Users`, and `Groups`.
+- `Role`: specifies the role supported by the app connector. It can be one of the following:  
+   - `Source`: indicates that the connection can only be used as a data source,
+   - `Destination`: indicates that the connection can only be used as a data destination,
+   - `Both`: (default) indicates that the connection can be used as both a data source and a data destination.
 - `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
 - `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
+- `HasSettings`: indicates whether the connection has settings when used in the specified role. This field is relevant only if the connector implements the `UIHandler` interface.   
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".

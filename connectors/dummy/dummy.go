@@ -44,6 +44,7 @@ func init() {
 		Targets:                meergo.Events | meergo.Users,
 		SourceDescription:      "import users from Dummy",
 		DestinationDescription: "export users and send events to Dummy",
+		HasSettings:            meergo.Destination,
 		TermForUsers:           "users",
 		IdentityIDLabel:        "Dummy Unique ID",
 		Icon:                   icon,

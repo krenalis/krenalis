@@ -329,6 +329,9 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.Settings != nil && body.Settings.IsNull() {
+		body.Settings = nil
+	}
 	return ws.CreateConnection(r.Context(), body.ConnectionToAdd, body.AuthToken)
 }
 

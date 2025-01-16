@@ -47,8 +47,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			var ct reflect.Type
 			switch connector := connector.(type) {
 			case meergo.AppInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = App
+				c.Role = Role(connector.Role)
 				c.Targets = ConnectorTargets(connector.Targets)
 				if c.Targets.Contains(Groups) {
 					// TODO(Gianluca): https://github.com/meergo/meergo/issues/895.
@@ -69,6 +71,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					mode := Combined
 					c.SendingMode = &mode
 				}
+				if ct.Implements(uiHandlerType) {
+					c.HasSourceSettings = connector.HasSettings == meergo.Source || connector.HasSettings == meergo.Both
+					c.HasDestinationSettings = connector.HasSettings == meergo.Destination || connector.HasSettings == meergo.Both
+				}
 				c.IdentityIDLabel = connector.IdentityIDLabel
 				c.WebhooksPer = WebhooksPer(connector.WebhooksPer)
 				if connector.OAuth.AuthURL != "" {
@@ -85,69 +91,84 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						c.OAuth.ClientSecret = oAuth.ClientSecret
 					}
 				}
-				ct = connector.ReflectType()
 			case meergo.DatabaseInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Database
+				c.Role = Both
 				c.Targets = UsersFlag
+				c.HasSourceSettings = true
+				c.HasDestinationSettings = true
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.SampleQuery = connector.SampleQuery
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 			case meergo.FileInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = File
+				c.Role = Both
+				if ct.Implements(uiHandlerType) {
+					c.HasSourceSettings = connector.HasSettings == meergo.Source || connector.HasSettings == meergo.Both
+					c.HasDestinationSettings = connector.HasSettings == meergo.Destination || connector.HasSettings == meergo.Both
+				}
 				c.FileExtension = connector.Extension
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 				c.HasSheets = ct.Implements(sheetsType)
 			case meergo.FileStorageInfo:
 				c.Name = connector.Name
 				c.Type = FileStorage
+				c.Role = Both
+				c.HasSourceSettings = true
+				c.HasDestinationSettings = true
 				c.Targets = UsersFlag
 				c.Icon = connector.Icon
 				ct = connector.ReflectType()
 			case meergo.MobileInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Mobile
+				c.Role = Source
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
 				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 			case meergo.ServerInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Server
+				c.Role = Source
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
 				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 			case meergo.StreamInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Stream
+				c.Role = Both
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.Targets = EventsFlag
+				c.HasSourceSettings = true
+				c.HasDestinationSettings = true
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 			case meergo.WebsiteInfo:
+				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Website
+				c.Role = Source
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
 				c.Targets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 			}
-			c.HasSettings = ct.Implements(uiHandlerType)
 			state.connectors[name] = &c
 		}
 

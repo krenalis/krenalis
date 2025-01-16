@@ -408,18 +408,18 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	if v.connection.connector.typ == state.FileStorage {
 		if action.FormatSettings == nil {
 			if v.format.hasSettings {
-				return errors.BadRequest("format settings must be provided because format %s has settings", action.Format)
+				return errors.BadRequest("format settings must be provided because format %s has %s settings", action.Format, strings.ToLower(v.connection.role.String()))
 			}
 		} else {
 			if !v.format.hasSettings {
-				return errors.BadRequest("format settings cannot be provided because format %s has no settings", action.Format)
+				return errors.BadRequest("format settings cannot be provided because format %s has no %s settings", action.Format, strings.ToLower(v.connection.role.String()))
 			}
 			if !json.Valid(action.FormatSettings) || !action.FormatSettings.IsObject() {
 				return errors.BadRequest("format settings are not a valid JSON Object")
 			}
 		}
 	} else if action.FormatSettings != nil {
-		return errors.BadRequest("%s actions cannot have format settings", strings.ToLower(v.connection.connector.typ.String()))
+		return errors.BadRequest("%s actions cannot have %s format settings", strings.ToLower(v.connection.connector.typ.String()), strings.ToLower(v.connection.role.String()))
 	}
 
 	// Check if the compression is allowed.

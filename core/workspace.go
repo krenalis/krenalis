@@ -361,7 +361,6 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		WebsiteHost:       c.WebsiteHost,
 		LinkedConnections: slices.Clone(c.LinkedConnections),
-		HasSettings:       conn.HasSettings,
 		ActionsCount:      len(c.Actions()),
 		Health:            Health(c.Health),
 	}
@@ -473,7 +472,6 @@ func (this *Workspace) Connections() []*Connection {
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			WebsiteHost:       c.WebsiteHost,
 			LinkedConnections: slices.Clone(c.LinkedConnections),
-			HasSettings:       conn.HasSettings,
 			ActionsCount:      len(c.Actions()),
 			Health:            Health(c.Health),
 		}
@@ -644,10 +642,13 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	}
 
 	// Validate the settings.
-	if c.HasSettings {
-		settings := connection.Settings
-		if settings == nil {
-			settings = json.Value("{}")
+	if settings := connection.Settings; settings == nil {
+		if connection.Role == Source && c.HasSourceSettings || connection.Role == Destination && c.HasDestinationSettings {
+			return 0, errors.BadRequest("settings must be provided because connector %s has %s settings", c.Name, strings.ToLower(connection.Role.String()))
+		}
+	} else {
+		if connection.Role == Source && !c.HasSourceSettings || connection.Role == Destination && !c.HasDestinationSettings {
+			return 0, errors.BadRequest("settings cannot be provided because connector %s has no %s settings", c.Name, strings.ToLower(connection.Role.String()))
 		}
 		var clientSecret string
 		if c.OAuth != nil {
@@ -1310,8 +1311,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
 
-	if !c.HasSettings {
-		return nil, errors.BadRequest("connector %s does not have settings", connector)
+	if role == Source && !c.HasSourceSettings || role == Destination && !c.HasDestinationSettings {
+		return nil, errors.BadRequest("connector %s does not have %s settings", connector, strings.ToLower(role.String()))
 	}
 
 	if (authToken == "") != (c.OAuth == nil) {

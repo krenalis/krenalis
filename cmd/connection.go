@@ -108,6 +108,9 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
+		body.FormatSettings = nil
+	}
 	return c.CreateAction(r.Context(), body.Target, body.EventType, body.ActionToSet)
 }
 

@@ -250,12 +250,16 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 	this.core.mustBeOpen()
 	// TODO: check and delete alternative fieldsets keys that have 'null' value
 	// before saving to database
-	connector := this.action.Connection().Connector()
+	connection := this.action.Connection()
+	connector := connection.Connector()
 	if connector.Type != state.FileStorage {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
-	if !connector.HasSettings {
-		return nil, errors.BadRequest("connector %s does not have settings", connector.Name)
+	if connection.Role == state.Source && !connector.HasSourceSettings {
+		return nil, errors.BadRequest("connector %s does not have source settings", connector.Name)
+	}
+	if connection.Role == state.Destination && !connector.HasDestinationSettings {
+		return nil, errors.BadRequest("connector %s does not have destination settings", connector.Name)
 	}
 	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
 	if err != nil {
@@ -359,7 +363,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	if format != nil {
 		v.format.typ = format.Type
 		v.format.hasSheets = format.HasSheets
-		v.format.hasSettings = format.HasSettings
+		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.transformerProvider
 	err := validateAction(action, this.action.Target, v)
@@ -431,7 +435,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	}
 
 	// Format settings.
-	if format != nil && format.HasSettings {
+	if format != nil && action.FormatSettings != nil {
 		conf := &connectors.ConnectorConfig{
 			Role: this.action.Connection().Role,
 		}

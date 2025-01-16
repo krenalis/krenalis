@@ -22,6 +22,7 @@ var ErrSheetNotExist = errors.New("sheet does not exist")
 // FileInfo represents a file connector info.
 type FileInfo struct {
 	Name        string
+	HasSettings Role        // specifies whether the format settings can be used as a source, a destination, or both.
 	TimeLayouts TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
 	Extension   string      // default extension of the file
 	Icon        string      // icon in SVG format

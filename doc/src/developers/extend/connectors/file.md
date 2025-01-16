@@ -77,8 +77,9 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `FileInfo` type describes information about the file connector:
 
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
+- `HasSettings`: indicates whether the connection has format settings when used in the specified role. This field is relevant only if the connector implements the `UIHandler` interface.
+- `TimeLayouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Extension`: main extension of the file type that the connector reads and writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
-- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFile` function that, executed during package initialization, registers the file connector:

@@ -23,7 +23,6 @@ class TransformedConnection {
 	type: ConnectorType;
 	role: ConnectionRole;
 	connector: TransformedConnector;
-	hasSettings: boolean;
 	actionsCount: number;
 	health: Health;
 	storage: number;
@@ -44,7 +43,6 @@ class TransformedConnection {
 		type: ConnectorType,
 		role: ConnectionRole,
 		connector: TransformedConnector,
-		hasSettings: boolean,
 		actionsCount: number,
 		health: Health,
 		storage: number,
@@ -64,7 +62,6 @@ class TransformedConnection {
 		this.type = type;
 		this.role = role;
 		this.connector = connector;
-		this.hasSettings = hasSettings;
 		this.actionsCount = actionsCount;
 		this.health = health;
 		this.storage = storage == null ? 0 : storage;
@@ -133,6 +130,10 @@ class TransformedConnection {
 	get hasAnonymousIdentifiers() {
 		return this.type === 'Mobile' || this.type === 'Server' || this.type === 'Website';
 	}
+
+	get hasSettings(): boolean {
+		return this.connector.hasSettings(this.role);
+	}
 }
 
 const getActionTypeFromConnection = (
@@ -156,9 +157,9 @@ const getActionTypeFromConnection = (
 const getConnectionDescription = (connection: Connection, connector: TransformedConnector): string => {
 	let description: string;
 	if (connection.role === 'Source') {
-		description = connector.sourceDescription;
+		description = connector.source.description;
 	} else {
-		description = connector.destinationDescription;
+		description = connector.destination.description;
 	}
 	return description;
 };

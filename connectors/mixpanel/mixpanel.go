@@ -37,6 +37,7 @@ var _ interface {
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Mixpanel",
+		Role:                   meergo.Destination,
 		Targets:                meergo.Events,
 		DestinationDescription: "send events to Mixpanel",
 		Icon:                   icon,

@@ -18,24 +18,33 @@ import (
 
 // Connector represents a connector.
 type Connector struct {
-	core                   *Core
-	connector              *state.Connector
-	Name                   string        `json:"name"`
-	SourceDescription      string        `json:"sourceDescription"`
-	DestinationDescription string        `json:"destinationDescription"`
-	TermForUsers           string        `json:"termForUsers"`
-	TermForGroups          string        `json:"termForGroups"`
-	Type                   ConnectorType `json:"type"`
-	Targets                []Target      `json:"targets"`
-	SendingMode            *SendingMode  `json:"sendingMode"`
-	HasSheets              bool          `json:"hasSheets"`
-	HasSettings            bool          `json:"hasSettings"`
-	IdentityIDLabel        string        `json:"identityIDLabel"`
-	Icon                   string        `json:"icon"`
-	FileExtension          string        `json:"fileExtension"`
-	SampleQuery            string        `json:"sampleQuery"`
-	WebhooksPer            WebhooksPer   `json:"webhooksPer"`
-	RequiresAuth           bool          `json:"requiresAuth"`
+	core            *Core
+	connector       *state.Connector
+	Name            string                `json:"name"`
+	Type            ConnectorType         `json:"type"`
+	Source          *SourceConnector      `json:"source"`
+	Destination     *DestinationConnector `json:"destination"`
+	Targets         []Target              `json:"targets"`
+	IdentityIDLabel string                `json:"identityIDLabel"`
+	HasSheets       bool                  `json:"hasSheets"`
+	FileExtension   string                `json:"fileExtension"`
+	RequiresAuth    bool                  `json:"requiresAuth"`
+	TermForUsers    string                `json:"termForUsers"`
+	TermForGroups   string                `json:"termForGroups"`
+	Icon            string                `json:"icon"`
+}
+
+type SourceConnector struct {
+	Description string      `json:"description"`
+	HasSettings bool        `json:"hasSettings"`
+	SampleQuery string      `json:"sampleQuery"`
+	WebhooksPer WebhooksPer `json:"webhooksPer"`
+}
+
+type DestinationConnector struct {
+	Description string       `json:"description"`
+	HasSettings bool         `json:"hasSettings"`
+	SendingMode *SendingMode `json:"sendingMode"`
 }
 
 // ConnectorType represents a connector type.

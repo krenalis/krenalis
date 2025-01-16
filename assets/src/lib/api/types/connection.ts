@@ -39,7 +39,7 @@ interface ConnectionToAdd {
 	strategy?: Strategy | null;
 	websiteHost: string;
 	sendingMode?: SendingMode | null;
-	settings: ConnectorSettings;
+	settings?: ConnectorSettings | null;
 	linkedConnections: Number[] | null;
 }
 

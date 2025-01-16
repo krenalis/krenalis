@@ -21,16 +21,70 @@ func init() {
 			Description: "The connector's name.",
 		},
 		{
-			Name:        "sourceDescription",
-			Type:        types.Text(),
-			Placeholder: `"import contacts as users and companies as groups from HubSpot"`,
-			Description: `A brief description of the connector when it is used as a source. It completes the sentence "Add an action to ...".`,
+			Name:        "type",
+			Type:        types.Text().WithValues("App", "Database", "File", "FileStorage", "Mobile", "Server", "Stream", "Website"),
+			Placeholder: `"App"`,
+			Description: "The type of connector.",
 		},
 		{
-			Name:        "destinationDescription",
-			Type:        types.Text(),
-			Placeholder: `"export users as contacts and groups as companies to HubSpot"`,
-			Description: `A brief description of the connector when it is used as a destination. It should complete the sentence "Add an action to ...".`,
+			Name: "source",
+			Type: types.Object([]types.Property{
+				{
+					Name:        "description",
+					Type:        types.Text(),
+					Placeholder: `"import contacts as users and companies as groups from HubSpot"`,
+					Description: `A brief description of the connector when it is used as a source. It completes the sentence "Add an action to ...".`,
+				},
+				{
+					Name:        "hasSettings",
+					Type:        types.Boolean(),
+					Placeholder: `true`,
+					Description: "It indicates if the connector has settings when it is used as a source.",
+				},
+				{
+					Name:        "sampleQuery",
+					Type:        types.Text(),
+					Placeholder: `""`,
+					Description: "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector.",
+				},
+				{
+					Name:        "webhooksPer",
+					Type:        types.Text().WithValues("None", "Account", "Connection", "Connector"),
+					Placeholder: `"None"`,
+					Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
+						"It is `\"None\"` if the connector is not an app or does not support webhooks.",
+				},
+			}),
+			Placeholder: `...`,
+			Nullable:    true,
+			Description: `The characteristics of the connector when it is used as a data source. This will be null if the connector cannot function as a data source.`,
+		},
+		{
+			Name: "destination",
+			Type: types.Object([]types.Property{
+				{
+					Name:        "description",
+					Type:        types.Text(),
+					Placeholder: `"export users as contacts and groups as companies to HubSpot"`,
+					Description: `A brief description of the connector when it is used as a destination. It should complete the sentence "Add an action to ...".`,
+				},
+				{
+					Name:        "hasSettings",
+					Type:        types.Boolean(),
+					Placeholder: `true`,
+					Description: "It indicates if the connector has settings when it is used as a destination.",
+				},
+				{
+					Name:        "sendingMode",
+					Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
+					Nullable:    true,
+					Placeholder: `null`,
+					Description: "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events.",
+				},
+			}),
+			Placeholder: `...`,
+			Nullable:    true,
+			Description: `The characteristics of the connector when it is used as a data destination. This will be null if the connector cannot function as a data destination.`,
 		},
 		{
 			Name:        "termForUsers",
@@ -47,24 +101,11 @@ func init() {
 				"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
 		},
 		{
-			Name:        "type",
-			Type:        types.Text().WithValues("App", "Database", "File", "FileStorage", "Mobile", "Server", "Stream", "Website"),
-			Placeholder: `"App"`,
-			Description: "The type of connector.",
-		},
-		{
 			Name:        "targets",
 			Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
 			Placeholder: `[ "Users", "Groups" ]`,
 			Description: "The targets supported by the app connector. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`.\n\n" +
 				"It will be empty if the connector is not an app.",
-		},
-		{
-			Name:        "sendingMode",
-			Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
-			Nullable:    true,
-			Placeholder: `null`,
-			Description: "The mode used by app connectors to dispatch the events to the app, if the app supports events. It is empty is the connector is not an app or it does not handle events.",
 		},
 		{
 			Name:        "hasSheets",
@@ -73,22 +114,10 @@ func init() {
 			Description: "It indicates, for file connectors, if it supports sheets. It is false if the connector is not a file connector or does not support sheets.",
 		},
 		{
-			Name:        "hasSettings",
-			Type:        types.Boolean(),
-			Placeholder: `true`,
-			Description: "It indicates if the connector has settings.",
-		},
-		{
 			Name:        "identityIDLabel",
 			Type:        types.Text(),
 			Placeholder: `"HubSpot ID"`,
 			Description: "The descriptive name of the identifier used by the app to identify a user. For example \"ID\", \"User ID\", or \"HubSpot ID\".\n\nIt is empty if the connector is not an app.",
-		},
-		{
-			Name:        "icon",
-			Type:        types.Text(),
-			Placeholder: `"<svg icon>"`,
-			Description: "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon.",
 		},
 		{
 			Name:        "fileExtension",
@@ -98,23 +127,16 @@ func init() {
 				"It is empty if the connector is not a file connector.",
 		},
 		{
-			Name:        "sampleQuery",
-			Type:        types.Text(),
-			Placeholder: `""`,
-			Description: "The sample query displayed in the query editor when creating a new database source action.\n\nIt is empty if the connector is not a database connector.",
-		},
-		{
-			Name:        "webhooksPer",
-			Type:        types.Text().WithValues("None", "Account", "Connection", "Connector"),
-			Placeholder: `"None"`,
-			Description: "Indicates, for app connectors supporting webhooks, whether webhooks are per account, connection, or connector.\n\n" +
-				"It is `\"None\"` if the connector is not an app or does not support webhooks.",
-		},
-		{
 			Name:        "requiresAuth",
 			Type:        types.Boolean(),
 			Placeholder: `true`,
 			Description: "Indicates whether an authorization is required to create a connection for this connector. It is false if the connector is not an app or does not require authorization.",
+		},
+		{
+			Name:        "icon",
+			Type:        types.Text(),
+			Placeholder: `"<svg icon>"`,
+			Description: "The icon in SVG format representing the connector, minimized for embedding in an HTML page.\n\nIt is empty if the connector does not have an icon.",
 		},
 	}
 
@@ -145,10 +167,11 @@ func init() {
 				URL:         "/v0/connectors/:name",
 				Parameters: []types.Property{
 					{
-						Name:        "name",
-						Type:        types.Text(),
-						Placeholder: `"HubSpot"`,
-						Description: "The connector's name.",
+						Name:           "name",
+						Type:           types.Text(),
+						Placeholder:    `"HubSpot"`,
+						CreateRequired: true,
+						Description:    "The connector's name.",
 					},
 				},
 				Response: &Response{

@@ -85,7 +85,7 @@ const ActionFile = () => {
 	useEffect(() => {
 		const fetchFields = async () => {
 			const format = connectors.find((c) => c.name === action.format);
-			if (format.hasSettings === false) {
+			if (!format.hasSettings(connection.role)) {
 				setFileFields([]);
 				setTimeout(() => setIsFormatLoading(false), 300);
 				return;
