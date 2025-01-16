@@ -48,6 +48,9 @@ func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Reques
 }
 
 // ActionTypes returns the action types of a connection.
+//
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1265.
 func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {

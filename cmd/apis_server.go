@@ -95,7 +95,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections":                                                 workspace.Connections,
 		"GET    /connections/auth-token":                                      workspace.AuthToken,
 		"GET    /connections/auth-url":                                        connector.AuthCodeURL,
-		"GET    /connections/{connection}/action-types":                       connection.ActionTypes,
+		"GET    /connections/{connection}/action-types":                       connection.ActionTypes, /* only UI */
 		"GET    /connections/{connection}/actions/schemas/Events/{eventType}": connection.ActionSchemas,
 		"GET    /connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas,
 		"GET    /connections/{connection}/actions/{action}":                   connection.Action,

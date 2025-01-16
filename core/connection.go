@@ -296,6 +296,9 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 
 // ActionTypes returns the action types for the connection.
 //
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1265.
+//
 // Refer to the specifications in the file "core/Actions.csv" for more details.
 func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	var actionTypes []ActionType

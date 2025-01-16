@@ -319,6 +319,8 @@ class Connections {
 		);
 	};
 
+	// TODO(Gianluca): this method is deprecated. See the issue
+	// https://github.com/meergo/meergo/issues/1265.
 	actionTypes = async (connection: number) => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(connection)}/action-types`,
