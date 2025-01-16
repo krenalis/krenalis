@@ -47,8 +47,8 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Mailchimp",
 		Targets:                meergo.Users,
-		SourceDescription:      "import contacts as users from Mailchimp",
-		DestinationDescription: "export users as contacts to Mailchimp",
+		SourceDescription:      "Import contacts as users from Mailchimp",
+		DestinationDescription: "Export users as contacts to Mailchimp",
 		TermForUsers:           "contacts",
 		Icon:                   icon,
 		WebhooksPer:            meergo.WebhooksPerConnection,

@@ -1785,7 +1785,7 @@
                                                             "type": {
                                                                 "name": "Text"
                                                             },
-                                                            "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
+                                                            "description": "A brief description of the connector when it is used as a source."
                                                         },
                                                         {
                                                             "name": "hasSettings",
@@ -1834,7 +1834,7 @@
                                                             "type": {
                                                                 "name": "Text"
                                                             },
-                                                            "description": "A brief description of the connector when it is used as a destination. It should complete the sentence \"Add an action to ...\"."
+                                                            "description": "A brief description of the connector when it is used as a destination."
                                                         },
                                                         {
                                                             "name": "hasSettings",
@@ -2002,7 +2002,7 @@
                                             "type": {
                                                 "name": "Text"
                                             },
-                                            "description": "A brief description of the connector when it is used as a source. It completes the sentence \"Add an action to ...\"."
+                                            "description": "A brief description of the connector when it is used as a source."
                                         },
                                         {
                                             "name": "hasSettings",
@@ -2051,7 +2051,7 @@
                                             "type": {
                                                 "name": "Text"
                                             },
-                                            "description": "A brief description of the connector when it is used as a destination. It should complete the sentence \"Add an action to ...\"."
+                                            "description": "A brief description of the connector when it is used as a destination."
                                         },
                                         {
                                             "name": "hasSettings",

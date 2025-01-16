@@ -46,8 +46,8 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "HubSpot",
 		Targets:                meergo.Users,
-		SourceDescription:      "import contacts as users and companies as groups from HubSpot",
-		DestinationDescription: "export users as contacts and groups as companies to HubSpot",
+		SourceDescription:      "Import contacts as users and companies as groups from HubSpot",
+		DestinationDescription: "Export users as contacts and groups as companies to HubSpot",
 		TermForUsers:           "contacts",
 		TermForGroups:          "companies",
 		IdentityIDLabel:        "HubSpot ID",

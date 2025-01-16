@@ -33,7 +33,7 @@ func init() {
 					Name:        "description",
 					Type:        types.Text(),
 					Placeholder: `"import contacts as users and companies as groups from HubSpot"`,
-					Description: `A brief description of the connector when it is used as a source. It completes the sentence "Add an action to ...".`,
+					Description: `A brief description of the connector when it is used as a source.`,
 				},
 				{
 					Name:        "hasSettings",
@@ -66,7 +66,7 @@ func init() {
 					Name:        "description",
 					Type:        types.Text(),
 					Placeholder: `"export users as contacts and groups as companies to HubSpot"`,
-					Description: `A brief description of the connector when it is used as a destination. It should complete the sentence "Add an action to ...".`,
+					Description: `A brief description of the connector when it is used as a destination.`,
 				},
 				{
 					Name:        "hasSettings",

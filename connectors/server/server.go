@@ -33,27 +33,27 @@ func init() {
 	servers := []meergo.ServerInfo{
 		{
 			Name:              ".NET",
-			SourceDescription: "import events, users and groups from a server using .NET",
+			SourceDescription: "Import events, users and groups from a server using .NET",
 			Icon:              iconDotNet,
 		},
 		{
 			Name:              "Go",
-			SourceDescription: "import events, users and groups from a server using Go",
+			SourceDescription: "Import events, users and groups from a server using Go",
 			Icon:              iconGo,
 		},
 		{
 			Name:              "Java",
-			SourceDescription: "import events, users and groups from a server using Java",
+			SourceDescription: "Import events, users and groups from a server using Java",
 			Icon:              iconJava,
 		},
 		{
 			Name:              "Node.js",
-			SourceDescription: "import events, users and groups from a server using Node.js",
+			SourceDescription: "Import events, users and groups from a server using Node.js",
 			Icon:              iconNode,
 		},
 		{
 			Name:              "Python",
-			SourceDescription: "import events, users and groups from a server using Python",
+			SourceDescription: "Import events, users and groups from a server using Python",
 			Icon:              iconPython,
 		},
 	}

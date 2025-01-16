@@ -29,8 +29,8 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Klaviyo",
 		Targets:                meergo.Events | meergo.Users,
-		SourceDescription:      "import clients as users from Klaviyo",
-		DestinationDescription: "export users as clients and dispatch events to Klaviyo",
+		SourceDescription:      "Import clients as users from Klaviyo",
+		DestinationDescription: "Export users as clients and dispatch events to Klaviyo",
 		TermForUsers:           "clients",
 		SendingMode:            meergo.Cloud,
 	}, New)
@@ -102,8 +102,8 @@ The `AppInfo` type describes information about the app connector:
    - `Source`: indicates that the connection can only be used as a data source,
    - `Destination`: indicates that the connection can only be used as a data destination,
    - `Both`: (default) indicates that the connection can be used as both a data source and a data destination.
-- `SourceDescription`: brief description of the connector when the connector is used as a source. It should complete the sentence "Add an action to ...".
-- `DestinationDescription`: brief description of the connector when the connector is used as a destination. It should complete the sentence "Add an action to ...".
+- `SourceDescription`: brief description of the connector when the connector is used as a source.
+- `DestinationDescription`: brief description of the connector when the connector is used as a destination.
 - `HasSettings`: indicates whether the connection has settings when used in the specified role. This field is relevant only if the connector implements the `UIHandler` interface.   
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".

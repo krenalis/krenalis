@@ -26,7 +26,7 @@ var _ interface {
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:              "UISample",
-		SourceDescription: "test the UI components",
+		SourceDescription: "Test the UI components",
 		Icon:              "",
 	}, New)
 }

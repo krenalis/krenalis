@@ -39,7 +39,7 @@ func init() {
 		Name:                   "Mixpanel",
 		Role:                   meergo.Destination,
 		Targets:                meergo.Events,
-		DestinationDescription: "send events to Mixpanel",
+		DestinationDescription: "Send events to Mixpanel",
 		Icon:                   icon,
 		SendingMode:            meergo.Cloud,
 		BackoffPolicy: meergo.BackoffPolicy{

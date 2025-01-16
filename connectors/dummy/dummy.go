@@ -42,8 +42,8 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Dummy",
 		Targets:                meergo.Events | meergo.Users,
-		SourceDescription:      "import users from Dummy",
-		DestinationDescription: "export users and send events to Dummy",
+		SourceDescription:      "Import users from Dummy",
+		DestinationDescription: "Export users and send events to Dummy",
 		HasSettings:            meergo.Destination,
 		TermForUsers:           "users",
 		IdentityIDLabel:        "Dummy Unique ID",

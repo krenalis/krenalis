@@ -24,12 +24,12 @@ func init() {
 	mobiles := []meergo.MobileInfo{
 		{
 			Name:              "Android",
-			SourceDescription: "import events, users and groups from an Android mobile device",
+			SourceDescription: "Import events, users and groups from an Android mobile device",
 			Icon:              iconAndroid,
 		},
 		{
 			Name:              "Apple",
-			SourceDescription: "import events, users and groups from an Apple mobile device",
+			SourceDescription: "Import events, users and groups from an Apple mobile device",
 			Icon:              iconApple,
 		},
 	}

@@ -64,8 +64,8 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Stripe",
 		Targets:                meergo.Users,
-		SourceDescription:      "import customers as users",
-		DestinationDescription: "export users as customers",
+		SourceDescription:      "Import customers as users",
+		DestinationDescription: "Export users as customers",
 		TermForUsers:           "customers",
 		BackoffPolicy: meergo.BackoffPolicy{
 			// https://docs.stripe.com/api/errors

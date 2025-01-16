@@ -43,7 +43,7 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Google Analytics",
 		Targets:                meergo.Events,
-		DestinationDescription: "send events to Google Analytics",
+		DestinationDescription: "Send events to Google Analytics",
 		Icon:                   icon,
 		SendingMode:            meergo.Cloud,
 	}, New)

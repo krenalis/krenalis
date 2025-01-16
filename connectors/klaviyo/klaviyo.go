@@ -41,8 +41,8 @@ func init() {
 	meergo.RegisterApp(meergo.AppInfo{
 		Name:                   "Klaviyo",
 		Targets:                meergo.Events | meergo.Users,
-		SourceDescription:      "import profiles as users from Klaviyo",
-		DestinationDescription: "export users as profiles and send events to Klaviyo",
+		SourceDescription:      "Import profiles as users from Klaviyo",
+		DestinationDescription: "Export users as profiles and send events to Klaviyo",
 		TermForUsers:           "clients",
 		Icon:                   icon,
 		BackoffPolicy: meergo.BackoffPolicy{

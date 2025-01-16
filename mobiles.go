@@ -14,8 +14,8 @@ import (
 // MobileInfo represents a mobile connector info.
 type MobileInfo struct {
 	Name                   string
-	SourceDescription      string // It should complete the sentence "Add an action to ..."
-	DestinationDescription string // It should complete the sentence "Add an action to ..."
+	SourceDescription      string
+	DestinationDescription string
 	Icon                   string // icon in SVG format
 
 	newFunc reflect.Value
