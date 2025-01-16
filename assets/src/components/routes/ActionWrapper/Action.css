@@ -814,6 +814,11 @@ inherit the disabled style */
 	font-size: 13px;
 }
 
+.fullscreen-transformation__property-disabled-info {
+	position: relative;
+	top: 3px;
+}
+
 .fullscreen-transformation__property-caret {
 	color: var(--sl-color-neutral-400);
 	font-size: 13px;
@@ -831,6 +836,41 @@ inherit the disabled style */
 	position: relative;
 	top: 3px;
 	margin-right: 1px;
+}
+
+.fullscreen-transformation__property-wrapper--is-out-matching > sl-checkbox {
+	opacity: 0.8;
+}
+
+.fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-name > * {
+	opacity: 0.6;
+}
+
+.fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-name > sl-tooltip {
+	opacity: 1;
+}
+
+.fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
+	> sl-checkbox,
+.fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
+	.fullscreen-transformation__property-name
+	> * {
+	opacity: 1;
+}
+
+.fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected {
+	align-items: start;
+}
+
+.fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
+	> sl-checkbox {
+	position: relative;
+	top: 5px;
+}
+
+.fullscreen-transformation__property-error {
+	font-size: 11px;
+	color: var(--sl-color-danger-500);
 }
 
 .fullscreen-transformation__nested--expand > .fullscreen-transformation__property-wrapper--parent > sl-icon {
@@ -1201,6 +1241,10 @@ inherit the disabled style */
 	gap: 20px;
 	align-items: center;
 	justify-content: center;
+}
+
+.action__matching-wrapper .combobox-input__error {
+	margin-top: 3px;
 }
 
 .action__matching-properties sl-input::part(form-control-label) {

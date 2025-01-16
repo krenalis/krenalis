@@ -184,7 +184,7 @@ const Combobox = ({
 		if (sharedMapping?.current) {
 			setVal(sharedMapping.current[name].value);
 		}
-	}, [sharedMapping?.current]);
+	}, [sharedMapping?.current[name].value]);
 
 	useLayoutEffect(() => {
 		if (listRef.current == null || !isOpen) {
@@ -241,11 +241,6 @@ const Combobox = ({
 			}
 		}
 
-		if (sharedMapping?.current) {
-			const sm = { ...sharedMapping.current };
-			sm[name].value = newValue;
-			sharedMapping.current = sm;
-		}
 		setVal(newValue);
 
 		setTimeout(() => {
@@ -357,11 +352,6 @@ const Combobox = ({
 			tabGroupRef.current.show('properties');
 		}
 
-		if (sharedMapping?.current) {
-			const sm = { ...sharedMapping.current };
-			sm[name].value = v;
-			sharedMapping.current = sm;
-		}
 		setVal(v);
 
 		inputRef.current.focus();

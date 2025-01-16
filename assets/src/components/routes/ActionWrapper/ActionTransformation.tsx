@@ -200,6 +200,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [selectedLanguage]);
 
+	useEffect(() => {
+		sharedMapping.current = { ...action.transformation.mapping };
+	}, [action.transformation.mapping]);
+
 	const needFormat: boolean = useMemo(() => {
 		if (
 			(connection.isFileStorage || connection.isDatabase) &&
@@ -654,6 +658,7 @@ const TransformationBox = ({
 		setTimeout(() => {
 			if (pendingTransformationType.current == 'mappings') {
 				a.transformation.mapping = flattenSchema(actionType.outputSchema);
+				sharedMapping.current = { ...a.transformation.mapping };
 				a.transformation.function = null;
 				setSelectedLanguage('');
 				setSelectedInPaths([]);
@@ -662,6 +667,7 @@ const TransformationBox = ({
 				setTransformationType('mappings');
 			} else {
 				a.transformation.mapping = null;
+				sharedMapping.current = null;
 				a.transformation.function = {
 					source: RAW_TRANSFORMATION_FUNCTIONS[pendingTransformationType.current].replace(
 						'$parameterName',
@@ -717,9 +723,6 @@ const TransformationBox = ({
 		const mappings: ReactNode[] = [];
 		for (const k in action.transformation.mapping) {
 			const isOutMatchingProperty = action.matching?.out && action.matching.out === k;
-			if (isOutMatchingProperty) {
-				continue;
-			}
 
 			const property = action.transformation.mapping[k];
 
@@ -776,6 +779,7 @@ const TransformationBox = ({
 				}
 			}
 
+			const showMatchingIn = isOutMatchingProperty && property.value === '';
 			mappings.push(
 				<div
 					key={k}
@@ -789,13 +793,22 @@ const TransformationBox = ({
 				>
 					<Combobox
 						onInput={onUpdateMapping}
-						value={property.value}
-						sharedMapping={sharedMapping}
+						value={showMatchingIn ? action.matching.in : property.value}
+						sharedMapping={showMatchingIn ? null : sharedMapping}
+						controlled={showMatchingIn}
 						name={k}
-						disabled={isTransformationDisabled || property.disabled === true}
+						disabled={
+							isTransformationDisabled ||
+							property.disabled === true ||
+							(isOutMatchingProperty && property.value === '')
+						}
 						className='action__transformation-input-property'
 						size='small'
-						error={property.error}
+						error={
+							isOutMatchingProperty && property.value !== ''
+								? 'Please leave this input empty, as the mapping is automatic in this case'
+								: property.error
+						}
 						autocompleteExpressions={true}
 						isExpression={true}
 						items={mappingItems}
@@ -1975,14 +1988,6 @@ const FullscreenTransformation = ({
 												}
 											}
 
-											if (action.matching?.out && action.matching.out === p.name) {
-												// Do not show the property used
-												//  as external matching
-												//  property as it must not be
-												//  transformed.
-												return null;
-											}
-
 											if (transformationType === 'function') {
 												const isSelected = selectedOutPaths.includes(p.name);
 												const hasSelectedChildren =
@@ -2022,6 +2027,9 @@ const FullscreenTransformation = ({
 														selectedPaths={selectedOutPaths}
 														onChangeSelectedPath={(path) =>
 															onChangeSelectedPath('out', path)
+														}
+														isOutMatchingProperty={
+															action.matching?.out && action.matching.out === p.name
 														}
 													/>
 												);
@@ -2193,6 +2201,7 @@ interface TransformationPropertyProps {
 	onChangeSelectedPath: (path: string) => void;
 	isExpanded?: boolean;
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
+	isOutMatchingProperty?: boolean;
 }
 
 const TransformationProperty = ({
@@ -2207,6 +2216,7 @@ const TransformationProperty = ({
 	onChangeSelectedPath,
 	isExpanded,
 	setIsExpanded,
+	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
@@ -2259,14 +2269,14 @@ const TransformationProperty = ({
 
 	return (
 		<div
-			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}`}
+			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
 		>
 			{transformationType === 'function' && (
 				<SlCheckbox
 					className='fullscreen-transformation__property-check'
 					checked={isSelected || hasSelectedParent}
 					indeterminate={hasSelectedChildren && !isSelected}
-					disabled={hasSelectedParent}
+					disabled={(isOutMatchingProperty && !isSelected) || hasSelectedParent}
 					onSlChange={() => onChangeSelectedPath(path)}
 					size='small'
 				/>
@@ -2294,7 +2304,7 @@ const TransformationProperty = ({
 						</span>
 						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
 					</span>
-					{!isParent && (
+					{!isParent && !isOutMatchingProperty && (
 						<SlCopyButton
 							className='fullscreen-transformation__property-copy'
 							value={parentName ? `${parentName}.${property.name}` : property.name}
@@ -2302,6 +2312,17 @@ const TransformationProperty = ({
 							successLabel='✓ Copied'
 							errorLabel='Copying to clipboard is not supported by your browser'
 						/>
+					)}
+					{transformationType === 'function' && isOutMatchingProperty && !isSelected && (
+						<SlTooltip content='You cannot select this property since it is already used as matching property'>
+							<SlIcon className='fullscreen-transformation__property-disabled-info' name='info-circle' />
+						</SlTooltip>
+					)}
+					{transformationType === 'function' && isOutMatchingProperty && isSelected && (
+						<div className='fullscreen-transformation__property-error'>
+							Ensure that this property is not returned by the transformation function, and then deselect
+							this
+						</div>
 					)}
 				</div>
 			</div>

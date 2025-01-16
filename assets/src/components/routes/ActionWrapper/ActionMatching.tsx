@@ -8,16 +8,8 @@ import { checkIfPropertyExists } from './Action.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const ActionMatching = forwardRef<any>((_, ref) => {
-	const {
-		connection,
-		action,
-		setAction,
-		actionType,
-		transformationType,
-		selectedOutPaths,
-		setSelectedOutPaths,
-		showEmptyMatchingError,
-	} = useContext(ActionContext);
+	const { connection, action, setAction, actionType, showEmptyMatchingError, transformationType, selectedOutPaths } =
+		useContext(ActionContext);
 
 	const flatInMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
 
@@ -62,44 +54,57 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 	}, [action]);
 
 	const outMatchingError = useMemo<string>(() => {
-		return checkIfPropertyExists(action.matching.out, flatOutMatchingSchema);
-	}, [action]);
-
-	const onUpdateMatching = (name: string, v: string) => {
-		const a = { ...action };
-		if (name === 'in') {
-			a.matching!.in = v;
+		const err = checkIfPropertyExists(action.matching.out, flatOutMatchingSchema);
+		if (err != '') {
+			return err;
+		}
+		if (action.matching.out === '') {
+			return '';
+		}
+		let isTransformed = false;
+		if (transformationType === 'mappings') {
+			isTransformed = action.transformation.mapping[action.matching.out].value !== '';
 		} else {
-			a.matching!.out = v;
-			// The out matching properties cannot be transformed.
-			if (transformationType === 'mappings') {
-				if (a.transformation.mapping[v] != null) {
-					a.transformation.mapping[v].value = '';
-				}
+			isTransformed = selectedOutPaths.includes(action.matching.out);
+		}
+		if (isTransformed) {
+			if (transformationType === 'function') {
+				return 'Please ensure that this property is not used in the transformation function, as it is currently selected in the output schema of the transformation';
 			} else {
-				const s = selectedOutPaths.filter((p) => p !== v && !p.startsWith(`${v}.`));
-				setSelectedOutPaths(s);
+				return 'Please ensure that no value is mapped to this property in the transformation below';
 			}
 		}
+	}, [action, selectedOutPaths, transformationType]);
+
+	const onUpdateMatching = (side: 'in' | 'out', v: string) => {
+		const a = { ...action };
+		a.matching![side] = v;
+
+		// automatically clear the mapping if the same value of the in
+		// matching is already mapped on the out matching.
+		if (side === 'out' && v !== '' && a.matching['in'] !== '' && transformationType === 'mappings') {
+			const isAlreadyMapped = a.transformation.mapping[v].value === a.matching['in'];
+			if (isAlreadyMapped) {
+				a.transformation.mapping[v].value = '';
+			}
+		}
+
 		setAction(a);
 	};
 
-	const onSelectMatching = (name: string, v: string) => {
+	const onSelectMatching = (side: 'in' | 'out', v: string) => {
 		const a = { ...action };
-		if (name === 'in') {
-			a.matching!.in = v;
-		} else {
-			a.matching!.out = v;
-			// The out matching properties cannot be transformed.
-			if (transformationType === 'mappings') {
-				if (a.transformation.mapping[v] != null) {
-					a.transformation.mapping[v].value = '';
-				}
-			} else {
-				const s = selectedOutPaths.filter((p) => p !== v && !p.startsWith(`${v}.`));
-				setSelectedOutPaths(s);
+		a.matching![side] = v;
+
+		// automatically clear the mapping if the same value of the in
+		// matching is already mapped on the out matching.
+		if (side === 'out' && v !== '' && a.matching['in'] !== '' && transformationType === 'mappings') {
+			const isAlreadyMapped = a.transformation.mapping[v].value === a.matching['in'];
+			if (isAlreadyMapped) {
+				a.transformation.mapping[v].value = '';
 			}
 		}
+
 		setAction(a);
 	};
 

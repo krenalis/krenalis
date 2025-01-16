@@ -45,7 +45,7 @@
 	position: absolute;
 	font-size: 11px;
 	color: var(--sl-color-danger-500);
-	margin-top: 2px;
+	line-height: 1.2;
 }
 
 .combobox-input__error-icon {
