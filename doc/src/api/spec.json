@@ -43,7 +43,7 @@
                                             },
                                             {
                                                 "name": "description",
-                                                "placeholder": "\"Export the users  as contacts to Mailchimp\"",
+                                                "placeholder": "\"Export the users as contacts to Mailchimp\"",
                                                 "type": {
                                                     "name": "Text"
                                                 },

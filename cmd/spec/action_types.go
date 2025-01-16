@@ -49,7 +49,7 @@ func init() {
 								{
 									Name:        "description",
 									Type:        types.Text(),
-									Placeholder: `"Export the users  as contacts to Mailchimp"`,
+									Placeholder: `"Export the users as contacts to Mailchimp"`,
 									Description: "The description of the action type.",
 								},
 								{
