@@ -57,35 +57,33 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"action": {
-			"name": "Import users",
-			"enabled": false,
-			"filter": null,
-			"inSchema": {
-				"name": "Object",
-				"properties": [
-					{ "name": "email", "type": { "name": "Text" }, "description": "" },
-					{ "name": "dummyId", "type": { "name": "Text" }, "description": "" },
-					{ "name": "firstName", "type": { "name": "Text" }, "description": "" },
-					{ "name": "lastName", "type": { "name": "Text" }, "description": "" }
-				]
-			},
-			"outSchema": {
-				"name": "Object",
-				"properties": [
-					{ "name": "email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
-					{ "name": "dummy_id", "type": { "name": "Text" }, "readOptional": true, "description": "" },
-					{ "name": "first_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
-					{ "name": "last_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" }
-				]
-			},
-			"transformation": {
-				"mapping": {
-					"email": "email",
-					"dummy_id": "dummyId",
-					"first_name": "firstName",
-					"last_name": "lastName"
-				}
+		"name": "Import users",
+		"enabled": false,
+		"filter": null,
+		"inSchema": {
+			"name": "Object",
+			"properties": [
+				{ "name": "email", "type": { "name": "Text" }, "description": "" },
+				{ "name": "dummyId", "type": { "name": "Text" }, "description": "" },
+				{ "name": "firstName", "type": { "name": "Text" }, "description": "" },
+				{ "name": "lastName", "type": { "name": "Text" }, "description": "" }
+			]
+		},
+		"outSchema": {
+			"name": "Object",
+			"properties": [
+				{ "name": "email", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
+				{ "name": "dummy_id", "type": { "name": "Text" }, "readOptional": true, "description": "" },
+				{ "name": "first_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" },
+				{ "name": "last_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" }
+			]
+		},
+		"transformation": {
+			"mapping": {
+				"email": "email",
+				"dummy_id": "dummyId",
+				"first_name": "firstName",
+				"last_name": "lastName"
 			}
 		}
 	}
@@ -163,109 +161,107 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"action": {
-			"name": "Export users",
-			"enabled": false,
-			"filter": {
-				"logical": "or",
-				"conditions": [
-					{
-						"property": "email",
-						"operator": "is one of",
-						"values": [
-							"acme@open2b.com",
-							"test@open2b.com"
-						]
-					},
-					{
-						"property": "dummy_id",
-						"operator": "is between",
-						"values": [
-							"1200",
-							"1800"
-						]
-					}
-				]
-			},
-			"inSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "first_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					},
-					{
-						"name": "last_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					},
-					{
-						"name": "email",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					},
-					{
-						"name": "dummy_id",
-						"type": {
-							"name": "Text"
-						},
-						"readOptional": true,
-						"description": ""
-					}
-				]
-			},
-			"outSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "firstName",
-						"type": {
-							"name": "Text"
-						},
-						"description": ""
-					},
-					{
-						"name": "lastName",
-						"type": {
-							"name": "Text"
-						},
-						"description": ""
-					},
-					{
-						"name": "email",
-						"type": {
-							"name": "Text"
-						},
-						"description": ""
-					}
-				]
-			},
-			"transformation": {
-				"mapping": {
-					"firstName": "first_name",
-					"lastName": "last_name"
+		"name": "Export users",
+		"enabled": false,
+		"filter": {
+			"logical": "or",
+			"conditions": [
+				{
+					"property": "email",
+					"operator": "is one of",
+					"values": [
+						"acme@open2b.com",
+						"test@open2b.com"
+					]
+				},
+				{
+					"property": "dummy_id",
+					"operator": "is between",
+					"values": [
+						"1200",
+						"1800"
+					]
 				}
-			},
-			"exportMode": "CreateOnly",
-			"matching": {
-				"in": "email",
-				"out": "email"
-			},
-			"exportOnDuplicates": true
-		}
+			]
+		},
+		"inSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "first_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "last_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "email",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "dummy_id",
+					"type": {
+						"name": "Text"
+					},
+					"readOptional": true,
+					"description": ""
+				}
+			]
+		},
+		"outSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "firstName",
+					"type": {
+						"name": "Text"
+					},
+					"description": ""
+				},
+				{
+					"name": "lastName",
+					"type": {
+						"name": "Text"
+					},
+					"description": ""
+				},
+				{
+					"name": "email",
+					"type": {
+						"name": "Text"
+					},
+					"description": ""
+				}
+			]
+		},
+		"transformation": {
+			"mapping": {
+				"firstName": "first_name",
+				"lastName": "last_name"
+			}
+		},
+		"exportMode": "CreateOnly",
+		"matching": {
+			"in": "email",
+			"out": "email"
+		},
+		"exportOnDuplicates": true
 	}
 	`;
 
@@ -312,28 +308,26 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	{
 		"target": "Events",
 		"eventType": "send_add_to_cart",
-		"action": {
-			"name": "Send Add to Cart",
-			"enabled": false,
-			"filter": null,
-			"inSchema": null,
-			"outSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "email",
-						"type": {
-							"name": "Text"
-						},
-						"createRequired": true,
-						"description": ""
-					}
-				]
-			},
-			"transformation": {
-				"mapping": {
-					"email": "traits"
+		"name": "Send Add to Cart",
+		"enabled": false,
+		"filter": null,
+		"inSchema": null,
+		"outSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "email",
+					"type": {
+						"name": "Text"
+					},
+					"createRequired": true,
+					"description": ""
 				}
+			]
+		},
+		"transformation": {
+			"mapping": {
+				"email": "traits"
 			}
 		}
 	}
@@ -401,76 +395,74 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"action": {
-			"name": "Import users",
-			"enabled": false,
-			"filter": null,
-			"inSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "first_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"nullable": true,
-						"description": ""
+		"name": "Import users",
+		"enabled": false,
+		"filter": null,
+		"inSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "first_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
 					},
-					{
-						"name": "last_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"nullable": true,
-						"description": ""
+					"nullable": true,
+					"description": ""
+				},
+				{
+					"name": "last_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
 					},
-					{
-						"name": "email",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"nullable": true,
-						"description": ""
-					}
-				]
-			},
-			"outSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "first_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
+					"nullable": true,
+					"description": ""
+				},
+				{
+					"name": "email",
+					"type": {
+						"name": "Text",
+						"charLen": 300
 					},
-					{
-						"name": "last_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					}
-				]
-			},
-			"transformation": {
-				"mapping": {
-					"first_name": "first_name",
-					"last_name": "last_name"
+					"nullable": true,
+					"description": ""
 				}
-			},
-			"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
-			"identityProperty": "email",
-			"lastChangeTimeProperty": "",
-			"lastChangeTimeFormat": ""
-		}
+			]
+		},
+		"outSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "first_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "last_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				}
+			]
+		},
+		"transformation": {
+			"mapping": {
+				"first_name": "first_name",
+				"last_name": "last_name"
+			}
+		},
+		"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
+		"identityProperty": "email",
+		"lastChangeTimeProperty": "",
+		"lastChangeTimeFormat": ""
 	}
 	`;
 
@@ -538,112 +530,110 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"action": {
-			"name": "Export users",
-			"enabled": false,
-			"filter": {
-				"logical": "or",
-				"conditions": [
-					{
-						"property": "email",
-						"operator": "is one of",
-						"values": [
-							"acme@open2b.com",
-							"test@open2b.com"
-						]
-					},
-					{
-						"property": "dummy_id",
-						"operator": "is between",
-						"values": [
-							"1200",
-							"1800"
-						]
-					}
-				]
-			},
-			"inSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "email",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					},
-					{
-						"name": "first_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					},
-					{
-						"name": "last_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"readOptional": true,
-						"description": ""
-					},
-					{
-						"name": "dummy_id",
-						"type": {
-							"name": "Text"
-						},
-						"readOptional": true,
-						"description": ""
-					}
-				]
-			},
-			"outSchema": {
-				"name": "Object",
-				"properties": [
-					{
-						"name": "email",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"nullable": false,
-						"description": ""
-					},
-					{
-						"name": "first_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"nullable": true,
-						"description": ""
-					},
-					{
-						"name": "last_name",
-						"type": {
-							"name": "Text",
-							"charLen": 300
-						},
-						"nullable": true,
-						"description": ""
-					}
-				]
-			},
-			"transformation": {
-				"mapping": {
-					"email": "email",
-					"first_name": "first_name",
-					"last_name": "last_name"
+		"name": "Export users",
+		"enabled": false,
+		"filter": {
+			"logical": "or",
+			"conditions": [
+				{
+					"property": "email",
+					"operator": "is one of",
+					"values": [
+						"acme@open2b.com",
+						"test@open2b.com"
+					]
+				},
+				{
+					"property": "dummy_id",
+					"operator": "is between",
+					"values": [
+						"1200",
+						"1800"
+					]
 				}
-			},
-			"tableName": "users",
-			"tableKeyProperty": "email"
-		}
+			]
+		},
+		"inSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "email",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "first_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "last_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"readOptional": true,
+					"description": ""
+				},
+				{
+					"name": "dummy_id",
+					"type": {
+						"name": "Text"
+					},
+					"readOptional": true,
+					"description": ""
+				}
+			]
+		},
+		"outSchema": {
+			"name": "Object",
+			"properties": [
+				{
+					"name": "email",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"nullable": false,
+					"description": ""
+				},
+				{
+					"name": "first_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"nullable": true,
+					"description": ""
+				},
+				{
+					"name": "last_name",
+					"type": {
+						"name": "Text",
+						"charLen": 300
+					},
+					"nullable": true,
+					"description": ""
+				}
+			]
+		},
+		"transformation": {
+			"mapping": {
+				"email": "email",
+				"first_name": "first_name",
+				"last_name": "last_name"
+			}
+		},
+		"tableName": "users",
+		"tableKeyProperty": "email"
 	}
 	`;
 
@@ -736,91 +726,89 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		{
 			"target": "Users",
 			"eventType": null,
-			"action": {
-				"name": "Import users",
-				"enabled": false,
-				"filter": null,
-				"inSchema": {
-					"name": "Object",
-					"properties": [
-						{
-							"name": "email",
-							"type": {
-								"name": "Text"
-							},
-							"description": ""
+			"name": "Import users",
+			"enabled": false,
+			"filter": null,
+			"inSchema": {
+				"name": "Object",
+				"properties": [
+					{
+						"name": "email",
+						"type": {
+							"name": "Text"
 						},
-						{
-							"name": "first_name",
-							"type": {
-								"name": "Text"
-							},
-							"description": ""
+						"description": ""
+					},
+					{
+						"name": "first_name",
+						"type": {
+							"name": "Text"
 						},
-						{
-							"name": "last_name",
-							"type": {
-								"name": "Text"
-							},
-							"description": ""
-						}
-					]
-				},
-				"outSchema": {
-					"name": "Object",
-					"properties": [
-						{
-							"name": "email",
-							"type": {
-								"name": "Text",
-								"charLen": 300
-							},
-							"readOptional": true,
-							"description": ""
+						"description": ""
+					},
+					{
+						"name": "last_name",
+						"type": {
+							"name": "Text"
 						},
-						{
-							"name": "first_name",
-							"type": {
-								"name": "Text",
-								"charLen": 300
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "last_name",
-							"type": {
-								"name": "Text",
-								"charLen": 300
-							},
-							"readOptional": true,
-							"description": ""
-						}
-					]
-				},
-				"transformation": {
-					"mapping": {
-						"email": "email",
-						"first_name": "first_name",
-						"last_name": "last_name"
+						"description": ""
 					}
-				},
-				"path": "test.csv",
-				"sheet": null,
-				"identityProperty": "email",
-				"lastChangeTimeProperty": "",
-				"lastChangeTimeFormat": "",
-				"compression": "",
-				"format": "CSV",
-				"formatSettings": {
-					"Comma": ",",
-					"Comment": "",
-					"FieldsPerRecord": 0,
-					"HasColumnNames": true,
-					"LazyQuotes": false,
-					"TrimLeadingSpace": false,
-					"UseCRLF": false
+				]
+			},
+			"outSchema": {
+				"name": "Object",
+				"properties": [
+					{
+						"name": "email",
+						"type": {
+							"name": "Text",
+							"charLen": 300
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "first_name",
+						"type": {
+							"name": "Text",
+							"charLen": 300
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "last_name",
+						"type": {
+							"name": "Text",
+							"charLen": 300
+						},
+						"readOptional": true,
+						"description": ""
+					}
+				]
+			},
+			"transformation": {
+				"mapping": {
+					"email": "email",
+					"first_name": "first_name",
+					"last_name": "last_name"
 				}
+			},
+			"path": "test.csv",
+			"sheet": null,
+			"identityProperty": "email",
+			"lastChangeTimeProperty": "",
+			"lastChangeTimeFormat": "",
+			"compression": "",
+			"format": "CSV",
+			"formatSettings": {
+				"Comma": ",",
+				"Comment": "",
+				"FieldsPerRecord": 0,
+				"HasColumnNames": true,
+				"LazyQuotes": false,
+				"TrimLeadingSpace": false,
+				"UseCRLF": false
 			}
 		}`;
 
@@ -884,273 +872,271 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 		{
 			"target": "Users",
 			"eventType": null,
-			"action": {
-				"name": "Export users",
-				"enabled": false,
-				"filter": {
-					"logical": "or",
-					"conditions": [
-						{
-							"property": "email",
-							"operator": "is one of",
-							"values": [
-								"acme@open2b.com",
-								"test@open2b.com"
-							]
+			"name": "Export users",
+			"enabled": false,
+			"filter": {
+				"logical": "or",
+				"conditions": [
+					{
+						"property": "email",
+						"operator": "is one of",
+						"values": [
+							"acme@open2b.com",
+							"test@open2b.com"
+						]
+					},
+					{
+						"property": "dummy_id",
+						"operator": "is between",
+						"values": [
+							"1200",
+							"1800"
+						]
+					}
+				]
+			},
+			"inSchema": {
+				"name": "Object",
+				"properties": [
+					{
+						"name": "email",
+						"type": {
+							"name": "Text",
+							"charLen": 300
 						},
-						{
-							"property": "dummy_id",
-							"operator": "is between",
-							"values": [
-								"1200",
-								"1800"
-							]
-						}
-					]
-				},
-				"inSchema": {
-					"name": "Object",
-					"properties": [
-						{
-							"name": "email",
-							"type": {
-								"name": "Text",
-								"charLen": 300
-							},
-							"readOptional": true,
-							"description": ""
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "dummy_id",
+						"type": {
+							"name": "Text"
 						},
-						{
-							"name": "dummy_id",
-							"type": {
-								"name": "Text"
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "android",
-							"type": {
-								"name": "Object",
-								"properties": [
-									{
-										"name": "id",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "android",
+						"type": {
+							"name": "Object",
+							"properties": [
+								{
+									"name": "id",
+									"type": {
+										"name": "Text"
 									},
-									{
-										"name": "idfa",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "idfa",
+									"type": {
+										"name": "Text"
 									},
-									{
-										"name": "push_token",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
-									}
-								]
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "ios",
-							"type": {
-								"name": "Object",
-								"properties": [
-									{
-										"name": "id",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "push_token",
+									"type": {
+										"name": "Text"
 									},
-									{
-										"name": "idfa",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
-									},
-									{
-										"name": "push_token",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
-									}
-								]
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "first_name",
-							"type": {
-								"name": "Text",
-								"charLen": 300
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "last_name",
-							"type": {
-								"name": "Text",
-								"charLen": 300
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "gender",
-							"type": {
-								"name": "Text"
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "food_preferences",
-							"type": {
-								"name": "Object",
-								"properties": [
-									{
-										"name": "drink",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
-									},
-									{
-										"name": "fruit",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
-									}
-								]
-							},
-							"readOptional": true,
-							"description": ""
-						},
-						{
-							"name": "phone_numbers",
-							"type": {
-								"name": "Array",
-								"elementType": {
-									"name": "Text",
-									"charLen": 300
+									"readOptional": true,
+									"description": ""
 								}
-							},
-							"readOptional": true,
-							"description": ""
+							]
 						},
-						{
-							"name": "favorite_movie",
-							"type": {
-								"name": "Object",
-								"properties": [
-									{
-										"name": "title",
-										"type": {
-											"name": "Text"
-										},
-										"readOptional": true,
-										"description": ""
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "ios",
+						"type": {
+							"name": "Object",
+							"properties": [
+								{
+									"name": "id",
+									"type": {
+										"name": "Text"
 									},
-									{
-										"name": "length",
-										"type": {
-											"name": "Float",
-											"bitSize": 64
-										},
-										"readOptional": true,
-										"description": ""
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "idfa",
+									"type": {
+										"name": "Text"
 									},
-									{
-										"name": "soundtrack",
-										"type": {
-											"name": "Object",
-											"properties": [
-												{
-													"name": "title",
-													"type": {
-														"name": "Text"
-													},
-													"readOptional": true,
-													"description": ""
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "push_token",
+									"type": {
+										"name": "Text"
+									},
+									"readOptional": true,
+									"description": ""
+								}
+							]
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "first_name",
+						"type": {
+							"name": "Text",
+							"charLen": 300
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "last_name",
+						"type": {
+							"name": "Text",
+							"charLen": 300
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "gender",
+						"type": {
+							"name": "Text"
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "food_preferences",
+						"type": {
+							"name": "Object",
+							"properties": [
+								{
+									"name": "drink",
+									"type": {
+										"name": "Text"
+									},
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "fruit",
+									"type": {
+										"name": "Text"
+									},
+									"readOptional": true,
+									"description": ""
+								}
+							]
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "phone_numbers",
+						"type": {
+							"name": "Array",
+							"elementType": {
+								"name": "Text",
+								"charLen": 300
+							}
+						},
+						"readOptional": true,
+						"description": ""
+					},
+					{
+						"name": "favorite_movie",
+						"type": {
+							"name": "Object",
+							"properties": [
+								{
+									"name": "title",
+									"type": {
+										"name": "Text"
+									},
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "length",
+									"type": {
+										"name": "Float",
+										"bitSize": 64
+									},
+									"readOptional": true,
+									"description": ""
+								},
+								{
+									"name": "soundtrack",
+									"type": {
+										"name": "Object",
+										"properties": [
+											{
+												"name": "title",
+												"type": {
+													"name": "Text"
 												},
-												{
-													"name": "author",
-													"type": {
-														"name": "Text"
-													},
-													"readOptional": true,
-													"description": ""
+												"readOptional": true,
+												"description": ""
+											},
+											{
+												"name": "author",
+												"type": {
+													"name": "Text"
 												},
-												{
-													"name": "length",
-													"type": {
-														"name": "Float",
-														"bitSize": 64
-													},
-													"readOptional": true,
-													"description": ""
+												"readOptional": true,
+												"description": ""
+											},
+											{
+												"name": "length",
+												"type": {
+													"name": "Float",
+													"bitSize": 64
 												},
-												{
-													"name": "genre",
-													"type": {
-														"name": "Text"
-													},
-													"readOptional": true,
-													"description": ""
-												}
-											]
-										},
-										"readOptional": true,
-										"description": ""
-									}
-								]
-							},
-							"readOptional": true,
-							"description": ""
-						}
-					]
-				},
-				"outSchema": null,
-				"transformation": {},
-				"path": "test.csv",
-				"sheet": null,
-				"fileOrderingPropertyPath": "email",
-				"identityProperty": "",
-				"lastChangeTimeProperty": "",
-				"lastChangeTimeFormat": "",
-				"compression": "",
-				"format": "CSV",
-				"formatSettings": {
-					"Comma": ",",
-					"Comment": "",
-					"FieldsPerRecord": 0,
-					"HasColumnNames": false,
-					"LazyQuotes": false,
-					"TrimLeadingSpace": false,
-					"UseCRLF": false
-				}
+												"readOptional": true,
+												"description": ""
+											},
+											{
+												"name": "genre",
+												"type": {
+													"name": "Text"
+												},
+												"readOptional": true,
+												"description": ""
+											}
+										]
+									},
+									"readOptional": true,
+									"description": ""
+								}
+							]
+						},
+						"readOptional": true,
+						"description": ""
+					}
+				]
+			},
+			"outSchema": null,
+			"transformation": {},
+			"path": "test.csv",
+			"sheet": null,
+			"fileOrderingPropertyPath": "email",
+			"identityProperty": "",
+			"lastChangeTimeProperty": "",
+			"lastChangeTimeFormat": "",
+			"compression": "",
+			"format": "CSV",
+			"formatSettings": {
+				"Comma": ",",
+				"Comment": "",
+				"FieldsPerRecord": 0,
+				"HasColumnNames": false,
+				"LazyQuotes": false,
+				"TrimLeadingSpace": false,
+				"UseCRLF": false
 			}
 		}`;
 
@@ -1207,25 +1193,23 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	{
 		"target": "Events",
 		"eventType": null,
-		"action": {
-			"name": "Import events",
-			"enabled": false,
-			"filter": {
-				"logical": "and",
-				"conditions": [
-					{
-						"property": "type",
-						"operator": "is",
-						"values": [
-							"track"
-						]
-					}
-				]
-			},
-			"inSchema": null,
-			"outSchema": null,
-			"transformation": {}
-		}
+		"name": "Import events",
+		"enabled": false,
+		"filter": {
+			"logical": "and",
+			"conditions": [
+				{
+					"property": "type",
+					"operator": "is",
+					"values": [
+						"track"
+					]
+				}
+			]
+		},
+		"inSchema": null,
+		"outSchema": null,
+		"transformation": {}
 	}
 	`;
 
@@ -1281,25 +1265,23 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	{
 		"target": "Users",
 		"eventType": null,
-		"action": {
-			"name": "Import users",
-			"enabled": false,
-			"filter": {
-				"logical": "and",
-				"conditions": [
-					{
-						"property": "type",
-						"operator": "is",
-						"values": [
-							"identify"
-						]
-					}
-				]
-			},
-			"inSchema": null,
-			"outSchema": null,
-			"transformation": {}
-		}
+		"name": "Import users",
+		"enabled": false,
+		"filter": {
+			"logical": "and",
+			"conditions": [
+				{
+					"property": "type",
+					"operator": "is",
+					"values": [
+						"identify"
+					]
+				}
+			]
+		},
+		"inSchema": null,
+		"outSchema": null,
+		"transformation": {}
 	}
 	`;
 

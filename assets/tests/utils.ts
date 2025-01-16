@@ -281,23 +281,23 @@ const deepCompareActionSchema = (actual: object, expected: object) => {
 	const expectedCopy = JSON.parse(JSON.stringify(expected));
 
 	// sort the properties of the action schemas.
-	if (actualCopy.action.inSchema && actualCopy.action.inSchema.properties) {
-		actualCopy.action.inSchema.properties.sort((a: Property, b: Property) =>
+	if (actualCopy.inSchema && actualCopy.inSchema.properties) {
+		actualCopy.inSchema.properties.sort((a: Property, b: Property) =>
 			a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1,
 		);
 	}
-	if (actualCopy.action.outSchema && actualCopy.action.outSchema.properties) {
-		actualCopy.action.outSchema.properties.sort((a: Property, b: Property) =>
+	if (actualCopy.outSchema && actualCopy.outSchema.properties) {
+		actualCopy.outSchema.properties.sort((a: Property, b: Property) =>
 			a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1,
 		);
 	}
-	if (expectedCopy.action.inSchema && expectedCopy.action.inSchema.properties) {
-		expectedCopy.action.inSchema.properties.sort((a: Property, b: Property) =>
+	if (expectedCopy.inSchema && expectedCopy.inSchema.properties) {
+		expectedCopy.inSchema.properties.sort((a: Property, b: Property) =>
 			a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1,
 		);
 	}
-	if (expectedCopy.action.outSchema && expectedCopy.action.outSchema.properties) {
-		expectedCopy.action.outSchema.properties.sort((a: Property, b: Property) =>
+	if (expectedCopy.outSchema && expectedCopy.outSchema.properties) {
+		expectedCopy.outSchema.properties.sort((a: Property, b: Property) =>
 			a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1,
 		);
 	}
