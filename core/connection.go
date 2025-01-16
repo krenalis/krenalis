@@ -149,6 +149,8 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			var err error
+			// Retrieve the app's source or target schema, depending on the
+			// Connection's role.
 			schema, err := this.app().Schema(ctx, state.Users, "")
 			if err != nil {
 				if _, ok := err.(*connectors.UnavailableError); ok {
@@ -157,8 +159,14 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, err
 			}
 			if c.Role == state.Source {
+				// Source/App/Users.
 				return &ActionSchemas{In: schema, Out: users}, nil
 			} else {
+				// Destination/App/Users.
+				//
+				// The app's destination schema is already available here, but
+				// we need to get the source one too because it's needed for the
+				// matching properties.
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Users, "")
 				if err != nil {
 					if _, ok := err.(*connectors.UnavailableError); ok {
@@ -183,8 +191,10 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 				return nil, err
 			}
 			if c.Role == state.Source {
+				// Source/App/Groups.
 				return &ActionSchemas{In: schema, Out: groups}, nil
 			} else {
+				// Destination/App/Groups.
 				sourceSchema, err := this.app().SchemaAsRole(ctx, state.Source, state.Groups, "")
 				if err != nil {
 					if _, ok := err.(*connectors.UnavailableError); ok {
@@ -207,14 +217,25 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
+				// Source/Database/Users.
+				//
+				// The input schema is not set here because it is retrieved via
+				// a separate API call, since it depends on the query, which in
+				// the UI case is entered interactively by the user.
 				return &ActionSchemas{Out: users}, nil
 			} else {
+				// Destination/Database/Users.
+				//
+				// The output schema depends on the table chosen for export, and
+				// must be retrieved separately.
 				return &ActionSchemas{In: users}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
+				// Source/Database/Groups.
 				return &ActionSchemas{Out: groups}, nil
 			} else {
+				// Destination/Database/Groups.
 				return &ActionSchemas{In: groups}, nil
 			}
 		}
@@ -223,14 +244,22 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		switch target {
 		case Users:
 			if c.Role == state.Source {
+				// Source/FileStorage/Source.
+				//
+				// The input schema is not set here because it is retrieved via
+				// a separate API call, since it depends on the file, which in
+				// the UI case is entered interactively by the user.
 				return &ActionSchemas{Out: users}, nil
 			} else {
+				// Destination/FileStorage/Source.
 				return &ActionSchemas{In: users}, nil
 			}
 		case Groups:
 			if c.Role == state.Source {
+				// Source/FileStorage/Groups.
 				return &ActionSchemas{Out: groups}, nil
 			} else {
+				// Destination/FileStorage/Groups.
 				return &ActionSchemas{In: groups}, nil
 			}
 		}
@@ -239,12 +268,23 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 		if eventType != "" {
 			return nil, errors.NotFound("event type not expected")
 		}
+		// TODO(Gianluca): regarding Stream connectors, see the issue
+		// https://github.com/meergo/meergo/issues/1264.
 		switch target {
 		case Users:
+			// Source/Mobile/Users.
+			// Source/Server/Users.
+			// Source/Website/Users.
 			return &ActionSchemas{In: events.Schema, Out: users}, nil
 		case Groups:
+			// Source/Mobile/Groups.
+			// Source/Server/Groups.
+			// Source/Website/Groups.
 			return &ActionSchemas{In: events.Schema, Out: groups}, nil
 		case Events:
+			// Source/Mobile/Events.
+			// Source/Server/Events.
+			// Source/Website/Events.
 			return &ActionSchemas{In: events.Schema}, nil
 		}
 		return &ActionSchemas{}, nil
@@ -300,7 +340,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				name = "Import users"
 				description = "Import the users from " + connector.Name
 			} else {
-				// Destination/File/Users.
+				// Destination/FileStorage/Users.
 				// Destination/Database/Users.
 				name = "Export users"
 				description = "Export the users to " + connector.Name
@@ -366,7 +406,7 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 				name = "Import groups"
 				description = "Import the groups from " + connector.Name
 			} else {
-				// Destination/File/Groups.
+				// Destination/FileStorage/Groups.
 				// Destination/Database/Groups.
 				name = "Export groups"
 				description = "Export the groups to " + connector.Name
