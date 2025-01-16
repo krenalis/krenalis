@@ -35,6 +35,9 @@ func (connection connection) Action(_ http.ResponseWriter, r *http.Request) (any
 }
 
 // ActionSchemas returns the action schema of a target.
+//
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1266.
 func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.connection(r)
 	if err != nil {

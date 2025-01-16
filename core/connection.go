@@ -125,6 +125,9 @@ type ActionType struct {
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
 //
+// TODO(Gianluca): this method is deprecated. See the issue
+// https://github.com/meergo/meergo/issues/1266.
+//
 // It returns an errors.UnprocessableError error with code EventTypeNotExist, if
 // the event type does not exist for the connection.
 func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventType string) (*ActionSchemas, error) {

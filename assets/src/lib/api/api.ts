@@ -329,6 +329,8 @@ class Connections {
 		);
 	};
 
+	// TODO(Gianluca): this method is deprecated. See the issue
+	// https://github.com/meergo/meergo/issues/1266.
 	actionSchemas = async (
 		connection: number,
 		target: ActionTarget,
