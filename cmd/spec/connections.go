@@ -49,7 +49,7 @@ func init() {
 		Placeholder:    `"Cloud"`,
 		UpdateRequired: true,
 		Nullable:       true,
-		Description: `The mode for sending events. It is required and can only be provided with destination app connections that support it. ` +
+		Description: `The mode for sending events. It is required and can only be provided with destination app connections that supports it. ` +
 			`In this case, it must be one of the sending modes supported by the app.`,
 	}
 	websiteHostParameter := types.Property{

@@ -13,6 +13,14 @@ import (
 
 func init() {
 
+	nameParameter := types.Property{
+		Name:           "name",
+		Type:           types.Text().WithCharLen(60),
+		CreateRequired: true,
+		Placeholder:    `"Site example.com"`,
+		Description:    "The action's name.",
+	}
+
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -23,29 +31,31 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "source-actions-on-events",
-		Name:        "Source actions on events",
-		Description: "A source action on events is an action that ingests incoming event data—from a website, mobile app, or server connection—and loads it into the workspace's data warehouse for storage and processing.",
+		ID:   "actions-import-events",
+		Name: "Import events",
+		Description: "Actions enable the import of events into the data warehouse.\n\n" +
+			"While the three endpoints are consistent across all actions, this section focuses specifically on importing events.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Create a source action on events",
-				Description: "Create a new source action on events.",
+				Name:        "Create action",
+				Description: "Create a source action that imports events into the data warehouse.",
 				Method:      POST,
 				URL:         "/v0/actions",
 				Parameters: []types.Property{
-					{
-						Name:           "name",
-						Type:           types.Text().WithCharLen(60),
-						CreateRequired: true,
-						Placeholder:    `"Site example.com"`,
-						Description:    "The action's name.",
-					},
+					nameParameter,
 					{
 						Name:           "connection",
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The connection for which the action should be created. It should be a source website, mobile, or server connection.",
+						Description:    "The ID of the connection from which the events are received. It must be a source website, mobile, or server.",
+					},
+					{
+						Name:           "target",
+						Type:           types.Text().WithValues("Events"),
+						CreateRequired: true,
+						Placeholder:    `"Events"`,
+						Description:    "The entity on which the action operates, which must be `\"Events\"` in order to create an action that imports events.",
 					},
 					{
 						Name:        "enabled",
@@ -72,8 +82,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update a source action on events",
-				Description: "Update a source action on events.",
+				Name:        "Update action",
+				Description: "Update a source action that imports events into the data warehouse.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id",
 				Parameters: []types.Property{
@@ -84,18 +94,12 @@ func init() {
 						Placeholder:    "705981339",
 						Description:    "The ID of the source action on event.",
 					},
-					{
-						Name:           "name",
-						Type:           types.Text().WithCharLen(60),
-						CreateRequired: true,
-						Placeholder:    `"Site example.com"`,
-						Description:    "The action's name.",
-					},
+					nameParameter,
 					{
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicates if the action is enable.",
+						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
 				},
@@ -105,17 +109,17 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get a source action on events",
-				Description: "Get a source action on events.",
+				Name:        "Get action",
+				Description: "Get a source action that imports events into the data warehouse.",
 				Method:      GET,
 				URL:         "/v0/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
 						Type:           types.Int(32),
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source action on event.",
-						CreateRequired: true,
 					},
 				},
 				Response: &Response{
@@ -124,46 +128,28 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Placeholder: "705981339",
-							Description: "The ID of the source action.",
+							Description: "The ID of the source action on event.",
 						},
+						nameParameter,
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
-							Description: "The ID of the action's connection.",
+							Description: "The ID of the connection from which the events are received. It is a source website, mobile, or server.",
 						},
 						{
-							Name:        "name",
-							Type:        types.Text().WithCharLen(60),
-							Placeholder: `"Site example.com"`,
-							Description: "The action's name.",
+							Name:        "target",
+							Type:        types.Text().WithValues("Events"),
+							Placeholder: `"Events"`,
+							Description: "The entity on which the action operates. It is always `\"Events\"` for an action that imports events.",
 						},
 						{
 							Name:        "enabled",
 							Type:        types.Boolean(),
 							Placeholder: "true",
-							Description: "Indicates if the action is enable.",
+							Description: "Indicates if the action is enabled.",
 						},
 						filterParameter,
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "action does not exist"},
-				},
-			},
-			{
-				Name:        "Delete a source action on events",
-				Description: "Delete a source action on events.",
-				Method:      DELETE,
-				URL:         "/v0/actions/:id",
-				Parameters: []types.Property{
-					{
-						Name:           "id",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "705981339",
-						Description:    "The ID of the source action on event.",
 					},
 				},
 				Errors: []Error{

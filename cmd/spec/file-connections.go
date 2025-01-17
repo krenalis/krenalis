@@ -25,8 +25,8 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "connection-files",
-		Name:        "Connection files",
+		ID:          "file-connections",
+		Name:        "File connections",
 		Description: "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
 		Endpoints: []*Endpoint{
 			{
@@ -104,7 +104,7 @@ func init() {
 			},
 			{
 				Name:        "Read the sheet names",
-				Description: "Returns the list of sheets in a file, applicable to file formats that support sheets.",
+				Description: "Returns the list of sheets in a file, applicable to file formats that supports sheets.",
 				Method:      POST,
 				URL:         "/v0/connections/:id/files/:path/sheets",
 				Parameters: []types.Property{

@@ -43,7 +43,7 @@ func init() {
 		Type:           types.Text().WithCharLen(1024),
 		CreateRequired: true,
 		Placeholder:    `"subscribers.xlsx"`,
-		Description:    "The file path relative to the root path defined in the action's connection. Refer to the file storage connector documentation for details on the specific format.",
+		Description:    "The file path relative to the root path defined in the file storage connection. Refer to the file storage connector documentation for details on the specific format.",
 	}
 
 	sheetParameter := types.Property{
@@ -59,8 +59,8 @@ func init() {
 		Name:        "compression",
 		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
 		Placeholder: `"Gzip"`,
-		Description: "The method used to compress the file, if applicable.\n\n" +
-			"**Note:** An Excel file is inherently compressed, so no compression method needs to be specified unless the file has been further compressed.",
+		Description: "The compression format of the file. It is an empty if the file is not compressed.\n\n" +
+			"Note that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed.",
 	}
 
 	formatSettingsParameter := types.Property{
@@ -68,18 +68,20 @@ func init() {
 		Type:        types.Parameter("Settings"),
 		Nullable:    true,
 		Placeholder: `{ "HasColumnNames": true }`,
-		Description: "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
+		Description: "The settings for the file format. Refer to the documentation for the [file connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` field may be omitted or set to null.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "source-file-actions",
-		Name:        "Source file actions",
-		Description: "A source file action is an action that extracts user data from a file and loads it into the workspace data warehouse for further processing and analysis.",
+		ID:   "actions-import-users-from-files",
+		Name: "Import users from files",
+		Description: "Actions enable the import of user data from a file into the unified data warehouse. " +
+			"Each import operation retrieves the latest user data from the specified file, ensuring that the unified data warehouse is kept up to date with the selected fields.\n\n" +
+			"While the three endpoints are consistent across all actions, this section focuses specifically on importing users from a file.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Create a source file action",
-				Description: "Create a source file action.",
+				Name:        "Create action",
+				Description: "Create a source action that imports users from a file.",
 				Method:      POST,
 				URL:         "/v0/actions",
 				Parameters: []types.Property{
@@ -89,7 +91,14 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The connection for which the action should be created. It should be a **source file storage** connection.",
+						Description:    "The ID of the connection from which to read the file. It must be a source file storage.",
+					},
+					{
+						Name:           "target",
+						Type:           types.Text().WithValues("Users"),
+						CreateRequired: true,
+						Placeholder:    `"Users"`,
+						Description:    "The entity on which the action operates, which must be `\"Users\"` in order to create an action that imports users.",
 					},
 					{
 						Name:        "enabled",
@@ -97,6 +106,11 @@ func init() {
 						Placeholder: "true",
 						Description: "Indicate if the action is enabled once created.",
 					},
+					formatParameter,
+					pathParameter,
+					sheetParameter,
+					compressionParameter,
+					formatSettingsParameter,
 					filterParameter,
 					{
 						Name:           "inSchema",
@@ -116,11 +130,6 @@ func init() {
 						CreateRequired: true,
 						Placeholder:    `{...}`,
 					},
-					formatParameter,
-					pathParameter,
-					sheetParameter,
-					compressionParameter,
-					formatSettingsParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -141,8 +150,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update a source file action",
-				Description: "Update a source file action.",
+				Name:        "Update action",
+				Description: "Update a source action that imports users from a file.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id",
 				Parameters: []types.Property{
@@ -158,8 +167,12 @@ func init() {
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicates if the action is enable.",
+						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
+					pathParameter,
+					sheetParameter,
+					compressionParameter,
+					filterParameter,
 					{
 						Name:           "inSchema",
 						Type:           types.Parameter("schema"),
@@ -172,16 +185,12 @@ func init() {
 						CreateRequired: true,
 						Placeholder:    `{...}`,
 					},
-					filterParameter,
 					{
 						Name:           "transformation",
 						Type:           types.Parameter("transformation"),
 						CreateRequired: true,
 						Placeholder:    `{...}`,
 					},
-					pathParameter,
-					sheetParameter,
-					compressionParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -192,37 +201,17 @@ func init() {
 				},
 			},
 			{
-				Name:        "Set schedule period",
-				Description: "Sets the frequency at which a source file action imports users. Both the action and its connection must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
-				Method:      PUT,
-				URL:         "/v0/actions/:id/schedule",
-				Parameters: []types.Property{
-					{
-						Name:           "id",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "705981339",
-						Description:    "The ID of the source file action on users.",
-					},
-					setSchedulerPeriodParameter,
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "action does not exist"},
-				},
-			},
-			{
-				Name:        "Get a source file action",
-				Description: "Get a source file action.",
+				Name:        "Get action",
+				Description: "Get a source action that imports users from a file.",
 				Method:      GET,
 				URL:         "/v0/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
 						Type:           types.Int(32),
+						CreateRequired: true,
 						Placeholder:    "705981339",
 						Description:    "The ID of the source file action.",
-						CreateRequired: true,
 					},
 				},
 				Response: &Response{
@@ -233,18 +222,24 @@ func init() {
 							Placeholder: "705981339",
 							Description: "The ID of the source action.",
 						},
+						nameParameter,
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
-							Description: "The ID of the action's connection.",
+							Description: "The ID of the connection from which the file is read. It is a source file storage.",
 						},
-						nameParameter,
+						{
+							Name:        "target",
+							Type:        types.Text().WithValues("Users"),
+							Placeholder: `"Users"`,
+							Description: "The entity on which the action operates. It is always `\"Users\"` for an action that imports users.",
+						},
 						{
 							Name:        "enabled",
 							Type:        types.Boolean(),
 							Placeholder: "true",
-							Description: "Indicates if the action is enable.",
+							Description: "Indicates if the action is enabled.",
 						},
 						{
 							Name:        "running",
@@ -253,7 +248,7 @@ func init() {
 							Description: "Indicates if the action is running.",
 						},
 						scheduleStartParameter,
-						schedulePeriodParameter,
+						importSchedulePeriodParameter,
 						{
 							Name:           "inSchema",
 							Type:           types.Parameter("schema"),
@@ -277,69 +272,6 @@ func init() {
 						pathParameter,
 						sheetParameter,
 						compressionParameter,
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "action does not exist"},
-				},
-			},
-			{
-				Name: "Import users from a file",
-				Description: "Starts a source file action execution to import users from the action's file into the workspace’s data warehouse, applying the action's transformation.\n\n" +
-					"It returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\n" +
-					"Both the action and its connection must be enabled.",
-				Method: POST,
-				URL:    "/v0/actions/:id/exec",
-				Parameters: []types.Property{
-					{
-						Name:           "id",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "705981339",
-						Description:    "The ID of the source file action.",
-					},
-					{
-						Name:           "reload",
-						Type:           types.Boolean(),
-						CreateRequired: false,
-						Placeholder:    "false",
-						Description: " Indicates whether the users should be re-imported from scratch. " +
-							"If set to false or omitted, only new users and those modified since the last import are processed.",
-					},
-				},
-				Response: &Response{
-					Parameters: []types.Property{
-						{
-							Name:        "id",
-							Type:        types.Int(32),
-							Placeholder: "609461413",
-							Description: "The ID of the started execution.",
-						},
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "action does not exist"},
-					{422, ActionDisabled, "action is disabled"},
-					{422, ExecutionInProgress, "action is already in progress"},
-					{422, InspectionMode, "data warehouse is in inspection mode"},
-					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-				},
-			},
-
-			{
-				Name:        "Delete a source file action",
-				Description: "Delete a source file action.",
-				Method:      DELETE,
-				URL:         "/v0/actions/:id",
-				Parameters: []types.Property{
-					{
-						Name:           "id",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "705981339",
-						Description:    "The ID of the source file action.",
 					},
 				},
 				Errors: []Error{

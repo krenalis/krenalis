@@ -14,8 +14,8 @@ import (
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "connection-database",
-		Name:        "Connection database",
+		ID:          "database-connections",
+		Name:        "Database connections",
 		Description: "...",
 		Endpoints: []*Endpoint{
 			{

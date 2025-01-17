@@ -13,6 +13,14 @@ import (
 
 func init() {
 
+	nameParameter := types.Property{
+		Name:           "name",
+		Type:           types.Text().WithCharLen(60),
+		CreateRequired: true,
+		Placeholder:    `"Mixpanel"`,
+		Description:    "The action's name.",
+	}
+
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -23,16 +31,32 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "destination-actions-on-events",
-		Name:        "Destination actions on events",
-		Description: "A destination action on events is an action that streams events received from a source connection to an app in real time.",
+		ID:   "actions-send-events-to-apps",
+		Name: "Send events to apps",
+		Description: "Actions enable the sending of events from the unified data warehouse to an app.\n\n" +
+			"While the three endpoints are consistent across all actions, this section focuses specifically on sending events to an app.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Create a destination action on events",
-				Description: "Create a new destination action on events.",
+				Name:        "Create action",
+				Description: "Create a destination action that send events to an app.",
 				Method:      POST,
 				URL:         "/v0/actions",
 				Parameters: []types.Property{
+					nameParameter,
+					{
+						Name:           "connection",
+						Type:           types.Int(32),
+						CreateRequired: true,
+						Placeholder:    "753166510",
+						Description:    "The ID of the connection to which the events will be sent. It must be a source app that supports events.",
+					},
+					{
+						Name:           "target",
+						Type:           types.Text().WithValues("Events"),
+						CreateRequired: true,
+						Placeholder:    `"Events"`,
+						Description:    "The entity on which the action operates, which must be `\"Events\"` in order to create an action that sends events.",
+					},
 					{
 						Name:           "eventType",
 						Type:           types.Text(),
@@ -40,20 +64,6 @@ func init() {
 						Placeholder:    `"send_add_to_cart"`,
 						Description: "The action's event type.\n\n" +
 							" It must be one of the event types supported by the connection of the action.",
-					},
-					{
-						Name:           "name",
-						Type:           types.Text().WithCharLen(60),
-						CreateRequired: true,
-						Placeholder:    `"Mixpanel"`,
-						Description:    "The action's name.",
-					},
-					{
-						Name:           "connection",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "753166510",
-						Description:    "The connection for which the action should be created. It should be a destination app connection that support events.",
 					},
 					{
 						Name:        "enabled",
@@ -94,8 +104,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update a destination action on events",
-				Description: "Update a destination action on events.",
+				Name:        "Update action",
+				Description: "Update a destination action that send events to an app.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id",
 				Parameters: []types.Property{
@@ -104,20 +114,14 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the destination action on event.",
+						Description:    "The ID of the destination app action on event.",
 					},
-					{
-						Name:           "name",
-						Type:           types.Text().WithCharLen(60),
-						CreateRequired: true,
-						Placeholder:    `"Mixpanel"`,
-						Description:    "The action's name.",
-					},
+					nameParameter,
 					{
 						Name:        "enabled",
 						Type:        types.Boolean(),
 						Placeholder: "true",
-						Description: "Indicates if the action is enable.",
+						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
 					{
@@ -140,17 +144,17 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get a destination action on events",
-				Description: "Get a destination action on events.",
+				Name:        "Get action",
+				Description: "Get a destination action that send events to an app.",
 				Method:      GET,
 				URL:         "/v0/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
 						Type:           types.Int(32),
-						Placeholder:    "705981339",
-						Description:    "The ID of the destination action on event.",
 						CreateRequired: true,
+						Placeholder:    "705981339",
+						Description:    "The ID of the destination app action on event.",
 					},
 				},
 				Response: &Response{
@@ -159,25 +163,32 @@ func init() {
 							Name:        "id",
 							Type:        types.Int(32),
 							Placeholder: "705981339",
-							Description: "The ID of the destination action.",
+							Description: "The ID of the destination app action on event.",
 						},
+						nameParameter,
 						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
-							Description: "The ID of the action's connection.",
+							Description: "The ID of the connection to which the events will be sent. It is a destination app that supports events.",
 						},
 						{
-							Name:        "name",
-							Type:        types.Text().WithCharLen(60),
-							Placeholder: `"Mixpanel"`,
-							Description: "The action's name.",
+							Name:        "target",
+							Type:        types.Text().WithValues("Events"),
+							Placeholder: `"Events"`,
+							Description: "The entity on which the action operates. It is always `\"Events\"` for an action that sends events.",
+						},
+						{
+							Name:        "eventType",
+							Type:        types.Text(),
+							Placeholder: `"send_add_to_cart"`,
+							Description: "The action's event type.",
 						},
 						{
 							Name:        "enabled",
 							Type:        types.Boolean(),
 							Placeholder: "true",
-							Description: "Indicates if the action is enable.",
+							Description: "Indicates if the action is enabled.",
 						},
 						filterParameter,
 						{
@@ -192,25 +203,6 @@ func init() {
 							Nullable:    true,
 							Placeholder: `{...}`,
 						},
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "action does not exist"},
-				},
-			},
-			{
-				Name:        "Delete a destination action on events",
-				Description: "Delete a destination action on events.",
-				Method:      DELETE,
-				URL:         "/v0/actions/:id",
-				Parameters: []types.Property{
-					{
-						Name:           "id",
-						Type:           types.Int(32),
-						CreateRequired: true,
-						Placeholder:    "705981339",
-						Description:    "The ID of the destination action on event.",
 					},
 				},
 				Errors: []Error{

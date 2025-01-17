@@ -143,33 +143,30 @@
                                 <div>Connections</div>
                                 <ul>
                                     <li>{{ item(`api/connections`, `Connections`) }}</li>
-                                    <li>{{ item(`api/connection-app`, `Connection app`) }}</li>
-                                    <li>{{ item(`api/connection-files`, `Connection files`) }}</li>
-                                    <li>{{ item(`api/connection-database`, `Connection database`) }}</li>
+                                    <li>{{ item(`api/app-connections`, `App connections`) }}</li>
+                                    <li>{{ item(`api/file-connections`, `File connections`) }}</li>
+                                    <li>{{ item(`api/database-connections`, `Database connections`) }}</li>
                                     <li>{{ item(`api/connection-keys`, `Connection keys`) }}</li>
                                     <li>{{ item(`api/connection-identities`, `Connection identities`) }}</li>
                                     <li>{{ item(`api/linked-connections`, `Linked connections`) }}</li>
                                 </ul>
                             </li>
                             <li>
-                                <div>Source actions</div>
+                                <div>Actions</div>
                                 <ul>
-                                    <li>{{ item(`api/source-app-actions-on-users`, `App users`) }}</li>
-                                    <li>{{ item(`api/source-database-actions`, `Database users`) }}</li>
-                                    <li>{{ item(`api/source-file-actions`, `File users`) }}</li>
-                                    <li>{{ item(`api/source-actions-on-events`, `Website events`) }}</li>
-                                    <li>{{ item(`api/source-actions-on-events`, `Mobile events`) }}</li>
-                                    <li>{{ item(`api/source-actions-on-events`, `Server events`) }}</li>
-                                </ul>
-                            </li>
-                            <li>
-                                <div>Destination actions</div>
-                                <ul>
-                                    <li>{{ item(`api/destination-actions-on-events`, `App events`) }}</li>
+                                    <li>{{ item(`api/actions`, `Actions`) }}</li>
+                                    <li>{{ item(`api/actions-import-users-from-apps`, `Import users from apps`) }}</li>
+                                    <li>{{ item(`api/actions-import-users-from-databases`, `Import users from databases`) }}</li>
+                                    <li>{{ item(`api/actions-import-users-from-files`, `Import users from files`) }}</li>
+                                    <li>{{ item(`api/actions-import-users-from-events`, `Import users from events`) }}</li>
+                                    <li>{{ item(`api/actions-import-events`, `Import events`) }}</li>
+                                    <li>{{ item(`api/actions-send-events-to-apps`, `Send events to apps`) }}</li>
+                                    <li>{{ item(`api/actions-export-users-to-apps`, `Export users to apps`) }}</li>
+                                    <li>{{ item(`api/actions-export-users-to-databases`, `Export users to databases`) }}</li>
+                                    <li>{{ item(`api/actions-export-users-to-files`, `Export users to files`) }}</li>
                                 </ul>
                             </li>
                             <li>{{ item(`api/executions`, `Executions`) }}</li>
-                            <li>{{ item(`api/action-types`, `Action types`) }}</li>
                             <li>{{ item(`api/identity-resolution`, `Identity resolution`) }}</li>
                             <li>{{ item(`api/metrics-and-errors`, `Metrics and errors`) }}</li>
                             <li>{{ item(`api/system`, `System`) }}</li>
