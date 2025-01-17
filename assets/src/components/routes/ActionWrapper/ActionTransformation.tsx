@@ -2337,7 +2337,13 @@ const TransformationProperty = ({
 							/>
 						</SlTooltip>
 					)}
-					<span className='fullscreen-transformation__property-name-text'>{property.name}</span>
+					<span
+						className='fullscreen-transformation__property-name-text'
+						style={{ cursor: transformationType === 'function' ? 'pointer' : 'default' }}
+						onClick={transformationType === 'function' ? () => onChangeSelectedPath(path) : null}
+					>
+						{property.name}
+					</span>
 					<span className='fullscreen-transformation__property-type'>
 						{side === 'input' && property.readOptional && <span>optional</span>}
 						<span>
