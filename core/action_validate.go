@@ -587,7 +587,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !ok {
 			return errors.BadRequest("table key %q not found within output schema", action.TableKey)
 		}
-		if !canBeUsedAsTableKeyProperty(p.Type.Kind()) {
+		if !canBeUsedAsTableKey(p.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as table key", p.Type)
 		}
 		if m := action.Transformation.Mapping; m != nil {
@@ -696,9 +696,9 @@ func canBeUsedAsMatchingProp(k types.Kind) bool {
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
-// canBeUsedAsTableKeyProperty reports whether a type with kind k can be used as
-// a table key when exporting users to databases.
-func canBeUsedAsTableKeyProperty(k types.Kind) bool {
+// canBeUsedAsTableKey reports whether a type with kind k can be used as a
+// table key when exporting users to databases.
+func canBeUsedAsTableKey(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
