@@ -2349,8 +2349,8 @@ const TransformationProperty = ({
 							{language === ''
 								? property.type.name
 								: language === 'Python'
-									? toPythonType(property.type)
-									: toJavascriptType(property.type)}
+									? toPythonType(property.type, property.nullable)
+									: toJavascriptType(property.type, property.nullable)}
 						</span>
 						{side === 'input' && property.readOptional && <span>- optional</span>}
 						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
@@ -2430,90 +2430,131 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 	return isVerticallyVisible;
 }
 
-function toJavascriptType(type: Type) {
-	// TODO: add additional information (property is nullable, property values,
-	//  property length). This needs the full type definition and not the
-	// type name only.
+function toJavascriptType(type: Type, nullable: boolean) {
+	// TODO: add additional information (property values, property
+	// length).
 	const name = type.name;
+
+	let t: string;
 	switch (name) {
 		case 'Boolean':
-			return 'Boolean';
+			t = 'boolean';
+			break;
 		case 'Int':
 		case 'Uint':
 			if (type.bitSize === 8 || type.bitSize === 16 || type.bitSize === 24 || type.bitSize === 32) {
-				return 'Number';
+				t = 'number';
 			} else {
-				return 'BigInt';
+				t = 'bigint';
 			}
+			break;
 		case 'Float':
-			return 'Number';
+			t = 'number';
+			break;
 		case 'Decimal':
-			return 'String';
+			t = 'string';
+			break;
 		case 'DateTime':
 		case 'Date':
 		case 'Time':
 		case 'Year':
-			return 'Date';
+			t = 'Date';
+			break;
 		case 'UUID':
-			return 'String';
+			t = 'string';
+			break;
 		case 'JSON':
-			return 'String';
+			t = 'string';
+			break;
 		case 'Inet':
-			return 'String';
+			t = 'string';
+			break;
 		case 'Text':
-			return 'String';
+			t = 'string';
+			break;
 		case 'Array':
-			return 'Array';
+			t = 'Array';
+			break;
 		case 'Object':
-			return 'Object';
+			t = 'Object';
+			break;
 		case 'Map':
-			return 'Map';
+			t = 'Map';
+			break;
 		default:
 			console.error(`schema contains unknow property type ${name}`);
-			return 'unknown property type';
+			'unknown property type';
 	}
+
+	if (nullable) {
+		t += ' | null';
+	}
+
+	return t;
 }
 
-function toPythonType(type: Type) {
-	// TODO: add additional information (property is nullable, property values,
-	// property length). This needs the full type definition and not the
-	// type name only.
+function toPythonType(type: Type, nullable: boolean) {
+	// TODO: add additional information (property values, property
+	// length).
+
+	let t: string;
 	switch (type.name) {
 		case 'Boolean':
-			return 'bool';
+			t = 'bool';
+			break;
 		case 'Int':
 		case 'Uint':
-			return 'int';
+			t = 'int';
+			break;
 		case 'Float':
-			return 'float';
+			t = 'float';
+			break;
 		case 'Decimal':
-			return 'decimal.Decimal';
+			t = 'decimal.Decimal';
+			break;
 		case 'DateTime':
-			return 'datetime.datetime';
+			t = 'datetime.datetime';
+			break;
 		case 'Date':
-			return 'datetime.date';
+			t = 'datetime.date';
+			break;
 		case 'Time':
-			return 'datetime.time';
+			t = 'datetime.time';
+			break;
 		case 'Year':
-			return 'int';
+			t = 'int';
+			break;
 		case 'UUID':
-			return 'uuid.UUID';
+			t = 'uuid.UUID';
+			break;
 		case 'JSON':
-			return 'str';
+			t = 'str';
+			break;
 		case 'Inet':
-			return 'str';
+			t = 'str';
+			break;
 		case 'Text':
-			return 'str';
+			t = 'str';
+			break;
 		case 'Array':
-			return 'list';
+			t = 'list';
+			break;
 		case 'Object':
-			return 'dict';
+			t = 'dict';
+			break;
 		case 'Map':
-			return 'dict';
+			t = 'dict';
+			break;
 		default:
 			console.error(`schema contains unknow property type ${type}`);
 			return 'unknown property type';
 	}
+
+	if (nullable) {
+		t += ' | None';
+	}
+
+	return t;
 }
 
 function removeTrailingS(str: string) {
