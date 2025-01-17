@@ -633,7 +633,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 			}
 		},
 		"tableName": "users",
-		"tableKeyProperty": "email"
+		"tableKey": "email"
 	}
 	`;
 

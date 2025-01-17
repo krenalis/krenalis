@@ -5,7 +5,7 @@ Schemas,,,,,,,,,,
 ,Input schema in UI,App user (source),Query,File,Event,(none),User,Event,User,User
 ,Output schema in UI,User,User,User,User,(none),App user (destination),"Event Type (none, if Event Type hasn’t one)",Table,(none)
 ,Input schema properties in state,Transformed properties,Transformed properties + identity property + last change time property,Transformed properties + identity property + last change time property,Event schema properties,Event schema properties,Filter properties + Transformed properties + internal matching property,Event schema properties,Filter properties + Transformed properties,User schema properties
-,Output schema properties in state,Transformed properties,Transformed properties,Transformed properties,Transformed properties,(none),Transformed properties + external matching property,Transformed properties,Transformed properties + table key property,(none)
+,Output schema properties in state,Transformed properties,Transformed properties,Transformed properties,Transformed properties,(none),Transformed properties + external matching property,Transformed properties,Transformed properties + table key,(none)
 Input schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,"(event schema, not relevant)","(event schema, not relevant)",Must be empty,"(event schema, not relevant)",Must be empty,Must be empty
 ,CreateRequired,Must be false,Must be false,Must be false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
@@ -24,7 +24,7 @@ Transformation,,,,,,,,,,
 ,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
 Additional information,,,,,,,,,,
 ,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
-,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key property,Ordering property path
+,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Ordering property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,
 ,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"
@@ -36,7 +36,7 @@ Transformation,,,,,,,,,,
 ,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
 Additional information,,,,,,,,,,
 ,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
-,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key property,Ordering property path
+,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Ordering property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,
 ,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"

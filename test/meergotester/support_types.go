@@ -43,8 +43,8 @@ type Action struct {
 	ExportMode               *ExportMode     `json:"exportMode"`
 	Matching                 *Matching       `json:"matching"`
 	ExportOnDuplicates       *bool           `json:"exportOnDuplicates"`
-	Table                    *string         `json:"table"`
-	TableKeyProperty         *string         `json:"tableKeyProperty"`
+	TableName                *string         `json:"tableName"`
+	TableKey                 *string         `json:"tableKey"`
 	IdentityProperty         *string         `json:"identityProperty"`
 	LastChangeTimeProperty   *string         `json:"lastChangeTimeProperty"`
 	LastChangeTimeFormat     *string         `json:"lastChangeTimeFormat"`
@@ -68,7 +68,7 @@ type ActionToSet struct {
 	Matching                 Matching        `json:"matching"`
 	ExportOnDuplicates       bool            `json:"exportOnDuplicates"`
 	TableName                string          `json:"tableName"`
-	TableKeyProperty         string          `json:"tableKeyProperty"`
+	TableKey                 string          `json:"tableKey"`
 	IdentityProperty         string          `json:"identityProperty"`
 	LastChangeTimeProperty   string          `json:"lastChangeTimeProperty"`
 	LastChangeTimeFormat     string          `json:"lastChangeTimeFormat"`

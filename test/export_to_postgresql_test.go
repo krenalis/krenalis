@@ -81,10 +81,10 @@ func TestExportToPostgreSQL(t *testing.T) {
 
 	// Export to PostgreSQL.
 	exportAction := c.CreateAction(pgsql, "Users", meergotester.ActionToSet{
-		Name:             "Export users to PostgreSQL",
-		Enabled:          true,
-		TableName:        "test_export_to_db",
-		TableKeyProperty: "email",
+		Name:      "Export users to PostgreSQL",
+		Enabled:   true,
+		TableName: "test_export_to_db",
+		TableKey:  "email",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -116,10 +116,10 @@ func TestExportToPostgreSQL(t *testing.T) {
 
 	// Update the action to export the empty string for full_name.
 	c.UpdateAction(pgsql, exportAction, meergotester.ActionToSet{
-		Name:             "Export users to PostgreSQL",
-		Enabled:          true,
-		TableName:        "test_export_to_db",
-		TableKeyProperty: "email",
+		Name:      "Export users to PostgreSQL",
+		Enabled:   true,
+		TableName: "test_export_to_db",
+		TableKey:  "email",
 		InSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),

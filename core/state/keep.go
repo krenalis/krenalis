@@ -285,7 +285,7 @@ type CreateAction struct {
 	Matching                 Matching
 	ExportOnDuplicates       bool
 	TableName                string
-	TableKeyProperty         string
+	TableKey                 string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
@@ -323,7 +323,7 @@ func (state *State) createAction(n notification) {
 		Matching:                 e.Matching,
 		ExportOnDuplicates:       e.ExportOnDuplicates,
 		TableName:                e.TableName,
-		TableKeyProperty:         e.TableKeyProperty,
+		TableKey:                 e.TableKey,
 		IdentityProperty:         e.IdentityProperty,
 		LastChangeTimeProperty:   e.LastChangeTimeProperty,
 		LastChangeTimeFormat:     e.LastChangeTimeFormat,
@@ -1017,7 +1017,7 @@ type UpdateAction struct {
 	Matching                 Matching
 	ExportOnDuplicates       bool
 	TableName                string
-	TableKeyProperty         string
+	TableKey                 string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string
@@ -1052,7 +1052,7 @@ func (state *State) updateAction(n notification) {
 		a.Matching = e.Matching
 		a.ExportOnDuplicates = e.ExportOnDuplicates
 		a.TableName = e.TableName
-		a.TableKeyProperty = e.TableKeyProperty
+		a.TableKey = e.TableKey
 		a.IdentityProperty = e.IdentityProperty
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat

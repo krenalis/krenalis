@@ -55,8 +55,8 @@ type Action struct {
 	ExportMode               *ExportMode     `json:"exportMode"`
 	Matching                 *Matching       `json:"matching"`
 	ExportOnDuplicates       *bool           `json:"exportOnDuplicates"`
-	Table                    *string         `json:"table"`
-	TableKeyProperty         *string         `json:"tableKeyProperty"`
+	TableName                *string         `json:"tableName"`
+	TableKey                 *string         `json:"tableKey"`
 	IdentityProperty         *string         `json:"identityProperty"`
 	LastChangeTimeProperty   *string         `json:"lastChangeTimeProperty"`
 	LastChangeTimeFormat     *string         `json:"lastChangeTimeFormat"`
@@ -396,7 +396,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		Matching:                 state.Matching(action.Matching),
 		ExportOnDuplicates:       action.ExportOnDuplicates,
 		TableName:                action.TableName,
-		TableKeyProperty:         action.TableKeyProperty,
+		TableKey:                 action.TableKey,
 		IdentityProperty:         action.IdentityProperty,
 		LastChangeTimeProperty:   action.LastChangeTimeProperty,
 		LastChangeTimeFormat:     action.LastChangeTimeFormat,
@@ -506,13 +506,13 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
 			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
 			"compression = $17, format_settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
-			"allow_duplicates = $22, table_name = $23, table_key_property = $24, identity_property = $25, "+
+			"allow_duplicates = $22, table_name = $23, table_key = $24, identity_property = $25, "+
 			"reload = reload OR $26, last_change_time_property = $27, last_change_time_format = $28, "+
 			"file_ordering_property_path = $29\nWHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.FormatSettings),
-			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKeyProperty,
+			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKey,
 			n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ID,
 		)
 		if err != nil {
@@ -602,7 +602,7 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	this.Compression = Compression(action.Compression)
 	if action.TableName != "" {
 		table := action.TableName
-		this.Table = &table
+		this.TableName = &table
 	}
 	if action.ExportMode != "" {
 		mode := action.ExportMode
@@ -612,9 +612,9 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		this.Matching = (*Matching)(&matching)
 		this.ExportOnDuplicates = &exportOnDuplicates
 	}
-	if action.TableKeyProperty != "" {
-		key := action.TableKeyProperty
-		this.TableKeyProperty = &key
+	if action.TableKey != "" {
+		key := action.TableKey
+		this.TableKey = &key
 	}
 	if action.IdentityProperty != "" {
 		p := action.IdentityProperty
@@ -737,10 +737,10 @@ type ActionToSet struct {
 	// It cannot be longer than MaxTableNameSize runes.
 	TableName string `json:"tableName"`
 
-	// TableKeyProperty is the name of the property used as table key when
-	// exporting users to databases.
+	// TableKey is the name of the property used as table key when exporting
+	// users to databases.
 	// It is the empty string for any other type of action.
-	TableKeyProperty string `json:"tableKeyProperty"`
+	TableKey string `json:"tableKey"`
 
 	// IdentityProperty is the property name used as identity when importing
 	// from a file or from a database.

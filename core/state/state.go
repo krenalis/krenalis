@@ -1074,7 +1074,7 @@ type Action struct {
 	Matching                 Matching
 	ExportOnDuplicates       bool
 	TableName                string
-	TableKeyProperty         string
+	TableKey                 string
 	IdentityProperty         string
 	LastChangeTimeProperty   string
 	LastChangeTimeFormat     string

@@ -132,7 +132,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.fields.includes('Filter') && !isFileStorageImport && <ActionFilters />}
 					{actionType!.fields.includes('Query') && <ActionQuery />}
 					{actionType!.fields.includes('File') && <ActionFile />}
-					{actionType!.fields.includes('Table') && <ActionTable />}
+					{actionType!.fields.includes('TableName') && <ActionTable />}
 					{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
 					{actionType!.fields.includes('Matching') && <ActionMatching ref={matchingSectionRef} />}
 					{actionType!.fields.includes('ExportOnDuplicates') && <ActionExportOnDuplicates />}

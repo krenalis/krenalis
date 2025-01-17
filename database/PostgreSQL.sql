@@ -104,7 +104,7 @@ CREATE TABLE actions (
     matching_out text NOT NULL,
     allow_duplicates boolean NOT NULL,
     table_name varchar(1024) NOT NULL DEFAULT '',
-    table_key_property text NOT NULL,
+    table_key text NOT NULL,
     identity_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',

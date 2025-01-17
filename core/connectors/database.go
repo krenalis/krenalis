@@ -236,11 +236,11 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 	}
 	properties := columnsToProperties(columns, state.Destination)
 	for i, p := range properties {
-		// The table key property cannot be nullable. This sets it as not nullable
-		// as a temporary workaround, until we can ensure that all connector
+		// The table key cannot be nullable. This sets it as not nullable as a
+		// temporary workaround, until we can ensure that all connector
 		// implementations correctly handle the Nullable attribute for each property
 		// (see issue #374).
-		if p.Name == action.TableKeyProperty {
+		if p.Name == action.TableKey {
 			properties[i].Nullable = false
 		}
 	}
@@ -257,7 +257,7 @@ func (database *Database) Writer(ctx context.Context, action *state.Action, ack 
 		table: meergo.Table{
 			Name:    action.TableName,
 			Columns: columnsOfType(action.OutSchema),
-			Keys:    []string{action.TableKeyProperty},
+			Keys:    []string{action.TableKey},
 		},
 		schema: action.OutSchema,
 		inner:  database.inner,

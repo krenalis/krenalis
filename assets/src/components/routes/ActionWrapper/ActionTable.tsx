@@ -62,13 +62,13 @@ const ActionTable = () => {
 
 	const onTableKeyPropertyUpdate = (_: string, value: string) => {
 		const a = { ...action };
-		a.tableKeyProperty = value;
+		a.tableKey = value;
 		setAction(a);
 	};
 
 	const onTableKeyPropertySelect = (_: string, value: string) => {
 		const a = { ...action };
-		a.tableKeyProperty = value;
+		a.tableKey = value;
 		setAction(a);
 	};
 
@@ -138,7 +138,7 @@ const ActionTable = () => {
 				>
 					<div className='action__table-key-property' ref={tableKeyRef}>
 						<Combobox
-							value={action.tableKeyProperty}
+							value={action.tableKey}
 							onInput={onTableKeyPropertyUpdate}
 							name='table-key'
 							items={tableKeyComboboxItems}

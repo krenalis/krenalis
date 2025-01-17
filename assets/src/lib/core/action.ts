@@ -162,7 +162,7 @@ type ActionTypeField =
 	| 'Query'
 	| 'File'
 	| 'FileOrderingProperty'
-	| 'Table';
+	| 'TableName';
 
 interface TransformedActionType {
 	name: string;
@@ -193,7 +193,7 @@ interface TransformedAction {
 	query?: string | null;
 	path?: string | null;
 	table?: string | null;
-	tableKeyProperty?: string | null;
+	tableKey?: string | null;
 	sheet?: string | null;
 	identityProperty?: string | null;
 	lastChangeTimeProperty?: string | null;
@@ -524,7 +524,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		query: action.query,
 		path: action.path,
 		table: action.table,
-		tableKeyProperty: action.tableKeyProperty,
+		tableKey: action.tableKey,
 		sheet: action.sheet,
 		identityProperty: action.identityProperty,
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
@@ -982,44 +982,44 @@ const transformInActionToSet = async (
 		connection.type === 'Database' && connection.role === 'Destination' && actionType.target === 'Users';
 
 	if (isDatabaseExportOnUsers) {
-		// the table key property must be defined for database type actions that
+		// the table key must be defined for database type actions that
 		// export users.
-		if (action.tableKeyProperty == null || action.tableKeyProperty === '') {
-			throw new Error('Table key property cannot be empty');
+		if (action.tableKey == null || action.tableKey === '') {
+			throw new Error('Table key cannot be empty');
 		}
 
-		// the table key property must be a valid property.
-		const property = flattenedOutputSchema[action.tableKeyProperty];
+		// the table key must be a valid property.
+		const property = flattenedOutputSchema[action.tableKey];
 		if (property == null) {
-			throw new Error('Table key property must be a valid property');
+			throw new Error('Table key must be a valid property');
 		}
 
-		// the table key property must necessarily be transformed.
+		// the table key must necessarily be transformed.
 		if (mapping == null && func == null) {
-			throw new Error('Table key property must be transformed');
+			throw new Error('Table key must be transformed');
 		} else if (mapping != null) {
-			if (!Object.keys(mapping).includes(action.tableKeyProperty)) {
-				throw new Error('Table key property must be transformed');
+			if (!Object.keys(mapping).includes(action.tableKey)) {
+				throw new Error('Table key must be transformed');
 			}
 		} else if (func != null) {
-			if (!func.outPaths.includes(action.tableKeyProperty)) {
-				throw new Error('Table key property must be transformed');
+			if (!func.outPaths.includes(action.tableKey)) {
+				throw new Error('Table key must be transformed');
 			}
 		}
 
-		// ensure that the table key property is always non-nullable.
+		// ensure that the table key is always non-nullable.
 		for (let i = 0; i < outSchema.properties.length; i++) {
 			const p = outSchema.properties[i];
-			if (p.name === action.tableKeyProperty) {
+			if (p.name === action.tableKey) {
 				p.nullable = false;
 				break;
 			}
 		}
 	} else {
-		// the table key property must be empty for actions that are not
+		// the table key must be empty for actions that are not
 		// database type actions that export users.
-		if (action.tableKeyProperty != null && action.tableKeyProperty !== '') {
-			throw new Error('Table key property must be empty for this kind of action');
+		if (action.tableKey != null && action.tableKey !== '') {
+			throw new Error('Table key must be empty for this kind of action');
 		}
 	}
 
@@ -1050,7 +1050,7 @@ const transformInActionToSet = async (
 		query: query!,
 		path: action.path,
 		tableName: action.table,
-		tableKeyProperty: action.tableKeyProperty,
+		tableKey: action.tableKey,
 		sheet: action.sheet,
 		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
 		identityProperty: action.identityProperty,
@@ -1117,9 +1117,9 @@ const computeDefaultAction = (
 	if (fields.includes('FileOrderingProperty')) {
 		action.fileOrderingPropertyPath = '';
 	}
-	if (fields.includes('Table')) {
+	if (fields.includes('TableName')) {
 		action.table = '';
-		action.tableKeyProperty = '';
+		action.tableKey = '';
 	}
 	if (fields.includes('ExportMode')) {
 		action.exportMode = Object.keys(EXPORT_MODE_OPTIONS)[0] as ExportMode;
@@ -1192,7 +1192,7 @@ const computeActionTypeFields = (
 	}
 
 	if (connection.type === 'Database' && connection.role === 'Destination') {
-		fields.push('Table');
+		fields.push('TableName');
 	}
 
 	return fields;

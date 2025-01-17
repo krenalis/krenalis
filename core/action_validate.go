@@ -394,12 +394,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() && !inSchemaIsEventSchema {
-		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ, action.TableKeyProperty); err != nil {
+		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ, action.TableKey); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
 	if outSchema.Valid() {
-		if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ, action.TableKeyProperty); err != nil {
+		if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ, action.TableKey); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
@@ -574,37 +574,37 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if action.TableName == "" {
 			return errors.BadRequest("table name cannot be empty for destination database actions")
 		}
-		if action.TableKeyProperty == "" {
-			return errors.BadRequest("table key property cannot be empty for destination database actions")
+		if action.TableKey == "" {
+			return errors.BadRequest("table key cannot be empty for destination database actions")
 		}
-		if !types.IsValidPropertyName(action.TableKeyProperty) {
-			return errors.BadRequest("table key property is not a valid property name")
+		if !types.IsValidPropertyName(action.TableKey) {
+			return errors.BadRequest("table key is not a valid property name")
 		}
 		if !outSchema.Valid() {
 			return errors.BadRequest("out schema must be valid")
 		}
-		p, ok := outSchema.Property(action.TableKeyProperty)
+		p, ok := outSchema.Property(action.TableKey)
 		if !ok {
-			return errors.BadRequest("table key property %q not found within output schema", action.TableKeyProperty)
+			return errors.BadRequest("table key %q not found within output schema", action.TableKey)
 		}
 		if !canBeUsedAsTableKeyProperty(p.Type.Kind()) {
-			return errors.BadRequest("type %s cannot be used as table key property", p.Type)
+			return errors.BadRequest("type %s cannot be used as table key", p.Type)
 		}
 		if m := action.Transformation.Mapping; m != nil {
-			if _, ok := m[action.TableKeyProperty]; !ok {
-				return errors.BadRequest("an expression must be mapped to the table key property")
+			if _, ok := m[action.TableKey]; !ok {
+				return errors.BadRequest("an expression must be mapped to the table key")
 			}
 		} else if t := action.Transformation.Function; t != nil {
-			if !slices.Contains(t.OutPaths, action.TableKeyProperty) {
-				return errors.BadRequest("the out properties of the transformation function must contain the table key property")
+			if !slices.Contains(t.OutPaths, action.TableKey) {
+				return errors.BadRequest("the out properties of the transformation function must contain the table key")
 			}
 		}
 	} else {
 		if action.TableName != "" {
 			return errors.BadRequest("table name is not allowed")
 		}
-		if action.TableKeyProperty != "" {
-			return errors.BadRequest("table key property is not allowed")
+		if action.TableKey != "" {
+			return errors.BadRequest("table key is not allowed")
 		}
 	}
 
@@ -697,7 +697,7 @@ func canBeUsedAsMatchingProp(k types.Kind) bool {
 }
 
 // canBeUsedAsTableKeyProperty reports whether a type with kind k can be used as
-// a table key property when exporting users to databases.
+// a table key when exporting users to databases.
 func canBeUsedAsTableKeyProperty(k types.Kind) bool {
 	// Only integers, UUIDs and texts are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
