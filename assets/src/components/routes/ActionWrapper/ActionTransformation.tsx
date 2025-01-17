@@ -2345,7 +2345,6 @@ const TransformationProperty = ({
 						{property.name}
 					</span>
 					<span className='fullscreen-transformation__property-type'>
-						{side === 'input' && property.readOptional && <span>optional</span>}
 						<span>
 							{language === ''
 								? property.type.name
@@ -2353,6 +2352,7 @@ const TransformationProperty = ({
 									? toPythonType(property.type)
 									: toJavascriptType(property.type)}
 						</span>
+						{side === 'input' && property.readOptional && <span>- optional</span>}
 						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
 					</span>
 					{!isParent && !isOutMatchingProperty && (

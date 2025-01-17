@@ -791,12 +791,16 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-type {
-	opacity: 0.7;
 	font-size: 11px;
 	margin-right: 5px;
 }
 
+.fullscreen-transformation__property-type > * {
+	opacity: 0.7;
+}
+
 .fullscreen-transformation__property-required {
+	opacity: 1;
 	color: var(--sl-color-danger-500);
 	font-weight: 500;
 	font-size: 11px;
