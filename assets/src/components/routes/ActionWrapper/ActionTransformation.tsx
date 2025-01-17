@@ -1654,14 +1654,6 @@ const FullscreenTransformation = ({
 					</SlSwitch>
 				)}
 				{inputSchema.properties.map((p) => {
-					if (inSearchTerm !== '') {
-						const name = p.name;
-						const isSearched = name.toLowerCase().includes(inSearchTerm.toLowerCase());
-						if (!isSearched) {
-							return null;
-						}
-					}
-
 					if (transformationType === 'function') {
 						const isSelected = selectedInPaths.includes(p.name);
 						const hasSelectedChildren =
@@ -1681,6 +1673,8 @@ const FullscreenTransformation = ({
 								side='input'
 								transformationType={transformationType}
 								exportMode={action.exportMode}
+								searchTerm={inSearchTerm}
+								flatSchema={flatInputSchema}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
 							/>
@@ -1694,6 +1688,7 @@ const FullscreenTransformation = ({
 								side='input'
 								transformationType={transformationType}
 								exportMode={action.exportMode}
+								searchTerm={inSearchTerm}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
 							/>
@@ -1978,16 +1973,6 @@ const FullscreenTransformation = ({
 											</SlSwitch>
 										)}
 										{outputSchema.properties.map((p) => {
-											if (outSearchTerm !== '') {
-												const name = p.name;
-												const isSearched = name
-													.toLowerCase()
-													.includes(outSearchTerm.toLowerCase());
-												if (!isSearched) {
-													return null;
-												}
-											}
-
 											if (transformationType === 'function') {
 												const isSelected = selectedOutPaths.includes(p.name);
 												const hasSelectedChildren =
@@ -2009,6 +1994,8 @@ const FullscreenTransformation = ({
 														side='output'
 														transformationType={transformationType}
 														exportMode={action.exportMode}
+														searchTerm={outSearchTerm}
+														flatSchema={flatOutputSchema}
 														selectedPaths={selectedOutPaths}
 														onChangeSelectedPath={(path) =>
 															onChangeSelectedPath('out', path)
@@ -2024,6 +2011,7 @@ const FullscreenTransformation = ({
 														side='output'
 														transformationType={transformationType}
 														exportMode={action.exportMode}
+														searchTerm={outSearchTerm}
 														selectedPaths={selectedOutPaths}
 														onChangeSelectedPath={(path) =>
 															onChangeSelectedPath('out', path)
@@ -2111,6 +2099,8 @@ interface TransformationNestedPropertiesProps {
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
+	searchTerm: string;
+	flatSchema: TransformedMapping;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
 }
@@ -2123,6 +2113,8 @@ const TransformationNestedProperties = ({
 	side,
 	transformationType,
 	exportMode,
+	searchTerm,
+	flatSchema,
 	selectedPaths,
 	onChangeSelectedPath,
 }: TransformationNestedPropertiesProps) => {
@@ -2130,9 +2122,45 @@ const TransformationNestedProperties = ({
 
 	const typ = property.type as ObjectType;
 
+	let path = property.name;
+	if (parentName) {
+		path = parentName + '.' + property.name;
+	}
+
+	let isSearched = false;
+	if (searchTerm === '') {
+		isSearched = true;
+	} else {
+		isSearched = property.name.toLowerCase().includes(searchTerm.toLowerCase());
+	}
+
+	let hasSearchedChildren = false;
+	if (searchTerm === '') {
+		hasSearchedChildren = true;
+	} else {
+		for (const key in flatSchema) {
+			const isChildren = key.startsWith(`${path}.`);
+			if (!isChildren) {
+				continue;
+			}
+			const name = flatSchema[key].full.name;
+			const isSearched = name.toLowerCase().includes(searchTerm.toLowerCase());
+			if (isSearched) {
+				hasSearchedChildren = true;
+				break;
+			}
+		}
+	}
+
+	if (!isSearched && !hasSearchedChildren) {
+		return null;
+	}
+
+	const showSearchedChildren = searchTerm !== '' && hasSearchedChildren;
+
 	return (
 		<div
-			className={`fullscreen-transformation__nested${isExpanded ? ' fullscreen-transformation__nested--expand' : ''}`}
+			className={`fullscreen-transformation__nested${isExpanded || showSearchedChildren ? ' fullscreen-transformation__nested--expand' : ''}`}
 		>
 			<TransformationProperty
 				property={property}
@@ -2143,15 +2171,16 @@ const TransformationNestedProperties = ({
 				transformationType={transformationType}
 				exportMode={exportMode}
 				selectedPaths={selectedPaths}
+				showCaret={hasSearchedChildren}
 				onChangeSelectedPath={onChangeSelectedPath}
-				isExpanded={isExpanded}
+				isExpanded={isExpanded || showSearchedChildren}
 				setIsExpanded={setIsExpanded}
 			/>
 			<div
 				className='fullscreen-transformation__sub-properties'
 				style={{ '--property-indentation': `${nesting * 20}px` } as React.CSSProperties}
 			>
-				{isExpanded &&
+				{(isExpanded || showSearchedChildren) &&
 					typ.properties.map((p) => {
 						if (p.type.name === 'Object') {
 							return (
@@ -2160,10 +2189,12 @@ const TransformationNestedProperties = ({
 									property={p}
 									language={language}
 									nesting={nesting + 1}
-									parentName={parentName ? parentName + '.' + property.name : property.name}
+									parentName={path}
 									side={side}
 									transformationType={transformationType}
 									exportMode={exportMode}
+									searchTerm={searchTerm}
+									flatSchema={flatSchema}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
 								/>
@@ -2174,10 +2205,11 @@ const TransformationNestedProperties = ({
 									key={p.name}
 									property={p}
 									language={language}
-									parentName={parentName ? parentName + '.' + property.name : property.name}
+									parentName={path}
 									side={side}
 									transformationType={transformationType}
 									exportMode={exportMode}
+									searchTerm={searchTerm}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
 								/>
@@ -2197,6 +2229,8 @@ interface TransformationPropertyProps {
 	side: 'input' | 'output';
 	transformationType: 'mappings' | 'function' | '';
 	exportMode: ExportMode;
+	searchTerm?: string;
+	showCaret?: boolean;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
 	isExpanded?: boolean;
@@ -2212,6 +2246,8 @@ const TransformationProperty = ({
 	side,
 	transformationType,
 	exportMode,
+	searchTerm,
+	showCaret = true,
 	selectedPaths,
 	onChangeSelectedPath,
 	isExpanded,
@@ -2230,6 +2266,15 @@ const TransformationProperty = ({
 	const isSelected = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
+
+	let isSearched = true;
+	if (searchTerm != null && searchTerm !== '') {
+		isSearched = property.name.toLowerCase().includes(searchTerm.toLowerCase());
+	}
+
+	if (!isSearched) {
+		return null;
+	}
 
 	const hasRequired =
 		exportMode != null &&
@@ -2326,7 +2371,7 @@ const TransformationProperty = ({
 					)}
 				</div>
 			</div>
-			{isParent && (
+			{isParent && showCaret && (
 				<SlIcon
 					className='fullscreen-transformation__property-caret'
 					name='caret-right-fill'
