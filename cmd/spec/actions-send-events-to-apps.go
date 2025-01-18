@@ -33,8 +33,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-send-events-to-apps",
 		Name: "Send events to apps",
-		Description: "Actions enable the sending of events from the unified data warehouse to an app.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses specifically on sending events to an app.",
+		Description: "This type of action sends the received events to applications. " +
+			"It requires a destination app connection that supports events.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

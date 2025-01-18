@@ -50,9 +50,11 @@ var setSchedulerPeriodParameter = types.Property{
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "actions",
-		Name:        "Actions",
-		Description: "",
+		ID:   "actions",
+		Name: "Actions",
+		Description: "Actions represent the operations that can be performed on connections. " +
+			"This section documents the endpoints common to various types of actions. " +
+			"Refer to the specific sections for each action type to create, update, and get an action.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Set status",
@@ -65,7 +67,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the action.",
+						Description:    "The ID of the action that imports or exports users.",
 					},
 					{
 						Name:           "enabled",
@@ -82,7 +84,7 @@ func init() {
 			},
 			{
 				Name:        "Set schedule period",
-				Description: "Sets the frequency at which an action imports users. The action must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
+				Description: "Sets the frequency at which an action imports or exports users. The action must be enabled for the execution to run as scheduled. If the period is null, the scheduler will be disabled.",
 				Method:      PUT,
 				URL:         "/v0/actions/:id/schedule",
 				Parameters: []types.Property{
@@ -91,7 +93,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the action on users.",
+						Description:    "The ID of the action that imports or exports users.",
 					},
 					setSchedulerPeriodParameter,
 				},
@@ -113,7 +115,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "705981339",
-						Description:    "The ID of the action on users.",
+						Description:    "The ID of the action that imports or exports users.",
 					},
 					{
 						Name:           "reload",

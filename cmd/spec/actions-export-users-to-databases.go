@@ -43,9 +43,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-databases",
 		Name: "Export users to databases",
-		Description: "Actions enable the export of unified users from the data warehouse to a database table. Depending on the values in the designated key column, rows in the table are either updated or created. " +
-			"This ensures that the database table stays synchronized with the unified users in the data warehouse for the specified fields.\n\n" +
-			"The three endpoints are the same for all actions; however, this section focuses specifically on exporting users to a database.",
+		Description: "This type of action exports user data from the workspace's data warehouse to a database table. " +
+			"It requires a destination database connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

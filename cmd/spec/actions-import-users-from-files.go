@@ -75,9 +75,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-files",
 		Name: "Import users from files",
-		Description: "Actions enable the import of user data from a file into the unified data warehouse. " +
-			"Each import operation retrieves the latest user data from the specified file, ensuring that the unified data warehouse is kept up to date with the selected fields.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses specifically on importing users from a file.",
+		Description: "This type of action imports user data from a file into the workspace's data warehouse. " +
+			"It requires a source file storage connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

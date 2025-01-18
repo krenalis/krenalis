@@ -25,16 +25,14 @@ func init() {
 		Type:        filterType,
 		Nullable:    true,
 		Placeholder: `{ "logical": "and", "conditions": [ { "property": "type", "operator": "is", "values": [ "track" ] } ] }`,
-		Description: "The filter applied to the events. If it's not null, only the events that match the filter will be received.\n\n" +
+		Description: "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "actions-import-users-from-events",
-		Name: "Import users from events",
-		Description: "Actions enable the import of user data into the unified data warehouse through events. " +
-			"An event can trigger the import of user data, ensuring that the data warehouse remains up to date with the relevant fields.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses specifically on importing users through events.",
+		ID:          "actions-import-users-from-events",
+		Name:        "Import users from events",
+		Description: "This type of action imports user data into the workspace’s data warehouse from events received from websites, mobile apps, and servers.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

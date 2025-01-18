@@ -33,9 +33,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-apps",
 		Name: "Import users from apps",
-		Description: "Actions enable the import of user data from an app into the unified data warehouse. " +
-			"Each import execution retrieves the latest user data from the app, ensuring that the unified data warehouse remains up to date for the specified fields.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses exclusively on importing users from an app.",
+		Description: "This type of action imports user data from an application into the workspace's data warehouse. " +
+			"It requires a source app connection that supports users.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
@@ -49,7 +48,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection from which to read the users. It must be a source app that supports users.",
+						Description:    "The ID of the connection from which to read the users. It must be a source app connection that imports users.",
 					},
 					{
 						Name:           "target",

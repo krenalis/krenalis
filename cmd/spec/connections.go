@@ -32,7 +32,7 @@ func init() {
 		Type:           types.Text().WithValues("Source", "Destination"),
 		CreateRequired: true,
 		Placeholder:    `"Source"`,
-		Description:    "Indicates if the connection is a source or a destination.",
+		Description:    "Indicates if the connection is a data source or a data destination.",
 	}
 	strategyParameter := types.Property{
 		Name:           "strategy",
@@ -49,22 +49,24 @@ func init() {
 		Placeholder:    `"Cloud"`,
 		UpdateRequired: true,
 		Nullable:       true,
-		Description: `The mode for sending events. It is required and can only be provided with destination app connections that supports it. ` +
-			`In this case, it must be one of the sending modes supported by the app.`,
+		Description: "The mode for sending events. It can be one of the sending modes supported by the app.\n\n" +
+			"It is required and can only be provided with destination app connections that supports it.",
 	}
 	websiteHostParameter := types.Property{
-		Name:        "websiteHost",
-		Type:        types.Text(),
-		Nullable:    true,
-		Placeholder: "www.example.com",
-		Description: "The host of the website. It is used for documentation purposes only, with no functional impact.",
+		Name:           "websiteHost",
+		Type:           types.Text(),
+		UpdateRequired: true,
+		Nullable:       true,
+		Placeholder:    "www.example.com",
+		Description: "The host of the website. It is used for documentation purposes only, with no functional impact.\n\n" +
+			"It is required and can only be provided with website connections.",
 	}
 	linkedConnectionsParameter := types.Property{
 		Name:        "linkedConnections",
 		Type:        types.Array(types.Int(32)),
 		Nullable:    true,
 		Placeholder: "null",
-		Description: "The connections (IDs) to which to send or from which to receive events.\n\n" +
+		Description: "The IDs of the connections to which to send or from which to receive events.\n\n" +
 			"For source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. " +
 			"On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\n" +
 			"If it is null, there are no linked connections, or the connection is not one of the mentioned types.",
@@ -108,14 +110,15 @@ func init() {
 			Type:        types.Text().WithValues("Cloud", "Device", "Combined"),
 			Placeholder: `"Cloud"`,
 			Nullable:    true,
-			Description: "The mode for sending events. It is null if the connection is not a destination app connection that supports sending mode.",
+			Description: "The mode for sending events. It is null if the connection is not a destination app that supports sending mode.",
 		},
 		{
 			Name:        "websiteHost",
 			Type:        types.Text(),
 			Nullable:    true,
 			Placeholder: `"www.example.com"`,
-			Description: "The host of the website. It is null if the connection is not a website connection. It is used for documentation purposes only, with no functional impact.",
+			Description: "The host of the website. It is used for documentation purposes only, with no functional impact.\n\n" +
+				"It is null if the connection is not a website.",
 		},
 		linkedConnectionsParameter,
 		{
@@ -165,9 +168,10 @@ func init() {
 	)
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "connections",
-		Name:        "Connections",
-		Description: "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
+		ID:   "connections",
+		Name: "Connections",
+		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n" +
+			"Actions then allow you to perform operations on these connections to import and export users and to receive and send events.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Create a connection",

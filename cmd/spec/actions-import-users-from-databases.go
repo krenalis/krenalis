@@ -65,9 +65,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-databases",
 		Name: "Import users from databases",
-		Description: "Actions enable the import of user data from a database query into the unified data warehouse. " +
-			"Each import operation retrieves the latest user data returned by the specified query, ensuring that the unified data warehouse is kept up to date with the selected fields.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses specifically on importing users from a database query.",
+		Description: "This type of action imports user data from a database into the workspace's data warehouse. " +
+			"It requires a source database connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

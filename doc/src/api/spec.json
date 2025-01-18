@@ -3,7 +3,7 @@
         {
             "id": "actions-export-users-to-apps",
             "name": "Export users to apps",
-            "description": "Actions allow you to export unified users from the data warehouse to an app. Depending on the configuration, users can be updated, created, or both created and updated. This ensures that app users remain synchronized with the unified users in the data warehouse for specific fields.\n\nThe three endpoints are the same for all actions; however, this section focuses specifically on exporting users to an app.",
+            "description": "This type of action exports user data from the workspace's data warehouse to an application. It requires a destination app connection that supports users.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -29,7 +29,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection to which the users will be written. It must be a destination app."
+                            "description": "The ID of the connection to which the users will be written. It must be a destination app connection that exports users."
                         },
                         {
                             "name": "target",
@@ -643,7 +643,7 @@
         {
             "id": "actions-export-users-to-databases",
             "name": "Export users to databases",
-            "description": "Actions enable the export of unified users from the data warehouse to a database table. Depending on the values in the designated key column, rows in the table are either updated or created. This ensures that the database table stays synchronized with the unified users in the data warehouse for the specified fields.\n\nThe three endpoints are the same for all actions; however, this section focuses specifically on exporting users to a database.",
+            "description": "This type of action exports user data from the workspace's data warehouse to a database table. It requires a destination database connection.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -1041,7 +1041,7 @@
         {
             "id": "actions-export-users-to-files",
             "name": "Export users to files",
-            "description": "Actions enable the export of unified users from the data warehouse to a file. Each export operation generates a new file containing the requested user data, ensuring the output remains independent and up to date with the unified users in the data warehouse for the specified fields.\n\nWhile the three endpoints are consistent across all actions, this section focuses exclusively on exporting users to a file.",
+            "description": "This type of action exports user data from the workspace’s data warehouse to a newly created file. It requires a destination file store connection.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -1763,7 +1763,7 @@
         {
             "id": "actions-import-events",
             "name": "Import events",
-            "description": "Actions enable the import of events into the data warehouse.\n\nWhile the three endpoints are consistent across all actions, this section focuses specifically on importing events.",
+            "description": "This type of action imports events into the workspace’s data warehouse. It requires a website, mobile, or server connection.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -2256,7 +2256,7 @@
         {
             "id": "actions-import-users-from-apps",
             "name": "Import users from apps",
-            "description": "Actions enable the import of user data from an app into the unified data warehouse. Each import execution retrieves the latest user data from the app, ensuring that the unified data warehouse remains up to date for the specified fields.\n\nWhile the three endpoints are consistent across all actions, this section focuses exclusively on importing users from an app.",
+            "description": "This type of action imports user data from an application into the workspace's data warehouse. It requires a source app connection that supports users.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -2282,7 +2282,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which to read the users. It must be a source app that supports users."
+                            "description": "The ID of the connection from which to read the users. It must be a source app connection that imports users."
                         },
                         {
                             "name": "target",
@@ -2873,7 +2873,7 @@
         {
             "id": "actions-import-users-from-databases",
             "name": "Import users from databases",
-            "description": "Actions enable the import of user data from a database query into the unified data warehouse. Each import operation retrieves the latest user data returned by the specified query, ensuring that the unified data warehouse is kept up to date with the selected fields.\n\nWhile the three endpoints are consistent across all actions, this section focuses specifically on importing users from a database query.",
+            "description": "This type of action imports user data from a database into the workspace's data warehouse. It requires a source database connection.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -3320,7 +3320,7 @@
         {
             "id": "actions-import-users-from-events",
             "name": "Import users from events",
-            "description": "Actions enable the import of user data into the unified data warehouse through events. An event can trigger the import of user data, ensuring that the data warehouse remains up to date with the relevant fields.\n\nWhile the three endpoints are consistent across all actions, this section focuses specifically on importing users through events.",
+            "description": "This type of action imports user data into the workspace’s data warehouse from events received from websites, mobile apps, and servers.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -3457,7 +3457,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the events. If it's not null, only the events that match the filter will be received.\n\nSee the [filters documentation](/filters) for more details."
+                            "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
                             "name": "inSchema",
@@ -3643,7 +3643,7 @@
                                 ]
                             },
                             "nullable": true,
-                            "description": "The filter applied to the events. If it's not null, only the events that match the filter will be received.\n\nSee the [filters documentation](/filters) for more details."
+                            "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
                             "name": "inSchema",
@@ -3854,7 +3854,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The filter applied to the events. If it's not null, only the events that match the filter will be received.\n\nSee the [filters documentation](/filters) for more details."
+                                "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
                                 "name": "inSchema",
@@ -3903,7 +3903,7 @@
         {
             "id": "actions-import-users-from-files",
             "name": "Import users from files",
-            "description": "Actions enable the import of user data from a file into the unified data warehouse. Each import operation retrieves the latest user data from the specified file, ensuring that the unified data warehouse is kept up to date with the selected fields.\n\nWhile the three endpoints are consistent across all actions, this section focuses specifically on importing users from a file.",
+            "description": "This type of action imports user data from a file into the workspace's data warehouse. It requires a source file storage connection.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -4679,7 +4679,7 @@
         {
             "id": "actions-send-events-to-apps",
             "name": "Send events to apps",
-            "description": "Actions enable the sending of events from the unified data warehouse to an app.\n\nWhile the three endpoints are consistent across all actions, this section focuses specifically on sending events to an app.",
+            "description": "This type of action sends the received events to applications. It requires a destination app connection that supports events.",
             "endpoints": [
                 {
                     "name": "Create action",
@@ -5258,7 +5258,7 @@
         {
             "id": "actions",
             "name": "Actions",
-            "description": "",
+            "description": "Actions represent the operations that can be performed on connections. This section documents the endpoints common to various types of actions. Refer to the specific sections for each action type to create, update, and get an action.",
             "endpoints": [
                 {
                     "name": "Set status",
@@ -5274,7 +5274,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the action."
+                            "description": "The ID of the action that imports or exports users."
                         },
                         {
                             "name": "enabled",
@@ -5303,7 +5303,7 @@
                 },
                 {
                     "name": "Set schedule period",
-                    "description": "Sets the frequency at which an action imports users. The action must be enabled for the import to run as scheduled. If the period is null, the scheduler will be disabled.",
+                    "description": "Sets the frequency at which an action imports or exports users. The action must be enabled for the execution to run as scheduled. If the period is null, the scheduler will be disabled.",
                     "method": "PUT",
                     "url": "/v0/actions/:id/schedule",
                     "parameters": [
@@ -5315,7 +5315,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the action on users."
+                            "description": "The ID of the action that imports or exports users."
                         },
                         {
                             "name": "schedulePeriod",
@@ -5369,7 +5369,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the action on users."
+                            "description": "The ID of the action that imports or exports users."
                         },
                         {
                             "name": "reload",
@@ -5983,7 +5983,7 @@
         {
             "id": "connections",
             "name": "Connections",
-            "description": "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
+            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\nActions then allow you to perform operations on these connections to import and export users and to receive and send events.",
             "endpoints": [
                 {
                     "name": "Create a connection",
@@ -6012,7 +6012,7 @@
                                 ]
                             },
                             "createRequired": true,
-                            "description": "Indicates if the connection is a source or a destination."
+                            "description": "Indicates if the connection is a data source or a data destination."
                         },
                         {
                             "name": "connector",
@@ -6052,7 +6052,7 @@
                             },
                             "updateRequired": true,
                             "nullable": true,
-                            "description": "The mode for sending events. It is required and can only be provided with destination app connections that supports it. In this case, it must be one of the sending modes supported by the app."
+                            "description": "The mode for sending events. It can be one of the sending modes supported by the app.\n\nIt is required and can only be provided with destination app connections that supports it."
                         },
                         {
                             "name": "websiteHost",
@@ -6060,8 +6060,9 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "updateRequired": true,
                             "nullable": true,
-                            "description": "The host of the website. It is used for documentation purposes only, with no functional impact."
+                            "description": "The host of the website. It is used for documentation purposes only, with no functional impact.\n\nIt is required and can only be provided with website connections."
                         },
                         {
                             "name": "linkedConnections",
@@ -6074,7 +6075,7 @@
                                 }
                             },
                             "nullable": true,
-                            "description": "The connections (IDs) to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
+                            "description": "The IDs of the connections to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
                         },
                         {
                             "name": "settings",
@@ -6306,7 +6307,7 @@
                             },
                             "updateRequired": true,
                             "nullable": true,
-                            "description": "The mode for sending events. It is required and can only be provided with destination app connections that supports it. In this case, it must be one of the sending modes supported by the app."
+                            "description": "The mode for sending events. It can be one of the sending modes supported by the app.\n\nIt is required and can only be provided with destination app connections that supports it."
                         },
                         {
                             "name": "websiteHost",
@@ -6314,8 +6315,9 @@
                             "type": {
                                 "name": "Text"
                             },
+                            "updateRequired": true,
                             "nullable": true,
-                            "description": "The host of the website. It is used for documentation purposes only, with no functional impact."
+                            "description": "The host of the website. It is used for documentation purposes only, with no functional impact.\n\nIt is required and can only be provided with website connections."
                         }
                     ],
                     "moreParameters": [],
@@ -6399,7 +6401,7 @@
                                                     ]
                                                 },
                                                 "createRequired": true,
-                                                "description": "Indicates if the connection is a source or a destination."
+                                                "description": "Indicates if the connection is a data source or a data destination."
                                             },
                                             {
                                                 "name": "connector",
@@ -6436,7 +6438,7 @@
                                                     ]
                                                 },
                                                 "nullable": true,
-                                                "description": "The mode for sending events. It is null if the connection is not a destination app connection that supports sending mode."
+                                                "description": "The mode for sending events. It is null if the connection is not a destination app that supports sending mode."
                                             },
                                             {
                                                 "name": "websiteHost",
@@ -6445,7 +6447,7 @@
                                                     "name": "Text"
                                                 },
                                                 "nullable": true,
-                                                "description": "The host of the website. It is null if the connection is not a website connection. It is used for documentation purposes only, with no functional impact."
+                                                "description": "The host of the website. It is used for documentation purposes only, with no functional impact.\n\nIt is null if the connection is not a website."
                                             },
                                             {
                                                 "name": "linkedConnections",
@@ -6458,7 +6460,7 @@
                                                     }
                                                 },
                                                 "nullable": true,
-                                                "description": "The connections (IDs) to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
+                                                "description": "The IDs of the connections to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
                                             },
                                             {
                                                 "name": "actionsCount",
@@ -6566,7 +6568,7 @@
                                     ]
                                 },
                                 "createRequired": true,
-                                "description": "Indicates if the connection is a source or a destination."
+                                "description": "Indicates if the connection is a data source or a data destination."
                             },
                             {
                                 "name": "connector",
@@ -6603,7 +6605,7 @@
                                     ]
                                 },
                                 "nullable": true,
-                                "description": "The mode for sending events. It is null if the connection is not a destination app connection that supports sending mode."
+                                "description": "The mode for sending events. It is null if the connection is not a destination app that supports sending mode."
                             },
                             {
                                 "name": "websiteHost",
@@ -6612,7 +6614,7 @@
                                     "name": "Text"
                                 },
                                 "nullable": true,
-                                "description": "The host of the website. It is null if the connection is not a website connection. It is used for documentation purposes only, with no functional impact."
+                                "description": "The host of the website. It is used for documentation purposes only, with no functional impact.\n\nIt is null if the connection is not a website."
                             },
                             {
                                 "name": "linkedConnections",
@@ -6625,7 +6627,7 @@
                                     }
                                 },
                                 "nullable": true,
-                                "description": "The connections (IDs) to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
+                                "description": "The IDs of the connections to which to send or from which to receive events.\n\nFor source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\nIf it is null, there are no linked connections, or the connection is not one of the mentioned types."
                             },
                             {
                                 "name": "actionsCount",

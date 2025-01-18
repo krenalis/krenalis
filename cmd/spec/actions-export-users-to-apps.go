@@ -33,9 +33,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-apps",
 		Name: "Export users to apps",
-		Description: "Actions allow you to export unified users from the data warehouse to an app. Depending on the configuration, users can be updated, created, or both created and updated. " +
-			"This ensures that app users remain synchronized with the unified users in the data warehouse for specific fields.\n\n" +
-			"The three endpoints are the same for all actions; however, this section focuses specifically on exporting users to an app.",
+		Description: "This type of action exports user data from the workspace's data warehouse to an application. " +
+			"It requires a destination app connection that supports users.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
@@ -49,7 +48,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection to which the users will be written. It must be a destination app.",
+						Description:    "The ID of the connection to which the users will be written. It must be a destination app connection that exports users.",
 					},
 					{
 						Name:           "target",

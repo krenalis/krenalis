@@ -74,9 +74,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-files",
 		Name: "Export users to files",
-		Description: "Actions enable the export of unified users from the data warehouse to a file. " +
-			"Each export operation generates a new file containing the requested user data, ensuring the output remains independent and up to date with the unified users in the data warehouse for the specified fields.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses exclusively on exporting users to a file.",
+		Description: "This type of action exports user data from the workspace’s data warehouse to a newly created file. " +
+			"It requires a destination file store connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

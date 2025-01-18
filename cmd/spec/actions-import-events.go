@@ -33,8 +33,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-events",
 		Name: "Import events",
-		Description: "Actions enable the import of events into the data warehouse.\n\n" +
-			"While the three endpoints are consistent across all actions, this section focuses specifically on importing events.",
+		Description: "This type of action imports events into the workspace’s data warehouse. " +
+			"It requires a website, mobile, or server connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
