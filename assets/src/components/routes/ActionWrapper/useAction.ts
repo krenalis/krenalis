@@ -205,7 +205,7 @@ const useAction = (
 				// If the action type is an export to a database
 				// destination, the output schema is the schema of the
 				// database table itself.
-				if (fields.includes('Table') && isEditing) {
+				if (fields.includes('TableName') && isEditing) {
 					let schema: ObjectType;
 					try {
 						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.table);
