@@ -1372,7 +1372,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 
 // PreviewSendEvent returns a preview of an event as it would be dispatches to
 // an app. The connection must be a destination app connection, and it is
-// expected to have an event type with identifier eventType. If there is a
+// expected to have an event type with identifier typ. If there is a
 // transformation, outSchema is the output schema of the transformation, and it
 // must be a valid.
 //
@@ -1383,7 +1383,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, event json.Value, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
+func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event json.Value, transformation DataTransformation, outSchema types.Type) ([]byte, error) {
 
 	this.core.mustBeOpen()
 
@@ -1398,8 +1398,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	if !c.Connector().Targets.Contains(state.Events) {
 		return nil, errors.BadRequest("connection %d does not support events", c.ID)
 	}
-	if eventType == "" {
-		return nil, errors.BadRequest("eventType is empty")
+	if typ == "" {
+		return nil, errors.BadRequest("type is empty")
 	}
 	if event == nil {
 		return nil, errors.BadRequest("event is missing")
@@ -1517,10 +1517,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, eventType string, 
 	// Convert data into a meergo.Event value.
 	ev := events.NewConnectorEvent(properties)
 
-	req, err := this.app().EventRequest(ctx, ev, eventType, outSchema, transformedProperties, true)
+	req, err := this.app().EventRequest(ctx, ev, typ, outSchema, transformedProperties, true)
 	if err != nil {
 		if err == meergo.ErrEventTypeNotExist {
-			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, eventType)
+			err = errors.Unprocessable(EventTypeNotExist, "connection %d does not have event type %q", c.ID, typ)
 		} else {
 			switch err.(type) {
 			case *connectors.SchemaError:

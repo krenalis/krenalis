@@ -5544,7 +5544,7 @@
                     "url": "/v0/connections/:id/preview-send-event",
                     "parameters": [
                         {
-                            "name": "evenType",
+                            "name": "type",
                             "placeholder": "\"addToCart\"",
                             "type": {
                                 "name": "Text"

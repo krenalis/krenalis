@@ -251,7 +251,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		EventType      string                  `json:"eventType"`
+		Type           string                  `json:"type"`
 		Event          json.Value              `json:"event"`
 		Transformation core.DataTransformation `json:"transformation"`
 		OutSchema      types.Type              `json:"outSchema"`
@@ -260,7 +260,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	preview, err := c.PreviewSendEvent(r.Context(), body.EventType, body.Event, body.Transformation, body.OutSchema)
+	preview, err := c.PreviewSendEvent(r.Context(), body.Type, body.Event, body.Transformation, body.OutSchema)
 	if err != nil {
 		return nil, err
 	}

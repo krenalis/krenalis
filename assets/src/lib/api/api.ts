@@ -476,7 +476,7 @@ class Connections {
 
 	previewSendEvent = async (
 		connection: number,
-		eventType: string,
+		type: string,
 		event: Event,
 		outSchema: ObjectType,
 		transformation?: Transformation,
@@ -486,7 +486,7 @@ class Connections {
 			http.POST,
 			this.workspaceID,
 			{
-				eventType,
+				type,
 				event,
 				outSchema,
 				transformation,

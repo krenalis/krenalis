@@ -69,7 +69,7 @@ func init() {
 				URL:    "/v0/connections/:id/preview-send-event",
 				Parameters: []types.Property{
 					{
-						Name:           "evenType",
+						Name:           "type",
 						Type:           types.Text(),
 						Placeholder:    `"addToCart"`,
 						CreateRequired: true,
