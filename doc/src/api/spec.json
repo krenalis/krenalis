@@ -5826,7 +5826,7 @@
                             "description": "The ID of the action that imports or exports users."
                         },
                         {
-                            "name": "schedulePeriod",
+                            "name": "period",
                             "placeholder": "\"1h\"",
                             "type": {
                                 "name": "Text",

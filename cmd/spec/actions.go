@@ -38,15 +38,6 @@ var exportSchedulePeriodParameter = types.Property{
 		"To change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint.",
 }
 
-var setSchedulerPeriodParameter = types.Property{
-	Name:           "schedulePeriod",
-	Type:           types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
-	CreateRequired: true,
-	Placeholder:    `"1h"`,
-	Nullable:       true,
-	Description:    "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed.",
-}
-
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -96,7 +87,14 @@ func init() {
 						Placeholder:    "705981339",
 						Description:    "The ID of the action that imports or exports users.",
 					},
-					setSchedulerPeriodParameter,
+					{
+						Name:           "period",
+						Type:           types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),
+						CreateRequired: true,
+						Placeholder:    `"1h"`,
+						Nullable:       true,
+						Description:    "The schedule period. It determines how often the execution runs automatically. If it is null, the scheduler will be disabled, and no automatic execution will be executed.",
+					},
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
