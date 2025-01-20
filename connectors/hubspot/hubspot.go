@@ -71,16 +71,14 @@ func init() {
 // New returns a new HubSpot connector instance.
 func New(conf *meergo.AppConfig) (*HubSpot, error) {
 	c := HubSpot{
-		setSettings: conf.SetSettings,
-		httpClient:  conf.HTTPClient,
+		httpClient: conf.HTTPClient,
 	}
 	return &c, nil
 }
 
 type HubSpot struct {
-	setSettings meergo.SetSettingsFunc
-	httpClient  meergo.HTTPClient
-	buf         bytes.Buffer
+	httpClient meergo.HTTPClient
+	buf        bytes.Buffer
 }
 
 // OAuthAccount returns the app's account associated with the OAuth
