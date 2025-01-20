@@ -14,6 +14,6 @@ For testing purposes, you can create a dedicated workspace without affecting oth
 
 ### Event ingestion endpoints
 
-For event ingestion, two endpoints are available, each accessible with specific keys ([write keys](/api/authentication#write-keys)) that are exclusively limited to event ingestion.
+For event ingestion, two endpoints are available, each accessible with specific keys ([event write keys](/api/authentication#event-write-keys)) that are exclusively limited to event ingestion.
 
 These two endpoints support cross-origin resource sharing, enabling secure interaction with the API from any website or client-facing application.

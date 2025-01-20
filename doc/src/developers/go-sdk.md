@@ -19,7 +19,7 @@ To create a source Go connection in Meergo:
 ## Step 2: Import the SDK
 
 1. In the new created Go connection, navigate to **Settings**.
-2. Select **Write Keys**.
+2. Select **Event write keys**.
 3. Copy the Write Key and the Endpoint.
 4. In your Go module, go get the `"github.com/open2b/analytics-go"` package:
     ```sh

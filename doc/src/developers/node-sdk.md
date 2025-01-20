@@ -25,7 +25,7 @@ Below are outlined the various alternative methods for importing the SDK to suit
 The Node SDK can be imported with `import` into Node projects, using ES6 modules.
 
 1. In the new created Node connection, navigate to **Settings**.
-2. Click on **Write Keys**.
+2. Click on **Event write keys**.
 3. Copy the Write Key and the Endpoint.
 4. In your project, install the `meergo-node-sdk` npm package:
     ```sh
@@ -47,7 +47,7 @@ The Node SDK can be imported with `import` into Node projects, using ES6 modules
 The Node SDK can be imported with `require` into Node projects, using CommonJS modules.
 
 1. In the new created Node connection, navigate to **Settings**.
-2. Click on **Write Keys**.
+2. Click on **Event write keys**.
 3. Copy the Write Key and the Endpoint.
 4. In your project, install the `meergo-node-sdk` npm package:
     ```sh

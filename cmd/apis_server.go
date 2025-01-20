@@ -101,8 +101,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{id}/action-types":                  connection.ActionTypes,   /* only UI */
 		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only UI */
-		"GET    /connections/{id}/files/{path}/absolute":         connection.CompletePath,
 		"GET    /connections/{id}/event-write-keys":              connection.EventWriteKeys,
+		"GET    /connections/{id}/files/{path}/absolute":         connection.CompletePath,
 		"GET    /connections/{id}/schemas/event/{type}":          connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":                  connection.AppUserSchemas,
 		"GET    /connections/{id}/tables/{name}":                 connection.TableSchema,
@@ -131,10 +131,10 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /actions/{id}/exec":                              action.Execute,
 		"POST   /actions/{id}/ui-event":                          action.ServeUI, /* only UI */
 		"POST   /connections":                                    workspace.CreateConnection,
+		"POST   /connections/{id}/event-write-keys":              connection.CreateEventWriteKey,
 		"POST   /connections/{id}/files/{path}":                  connection.File,
 		"POST   /connections/{id}/files/{path}/sheets":           connection.Sheets,
 		"POST   /connections/{id}/identities":                    connection.Identities,
-		"POST   /connections/{id}/event-write-keys":              connection.CreateEventWriteKey,
 		"POST   /connections/{id}/preview-send-event":            connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                         connection.ExecQuery,
 		"POST   /connections/{id}/ui-event":                      connection.ServeUI, /* only UI */

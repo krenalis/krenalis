@@ -44,26 +44,26 @@ API keys can be optionally restricted to a specific workspace during their creat
 <div class="spec">
 <div>
 
-## Write keys
+## Event write keys
 
-For event ingestion, it is recommended to use a **write key**. A write key is a more limited form of an API key, granting access only for event ingestion and specific to a particular connection type (e.g., **Website**, **Mobile**, or **Server**). Write keys provide better security and focus for these operations.
+For event ingestion, it is recommended to use an **event write key**. An event write key is a more limited form of an API key, granting access only for event ingestion and specific to a particular connection type (e.g., **Website**, **Mobile**, or **Server**). Event write keys provide better security and focus for these operations.
 
-Write keys are managed through the Meergo UI for each relevant source connection type.
+Event write keys are managed through the Meergo UI for each relevant source connection type.
 
-Using a write key allows authentication exclusively for the following endpoints:
+Using an event write key allows authentication exclusively for the following endpoints:
 
-- [Ingest Batch Events](/api/events#ingest-batch-events)
-- [Ingest Event](/api/events#ingest-event)
+- [Ingest event](/api/events#ingest-event)
+- [Ingest batch events](/api/events#ingest-batch-events)
 
-API Keys use HTTP Bearer Authentication.
+Event write keys use HTTP Base Authentication.
 
 </div>
 <div>
   <div class="api-request-box">
-  <div>Authenticated request with a write key</div>
+  <div>Authenticated request with an event write key</div>
         <div>
           <div>curl -X GET https://api.meergo.com/v0/api/events/batch \</div>
-          <div>   -u &lt;YOUR_WRITE_KEY&gt;:</div>
+          <div>   -u &lt;YOUR_EVENT_WRITE_KEY&gt;:</div>
         </div>
       </div>
   </div>

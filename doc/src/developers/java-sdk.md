@@ -19,7 +19,7 @@ To create a source Java connection in Meergo:
 ## Step 2: Import the SDK
 
 1. In the new created Java connection, navigate to **Settings**.
-2. Select **Write Keys**.
+2. Select **Event write keys**.
 3. Copy the Write Key and the Endpoint.
 4. Add `com.meergo.analytics.java` to `pom.xml`:
     ```xml

@@ -19,7 +19,7 @@ To create a source .NET connection in Meergo:
 ## Step 2: Import the SDK
 
 1. In the new created .NET connection, navigate to **Settings**.
-2. Select **Write Keys**.
+2. Select **Event write keys**.
 3. Copy the Write Key and the Endpoint.
 4. Install `Meergo.Analytics.CSharp` using NuGet:
     ```sh
