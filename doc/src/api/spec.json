@@ -11438,11 +11438,11 @@
         {
             "id": "linked-connections",
             "name": "Linked connections",
-            "description": "When a source connection is linked to a destination connection, events received from the source are forwarded to the destination.",
+            "description": "A source connection from a website, mobile, or server is linked to a destination connection so that destination actions can send the events to an external application.",
             "endpoints": [
                 {
                     "name": "Link connections",
-                    "description": "Links a source connection to a destination connection and vice versa.",
+                    "description": "Links a source to a destination. It succeeds if the connections are already linked.",
                     "method": "POST",
                     "url": "/v0/connections/:src/links/:dst",
                     "parameters": [
@@ -11454,7 +11454,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of a source mobile, server, or website connection."
+                            "description": "The ID of the source connection. It must be a website, mobile, or server."
                         },
                         {
                             "name": "dst",
@@ -11464,7 +11464,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of a destination app connection that handle events."
+                            "description": "The ID of a destination connection. It must be an app that supports events."
                         }
                     ],
                     "moreParameters": [],
@@ -11489,7 +11489,7 @@
                 },
                 {
                     "name": "Unlink connections",
-                    "description": "Unlink a source connection from a destination connection and vice versa.",
+                    "description": "Unlinks a source from a destination. It succeeds if the connections are not linked.",
                     "method": "DELETE",
                     "url": "/v0/connections/:src/links/:dst",
                     "parameters": [
@@ -11501,7 +11501,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of a source mobile, server, or website connection."
+                            "description": "The ID of the source connection. It must be a website, mobile, or server."
                         },
                         {
                             "name": "dst",
@@ -11511,7 +11511,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of a destination app connection that handle events."
+                            "description": "The ID of a destination connection. It must be an app that supports events."
                         }
                     ],
                     "moreParameters": [],

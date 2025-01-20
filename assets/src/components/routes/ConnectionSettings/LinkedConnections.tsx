@@ -19,8 +19,9 @@ const LinkedConnections = ({ connection, title, description }: LinkedConnectionP
 	const { connections, setIsLoadingConnections, api, handleError } = useContext(AppContext);
 
 	const onLink = async (id: number) => {
+		const [src, dst] = connection.role === 'Source' ? [connection.id, id] : [id, connection.id];
 		try {
-			await api.workspaces.connections.linkConnection(connection.id, id);
+			await api.workspaces.connections.linkConnection(src, dst);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -29,8 +30,9 @@ const LinkedConnections = ({ connection, title, description }: LinkedConnectionP
 	};
 
 	const onUnlink = async (id: number) => {
+		const [src, dst] = connection.role === 'Source' ? [connection.id, id] : [id, connection.id];
 		try {
-			await api.workspaces.connections.unlinkConnection(connection.id, id);
+			await api.workspaces.connections.unlinkConnection(src, dst);
 		} catch (err) {
 			handleError(err);
 			return;

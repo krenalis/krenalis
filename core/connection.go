@@ -1326,28 +1326,42 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 	return identities, count, err
 }
 
-// LinkConnection links the connection with identifier id to this connection and
-// vice versa.
-// If the connection to link does not exist, it returns an
-// errors.UnprocessableError error with code LinkedConnectionNotExist.
-func (this *Connection) LinkConnection(ctx context.Context, id int) error {
+// LinkConnection links the connection (which must be a website, mobile, or
+// server connection) to the connection identified by dst, which must be a
+// destination app connection that supports events. If the two connections are
+// already linked, this method does nothing.
+//
+// Returns an errors.NotFoundError if the destination connection does not exist.
+func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	this.core.mustBeOpen()
-	// Return If the connections are already linked.
-	if slices.Contains(this.connection.LinkedConnections, id) {
+	if dst < 1 || dst > maxInt32 {
+		return errors.BadRequest("dst is not a valid connection identifier")
+	}
+	// Return if the connections are already linked.
+	if slices.Contains(this.connection.LinkedConnections, dst) {
 		return nil
 	}
-	// Validate the connection to link.
-	c := this.connection.Connector()
+	// Validate the source connection.
+	if c := this.connection; c.Role == state.Destination {
+		return errors.BadRequest("connection %d is not a source", this.connection.ID)
+	} else if !c.Connector().Targets.Contains(state.Events) {
+		return errors.BadRequest("source %d does not support events", this.connection.ID)
+	}
+	// Validate the destination connection.
 	ws := this.connection.Workspace()
-	role := this.connection.Role
-	err := validateLinkedConnections([]int{id}, c, ws, role)
-	if err != nil {
-		return err
+	if c, ok := ws.Connection(dst); !ok {
+		return errors.NotFound("connection %d does not exist", dst)
+	} else if c.Role == state.Source {
+		return errors.BadRequest("connection %d is not a destination", dst)
+	} else if connector := c.Connector(); connector.Type != state.App {
+		return errors.BadRequest("destination %d is not an app", dst)
+	} else if !connector.Targets.Contains(state.Events) {
+		return errors.BadRequest("destination %d does not support events", dst)
 	}
 	n := state.LinkConnection{
-		Connections: [2]int{this.connection.ID, id},
+		Connections: [2]int{this.connection.ID, dst},
 	}
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		const add = "UPDATE connections\n" +
 			"SET linked_connections = (SELECT ARRAY(SELECT DISTINCT unnest(array_append(linked_connections, $1)) ORDER BY 1))\n" +
 			"WHERE id = $2"
@@ -1363,7 +1377,7 @@ func (this *Connection) LinkConnection(ctx context.Context, id int) error {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", n.Connections[1])
+			return errors.NotFound("destination %d does not exist", n.Connections[1])
 		}
 		return tx.Notify(ctx, n)
 	})
@@ -1723,28 +1737,44 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	return schema, err
 }
 
-// UnlinkConnection unlinks the connection with the specified identifier id from
-// this connection and vice versa.
-// If the connection to unlink does not exist, it returns an
-// errors.UnprocessableError with the code LinkedConnectionNotExist.
-func (this *Connection) UnlinkConnection(ctx context.Context, id int) error {
+// UnlinkConnection unlinks the connection (which must be a website, mobile, or
+// server connection) from the connection identified by dst, which must be a
+// destination app connection that supports events. If the two connections are
+// not linked, this method does nothing.
+//
+// If the destination connection does not exist, it returns an
+// errors.NotFoundError.
+func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 	this.core.mustBeOpen()
-	// Validate the connection to unlink.
-	c := this.connection.Connector()
-	ws := this.connection.Workspace()
-	role := this.connection.Role
-	err := validateLinkedConnections([]int{id}, c, ws, role)
-	if err != nil {
-		return err
+	if dst < 1 || dst > maxInt32 {
+		return errors.BadRequest("dst is not a valid connection identifier")
 	}
-	// Return if this connection is not linked to any other connection.
-	if !slices.Contains(this.connection.LinkedConnections, id) {
+	// Return if the connections are not linked.
+	if !slices.Contains(this.connection.LinkedConnections, dst) {
 		return nil
 	}
-	n := state.UnlinkConnection{
-		Connections: [2]int{this.connection.ID, id},
+	// Validate the source connection.
+	if c := this.connection; c.Role == state.Destination {
+		return errors.BadRequest("connection %d is not a source", this.connection.ID)
+	} else if !c.Connector().Targets.Contains(state.Events) {
+		return errors.BadRequest("source %d does not support events", this.connection.ID)
 	}
-	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+	// Validate the destination connection.
+	ws := this.connection.Workspace()
+	if c, ok := ws.Connection(dst); !ok {
+		return errors.NotFound("connection %d does not exist", dst)
+	} else if c.Role == state.Source {
+		return errors.BadRequest("connection %d is not a destination", dst)
+	} else if connector := c.Connector(); connector.Type != state.App {
+		return errors.BadRequest("destination %d is not an app", dst)
+	} else if !connector.Targets.Contains(state.Events) {
+		return errors.BadRequest("destination %d does not support events", dst)
+	}
+
+	n := state.UnlinkConnection{
+		Connections: [2]int{this.connection.ID, dst},
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		const remove = "UPDATE connections\n" +
 			"SET linked_connections =\n" +
 			"\tCASE\n" +
@@ -1764,7 +1794,7 @@ func (this *Connection) UnlinkConnection(ctx context.Context, id int) error {
 			return err
 		}
 		if result.RowsAffected() == 0 {
-			return errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", n.Connections[1])
+			return errors.NotFound("destination %d does not exist", n.Connections[1])
 		}
 		return tx.Notify(ctx, n)
 	})
