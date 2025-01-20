@@ -908,7 +908,8 @@ inherit the disabled style */
 	will-change: opacity, transform;
 }
 
-.fullscreen-transformation__property:hover
+.fullscreen-transformation__property-wrapper:hover
+	> .fullscreen-transformation__property
 	> .fullscreen-transformation__property-name
 	> .fullscreen-transformation__property-copy::part(copy-icon) {
 	opacity: 1;

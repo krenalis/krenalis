@@ -2355,7 +2355,7 @@ const TransformationProperty = ({
 						{side === 'input' && property.readOptional && <span>- optional</span>}
 						{showRequired && <span className='fullscreen-transformation__property-required'>required</span>}
 					</span>
-					{!isParent && !isOutMatchingProperty && (
+					{!isParent && (transformationType === 'mappings' || !isOutMatchingProperty) && (
 						<SlCopyButton
 							className='fullscreen-transformation__property-copy'
 							value={parentName ? `${parentName}.${property.name}` : property.name}
