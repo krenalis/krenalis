@@ -201,12 +201,8 @@ class Connections {
 		);
 	};
 
-	executions = async (connection: number): Promise<Execution[]> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/executions`,
-			http.GET,
-			this.workspaceID,
-		);
+	executions = async (): Promise<Execution[]> => {
+		return await call(`${this.apiURL}/actions/executions`, http.GET, this.workspaceID);
 	};
 
 	identities = async (connection: number, first: number, limit: number): Promise<ConnectionIdentitiesResponse> => {
@@ -361,68 +357,38 @@ class Connections {
 		eventType: string,
 		action: ActionToSet,
 	): Promise<number> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions`,
-			http.POST,
-			this.workspaceID,
-			{
-				target,
-				eventType,
-				...action,
-			},
-		);
+		return await call(`${this.apiURL}/actions`, http.POST, this.workspaceID, {
+			connection,
+			target,
+			eventType,
+			...action,
+		});
 	};
 
-	updateAction = async (connection: number, id: number, action: ActionToSet): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(id)}`,
-			http.PUT,
-			this.workspaceID,
-			action,
-		);
+	updateAction = async (id: number, action: ActionToSet): Promise<void> => {
+		return await call(`${this.apiURL}/actions/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, action);
 	};
 
-	deleteAction = async (connection: number, action: number): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}`,
-			http.DELETE,
-			this.workspaceID,
-		);
+	deleteAction = async (action: number): Promise<void> => {
+		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}`, http.DELETE, this.workspaceID);
 	};
 
-	setActionStatus = async (connection: number, action: number, enabled: boolean): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(action)}/status`,
-			http.PUT,
-			this.workspaceID,
-			{ enabled },
-		);
+	setActionStatus = async (action: number, enabled: boolean): Promise<void> => {
+		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/status`, http.PUT, this.workspaceID, {
+			enabled,
+		});
 	};
 
-	setActionSchedulePeriod = async (
-		connection: number,
-		action: number,
-		schedulePeriod: SchedulePeriod | null,
-	): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
-				action,
-			)}/schedule-period`,
-			http.PUT,
-			this.workspaceID,
-			{ schedulePeriod },
-		);
+	setActionSchedulePeriod = async (action: number, period: SchedulePeriod | null): Promise<void> => {
+		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/schedule`, http.PUT, this.workspaceID, {
+			period,
+		});
 	};
 
-	executeAction = async (connection: number, action: number): Promise<void> => {
-		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
-				action,
-			)}/executions`,
-			http.POST,
-			this.workspaceID,
-			{ reload: false },
-		);
+	executeAction = async (action: number): Promise<void> => {
+		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/exec`, http.POST, this.workspaceID, {
+			reload: false,
+		});
 	};
 
 	actionUiEvent = async (

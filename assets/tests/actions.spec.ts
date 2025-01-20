@@ -93,8 +93,10 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const got = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(got, expected);
 		}
 	});
 
@@ -269,8 +271,10 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const got = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(got, expected);
 		}
 	});
 
@@ -337,8 +341,10 @@ test(`Add "Send Add to Cart" action on Dummy`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const got = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(got, expected);
 		}
 	});
 
@@ -470,8 +476,10 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const got = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(got, expected);
 		}
 	});
 
@@ -641,8 +649,10 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const got = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(got, expected);
 		}
 	});
 
@@ -816,8 +826,10 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		page.on('request', async (request) => {
 			if (request.url().includes('/actions') && request.method() === 'POST') {
 				isRequestDone = true;
-				const body = request.postData();
-				deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+				const body = JSON.parse(request.postData());
+				let expected = JSON.parse(expectedBody);
+				expected.connection = connectionID;
+				deepCompareActionSchema(body, expected);
 			}
 		});
 
@@ -1144,8 +1156,10 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 		page.on('request', async (request) => {
 			if (request.url().includes('/actions') && request.method() === 'POST') {
 				isRequestDone = true;
-				const body = request.postData();
-				deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+				const body = JSON.parse(request.postData());
+				let expected = JSON.parse(expectedBody);
+				expected.connection = connectionID;
+				deepCompareActionSchema(body, expected);
 			}
 		});
 
@@ -1217,8 +1231,10 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const body = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(body, expected);
 		}
 	});
 
@@ -1289,8 +1305,10 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 	page.on('request', async (request) => {
 		if (request.url().includes('/actions') && request.method() === 'POST') {
 			isRequestDone = true;
-			const body = request.postData();
-			deepCompareActionSchema(JSON.parse(body), JSON.parse(expectedBody));
+			const body = JSON.parse(request.postData());
+			let expected = JSON.parse(expectedBody);
+			expected.connection = id;
+			deepCompareActionSchema(body, expected);
 		}
 	});
 

@@ -26,6 +26,23 @@ type workspace struct {
 	*apisServer
 }
 
+// Action returns an action of a connection.
+func (workspace workspace) Action(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("id")
+	if v[0] == '+' {
+		return nil, errors.NotFound("")
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.NotFound("")
+	}
+	return ws.Action(id)
+}
+
 // ActionErrors returns the action errors of the workspace.
 func (workspace workspace) ActionErrors(_ http.ResponseWriter, r *http.Request) (any, error) {
 
@@ -507,6 +524,15 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 	redirectURI := query.Get("redirectURI")
 	authCode := query.Get("authCode")
 	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
+}
+
+// Executions returns the executions of the actions of a workspace.
+func (workspace workspace) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	return ws.Executions(r.Context())
 }
 
 // IdentityResolutionSettings returns the identity resolution settings of the

@@ -62,7 +62,7 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(dummySrc, importUsersID, true)
+		exec := c.ExecuteAction(importUsersID, true)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -127,7 +127,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/api/connections/"+strconv.Itoa(fsID)+"/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
+		c.MustCall("PUT", "/api/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
 			Name:    "Export users to the CSV on Filesystem",
 			Enabled: true,
 			Path:    exportedFilename,
@@ -146,7 +146,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		exec := c.ExecuteAction(fsID, exportUsersActionID, true)
+		exec := c.ExecuteAction(exportUsersActionID, true)
 
 		// Wait for the import to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)

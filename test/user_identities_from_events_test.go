@@ -82,7 +82,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Update the action to import identities through a constant mapping.
-	c.UpdateAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
+	c.UpdateAction(importUsersAction, meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},
@@ -115,7 +115,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	}
 
 	// Update the action to import identities through a transformation function.
-	c.UpdateAction(javaScriptID, importUsersAction, meergotester.ActionToSet{
+	c.UpdateAction(importUsersAction, meergotester.ActionToSet{
 		Name:     "JavaScript users",
 		Enabled:  true,
 		InSchema: types.Type{},

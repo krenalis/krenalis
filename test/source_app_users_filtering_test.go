@@ -50,7 +50,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(dummySrc, importUsersID, true)
+	exec := c.ExecuteAction(importUsersID, true)
 	c.WaitForExecutionsCompletionAllowFailed(dummySrc, exec)
 
 	_, _, count := c.Users([]string{"email"}, "", false, 0, 100)

@@ -22,7 +22,7 @@ type action struct {
 
 // Delete deletes an action.
 func (action action) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
+	a, err := action.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (action action) Delete(_ http.ResponseWriter, r *http.Request) (any, error)
 
 // Execute executes an action.
 func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
+	a, err := action.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -71,24 +71,24 @@ func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error
 
 // SetSchedulePeriod sets the schedule period of an action.
 func (action action) SetSchedulePeriod(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
+	a, err := action.id(r)
 	if err != nil {
 		return nil, err
 	}
 	var body struct {
-		SchedulePeriod *core.SchedulePeriod `json:"schedulePeriod"`
+		Period *core.SchedulePeriod `json:"period"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = a.SetSchedulePeriod(r.Context(), body.SchedulePeriod)
+	err = a.SetSchedulePeriod(r.Context(), body.Period)
 	return nil, err
 }
 
 // SetStatus sets the status of an action.
 func (action action) SetStatus(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
+	a, err := action.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (action action) SetStatus(_ http.ResponseWriter, r *http.Request) (any, err
 
 // Update updates an action.
 func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
+	a, err := action.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -132,4 +132,20 @@ func (action action) action(r *http.Request) (*core.Action, error) {
 		return nil, errors.NotFound("")
 	}
 	return connection.Action(r.Context(), id)
+}
+
+func (action action) id(r *http.Request) (*core.Action, error) {
+	ws, err := workspace{action.apisServer}.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("id")
+	if v[0] == '+' {
+		return nil, errors.NotFound("")
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.NotFound("")
+	}
+	return ws.Action(id)
 }

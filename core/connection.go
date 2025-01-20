@@ -1134,50 +1134,6 @@ type Execution struct {
 	Error     string     `json:"error"`
 }
 
-// Executions returns the executions of the actions of the connection.
-// The connection must be an app, database, file, or stream connection.
-func (this *Connection) Executions(ctx context.Context) ([]*Execution, error) {
-
-	this.core.mustBeOpen()
-
-	switch c := this.connection.Connector(); c.Type {
-	case state.App, state.Database, state.FileStorage, state.Stream:
-	default:
-		return nil, errors.BadRequest("connection %d cannot have executions, it's a %s connection",
-			this.connection.ID, strings.ToLower(c.Type.String()))
-	}
-
-	executions := []*Execution{}
-	err := this.core.db.QueryScan(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error_message\n"+
-			"FROM actions_executions e\n"+
-			"INNER JOIN actions a ON a.id = e.action\n"+
-			"WHERE a.connection = $1\n"+
-			"ORDER BY id DESC", this.connection.ID, func(rows *postgres.Rows) error {
-			var err error
-			for rows.Next() {
-				var exe Execution
-				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed, &exe.Failed, &exe.Error); err != nil {
-					return err
-				}
-				executions = append(executions, &exe)
-			}
-			return nil
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, exe := range executions {
-		if exe.EndTime == nil {
-			exe.Passed = 0
-			exe.Failed = 0
-		}
-	}
-
-	return executions, nil
-}
-
 // File returns the records and schema of the file located at the specified path
 // within the connection. The connection must be a file storage connection. path
 // must be UTF-8 encoded with a length in range [1, MaxFilePathSize].

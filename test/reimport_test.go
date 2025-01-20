@@ -52,7 +52,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import the users from dummy.
-	exec := c.ExecuteAction(dummy, dummyAction, true)
+	exec := c.ExecuteAction(dummyAction, true)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check the users.
@@ -79,7 +79,7 @@ func TestReimport(t *testing.T) {
 	// - the email
 	// - the last name (instead of the first name)
 	//
-	c.UpdateAction(dummy, dummyAction, meergotester.ActionToSet{
+	c.UpdateAction(dummyAction, meergotester.ActionToSet{
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
@@ -99,7 +99,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from dummy.
-	exec = c.ExecuteAction(dummy, dummyAction, true) // reload = true
+	exec = c.ExecuteAction(dummyAction, true) // reload = true
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check the users again.

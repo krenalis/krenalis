@@ -278,7 +278,7 @@ const useAction = (
 		let id: number = 0;
 		try {
 			if (isEditing) {
-				await api.workspaces.connections.updateAction(connection.id, action.id!, actionToSet);
+				await api.workspaces.connections.updateAction(action.id!, actionToSet);
 			} else {
 				id = await api.workspaces.connections.createAction(
 					connection.id,

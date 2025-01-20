@@ -56,7 +56,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecuteAction(dummy, importUsersID, true)
+	exec := c.ExecuteAction(importUsersID, true)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check if the users have been imported - and then returned - correctly.

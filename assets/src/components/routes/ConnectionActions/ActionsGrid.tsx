@@ -61,7 +61,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		const index = connection.actions!.findIndex((a) => a.id === actionID);
 		const enabledValue = connection.actions![index].enabled;
 		try {
-			await api.workspaces.connections.setActionStatus(connection.id, actionID, !enabledValue);
+			await api.workspaces.connections.setActionStatus(actionID, !enabledValue);
 		} catch (err) {
 			handleError(err);
 			return;
@@ -76,7 +76,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const onConfirmDeleteAction = async () => {
 		newActionID.current = 0; // do not re-trigger the animation of the new action's row during the repainting.
 		try {
-			await api.workspaces.connections.deleteAction(connection.id, actionToDelete);
+			await api.workspaces.connections.deleteAction(actionToDelete);
 		} catch (err) {
 			handleError(err);
 			setActionToDelete(null);
@@ -90,7 +90,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		runButtonRefs.current[actionID].current!.load();
 		const startTime = new Date().getTime();
 		try {
-			await api.workspaces.connections.executeAction(connection.id, actionID);
+			await api.workspaces.connections.executeAction(actionID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				runButtonRefs.current[actionID].current!.error(err.message);
@@ -105,7 +105,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		while (execution == null) {
 			let executions: Execution[];
 			try {
-				executions = await api.workspaces.connections.executions(connection.id);
+				executions = await api.workspaces.connections.executions();
 			} catch (err) {
 				handleError(err);
 				return;
@@ -150,7 +150,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const onSchedulerPeriodChange = async (e: any, actionID: number) => {
 		const period = e.currentTarget.value === 'Off' ? null : e.currentTarget.value;
 		try {
-			await api.workspaces.connections.setActionSchedulePeriod(connection.id, actionID, period);
+			await api.workspaces.connections.setActionSchedulePeriod(actionID, period);
 		} catch (err) {
 			handleError(err);
 			return;

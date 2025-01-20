@@ -52,7 +52,7 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(dummySrc, importUsersID, true)
+	exec := c.ExecuteAction(importUsersID, true)
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
 	// Create a JavaScript connection with 2 actions (one for importing events,

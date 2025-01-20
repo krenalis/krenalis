@@ -21,19 +21,6 @@ type connection struct {
 	*apisServer
 }
 
-// Action returns an action of a connection.
-func (connection connection) Action(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	id, err := connection.action(r)
-	if err != nil {
-		return nil, err
-	}
-	return c.Action(r.Context(), id)
-}
-
 // ActionSchemas returns the action schema of a target.
 //
 // TODO(Gianluca): this method is deprecated. See the issue
@@ -98,13 +85,14 @@ func (connection connection) CompletePath(_ http.ResponseWriter, r *http.Request
 
 // CreateAction creates an action.
 func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
 		return nil, err
 	}
 	var body struct {
-		Target    core.Target `json:"target"`
-		EventType string      `json:"eventType"`
+		Connection int         `json:"connection"`
+		Target     core.Target `json:"target"`
+		EventType  string      `json:"eventType"`
 		core.ActionToSet
 	}
 	err = json.Decode(r.Body, &body)
@@ -113,6 +101,10 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 	}
 	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
 		body.FormatSettings = nil
+	}
+	c, err := ws.Connection(r.Context(), body.Connection)
+	if err != nil {
+		return nil, err
 	}
 	return c.CreateAction(r.Context(), body.Target, body.EventType, body.ActionToSet)
 }
@@ -165,15 +157,6 @@ func (connection connection) ExecQuery(_ http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	return map[string]any{"rows": rows, "schema": schema}, nil
-}
-
-// Executions returns the executions of the actions of a connection.
-func (connection connection) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	return c.Executions(r.Context())
 }
 
 // File returns the records and schema of the file located at the specified path

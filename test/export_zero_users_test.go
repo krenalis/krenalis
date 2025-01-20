@@ -58,7 +58,7 @@ func TestExportZeroUsers(t *testing.T) {
 			},
 			ExportOnDuplicates: false,
 		})
-		exec := c.ExecuteAction(dummyDest, exportUsersActionID, true)
+		exec := c.ExecuteAction(exportUsersActionID, true)
 		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}()
 
@@ -111,7 +111,7 @@ func TestExportZeroUsers(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		exec := c.ExecuteAction(fsID, exportUsersActionID, true)
+		exec := c.ExecuteAction(exportUsersActionID, true)
 
 		// Wait for the import to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)

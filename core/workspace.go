@@ -126,6 +126,22 @@ type ActionError struct {
 	LastOccurred time.Time  `json:"lastOccurred"`
 }
 
+// Action returns the action with identifier id of the workspace.
+// It returns an errors.NotFound error if the action does not exist.
+func (this *Workspace) Action(id int) (*Action, error) {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
+	}
+	a, ok := this.core.state.Action(id)
+	if !ok || a.Connection().Workspace().ID != this.workspace.ID {
+		return nil, errors.NotFound("action %d does not exist", id)
+	}
+	var action Action
+	action.fromState(this.core, this.store, a)
+	return &action, nil
+}
+
 // ActionErrors returns the errors for the provided actions within the time
 // range [start,end). The end time must not precede the start time, and both
 // must be within [metrics.MinTime,metrics.MaxTime]. actions must not be empty.
@@ -922,6 +938,43 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	}
 
 	return evts, nil
+}
+
+// Executions returns the executions of the actions of the workspace.
+func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
+
+	this.core.mustBeOpen()
+
+	executions := []*Execution{}
+	err := this.core.db.QueryScan(ctx,
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error_message\n"+
+			"FROM actions_executions e\n"+
+			"INNER JOIN actions a ON a.id = e.action\n"+
+			"INNER JOIN connections c ON c.id = a.connection\n"+
+			"WHERE c.workspace = $1\n"+
+			"ORDER BY id DESC", this.workspace.ID, func(rows *postgres.Rows) error {
+			var err error
+			for rows.Next() {
+				var exe Execution
+				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed, &exe.Failed, &exe.Error); err != nil {
+					return err
+				}
+				executions = append(executions, &exe)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, exe := range executions {
+		if exe.EndTime == nil {
+			exe.Passed = 0
+			exe.Failed = 0
+		}
+	}
+
+	return executions, nil
 }
 
 // IdentifiersSchema returns the properties of the "users" schema that can be

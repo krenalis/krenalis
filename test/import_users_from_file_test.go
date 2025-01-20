@@ -72,7 +72,7 @@ func TestImportUsersFromFile(t *testing.T) {
 	})
 
 	// Execute the action that imports users.
-	exec := c.ExecuteAction(fsID, importUsersActionID, true)
+	exec := c.ExecuteAction(importUsersActionID, true)
 
 	// Wait for the import to finish.
 	c.WaitForExecutionsCompletion(fsID, exec)

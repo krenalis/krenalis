@@ -79,7 +79,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 	action := action{s}
 
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
-		"DELETE /connections/{connection}/actions/{action}":                   action.Delete,
+		"DELETE /actions/{id}":                                                action.Delete,
 		"DELETE /connections/{id}":                                            connection.Delete,
 		"DELETE /connections/{id}/keys/{key}":                                 connection.DeleteWriteKey,
 		"DELETE /connections/{src}/links/{dst}":                               connection.UnlinkConnection,
@@ -88,19 +88,19 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"DELETE /members/{member}":                                            organization.DeleteMember, /* only UI */
 		"DELETE /workspaces/current":                                          workspace.Delete,
 		"GET    /actions/errors/{start}/{end}":                                workspace.ActionErrors,
+		"GET    /actions/executions":                                          workspace.Executions,
 		"GET    /actions/metrics/dates/{start}/{end}":                         workspace.ActionMetricsPerDate,
 		"GET    /actions/metrics/days/{days}":                                 workspace.ActionMetricsPerDay,
 		"GET    /actions/metrics/hours/{hours}":                               workspace.ActionMetricsPerHour,
 		"GET    /actions/metrics/minutes/{minutes}":                           workspace.ActionMetricsPerMinute,
+		"GET    /actions/{id}":                                                workspace.Action,
 		"GET    /connections":                                                 workspace.Connections,
 		"GET    /connections/auth-token":                                      workspace.AuthToken,
 		"GET    /connections/auth-url":                                        connector.AuthCodeURL,
 		"GET    /connections/{connection}/action-types":                       connection.ActionTypes,   /* only UI */
 		"GET    /connections/{connection}/actions/schemas/Events/{eventType}": connection.ActionSchemas, /* only UI */
 		"GET    /connections/{connection}/actions/schemas/{target}":           connection.ActionSchemas, /* only UI */
-		"GET    /connections/{connection}/actions/{action}":                   connection.Action,
-		"GET    /connections/{connection}/executions":                         connection.Executions,
-		"GET    /connections/{connection}/ui":                                 connection.ServeUI, /* only UI */
+		"GET    /connections/{connection}/ui":                                 connection.ServeUI,       /* only UI */
 		"GET    /connections/{id}":                                            workspace.Connection,
 		"GET    /connections/{id}/files/{path}/absolute":                      connection.CompletePath,
 		"GET    /connections/{id}/keys":                                       connection.WriteKeys,
@@ -127,9 +127,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /warehouse/types":                                             api.WarehouseTypes,
 		"GET    /workspaces":                                                  organization.Workspaces,
 		"GET    /workspaces/current":                                          organization.Workspace,
+		"POST   /actions":                                                     connection.CreateAction,
+		"POST   /actions/{id}/exec":                                           action.Execute,
 		"POST   /connections":                                                 workspace.CreateConnection,
-		"POST   /connections/{connection}/actions":                            connection.CreateAction,
-		"POST   /connections/{connection}/actions/{action}/executions":        action.Execute,
 		"POST   /connections/{connection}/actions/{action}/ui-event":          action.ServeUI,     /* only UI */
 		"POST   /connections/{connection}/ui-event":                           connection.ServeUI, /* only UI */
 		"POST   /connections/{id}/files/{path}":                               connection.File,
@@ -158,9 +158,9 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /warehouse/repair":                                            workspace.RepairWarehouse,
 		"POST   /workspaces":                                                  organization.CreateWorkspace,
 		"POST   /workspaces/test":                                             organization.TestWorkspaceCreation,
-		"PUT    /connections/{connection}/actions/{action}":                   action.Update,
-		"PUT    /connections/{connection}/actions/{action}/schedule-period":   action.SetSchedulePeriod,
-		"PUT    /connections/{connection}/actions/{action}/status":            action.SetStatus,
+		"PUT    /actions/{id}":                                                action.Update,
+		"PUT    /actions/{id}/schedule":                                       action.SetSchedulePeriod,
+		"PUT    /actions/{id}/status":                                         action.SetStatus,
 		"PUT    /connections/{id}":                                            connection.Update,
 		"PUT    /identity-resolution/settings":                                workspace.UpdateIdentityResolutionSettings,
 		"PUT    /keys/{key}":                                                  organization.UpdateAPIKey, /* only UI */

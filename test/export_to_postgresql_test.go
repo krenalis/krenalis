@@ -50,7 +50,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(dummySrc, importUsersID, true)
+		exec := c.ExecuteAction(importUsersID, true)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -101,7 +101,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(pgsql, exportAction, false)
+	exec := c.ExecuteAction(exportAction, false)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.
@@ -115,7 +115,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 	}
 
 	// Update the action to export the empty string for full_name.
-	c.UpdateAction(pgsql, exportAction, meergotester.ActionToSet{
+	c.UpdateAction(exportAction, meergotester.ActionToSet{
 		Name:      "Export users to PostgreSQL",
 		Enabled:   true,
 		TableName: "test_export_to_db",
@@ -134,7 +134,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec = c.ExecuteAction(pgsql, exportAction, false)
+	exec = c.ExecuteAction(exportAction, false)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.

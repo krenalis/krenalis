@@ -29,8 +29,8 @@ var defaultStrategy Strategy = "AB-C"
 
 // This file contains support methods which reduce verbosity of tests.
 
-func (c *Meergo) Action(connection, action int) Action {
-	method := fmt.Sprintf("/api/connections/%d/actions/%d", connection, action)
+func (c *Meergo) Action(action int) Action {
+	method := fmt.Sprintf("/api/actions/%d", action)
 	var response map[string]any
 	c.MustCall("GET", method, nil, &response)
 	data, err := json.Marshal(response)
@@ -100,10 +100,10 @@ func (c *Meergo) CreateAction(conn int, target string, action ActionToSet) int {
 	if err != nil {
 		panic(err)
 	}
+	body["connection"] = conn
 	body["target"] = target
 	var id int
-	method := fmt.Sprintf("/api/connections/%d/actions", conn)
-	c.MustCall("POST", method, body, &id)
+	c.MustCall("POST", "/api/actions", body, &id)
 	return id
 }
 
@@ -124,10 +124,10 @@ func (c *Meergo) CreateActionErr(conn int, target string, action ActionToSet) (i
 	if err != nil {
 		panic(err)
 	}
+	body["connection"] = conn
 	body["target"] = target
 	var id int
-	method := fmt.Sprintf("/api/connections/%d/actions", conn)
-	err = c.Call("POST", method, body, &id)
+	err = c.Call("POST", "/api/actions", body, &id)
 	if err != nil {
 		return 0, err
 	}
@@ -207,11 +207,11 @@ func (c *Meergo) CreateEventAction(conn int, eventType string, action ActionToSe
 	if err != nil {
 		panic(err)
 	}
+	body["connection"] = conn
 	body["target"] = "Events"
 	body["eventType"] = eventType
 	var id int
-	method := fmt.Sprintf("/api/connections/%d/actions", conn)
-	c.MustCall("POST", method, body, &id)
+	c.MustCall("POST", "/api/actions", body, &id)
 	return id
 }
 
@@ -258,17 +258,16 @@ func (c *Meergo) DeleteConnection(conn int) {
 	c.MustCall("DELETE", method, nil, nil)
 }
 
-func (c *Meergo) ExecuteAction(conn, action int, reload bool) int {
-	method := fmt.Sprintf("/api/connections/%d/actions/%d/executions", conn, action)
+func (c *Meergo) ExecuteAction(action int, reload bool) int {
+	method := fmt.Sprintf("/api/actions/%d/exec", action)
 	var id int
-	c.MustCall("POST", method, map[string]any{"Reload": reload}, &id)
+	c.MustCall("POST", method, map[string]any{"reload": reload}, &id)
 	return id
 }
 
-func (c *Meergo) Executions(conn int) []Execution {
+func (c *Meergo) Executions() []Execution {
 	var executions []Execution
-	method := fmt.Sprintf("/api/connections/%d/executions", conn)
-	c.MustCall("GET", method, nil, &executions)
+	c.MustCall("GET", "/api/actions/executions", nil, &executions)
 	return executions
 }
 
@@ -412,8 +411,8 @@ func (c *Meergo) TestWorkspaceCreation(name string, userSchema types.Type,
 	return c.Call("POST", "/api/workspaces/test", body, nil)
 }
 
-func (c *Meergo) UpdateAction(conn int, actionID int, action ActionToSet) {
-	method := fmt.Sprintf("/api/connections/%d/actions/%d", conn, actionID)
+func (c *Meergo) UpdateAction(actionID int, action ActionToSet) {
+	method := fmt.Sprintf("/api/actions/%d", actionID)
 	c.MustCall("PUT", method, action, nil)
 }
 
@@ -567,7 +566,7 @@ func (c *Meergo) waitForExecutionsCompletion(conn int, allowFailed bool, executi
 	time.Sleep(500 * time.Millisecond)
 	for {
 		completed := true
-		for _, exec := range c.Executions(conn) {
+		for _, exec := range c.Executions() {
 			if !slices.Contains(executions, exec.ID) {
 				continue
 			}

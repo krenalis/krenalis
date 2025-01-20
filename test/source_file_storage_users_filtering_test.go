@@ -64,7 +64,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecuteAction(fs1, action1, true)
+	exec1 := c.ExecuteAction(action1, true)
 
 	c.WaitForExecutionsCompletionAllowFailed(fs1, exec1)
 

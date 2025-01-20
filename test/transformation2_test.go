@@ -63,7 +63,7 @@ def transform(user: dict) -> dict:
 			},
 		},
 	})
-	exec := c.ExecuteAction(dummy, action, true)
+	exec := c.ExecuteAction(action, true)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Retrieve the users.
