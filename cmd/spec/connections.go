@@ -66,10 +66,10 @@ func init() {
 		Type:        types.Array(types.Int(32)),
 		Nullable:    true,
 		Placeholder: "null",
-		Description: "The IDs of the connections to which to send or from which to receive events.\n\n" +
-			"For source mobile, server, or website connections, linked connections are the app connections to which the received events are sent. " +
-			"On the other hand, for destination app connections, linked connections are the source mobile, website, and server connections from which events are received.\n\n" +
-			"If it is null, there are no linked connections, or the connection is not one of the mentioned types.",
+		Description: "The IDs of of the connections to which events are sent or from which events are received.\n\n" +
+			"For source connections (website, mobile, server), the linked connections are the destination app connections where the received events are forwarded. " +
+			"On the other hand, for destination app connections, the linked connections are the source website, mobile, or server connections from which events are received.\n\n" +
+			"If this field is null, it means there are no linked connections, or the connection type does not match any of the types mentioned above.",
 	}
 	settingsParameter := types.Property{
 		Name:        "settings",
@@ -80,7 +80,6 @@ func init() {
 			"Please refer to the documentation for the [connector](/connectors/) to understand the available settings and their corresponding values.\n\n" +
 			"If the connector does not require any settings, the `settings` field may be omitted or set to null.",
 	}
-
 	listReturnsConnection := []types.Property{
 		idParameter,
 		nameParameter,
@@ -134,7 +133,6 @@ func init() {
 			Description: "The connection's health.",
 		},
 	}
-
 	getReturnsConnection := append(listReturnsConnection,
 		types.Property{
 			Name:        "actions",
@@ -170,12 +168,12 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "connections",
 		Name: "Connections",
-		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n" +
-			"Actions then allow you to perform operations on these connections to import and export users and to receive and send events.",
+		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers. " +
+			"Actions then allow you to perform operations on these connections.",
 		Endpoints: []*Endpoint{
 			{
-				Name: "Create a connection",
-				Description: "Creates a new connection.\n\n" +
+				Name: "Create connection",
+				Description: "Creates a connection.\n\n" +
 					"For connectors that require authorization, follow these steps to create the connection:\n\n" +
 					"1. [Get the auth URL](/api/connections#get-auth-url) and redirect the user to it.\n" +
 					"2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n" +
@@ -307,7 +305,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update a connection",
+				Name:        "Update connection",
 				Description: "Updates a connection.",
 				Method:      PUT,
 				URL:         "/v0/connections/:id",
@@ -342,7 +340,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get a connection",
+				Name:        "Get connection",
 				Description: "Gets a connection.",
 				Method:      GET,
 				URL:         "/v0/connections/:id",
@@ -358,7 +356,56 @@ func init() {
 				},
 			},
 			{
-				Name:        "Delete a connection",
+				Name:        "Retrieve user identities",
+				Description: "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.",
+				Method:      GET,
+				URL:         "/v0/connections/:id/identities",
+				Parameters: []types.Property{
+					{
+						Name:           "id",
+						Type:           types.Int(32),
+						Placeholder:    "1371036433",
+						CreateRequired: true,
+						Description:    "The ID of the connection from which the user identities were imported. It must be a source connection.",
+					},
+					{
+						Name:        "first",
+						Type:        types.Int(32),
+						Placeholder: `0`,
+						Description: "The number of user identities to skip before starting to return results. The default value is 0.",
+					},
+					{
+						Name:           "limit",
+						Type:           types.Int(32).WithIntRange(1, 1000),
+						CreateRequired: true,
+						Placeholder:    `1000`,
+						Description:    "The maximum number of user identities to return. The value must be within the range [1, 1000].",
+					},
+				},
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name:        "identities",
+							Type:        types.Array(types.Map(types.JSON())),
+							Placeholder: `[ { ... } ]`,
+							Description: "The connection's user identities.",
+						},
+						{
+							Name:        "count",
+							Type:        types.Int(32),
+							Placeholder: `23`,
+							Description: "The estimated total number of user identities in the connection.",
+						},
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+					{404, NotFound, "connection does not exist"},
+					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+				},
+			},
+			{
+				Name:        "Delete connection",
 				Description: "Deletes a connection.",
 				Method:      DELETE,
 				URL:         "/v0/connections/:id",

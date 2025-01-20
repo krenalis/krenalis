@@ -25,13 +25,13 @@ func init() {
 		{
 			Name:        "start",
 			Type:        types.DateTime(),
-			Placeholder: `2025-01-02T09:00:00`,
+			Placeholder: `"2025-01-02T09:00:00"`,
 			Description: "The starting date in the `YYYY-MM-DDTHH:mm:ss` ISO 8601 format.",
 		},
 		{
 			Name:        "end",
 			Type:        types.DateTime(),
-			Placeholder: `2025-01-02T18:00:00`,
+			Placeholder: `"2025-01-02T18:00:00"`,
 			Description: "The ending date in the `YYYY-MM-DDTHH:mm:ss` ISO 8601 format.",
 		},
 		{
@@ -50,12 +50,12 @@ func init() {
 	stepType := types.Text().WithValues("Receive", "InputValidation", "Filter", "Transformation", "OutputValidation", "Finalize")
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "metrics-and-errors",
-		Name:        "Metrics and errors",
+		ID:          "action-metrics-and-errors",
+		Name:        "Action metrics and errors",
 		Description: "Metrics and errors related to the actions, including both import/export processes and the sending or receiving of events within the pipelines.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Get action metrics per dates",
+				Name:        "Get metrics per dates",
 				Description: "Retrieves metrics for actions aggregated by day for a time interval between specified start and end dates.",
 				Method:      GET,
 				URL:         "/v0/actions/metrics/dates/:start/:end",
@@ -82,7 +82,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get action metrics per day",
+				Name:        "Get metrics per day",
 				Description: "Retrieves metrics for actions for a specified number of days up to the current time.",
 				Method:      GET,
 				URL:         "/v0/actions/metrics/days/:days",
@@ -103,7 +103,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get action metrics per hour",
+				Name:        "Get metrics per hour",
 				Description: "Retrieves metrics for actions for a specified number of hours up to the current time.",
 				Method:      GET,
 				URL:         "/v0/actions/metrics/hours/:hours",
@@ -124,7 +124,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get action metrics per minute",
+				Name:        "Get metrics per minute",
 				Description: "Retrieves metrics for actions for a specified number of minutes up to the current time.",
 				Method:      GET,
 				URL:         "/v0/actions/metrics/minutes/:minutes",
@@ -145,7 +145,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get action errors",
+				Name:        "Get errors",
 				Description: "Retrieves errors for actions for a time interval between specified start and end dates.",
 				Method:      GET,
 				URL:         "/v0/actions/errors/:start/:end",
@@ -154,13 +154,15 @@ func init() {
 						Name:           "start",
 						Type:           types.DateTime(),
 						CreateRequired: true,
-						Description:    "The starting date in ISO 8601 format.\n\nThe date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00, and the date must be earlier than the end date.",
+						Description: "The starting date in ISO 8601 format. It must be earlier than the end date.\n\n" +
+							"Additionally, the date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00.",
 					},
 					{
 						Name:           "end",
 						Type:           types.DateTime(),
 						CreateRequired: true,
-						Description:    "The ending date in ISO 8601 format.\n\nThe date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00, and the date must be later than the start date.",
+						Description: "The ending date in ISO 8601 format. It must be later than the start date.\n\n" +
+							"Additionally, the date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00.",
 					},
 					{
 						Name:           "actions",

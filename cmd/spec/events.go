@@ -176,15 +176,53 @@ func init() {
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:          "events",
-		Name:        "Events",
-		Description: "Events are the events associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse).",
+		ID:   "events",
+		Name: "Events",
+		Description: "Events are received from websites, mobile apps, and servers. " +
+			"They can be stored in the workspace’s data warehouse and forwarded to apps.\n\n" +
+			"These endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.",
 		Endpoints: []*Endpoint{
 			{
+				Name: "Ingest event",
+				Description: "Ingests a single event.\n\n This endpoint supports authentication only with a **connection key**. " +
+					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+				Method:       POST,
+				WriteKeyAuth: true,
+				URL:          "/v0/events/:type",
+				Parameters: []types.Property{
+					{
+						Name:           "type",
+						Type:           types.Text().WithValues("alias", "identify", "group", "page", "screen", "track"),
+						CreateRequired: true,
+						Description:    "The type of the event.",
+					},
+					{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
+					{Name: "category", Type: types.Text()},
+					{
+						Name: "context",
+						Type: eventContextType,
+					},
+					{Name: "event", Type: types.Text()},
+					{Name: "groupId", Type: types.Text()},
+					{Name: "messageId", Type: types.Text()},
+					{Name: "name", Type: types.Text()},
+					{Name: "properties", Type: types.JSON()},
+					{Name: "receivedAt", Type: types.DateTime()},
+					{Name: "sentAt", Type: types.DateTime()},
+					{Name: "originalTimestamp", Type: types.DateTime()},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "traits", Type: types.JSON()},
+					{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+					{Name: "previousId", Type: types.Text()},
+					{Name: "userId", Type: types.Text()},
+					{Name: "integrations", Type: types.JSON(), Nullable: true},
+				},
+			},
+			{
 				Name: "Ingest batch events",
-				Description: "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and a write key:\n" +
-					"* For a website or mobile app, you must exclusively use a write key, as it only provides access to event ingestion endpoints.\n" +
-					"* For a server application, using a write key is recommended if you don’t need access to other endpoints.",
+				Description: "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and a connection key:\n" +
+					"* For a website or mobile app, you must exclusively use a connection key, as it only provides access to event ingestion endpoints.\n" +
+					"* For a server application, using a connection key is recommended if you don’t need access to other endpoints.",
 				Method: POST,
 				URL:    "/v0/events/batch",
 				Parameters: []types.Property{
@@ -194,7 +232,8 @@ func init() {
 						Placeholder:    "1371036433",
 						UpdateRequired: true,
 						Description: "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\n" +
-							"It is required only if the call is authenticated using an API key. If authentication is done with a write key, it is not needed, as the connection is that of the write key.",
+							"It is required only if the call is authenticated using an API key. " +
+							"If authentication is done with a connection key, it is not needed, as the connection is that of the key.",
 					},
 					{
 						Name: "batch",
@@ -236,48 +275,12 @@ func init() {
 					{
 						Name:        "writeKey",
 						Type:        types.Text(),
-						Description: "The write key of the connection.",
+						Description: "The key of the connection.",
 					},
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-				},
-			},
-			{
-				Name: "Ingest event",
-				Description: "Ingests a single event.\n\n This endpoint supports authentication only with a **write key**. " +
-					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
-				Method:       POST,
-				WriteKeyAuth: true,
-				URL:          "/v0/events/:type",
-				Parameters: []types.Property{
-					{
-						Name:           "type",
-						Type:           types.Text().WithValues("alias", "identify", "group", "page", "screen", "track"),
-						CreateRequired: true,
-						Description:    "The type of the event.",
-					},
-					{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
-					{Name: "category", Type: types.Text()},
-					{
-						Name: "context",
-						Type: eventContextType,
-					},
-					{Name: "event", Type: types.Text()},
-					{Name: "groupId", Type: types.Text()},
-					{Name: "messageId", Type: types.Text()},
-					{Name: "name", Type: types.Text()},
-					{Name: "properties", Type: types.JSON()},
-					{Name: "receivedAt", Type: types.DateTime()},
-					{Name: "sentAt", Type: types.DateTime()},
-					{Name: "originalTimestamp", Type: types.DateTime()},
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "traits", Type: types.JSON()},
-					{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
-					{Name: "previousId", Type: types.Text()},
-					{Name: "userId", Type: types.Text()},
-					{Name: "integrations", Type: types.JSON(), Nullable: true},
 				},
 			},
 			{
@@ -340,7 +343,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get the event schema",
+				Name:        "Get event schema",
 				Description: "Return the event schema. The event schema is the same for all workspaces.",
 				Method:      GET,
 				URL:         "/v0/events/schema",
@@ -358,7 +361,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Create an event listener",
+				Name:        "Create event listener",
 				Description: "Creates an event listener to the workspace that listens to events and returns its identifier.",
 				Method:      POST,
 				URL:         "/v0/events/listeners",
@@ -417,7 +420,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Delete an event listener",
+				Name:        "Delete event listener",
 				Description: "Deletes an event listener. It does nothing if the event listener does not exist.",
 				Method:      DELETE,
 				URL:         "/v0/events/listeners/:id",

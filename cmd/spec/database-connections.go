@@ -16,11 +16,11 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "database-connections",
 		Name:        "Database connections",
-		Description: "...",
+		Description: "These endpoints are specific to database connections.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Retrieve a database query schema",
-				Description: "It executes the provided query on the source database connection and returns the result schema along with sample rows for reference.",
+				Name:        "Retrieve query schema",
+				Description: "It executes the provided query on a source database connection and returns the result schema along with the first rows.",
 				Method:      POST,
 				URL:         "/v0/connections/:id/query",
 				Parameters: []types.Property{
@@ -36,7 +36,7 @@ func init() {
 						Type:           types.Text(),
 						Placeholder:    `"SELECT name, email FROM users"`,
 						CreateRequired: true,
-						Description: "The query to execute on the connection's database to read the result schema along with sample rows for reference. " +
+						Description: "The query to execute to read the result schema along with sample rows for reference. " +
 							"It must contain the \"limit\" placeholder and cannot be longer than 16,777,215 characters.",
 					},
 					{
@@ -68,7 +68,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Retrieve a database table schema",
+				Name:        "Retrieve table schema",
 				Description: "Returns the schema of a specified database table of a destination database connection.",
 				Method:      GET,
 				URL:         "/v0/connections/:id/tables/:name",

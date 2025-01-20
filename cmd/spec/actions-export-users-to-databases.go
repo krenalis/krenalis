@@ -44,7 +44,7 @@ func init() {
 		ID:   "actions-export-users-to-databases",
 		Name: "Export users to databases",
 		Description: "This type of action exports user data from the workspace's data warehouse to a database table. " +
-			"It requires a destination database connection.",
+			"It operates on a destination database connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

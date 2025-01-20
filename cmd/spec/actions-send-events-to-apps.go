@@ -34,7 +34,7 @@ func init() {
 		ID:   "actions-send-events-to-apps",
 		Name: "Send events to apps",
 		Description: "This type of action sends the received events to applications. " +
-			"It requires a destination app connection that supports events.",
+			"It operates on a destination app connection that supports events.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

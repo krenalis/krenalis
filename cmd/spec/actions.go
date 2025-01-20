@@ -52,9 +52,10 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions",
 		Name: "Actions",
-		Description: "Actions represent the operations that can be performed on connections. " +
+		Description: "Actions represent the operations that can be performed on connections, " +
+			"such as importing and exporting users or storing and sending events.\n\n" +
 			"This section documents the endpoints common to various types of actions. " +
-			"Refer to the specific sections for each action type to create, update, and get an action.",
+			"For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Set status",
@@ -143,6 +144,63 @@ func init() {
 					{422, ExecutionInProgress, "action is already in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+				},
+			},
+			{
+				Name: "List all executions",
+				Description: "Returns all action executions.\n\n" +
+					"Actions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
+				Method: GET,
+				URL:    "/v0/actions/executions",
+				Response: &Response{
+					Parameters: []types.Property{
+						{
+							Name:        "id",
+							Type:        types.Int(32),
+							Placeholder: "609461413",
+							Description: "The ID of the execution.",
+						},
+						{
+							Name:        "action",
+							Type:        types.Int(32),
+							Placeholder: "705981339",
+							Description: "The ID of the executed action.",
+						},
+						{
+							Name:        "startTime",
+							Type:        types.DateTime(),
+							Placeholder: `"2024/11/27T18:22:47.937Z"`,
+							Description: "The start time in ISO 8601 format.",
+						},
+						{
+							Name:        "endTime",
+							Type:        types.DateTime(),
+							Nullable:    true,
+							Placeholder: `"2024/11/27T18:49:07.150Z"`,
+							Description: "The end time in ISO 8601 format. It is null if the execution has not yet finished.",
+						},
+						{
+							Name:        "passed",
+							Type:        types.Int(32),
+							Placeholder: "22947",
+							Description: "The number of passed users or events.",
+						},
+						{
+							Name:        "failed",
+							Type:        types.Int(32),
+							Placeholder: "172",
+							Description: "The number of failed users or events.",
+						},
+						{
+							Name:        "error",
+							Type:        types.Text(),
+							Placeholder: `""`,
+							Description: "An error occurred during execution, causing it to stop prematurely. It is empty if the execution has not yet finished or if no error occurred.",
+						},
+					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
 				},
 			},
 			{

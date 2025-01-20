@@ -26,7 +26,7 @@ func init() {
 		Type:        filterType,
 		Nullable:    true,
 		Placeholder: `{ "logical": "and", "conditions": [ { "property": "type", "operator": "is", "values": [ "track" ] } ] }`,
-		Description: "The filter applied to the events. If it's not null, only the events that match the filter will be received.\n\n" +
+		Description: "The filter applied to the events. If it's not null, only the events that match the filter will be imported.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
 
@@ -34,7 +34,7 @@ func init() {
 		ID:   "actions-import-events",
 		Name: "Import events",
 		Description: "This type of action imports events into the workspace’s data warehouse. " +
-			"It requires a website, mobile, or server connection.",
+			"It operates on a website, mobile, or server connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
@@ -48,7 +48,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection from which the events are received. It must be a source website, mobile, or server.",
+						Description:    "The ID of the connection from which the events are received. It must be a website, mobile, or server.",
 					},
 					{
 						Name:           "target",

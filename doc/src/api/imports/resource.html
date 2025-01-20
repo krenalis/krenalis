@@ -121,7 +121,12 @@
     return i != -1 and "/?,&" contains url[i+len(name)]
   }
 
-  bodyParameters := func(url string, parameters []any) []map[string]any {
+  bodyParameters := func(endpoint map[string]any) []map[string]any {
+    if endpoint.method != "POST" and endpoint.method != "PUT" {
+      return nil
+    }
+    url := endpoint.url.(string)
+    parameters := endpoint.parameters.([]any)
     var params []map[string]any
     for parameter in parameters {
       p := parameter.(map[string]any)
@@ -274,7 +279,7 @@
         <div><span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}</div>
         <div>
           <div>curl -X {{ endpoint.method }} https://api.meergo.com{{ endpoint.url }} \</div>
-          {% body := bodyParameters(endpoint.url.(string), endpoint.parameters.([]any)) %}
+          {% body := bodyParameters(endpoint) %}
           {% if endpoint.writeKeyAuth %}
           <div>   -u &lt;YOUR_WRITE_KEY&gt;:{% if body %} \{% end %}</div>
           {% else %}

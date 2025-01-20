@@ -34,7 +34,7 @@ func init() {
 		ID:   "actions-export-users-to-apps",
 		Name: "Export users to apps",
 		Description: "This type of action exports user data from the workspace's data warehouse to an application. " +
-			"It requires a destination app connection that supports users.",
+			"It operates on a destination app connection that supports users.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

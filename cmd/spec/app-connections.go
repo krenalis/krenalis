@@ -16,7 +16,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "app-connections",
 		Name:        "App connections",
-		Description: "A connection enables Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
+		Description: "These endpoints are specific to app connections.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Retrieve app users",
@@ -25,6 +25,13 @@ func init() {
 				Method: POST,
 				URL:    "/v0/connections/:id/users",
 				Parameters: []types.Property{
+					{
+						Name:           "id",
+						Type:           types.Int(32),
+						Placeholder:    "1371036433",
+						CreateRequired: true,
+						Description:    "The ID of the app connection from which to read users.",
+					},
 					{
 						Name:           "schema",
 						Type:           types.Parameter("Schema"),
@@ -62,25 +69,32 @@ func init() {
 				},
 			},
 			{
-				Name: "Preview send event",
-				Description: "Returns a preview of an event as it would be sent to the connection's app.\n\n" +
-					"The connection must be a destination app connection, and it is expected to have the provided event type.",
-				Method: POST,
-				URL:    "/v0/connections/:id/preview-send-event",
+				Name:        "Preview send event",
+				Description: "Returns a preview of an event as it would be sent to an app, but no event is actually sent.",
+				Method:      POST,
+				URL:         "/v0/connections/:id/preview-send-event",
 				Parameters: []types.Property{
+					{
+						Name:           "id",
+						Type:           types.Int(32),
+						Placeholder:    "1371036433",
+						CreateRequired: true,
+						Description:    "The ID of the destination app connection through which the event would be sent.",
+					},
 					{
 						Name:           "type",
 						Type:           types.Text(),
 						Placeholder:    `"addToCart"`,
 						CreateRequired: true,
-						Description:    "The ID of the event type.",
+						Description:    "The ID of the event type to be sent. It must be one of the event types supported by the app connection.",
 					},
 					{
 						Name:           "event",
 						Type:           types.JSON(),
 						Placeholder:    `{...}`,
 						CreateRequired: true,
-						Description:    "The event that would be sent. It must conform to the schema of the event type.",
+						Description: "The event (as it would be received from a website, mobile, or server connection) that is sent to the app. " +
+							"It must adhere to the [event schema](http://localhost:8080/api/events#get-the-event-schema).",
 					},
 					{
 						Name:        "transformation",
@@ -147,7 +161,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get event type schema",
+				Name:        "Get event schema",
 				Description: "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
 				Method:      GET,
 				URL:         "/v0/connections/:id/schemas/event/:type",

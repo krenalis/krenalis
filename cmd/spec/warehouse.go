@@ -39,7 +39,7 @@ func init() {
 		Description: "A warehouse, which is associated with a [workspace](workspaces), stores [user](users) and [event](events) data. This data can be accessed or queried for export to external destinations.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Get the warehouse",
+				Name:        "Get warehouse",
 				Description: "Returns the name and the settings of the current workspace's warehouse.",
 				Method:      GET,
 				URL:         "/v0/warehouse",
@@ -59,7 +59,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update the warehouse",
+				Name:        "Update warehouse",
 				Description: "Updates the warehouse of the current workspace.",
 				Method:      PUT,
 				URL:         "/v0/warehouse",
@@ -75,7 +75,7 @@ func init() {
 				},
 			},
 			{
-				Name: "Test the warehouse update",
+				Name: "Test warehouse update",
 				Description: "Tests the update of the warehouse of the current workspace.\n\n" +
 					"If the settings are incorrect or the warehouse can’t be accessed with the given settings, an error will be returned. " +
 					"If no error occurs, the settings are valid.",
@@ -104,9 +104,9 @@ func init() {
 				},
 			},
 			{
-				Name: "Repair the warehouse",
+				Name: "Repair warehouse",
 				Description: "Repairs the current workspace's warehouse.\n\n" +
-					"This method must be called when no identity resolution and alter schema operations are running on the data warehouse.",
+					"This endpoint can be called when no identity resolution and alter schema operations are running on the data warehouse.",
 				Method: POST,
 				URL:    "/v0/warehouse/repair",
 				Errors: []Error{

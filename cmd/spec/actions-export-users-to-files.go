@@ -75,7 +75,7 @@ func init() {
 		ID:   "actions-export-users-to-files",
 		Name: "Export users to files",
 		Description: "This type of action exports user data from the workspace’s data warehouse to a newly created file. " +
-			"It requires a destination file store connection.",
+			"It operates on a destination file store connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

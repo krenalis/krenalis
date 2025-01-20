@@ -76,7 +76,7 @@ func init() {
 		ID:   "actions-import-users-from-files",
 		Name: "Import users from files",
 		Description: "This type of action imports user data from a file into the workspace's data warehouse. " +
-			"It requires a source file storage connection.",
+			"It operates on a source file storage connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

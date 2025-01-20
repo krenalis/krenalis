@@ -16,13 +16,14 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "connection-keys",
 		Name: "Connection keys",
-		Description: "The connection keys are used for authentication when sending events to Meergo.\n\n" +
-			"Mobile and server keys are private, while website keys are usually public, as they can be accessed from the site’s source code.\n" +
-			"A connection can have at most 20 keys.",
+		Description: "Connection keys are used for authentication when sending events from websites, mobile apps, and servers " +
+			"through the [Ingest event](events#ingest-event) and [Ingest batch events](events#ingest-batch-events) endpoints.\n\n" +
+			"Keys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. " +
+			"In contrast, keys for server connections should always remain private.",
 		Endpoints: []*Endpoint{
 			{
-				Name: "Create a connection key",
-				Description: "Creates a key for a mobile, server, or website source connection. " +
+				Name: "Create key",
+				Description: "Creates a key for a website, mobile, or server connection. " +
 					"Returns an error if the connection already has the maximum limit of 20 keys.",
 				Method: POST,
 				URL:    "/v0/connections/:id/keys",
@@ -32,7 +33,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "1371036433",
-						Description:    "The ID of a mobile, server, or website connection.",
+						Description:    "The ID of the connection for which to create the key. It must be a website, mobile, or server.",
 					},
 				},
 				Response: &Response{
@@ -41,7 +42,7 @@ func init() {
 							Name:        "key",
 							Type:        types.Text(),
 							Placeholder: `"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA"`,
-							Description: "The new key of the connection.",
+							Description: "The new created key.",
 						},
 					},
 				},
@@ -52,8 +53,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "List all connection keys",
-				Description: "Returns all keys for mobile, server, and website source connections.",
+				Name:        "List all keys",
+				Description: "Returns all keys for a website, mobile, or server connection.",
 				Method:      GET,
 				URL:         "/v0/connections/:id/keys",
 				Parameters: []types.Property{
@@ -62,7 +63,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "1371036433",
-						Description:    "The ID of a mobile, server, or website connection.",
+						Description:    "The ID of the connection for which to return the keys. It must be a website, mobile, or server.",
 					},
 				},
 				Response: &Response{
@@ -71,7 +72,7 @@ func init() {
 							Name:        "keys",
 							Type:        types.Array(types.Text()),
 							Placeholder: `[ "aC7B37Bug92OI2JSnl9eKrfGeecZT5hA", "9HnSIbfreXvzD8tCb0L04xSseUNOavEp" ]`,
-							Description: "The keys of the connection.",
+							Description: "The keys of the connection. At least one key is guaranteed to be present.",
 						},
 					},
 				},
@@ -81,8 +82,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Delete a connection key",
-				Description: "Delete a key of a mobile, server, or website source connection.",
+				Name:        "Delete key",
+				Description: "Deletes a key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
 				Method:      DELETE,
 				URL:         "/v0/connections/:id/keys/:key",
 				Parameters: []types.Property{
@@ -91,13 +92,14 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "1371036433",
-						Description:    "The ID of a mobile, server, or website connection.",
+						Description:    "The ID of the connection for which to delete the key. It must be a website, mobile, or server.",
 					},
 					{
-						Name:        "key",
-						Type:        types.Text(),
-						Placeholder: `"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA"`,
-						Description: "The key to delete.",
+						Name:           "key",
+						Type:           types.Text(),
+						CreateRequired: true,
+						Placeholder:    `"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA"`,
+						Description:    "The key to delete.",
 					},
 				},
 				Errors: []Error{

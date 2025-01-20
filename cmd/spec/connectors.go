@@ -161,7 +161,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get a connector",
+				Name:        "Get connector",
 				Description: "Get a connector by name.",
 				Method:      GET,
 				URL:         "/v0/connectors/:name",

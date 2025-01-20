@@ -115,7 +115,7 @@ func init() {
 		Description: "Workspaces enable Meergo to retrieve customer and event data from an external source location or send them to an external destination location.",
 		Endpoints: []*Endpoint{
 			{
-				Name:        "Create a workspace",
+				Name:        "Create workspace",
 				Description: "Creates a new workspace.",
 				Method:      POST,
 				URL:         "/v0/workspaces",
@@ -176,7 +176,7 @@ func init() {
 				},
 			},
 			{
-				Name:        "Update the workspace",
+				Name:        "Update workspace",
 				Description: "Updates the current workspace.",
 				Method:      PUT,
 				URL:         "/v0/workspaces/current",
@@ -214,8 +214,8 @@ func init() {
 				},
 			},
 			{
-				Name:        "Get the workspace",
-				Description: "Retrieves the current workspace.",
+				Name:        "Get workspace",
+				Description: "Returns the current workspace.",
 				Method:      GET,
 				URL:         "/v0/workspaces/current",
 				Response: &Response{

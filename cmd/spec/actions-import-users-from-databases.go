@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"PostgreSQL"`,
 		Description:    "The action's name.",
 	}
-
 	queryParameter := types.Property{
 		Name:           "query",
 		Type:           types.Text().WithCharLen(1000),
@@ -33,7 +32,6 @@ func init() {
 			"Note that you can use a column alias if necessary (e.g., `SELECT 1 AS v FROM users`).\n\n" +
 			"The query should include the `last_change_time` placeholder as a condition in the WHERE clause.",
 	}
-
 	identityPropertyParameter := types.Property{
 		Name:           "identityProperty",
 		Type:           types.Text(),
@@ -42,7 +40,6 @@ func init() {
 		Description: "The column that uniquely identifies each user in the database. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`.",
 	}
-
 	lastChangeTimeProperty := types.Property{
 		Name:        "lastChangeTimeProperty",
 		Type:        types.Text(),
@@ -51,7 +48,6 @@ func init() {
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`.",
 	}
-
 	lastChangeTimeFormat := types.Property{
 		Name:           "lastChangeTimeFormat",
 		Type:           types.Text(),
@@ -66,7 +62,7 @@ func init() {
 		ID:   "actions-import-users-from-databases",
 		Name: "Import users from databases",
 		Description: "This type of action imports user data from a database into the workspace's data warehouse. " +
-			"It requires a source database connection.",
+			"It operates on a source database connection.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",

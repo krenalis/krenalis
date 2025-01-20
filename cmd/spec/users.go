@@ -48,18 +48,10 @@ func init() {
 		},
 	})
 
-	const rePathsDescription = "Specifies renamed properties and additional information that cannot be expressed through the `schema` parameter alone.\n" +
-		"\n" +
-		"In particular:\n" +
-		"\n" +
-		"- If a property in `schema` has been renamed, the new path must be added as a key in `rePaths` and the old path as the associated value. Otherwise, instead of performing a rename operation, a new property with the new path would be created, and the property with the old path would be deleted.\n" +
-		"- If a property in `schema` has been added with the same path of an already existent one which should be removed, then the path of the new property must be added as a key in `rePaths` and `null` as the associated value. Otherwise, instead of creating a new property and deleting the old one, it would be interpreted as a rename operation."
-
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "users",
-		Name: "Users",
-		Description: "Users are the users associated with a [workspace](workspaces), imported from the various sources, that are stored inside the [warehouse](warehouse), and that can be queried or exported to data destinations.\n\n" +
-			"User identities represent the users as they are imported from the various sources, while the actual users are the users resolved – and possibly merged – by [identity resolution](identity-resolution).",
+		ID:          "users",
+		Name:        "Users",
+		Description: "Users are those imported from external sources and events, unified through identity resolution, and stored in the workspace’s data warehouse.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Retrieve all users",
@@ -236,95 +228,6 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
-				},
-			},
-			{
-				Name:        "Get the user schema",
-				Description: "Returns the user schema of the workspace.",
-				Method:      GET,
-				URL:         "/v0/users/schema",
-				Response: &Response{
-					Parameters: []types.Property{
-						{
-							Name:        "schema",
-							Type:        types.Parameter("Schema"),
-							Placeholder: "...",
-						},
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-				},
-			},
-			{
-				Name:        "Update the user schema",
-				Description: "Updates the user schema of the workspace.",
-				Method:      PUT,
-				URL:         "/v0/users/schema",
-				Parameters: []types.Property{
-					{
-						Name:           "schema",
-						Type:           types.Parameter("Schema"),
-						CreateRequired: true,
-						Description:    "The new user schema. It must include at least one property.",
-					},
-					{
-						Name:        "primarySources",
-						Type:        types.Map(types.Int(32)),
-						Placeholder: `{ "email": 1371036433 }`,
-						Description: "The primary source for each schema property that has one, where the key is the property name and the value is the connection identifier.\n\n" +
-							"This source defines where the definitive value for the property is read from, preventing other sources from overwriting it once it is set.\n\n" +
-							"If no primary source is provided, the new schema will have no primary sources defined.",
-					},
-					{
-						Name:        "rePaths",
-						Type:        types.Map(types.Text()),
-						Placeholder: `{ "city": "address.city", "street3": null }`,
-						Description: rePathsDescription,
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{422, AlterSchemaInProgress, "alter schema operation is already in progress"},
-					{422, ConnectionNotExist, "primary source does not exist"},
-					{422, IdentityResolutionInProgress, "identity resolution is currently in progress"},
-					{422, InspectionMode, "data warehouse is in inspection mode"},
-					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
-				},
-			},
-			{
-				Name: "Preview a user schema update",
-				Description: "Returns the SQL queries that would be executed on the warehouse to update the user schema.\n\n" +
-					"It does not make any changes to the schema or execute any queries on the warehouse.",
-				Method: PUT,
-				URL:    "/v0/users/schema/preview",
-				Parameters: []types.Property{
-					{
-						Name:           "schema",
-						Type:           types.Parameter("Schema"),
-						CreateRequired: true,
-						Description:    "The new user schema. It must include at least one property.",
-					},
-					{
-						Name:        "rePaths",
-						Type:        types.Map(types.Text()),
-						Placeholder: `{ "city": "address.city", "street3": null }`,
-						Description: rePathsDescription,
-					},
-				},
-				Response: &Response{
-					Parameters: []types.Property{
-						{
-							Name:        "queries",
-							Type:        types.Array(types.Text()),
-							Placeholder: `[ "ALTER TABLE ..." ]`,
-							Description: "The SQL queries that would be executed on the warehouse to modify the user schema.",
-						},
-					},
-				},
-				Errors: []Error{
-					{404, NotFound, "workspace does not exist"},
-					{422, InvalidSchemaUpdate, "cannot update the schema as specified"},
 				},
 			},
 		},

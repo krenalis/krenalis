@@ -34,7 +34,7 @@ func init() {
 		ID:   "actions-import-users-from-apps",
 		Name: "Import users from apps",
 		Description: "This type of action imports user data from an application into the workspace's data warehouse. " +
-			"It requires a source app connection that supports users.",
+			"It operates on a source app connection that supports users.",
 		Endpoints: []*Endpoint{
 			{
 				Name:        "Create action",
