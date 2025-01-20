@@ -549,9 +549,9 @@ func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...
 	c.waitForExecutionsCompletion(conn, true, executions...)
 }
 
-func (c *Meergo) WriteKeys(conn int) []string {
+func (c *Meergo) EventWriteKeys(conn int) []string {
 	var keys []string
-	method := fmt.Sprintf("/api/connections/%d/keys", conn)
+	method := fmt.Sprintf("/api/connections/%d/event-write-keys", conn)
 	c.MustCall("GET", method, nil, &keys)
 	return keys
 }

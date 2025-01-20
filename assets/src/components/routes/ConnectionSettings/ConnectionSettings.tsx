@@ -151,10 +151,10 @@ const ConnectionSettings = () => {
 				{tabs.includes('keys') && (
 					<>
 						<SlTab slot='nav' panel='keys'>
-							Write Keys
+							Event write keys
 						</SlTab>
 						<SlTabPanel name='keys'>
-							<div className='connection-settings__panel-title'>Write Keys</div>
+							<div className='connection-settings__panel-title'>Event write keys</div>
 							<ConnectionKeys connection={c} />
 						</SlTabPanel>
 					</>

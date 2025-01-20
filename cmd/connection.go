@@ -109,13 +109,13 @@ func (connection connection) CreateAction(_ http.ResponseWriter, r *http.Request
 	return c.CreateAction(r.Context(), body.Target, body.EventType, body.ActionToSet)
 }
 
-// CreateWriteKey creates a new write key for a connection.
-func (connection connection) CreateWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// CreateEventWriteKey creates a new event write key for a connection.
+func (connection connection) CreateEventWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	return c.CreateWriteKey(r.Context())
+	return c.CreateEventWriteKey(r.Context())
 }
 
 // Delete deletes a connection.
@@ -128,13 +128,13 @@ func (connection connection) Delete(_ http.ResponseWriter, r *http.Request) (any
 	return nil, err
 }
 
-// DeleteWriteKey deletes a write key of a connection.
-func (connection connection) DeleteWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
+// DeleteEventWriteKey deletes an event write key of a connection.
+func (connection connection) DeleteEventWriteKey(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	err = c.DeleteWriteKey(r.Context(), r.PathValue("key"))
+	err = c.DeleteEventWriteKey(r.Context(), r.PathValue("key"))
 	return nil, err
 }
 
@@ -371,13 +371,13 @@ func (connection connection) AppUserSchemas(_ http.ResponseWriter, r *http.Reque
 	return map[string]any{"schemas": map[string]any{"source": src, "destination": dst}}, nil
 }
 
-// WriteKeys returns the write keys of a connection.
-func (connection connection) WriteKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
+// EventWriteKeys returns the event write keys of a connection.
+func (connection connection) EventWriteKeys(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	return c.WriteKeys()
+	return c.EventWriteKeys()
 }
 
 func (connection connection) id(r *http.Request) (*core.Connection, error) {

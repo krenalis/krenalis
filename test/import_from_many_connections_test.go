@@ -135,7 +135,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 		var javaScriptKey string
 		{
 			javaScript = c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
-			keys := c.WriteKeys(javaScript)
+			keys := c.EventWriteKeys(javaScript)
 			if len(keys) != 1 {
 				t.Fatalf("expected one key, got %d keys", len(keys))
 			}

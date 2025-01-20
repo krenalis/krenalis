@@ -20,7 +20,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 		const fetchKeys = async () => {
 			let keys: string[];
 			try {
-				keys = await api.workspaces.connections.writeKeys(c.id);
+				keys = await api.workspaces.connections.eventWriteKeys(c.id);
 			} catch (err) {
 				if (err instanceof NotFoundError) {
 					redirect('connections');
@@ -39,7 +39,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 	const onAddKey = async () => {
 		let key: string;
 		try {
-			key = await api.workspaces.connections.createWriteKey(c.id);
+			key = await api.workspaces.connections.createEventWriteKey(c.id);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				redirect('connections');
@@ -48,7 +48,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			}
 			if (err instanceof UnprocessableError) {
 				if (err.code === 'TooManyKeys') {
-					handleError('The maximum number of keys has been reached');
+					handleError('The maximum number of event write keys has been reached');
 					return;
 				}
 			}
@@ -62,7 +62,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 
 	const onDeleteWriteKey = async (key: string) => {
 		try {
-			await api.workspaces.connections.deleteWriteKey(c.id, key);
+			await api.workspaces.connections.deleteEventWriteKey(c.id, key);
 		} catch (err) {
 			if (err instanceof NotFoundError) {
 				// let the key be removed from the UI without showing errors.

@@ -162,13 +162,6 @@ CREATE TABLE actions_metrics (
 CREATE INDEX ON actions_metrics (action);
 CREATE INDEX ON actions_metrics (timeslot);
 
-CREATE TABLE connections_keys (
-    connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
-    value char(32) NOT NULL,
-    creation_time timestamp NOT NULL,
-    PRIMARY KEY (connection, value)
-);
-
 CREATE TABLE election (
     number integer NOT NULL,
     leader uuid NOT NULL,
@@ -192,6 +185,13 @@ CREATE TABLE event_payloads (
     actions integer[],
     properties bytea NOT NULL,
     PRIMARY KEY (id)
+);
+
+CREATE TABLE event_write_keys (
+    connection INT NOT NULL REFERENCES connections ON DELETE CASCADE,
+    key char(32) NOT NULL,
+    creation_time timestamp NOT NULL,
+    PRIMARY KEY (connection, key)
 );
 
 CREATE TYPE avatar_mime_type AS ENUM ('image/jpeg', 'image/png');

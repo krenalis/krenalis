@@ -6345,160 +6345,6 @@
             ]
         },
         {
-            "id": "connection-keys",
-            "name": "Connection keys",
-            "description": "Connection keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest batch events](events#ingest-batch-events) endpoints.\n\nKeys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. In contrast, keys for server connections should always remain private.",
-            "endpoints": [
-                {
-                    "name": "Create key",
-                    "description": "Creates a key for a website, mobile, or server connection. Returns an error if the connection already has the maximum limit of 20 keys.",
-                    "method": "POST",
-                    "url": "/v0/connections/:id/keys",
-                    "parameters": [
-                        {
-                            "name": "id",
-                            "placeholder": "1371036433",
-                            "type": {
-                                "name": "Int",
-                                "bitSize": 32
-                            },
-                            "createRequired": true,
-                            "description": "The ID of the connection for which to create the key. It must be a website, mobile, or server."
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": {
-                        "description": "",
-                        "parameters": [
-                            {
-                                "name": "key",
-                                "placeholder": "\"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The new created key."
-                            }
-                        ]
-                    },
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "connection does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "TooManyKeys",
-                            "message": "connection has already 20 keys"
-                        }
-                    ]
-                },
-                {
-                    "name": "List all keys",
-                    "description": "Returns all keys for a website, mobile, or server connection.",
-                    "method": "GET",
-                    "url": "/v0/connections/:id/keys",
-                    "parameters": [
-                        {
-                            "name": "id",
-                            "placeholder": "1371036433",
-                            "type": {
-                                "name": "Int",
-                                "bitSize": 32
-                            },
-                            "createRequired": true,
-                            "description": "The ID of the connection for which to return the keys. It must be a website, mobile, or server."
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": {
-                        "description": "",
-                        "parameters": [
-                            {
-                                "name": "keys",
-                                "placeholder": "[ \"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA\", \"9HnSIbfreXvzD8tCb0L04xSseUNOavEp\" ]",
-                                "type": {
-                                    "name": "Array",
-                                    "elementType": {
-                                        "name": "Text"
-                                    }
-                                },
-                                "description": "The keys of the connection. At least one key is guaranteed to be present."
-                            }
-                        ]
-                    },
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "connection does not exist"
-                        }
-                    ]
-                },
-                {
-                    "name": "Delete key",
-                    "description": "Deletes a key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
-                    "method": "DELETE",
-                    "url": "/v0/connections/:id/keys/:key",
-                    "parameters": [
-                        {
-                            "name": "id",
-                            "placeholder": "1371036433",
-                            "type": {
-                                "name": "Int",
-                                "bitSize": 32
-                            },
-                            "createRequired": true,
-                            "description": "The ID of the connection for which to delete the key. It must be a website, mobile, or server."
-                        },
-                        {
-                            "name": "key",
-                            "placeholder": "\"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA\"",
-                            "type": {
-                                "name": "Text"
-                            },
-                            "createRequired": true,
-                            "description": "The key to delete."
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": null,
-                    "errors": [
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "workspace does not exist"
-                        },
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "connection does not exist"
-                        },
-                        {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "key does not exist"
-                        },
-                        {
-                            "status": 422,
-                            "code": "ConnectionUniqueKey",
-                            "message": "key cannot be deleted as it is the connection’s only key"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
             "id": "connections",
             "name": "Connections",
             "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers. Actions then allow you to perform operations on these connections.",
@@ -8090,13 +7936,167 @@
             ]
         },
         {
+            "id": "event-write-keys",
+            "name": "Event write keys",
+            "description": "Event write keys are used for authentication when sending events from websites, mobile apps, and servers through the [Ingest event](events#ingest-event) and [Ingest batch events](events#ingest-batch-events) endpoints.\n\nKeys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. In contrast, keys for server connections should always remain private.",
+            "endpoints": [
+                {
+                    "name": "Create event write key",
+                    "description": "Creates an event write key for a website, mobile, or server connection. Returns an error if the connection already has the maximum limit of 20 keys.",
+                    "method": "POST",
+                    "url": "/v0/connections/:id/event-write-keys",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "placeholder": "1371036433",
+                            "type": {
+                                "name": "Int",
+                                "bitSize": 32
+                            },
+                            "createRequired": true,
+                            "description": "The ID of the connection for which to create the key. It must be a website, mobile, or server."
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "key",
+                                "placeholder": "\"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The new created key."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "connection does not exist"
+                        },
+                        {
+                            "status": 422,
+                            "code": "TooManyEventWriteKeys",
+                            "message": "connection has already 20 keys"
+                        }
+                    ]
+                },
+                {
+                    "name": "List all event write keys",
+                    "description": "Returns all event write keys for a website, mobile, or server connection.",
+                    "method": "GET",
+                    "url": "/v0/connections/:id/event-write-keys",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "placeholder": "1371036433",
+                            "type": {
+                                "name": "Int",
+                                "bitSize": 32
+                            },
+                            "createRequired": true,
+                            "description": "The ID of the connection for which to return the keys. It must be a website, mobile, or server."
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "keys",
+                                "placeholder": "[ \"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA\", \"9HnSIbfreXvzD8tCb0L04xSseUNOavEp\" ]",
+                                "type": {
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Text"
+                                    }
+                                },
+                                "description": "The keys of the connection. At least one key is guaranteed to be present."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "connection does not exist"
+                        }
+                    ]
+                },
+                {
+                    "name": "Delete write key",
+                    "description": "Deletes a write key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
+                    "method": "DELETE",
+                    "url": "/v0/connections/:id/event-write-keys/:key",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "placeholder": "1371036433",
+                            "type": {
+                                "name": "Int",
+                                "bitSize": 32
+                            },
+                            "createRequired": true,
+                            "description": "The ID of the connection for which to delete the key. It must be a website, mobile, or server."
+                        },
+                        {
+                            "name": "key",
+                            "placeholder": "\"aC7B37Bug92OI2JSnl9eKrfGeecZT5hA\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The key to delete."
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": null,
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "connection does not exist"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "key does not exist"
+                        },
+                        {
+                            "status": 422,
+                            "code": "SingleEventWriteKey",
+                            "message": "key cannot be deleted as it is the connection’s only key"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "id": "events",
             "name": "Events",
             "description": "Events are received from websites, mobile apps, and servers. They can be stored in the workspace’s data warehouse and forwarded to apps.\n\nThese endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.",
             "endpoints": [
                 {
                     "name": "Ingest event",
-                    "description": "Ingests a single event.\n\n This endpoint supports authentication only with a **connection key**. To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+                    "description": "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
                     "method": "POST",
                     "writeKeyAuth": true,
                     "url": "/v0/events/:type",
@@ -8751,7 +8751,7 @@
                 },
                 {
                     "name": "Ingest batch events",
-                    "description": "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and a connection key:\n* For a website or mobile app, you must exclusively use a connection key, as it only provides access to event ingestion endpoints.\n* For a server application, using a connection key is recommended if you don’t need access to other endpoints.",
+                    "description": "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and an event write key:\n* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n* For a server application, using an event write key is recommended if you don’t need access to other endpoints.",
                     "method": "POST",
                     "url": "/v0/events/batch",
                     "parameters": [
@@ -8763,7 +8763,7 @@
                                 "bitSize": 32
                             },
                             "updateRequired": true,
-                            "description": "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with a connection key, it is not needed, as the connection is that of the key."
+                            "description": "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\nIt is required only if the call is authenticated using an API key. If authentication is done with an event write key, it is not needed, as the connection is that of the key."
                         },
                         {
                             "name": "batch",
@@ -9922,7 +9922,7 @@
                             "type": {
                                 "name": "Text"
                             },
-                            "description": "The key of the connection."
+                            "description": "The event write key of the connection."
                         }
                     ],
                     "moreParameters": [],

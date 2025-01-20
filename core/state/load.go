@@ -350,18 +350,18 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			return err
 		}
 
-		// Read all keys.
-		err = state.db.QueryScan(ctx, `SELECT connection, value FROM connections_keys ORDER BY connection, creation_time`,
+		// Read all event write keys.
+		err = state.db.QueryScan(ctx, `SELECT connection, key FROM event_write_keys ORDER BY connection, creation_time`,
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					var connectionID int
-					var value string
-					if err := rows.Scan(&connectionID, &value); err != nil {
+					var key string
+					if err := rows.Scan(&connectionID, &key); err != nil {
 						return err
 					}
 					connection := state.connections[connectionID]
-					connection.Keys = append(connection.Keys, value)
-					state.connectionsByKey[value] = connection
+					connection.Keys = append(connection.Keys, key)
+					state.connectionsByKey[key] = connection
 				}
 				return nil
 			})

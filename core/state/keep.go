@@ -54,8 +54,8 @@ func (state *State) keep() {
 			state.createConnection(n)
 		case "CreateWorkspace":
 			state.createWorkspace(n)
-		case "CreateWriteKey":
-			state.createWriteKey(n)
+		case "CreateEventWriteKey":
+			state.createEventWriteKey(n)
 		case "DeleteAPIKey":
 			state.deleteAPIKey(n)
 		case "DeleteAction":
@@ -64,8 +64,8 @@ func (state *State) keep() {
 			state.deleteConnection(n)
 		case "DeleteWorkspace":
 			state.deleteWorkspace(n)
-		case "DeleteWriteKey":
-			state.deleteWriteKey(n)
+		case "DeleteEventWriteKey":
+			state.deleteEventWriteKey(n)
 		case "ElectLeader":
 			state.electLeader(n)
 		case "EndActionExecution":
@@ -361,7 +361,7 @@ type CreateConnection struct {
 	SendingMode       *SendingMode // sending mode
 	WebsiteHost       string       // website host in form host:port
 	LinkedConnections []int        // linked connections
-	Key               string       // server key to add
+	EventWriteKey     string       // event write key to add
 	Settings          []byte
 }
 
@@ -424,13 +424,13 @@ func (state *State) createConnection(n notification) {
 		Settings:          e.Settings,
 		actions:           map[int]*Action{},
 	}
-	if e.Key != "" {
-		c.Keys = []string{e.Key}
+	if e.EventWriteKey != "" {
+		c.Keys = []string{e.EventWriteKey}
 	}
 	state.mu.Lock()
 	state.connections[e.ID] = c
-	if e.Key != "" {
-		state.connectionsByKey[e.Key] = c
+	if e.EventWriteKey != "" {
+		state.connectionsByKey[e.EventWriteKey] = c
 	}
 	state.mu.Unlock()
 	// Update the workspace.
@@ -491,27 +491,27 @@ func (state *State) createWorkspace(n notification) {
 	dispatchNotification(state, e)
 }
 
-// CreateWriteKey is the event sent when a write key is created.
-type CreateWriteKey struct {
+// CreateEventWriteKey is the event sent when an event write key is created.
+type CreateEventWriteKey struct {
 	Connection   int
-	Value        string
+	Key          string
 	CreationTime time.Time
 }
 
-// createWriteKey creates a write key.
-func (state *State) createWriteKey(n notification) {
-	e := CreateWriteKey{}
+// createEventWriteKey creates an event write key.
+func (state *State) createEventWriteKey(n notification) {
+	e := CreateEventWriteKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)+1)
 		copy(keys, c.Keys)
-		keys[len(c.Keys)] = e.Value
+		keys[len(c.Keys)] = e.Key
 		c.Keys = keys
 	})
 	state.mu.Lock()
-	state.connectionsByKey[e.Value] = c
+	state.connectionsByKey[e.Key] = c
 	state.mu.Unlock()
 }
 
@@ -679,15 +679,15 @@ func (state *State) deleteWorkspace(n notification) {
 	dispatchNotification(state, e)
 }
 
-// DeleteWriteKey is the event sent when a write key is deleted.
-type DeleteWriteKey struct {
+// DeleteEventWriteKey is the event sent when an event write key is deleted.
+type DeleteEventWriteKey struct {
 	Connection int
-	Value      string
+	Key        string
 }
 
-// deleteWriteKey deletes a write key.
-func (state *State) deleteWriteKey(n notification) {
-	e := DeleteWriteKey{}
+// deleteEventWriteKey deletes an event write key.
+func (state *State) deleteEventWriteKey(n notification) {
+	e := DeleteEventWriteKey{}
 	if !decodeNotification(n, &e) {
 		return
 	}
@@ -695,7 +695,7 @@ func (state *State) deleteWriteKey(n notification) {
 		keys := make([]string, len(c.Keys)-1)
 		i := 0
 		for _, key := range c.Keys {
-			if key != e.Value {
+			if key != e.Key {
 				keys[i] = key
 				i++
 			}
@@ -703,7 +703,7 @@ func (state *State) deleteWriteKey(n notification) {
 		c.Keys = keys
 	})
 	state.mu.Lock()
-	delete(state.connectionsByKey, e.Value)
+	delete(state.connectionsByKey, e.Key)
 	state.mu.Unlock()
 }
 

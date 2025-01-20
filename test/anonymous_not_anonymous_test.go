@@ -28,7 +28,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	// Create a JavaScript connection and get its key.
 	var javaScriptKey string
 	javaScriptID := c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
-	keys := c.WriteKeys(javaScriptID)
+	keys := c.EventWriteKeys(javaScriptID)
 	if len(keys) != 1 {
 		t.Fatalf("expected one key, got %d keys", len(keys))
 	}

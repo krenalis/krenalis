@@ -81,7 +81,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 	paths := map[string]func(w http.ResponseWriter, r *http.Request) (any, error){
 		"DELETE /actions/{id}":                                   action.Delete,
 		"DELETE /connections/{id}":                               connection.Delete,
-		"DELETE /connections/{id}/keys/{key}":                    connection.DeleteWriteKey,
+		"DELETE /connections/{id}/event-write-keys/{key}":        connection.DeleteEventWriteKey,
 		"DELETE /connections/{src}/links/{dst}":                  connection.UnlinkConnection,
 		"DELETE /events/listeners/{id}":                          workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                     organization.DeleteAPIKey, /* only UI */
@@ -102,7 +102,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/files/{path}/absolute":         connection.CompletePath,
-		"GET    /connections/{id}/keys":                          connection.WriteKeys,
+		"GET    /connections/{id}/event-write-keys":              connection.EventWriteKeys,
 		"GET    /connections/{id}/schemas/event/{type}":          connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":                  connection.AppUserSchemas,
 		"GET    /connections/{id}/tables/{name}":                 connection.TableSchema,
@@ -134,7 +134,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{id}/files/{path}":                  connection.File,
 		"POST   /connections/{id}/files/{path}/sheets":           connection.Sheets,
 		"POST   /connections/{id}/identities":                    connection.Identities,
-		"POST   /connections/{id}/keys":                          connection.CreateWriteKey,
+		"POST   /connections/{id}/event-write-keys":              connection.CreateEventWriteKey,
 		"POST   /connections/{id}/preview-send-event":            connection.PreviewSendEvent,
 		"POST   /connections/{id}/query":                         connection.ExecQuery,
 		"POST   /connections/{id}/ui-event":                      connection.ServeUI, /* only UI */

@@ -291,25 +291,25 @@ class Connections {
 		);
 	};
 
-	writeKeys = async (connection: number): Promise<string[]> => {
+	eventWriteKeys = async (connection: number): Promise<string[]> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
 			http.GET,
 			this.workspaceID,
 		);
 	};
 
-	createWriteKey = async (connection: number): Promise<string> => {
+	createEventWriteKey = async (connection: number): Promise<string> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys`,
 			http.POST,
 			this.workspaceID,
 		);
 	};
 
-	deleteWriteKey = async (connection: number, key: string): Promise<void> => {
+	deleteEventWriteKey = async (connection: number, key: string): Promise<void> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/keys/${encodeURIComponent(key)}`,
+			`${this.apiURL}/connections/${encodeURIComponent(connection)}/event-write-keys/${encodeURIComponent(key)}`,
 			http.DELETE,
 			this.workspaceID,
 		);

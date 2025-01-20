@@ -61,7 +61,7 @@ func TestEvents(t *testing.T) {
 	var javaScriptKey string
 	{
 		javaScriptID = c.CreateJavaScriptSource("JavaScript (source)", "example.com", nil)
-		keys := c.WriteKeys(javaScriptID)
+		keys := c.EventWriteKeys(javaScriptID)
 		if len(keys) != 1 {
 			t.Fatalf("expected one key, got %d keys", len(keys))
 		}
@@ -221,7 +221,7 @@ func TestEvents(t *testing.T) {
 
 	// Test importing a user identity with an action that has no mapping.
 	javaScript2ID := c.CreateJavaScriptSource("JavaScript (source 2)", "example.com", nil)
-	javaScript2Key := c.WriteKeys(javaScript2ID)[0]
+	javaScript2Key := c.EventWriteKeys(javaScript2ID)[0]
 	c.CreateAction(javaScript2ID, "Users", meergotester.ActionToSet{
 		Name:    "JavaScript",
 		Enabled: true,

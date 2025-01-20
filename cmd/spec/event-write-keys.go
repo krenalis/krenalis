@@ -14,19 +14,19 @@ import (
 func init() {
 
 	Specification.Resources = append(Specification.Resources, &Resource{
-		ID:   "connection-keys",
-		Name: "Connection keys",
-		Description: "Connection keys are used for authentication when sending events from websites, mobile apps, and servers " +
+		ID:   "event-write-keys",
+		Name: "Event write keys",
+		Description: "Event write keys are used for authentication when sending events from websites, mobile apps, and servers " +
 			"through the [Ingest event](events#ingest-event) and [Ingest batch events](events#ingest-batch-events) endpoints.\n\n" +
 			"Keys for website and mobile connections are usually public, as they can be exposed in a website’s source code or on a mobile device. " +
 			"In contrast, keys for server connections should always remain private.",
 		Endpoints: []*Endpoint{
 			{
-				Name: "Create key",
-				Description: "Creates a key for a website, mobile, or server connection. " +
+				Name: "Create event write key",
+				Description: "Creates an event write key for a website, mobile, or server connection. " +
 					"Returns an error if the connection already has the maximum limit of 20 keys.",
 				Method: POST,
-				URL:    "/v0/connections/:id/keys",
+				URL:    "/v0/connections/:id/event-write-keys",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -49,14 +49,14 @@ func init() {
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
-					{422, TooManyKeys, "connection has already 20 keys"},
+					{422, TooManyEventWriteKeys, "connection has already 20 keys"},
 				},
 			},
 			{
-				Name:        "List all keys",
-				Description: "Returns all keys for a website, mobile, or server connection.",
+				Name:        "List all event write keys",
+				Description: "Returns all event write keys for a website, mobile, or server connection.",
 				Method:      GET,
-				URL:         "/v0/connections/:id/keys",
+				URL:         "/v0/connections/:id/event-write-keys",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -82,10 +82,10 @@ func init() {
 				},
 			},
 			{
-				Name:        "Delete key",
-				Description: "Deletes a key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
+				Name:        "Delete write key",
+				Description: "Deletes a write key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
 				Method:      DELETE,
-				URL:         "/v0/connections/:id/keys/:key",
+				URL:         "/v0/connections/:id/event-write-keys/:key",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -106,7 +106,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "connection does not exist"},
 					{404, NotFound, "key does not exist"},
-					{422, ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key"},
+					{422, SingleEventWriteKey, "key cannot be deleted as it is the connection’s only key"},
 				},
 			},
 		},

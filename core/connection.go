@@ -864,13 +864,13 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	return n.ID, nil
 }
 
-// CreateWriteKey creates a new write key for the connection. The connection
-// must be a source mobile, server or website connection.
+// CreateEventWriteKey creates a new event write key for the connection.
+// The connection must be a source mobile, server or website connection.
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // If the connection has already too many keys, it returns an
-// errors.UnprocessableError error with code TooManyKeys.
-func (this *Connection) CreateWriteKey(ctx context.Context) (string, error) {
+// errors.UnprocessableError error with code TooManyEventWriteKeys.
+func (this *Connection) CreateEventWriteKey(ctx context.Context) (string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	connector := c.Connector()
@@ -882,29 +882,29 @@ func (this *Connection) CreateWriteKey(ctx context.Context) (string, error) {
 	if c.Role != state.Source {
 		return "", errors.NotFound("connection %d is not a source", c.ID)
 	}
-	value, err := generateWriteKey()
+	key, err := generateEventWriteKey()
 	if err != nil {
 		return "", err
 	}
-	n := state.CreateWriteKey{
+	n := state.CreateEventWriteKey{
 		Connection:   c.ID,
-		Value:        value,
+		Key:          key,
 		CreationTime: time.Now().UTC(),
 	}
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var count int
-		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM event_write_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
 			return err
 		}
 		if count == maxKeysPerConnection {
-			return errors.Unprocessable(TooManyKeys, "connection %d has already %d keys", n.Connection, maxKeysPerConnection)
+			return errors.Unprocessable(TooManyEventWriteKeys, "connection %d has already %d event write keys", n.Connection, maxKeysPerConnection)
 		}
-		_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
-			n.Connection, n.Value, n.CreationTime)
+		_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, creation_time) VALUES ($1, $2, $3)",
+			n.Connection, n.Key, n.CreationTime)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "connections_keys_connection_fkey" {
+				if postgres.ErrConstraintName(err) == "event_write_keys_connection_fkey" {
 					err = errors.NotFound("connection %d does not exist", n.Connection)
 				}
 			}
@@ -915,8 +915,7 @@ func (this *Connection) CreateWriteKey(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	return value, nil
+	return key, nil
 }
 
 // Delete deletes the connection.
@@ -983,14 +982,14 @@ func (this *Connection) Delete(ctx context.Context) error {
 	return err
 }
 
-// DeleteWriteKey deletes the given write key of the connection. key cannot be
-// empty and cannot be the unique key of the connection. The connection must be
-// a source mobile, server or website connection.
+// DeleteEventWriteKey deletes the given event write key of the connection.
+// key cannot be empty and cannot be the only key for the connection.
+// The connection must be a source mobile, server or website connection.
 //
 // If the key does not exist, it returns an errors.NotFoundError error.
-// If the key is the unique key of the server, it returns an
-// errors.UnprocessableError error with code ConnectionUniqueKey.
-func (this *Connection) DeleteWriteKey(ctx context.Context, key string) error {
+// If the key is the only key for the connection, it returns an
+// errors.UnprocessableError error with code SingleEventWriteKey.
+func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) error {
 	this.core.mustBeOpen()
 	if key == "" {
 		return errors.BadRequest("key is empty")
@@ -1008,20 +1007,20 @@ func (this *Connection) DeleteWriteKey(ctx context.Context, key string) error {
 	if c.Role != state.Source {
 		return errors.BadRequest("connection %d is not a source", c.ID)
 	}
-	n := state.DeleteWriteKey{
+	n := state.DeleteEventWriteKey{
 		Connection: c.ID,
-		Value:      key,
+		Key:        key,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var count int
-		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM connections_keys WHERE connection = $1", n.Connection).Scan(&count)
+		err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM event_write_keys WHERE connection = $1", n.Connection).Scan(&count)
 		if err != nil {
 			return err
 		}
 		if count == 1 {
-			return errors.Unprocessable(ConnectionUniqueKey, "key cannot be deleted as it is the connection’s only key")
+			return errors.Unprocessable(SingleEventWriteKey, "key cannot be deleted as it is the connection’s only key")
 		}
-		result, err := tx.Exec(ctx, "DELETE FROM connections_keys WHERE connection = $1 AND value = $2", n.Connection, n.Value)
+		result, err := tx.Exec(ctx, "DELETE FROM event_write_keys WHERE connection = $1 AND key = $2", n.Connection, n.Key)
 		if err != nil {
 			return err
 		}
@@ -1841,9 +1840,9 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	return err
 }
 
-// WriteKeys returns the write keys of the connection.
+// EventWriteKeys returns the event write keys of the connection.
 // The connection must be a source mobile, server or website connection.
-func (this *Connection) WriteKeys() ([]string, error) {
+func (this *Connection) EventWriteKeys() ([]string, error) {
 	this.core.mustBeOpen()
 	c := this.connection
 	switch c.Connector().Type {
@@ -2011,12 +2010,12 @@ func isWriteKey(key string) bool {
 	return err == nil
 }
 
-// generateWriteKey generates a write key in its base62 form.
-func generateWriteKey() (string, error) {
+// generateEventWriteKey generates an event write key in its base62 form.
+func generateEventWriteKey() (string, error) {
 	key := make([]byte, 24)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", errors.New("cannot generate a write key")
+		return "", errors.New("cannot generate an event write key")
 	}
 	return base62.EncodeToString(key)[0:32], nil
 }

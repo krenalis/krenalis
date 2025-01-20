@@ -694,10 +694,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		return 0, err
 	}
 
-	// Generate a write key.
+	// Generate an event write key.
 	switch c.Type {
 	case state.Mobile, state.Server, state.Website:
-		n.Key, err = generateWriteKey()
+		n.EventWriteKey, err = generateEventWriteKey()
 		if err != nil {
 			return 0, err
 		}
@@ -762,10 +762,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 				return errors.Unprocessable(LinkedConnectionNotExist, "a linked connection does not exist")
 			}
 		}
-		if n.Key != "" {
-			// Insert the server key.
-			_, err = tx.Exec(ctx, "INSERT INTO connections_keys (connection, value, creation_time) VALUES ($1, $2, $3)",
-				n.ID, n.Key, time.Now().UTC())
+		if n.EventWriteKey != "" {
+			// Insert the event write key.
+			_, err = tx.Exec(ctx, "INSERT INTO event_write_keys (connection, key, creation_time) VALUES ($1, $2, $3)",
+				n.ID, n.EventWriteKey, time.Now().UTC())
 			if err != nil {
 				return err
 			}

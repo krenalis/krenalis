@@ -184,7 +184,7 @@ func init() {
 		Endpoints: []*Endpoint{
 			{
 				Name: "Ingest event",
-				Description: "Ingests a single event.\n\n This endpoint supports authentication only with a **connection key**. " +
+				Description: "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. " +
 					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
 				Method:       POST,
 				WriteKeyAuth: true,
@@ -220,9 +220,9 @@ func init() {
 			},
 			{
 				Name: "Ingest batch events",
-				Description: "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and a connection key:\n" +
-					"* For a website or mobile app, you must exclusively use a connection key, as it only provides access to event ingestion endpoints.\n" +
-					"* For a server application, using a connection key is recommended if you don’t need access to other endpoints.",
+				Description: "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and an event write key:\n" +
+					"* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n" +
+					"* For a server application, using an event write key is recommended if you don’t need access to other endpoints.",
 				Method: POST,
 				URL:    "/v0/events/batch",
 				Parameters: []types.Property{
@@ -233,7 +233,7 @@ func init() {
 						UpdateRequired: true,
 						Description: "The ID of the connection to which the events refer. It can only be a source website, mobile, or server connection.\n\n" +
 							"It is required only if the call is authenticated using an API key. " +
-							"If authentication is done with a connection key, it is not needed, as the connection is that of the key.",
+							"If authentication is done with an event write key, it is not needed, as the connection is that of the key.",
 					},
 					{
 						Name: "batch",
@@ -275,7 +275,7 @@ func init() {
 					{
 						Name:        "writeKey",
 						Type:        types.Text(),
-						Description: "The key of the connection.",
+						Description: "The event write key of the connection.",
 					},
 				},
 				Errors: []Error{
