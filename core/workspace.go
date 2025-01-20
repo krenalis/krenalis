@@ -334,65 +334,6 @@ func (this *Workspace) ActionMetricsPerTimeUnit(ctx context.Context, number int,
 	}, nil
 }
 
-// Connection returns the connection with identifier id of the workspace.
-//
-// If the connection does not exist, it returns an errors.NotFoundError error.
-func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
-	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("connection identifier %d is not valid", id)
-	}
-	c, ok := this.workspace.Connection(id)
-	if !ok {
-		return nil, errors.NotFound("connection %d does not exist", id)
-	}
-	conn := c.Connector()
-
-	connection := Connection{
-		core:              this.core,
-		store:             this.store,
-		connection:        c,
-		ID:                c.ID,
-		Name:              c.Name,
-		Type:              ConnectorType(conn.Type),
-		Role:              Role(c.Role),
-		Connector:         conn.Name,
-		Strategy:          (*Strategy)(c.Strategy),
-		SendingMode:       (*SendingMode)(c.SendingMode),
-		WebsiteHost:       c.WebsiteHost,
-		LinkedConnections: slices.Clone(c.LinkedConnections),
-		ActionsCount:      len(c.Actions()),
-		Health:            Health(c.Health),
-	}
-
-	// Set the actions.
-	actions := c.Actions()
-	a := make([]Action, len(actions))
-	connection.Actions = &a
-	for i, a := range actions {
-		(*connection.Actions)[i].fromState(this.core, this.store, a)
-	}
-
-	// Set the event types.
-	if conn.Type == state.App && c.Role == state.Destination && c.Connector().Targets.Contains(state.Events) {
-		appEventTypes, err := connection.app().EventTypes(ctx)
-		if err != nil {
-			return nil, err
-		}
-		eventTypes := make([]EventType, len(appEventTypes))
-		for i, et := range appEventTypes {
-			eventTypes[i] = EventType{
-				ID:          et.ID,
-				Name:        et.Name,
-				Description: et.Description,
-			}
-		}
-		connection.EventTypes = &eventTypes
-	}
-
-	return &connection, nil
-}
-
 // authorizedOAuthAccount represents an authorized OAuth account that can be
 // used to create a new connection.
 type authorizedOAuthAccount struct {
@@ -450,6 +391,65 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 	// TODO(marco): Encrypt the token.
 
 	return base62.EncodeToString(account), nil
+}
+
+// Connection returns the connection with identifier id of the workspace.
+//
+// If the connection does not exist, it returns an errors.NotFoundError error.
+func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, error) {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("connection identifier %d is not valid", id)
+	}
+	c, ok := this.workspace.Connection(id)
+	if !ok {
+		return nil, errors.NotFound("connection %d does not exist", id)
+	}
+	conn := c.Connector()
+
+	connection := Connection{
+		core:              this.core,
+		store:             this.store,
+		connection:        c,
+		ID:                c.ID,
+		Name:              c.Name,
+		Type:              ConnectorType(conn.Type),
+		Role:              Role(c.Role),
+		Connector:         conn.Name,
+		Strategy:          (*Strategy)(c.Strategy),
+		SendingMode:       (*SendingMode)(c.SendingMode),
+		WebsiteHost:       c.WebsiteHost,
+		LinkedConnections: slices.Clone(c.LinkedConnections),
+		ActionsCount:      len(c.Actions()),
+		Health:            Health(c.Health),
+	}
+
+	// Set the actions.
+	actions := c.Actions()
+	a := make([]Action, len(actions))
+	connection.Actions = &a
+	for i, a := range actions {
+		(*connection.Actions)[i].fromState(this.core, this.store, a)
+	}
+
+	// Set the event types.
+	if conn.Type == state.App && c.Role == state.Destination && c.Connector().Targets.Contains(state.Events) {
+		appEventTypes, err := connection.app().EventTypes(ctx)
+		if err != nil {
+			return nil, err
+		}
+		eventTypes := make([]EventType, len(appEventTypes))
+		for i, et := range appEventTypes {
+			eventTypes[i] = EventType{
+				ID:          et.ID,
+				Name:        et.Name,
+				Description: et.Description,
+			}
+		}
+		connection.EventTypes = &eventTypes
+	}
+
+	return &connection, nil
 }
 
 // Connections returns the connections of the workspace.
@@ -1020,6 +1020,155 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 	return observedEvents, discarded, nil
 }
 
+// Rename renames the workspace with the given new name.
+// name must be between 1 and 100 runes long.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist
+// anymore.
+func (this *Workspace) Rename(ctx context.Context, name string) error {
+	this.core.mustBeOpen()
+	if name == this.workspace.Name {
+		return nil
+	}
+	if err := validateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	n := state.RenameWorkspace{
+		Workspace: this.workspace.ID,
+		Name:      name,
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() == 0 {
+			return errors.NotFound("workspace %d does not exist", n.Workspace)
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
+}
+
+// RepairWarehouse repairs the database objects needed by Meergo on the
+// workspace's data warehouse.
+func (this *Workspace) RepairWarehouse(ctx context.Context) error {
+	this.core.mustBeOpen()
+	err := this.store.Repair(ctx, this.workspace.UserSchema)
+	if err != nil {
+		if err, ok := (err).(*datastore.UnavailableError); ok {
+			return errors.Unavailable("%s", err)
+		}
+		return err
+	}
+	return nil
+}
+
+// ServeUI serves the user interface for the given connector, with the given
+// role. event is the event and settings are connector's settings. oAuth is the
+// OAuth token returned by the (*Workspace).OAuth method, it is required if the
+// connector requires OAuth.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - ConnectorNotExist, if the connector does not exist.
+//   - EventNotExist, if the event does not exist.
+//   - InvalidSettings, if the settings are not valid.
+func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, authToken string) ([]byte, error) {
+
+	this.core.mustBeOpen()
+
+	if connector == "" {
+		return nil, errors.BadRequest("connector name is empty")
+	}
+	if role != Source && role != Destination {
+		return nil, errors.BadRequest("role %d is not valid", role)
+	}
+	c, ok := this.core.state.Connector(connector)
+	if !ok {
+		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
+	}
+
+	if role == Source && !c.HasSourceSettings || role == Destination && !c.HasDestinationSettings {
+		return nil, errors.BadRequest("connector %s does not have %s settings", connector, strings.ToLower(role.String()))
+	}
+
+	if (authToken == "") != (c.OAuth == nil) {
+		if authToken == "" {
+			return nil, errors.BadRequest("authorization token is required by connector %s", c.Name)
+		}
+		return nil, errors.BadRequest("connector %s does not support authorization", c.Name)
+	}
+
+	// Decode oAuth.
+	var a authorizedOAuthAccount
+	if authToken != "" {
+		data, err := base62.DecodeString(authToken)
+		if err != nil {
+			return nil, errors.BadRequest("authorization token is not valid")
+		}
+		err = json.Unmarshal(data, &a)
+		if err != nil {
+			return nil, errors.BadRequest("authorization token is not valid")
+		}
+	}
+
+	var clientSecret string
+	if authToken != "" {
+		clientSecret = c.OAuth.ClientSecret
+	}
+	conf := &connectors.ConnectorConfig{
+		Role: state.Role(role),
+	}
+	conf.OAuth.Account = a.Code
+	conf.OAuth.ClientSecret = clientSecret
+	conf.OAuth.AccessToken = a.AccessToken
+
+	// TODO: check and delete alternative fieldsets keys that have 'null' value
+	// before saving to database
+	ui, err := this.core.connectors.ServeConnectorUI(ctx, c, conf, event, settings)
+	if err != nil {
+		if err == meergo.ErrUIEventNotExist {
+			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
+		} else {
+			switch err.(type) {
+			case *meergo.InvalidSettingsError:
+				err = errors.Unprocessable(InvalidSettings, "%s", err)
+			case *connectors.UnavailableError:
+				err = errors.Unavailable("%s", err)
+			}
+		}
+		return nil, err
+	}
+
+	return ui, nil
+}
+
+// StartIdentityResolution starts an Identity Resolution operation that resolves
+// the identities of the workspace.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - InspectionMode, if the data warehouse is in inspection mode.
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
+	this.core.mustBeOpen()
+	ctx, span := telemetry.TraceSpan(ctx, "Workspace.StartIdentityResolution", "workspace_id", this.workspace.ID)
+	defer span.End()
+	telemetry.IncrementCounter(ctx, "IdentityResolutionExecutions", 1)
+	err := this.store.StartIdentityResolution(ctx)
+	if err != nil {
+		if err == datastore.ErrInspectionMode {
+			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
+		}
+		if err == datastore.ErrMaintenanceMode {
+			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		return err
+	}
+	return nil
+}
+
 // TestWarehouseUpdate tests the update of the workspace's warehouse.
 //
 // It returns an errors.UnprocessableError with code:
@@ -1048,6 +1197,85 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings []byte)
 		return err
 	}
 	return nil
+}
+
+// Traits returns the traits of a user.
+//
+// It returns an errors.NotFoundError error, if the user does not exist.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
+func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, error) {
+
+	this.core.mustBeOpen()
+
+	ws := this.workspace
+
+	// Validate the user.
+	if _, ok := ParseUUID(user); !ok {
+		return nil, errors.BadRequest("user %q is not a valid user identifier", user)
+	}
+
+	properties := types.PropertyNames(this.workspace.UserSchema)
+	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
+		Property: []string{"__id__"},
+		Operator: state.OpIs,
+		Values:   []any{user},
+	}}}
+
+	// Retrieve the user traits.
+	records, _, err := this.store.Users(ctx, datastore.Query{
+		Properties: properties,
+		Where:      where,
+		Limit:      1,
+	})
+	if err != nil {
+		if err == datastore.ErrMaintenanceMode {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			// TODO(marco): log the error in a log specific of the workspace.
+			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
+			return nil, errors.Unavailable("%s", err)
+		}
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, errors.NotFound("user %q does not exist", user)
+	}
+
+	return types.Marshal(records[0], ws.UserSchema)
+}
+
+// Update updates the name and the displayed properties of the workspace. name
+// must be between 1 and 100 runes long. displayedProperties must contain valid
+// displayed property names. A valid displayed property name is an empty string,
+// or alternatively a valid property name between 1 and 100 runes long.
+func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UIPreferences) error {
+	this.core.mustBeOpen()
+	if err := validateStringField("name", name, 100); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	if err := validateUIPreferences(uiPreferences); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	ws := this.workspace
+	n := state.UpdateWorkspace{
+		Workspace:     ws.ID,
+		Name:          name,
+		UIPreferences: state.UIPreferences(uiPreferences),
+	}
+	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_user_profile_image = $2, "+
+			"ui_user_profile_first_name = $3, ui_user_profile_last_name = $4, "+
+			"ui_user_profile_extra = $5 WHERE id = $6",
+			n.Name, n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
+			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra, n.Workspace)
+		if err != nil {
+			return err
+		}
+		return tx.Notify(ctx, n)
+	})
+	return err
 }
 
 // UpdateIdentityResolutionSettings updates the identity resolution settings of
@@ -1239,234 +1467,6 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 		return tx.Notify(ctx, n)
 	})
 
-	return err
-}
-
-// Rename renames the workspace with the given new name.
-// name must be between 1 and 100 runes long.
-//
-// It returns an errors.NotFoundError error if the workspace does not exist
-// anymore.
-func (this *Workspace) Rename(ctx context.Context, name string) error {
-	this.core.mustBeOpen()
-	if name == this.workspace.Name {
-		return nil
-	}
-	if err := validateStringField("name", name, 100); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	n := state.RenameWorkspace{
-		Workspace: this.workspace.ID,
-		Name:      name,
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() == 0 {
-			return errors.NotFound("workspace %d does not exist", n.Workspace)
-		}
-		return tx.Notify(ctx, n)
-	})
-	return err
-}
-
-// RepairWarehouse repairs the database objects needed by Meergo on the
-// workspace's data warehouse.
-func (this *Workspace) RepairWarehouse(ctx context.Context) error {
-	this.core.mustBeOpen()
-	err := this.store.Repair(ctx, this.workspace.UserSchema)
-	if err != nil {
-		if err, ok := (err).(*datastore.UnavailableError); ok {
-			return errors.Unavailable("%s", err)
-		}
-		return err
-	}
-	return nil
-}
-
-// ServeUI serves the user interface for the given connector, with the given
-// role. event is the event and settings are connector's settings. oAuth is the
-// OAuth token returned by the (*Workspace).OAuth method, it is required if the
-// connector requires OAuth.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - ConnectorNotExist, if the connector does not exist.
-//   - EventNotExist, if the event does not exist.
-//   - InvalidSettings, if the settings are not valid.
-func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.Value, connector string, role Role, authToken string) ([]byte, error) {
-
-	this.core.mustBeOpen()
-
-	if connector == "" {
-		return nil, errors.BadRequest("connector name is empty")
-	}
-	if role != Source && role != Destination {
-		return nil, errors.BadRequest("role %d is not valid", role)
-	}
-	c, ok := this.core.state.Connector(connector)
-	if !ok {
-		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
-	}
-
-	if role == Source && !c.HasSourceSettings || role == Destination && !c.HasDestinationSettings {
-		return nil, errors.BadRequest("connector %s does not have %s settings", connector, strings.ToLower(role.String()))
-	}
-
-	if (authToken == "") != (c.OAuth == nil) {
-		if authToken == "" {
-			return nil, errors.BadRequest("authorization token is required by connector %s", c.Name)
-		}
-		return nil, errors.BadRequest("connector %s does not support authorization", c.Name)
-	}
-
-	// Decode oAuth.
-	var a authorizedOAuthAccount
-	if authToken != "" {
-		data, err := base62.DecodeString(authToken)
-		if err != nil {
-			return nil, errors.BadRequest("authorization token is not valid")
-		}
-		err = json.Unmarshal(data, &a)
-		if err != nil {
-			return nil, errors.BadRequest("authorization token is not valid")
-		}
-	}
-
-	var clientSecret string
-	if authToken != "" {
-		clientSecret = c.OAuth.ClientSecret
-	}
-	conf := &connectors.ConnectorConfig{
-		Role: state.Role(role),
-	}
-	conf.OAuth.Account = a.Code
-	conf.OAuth.ClientSecret = clientSecret
-	conf.OAuth.AccessToken = a.AccessToken
-
-	// TODO: check and delete alternative fieldsets keys that have 'null' value
-	// before saving to database
-	ui, err := this.core.connectors.ServeConnectorUI(ctx, c, conf, event, settings)
-	if err != nil {
-		if err == meergo.ErrUIEventNotExist {
-			err = errors.Unprocessable(EventNotExist, "UI event %q does not exist for connector %s", event, c.Name)
-		} else {
-			switch err.(type) {
-			case *meergo.InvalidSettingsError:
-				err = errors.Unprocessable(InvalidSettings, "%s", err)
-			case *connectors.UnavailableError:
-				err = errors.Unavailable("%s", err)
-			}
-		}
-		return nil, err
-	}
-
-	return ui, nil
-}
-
-// StartIdentityResolution starts an Identity Resolution operation that resolves
-// the identities of the workspace.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - InspectionMode, if the data warehouse is in inspection mode.
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
-	this.core.mustBeOpen()
-	ctx, span := telemetry.TraceSpan(ctx, "Workspace.StartIdentityResolution", "workspace_id", this.workspace.ID)
-	defer span.End()
-	telemetry.IncrementCounter(ctx, "IdentityResolutionExecutions", 1)
-	err := this.store.StartIdentityResolution(ctx)
-	if err != nil {
-		if err == datastore.ErrInspectionMode {
-			return errors.Unprocessable(InspectionMode, "data warehouse is in inspection mode")
-		}
-		if err == datastore.ErrMaintenanceMode {
-			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		return err
-	}
-	return nil
-}
-
-// Traits returns the traits of a user.
-//
-// It returns an errors.NotFoundError error, if the user does not exist.
-// It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
-func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, error) {
-
-	this.core.mustBeOpen()
-
-	ws := this.workspace
-
-	// Validate the user.
-	if _, ok := ParseUUID(user); !ok {
-		return nil, errors.BadRequest("user %q is not a valid user identifier", user)
-	}
-
-	properties := types.PropertyNames(this.workspace.UserSchema)
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"__id__"},
-		Operator: state.OpIs,
-		Values:   []any{user},
-	}}}
-
-	// Retrieve the user traits.
-	records, _, err := this.store.Users(ctx, datastore.Query{
-		Properties: properties,
-		Where:      where,
-		Limit:      1,
-	})
-	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			// TODO(marco): log the error in a log specific of the workspace.
-			slog.Error("cannot get users from the data warehouse", "workspace", ws.ID, "err", err)
-			return nil, errors.Unavailable("%s", err)
-		}
-		return nil, err
-	}
-	if len(records) == 0 {
-		return nil, errors.NotFound("user %q does not exist", user)
-	}
-
-	return types.Marshal(records[0], ws.UserSchema)
-}
-
-// Update updates the name and the displayed properties of the workspace. name
-// must be between 1 and 100 runes long. displayedProperties must contain valid
-// displayed property names. A valid displayed property name is an empty string,
-// or alternatively a valid property name between 1 and 100 runes long.
-func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UIPreferences) error {
-	this.core.mustBeOpen()
-	if err := validateStringField("name", name, 100); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	if err := validateUIPreferences(uiPreferences); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	ws := this.workspace
-	n := state.UpdateWorkspace{
-		Workspace:     ws.ID,
-		Name:          name,
-		UIPreferences: state.UIPreferences(uiPreferences),
-	}
-	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
-		_, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_user_profile_image = $2, "+
-			"ui_user_profile_first_name = $3, ui_user_profile_last_name = $4, "+
-			"ui_user_profile_extra = $5 WHERE id = $6",
-			n.Name, n.UIPreferences.UserProfile.Image, n.UIPreferences.UserProfile.FirstName,
-			n.UIPreferences.UserProfile.LastName, n.UIPreferences.UserProfile.Extra, n.Workspace)
-		if err != nil {
-			return err
-		}
-		return tx.Notify(ctx, n)
-	})
 	return err
 }
 
