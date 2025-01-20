@@ -112,11 +112,11 @@ func (organization organization) DeleteMember(_ http.ResponseWriter, r *http.Req
 	if err != nil {
 		return nil, err
 	}
-	member, err := organization.member(r)
+	id, err := organization.id(r)
 	if err != nil {
 		return nil, err
 	}
-	err = org.DeleteMember(r.Context(), member)
+	err = org.DeleteMember(r.Context(), id)
 	return nil, err
 }
 
@@ -250,8 +250,8 @@ func (organization organization) Workspaces(_ http.ResponseWriter, r *http.Reque
 	return map[string]any{"workspaces": org.Workspaces()}, nil
 }
 
-func (organization organization) key(r *http.Request) (int, error) {
-	v := r.PathValue("key")
+func (organization organization) id(r *http.Request) (int, error) {
+	v := r.PathValue("id")
 	if v[0] == '+' {
 		return 0, errors.NotFound("")
 	}
@@ -262,8 +262,8 @@ func (organization organization) key(r *http.Request) (int, error) {
 	return id, nil
 }
 
-func (organization organization) member(r *http.Request) (int, error) {
-	v := r.PathValue("member")
+func (organization organization) key(r *http.Request) (int, error) {
+	v := r.PathValue("key")
 	if v[0] == '+' {
 		return 0, errors.NotFound("")
 	}

@@ -165,12 +165,7 @@ const useAction = (
 					const connector = connectors.find((c) => c.name === providedAction.format);
 					if (connector.hasSettings) {
 						// get the settings of the file.
-						let ui = await api.workspaces.connections.actionUiEvent(
-							connection.id,
-							providedAction.id,
-							'load',
-							null,
-						);
+						let ui = await api.workspaces.connections.actionUiEvent(providedAction.id, 'load', null);
 						s = ui.settings;
 						setSettings(ui.settings);
 					}

@@ -48,7 +48,7 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 
 // ServeUI serves the UI of an action.
 func (action action) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	a, err := action.action(r)
+	a, err := action.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -116,22 +116,6 @@ func (action action) Update(_ http.ResponseWriter, r *http.Request) (any, error)
 	}
 	err = a.Update(r.Context(), body)
 	return nil, err
-}
-
-func (action action) action(r *http.Request) (*core.Action, error) {
-	connection, err := connection{action.apisServer}.connection(r)
-	if err != nil {
-		return nil, err
-	}
-	v := r.PathValue("action")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.NotFound("")
-	}
-	return connection.Action(r.Context(), id)
 }
 
 func (action action) id(r *http.Request) (*core.Action, error) {

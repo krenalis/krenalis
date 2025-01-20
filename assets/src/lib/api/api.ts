@@ -392,15 +392,12 @@ class Connections {
 	};
 
 	actionUiEvent = async (
-		connection: number,
 		action: number,
 		event: string,
 		formatSettings: ConnectorSettings,
 	): Promise<ConnectorUIResponse> => {
 		return await call(
-			`${this.apiURL}/connections/${encodeURIComponent(connection)}/actions/${encodeURIComponent(
-				action,
-			)}/ui-event`,
+			`${this.apiURL}/actions/${encodeURIComponent(action)}/ui-event`,
 			http.POST,
 			this.workspaceID,
 			{

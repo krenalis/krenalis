@@ -94,7 +94,7 @@ const ActionFile = () => {
 			let ui: ConnectorUIResponse;
 			if (isEditing && !isFormatChanged) {
 				try {
-					ui = await api.workspaces.connections.actionUiEvent(connection.id, action.id, 'load', null);
+					ui = await api.workspaces.connections.actionUiEvent(action.id, 'load', null);
 				} catch (err) {
 					setTimeout(() => setIsFormatLoading(false), 300);
 					if (err instanceof NotFoundError) {

@@ -26,15 +26,15 @@ type connection struct {
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/meergo/meergo/issues/1266.
 func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	target, eventType, err := connection.target(r)
+	target, typ, err := connection.target(r)
 	if err != nil {
 		return nil, err
 	}
-	return c.ActionSchemas(r.Context(), target, eventType)
+	return c.ActionSchemas(r.Context(), target, typ)
 }
 
 // ActionTypes returns the action types of a connection.
@@ -42,7 +42,7 @@ func (connection connection) ActionSchemas(_ http.ResponseWriter, r *http.Reques
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/meergo/meergo/issues/1265.
 func (connection connection) ActionTypes(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (connection connection) LinkConnection(_ http.ResponseWriter, r *http.Reque
 
 // PreviewSendEvent previews sending an event.
 func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (connection connection) PreviewSendEvent(_ http.ResponseWriter, r *http.Req
 
 // ServeUI serves the user interface for a connection.
 func (connection connection) ServeUI(w http.ResponseWriter, r *http.Request) (any, error) {
-	c, err := connection.connection(r)
+	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
@@ -380,46 +380,6 @@ func (connection connection) WriteKeys(_ http.ResponseWriter, r *http.Request) (
 	return c.WriteKeys()
 }
 
-func (connection connection) action(r *http.Request) (int, error) {
-	v := r.PathValue("action")
-	if v[0] == '+' {
-		return 0, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return 0, errors.NotFound("")
-	}
-	return id, nil
-}
-
-func (connection connection) connection(r *http.Request) (*core.Connection, error) {
-	ws, err := workspace{connection.apisServer}.workspace(r)
-	if err != nil {
-		return nil, err
-	}
-	v := r.PathValue("connection")
-	if v[0] == '+' {
-		return nil, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return nil, errors.NotFound("")
-	}
-	return ws.Connection(r.Context(), id)
-}
-
-func (connection connection) connection2(r *http.Request) (int, error) {
-	v := r.PathValue("connection2")
-	if v[0] == '+' {
-		return 0, errors.NotFound("")
-	}
-	id, _ := strconv.Atoi(v)
-	if id <= 0 {
-		return 0, errors.NotFound("")
-	}
-	return id, nil
-}
-
 func (connection connection) id(r *http.Request) (*core.Connection, error) {
 	ws, err := workspace{connection.apisServer}.workspace(r)
 	if err != nil {
@@ -462,7 +422,7 @@ func (connection connection) target(r *http.Request) (core.Target, string, error
 	case "Events":
 		return core.Events, "", nil
 	case "":
-		return core.Events, r.PathValue("eventType"), nil
+		return core.Events, r.PathValue("type"), nil
 	}
 	return 0, "", errors.NotFound("")
 }
