@@ -1,117 +1,11 @@
+{% import "specification.txt" %}
+{% import "properties.html" %}
 
-{% macro props(url, name string, properties []any, inReturns bool) %}
-{%%
-  var dataType func(t any) string
-  dataType = func(typ any) string {
-    t := typ.(map[string]any)
-    switch name := t.name.(string); name {
-    case "Int":
-      if t.bitSize == 32.0 {
-        return "int"
-      }
-      return sprintf("%.0f bit int", t.bitSize)
-    case "Uint":
-      if t.bitSize == 32.0 {
-        return "unsigned int"
-      }
-      return sprintf("%.0f bit unsigned int", t.bitSize)
-    case "Decimal":
-      return sprintf("decimal(%.0f, %.0f)", t.precision, t.scale)
-    case "Text":
-      return "string"
-    case "Array":
-      return sprintf("array of %s", dataType(t.elementType))
-    case "Map":
-      return sprintf("object with %s values", dataType(t.elementType))
-    case "UIValues":
-      return "object"
-    default:
-      return toLower(name)
-    }
-  }
-
-  passedInURL := func(url, name string) bool {
-    name = ":"+name
-    if hasSuffix(url, name) {
-      return true
-    }
-    i := index(url, name)
-    return i != -1 and "/?,&" contains url[i+len(name)]
-  }
-%%}
-
-<script>
-  function toggleJSONBody(row) {
-	  const code = row.querySelector('.message').getAttribute('data-code');
-	  const msg = row.querySelector('.message').textContent;
-	  const json = { error: { code, message: msg } };
-
-	  let jsonBody = row.querySelector('.json-body');
-	  if (!jsonBody) {
-		  jsonBody = document.createElement('div');
-		  jsonBody.classList.add('json-body');
-		  const pre = document.createElement('pre');
-		  pre.textContent = JSON.stringify(json, null, 2);
-		  jsonBody.appendChild(pre);
-		  row.appendChild(jsonBody);
-		  jsonBody.addEventListener('click', (e) => e.stopPropagation());
-	  }
-
-	  jsonBody.style.display = jsonBody.style.display === 'block' ? 'none' : 'block';
-  }
-</script>
-
-<ul class="method-list">
-  {% for property in properties %}
-  {% p := property.(map[string]any) %}
-  <li>
-    <h4>{% if url != "" and passedInURL(url, p.name.(string)) %}:{% else if name != "" %}<span>{{ name }}.</span>{% end %}{{ p.name }}</h4>
-    <span class="api-property-type">{% if p.nullable %}nullable {% end %}{{ dataType(p["type"]) }}</span>
-    {% if not inReturns and (p.createRequired or p.updateRequired) %}
-    <span class="api-property-create-required">{% if p.updateRequired %}Conditionally {% end %}Required</span>
-    {% end if %}
-    <span class="api-property-description">
-      {{ unsafeconv.ToMarkdown(p.description.(string)) }}
-      {% if t := p["type"].(map[string]any); t.name == "Text" %}
-        {% if values, ok := t.values.([]any); ok %}
-          {%%
-            last := len(values) - 1
-            if last == 0 { last-- }
-          %%}
-          Possible values:
-          {% for i, v := range values %}{% if i > 0 and i !=last %},{% else if i == last %} or{% end %} <code>"{{ v }}"</code>{% end %}.
-        {% else if t.charLen %}
-          {% if (not inReturns) and (p.createRequired or p.updateRequired) %}
-            Must be a non-empty string with a maximum of {{ t.charLen }} characters.
-          {% else %}
-            It {% if inReturns %}is not{% else %}cannot be{% end %} longer than {{ t.charLen }} characters.
-          {% end if %}
-        {% else if re, ok := t.regexp.(string); ok %}
-          It {% if inReturns %}matches{% else %}must match{% end %} the regular expression <code>/{{ re }}/</code>.
-        {% end %}
-      {% end if %}
-    </span>
-    {%%
-      propertyName := p.name.(string)
-      if name != "" {
-        propertyName = name + "." + propertyName
-      }
-      if t := p["type"].(map[string]any); t.name == "Object" {
-        show props("", propertyName, t.properties.([]any), inReturns)
-      } else if t := p["type"].(map[string]any); t.name == "Array" {
-        if t := t.elementType.(map[string]any); t.name == "Object" {
-          show props("", "", t.properties.([]any), inReturns)
-        }
-      }
-    %%}
-  </li>
-  {% end for %}
-</ul>
-{% end macro %}
-
-{% macro Resource(resource map[string]any) %}
+{% macro Resource(id string) %}
 
 {%%
+  resource := ResourceByID[id]
+
   passedInURL := func(url, name string) bool {
     name = ":"+name
     if hasSuffix(url, name) {
@@ -262,14 +156,14 @@
       <h3>Parameters</h3>
       {% parameters := endpoint.parameters.([]any) %}
       {% if len(parameters) > 0 %}
-      {{ props(endpoint.url.(string), "", parameters, false) }}
+      {{ Properties(endpoint.url.(string), "", parameters, false) }}
       {% else %}
       <span class="api-no-parameters">No parameters.</span>
       {% end if %}
       <h3>Response</h3>
       {% if response, ok := endpoint.response.(map[string]any); ok %}
       {% if response.description != "" %}<div>{{ unsafeconv.ToMarkdown(response.description.(string)) }}</div>{% end %}
-      {% if parameters, ok := response.parameters.([]any); ok %}{{ props("", "", parameters, true) }}{% end %}
+      {% if parameters, ok := response.parameters.([]any); ok %}{{ Properties("", "", parameters, true) }}{% end %}
       {% else %}
       <span class="api-no-response">No response.</span>
       {% end if %}
