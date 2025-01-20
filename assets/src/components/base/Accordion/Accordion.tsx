@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './Accordion.css';
 
 interface AccordionProps {
@@ -9,10 +9,39 @@ interface AccordionProps {
 }
 
 const Accordion = ({ className, isOpen, summary, details }: AccordionProps) => {
+	const [isAccordionOpen, setIsAccordionOpen] = useState<boolean>(true);
+
+	const accordionRef = useRef<any>();
+	const maxHeightRef = useRef<number>();
+
+	useLayoutEffect(() => {
+		const details = accordionRef.current.querySelector('.accordion__details');
+		const height = details.clientHeight;
+		setTimeout(() => {
+			maxHeightRef.current = height;
+			setIsAccordionOpen(isOpen);
+		});
+	}, []);
+
+	useEffect(() => {
+		if (maxHeightRef.current === null) {
+			return;
+		}
+		setIsAccordionOpen(isOpen);
+	}, [isOpen]);
+
 	return (
-		<div className={`accordion${isOpen ? ' accordion--open' : ''}${className ? ' ' + className : ''}`}>
+		<div
+			ref={accordionRef}
+			className={`accordion${isAccordionOpen ? ' accordion--open' : ''}${className ? ' ' + className : ''}`}
+		>
 			<div className='accordion__summary'>{summary}</div>
-			<div className='accordion__details'>{details}</div>
+			<div
+				className='accordion__details'
+				style={{ maxHeight: isAccordionOpen ? `${maxHeightRef.current}px` : 0 }}
+			>
+				{details}
+			</div>
 		</div>
 	);
 };
