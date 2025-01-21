@@ -1929,10 +1929,13 @@ const FullscreenTransformation = ({
 		<div
 			className={`fullscreen-transformation${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
 		>
-			<SlSplitPanel style={{ '--min': '10px', '--max': '800px' } as React.CSSProperties}>
+			<SlSplitPanel style={{ '--min': '70%', '--max': 'calc(100% - 10px)' } as React.CSSProperties}>
 				<div className='fullscreen-transformation__left-panel' slot='start'>
-					<SlSplitPanel style={{ '--min': '10px', '--max': 'calc(100% - 10px)' } as React.CSSProperties}>
-						<div className='fullscreen-transformation__input-panel' slot='start'>
+					<SlSplitPanel style={{ '--min': '10px', '--max': '42%' } as React.CSSProperties}>
+						<div
+							className={`fullscreen-transformation__input-panel${isInputSchemaSelected ? ' fullscreen-transformation__input-panel--schema' : ''}`}
+							slot='start'
+						>
 							<div className='fullscreen-transformation__panel-title-wrapper'>
 								<div className='fullscreen-transformation__panel-title'>{InputPanelTitle}</div>
 								<SlButtonGroup>
@@ -1954,104 +1957,14 @@ const FullscreenTransformation = ({
 							</div>
 							<div className='fullscreen-transformation__panel-content'>{inputPanelContent}</div>
 						</div>
-						<div className='fullscreen-transformation__output-panel' slot='end'>
-							<div className='fullscreen-transformation__panel-title-wrapper'>
-								<div className='fullscreen-transformation__panel-title'>{OutputPanelTitle}</div>
-								<SlButtonGroup>
-									<SlButton
-										size='small'
-										variant={isOutputSchemaSelected ? 'primary' : 'default'}
-										onClick={onSelectOutputSchema}
-										disabled={isExecuting}
-									>
-										Schema
-									</SlButton>
-									<SlButton
-										size='small'
-										variant={isOutputSchemaSelected ? 'default' : 'primary'}
-										onClick={onSelectOutputResult}
-										disabled={isExecuting}
-									>
-										{OutputPanelTitle === 'Request' ? 'Preview' : 'Result'}
-									</SlButton>
-								</SlButtonGroup>
-							</div>
-							<div className='fullscreen-transformation__panel-content'>
-								{isOutputSchemaSelected ? (
-									<div className='fullscreen-transformation__panel-schema'>
-										<SlInput
-											className='fullscreen-transformation__panel-schema-search'
-											onSlInput={onInputOutSearchTerm}
-											value={outSearchTerm}
-											placeholder='Search a property...'
-											size='small'
-											clearable
-										>
-											<SlIcon name='search' slot='prefix' />
-										</SlInput>
-										{transformationType === 'function' && (
-											<SlSwitch
-												className='fullscreen-transformation__panel-schema-show-only-selected'
-												size='small'
-												onSlChange={onChangeShowOnlyOutSelected}
-											>
-												Show only selected properties
-											</SlSwitch>
-										)}
-										{outputSchema.properties.map((p) => {
-											if (transformationType === 'function') {
-												const isSelected = selectedOutPaths.includes(p.name);
-												const hasSelectedChildren =
-													selectedOutPaths.findIndex((prop) =>
-														prop.startsWith(`${p.name}.`),
-													) !== -1;
-												if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
-													return null;
-												}
-											}
-
-											if (p.type.name === 'Object') {
-												return (
-													<TransformationNestedProperties
-														key={p.name}
-														property={p}
-														language={selectedLanguage}
-														nesting={1}
-														side='output'
-														transformationType={transformationType}
-														exportMode={action.exportMode}
-														searchTerm={outSearchTerm}
-														flatSchema={flatOutputSchema}
-														selectedPaths={selectedOutPaths}
-														onChangeSelectedPath={(path) =>
-															onChangeSelectedPath('out', path)
-														}
-													/>
-												);
-											} else {
-												return (
-													<TransformationProperty
-														key={p.name}
-														property={p}
-														language={selectedLanguage}
-														side='output'
-														transformationType={transformationType}
-														exportMode={action.exportMode}
-														searchTerm={outSearchTerm}
-														selectedPaths={selectedOutPaths}
-														onChangeSelectedPath={(path) =>
-															onChangeSelectedPath('out', path)
-														}
-														isOutMatchingProperty={
-															action.matching?.out && action.matching.out === p.name
-														}
-													/>
-												);
-											}
-										})}
-									</div>
-								) : isExecuting ? (
+						<div className='fullscreen-transformation__right-panel' slot='end'>
+							<div
+								slot='start'
+								className={`fullscreen-transformation__editor-panel${!isBodyShown ? ' fullscreen-transformation__editor-panel--hide' : ''}`}
+							>
+								{!isBodyShown && (
 									<SlSpinner
+										className='fullscreen-transformation__editor-panel-spinner'
 										style={
 											{
 												fontSize: '3rem',
@@ -2059,48 +1972,107 @@ const FullscreenTransformation = ({
 											} as React.CSSProperties
 										}
 									></SlSpinner>
-								) : output !== '' || outputError !== '' ? (
-									<div className='fullscreen-transformation__output-code'>
-										<SlTooltip content='Clear' placement='left' onClick={onClear}>
-											<SlIconButton
-												className='fullscreen-transformation__output-clear'
-												name='x-lg'
-											/>
-										</SlTooltip>
-										{outputError !== '' ? (
-											<div className='fullscreen-transformation__output-error'>{outputError}</div>
-										) : (
-											<div className='fullscreen-transformation__output-success'>
-												{connection.isApp &&
-												connection.isDestination &&
-												actionType.target === 'Events' ? (
-													output
-												) : (
-													<SyntaxHighlight>{output}</SyntaxHighlight>
-												)}
-											</div>
-										)}
-									</div>
-								) : (
-									<div className='fullscreen-transformation__output-placeholder'>
-										<SlIcon name='play-circle' />
-										<p className='fullscreen-transformation__output-placeholder-text'>
-											Run the transformation on a sample to see the resulting output
-										</p>
-									</div>
 								)}
+								{isBodyRendered && body}
 							</div>
 						</div>
 					</SlSplitPanel>
 				</div>
-				<div className='fullscreen-transformation__right-panel' slot='end'>
-					<div
-						slot='start'
-						className={`fullscreen-transformation__editor-panel${!isBodyShown ? ' fullscreen-transformation__editor-panel--hide' : ''}`}
-					>
-						{!isBodyShown && (
+				<div
+					className={`fullscreen-transformation__output-panel${isOutputSchemaSelected ? ' fullscreen-transformation__output-panel--schema' : ''}`}
+					slot='end'
+				>
+					<div className='fullscreen-transformation__panel-title-wrapper'>
+						<div className='fullscreen-transformation__panel-title'>{OutputPanelTitle}</div>
+						<SlButtonGroup>
+							<SlButton
+								size='small'
+								variant={isOutputSchemaSelected ? 'primary' : 'default'}
+								onClick={onSelectOutputSchema}
+								disabled={isExecuting}
+							>
+								Schema
+							</SlButton>
+							<SlButton
+								size='small'
+								variant={isOutputSchemaSelected ? 'default' : 'primary'}
+								onClick={onSelectOutputResult}
+								disabled={isExecuting}
+							>
+								{OutputPanelTitle === 'Request' ? 'Preview' : 'Result'}
+							</SlButton>
+						</SlButtonGroup>
+					</div>
+					<div className='fullscreen-transformation__panel-content'>
+						{isOutputSchemaSelected ? (
+							<div className='fullscreen-transformation__panel-schema'>
+								<SlInput
+									className='fullscreen-transformation__panel-schema-search'
+									onSlInput={onInputOutSearchTerm}
+									value={outSearchTerm}
+									placeholder='Search a property...'
+									size='small'
+									clearable
+								>
+									<SlIcon name='search' slot='prefix' />
+								</SlInput>
+								{transformationType === 'function' && (
+									<SlSwitch
+										className='fullscreen-transformation__panel-schema-show-only-selected'
+										size='small'
+										onSlChange={onChangeShowOnlyOutSelected}
+									>
+										Show only selected properties
+									</SlSwitch>
+								)}
+								{outputSchema.properties.map((p) => {
+									if (transformationType === 'function') {
+										const isSelected = selectedOutPaths.includes(p.name);
+										const hasSelectedChildren =
+											selectedOutPaths.findIndex((prop) => prop.startsWith(`${p.name}.`)) !== -1;
+										if (showOnlyOutSelected && !isSelected && !hasSelectedChildren) {
+											return null;
+										}
+									}
+
+									if (p.type.name === 'Object') {
+										return (
+											<TransformationNestedProperties
+												key={p.name}
+												property={p}
+												language={selectedLanguage}
+												nesting={1}
+												side='output'
+												transformationType={transformationType}
+												exportMode={action.exportMode}
+												searchTerm={outSearchTerm}
+												flatSchema={flatOutputSchema}
+												selectedPaths={selectedOutPaths}
+												onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
+											/>
+										);
+									} else {
+										return (
+											<TransformationProperty
+												key={p.name}
+												property={p}
+												language={selectedLanguage}
+												side='output'
+												transformationType={transformationType}
+												exportMode={action.exportMode}
+												searchTerm={outSearchTerm}
+												selectedPaths={selectedOutPaths}
+												onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
+												isOutMatchingProperty={
+													action.matching?.out && action.matching.out === p.name
+												}
+											/>
+										);
+									}
+								})}
+							</div>
+						) : isExecuting ? (
 							<SlSpinner
-								className='fullscreen-transformation__editor-panel-spinner'
 								style={
 									{
 										fontSize: '3rem',
@@ -2108,8 +2080,33 @@ const FullscreenTransformation = ({
 									} as React.CSSProperties
 								}
 							></SlSpinner>
+						) : output !== '' || outputError !== '' ? (
+							<div className='fullscreen-transformation__output-code'>
+								<SlTooltip content='Clear' placement='left' onClick={onClear}>
+									<SlIconButton className='fullscreen-transformation__output-clear' name='x-lg' />
+								</SlTooltip>
+								{outputError !== '' ? (
+									<div className='fullscreen-transformation__output-error'>{outputError}</div>
+								) : (
+									<div className='fullscreen-transformation__output-success'>
+										{connection.isApp &&
+										connection.isDestination &&
+										actionType.target === 'Events' ? (
+											output
+										) : (
+											<SyntaxHighlight>{output}</SyntaxHighlight>
+										)}
+									</div>
+								)}
+							</div>
+						) : (
+							<div className='fullscreen-transformation__output-placeholder'>
+								<SlIcon name='play-circle' />
+								<p className='fullscreen-transformation__output-placeholder-text'>
+									Run the transformation on a sample to see the resulting output
+								</p>
+							</div>
 						)}
-						{isBodyRendered && body}
 					</div>
 				</div>
 			</SlSplitPanel>
