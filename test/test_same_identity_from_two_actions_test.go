@@ -71,8 +71,8 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		t.Fatalf("expected 10 users, got %d", total)
 	}
 	user := users[0]
-	if user.Properties["first_name"] != "Ariela" {
-		t.Fatalf("expected first name %q, got %q", "Ariela", user.Properties["first_name"])
+	if user.Traits["first_name"] != "Ariela" {
+		t.Fatalf("expected first name %q, got %q", "Ariela", user.Traits["first_name"])
 	}
 
 	// Check that there are 20 user identities in total.

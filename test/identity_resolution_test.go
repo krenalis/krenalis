@@ -107,8 +107,8 @@ func TestIdentityResolution(t *testing.T) {
 			t.Fatalf("\nexpected: %d users\ngot %d", len(expectedUsers), len(users))
 		}
 		for i, user := range users {
-			if !reflect.DeepEqual(expectedUsers[i], user.Properties) {
-				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expectedUsers[i], strings.Repeat(" ", len(strconv.Itoa(i))), user.Properties)
+			if !reflect.DeepEqual(expectedUsers[i], user.Traits) {
+				t.Fatalf("\nexpected at index %d: %#v\ngot:                %s%#v", i, expectedUsers[i], strings.Repeat(" ", len(strconv.Itoa(i))), user.Traits)
 			}
 		}
 		t.Logf("users: %v", users)

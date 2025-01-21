@@ -852,8 +852,8 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		b.writeString(`","lastChangeTime":"`)
 		buf := b.availableBuffer()
 		b.write(user.LastChangeTime.AppendFormat(buf, time.RFC3339Nano))
-		b.writeString(`","properties":`)
-		s, _ := types.Marshal(user.Properties, schema)
+		b.writeString(`","traits":`)
+		s, _ := types.Marshal(user.Traits, schema)
 		b.write(s)
 		b.writeByte('}')
 	}

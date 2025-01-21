@@ -71,7 +71,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	}
 	found := false
 	for _, user := range users {
-		email, _ := user.Properties["email"].(string)
+		email, _ := user.Traits["email"].(string)
 		if email == eventUserEmail {
 			found = true
 			break

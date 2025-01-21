@@ -75,7 +75,7 @@ interface TransformDataResponse {
 interface ResponseUser {
 	id: string;
 	lastChangeTime: string;
-	properties: Record<string, any>;
+	traits: Record<string, any>;
 }
 
 interface FindUsersResponse {

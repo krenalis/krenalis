@@ -181,7 +181,7 @@ type KV struct {
 type User struct {
 	ID             uuid.UUID      `json:"id"`
 	LastChangeTime time.Time      `json:"lastChangeTime"`
-	Properties     map[string]any `json:"properties"`
+	Traits         map[string]any `json:"traits"`
 }
 
 type UserIdentity struct {

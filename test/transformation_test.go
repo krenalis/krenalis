@@ -98,7 +98,7 @@ def transform(user: dict) -> dict:
 	}
 	for i, user := range users {
 		expected := expectedProperties[i]
-		if !reflect.DeepEqual(expected, user.Properties) {
+		if !reflect.DeepEqual(expected, user.Traits) {
 			t.Fatalf("expected %#v, got %#v", expected, user)
 		}
 	}

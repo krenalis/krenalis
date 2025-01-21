@@ -1526,7 +1526,7 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 // User represents a user.
 type User struct {
 	ID             string         `json:"id"`
-	Properties     map[string]any `json:"properties"`
+	Traits         map[string]any `json:"traits"`
 	LastChangeTime time.Time      `json:"lastChangeTime"`
 }
 
@@ -1645,7 +1645,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	users := make([]User, len(rows))
 	for i, row := range rows {
 		users[i].ID = row["__id__"].(string)
-		users[i].Properties = row
+		users[i].Traits = row
 		users[i].LastChangeTime = row["__last_change_time__"].(time.Time)
 		delete(row, "__id__")
 		delete(row, "__last_change_time__")

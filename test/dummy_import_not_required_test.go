@@ -56,7 +56,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 	if total != 10 {
 		t.Fatalf("expected 10 users, got %d instead", total)
 	}
-	expectedUserProps := []map[string]any{
+	expectedUserTraits := []map[string]any{
 		{"email": "abenois2@example.com", "favorite_movie": map[string]any{"title": "Eclipse Protocol"}},
 		{"email": "bdroghan5@example.com"},
 		{"email": "ctroy7@example.com", "favorite_movie": map[string]any{"title": "Phantom Avenue"}},
@@ -69,10 +69,10 @@ func TestDummyImportNotRequired(t *testing.T) {
 		{"email": "kfellon6@example.com"},
 	}
 	for i := range 10 {
-		gotProps := users[i].Properties
-		expectedProps := expectedUserProps[i]
-		if !reflect.DeepEqual(gotProps, expectedProps) {
-			t.Fatalf("user n. %d: expected properties %#v, got %#v", i+1, expectedProps, gotProps)
+		got := users[i].Traits
+		expected := expectedUserTraits[i]
+		if !reflect.DeepEqual(got, expected) {
+			t.Fatalf("user n. %d: expected traits %#v, got %#v", i+1, expected, got)
 		}
 	}
 

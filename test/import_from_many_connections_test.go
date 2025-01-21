@@ -192,7 +192,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	// Retrieve the GID of "kbuessen0@example.com".
 	var kBuessenGid uuid.UUID
 	for _, user := range users {
-		if user.Properties["email"] == "kbuessen0@example.com" {
+		if user.Traits["email"] == "kbuessen0@example.com" {
 			kBuessenGid = user.ID
 			break
 		}

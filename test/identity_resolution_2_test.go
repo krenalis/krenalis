@@ -181,14 +181,14 @@ func TestIdentityResolution2(t *testing.T) {
 	if user.LastChangeTime.IsZero() {
 		t.Fatalf("expected a valid last change time, got zero instead")
 	}
-	expectedProps := map[string]any{
+	expected := map[string]any{
 		"email":         "a@b",
 		"name":          "John",
 		"phone_numbers": []any{"+11 111", "+22 222", "+33 333"},
 		"total_orders":  json.Number("21"),
 	}
-	if !reflect.DeepEqual(user.Properties, expectedProps) {
-		t.Fatalf("expected user properties %#v, got %#v", expectedProps, user)
+	if !reflect.DeepEqual(user.Traits, expected) {
+		t.Fatalf("expected user traits %#v, got %#v", expected, user)
 	}
 
 	// Change the primary sources, making the "total_orders" property have
@@ -213,14 +213,14 @@ func TestIdentityResolution2(t *testing.T) {
 	if user.LastChangeTime.IsZero() {
 		t.Fatalf("expected a valid last change time, got zero instead")
 	}
-	expectedProps = map[string]any{
+	expected = map[string]any{
 		"email":         "a@b",
 		"name":          "John",
 		"phone_numbers": []any{"+11 111", "+22 222", "+33 333"},
 		"total_orders":  json.Number("20"),
 	}
-	if !reflect.DeepEqual(user.Properties, expectedProps) {
-		t.Fatalf("expected user properties %#v, got %#v", expectedProps, user)
+	if !reflect.DeepEqual(user.Traits, expected) {
+		t.Fatalf("expected user traits %#v, got %#v", expected, user)
 	}
 
 	storage.Remove()

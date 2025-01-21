@@ -67,12 +67,12 @@ func TestReimport(t *testing.T) {
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
-	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
-	assertEq("first  user first name", "Ariela", users[0].Properties["first_name"])
-	assertEq("first  user last name", nil, users[0].Properties["last_name"])
-	assertEq("second user email", "bdroghan5@example.com", users[1].Properties["email"])
-	assertEq("second user first name", "Bryon", users[1].Properties["first_name"])
-	assertEq("second user last name", nil, users[1].Properties["last_name"])
+	assertEq("first  user email", "abenois2@example.com", users[0].Traits["email"])
+	assertEq("first  user first name", "Ariela", users[0].Traits["first_name"])
+	assertEq("first  user last name", nil, users[0].Traits["last_name"])
+	assertEq("second user email", "bdroghan5@example.com", users[1].Traits["email"])
+	assertEq("second user first name", "Bryon", users[1].Traits["first_name"])
+	assertEq("second user last name", nil, users[1].Traits["last_name"])
 
 	// Update the action that imports users from Dummy, that imports:
 	//
@@ -110,11 +110,11 @@ func TestReimport(t *testing.T) {
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
-	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
+	assertEq("first  user email", "abenois2@example.com", users[0].Traits["email"])
 	//assertEq("first  user first name", nil, users[0].Properties["first_name"])    // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)
-	assertEq("first  user last name", "Benois", users[0].Properties["last_name"]) // <- now has a value
-	assertEq("second user email", "bdroghan5@example.com", users[1].Properties["email"])
+	assertEq("first  user last name", "Benois", users[0].Traits["last_name"]) // <- now has a value
+	assertEq("second user email", "bdroghan5@example.com", users[1].Traits["email"])
 	//assertEq("second user first name", nil, users[1].Properties["first_name"])     // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)
-	assertEq("second user last name", "Droghan", users[1].Properties["last_name"]) // <- now has a value
+	assertEq("second user last name", "Droghan", users[1].Traits["last_name"]) // <- now has a value
 
 }

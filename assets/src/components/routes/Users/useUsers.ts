@@ -60,7 +60,7 @@ const useUsers = () => {
 		const properties: UserProperty[] = [];
 		for (const p of schema.properties) {
 			// check if there is a preference for the visualization of the
-			// property, othwerwise, show the property by default.
+			// property, otherwise, show the property by default.
 			const property = preferenceProperties.find((prop) => prop.name === p.name);
 			properties.push({
 				name: p.name,
@@ -114,12 +114,12 @@ const useUsers = () => {
 		const total = res.total;
 
 		for (const user of users) {
-			const properties: Record<string, any> = {};
+			const traits: Record<string, any> = {};
 			for (const name of propertiesNames) {
-				const value = user.properties[name];
-				properties[name] = value ? value : undefined;
+				const value = user.traits[name];
+				traits[name] = value ? value : undefined;
 			}
-			user.properties = properties;
+			user.traits = traits;
 		}
 
 		setUsers(users);

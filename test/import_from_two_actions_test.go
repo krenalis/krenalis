@@ -114,12 +114,12 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
-	assertEq("run #1: first  user email", "luigi.rossi@example.com", users[0].Properties["email"])
-	assertEq("run #1: first  user first name", "Luigi", users[0].Properties["first_name"])
-	assertEq("run #1: first  user last name", nil, users[0].Properties["last_name"])
-	assertEq("run #1: second user email", "mario.rossi@example.com", users[1].Properties["email"])
-	assertEq("run #1: second user first name", "Mario", users[1].Properties["first_name"])
-	assertEq("run #1: second user last name", nil, users[0].Properties["last_name"])
+	assertEq("run #1: first  user email", "luigi.rossi@example.com", users[0].Traits["email"])
+	assertEq("run #1: first  user first name", "Luigi", users[0].Traits["first_name"])
+	assertEq("run #1: first  user last name", nil, users[0].Traits["last_name"])
+	assertEq("run #1: second user email", "mario.rossi@example.com", users[1].Traits["email"])
+	assertEq("run #1: second user first name", "Mario", users[1].Traits["first_name"])
+	assertEq("run #1: second user last name", nil, users[0].Traits["last_name"])
 
 	// Import from the second action, which should import just the last name,
 	// and that should result in users with both first name and last name.
@@ -131,10 +131,10 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
-	assertEq("run #2: first  user email", "luigi.rossi@example.com", users[0].Properties["email"])
-	assertEq("run #2: first  user first name", "Luigi", users[0].Properties["first_name"])
-	assertEq("run #2: first  user last name", "Bianchi", users[0].Properties["last_name"])
-	assertEq("run #2: second user email", "mario.rossi@example.com", users[1].Properties["email"])
-	assertEq("run #2: second user first name", "Mario", users[1].Properties["first_name"])
-	assertEq("run #2: second user last name", "Rossi", users[1].Properties["last_name"])
+	assertEq("run #2: first  user email", "luigi.rossi@example.com", users[0].Traits["email"])
+	assertEq("run #2: first  user first name", "Luigi", users[0].Traits["first_name"])
+	assertEq("run #2: first  user last name", "Bianchi", users[0].Traits["last_name"])
+	assertEq("run #2: second user email", "mario.rossi@example.com", users[1].Traits["email"])
+	assertEq("run #2: second user first name", "Mario", users[1].Traits["first_name"])
+	assertEq("run #2: second user last name", "Rossi", users[1].Traits["last_name"])
 }

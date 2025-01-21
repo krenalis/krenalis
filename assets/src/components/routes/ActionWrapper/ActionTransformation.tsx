@@ -1187,7 +1187,7 @@ const FullscreenTransformation = ({
 				}
 				const s: Sample[] = [];
 				for (const user of res.users) {
-					s.push(user.properties);
+					s.push(user.traits);
 				}
 				samples = s;
 			} else {

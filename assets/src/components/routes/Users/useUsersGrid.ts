@@ -18,7 +18,7 @@ const useUsersGrid = (
 			const isSelected = userCopy.id === selectedUser;
 			const row: GridRow = {
 				onClick: () => onUserClick(user.id),
-				cells: [userCopy.lastChangeTime, ...Object.values(userCopy.properties)],
+				cells: [userCopy.lastChangeTime, ...Object.values(userCopy.traits)],
 				selected: isSelected,
 			};
 			rows.push(row);

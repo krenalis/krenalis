@@ -141,7 +141,7 @@ func TestEvents(t *testing.T) {
 	}
 	var userGID uuid.UUID
 	for _, user := range users {
-		email, _ := user.Properties["email"].(string)
+		email, _ := user.Traits["email"].(string)
 		if email == eventUserEmail {
 			userGID = user.ID
 			break
