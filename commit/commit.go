@@ -24,7 +24,7 @@ import (
 // expectedDenoVersion is the expected Deno version.
 //
 // Keep in sync with the version within ".github/workflows/main.yml".
-const expectedDenoVersion = "2.1.0"
+const expectedDenoVersion = "2.1.6"
 
 func main() {
 
