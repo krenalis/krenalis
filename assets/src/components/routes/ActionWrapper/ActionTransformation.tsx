@@ -2316,6 +2316,17 @@ const TransformationProperty = ({
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isSelected ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
 		>
+			<div className='fullscreen-transformation__property-padding'>
+				{isParent && showCaret && (
+					<SlIcon
+						className='fullscreen-transformation__property-caret'
+						name='caret-right-fill'
+						onClick={() => {
+							setIsExpanded(!isExpanded);
+						}}
+					/>
+				)}
+			</div>
 			{transformationType === 'function' && (
 				<SlCheckbox
 					className='fullscreen-transformation__property-check'
@@ -2377,15 +2388,6 @@ const TransformationProperty = ({
 					)}
 				</div>
 			</div>
-			{isParent && showCaret && (
-				<SlIcon
-					className='fullscreen-transformation__property-caret'
-					name='caret-right-fill'
-					onClick={() => {
-						setIsExpanded(!isExpanded);
-					}}
-				/>
-			)}
 		</div>
 	);
 };
