@@ -45,9 +45,9 @@ func Test_validateAction(t *testing.T) {
 		connectionRole          state.Role
 		connectionConnectorType state.ConnectorType
 
-		connectorType        state.ConnectorType
-		connectorHasSettings bool
-		connectorHasSheets   bool
+		formatType        state.ConnectorType
+		formatHasSettings bool
+		formatHasSheets   bool
 
 		provider transformers.Provider
 
@@ -184,9 +184,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 		},
 		{
 			name: "GOOD: Source/FileStorage/Users - with mapping and filter",
@@ -228,9 +228,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 		},
 		{
 			name: "GOOD: Source/Website/Users - with mapping",
@@ -610,9 +610,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 		},
 		{
 			name: "GOOD: Destination/FileStorage/Users - with placeholder",
@@ -631,9 +631,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 		},
 		{
 			name: "GOOD: Destination/FileStorage/Users - with filter",
@@ -658,9 +658,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 		},
 		{
 			name: "GOOD: Source/App/Users - input schema can contain meta properties",
@@ -1022,9 +1022,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 			err:                     "actions on App connections cannot have a format",
 		},
 		{
@@ -1079,7 +1079,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.App,
+			formatType:              state.App,
 			err:                     "format does not refer to a file connector",
 		},
 		{
@@ -1236,9 +1236,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 			err:                     "path is longer than 1024 runes",
 		},
 
@@ -1267,9 +1267,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 			err:                     "placeholders syntax is not supported by source actions",
 		},
 		{
@@ -1336,9 +1336,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 			err:                     "input schema is required by the mapping",
 		},
 		{
@@ -1403,9 +1403,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 			err:                     "compression \"BadCompression\" is not valid",
 		},
 		{
@@ -2264,9 +2264,9 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.FileStorage,
-			connectorType:           state.File,
-			connectorHasSettings:    false,
-			connectorHasSheets:      false,
+			formatType:              state.File,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
 			err:                     "input schema must be valid when exporting users to file",
 		},
 		{
@@ -2654,9 +2654,9 @@ func Test_validateAction(t *testing.T) {
 			v := validationState{}
 			v.connection.role = test.connectionRole
 			v.connection.connector.typ = test.connectionConnectorType
-			v.format.typ = test.connectorType
-			v.format.hasSheets = test.connectorHasSheets
-			v.format.hasSettings = test.connectorHasSettings
+			v.format.typ = test.formatType
+			v.format.hasSheets = test.formatHasSheets
+			v.format.hasSettings = test.formatHasSettings
 			v.provider = test.provider
 			err := validateAction(test.action, test.target, v)
 			var gotErr string
