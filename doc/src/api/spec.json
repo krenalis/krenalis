@@ -7131,7 +7131,7 @@
                                 "description": "The connection's user identities."
                             },
                             {
-                                "name": "count",
+                                "name": "total",
                                 "placeholder": "23",
                                 "type": {
                                     "name": "Int",
@@ -12466,13 +12466,13 @@
                                 "description": "The schema of the returned traits. It corresponds to the user schema but includes only the properties that were explicitly requested."
                             },
                             {
-                                "name": "count",
+                                "name": "total",
                                 "placeholder": "803154",
                                 "type": {
                                     "name": "Int",
                                     "bitSize": 32
                                 },
-                                "description": "The total number of users."
+                                "description": "An estimate of the total number of users, without considering `first` and `limit`."
                             }
                         ]
                     },
@@ -13355,7 +13355,7 @@
                                 "description": "The user’s identities, containing at least one identity."
                             },
                             {
-                                "name": "count",
+                                "name": "total",
                                 "placeholder": "12",
                                 "type": {
                                     "name": "Int",
