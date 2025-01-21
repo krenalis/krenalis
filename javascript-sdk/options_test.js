@@ -25,7 +25,7 @@ Deno.test('Options', () => {
 			timeout: 30 * 60000, // 30 minutes.
 		},
 		stores: ['localStorage', 'cookie', 'memory'],
-		strategy: 'AB-C',
+		strategy: 'Conversion',
 		useQueryString: {
 			aid: /\s\S/,
 			uid: /\s\S/,
@@ -357,15 +357,15 @@ Deno.test('Options', () => {
 })
 
 Deno.test('isStrategy', () => {
-	assert(isStrategy('ABC'))
-	assert(isStrategy('AB-C'))
-	assert(isStrategy('A-B-C'))
-	assert(isStrategy('AC-B'))
-	assert(!isStrategy('A-BC'))
-	assert(!isStrategy('ABCxy'))
-	assert(!isStrategy('xyAC-B'))
-	assert(!isStrategy('AB'))
-	assert(!isStrategy('ABC '))
+	assert(isStrategy('Fusion'))
+	assert(isStrategy('Conversion'))
+	assert(isStrategy('Isolation'))
+	assert(isStrategy('Preservation'))
+	assert(!isStrategy('Unification'))
+	assert(!isStrategy('fusion'))
+	assert(!isStrategy(' Preservation'))
+	assert(!isStrategy('isolation'))
+	assert(!isStrategy('Conversion '))
 	assert(!isStrategy(''))
 	assert(!isStrategy(5))
 	assert(!isStrategy(null))

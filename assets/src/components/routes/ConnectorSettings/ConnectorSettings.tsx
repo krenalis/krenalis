@@ -25,7 +25,7 @@ import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { validateConnectorSettings } from '../../../lib/core/connectorSettings';
 import * as icons from '../../../constants/icons';
 
-const strategyOptions: Strategy[] = ['AB-C', 'ABC', 'A-B-C', 'AC-B'];
+const strategyOptions: Strategy[] = ['Conversion', 'Fusion', 'Isolation', 'Preservation'];
 
 const hasStrategy = (connectionRole: ConnectionRole, c: TransformedConnector): boolean => {
 	return connectionRole === 'Source' && (c.type === 'Mobile' || c.type === 'Website');
@@ -316,7 +316,7 @@ const ConnectorSettings = () => {
 								<SlSelect
 									className='connector-settings__strategy-field'
 									name='strategy'
-									value={strategy || 'AB-C'}
+									value={strategy || 'Conversion'}
 									label='Strategy'
 									onSlChange={(e) => {
 										const target = e.currentTarget as any;

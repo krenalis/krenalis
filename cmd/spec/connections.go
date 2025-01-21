@@ -36,8 +36,8 @@ func init() {
 	}
 	strategyParameter := types.Property{
 		Name:           "strategy",
-		Type:           types.Text().WithValues("AB-C", "ABC", "A-B-C", "AC-B"),
-		Placeholder:    `"AB-C"`,
+		Type:           types.Text().WithValues("Conversion", "Fusion", "Isolation", "Preservation"),
+		Placeholder:    `"Conversion"`,
 		UpdateRequired: true,
 		Nullable:       true,
 		Description: `The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. ` +
@@ -98,8 +98,8 @@ func init() {
 		},
 		{
 			Name:        "strategy",
-			Type:        types.Text().WithValues("AB-C", "ABC", "A-B-C", "AC-B"),
-			Placeholder: `"AB-C"`,
+			Type:        types.Text().WithValues("Conversion", "Fusion", "Isolation", "Preservation"),
+			Placeholder: `"Conversion"`,
 			Nullable:    true,
 			Description: "The [strategy](/identity-resolution/anonymous-users-strategies) for anonymous users. " +
 				"It is `null` if the connection is not a mobile or website source connection.",

@@ -542,12 +542,12 @@ await meergoAnalytics.ready();
 
 The `reset` method resets the user and group identifiers, and updates or removes the Anonymous ID and traits according to the strategy (as detailed in the table below). If `all` is true it always resets the Anonymous ID by generating a new one, and ends the session if one exists, regardless of the strategy.
 
-| Strategy | Behavior of `reset()`                                                                                                                               |
-|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| AB-C     | Removes User ID, Group ID, user and group traits, and changes Anonymous ID and session.                                                             |
-| ABC      | Removes User ID, Group ID, and user and group traits. Does not change Anonymous ID or session.                                                      |
-| A-B-C    | Removes User ID, Group ID, user and group traits, and changes Anonymous ID and session.                                                             |
-| AC-B     | Removes User ID. Restores Anonymous ID, Group ID, user and group traits, and session to their state before the latest [`identify`](#identify) call. |
+| Strategy     | Behavior of `reset()`                                                                                                                               |
+|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| Conversion   | Removes User ID, Group ID, user and group traits, and changes Anonymous ID and session.                                                             |
+| Fusion       | Removes User ID, Group ID, and user and group traits. Does not change Anonymous ID or session.                                                      |
+| Isolation    | Removes User ID, Group ID, user and group traits, and changes Anonymous ID and session.                                                             |
+| Preservation | Removes User ID. Restores Anonymous ID, Group ID, user and group traits, and session to their state before the latest [`identify`](#identify) call. |
 
 
 #### Syntax
@@ -579,11 +579,11 @@ meergoAnalytics.reset();  // same as meergoAnalytics.reset(false)
 
 #### Segment Compatibility
 
-To align with Segment's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Meergo. Note that `reset(true)` is not available in Segment.
+To align with Segment's `reset()` behavior, choose the "Conversion" or "Isolation" strategy in Meergo. Note that `reset(true)` is not available in Segment.
 
 #### RudderStack Compatibility
 
-To match RudderStack's `reset()` behavior, choose the "A-B-C" or "AB-C" strategy in Meergo. In Meergo, `reset(true)` works the same way as it does in RudderStack for all strategies.
+To match RudderStack's `reset()` behavior, choose the "Conversion" or "Isolation" strategy in Meergo. In Meergo, `reset(true)` works the same way as it does in RudderStack for all strategies.
 
 ## debug
 

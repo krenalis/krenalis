@@ -1,7 +1,7 @@
 import { debug, isPlainObject, log } from './utils.js'
 
 const matchAll = /\s\S/
-const strategies = ['ABC', 'AB-C', 'A-B-C', 'AC-B']
+const strategies = ['Fusion', 'Conversion', 'Isolation', 'Preservation']
 const storages = ['multiStorage', 'cookieStorage', 'localStorage', 'sessionStorage', 'memoryStorage', 'none']
 const stores = ['cookie', 'localStorage', 'sessionStorage', 'memory']
 
@@ -24,7 +24,7 @@ class Options {
 		timeout: 30 * 60000, // 30 minutes.
 	}
 	stores = ['localStorage', 'cookie', 'memory']
-	strategy = 'AB-C'
+	strategy = 'Conversion'
 	useQueryString = {
 		aid: matchAll,
 		uid: matchAll,

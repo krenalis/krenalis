@@ -6509,14 +6509,14 @@
                         },
                         {
                             "name": "strategy",
-                            "placeholder": "\"AB-C\"",
+                            "placeholder": "\"Conversion\"",
                             "type": {
                                 "name": "Text",
                                 "values": [
-                                    "AB-C",
-                                    "ABC",
-                                    "A-B-C",
-                                    "AC-B"
+                                    "Conversion",
+                                    "Fusion",
+                                    "Isolation",
+                                    "Preservation"
                                 ]
                             },
                             "updateRequired": true,
@@ -6764,14 +6764,14 @@
                         },
                         {
                             "name": "strategy",
-                            "placeholder": "\"AB-C\"",
+                            "placeholder": "\"Conversion\"",
                             "type": {
                                 "name": "Text",
                                 "values": [
-                                    "AB-C",
-                                    "ABC",
-                                    "A-B-C",
-                                    "AC-B"
+                                    "Conversion",
+                                    "Fusion",
+                                    "Isolation",
+                                    "Preservation"
                                 ]
                             },
                             "updateRequired": true,
@@ -6897,14 +6897,14 @@
                                             },
                                             {
                                                 "name": "strategy",
-                                                "placeholder": "\"AB-C\"",
+                                                "placeholder": "\"Conversion\"",
                                                 "type": {
                                                     "name": "Text",
                                                     "values": [
-                                                        "AB-C",
-                                                        "ABC",
-                                                        "A-B-C",
-                                                        "AC-B"
+                                                        "Conversion",
+                                                        "Fusion",
+                                                        "Isolation",
+                                                        "Preservation"
                                                     ]
                                                 },
                                                 "nullable": true,
@@ -7064,14 +7064,14 @@
                             },
                             {
                                 "name": "strategy",
-                                "placeholder": "\"AB-C\"",
+                                "placeholder": "\"Conversion\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "AB-C",
-                                        "ABC",
-                                        "A-B-C",
-                                        "AC-B"
+                                        "Conversion",
+                                        "Fusion",
+                                        "Isolation",
+                                        "Preservation"
                                     ]
                                 },
                                 "nullable": true,

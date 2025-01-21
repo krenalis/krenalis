@@ -744,7 +744,8 @@ func (account *Account) Connector() *Connector {
 	return c
 }
 
-// Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
+// Strategy represents a strategy.
+// Can be "Conversion", "Fusion", "Isolation", and "Preservation".
 type Strategy string
 
 // Connection represents a connection.

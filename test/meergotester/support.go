@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var defaultStrategy Strategy = "AB-C"
+var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 

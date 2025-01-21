@@ -214,7 +214,7 @@ const addJavascriptSource = async (page: Page): Promise<number> => {
 					name: 'JavaScript',
 					role: 'Source',
 					connector: 'JavaScript',
-					strategy: 'AB-C',
+					strategy: 'Conversion',
 					websiteHost: '',
 					sendingMode: null,
 					settings: null,

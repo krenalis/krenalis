@@ -59,7 +59,7 @@ Deno.test('Analytics', async (t) => {
 		const fetch = globalThis.fetch
 		globalThis.fetch = function () {
 			return new _Promise(function (resolve) {
-				const body = JSON.stringify({ strategy: strategy || 'AB-C' })
+				const body = JSON.stringify({ strategy: strategy || 'Conversion' })
 				const response = new Response(body, {
 					status: 200,
 					statusText: 'OK',
@@ -135,7 +135,7 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('reset function', async () => {
 		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
-		const a = newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
+		const a = newAnalytics({ sessions: { autoTrack: false } }, 'Preservation')
 		await a.ready()
 		a.startSession(137206)
 		a.setAnonymousId('53c5986a-7fa4-493c-9a61-75c483aaf3d7')
@@ -166,7 +166,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	await t.step('startSession argument validation', async () => {
-		const a = newAnalytics({ sessions: { autoTrack: false } }, 'AC-B')
+		const a = newAnalytics({ sessions: { autoTrack: false } }, 'Preservation')
 		await a.ready()
 		// Check valid startSession arguments.
 		let ids = [null, undefined, 1, 300, Number.MAX_SAFE_INTEGER]
@@ -343,7 +343,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	// Test identify and reset with each strategy, both with and without sessions.
-	for (const strategy of ['ABC', 'AB-C', 'A-B-C', 'AC-B']) {
+	for (const strategy of ['Fusion', 'Conversion', 'Isolation', 'Preservation']) {
 		for (const autoTrack of [true, false]) {
 			await t.step(`strategy ${strategy} with${autoTrack ? '' : 'out'} sessions`, async () => {
 				const a = newAnalytics({ sessions: { autoTrack } }, strategy)
@@ -378,7 +378,7 @@ Deno.test('Analytics', async (t) => {
 						assert(!('sessionStart' in event.context))
 						assertEquals(a.getSessionId(), null)
 					}
-					if (strategy.includes('-B')) {
+					if (strategy === 'Isolation' || strategy === 'Preservation') {
 						if (autoTrack) {
 							assertNotEquals(event.context.sessionId, sessionId)
 						}
@@ -407,7 +407,7 @@ Deno.test('Analytics', async (t) => {
 					if (!autoTrack) {
 						assertEquals(a.getSessionId(), null)
 					}
-					if (strategy === 'AC-B') {
+					if (strategy === 'Preservation') {
 						if (autoTrack) {
 							assertEquals(a.getSessionId(), original.sessionId)
 						}
@@ -415,7 +415,7 @@ Deno.test('Analytics', async (t) => {
 						assertEquals(a.user().traits(), original.userTraits)
 						assertEquals(a.group().id(), original.groupId)
 						assertEquals(a.group().traits(), original.groupTraits)
-					} else if (strategy.includes('-C')) {
+					} else if (strategy === 'Conversion' || strategy === 'Isolation') {
 						if (autoTrack) {
 							assertNotEquals(a.getSessionId(), original.sessionId)
 							assertNotEquals(a.getSessionId(), sessionId)

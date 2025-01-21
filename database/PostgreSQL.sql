@@ -50,7 +50,7 @@ CREATE TYPE health AS ENUM ('Healthy', 'NoRecentData', 'RecentError');
 
 CREATE TYPE compression AS ENUM ('', 'Zip', 'Gzip', 'Snappy');
 
-CREATE TYPE strategy AS ENUM ('AB-C', 'ABC', 'A-B-C', 'AC-B');
+CREATE TYPE strategy AS ENUM ('Conversion', 'Fusion', 'Isolation', 'Preservation');
 
 CREATE TYPE sending_mode as ENUM ('Cloud', 'Device', 'Combined');
 

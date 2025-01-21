@@ -77,7 +77,8 @@ type EventType struct {
 	Description string `json:"description"`
 }
 
-// Strategy represents a strategy. Can be "AB-C", "ABC", "A-B-C", and "AC-B".
+// Strategy represents a strategy.
+// Can be "Conversion", "Fusion", "Isolation", and "Preservation".
 type Strategy string
 
 // Action returns the action with identifier id of the connection.
@@ -1995,7 +1996,7 @@ func isMetaProperty(name string) bool {
 // isValidStrategy reports whether s is a valid strategy.
 func isValidStrategy(s Strategy) bool {
 	switch s {
-	case "AB-C", "ABC", "A-B-C", "AC-B":
+	case "Conversion", "Fusion", "Isolation", "Preservation":
 		return true
 	}
 	return false

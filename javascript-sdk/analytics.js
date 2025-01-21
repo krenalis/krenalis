@@ -188,7 +188,8 @@ class Analytics {
 	// strategy.
 	reset(all) {
 		this.#storage.setUserId()
-		if (!all && this.#options.strategy === 'AC-B') {
+		const strategy = this.#options.strategy
+		if (!all && strategy === 'Preservation') {
 			this.#storage.restore()
 			return
 		}
@@ -196,7 +197,7 @@ class Analytics {
 		this.#storage.setTraits('user')
 		this.#storage.setTraits('group')
 		this.#storage.removeSuspended()
-		if (all || this.#options.strategy.indexOf('-C') > 0) {
+		if (all || strategy === 'Conversion' || strategy === 'Isolation') {
 			this.#storage.setAnonymousId()
 			this.#session.reset()
 		}
@@ -433,9 +434,10 @@ class Analytics {
 			case 'group':
 				event.userId = this.#user.id()
 				break
-			case 'identify':
-				if (this.#options.strategy.indexOf('-B') > 0) {
-					if (this.#options.strategy === 'AC-B') {
+			case 'identify': {
+				const strategy = this.#options.strategy
+				if (strategy === 'Isolation' || strategy === 'Preservation') {
+					if (strategy === 'Preservation') {
 						this.#storage.suspend()
 					} else {
 						this.#storage.removeSuspended()
@@ -448,6 +450,7 @@ class Analytics {
 				} else {
 					event.traits = this.#mergeTraits(this.#user, event.traits)
 				}
+			}
 		}
 
 		event.messageId = uuid()

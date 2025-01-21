@@ -112,10 +112,10 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					className='connection-settings__strategy-field'
 					onSlChange={onStrategyChange}
 				>
-					<SlOption value='AB-C'>AB-C</SlOption>
-					<SlOption value='ABC'>ABC</SlOption>
-					<SlOption value='A-B-C'>A-B-C</SlOption>
-					<SlOption value='AC-B'>AC-B</SlOption>
+					<SlOption value='Conversion'>Conversion strategy</SlOption>
+					<SlOption value='Fusion'>Fusion strategy</SlOption>
+					<SlOption value='Isolation'>Isolation strategy</SlOption>
+					<SlOption value='Preservation'>Preservation strategy</SlOption>
 				</SlSelect>
 			)}
 

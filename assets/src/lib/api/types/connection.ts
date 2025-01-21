@@ -28,7 +28,7 @@ interface Connection {
 
 type Compression = '' | 'Zip' | 'Gzip' | 'Snappy';
 
-type Strategy = 'AB-C' | 'ABC' | 'A-B-C' | 'AC-B';
+type Strategy = 'Conversion' | 'Fusion' | 'Isolation' | 'Preservation';
 
 type SendingMode = 'Cloud' | 'Device' | 'Combined';
 
