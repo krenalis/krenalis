@@ -657,21 +657,43 @@
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "La modalità con cui gi utenti sono esportati:\n\n* `CreateOnly`: vengono esclusivamente creati degli utenti nell'app. Nessun cliente esistente viene modificato.\n* `UpdateOnly`: vengono esclusivamente aggiornati gli utenti esistenti nell'app. Nessun nuovo cliente viene creato.\n* `CreateOrUpdate`: se un utente è già presente nell'app, viene aggiornato, altrimenti viene creato come nuovo."
+                            "description": "The mode in which users are exported:\n\n* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
                         },
                         {
                             "name": "matching",
-                            "placeholder": "\"CreateOnly\"",
                             "type": {
-                                "name": "Text",
-                                "values": [
-                                    "CreateOnly",
-                                    "UpdateOnly",
-                                    "CreateOrUpdate"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "in",
+                                        "placeholder": "\"email\"",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "createRequired": true,
+                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the workspace's user schema. Its definition must also be included in the action's input schema."
+                                    },
+                                    {
+                                        "name": "out",
+                                        "placeholder": "\"email\"",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "createRequired": true,
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the name of the property in the app's user schema. Its definition must also be included in the action's output schema."
+                                    }
                                 ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties are required to determine which users should be updated and which should be created as new in the app."
+                        },
+                        {
+                            "name": "exportOnDuplicates",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged."
                         },
                         {
                             "name": "inSchema",
@@ -865,6 +887,51 @@
                             "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
+                            "name": "exportMode",
+                            "placeholder": "\"CreateOnly\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The mode in which users are exported:\n\n* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                        },
+                        {
+                            "name": "matching",
+                            "type": {
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "in",
+                                        "placeholder": "\"email\"",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "createRequired": true,
+                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the workspace's user schema. Its definition must also be included in the action's input schema."
+                                    },
+                                    {
+                                        "name": "out",
+                                        "placeholder": "\"email\"",
+                                        "type": {
+                                            "name": "Text"
+                                        },
+                                        "createRequired": true,
+                                        "description": "The matching output property. It cannot be empty.\n\nIt represents the name of the property in the app's user schema. Its definition must also be included in the action's output schema."
+                                    }
+                                ]
+                            },
+                            "createRequired": true,
+                            "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties are required to determine which users should be updated and which should be created as new in the app."
+                        },
+                        {
+                            "name": "exportOnDuplicates",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged."
+                        },
+                        {
                             "name": "inSchema",
                             "placeholder": "{...}",
                             "type": {
@@ -986,37 +1053,6 @@
                                 "description": "Indicates if the action is running."
                             },
                             {
-                                "name": "scheduleStart",
-                                "placeholder": "15",
-                                "type": {
-                                    "name": "Int",
-                                    "bitSize": 32
-                                },
-                                "nullable": true,
-                                "description": "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null."
-                            },
-                            {
-                                "name": "schedulePeriod",
-                                "placeholder": "\"1h\"",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "5m",
-                                        "15m",
-                                        "30m",
-                                        "1h",
-                                        "2h",
-                                        "3h",
-                                        "6h",
-                                        "8h",
-                                        "12h",
-                                        "24h"
-                                    ]
-                                },
-                                "nullable": true,
-                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
-                            },
-                            {
                                 "name": "filter",
                                 "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"country\", \"operator\": \"is\", \"values\": [ \"US\" ] } ] }",
                                 "type": {
@@ -1108,6 +1144,51 @@
                                 "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
+                                "name": "exportMode",
+                                "placeholder": "\"CreateOnly\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "createRequired": true,
+                                "description": "The mode in which users are exported:\n\n* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                            },
+                            {
+                                "name": "matching",
+                                "type": {
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "in",
+                                            "placeholder": "\"email\"",
+                                            "type": {
+                                                "name": "Text"
+                                            },
+                                            "createRequired": true,
+                                            "description": "The matching input property.\n\nIt represents the name of the property in the workspace's user schema. Its definition is included in the action's input schema."
+                                        },
+                                        {
+                                            "name": "out",
+                                            "placeholder": "\"email\"",
+                                            "type": {
+                                                "name": "Text"
+                                            },
+                                            "createRequired": true,
+                                            "description": "The matching output property.\n\nIt represents the name of the property in the app's user schema. Its definition is included in the action's output schema."
+                                        }
+                                    ]
+                                },
+                                "createRequired": true,
+                                "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties determine which users should be updated and which should be created as new in the app."
+                            },
+                            {
+                                "name": "exportOnDuplicates",
+                                "placeholder": "true",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf true, the export will proceed regardless of duplicates. If false, the user will not be exported, and an error will be logged."
+                            },
+                            {
                                 "name": "inSchema",
                                 "placeholder": "{...}",
                                 "type": {
@@ -1130,6 +1211,45 @@
                                     "name": "transformation"
                                 },
                                 "description": ""
+                            },
+                            {
+                                "name": "running",
+                                "placeholder": "false",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates if the action is running."
+                            },
+                            {
+                                "name": "scheduleStart",
+                                "placeholder": "15",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "nullable": true,
+                                "description": "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null."
+                            },
+                            {
+                                "name": "schedulePeriod",
+                                "placeholder": "\"1h\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "5m",
+                                        "15m",
+                                        "30m",
+                                        "1h",
+                                        "2h",
+                                        "3h",
+                                        "6h",
+                                        "8h",
+                                        "12h",
+                                        "24h"
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The schedule period, which determines how often the export runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
                             }
                         ]
                     },

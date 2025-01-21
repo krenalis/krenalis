@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"HubSpot"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -28,6 +27,45 @@ func init() {
 		Placeholder: `{ "logical": "and", "conditions": [ { "property": "country", "operator": "is", "values": [ "US" ] } ] }`,
 		Description: "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
+	}
+	exportModeParameter := types.Property{
+		Name:           "exportMode",
+		Type:           types.Text(),
+		CreateRequired: true,
+		Placeholder:    `"CreateOnly"`,
+		Description: "The mode in which users are exported:\n\n" +
+			"* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n" +
+			"* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n" +
+			"* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
+	}
+	matchingParameter := types.Property{
+		Name: "matching",
+		Type: types.Object([]types.Property{
+			{
+				Name:           "in",
+				Type:           types.Text(),
+				CreateRequired: true,
+				Placeholder:    `"email"`,
+				Description:    "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the workspace's user schema. Its definition must also be included in the action's input schema.",
+			},
+			{
+				Name:           "out",
+				Type:           types.Text(),
+				CreateRequired: true,
+				Placeholder:    `"email"`,
+				Description:    "The matching output property. It cannot be empty.\n\nIt represents the name of the property in the app's user schema. Its definition must also be included in the action's output schema.",
+			},
+		}),
+		CreateRequired: true,
+		Description: "The properties used to identify the match between a user in the workspace and a user in the app. " +
+			"These properties are required to determine which users should be updated and which should be created as new in the app.",
+	}
+	exportOnDuplicatesParameter := types.Property{
+		Name:        "exportOnDuplicates",
+		Type:        types.Boolean(),
+		Placeholder: `true`,
+		Description: "Determines whether a user should be exported even if there are multiple matching users in the app.\n\n" +
+			"If set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -64,22 +102,9 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
-					{
-						Name:           "exportMode",
-						Type:           types.Text(),
-						CreateRequired: true,
-						Placeholder:    `"CreateOnly"`,
-						Description: "La modalità con cui gi utenti sono esportati:\n\n" +
-							"* `CreateOnly`: vengono esclusivamente creati degli utenti nell'app. Nessun cliente esistente viene modificato.\n" +
-							"* `UpdateOnly`: vengono esclusivamente aggiornati gli utenti esistenti nell'app. Nessun nuovo cliente viene creato.\n" +
-							"* `CreateOrUpdate`: se un utente è già presente nell'app, viene aggiornato, altrimenti viene creato come nuovo.",
-					},
-					{
-						Name:           "matching",
-						Type:           types.Text().WithValues("CreateOnly", "UpdateOnly", "CreateOrUpdate"),
-						CreateRequired: true,
-						Placeholder:    `"CreateOnly"`,
-					},
+					exportModeParameter,
+					matchingParameter,
+					exportOnDuplicatesParameter,
 					{
 						Name:           "inSchema",
 						Type:           types.Parameter("schema"),
@@ -137,6 +162,9 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
+					exportModeParameter,
+					matchingParameter,
+					exportOnDuplicatesParameter,
 					{
 						Name:        "inSchema",
 						Type:        types.Parameter("schema"),
@@ -206,9 +234,37 @@ func init() {
 							Placeholder: "false",
 							Description: "Indicates if the action is running.",
 						},
-						scheduleStartParameter,
-						exportSchedulePeriodParameter,
 						filterParameter,
+						exportModeParameter,
+						{
+							Name: "matching",
+							Type: types.Object([]types.Property{
+								{
+									Name:           "in",
+									Type:           types.Text(),
+									CreateRequired: true,
+									Placeholder:    `"email"`,
+									Description:    "The matching input property.\n\nIt represents the name of the property in the workspace's user schema. Its definition is included in the action's input schema.",
+								},
+								{
+									Name:           "out",
+									Type:           types.Text(),
+									CreateRequired: true,
+									Placeholder:    `"email"`,
+									Description:    "The matching output property.\n\nIt represents the name of the property in the app's user schema. Its definition is included in the action's output schema.",
+								},
+							}),
+							CreateRequired: true,
+							Description: "The properties used to identify the match between a user in the workspace and a user in the app. " +
+								"These properties determine which users should be updated and which should be created as new in the app.",
+						},
+						{
+							Name:        "exportOnDuplicates",
+							Type:        types.Boolean(),
+							Placeholder: `true`,
+							Description: "Determines whether a user should be exported even if there are multiple matching users in the app.\n\n" +
+								"If true, the export will proceed regardless of duplicates. If false, the user will not be exported, and an error will be logged.",
+						},
 						{
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
@@ -224,6 +280,14 @@ func init() {
 							Type:        types.Parameter("transformation"),
 							Placeholder: `{...}`,
 						},
+						{
+							Name:        "running",
+							Type:        types.Boolean(),
+							Placeholder: "false",
+							Description: "Indicates if the action is running.",
+						},
+						scheduleStartParameter,
+						exportSchedulePeriodParameter,
 					},
 				},
 				Errors: []Error{
