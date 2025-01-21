@@ -168,8 +168,8 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "connections",
 		Name: "Connections",
-		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers. " +
-			"Actions then allow you to perform operations on these connections.",
+		Description: "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n" +
+			"[Actions](/api/actions) then allow you to perform operations on these connections.",
 		Endpoints: []*Endpoint{
 			{
 				Name: "Create connection",

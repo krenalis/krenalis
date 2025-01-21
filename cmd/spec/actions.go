@@ -43,7 +43,7 @@ func init() {
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions",
 		Name: "Actions",
-		Description: "Actions represent the operations that can be performed on connections, " +
+		Description: "Actions represent the operations that can be performed on [connections](/api/connections), " +
 			"such as importing and exporting users or storing and sending events.\n\n" +
 			"This section documents the endpoints common to various types of actions. " +
 			"For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",

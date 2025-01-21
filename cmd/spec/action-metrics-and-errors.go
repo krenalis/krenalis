@@ -64,13 +64,15 @@ func init() {
 						Name:           "start",
 						Type:           types.Date(),
 						CreateRequired: true,
-						Description:    "The starting date in ISO 8601 format.\n\nThe date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00, and the date must be earlier than the end date.",
+						Description: "The starting date in ISO 8601 format. It must be earlier than the end date.\n\n" +
+							"Additionally, the date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00.",
 					},
 					{
 						Name:           "end",
 						Type:           types.Date(),
 						CreateRequired: true,
-						Description:    "The ending date in ISO 8601 format.\n\nThe date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00, and the date must be later than the start date.",
+						Description: "The ending date in ISO 8601 format. It must be later than the start date.\n\n" +
+							"Additionally, the date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00.",
 					},
 					actionsParameter,
 				},

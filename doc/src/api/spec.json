@@ -17,7 +17,7 @@
                                 "name": "Date"
                             },
                             "createRequired": true,
-                            "description": "The starting date in ISO 8601 format.\n\nThe date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00, and the date must be earlier than the end date."
+                            "description": "The starting date in ISO 8601 format. It must be earlier than the end date.\n\nAdditionally, the date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00."
                         },
                         {
                             "name": "end",
@@ -25,7 +25,7 @@
                                 "name": "Date"
                             },
                             "createRequired": true,
-                            "description": "The ending date in ISO 8601 format.\n\nThe date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00, and the date must be later than the start date."
+                            "description": "The ending date in ISO 8601 format. It must be later than the start date.\n\nAdditionally, the date must be no earlier than 1970-01-01T00:00:00 and no later than the 2262-04-11T23:47:00."
                         },
                         {
                             "name": "actions",
@@ -5766,7 +5766,7 @@
         {
             "id": "actions",
             "name": "Actions",
-            "description": "Actions represent the operations that can be performed on connections, such as importing and exporting users or storing and sending events.\n\nThis section documents the endpoints common to various types of actions. For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",
+            "description": "Actions represent the operations that can be performed on [connections](/api/connections), such as importing and exporting users or storing and sending events.\n\nThis section documents the endpoints common to various types of actions. For creating, updating, and retrieving an action, refer to the specific sections for each type of action.",
             "endpoints": [
                 {
                     "name": "Set status",
@@ -6347,7 +6347,7 @@
         {
             "id": "connections",
             "name": "Connections",
-            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers. Actions then allow you to perform operations on these connections.",
+            "description": "Connections serve as a channel between workspaces and external sources or destinations, such as applications, databases, file storage, websites, mobile apps, and servers.\n\n[Actions](/api/actions) then allow you to perform operations on these connections.",
             "endpoints": [
                 {
                     "name": "Create connection",
@@ -12278,7 +12278,7 @@
                     "parameters": [
                         {
                             "name": "properties",
-                            "placeholder": "[ \"email\", \"last_name\" ]",
+                            "placeholder": "[ \"name\", \"email\" ]",
                             "type": {
                                 "name": "Array",
                                 "elementType": {
@@ -12286,7 +12286,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The user properties to return."
+                            "description": "The names of the properties to return. At least one property must be included."
                         },
                         {
                             "name": "filter",
@@ -12413,7 +12413,7 @@
                                 "maximum": 1000
                             },
                             "createRequired": true,
-                            "description": "The maximum number of users to return. The value must be within the range [1, 1000]."
+                            "description": "The maximum number of users to return. It must be a value between 1 and 1000."
                         }
                     ],
                     "moreParameters": [],
@@ -12422,7 +12422,7 @@
                         "parameters": [
                             {
                                 "name": "users",
-                                "placeholder": "[ { \"id\": 123 } ]",
+                                "placeholder": "...",
                                 "type": {
                                     "name": "Array",
                                     "elementType": {
@@ -12430,15 +12430,49 @@
                                         "properties": [
                                             {
                                                 "name": "id",
+                                                "placeholder": "\"02bc2281-f801-4f59-9c56-b96ff81df84f\"",
                                                 "type": {
-                                                    "name": "Text"
+                                                    "name": "UUID"
                                                 },
-                                                "description": ""
+                                                "description": "The ID of the user."
+                                            },
+                                            {
+                                                "name": "lastChangeTime",
+                                                "placeholder": "\"2015-01-21T08:51:32.137139Z\"",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": "The date and time when the user's data was last updated. It corresponds to the most recent last change time of its identities.\n\nIts value is independent of which properties were requested."
+                                            },
+                                            {
+                                                "name": "traits",
+                                                "placeholder": "{ \"name\": \"John Walker\", \"email\": \"walker@example.com\" }",
+                                                "type": {
+                                                    "name": "Traits"
+                                                },
+                                                "description": "The traits of the user. Only the properties explicitly requested are included."
                                             }
                                         ]
                                     }
                                 },
                                 "description": ""
+                            },
+                            {
+                                "name": "schema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "Schema"
+                                },
+                                "description": "The schema of the returned traits. It corresponds to the user schema but includes only the properties that were explicitly requested."
+                            },
+                            {
+                                "name": "count",
+                                "placeholder": "803154",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "description": "The total number of users."
                             }
                         ]
                     },
@@ -12455,6 +12489,11 @@
                         },
                         {
                             "status": 422,
+                            "code": "PropertyNotExist",
+                            "message": "property does not exist in the user schema"
+                        },
+                        {
+                            "status": 422,
                             "code": "OrderNotExist",
                             "message": "order does not exist in schema"
                         },
@@ -12462,23 +12501,18 @@
                             "status": 422,
                             "code": "OrderTypeNotSortable",
                             "message": "cannot sort by non-sortable type"
-                        },
-                        {
-                            "status": 422,
-                            "code": "PropertyNotExist",
-                            "message": "property does not exist in the user schema"
                         }
                     ]
                 },
                 {
                     "name": "Retrieve user traits",
-                    "description": "Retrieves, from the workspace's data warehouse, the traits of a user given its identifier.",
+                    "description": "Retrieves, from the workspace's data warehouse, the traits of a user given its ID.",
                     "method": "GET",
                     "url": "/v0/users/:id/traits",
                     "parameters": [
                         {
                             "name": "id",
-                            "placeholder": "\"86de98fe-8f26-49ac-87dc-8a14997a97d9\"",
+                            "placeholder": "\"02bc2281-f801-4f59-9c56-b96ff81df84f\"",
                             "type": {
                                 "name": "UUID"
                             },
@@ -12492,14 +12526,11 @@
                         "parameters": [
                             {
                                 "name": "traits",
-                                "placeholder": "{ ... }",
+                                "placeholder": "{ \"name\": \"John Walker\", \"email\": \"walker@example.com\" }",
                                 "type": {
-                                    "name": "Map",
-                                    "elementType": {
-                                        "name": "JSON"
-                                    }
+                                    "name": "Traits"
                                 },
-                                "description": "The traits of the user, following the user schema."
+                                "description": "The traits of the user."
                             }
                         ]
                     },
@@ -12510,14 +12541,14 @@
                             "message": "workspace does not exist"
                         },
                         {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "user does not exist"
-                        },
-                        {
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "user does not exist"
                         }
                     ]
                 },
@@ -12529,7 +12560,7 @@
                     "parameters": [
                         {
                             "name": "id",
-                            "placeholder": "\"86de98fe-8f26-49ac-87dc-8a14997a97d9\"",
+                            "placeholder": "\"02bc2281-f801-4f59-9c56-b96ff81df84f\"",
                             "type": {
                                 "name": "UUID"
                             },
@@ -12545,7 +12576,7 @@
                                 }
                             },
                             "createRequired": true,
-                            "description": "The names of the properties to return. At least one property must be provided.\n\nThe properties can be specified in the query string in two ways:\n* `properties=timestamp,event`\n* `properties=timestamp&properties=event`"
+                            "description": "The names of the event properties to return. At least one property must be included.\n\nThe properties can be specified in the query string in two ways:\n* `properties=timestamp,event`\n* `properties=timestamp&properties=event`"
                         },
                         {
                             "name": "limit",
@@ -13283,7 +13314,7 @@
                                                     "name": "Int",
                                                     "bitSize": 32
                                                 },
-                                                "description": "The ID of the connection through which the identity was observed."
+                                                "description": "The ID of the connection through which the identity was read."
                                             },
                                             {
                                                 "name": "action",
@@ -13291,14 +13322,14 @@
                                                     "name": "Int",
                                                     "bitSize": 32
                                                 },
-                                                "description": "The ID of the action through which the identity was observed."
+                                                "description": "The ID of the action through which the identity was imported."
                                             },
                                             {
                                                 "name": "id",
                                                 "type": {
                                                     "name": "Text"
                                                 },
-                                                "description": "The ID of the identity. It is empty for identities imported from anonymous events."
+                                                "description": "The unique identifier that represents the identity in the source from which it was retrieved. This field is empty for anonymous users. Specifically:\n* For a website, mobile, or server connection, it corresponds to the User ID of the event. This field is empty for identities imported from anonymous events.\n* For an app connection, it is the value used to identify the user in the app. For example, in HubSpot, it corresponds to the HubSpot ID.\n* For a database or file storage connection, it is the value in the column designated as the identity."
                                             },
                                             {
                                                 "name": "anonymousIds",
@@ -13309,7 +13340,7 @@
                                                     }
                                                 },
                                                 "nullable": true,
-                                                "description": "The anonymousIds of the identity. It is null for identities not imported from events."
+                                                "description": "The anonymous IDs of the identity. It is null for identities not imported from events."
                                             },
                                             {
                                                 "name": "lastChangeTime",
@@ -13322,6 +13353,15 @@
                                     }
                                 },
                                 "description": "The user’s identities, containing at least one identity."
+                            },
+                            {
+                                "name": "count",
+                                "placeholder": "12",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "description": "The total number of identities."
                             }
                         ]
                     },
@@ -13332,14 +13372,14 @@
                             "message": "workspace does not exist"
                         },
                         {
-                            "status": 404,
-                            "code": "NotFound",
-                            "message": "user does not exist"
-                        },
-                        {
                             "status": 422,
                             "code": "MaintenanceMode",
                             "message": "data warehouse is in maintenance mode"
+                        },
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "user does not exist"
                         }
                     ]
                 }

@@ -23,23 +23,26 @@ func init() {
 		{
 			Name:        "connection",
 			Type:        types.Int(32),
-			Description: "The ID of the connection through which the identity was observed.",
+			Description: "The ID of the connection through which the identity was read.",
 		},
 		{
 			Name:        "action",
 			Type:        types.Int(32),
-			Description: "The ID of the action through which the identity was observed.",
+			Description: "The ID of the action through which the identity was imported.",
 		},
 		{
-			Name:        "id",
-			Type:        types.Text(),
-			Description: "The ID of the identity. It is empty for identities imported from anonymous events.",
+			Name: "id",
+			Type: types.Text(),
+			Description: "The unique identifier that represents the identity in the source from which it was retrieved. This field is empty for anonymous users. Specifically:\n" +
+				"* For a website, mobile, or server connection, it corresponds to the User ID of the event. This field is empty for identities imported from anonymous events.\n" +
+				"* For an app connection, it is the value used to identify the user in the app. For example, in HubSpot, it corresponds to the HubSpot ID.\n" +
+				"* For a database or file storage connection, it is the value in the column designated as the identity.",
 		},
 		{
 			Name:        "anonymousIds",
 			Type:        types.Array(types.Text()),
 			Nullable:    true,
-			Description: "The anonymousIds of the identity. It is null for identities not imported from events.",
+			Description: "The anonymous IDs of the identity. It is null for identities not imported from events.",
 		},
 		{
 			Name:        "lastChangeTime",
@@ -64,8 +67,8 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Placeholder:    `[ "email", "last_name" ]`,
-						Description:    "The user properties to return.",
+						Placeholder:    `[ "name", "email" ]`,
+						Description:    "The names of the properties to return. At least one property must be included.",
 					},
 					{
 						Name:        "filter",
@@ -96,36 +99,68 @@ func init() {
 						Type:           types.Int(32).WithIntRange(1, 1000),
 						CreateRequired: true,
 						Placeholder:    `1000`,
-						Description:    "The maximum number of users to return. The value must be within the range [1, 1000].",
+						Description:    "The maximum number of users to return. It must be a value between 1 and 1000.",
 					},
 				},
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name:        "users",
-							Type:        types.Array(types.Object([]types.Property{{Name: "id", Type: types.Text()}})),
-							Placeholder: "[ { \"id\": 123 } ]",
+							Name: "users",
+							Type: types.Array(types.Object([]types.Property{
+								{
+									Name:        "id",
+									Type:        types.UUID(),
+									Placeholder: `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
+									Description: "The ID of the user.",
+								},
+								{
+									Name:        "lastChangeTime",
+									Type:        types.DateTime(),
+									Placeholder: `"2015-01-21T08:51:32.137139Z"`,
+									Description: "The date and time when the user's data was last updated. It corresponds to the most recent last change time of its identities.\n\n" +
+										"Its value is independent of which properties were requested.",
+								},
+								{
+									Name:        "traits",
+									Type:        types.Parameter("Traits"),
+									Placeholder: `{ "name": "John Walker", "email": "walker@example.com" }`,
+									Description: "The traits of the user. Only the properties explicitly requested are included.",
+								},
+							})),
+							Placeholder: "...",
+						},
+						{
+							Name:        "schema",
+							Type:        types.Parameter("Schema"),
+							Placeholder: `{...}`,
+							Description: "The schema of the returned traits. It corresponds to the user schema but includes only the properties that were explicitly requested.",
+						},
+						{
+							Name:        "count",
+							Type:        types.Int(32),
+							Placeholder: `803154`,
+							Description: "The total number of users.",
 						},
 					},
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+					{422, PropertyNotExist, "property does not exist in the user schema"},
 					{422, OrderNotExist, "order does not exist in schema"},
 					{422, OrderTypeNotSortable, "cannot sort by non-sortable type"},
-					{422, PropertyNotExist, "property does not exist in the user schema"},
 				},
 			},
 			{
 				Name:        "Retrieve user traits",
-				Description: "Retrieves, from the workspace's data warehouse, the traits of a user given its identifier.",
+				Description: "Retrieves, from the workspace's data warehouse, the traits of a user given its ID.",
 				Method:      GET,
 				URL:         "/v0/users/:id/traits",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
+						Placeholder:    `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
@@ -134,16 +169,16 @@ func init() {
 					Parameters: []types.Property{
 						{
 							Name:        "traits",
-							Type:        types.Map(types.JSON()),
-							Placeholder: `{ ... }`,
-							Description: "The traits of the user, following the user schema.",
+							Type:        types.Parameter("Traits"),
+							Placeholder: `{ "name": "John Walker", "email": "walker@example.com" }`,
+							Description: "The traits of the user.",
 						},
 					},
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+					{404, NotFound, "user does not exist"},
 				},
 			},
 			{
@@ -157,7 +192,7 @@ func init() {
 					{
 						Name:           "id",
 						Type:           types.UUID(),
-						Placeholder:    `"86de98fe-8f26-49ac-87dc-8a14997a97d9"`,
+						Placeholder:    `"02bc2281-f801-4f59-9c56-b96ff81df84f"`,
 						CreateRequired: true,
 						Description:    "The ID of the user.",
 					},
@@ -165,7 +200,7 @@ func init() {
 						Name:           "properties",
 						Type:           types.Array(types.Text()),
 						CreateRequired: true,
-						Description: "The names of the properties to return. At least one property must be provided.\n\n" +
+						Description: "The names of the event properties to return. At least one property must be included.\n\n" +
 							"The properties can be specified in the query string in two ways:\n" +
 							"* `properties=timestamp,event`\n* `properties=timestamp&properties=event`",
 					},
@@ -222,12 +257,18 @@ func init() {
 							Placeholder: `{ ... }`,
 							Description: "The user’s identities, containing at least one identity.",
 						},
+						{
+							Name:        "count",
+							Type:        types.Int(32),
+							Placeholder: `12`,
+							Description: "The total number of identities.",
+						},
 					},
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
-					{404, NotFound, "user does not exist"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},
+					{404, NotFound, "user does not exist"},
 				},
 			},
 		},
