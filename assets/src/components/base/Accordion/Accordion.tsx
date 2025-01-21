@@ -10,6 +10,7 @@ interface AccordionProps {
 
 const Accordion = ({ className, isOpen, summary, details }: AccordionProps) => {
 	const [isAccordionOpen, setIsAccordionOpen] = useState<boolean>(true);
+	const [isRendered, setIsRendered] = useState<boolean>(false);
 
 	const accordionRef = useRef<any>();
 	const maxHeightRef = useRef<number>();
@@ -20,6 +21,7 @@ const Accordion = ({ className, isOpen, summary, details }: AccordionProps) => {
 		setTimeout(() => {
 			maxHeightRef.current = height;
 			setIsAccordionOpen(isOpen);
+			setIsRendered(true);
 		});
 	}, []);
 
@@ -34,6 +36,7 @@ const Accordion = ({ className, isOpen, summary, details }: AccordionProps) => {
 		<div
 			ref={accordionRef}
 			className={`accordion${isAccordionOpen ? ' accordion--open' : ''}${className ? ' ' + className : ''}`}
+			style={{ visibility: isRendered ? 'visible' : 'hidden' }}
 		>
 			<div className='accordion__summary'>{summary}</div>
 			<div
