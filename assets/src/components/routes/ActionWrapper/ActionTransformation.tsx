@@ -1704,29 +1704,42 @@ const FullscreenTransformation = ({
 					const isOpen = JSON.stringify(s) === JSON.stringify(selectedSample);
 					const isLastExecuted =
 						lastExecutedSample.current && JSON.stringify(lastExecutedSample.current) === JSON.stringify(s);
-					let sampleToShow = s;
+
+					let highlightedLines: boolean[] = [true]; // First curly brace is highlighted.
+
 					if (transformationType === 'function') {
-						// Show only the selected properties.
-						const filtered = {};
+						// Highlight the selected properties.
 						for (const k in s) {
 							const v = s[k];
 							if (typeof v === 'object') {
+								const children = getSelectedChildrenProperties(k, selectedInPaths, v);
+								const keys = Object.keys(children);
+
+								let isSelected = false;
 								if (selectedInPaths.includes(k)) {
-									filtered[k] = v;
+									isSelected = true;
+									highlightedLines.push(true);
+									for (const _ of keys) {
+										highlightedLines.push(true);
+									}
 								} else {
-									const props = getSampleSelectedChildrenProperties(k, selectedInPaths, v);
-									if (Object.keys(props).length > 0) {
-										filtered[k] = props;
+									const hasSelectedChildren = keys.findIndex((key) => children[key] === true) !== -1;
+									isSelected = hasSelectedChildren;
+									highlightedLines.push(hasSelectedChildren);
+									for (const key of keys) {
+										highlightedLines.push(children[key]);
 									}
 								}
+								highlightedLines.push(isSelected); // Final curly brace is highlighted.
+								continue;
 							} else {
-								if (selectedInPaths.includes(k)) {
-									filtered[k] = v;
-								}
+								highlightedLines.push(selectedInPaths.includes(k));
+								continue;
 							}
 						}
-						sampleToShow = filtered;
+						highlightedLines.push(true); // Final curly brace is highlighted.
 					}
+
 					return (
 						<Accordion
 							key={i}
@@ -1777,7 +1790,20 @@ const FullscreenTransformation = ({
 							}
 							details={
 								<div className='fullscreen-transformation__sample-source'>
-									<SyntaxHighlight>{JSONbig.stringify(sampleToShow, null, 4)}</SyntaxHighlight>
+									<SyntaxHighlight
+										language='json'
+										showLineNumbers={true}
+										wrapLines={true}
+										lineNumberStyle={{ display: 'none' }}
+										lineProps={(n) => {
+											if (highlightedLines[n - 1] === false) {
+												return { 'data-excluded': '' };
+											}
+											return {};
+										}}
+									>
+										{JSONbig.stringify(s, null, 4)}
+									</SyntaxHighlight>
 								</div>
 							}
 						/>
@@ -2392,27 +2418,28 @@ const TransformationProperty = ({
 	);
 };
 
-function getSampleSelectedChildrenProperties(
+function getSelectedChildrenProperties(
 	parentPath: string,
 	selectedPaths: string[],
-	property: Record<string, any>,
+	value: Record<string, any>,
 ): Record<string, any> {
 	let props: Record<string, any> = {};
-	for (const k in property) {
-		const v = property[k];
+	for (const k in value) {
+		props[k] = false;
+		const v = value[k];
 		const path = `${parentPath}.${k}`;
 		if (typeof v === 'object') {
 			if (selectedPaths.includes(path)) {
-				props[k] = v;
+				props[k] = true;
 			} else {
-				const p = getSampleSelectedChildrenProperties(path, selectedPaths, v);
+				const p = getSelectedChildrenProperties(path, selectedPaths, v);
 				if (Object.keys(p).length > 0) {
-					props[k] = p;
+					props[k] = true;
 				}
 			}
 		} else {
 			if (selectedPaths.includes(path)) {
-				props[k] = v;
+				props[k] = true;
 			}
 		}
 	}

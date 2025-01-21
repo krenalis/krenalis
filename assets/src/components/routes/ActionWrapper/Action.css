@@ -1021,6 +1021,10 @@ inherit the disabled style */
 	background: #fafbff;
 	padding: 20px 30px;
 }
+
+.fullscreen-transformation__sample-source span[data-excluded],
+.fullscreen-transformation__sample-source span[data-excluded] > span {
+	color: #c3c3c3 !important;
 }
 
 .fullscreen-transformation__no-sample,
