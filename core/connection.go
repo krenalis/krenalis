@@ -1466,10 +1466,10 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 		if err = records[0].Err; err != nil {
 			if err, ok := err.(transformers.FunctionExecutionError); ok {
-				return nil, errors.Unprocessable(TransformationFailed, err.Error())
+				return nil, errors.Unprocessable(TransformationFailed, "%s", err.Error())
 			}
 			if err, ok := err.(validationError); ok {
-				return nil, errors.Unprocessable(TransformationFailed, err.Error())
+				return nil, errors.Unprocessable(TransformationFailed, "%s", err.Error())
 			}
 			return nil, err
 		}
