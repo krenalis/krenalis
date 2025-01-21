@@ -53,13 +53,13 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 	exec := c.ExecuteAction(importUsersID, true)
 	c.WaitForExecutionsCompletionAllowFailed(dummySrc, exec)
 
-	_, _, count := c.Users([]string{"email"}, "", false, 0, 100)
+	_, _, total := c.Users([]string{"email"}, "", false, 0, 100)
 
 	// Dummy exposes 10 users, but one of them was filtered out, so there must
 	// be 9.
 	const expectedCount = 9
-	if expectedCount != count {
-		t.Fatalf("expected %d users, got %d", expectedCount, count)
+	if expectedCount != total {
+		t.Fatalf("expected %d users, got %d", expectedCount, total)
 	}
-	t.Logf("the APIs successfully returned %d users", count)
+	t.Logf("the APIs successfully returned %d users", total)
 }

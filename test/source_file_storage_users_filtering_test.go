@@ -68,13 +68,13 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
 	c.WaitForExecutionsCompletionAllowFailed(fs1, exec1)
 
-	_, _, count := c.Users([]string{"email"}, "", false, 0, 100)
+	_, _, total := c.Users([]string{"email"}, "", false, 0, 100)
 
 	// The CSV file contains 10 users, but one of them was filtered out, so
 	// there must be 9.
-	const expectedCount = 9
-	if expectedCount != count {
-		t.Fatalf("expected %d users, got %d", expectedCount, count)
+	const expectedTotal = 9
+	if expectedTotal != total {
+		t.Fatalf("expected %d users, got %d", expectedTotal, total)
 	}
-	t.Logf("the APIs successfully returned %d users", count)
+	t.Logf("the APIs successfully returned %d users", total)
 }

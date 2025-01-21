@@ -88,22 +88,22 @@ func Test_UserIdentities(t *testing.T) {
 	c.WaitForExecutionsCompletion(fs1, exec1)
 	c.WaitForExecutionsCompletion(fs2, exec2)
 
-	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
+	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
 
-	const expectedCount = 4
-	if expectedCount != count {
-		t.Fatalf("expected %d users, got %d", expectedCount, count)
+	const expectedTotal = 4
+	if expectedTotal != total {
+		t.Fatalf("expected %d users, got %d", expectedTotal, total)
 	}
-	t.Logf("the APIs successfully returned %d users", count)
+	t.Logf("the APIs successfully returned %d users", total)
 
 	var totalIdentities int
 
 	for _, user := range users {
 
-		identities, count := c.UserIdentities(user.ID, 0, 1000)
+		identities, total := c.UserIdentities(user.ID, 0, 1000)
 
-		if count != 1 && count != 2 {
-			t.Fatalf("expected 'count' to be 1 or 2, got %d", count)
+		if total != 1 && total != 2 {
+			t.Fatalf("expected 'total' to be 1 or 2, got %d", total)
 		}
 
 		for _, identity := range identities {

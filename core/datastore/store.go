@@ -644,7 +644,7 @@ func (store *Store) UserIdentities(ctx context.Context, query Query) ([]map[stri
 	}
 	defer done()
 	query.table = "_user_identities"
-	query.count = true
+	query.total = true
 	return store.query(ctx, query, store.identityColumnByProperty(), true)
 }
 
@@ -698,7 +698,7 @@ func (store *Store) Users(ctx context.Context, query Query) ([]map[string]any, i
 	}
 	defer done()
 	query.table = "users"
-	query.count = true
+	query.total = true
 	return store.query(ctx, query, store.userColumnByProperty(), true)
 }
 
@@ -810,8 +810,8 @@ func (store *Store) onUpdateUserSchema(n state.UpdateUserSchema) {
 }
 
 // query executes the provided query on the data warehouse and returns an
-// iterator over the results and an estimated count of the rows that would be
-// returned if First and Limit of query were not provided.
+// iterator over the results and an estimated total number of the rows that
+// would be returned if First and Limit of query were not provided.
 //
 // columnByProperty is the mapping from the path of a property to the relative
 // column, and omitNil indicates whether properties with a nil value should be
@@ -844,7 +844,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		orderDesc = query.OrderDesc
 	}
 
-	rows, count, err := store.warehouse().Query(ctx, meergo.RowQuery{
+	rows, total, err := store.warehouse().Query(ctx, meergo.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Where:     where,
@@ -871,12 +871,12 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		return nil, 0, err
 	}
 
-	// Since the count is an estimate, being counted separately from the actual
-	// number of record returned, ensure to not return a value lower than the
-	// actually returned number of users.
-	count = max(len(records), count)
+	// Since total is an estimate, being counted separately from the actual
+	// total number of record returned, ensure to not return a value lower than
+	// the actually returned number of users.
+	total = max(len(records), total)
 
-	return records, count, nil
+	return records, total, nil
 }
 
 // userColumnByProperty returns the map from properties to columns for the user

@@ -50,11 +50,11 @@ func TestImportFromDatabase(t *testing.T) {
 
 	c.WaitForExecutionsCompletion(pgSQL, exec)
 
-	identities, count := c.ConnectionIdentities(pgSQL, 0, 100)
+	identities, total := c.ConnectionIdentities(pgSQL, 0, 100)
 
 	const expectedCount = 1
-	if count != expectedCount {
-		t.Fatalf("expected %d identities, got %d", expectedCount, count)
+	if total != expectedCount {
+		t.Fatalf("expected %d identities, got %d", expectedCount, total)
 	}
 
 	for _, identity := range identities {

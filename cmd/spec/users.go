@@ -136,10 +136,10 @@ func init() {
 							Description: "The schema of the returned traits. It corresponds to the user schema but includes only the properties that were explicitly requested.",
 						},
 						{
-							Name:        "count",
+							Name:        "total",
 							Type:        types.Int(32),
 							Placeholder: `803154`,
-							Description: "The total number of users.",
+							Description: "An estimate of the total number of users, without considering `first` and `limit`.",
 						},
 					},
 				},
@@ -258,7 +258,7 @@ func init() {
 							Description: "The user’s identities, containing at least one identity.",
 						},
 						{
-							Name:        "count",
+							Name:        "total",
 							Type:        types.Int(32),
 							Placeholder: `12`,
 							Description: "The total number of identities.",

@@ -66,18 +66,18 @@ def transform(user: dict) -> dict:
 	c.WaitForExecutionsCompletion(dummyID, exec)
 
 	// Retrieve the users.
-	const expectedTotalCount = 10
-	users, _, count := c.Users([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotalCount)
+	const expectedTotal = 10
+	users, _, total := c.Users([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
 
-	// Validate the users count.
-	if count != expectedTotalCount {
-		t.Fatalf("expected \"count\" to be %d, got %d", expectedTotalCount, count)
+	// Validate the users total.
+	if total != expectedTotal {
+		t.Fatalf("expected \"total\" to be %d, got %d", expectedTotal, total)
 	}
 
-	// Validate the count of the returned users.
+	// Validate the total of the returned users.
 	usersLen := len(users)
-	if expectedTotalCount != usersLen {
-		t.Fatalf("expected %d users, got %d", expectedTotalCount, usersLen)
+	if expectedTotal != usersLen {
+		t.Fatalf("expected %d users, got %d", expectedTotal, usersLen)
 	}
 
 	// Validate the users.

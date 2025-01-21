@@ -109,10 +109,10 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 		}
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
-	const expectedCount = 2
-	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
-	if count != expectedCount {
-		t.Fatalf("expected a total of %d users, got %d", expectedCount, count)
+	const expectedTotal = 2
+	users, _, total := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	if total != expectedTotal {
+		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
 	assertEq("run #1: first  user email", "luigi.rossi@example.com", users[0].Properties["email"])
 	assertEq("run #1: first  user first name", "Luigi", users[0].Properties["first_name"])
@@ -127,9 +127,9 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	c.WaitForExecutionsCompletion(fsID, exec)
 
 	// Check the users.
-	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
-	if count != expectedCount {
-		t.Fatalf("expected a total of %d users, got %d", expectedCount, count)
+	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	if total != expectedTotal {
+		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
 	assertEq("run #2: first  user email", "luigi.rossi@example.com", users[0].Properties["email"])
 	assertEq("run #2: first  user first name", "Luigi", users[0].Properties["first_name"])

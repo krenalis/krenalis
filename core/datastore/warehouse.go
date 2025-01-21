@@ -96,10 +96,10 @@ func (dw warehouse) MergeIdentities(ctx context.Context, columns []meergo.Column
 	return unavailableError(dw.inner.MergeIdentities(ctx, columns, rows))
 }
 
-func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withCount bool) (meergo.Rows, int, error) {
-	rows, count, err := dw.inner.Query(ctx, query, withCount)
+func (dw warehouse) Query(ctx context.Context, query meergo.RowQuery, withTotal bool) (meergo.Rows, int, error) {
+	rows, total, err := dw.inner.Query(ctx, query, withTotal)
 	err = unavailableError(err)
-	return rows, count, err
+	return rows, total, err
 }
 
 func (dw warehouse) ResolveIdentities(ctx context.Context, identifiers, userColumns []meergo.Column, userPrimarySources map[string]int) error {

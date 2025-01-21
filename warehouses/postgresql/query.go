@@ -17,7 +17,7 @@ import (
 )
 
 // Query executes a query and returns the results as Rows.
-func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, withCount bool) (meergo.Rows, int, error) {
+func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, withTotal bool) (meergo.Rows, int, error) {
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
@@ -38,8 +38,8 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 	var b strings.Builder
 
 	// Count the total number of records.
-	var count int
-	if withCount {
+	var total int
+	if withTotal {
 		b.WriteString(`SELECT COUNT(*) FROM `)
 		b.WriteString(quoteIdent(query.Table))
 		err = appendJoins(&b, query.Joins)
@@ -50,7 +50,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 			b.WriteString(` WHERE `)
 			b.WriteString(whereExpr)
 		}
-		err = pool.QueryRow(ctx, b.String()).Scan(&count)
+		err = pool.QueryRow(ctx, b.String()).Scan(&total)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -100,7 +100,7 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 		return nil, 0, err
 	}
 
-	return newScanner(query.Columns, rows), count, nil
+	return newScanner(query.Columns, rows), total, nil
 }
 
 // appendJoins appends the string serialization of the provided joins to b.

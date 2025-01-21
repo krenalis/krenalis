@@ -98,9 +98,9 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 	attempts := 0
 	var identities []meergotester.UserIdentity
 	for {
-		var count int
-		identities, count = c.ConnectionIdentities(javaScriptID, 0, 100)
-		if count == 2 {
+		var total int
+		identities, total = c.ConnectionIdentities(javaScriptID, 0, 100)
+		if total == 2 {
 			break
 		}
 		attempts += 1
@@ -159,9 +159,9 @@ waitLoop:
 
 	// Make sure there is only one identity now, as both the anonymous
 	// identities, each imported by its own action, have been deleted.
-	identities, count := c.ConnectionIdentities(javaScriptID, 0, 100)
-	if count != 1 {
-		t.Fatalf("expected just one identity, got %d", count)
+	identities, total := c.ConnectionIdentities(javaScriptID, 0, 100)
+	if total != 1 {
+		t.Fatalf("expected just one identity, got %d", total)
 	}
 
 	// Check that the only existing identity is correct.
@@ -182,9 +182,9 @@ waitLoop:
 	c.StartIdentityResolution()
 
 	// Check that there is actually only one user in the workspace.
-	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
-	if count != 1 {
-		t.Fatalf("expected only one user in the workspace, got %d instead", count)
+	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
+	if total != 1 {
+		t.Fatalf("expected only one user in the workspace, got %d instead", total)
 	}
 
 }

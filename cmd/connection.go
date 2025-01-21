@@ -199,13 +199,13 @@ func (connection connection) Identities(_ http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	identities, count, err := c.Identities(r.Context(), body.First, body.Limit)
+	identities, total, err := c.Identities(r.Context(), body.First, body.Limit)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{
 		"identities": identities,
-		"count":      count,
+		"total":      total,
 	}, nil
 }
 

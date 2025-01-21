@@ -61,12 +61,12 @@ def transform(user: dict) -> dict:
 
 	// Check if the users have been imported - and then returned - correctly.
 
-	users, _, count := c.Users([]string{"email", "ios"}, "email", false, 0, 1)
+	users, _, total := c.Users([]string{"email", "ios"}, "email", false, 0, 1)
 
-	// Validate the users count.
-	const expectedTotalCount = 10
-	if count != expectedTotalCount {
-		t.Fatalf("expected \"count\" to be %d, got %d", expectedTotalCount, count)
+	// Validate the users total.
+	const expectedTotal = 10
+	if total != expectedTotal {
+		t.Fatalf("expected \"total\" to be %d, got %d", expectedTotal, total)
 	}
 
 	// Validate the users.

@@ -25,7 +25,7 @@ const UsersList = () => {
 	const [lastIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 
 	const { api, handleError } = useContext(AppContext);
-	const { users, usersCount, usersProperties, isLoading, fetchUsers } = useContext(UsersContext);
+	const { users, usersTotal, usersProperties, isLoading, fetchUsers } = useContext(UsersContext);
 	const { usersRows, userColumns } = useUsersGrid(users, usersProperties, selectedUser, (id: string) =>
 		setSelectedUser(id),
 	);
@@ -207,7 +207,7 @@ const UsersList = () => {
 						<UserDrawer selectedUser={selectedUser} setSelectedUser={setSelectedUser} />
 						<div className='users-list__footer'>
 							<div className='users-list__footer-total'>
-								<div className='users-list__footer-found'>Found {usersCount} users</div>
+								<div className='users-list__footer-found'>Found {usersTotal} users</div>
 							</div>
 						</div>
 					</div>

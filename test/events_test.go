@@ -134,10 +134,10 @@ func TestEvents(t *testing.T) {
 	c.StartIdentityResolution()
 
 	// Retrieve the user imported from the event.
-	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
-	const expectedUsersCount = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
-	if expectedUsersCount != count {
-		t.Fatalf("expected %d users, got %d", expectedUsersCount, count)
+	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
+	const expectedUsersTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
+	if expectedUsersTotal != total {
+		t.Fatalf("expected %d users, got %d", expectedUsersTotal, total)
 	}
 	var userGID uuid.UUID
 	for _, user := range users {
@@ -231,9 +231,9 @@ func TestEvents(t *testing.T) {
 		AnonymousId: "bd857fe0-8f62-4d36-8e47-0161db0cc513",
 	})
 	time.Sleep(time.Second)
-	_, count = c.ConnectionIdentities(javaScript2ID, 0, 100)
-	if count != 1 {
-		t.Fatalf("expected one identity, got %d", count)
+	_, total = c.ConnectionIdentities(javaScript2ID, 0, 100)
+	if total != 1 {
+		t.Fatalf("expected one identity, got %d", total)
 	}
 
 }

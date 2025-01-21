@@ -79,22 +79,22 @@ func TestImportUsersFromFile(t *testing.T) {
 
 	// Retrieve the users and test them.
 	const (
-		expectedCount    = 2
+		expectedTotal    = 2
 		expectedUsersLen = 2
 	)
-	users, _, count := c.Users([]string{"email"}, "", false, 0, 100)
+	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
 	usersLen := len(users)
 	if usersLen != expectedUsersLen {
 		t.Fatalf("expected %d users, got %d", expectedUsersLen, usersLen)
 	}
-	if count != expectedCount {
-		t.Fatalf("expected \"count\" to be %d, got %d", expectedCount, count)
+	if total != expectedTotal {
+		t.Fatalf("expected \"total\" to be %d, got %d", expectedTotal, total)
 	}
 
 	// Retrieve the user identities and test them.
-	identities, count := c.ConnectionIdentities(fsID, 0, 100)
-	if count != 2 {
-		t.Fatalf("expected 2 user identities, got %d", count)
+	identities, total := c.ConnectionIdentities(fsID, 0, 100)
+	if total != 2 {
+		t.Fatalf("expected 2 user identities, got %d", total)
 	}
 	for _, identity := range identities {
 		if identity.Connection != fsID {

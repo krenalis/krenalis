@@ -9,7 +9,7 @@ import { useUsers } from './useUsers';
 const Users = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { users, usersCount, usersProperties, isLoading, userIDList, fetchUsers } = useUsers();
+	const { users, usersTotal, usersProperties, isLoading, userIDList, fetchUsers } = useUsers();
 
 	useLayoutEffect(() => {
 		setTitle('User Profiles');
@@ -19,7 +19,7 @@ const Users = () => {
 		<UsersContext.Provider
 			value={{
 				users,
-				usersCount,
+				usersTotal,
 				usersProperties,
 				isLoading,
 				userIDList,

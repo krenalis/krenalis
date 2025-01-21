@@ -70,12 +70,12 @@ func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, i
 		"limit": limit,
 	}
 	var response struct {
-		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
+		Total      int            `json:"total"`
 	}
 	method := fmt.Sprintf("/api/connections/%d/identities", conn)
 	c.MustCall("POST", method, req, &response)
-	return response.Identities, response.Count
+	return response.Identities, response.Total
 }
 
 func (c *Meergo) ConnectionUI(connection int) map[string]any {
@@ -484,15 +484,15 @@ func (c *Meergo) UserEvents(user uuid.UUID, properties []string) []map[string]an
 
 func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentity, int) {
 	var response struct {
-		Count      int            `json:"count"`
 		Identities []UserIdentity `json:"identities"`
+		Total      int            `json:"total"`
 	}
 	method := fmt.Sprintf("/api/users/%s/identities?first=%d&limit=%d", user, first, limit)
 	c.MustCall("GET", method, nil, &response)
-	return response.Identities, response.Count
+	return response.Identities, response.Total
 }
 
-func (c *Meergo) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, count int) {
+func (c *Meergo) Users(properties []string, order string, orderDesc bool, first, limit int) (users []User, schema types.Type, total int) {
 	req := map[string]any{
 		"properties": properties,
 		"order":      order,
@@ -502,11 +502,11 @@ func (c *Meergo) Users(properties []string, order string, orderDesc bool, first,
 	}
 	var response struct {
 		Users  []User     `json:"users"`
-		Count  int        `json:"count"`
 		Schema types.Type `json:"schema"`
+		Total  int        `json:"total"`
 	}
 	c.MustCall("POST", "/api/users", req, &response)
-	return response.Users, response.Schema, response.Count
+	return response.Users, response.Schema, response.Total
 }
 
 func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int) {

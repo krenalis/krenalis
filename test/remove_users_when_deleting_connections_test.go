@@ -61,9 +61,9 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	c.WaitForExecutionsCompletion(dummy2, exec2)
 
 	// Now there should be total of 20 users.
-	_, _, count := c.Users([]string{"email"}, "", false, 0, 100)
-	if count != 20 {
-		t.Fatalf("expected 20 users, got %d", count)
+	_, _, total := c.Users([]string{"email"}, "", false, 0, 100)
+	if total != 20 {
+		t.Fatalf("expected 20 users, got %d", total)
 	}
 
 	// Delete one Dummy, wait for the identities to be purged, resolve
@@ -71,19 +71,19 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	c.DeleteConnection(dummy1)
 	time.Sleep(time.Second)
 	c.StartIdentityResolution()
-	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
-	if count != 10 {
-		t.Fatalf("expected 10 users, got %d", count)
+	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
+	if total != 10 {
+		t.Fatalf("expected 10 users, got %d", total)
 	}
 
-	// Delete also the other Dummy connection; now the total count of users
+	// Delete also the other Dummy connection; now the total number of users
 	// should be zero.
 	c.DeleteConnection(dummy2)
 	time.Sleep(time.Second)
 	c.StartIdentityResolution()
-	_, _, count = c.Users([]string{"email"}, "", false, 0, 100)
-	if count != 0 {
-		t.Fatalf("expected no users, got %d", count)
+	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
+	if total != 0 {
+		t.Fatalf("expected no users, got %d", total)
 	}
 
 }

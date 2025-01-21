@@ -65,9 +65,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 10 users.
-	_, _, count := c.Users([]string{"email"}, "", false, 0, 1000)
-	if count != 10 {
-		t.Fatalf("expected 10 users, got %d", count)
+	_, _, total := c.Users([]string{"email"}, "", false, 0, 1000)
+	if total != 10 {
+		t.Fatalf("expected 10 users, got %d", total)
 	}
 
 	// Imports users from CSV.
@@ -121,9 +121,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 13 users (10 from Dummy + 3 from CSV).
-	_, _, count = c.Users([]string{"email"}, "", false, 0, 1000)
-	if count != 13 {
-		t.Fatalf("expected 13 users, got %d", count)
+	_, _, total = c.Users([]string{"email"}, "", false, 0, 1000)
+	if total != 13 {
+		t.Fatalf("expected 13 users, got %d", total)
 	}
 
 	// Import users and events from a JavaScript connection.
@@ -174,9 +174,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 14 users (10 from Dummy + 3 from CSV + 1 from event).
-	_, _, count = c.Users([]string{"email"}, "", false, 0, 1000)
-	if count != 14 {
-		t.Fatalf("expected 14 users, got %d", count)
+	_, _, total = c.Users([]string{"email"}, "", false, 0, 1000)
+	if total != 14 {
+		t.Fatalf("expected 14 users, got %d", total)
 	}
 
 	// Set the "email" as identifier and run the Identity Resolution.
@@ -184,9 +184,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	c.StartIdentityResolution()
 
 	// Ensure that there are 10 users.
-	users, _, count := c.Users([]string{"email"}, "", false, 0, 1000)
-	if count != 10 {
-		t.Fatalf("expected 10 users, got %d", count)
+	users, _, total := c.Users([]string{"email"}, "", false, 0, 1000)
+	if total != 10 {
+		t.Fatalf("expected 10 users, got %d", total)
 	}
 
 	// Retrieve the GID of "kbuessen0@example.com".
@@ -208,9 +208,9 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Validate the identities.
-	identities, count := c.UserIdentities(kBuessenGid, 0, 1000)
-	if count != 3 {
-		t.Fatalf("expected user %s to have 3 identities associated, got %d", kBuessenGid, count)
+	identities, total := c.UserIdentities(kBuessenGid, 0, 1000)
+	if total != 3 {
+		t.Fatalf("expected user %s to have 3 identities associated, got %d", kBuessenGid, total)
 	}
 	assertEqualIdentity := func(got, expected meergotester.UserIdentity) {
 		if !reflect.DeepEqual(got, expected) {

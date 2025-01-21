@@ -185,14 +185,14 @@ type Warehouse interface {
 	// that the row should not be purged.
 	MergeIdentities(ctx context.Context, columns []Column, rows []map[string]any) error
 
-	// Query executes a query and returns the results as Rows. If withCount is true,
-	// it also returns an estimated total count of the records that would be
+	// Query executes a query and returns the results as Rows. If withTotal is true,
+	// it also returns an estimated total number of the records that would be
 	// returned if the query did not include First and Limit clauses.
 	//
 	// Scan is called on the returned Rows with interface{} arguments. It copies
 	// data directly into these arguments, rather than into the values they point
 	// to.
-	Query(ctx context.Context, query RowQuery, withCount bool) (Rows, int, error)
+	Query(ctx context.Context, query RowQuery, withTotal bool) (Rows, int, error)
 
 	// ResolveIdentities resolves the identities.
 	//

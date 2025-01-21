@@ -62,10 +62,10 @@ func TestReimport(t *testing.T) {
 		}
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
-	const expectedCount = 10
-	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
-	if count != expectedCount {
-		t.Fatalf("expected a total of %d users, got %d", expectedCount, count)
+	const expectedTotal = 10
+	users, _, total := c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	if total != expectedTotal {
+		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
 	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
 	assertEq("first  user first name", "Ariela", users[0].Properties["first_name"])
@@ -106,9 +106,9 @@ func TestReimport(t *testing.T) {
 	//
 	// This time the first name must be nil, while the last name should have a value.
 	// TODO: The previous statement will only be true after issue #767 is resolved.
-	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
-	if count != expectedCount {
-		t.Fatalf("expected a total of %d users, got %d", expectedCount, count)
+	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	if total != expectedTotal {
+		t.Fatalf("expected a total of %d users, got %d", expectedTotal, total)
 	}
 	assertEq("first  user email", "abenois2@example.com", users[0].Properties["email"])
 	//assertEq("first  user first name", nil, users[0].Properties["first_name"])    // <- now is nil (see issue https://github.com/meergo/meergo/issues/767)

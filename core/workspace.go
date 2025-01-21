@@ -989,7 +989,7 @@ func (this *Workspace) IdentifiersSchema() types.Type {
 }
 
 // Identities returns the identities of the provider user, and an estimate of
-// their count without applying first and limit.
+// their total number without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
@@ -1018,14 +1018,14 @@ func (this *Workspace) Identities(ctx context.Context, user string, first, limit
 		store:     this.store,
 		workspace: this.workspace,
 	}
-	identities, count, err := ws.userIdentities(ctx, where, first, limit)
+	identities, total, err := ws.userIdentities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 	if identities == nil {
 		return nil, 0, errors.NotFound("user %q does not exist", user)
 	}
-	return identities, count, nil
+	return identities, total, nil
 }
 
 // LatestIdentityResolution returns information about the latest Identity
@@ -1530,9 +1530,9 @@ type User struct {
 	LastChangeTime time.Time      `json:"lastChangeTime"`
 }
 
-// Users returns the users, the user schema, and an estimate of their count
-// without applying first and limit. It returns the users that satisfies the
-// filter, if not nil, and in range [first,first+limit] with first >= 0 and
+// Users returns the users, the user schema, and an estimate of their total
+// number without applying first and limit. It returns the users that satisfies
+// the filter, if not nil, and in range [first,first+limit] with first >= 0 and
 // 0 < limit <= 1000 and only the given properties. properties cannot be empty.
 //
 // order is the name of the property by which to sort the returned users and
@@ -1615,7 +1615,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 	}
 
 	// Read the users.
-	rows, count, err := this.store.Users(ctx, datastore.Query{
+	rows, total, err := this.store.Users(ctx, datastore.Query{
 		Properties: append([]string{"__id__", "__last_change_time__"}, properties...),
 		Where:      where,
 		OrderBy:    order,
@@ -1651,7 +1651,7 @@ func (this *Workspace) Users(ctx context.Context, properties []string, filter *F
 		delete(row, "__last_change_time__")
 	}
 
-	return users, schema, count, nil
+	return users, schema, total, nil
 }
 
 // Warehouse returns type and settings of the data warehouse for the workspace.
@@ -1662,7 +1662,8 @@ func (this *Workspace) Warehouse() (string, json.Value) {
 }
 
 // userIdentities returns the user identities matching the provided where
-// condition and an estimate of their count without applying first and limit.
+// condition and an estimate of their total number without applying first and
+// limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
@@ -1674,7 +1675,7 @@ func (this *Workspace) Warehouse() (string, json.Value) {
 func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, first, limit int) ([]UserIdentity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
-	records, count, err := this.store.UserIdentities(ctx, datastore.Query{
+	records, total, err := this.store.UserIdentities(ctx, datastore.Query{
 		Properties: []string{
 			"__action__",
 			"__is_anonymous__",
@@ -1751,12 +1752,12 @@ func (this *Workspace) userIdentities(ctx context.Context, where *state.Where, f
 
 	}
 
-	// Since the count is an estimate, being counted separately from the actual
+	// Since the total is an estimate, being counted separately from the actual
 	// number of identities returned, ensure to not return a value lower than
 	// the actually returned number of identities.
-	count = max(len(identities), count)
+	total = max(len(identities), total)
 
-	return identities, count, nil
+	return identities, total, nil
 }
 
 // ConnectionToAdd represents a connection to add to a workspace.

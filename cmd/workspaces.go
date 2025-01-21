@@ -425,7 +425,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 }
 
 // Identities returns the user identities of a user, and an estimate of their
-// count without applying first and limit.
+// total number without applying first and limit.
 func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -447,13 +447,13 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, count, err := ws.Identities(r.Context(), userID, first, limit)
+	identities, total, err := ws.Identities(r.Context(), userID, first, limit)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{
 		"identities": identities,
-		"count":      count,
+		"total":      total,
 	}, nil
 }
 
@@ -818,7 +818,7 @@ func (workspace workspace) UserSchema(_ http.ResponseWriter, r *http.Request) (a
 }
 
 // Users returns the users, the user schema of a workspace, and an estimate of
-// their count without applying first and limit.
+// their total number without applying first and limit.
 func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
@@ -836,7 +836,7 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	users, schema, count, err := ws.Users(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, body.Limit)
+	users, schema, total, err := ws.Users(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, body.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -860,9 +860,9 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 	b.writeString(`],"schema":`)
 	buf, _ := schema.MarshalJSON()
 	b.write(buf)
-	b.writeString(`,"count":`)
+	b.writeString(`,"total":`)
 	buf = b.availableBuffer()
-	b.write(strconv.AppendInt(buf, int64(count), 10))
+	b.write(strconv.AppendInt(buf, int64(total), 10))
 	b.writeByte('}')
 	b.flush()
 	return nil, nil

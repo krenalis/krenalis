@@ -66,9 +66,9 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	c.WaitForExecutionsCompletion(dummy, exec1, exec2)
 
 	// Check that there are 10 users.
-	users, _, count := c.Users([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
-	if count != 10 {
-		t.Fatalf("expected 10 users, got %d", count)
+	users, _, total := c.Users([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
+	if total != 10 {
+		t.Fatalf("expected 10 users, got %d", total)
 	}
 	user := users[0]
 	if user.Properties["first_name"] != "Ariela" {
@@ -76,9 +76,9 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 	}
 
 	// Check that there are 20 user identities in total.
-	identities, count := c.ConnectionIdentities(dummy, 0, 100)
-	if count != 20 {
-		t.Fatalf("expected 20 identities, got %d", count)
+	identities, total := c.ConnectionIdentities(dummy, 0, 100)
+	if total != 20 {
+		t.Fatalf("expected 20 identities, got %d", total)
 	}
 
 	// Make sure both actions appear 10 times, respectively each among all

@@ -10,7 +10,7 @@ const DEFAULT_USER_LIMIT = 1000;
 
 const useUsers = () => {
 	const [users, setUsers] = useState<ResponseUser[]>([]);
-	const [usersCount, setUsersCount] = useState<number>(0);
+	const [usersTotal, setUsersTotal] = useState<number>(0);
 	const [usersProperties, setUsersProperties] = useState<UserProperty[]>([]);
 	const [userIDList, setUserIDList] = useState<string[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -111,7 +111,7 @@ const useUsers = () => {
 			return;
 		}
 		const users = res.users;
-		const count = res.count;
+		const total = res.total;
 
 		for (const user of users) {
 			const properties: Record<string, any> = {};
@@ -123,7 +123,7 @@ const useUsers = () => {
 		}
 
 		setUsers(users);
-		setUsersCount(count);
+		setUsersTotal(total);
 
 		// compute the list of users ids needed for navigating between users.
 		const ids: string[] = [];
@@ -141,7 +141,7 @@ const useUsers = () => {
 
 	return {
 		users,
-		usersCount,
+		usersTotal,
 		usersProperties,
 		isLoading,
 		userIDList,

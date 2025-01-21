@@ -1246,7 +1246,7 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 }
 
 // Identities returns the user identities of the connection, and an estimate of
-// their count without applying first and limit.
+// their total number without applying first and limit.
 //
 // It returns the user identities in range [first,first+limit] with first >= 0
 // and 0 < limit <= 1000.
@@ -1271,14 +1271,14 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Use
 		Operator: state.OpIs,
 		Values:   []any{strconv.Itoa(this.connection.ID)},
 	}}}
-	identities, count, err := coreWs.userIdentities(ctx, where, first, limit)
+	identities, total, err := coreWs.userIdentities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 	if identities == nil {
 		identities = []UserIdentity{}
 	}
-	return identities, count, err
+	return identities, total, err
 }
 
 // LinkConnection links the connection (which must be a website, mobile, or

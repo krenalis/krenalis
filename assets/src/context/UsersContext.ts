@@ -4,7 +4,7 @@ import { ResponseUser } from '../lib/api/types/responses';
 
 interface UsersContext {
 	users: ResponseUser[];
-	usersCount: number;
+	usersTotal: number;
 	usersProperties: UserProperty[];
 	isLoading: boolean;
 	userIDList: string[];

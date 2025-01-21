@@ -61,18 +61,18 @@ func TestImportFromTwoDummies(t *testing.T) {
 
 	// Ensure that the connection have the correct identities associated.
 	{
-		identities, count := c.ConnectionIdentities(dummy1, 0, 100)
-		if count != 10 {
-			t.Fatalf("expected count 10, got %d", count)
+		identities, total := c.ConnectionIdentities(dummy1, 0, 100)
+		if total != 10 {
+			t.Fatalf("expected total 10, got %d", total)
 		}
 		for _, identity := range identities {
 			if identity.Action != action1 {
 				t.Fatalf("expected action %d, got %d, ", action1, identity.Action)
 			}
 		}
-		identities, count = c.ConnectionIdentities(dummy2, 0, 100)
-		if count != 10 {
-			t.Fatalf("expected count 10, got %d", count)
+		identities, total = c.ConnectionIdentities(dummy2, 0, 100)
+		if total != 10 {
+			t.Fatalf("expected total 10, got %d", total)
 		}
 		for _, identity := range identities {
 			if identity.Action != action2 {
@@ -84,24 +84,24 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Since the users have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 users, even if they have the same properties.
-	users, _, count := c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
-	expectedCount := 20
-	if expectedCount != count {
-		t.Fatalf("expected count %d, got %d", expectedCount, count)
+	users, _, total := c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	expectedTotal := 20
+	if expectedTotal != total {
+		t.Fatalf("expected total %d, got %d", expectedTotal, total)
 	}
 
 	// Every user now should have just one identity associated.
 	totalUsers := 0
 	for _, user := range users {
-		_, count := c.UserIdentities(user.ID, 0, 100)
-		const expectedCount = 1
-		if expectedCount != count {
-			t.Fatalf("expected %d identities for user %s, got %d", count, user.ID, count)
+		_, total := c.UserIdentities(user.ID, 0, 100)
+		const expectedTotal = 1
+		if expectedTotal != total {
+			t.Fatalf("expected %d identities for user %s, got %d", total, user.ID, total)
 		}
 		totalUsers++
 	}
-	if expectedCount != totalUsers { // ensure that the number of users matches with the returned 'count' value.
-		t.Fatalf("expected %d users returned, got %d", expectedCount, totalUsers)
+	if expectedTotal != totalUsers { // ensure that the number of users matches with the returned 'total' value.
+		t.Fatalf("expected %d users returned, got %d", expectedTotal, totalUsers)
 	}
 
 	// Update the workspace identifiers and run the Identity Resolution.
@@ -109,24 +109,24 @@ func TestImportFromTwoDummies(t *testing.T) {
 	c.StartIdentityResolution()
 
 	// Now the users should be merged, resulting in a total of 10 users.
-	users, _, count = c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
-	expectedCount = 10
-	if expectedCount != count {
-		t.Fatalf("expected count %d, got %d", expectedCount, count)
+	users, _, total = c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	expectedTotal = 10
+	if expectedTotal != total {
+		t.Fatalf("expected total %d, got %d", expectedTotal, total)
 	}
 
 	// Every user now should have two identities associated.
 	totalUsers = 0
 	for _, user := range users {
-		_, count := c.UserIdentities(user.ID, 0, 100)
-		const expectedCount = 2
-		if expectedCount != count {
-			t.Fatalf("expected %d identities for user %s, got %d", count, user.ID, count)
+		_, total := c.UserIdentities(user.ID, 0, 100)
+		const expectedTotal = 2
+		if expectedTotal != total {
+			t.Fatalf("expected %d identities for user %s, got %d", total, user.ID, total)
 		}
 		totalUsers++
 	}
-	if expectedCount != totalUsers { // ensure that the number of users matches with the returned 'count' value.
-		t.Fatalf("expected %d users returned, got %d", expectedCount, totalUsers)
+	if expectedTotal != totalUsers { // ensure that the total number of users matches with the returned 'total' value.
+		t.Fatalf("expected %d users returned, got %d", expectedTotal, totalUsers)
 	}
 
 }

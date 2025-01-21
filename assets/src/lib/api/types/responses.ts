@@ -81,7 +81,7 @@ interface ResponseUser {
 interface FindUsersResponse {
 	users: ResponseUser[];
 	schema: ObjectType;
-	count: number;
+	total: number;
 }
 
 interface AppUsersResponse {
@@ -99,12 +99,12 @@ interface userTraitsResponse {
 
 interface UserIdentitiesResponse {
 	identities: UserIdentity[];
-	count: number;
+	total: number;
 }
 
 interface ConnectionIdentitiesResponse {
 	identities: UserIdentity[];
-	count: number;
+	total: number;
 }
 
 interface PreviewSendEventResponse {

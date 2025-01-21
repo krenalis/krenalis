@@ -21,10 +21,10 @@ type Query struct {
 	// table is the table to query.
 	table string
 
-	// count retrieves the total number of rows that match the filter,
-	// irrespective of the first and limit parameters. It is meaningful only if
-	// the method has a count return parameter.
-	count bool
+	// total indicates the total number of rows that match the filter,
+	// regardless of the 'first' and 'limit' parameters. It is only meaningful
+	// if the method has a parameter that returns the total count.
+	total bool
 
 	// Properties are the paths of the properties to return. It cannot be empty
 	// and cannot contain overlapped paths.

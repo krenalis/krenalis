@@ -173,9 +173,9 @@ func TestIdentityResolution2(t *testing.T) {
 	// Check that there is only one user, and that its properties have been
 	// merged correctly.
 
-	users, _, count := c.Users(types.PropertyNames(schema), "", false, 0, 100)
-	if count != 1 {
-		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
+	users, _, total := c.Users(types.PropertyNames(schema), "", false, 0, 100)
+	if total != 1 {
+		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", total)
 	}
 	user := users[0]
 	if user.LastChangeTime.IsZero() {
@@ -205,9 +205,9 @@ func TestIdentityResolution2(t *testing.T) {
 
 	c.StartIdentityResolution()
 
-	users, _, count = c.Users(types.PropertyNames(schema), "", false, 0, 100)
-	if count != 1 {
-		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", count)
+	users, _, total = c.Users(types.PropertyNames(schema), "", false, 0, 100)
+	if total != 1 {
+		t.Fatalf("expected just 1 user (which is the merge of the 3 identities), got %d instead", total)
 	}
 	user = users[0]
 	if user.LastChangeTime.IsZero() {

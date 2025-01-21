@@ -391,7 +391,7 @@ func init() {
 							Description: "The connection's user identities.",
 						},
 						{
-							Name:        "count",
+							Name:        "total",
 							Type:        types.Int(32),
 							Placeholder: `23`,
 							Description: "The estimated total number of user identities in the connection.",
