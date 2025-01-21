@@ -12412,8 +12412,7 @@
                                 "minimum": 1,
                                 "maximum": 1000
                             },
-                            "createRequired": true,
-                            "description": "The maximum number of users to return. It must be a value between 1 and 1000."
+                            "description": "The maximum number of users to return. It can be any value between 1 and 1,000. If not provided, the default value is 100."
                         }
                     ],
                     "moreParameters": [],
@@ -12582,9 +12581,11 @@
                             "name": "limit",
                             "type": {
                                 "name": "Int",
-                                "bitSize": 32
+                                "bitSize": 32,
+                                "minimum": 1,
+                                "maximum": 1000
                             },
-                            "description": "The maximum number of events to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 100."
+                            "description": "The maximum number of events to return. It can be any value between 1 and 1,000. If not provided, the default value is 100."
                         }
                     ],
                     "moreParameters": [],
@@ -13291,9 +13292,11 @@
                             "name": "limit",
                             "type": {
                                 "name": "Int",
-                                "bitSize": 32
+                                "bitSize": 32,
+                                "minimum": 1,
+                                "maximum": 1000
                             },
-                            "description": "The maximum number of identities to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 1000."
+                            "description": "The maximum number of identities to return. It can be any value between 1 and 1,000. If not provided, the default value is 100."
                         }
                     ],
                     "moreParameters": [],

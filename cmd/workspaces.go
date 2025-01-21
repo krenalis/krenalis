@@ -433,7 +433,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	}
 	userID := r.PathValue("id")
 	var first = 0
-	var limit = 1000
+	var limit = 100
 	query := r.URL.Query()
 	if v, ok := query["first"]; ok {
 		first, _ = strconv.Atoi(v[0])
@@ -775,8 +775,8 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 	// Parse limit.
 	limit := 100
 	if v, ok := q["limit"]; ok {
-		limit, _ := strconv.Atoi(v[0])
-		if limit <= 0 || limit > 1000 {
+		limit, err = strconv.Atoi(v[0])
+		if err != nil {
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
@@ -830,13 +830,19 @@ func (workspace workspace) Users(w http.ResponseWriter, r *http.Request) (any, e
 		Order      string       `json:"order"`
 		OrderDesc  bool         `json:"orderDesc"`
 		First      int          `json:"first"`
-		Limit      int          `json:"limit"`
+		Limit      *int         `json:"limit"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	users, schema, total, err := ws.Users(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, body.Limit)
+	var limit int
+	if body.Limit == nil {
+		limit = 100
+	} else {
+		limit = *body.Limit
+	}
+	users, schema, total, err := ws.Users(r.Context(), body.Properties, body.Filter, body.Order, body.OrderDesc, body.First, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -95,11 +95,10 @@ func init() {
 						Description: "The number of users to skip before starting to return results. The default value is 0.",
 					},
 					{
-						Name:           "limit",
-						Type:           types.Int(32).WithIntRange(1, 1000),
-						CreateRequired: true,
-						Placeholder:    `1000`,
-						Description:    "The maximum number of users to return. It must be a value between 1 and 1000.",
+						Name:        "limit",
+						Type:        types.Int(32).WithIntRange(1, 1000),
+						Placeholder: `1000`,
+						Description: "The maximum number of users to return. It can be any value between 1 and 1,000. If not provided, the default value is 100.",
 					},
 				},
 				Response: &Response{
@@ -206,8 +205,8 @@ func init() {
 					},
 					{
 						Name:        "limit",
-						Type:        types.Int(32),
-						Description: "The maximum number of events to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 100.",
+						Type:        types.Int(32).WithIntRange(1, 1000),
+						Description: "The maximum number of events to return. It can be any value between 1 and 1,000. If not provided, the default value is 100.",
 					},
 				},
 				Response: &Response{
@@ -245,8 +244,8 @@ func init() {
 					},
 					{
 						Name:        "limit",
-						Type:        types.Int(32),
-						Description: "The maximum number of identities to return. If provided, it must be a value between 1 and 1000. If not specified, the default value is 1000.",
+						Type:        types.Int(32).WithIntRange(1, 1000),
+						Description: "The maximum number of identities to return. It can be any value between 1 and 1,000. If not provided, the default value is 100.",
 					},
 				},
 				Response: &Response{
