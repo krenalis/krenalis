@@ -34,7 +34,7 @@ func init() {
 	}
 	identityPropertyParameter := types.Property{
 		Name:           "identityProperty",
-		Type:           types.Text(),
+		Type:           types.Text().WithCharLen(1024),
 		CreateRequired: true,
 		Placeholder:    `"email"`,
 		Description: "The column that uniquely identifies each user in the database. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\n" +
@@ -42,7 +42,7 @@ func init() {
 	}
 	lastChangeTimeProperty := types.Property{
 		Name:        "lastChangeTimeProperty",
-		Type:        types.Text(),
+		Type:        types.Text().WithCharLen(1024),
 		Placeholder: `"updated_at"`,
 		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\n" +
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
@@ -50,7 +50,7 @@ func init() {
 	}
 	lastChangeTimeFormat := types.Property{
 		Name:           "lastChangeTimeFormat",
-		Type:           types.Text(),
+		Type:           types.Text().WithCharLen(64),
 		UpdateRequired: true,
 		Placeholder:    `"ISO8601"`,
 		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
@@ -243,22 +243,23 @@ func init() {
 							Name:        "identityProperty",
 							Type:        types.Text(),
 							Placeholder: `"email"`,
-							Description: "The column that uniquely identifies each user in the database. It is never empty.",
+							Description: "The column that uniquely identifies each user in the database.",
 						},
 						{
 							Name:        "lastChangeTimeProperty",
 							Type:        types.Text(),
+							Nullable:    true,
 							Placeholder: `"updated_at"`,
-							Description: "The column that stores the date when a user record was last updated. It can be empty.",
+							Description: "The column that stores the timestamp of the last update to a user record. It is null if no such column exists.",
 						},
 						{
-							Name:           "lastChangeTimeFormat",
-							Type:           types.Text(),
-							UpdateRequired: true,
-							Placeholder:    `"ISO8601"`,
-							Description: "The format of the value in the last change time column. It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
-								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
-								"This field is returned only if the last change time column is not empty and its type is `JSON` or `Text`.",
+							Name:        "lastChangeTimeFormat",
+							Type:        types.Text(),
+							Nullable:    true,
+							Placeholder: `"ISO8601"`,
+							Description: "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\n" +
+								"It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
+								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
 						},
 						{
 							Name:        "running",

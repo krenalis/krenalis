@@ -3748,7 +3748,8 @@
                             "name": "identityProperty",
                             "placeholder": "\"email\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 1024
                             },
                             "createRequired": true,
                             "description": "The column that uniquely identifies each user in the database. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\nOnly columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`."
@@ -3757,7 +3758,8 @@
                             "name": "lastChangeTimeProperty",
                             "placeholder": "\"updated_at\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 1024
                             },
                             "description": "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\nThe value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\nOnly columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`."
                         },
@@ -3765,7 +3767,8 @@
                             "name": "lastChangeTimeFormat",
                             "placeholder": "\"ISO8601\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 64
                             },
                             "updateRequired": true,
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
@@ -3881,7 +3884,8 @@
                             "name": "identityProperty",
                             "placeholder": "\"email\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 1024
                             },
                             "createRequired": true,
                             "description": "The column that uniquely identifies each user in the database. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\nOnly columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`."
@@ -3890,7 +3894,8 @@
                             "name": "lastChangeTimeProperty",
                             "placeholder": "\"updated_at\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 1024
                             },
                             "description": "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\nThe value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\nOnly columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`."
                         },
@@ -3898,7 +3903,8 @@
                             "name": "lastChangeTimeFormat",
                             "placeholder": "\"ISO8601\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 64
                             },
                             "updateRequired": true,
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
@@ -4068,7 +4074,7 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "description": "The column that uniquely identifies each user in the database. It is never empty."
+                                "description": "The column that uniquely identifies each user in the database."
                             },
                             {
                                 "name": "lastChangeTimeProperty",
@@ -4076,7 +4082,8 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "description": "The column that stores the date when a user record was last updated. It can be empty."
+                                "nullable": true,
+                                "description": "The column that stores the timestamp of the last update to a user record. It is null if no such column exists."
                             },
                             {
                                 "name": "lastChangeTimeFormat",
@@ -4084,8 +4091,8 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "updateRequired": true,
-                                "description": "The format of the value in the last change time column. It is `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is returned only if the last change time column is not empty and its type is `JSON` or `Text`."
+                                "nullable": true,
+                                "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
                             },
                             {
                                 "name": "running",
@@ -4634,15 +4641,6 @@
                                     ]
                                 },
                                 "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from events."
-                            },
-                            {
-                                "name": "name",
-                                "placeholder": "\"Site example.com\"",
-                                "type": {
-                                    "name": "Text",
-                                    "charLen": 60
-                                },
-                                "description": "The action's name."
                             },
                             {
                                 "name": "enabled",

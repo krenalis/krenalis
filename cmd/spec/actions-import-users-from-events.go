@@ -196,12 +196,6 @@ func init() {
 							Description: "The entity on which the action operates. It is always `\"Users\"` when the action imports users from events.",
 						},
 						{
-							Name:        "name",
-							Type:        types.Text().WithCharLen(60),
-							Placeholder: `"Site example.com"`,
-							Description: "The action's name.",
-						},
-						{
 							Name:        "enabled",
 							Type:        types.Boolean(),
 							Placeholder: "true",
