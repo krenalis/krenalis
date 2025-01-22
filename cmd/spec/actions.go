@@ -20,6 +20,13 @@ var scheduleStartParameter = types.Property{
 		"Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null.",
 }
 
+var runningParameter = types.Property{
+	Name:        "running",
+	Type:        types.Boolean(),
+	Placeholder: "false",
+	Description: "Indicates if the action is running.",
+}
+
 var importSchedulePeriodParameter = types.Property{
 	Name:        "schedulePeriod",
 	Type:        types.Text().WithValues("5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", "24h"),

@@ -1082,14 +1082,6 @@
                                 "description": "Indicates if the action is enabled."
                             },
                             {
-                                "name": "running",
-                                "placeholder": "false",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "Indicates if the action is running."
-                            },
-                            {
                                 "name": "filter",
                                 "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"country\", \"operator\": \"is\", \"values\": [ \"US\" ] } ] }",
                                 "type": {
@@ -1640,6 +1632,97 @@
                                     "name": "Boolean"
                                 },
                                 "description": "Indicates if the action is enabled."
+                            },
+                            {
+                                "name": "filter",
+                                "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"country\", \"operator\": \"is\", \"values\": [ \"US\" ] } ] }",
+                                "type": {
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "logical",
+                                            "placeholder": "and",
+                                            "type": {
+                                                "name": "Text",
+                                                "values": [
+                                                    "and",
+                                                    "or"
+                                                ]
+                                            },
+                                            "createRequired": true,
+                                            "description": ""
+                                        },
+                                        {
+                                            "name": "conditions",
+                                            "placeholder": "and",
+                                            "type": {
+                                                "name": "Array",
+                                                "elementType": {
+                                                    "name": "Object",
+                                                    "properties": [
+                                                        {
+                                                            "name": "property",
+                                                            "type": {
+                                                                "name": "Text"
+                                                            },
+                                                            "createRequired": true,
+                                                            "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
+                                                        },
+                                                        {
+                                                            "name": "operator",
+                                                            "type": {
+                                                                "name": "Text",
+                                                                "values": [
+                                                                    "is",
+                                                                    "is not",
+                                                                    "is less than",
+                                                                    "is less than or equal to",
+                                                                    "is greater than",
+                                                                    "is greater than or equal to",
+                                                                    "is between",
+                                                                    "is not between",
+                                                                    "contains",
+                                                                    "does not contain",
+                                                                    "is one of",
+                                                                    "is not one of",
+                                                                    "starts with",
+                                                                    "ends with",
+                                                                    "is before",
+                                                                    "is on or before",
+                                                                    "is after",
+                                                                    "is on or after",
+                                                                    "is true",
+                                                                    "is false",
+                                                                    "is null",
+                                                                    "is not null",
+                                                                    "exists",
+                                                                    "does not exist"
+                                                                ]
+                                                            },
+                                                            "createRequired": true,
+                                                            "description": "The condition's operator. The allowed values depend on the property's type."
+                                                        },
+                                                        {
+                                                            "name": "values",
+                                                            "type": {
+                                                                "name": "Array",
+                                                                "elementType": {
+                                                                    "name": "Text",
+                                                                    "charLen": 60
+                                                                }
+                                                            },
+                                                            "description": "The values the operator applies to, if any. These depend on both the operator and the property's type, including whether they're present and how many there are."
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "createRequired": true,
+                                            "description": "A filter's condition."
+                                        }
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The filter applied to the users in the database table. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
                                 "name": "tableName",
@@ -2326,7 +2409,7 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "updateRequired": true,
+                                "nullable": true,
                                 "description": "The name of the sheet. It is empty if the format is not Excel."
                             },
                             {
@@ -3011,6 +3094,15 @@
                                 },
                                 "nullable": true,
                                 "description": "The filter applied to the events. If it's not null, only the events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "createRequired": true,
+                                "description": ""
                             }
                         ]
                     },
@@ -3513,45 +3605,6 @@
                                 "description": "Indicates if the action is enabled."
                             },
                             {
-                                "name": "running",
-                                "placeholder": "false",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "Indicates if the action is running."
-                            },
-                            {
-                                "name": "scheduleStart",
-                                "placeholder": "15",
-                                "type": {
-                                    "name": "Int",
-                                    "bitSize": 32
-                                },
-                                "nullable": true,
-                                "description": "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null."
-                            },
-                            {
-                                "name": "schedulePeriod",
-                                "placeholder": "\"1h\"",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "5m",
-                                        "15m",
-                                        "30m",
-                                        "1h",
-                                        "2h",
-                                        "3h",
-                                        "6h",
-                                        "8h",
-                                        "12h",
-                                        "24h"
-                                    ]
-                                },
-                                "nullable": true,
-                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
-                            },
-                            {
                                 "name": "filter",
                                 "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"country\", \"operator\": \"is\", \"values\": [ \"US\" ] } ] }",
                                 "type": {
@@ -3665,6 +3718,45 @@
                                     "name": "transformation"
                                 },
                                 "description": ""
+                            },
+                            {
+                                "name": "running",
+                                "placeholder": "false",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates if the action is running."
+                            },
+                            {
+                                "name": "scheduleStart",
+                                "placeholder": "15",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "nullable": true,
+                                "description": "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null."
+                            },
+                            {
+                                "name": "schedulePeriod",
+                                "placeholder": "\"1h\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "5m",
+                                        "15m",
+                                        "30m",
+                                        "1h",
+                                        "2h",
+                                        "3h",
+                                        "6h",
+                                        "8h",
+                                        "12h",
+                                        "24h"
+                                    ]
+                                },
+                                "nullable": true,
+                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -4095,6 +4187,30 @@
                                 "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
                             },
                             {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": ""
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": ""
+                            },
+                            {
+                                "name": "transformation",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "transformation"
+                                },
+                                "description": ""
+                            },
+                            {
                                 "name": "running",
                                 "placeholder": "false",
                                 "type": {
@@ -4132,30 +4248,6 @@
                                 },
                                 "nullable": true,
                                 "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
-                            },
-                            {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": ""
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": ""
-                            },
-                            {
-                                "name": "transformation",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "transformation"
-                                },
-                                "description": ""
                             }
                         ]
                     },
@@ -4315,15 +4407,6 @@
                             },
                             "nullable": true,
                             "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
-                        },
-                        {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": ""
                         },
                         {
                             "name": "outSchema",
@@ -4501,15 +4584,6 @@
                             },
                             "nullable": true,
                             "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
-                        },
-                        {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": ""
                         },
                         {
                             "name": "outSchema",
@@ -4751,15 +4825,6 @@
                                 "description": ""
                             },
                             {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "createRequired": true,
-                                "description": ""
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "{...}",
                                 "type": {
@@ -4983,6 +5048,35 @@
                             },
                             "nullable": true,
                             "description": "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
+                        },
+                        {
+                            "name": "identityProperty",
+                            "placeholder": "\"email\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 1024
+                            },
+                            "createRequired": true,
+                            "description": "The column that uniquely identifies each user in the file. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\nOnly columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`."
+                        },
+                        {
+                            "name": "lastChangeTimeProperty",
+                            "placeholder": "\"updated_at\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 1024
+                            },
+                            "description": "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\nThe value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\nOnly columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`."
+                        },
+                        {
+                            "name": "lastChangeTimeFormat",
+                            "placeholder": "\"ISO8601\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 64
+                            },
+                            "updateRequired": true,
+                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
                             "name": "inSchema",
@@ -5214,6 +5308,35 @@
                             "description": "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
+                            "name": "identityProperty",
+                            "placeholder": "\"email\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 1024
+                            },
+                            "createRequired": true,
+                            "description": "The column that uniquely identifies each user in the file. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\nOnly columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`."
+                        },
+                        {
+                            "name": "lastChangeTimeProperty",
+                            "placeholder": "\"updated_at\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 1024
+                            },
+                            "description": "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\nThe value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\nOnly columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`."
+                        },
+                        {
+                            "name": "lastChangeTimeFormat",
+                            "placeholder": "\"ISO8601\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 64
+                            },
+                            "updateRequired": true,
+                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
+                        },
+                        {
                             "name": "inSchema",
                             "placeholder": "{...}",
                             "type": {
@@ -5377,61 +5500,52 @@
                                 "description": "Indicates if the action is enabled."
                             },
                             {
-                                "name": "running",
-                                "placeholder": "false",
-                                "type": {
-                                    "name": "Boolean"
-                                },
-                                "description": "Indicates if the action is running."
-                            },
-                            {
-                                "name": "scheduleStart",
-                                "placeholder": "15",
-                                "type": {
-                                    "name": "Int",
-                                    "bitSize": 32
-                                },
-                                "nullable": true,
-                                "description": "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null."
-                            },
-                            {
-                                "name": "schedulePeriod",
-                                "placeholder": "\"1h\"",
+                                "name": "format",
+                                "placeholder": "\"Excel\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "5m",
-                                        "15m",
-                                        "30m",
-                                        "1h",
-                                        "2h",
-                                        "3h",
-                                        "6h",
-                                        "8h",
-                                        "12h",
-                                        "24h"
+                                        "CVS",
+                                        "Excel",
+                                        "Parquet",
+                                        "JSON"
                                     ]
                                 },
+                                "createRequired": true,
+                                "description": "The file format. It correspond to the name of a file connector."
+                            },
+                            {
+                                "name": "path",
+                                "placeholder": "\"subscribers.xlsx\"",
+                                "type": {
+                                    "name": "Text",
+                                    "charLen": 1024
+                                },
+                                "createRequired": true,
+                                "description": "The file path relative to the root path defined in the file storage connection. Refer to the file storage connector documentation for details on the specific format."
+                            },
+                            {
+                                "name": "sheet",
+                                "placeholder": "\"Sheet1\"",
+                                "type": {
+                                    "name": "Text"
+                                },
                                 "nullable": true,
-                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
+                                "description": "The name of the sheet. It is empty if the format is not Excel."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
+                                "name": "compression",
+                                "placeholder": "\"Gzip\"",
                                 "type": {
-                                    "name": "schema"
+                                    "name": "Text",
+                                    "values": [
+                                        "",
+                                        "Zip",
+                                        "Gzip",
+                                        "Snappy"
+                                    ]
                                 },
-                                "createRequired": true,
-                                "description": ""
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "createRequired": true,
-                                "description": ""
+                                "description": "The compression format of the file. It is an empty if the file is not compressed.\n\nNote that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed."
                             },
                             {
                                 "name": "filter",
@@ -5525,6 +5639,24 @@
                                 "description": "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "createRequired": true,
+                                "description": ""
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "createRequired": true,
+                                "description": ""
+                            },
+                            {
                                 "name": "transformation",
                                 "placeholder": "{...}",
                                 "type": {
@@ -5534,52 +5666,43 @@
                                 "description": ""
                             },
                             {
-                                "name": "format",
-                                "placeholder": "\"Excel\"",
+                                "name": "running",
+                                "placeholder": "false",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates if the action is running."
+                            },
+                            {
+                                "name": "scheduleStart",
+                                "placeholder": "15",
+                                "type": {
+                                    "name": "Int",
+                                    "bitSize": 32
+                                },
+                                "nullable": true,
+                                "description": "The start time of the schedule in minutes, counting from 00:00. It specifies the minute when the first scheduled execution of the day begins. Subsequent executions occur based on the interval defined by the scheduler period. If the scheduler is disabled, this value is null."
+                            },
+                            {
+                                "name": "schedulePeriod",
+                                "placeholder": "\"1h\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "CVS",
-                                        "Excel",
-                                        "Parquet",
-                                        "JSON"
+                                        "5m",
+                                        "15m",
+                                        "30m",
+                                        "1h",
+                                        "2h",
+                                        "3h",
+                                        "6h",
+                                        "8h",
+                                        "12h",
+                                        "24h"
                                     ]
                                 },
-                                "createRequired": true,
-                                "description": "The file format. It correspond to the name of a file connector."
-                            },
-                            {
-                                "name": "path",
-                                "placeholder": "\"subscribers.xlsx\"",
-                                "type": {
-                                    "name": "Text",
-                                    "charLen": 1024
-                                },
-                                "createRequired": true,
-                                "description": "The file path relative to the root path defined in the file storage connection. Refer to the file storage connector documentation for details on the specific format."
-                            },
-                            {
-                                "name": "sheet",
-                                "placeholder": "\"Sheet1\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "updateRequired": true,
-                                "description": "The sheet name. It can only be used with the Excel format, where it is required.\n\nWhen provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`."
-                            },
-                            {
-                                "name": "compression",
-                                "placeholder": "\"Gzip\"",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "",
-                                        "Zip",
-                                        "Gzip",
-                                        "Snappy"
-                                    ]
-                                },
-                                "description": "The compression format of the file. It is an empty if the file is not compressed.\n\nNote that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed."
+                                "nullable": true,
+                                "description": "The schedule period, which determines how often the import runs automatically. If it is null, the scheduler is disabled, and no automatic executions will occur.\n\nTo change the schedule period, use the [Set schedule period](/api/actions#set-schedule-period) endpoint."
                             }
                         ]
                     },
@@ -5642,6 +5765,14 @@
                             "description": "The entity on which the action operates, which must be `\"Events\"` in order to create an action that sends events."
                         },
                         {
+                            "name": "enabled",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Indicate if the action is enabled once created."
+                        },
+                        {
                             "name": "eventType",
                             "placeholder": "\"send_add_to_cart\"",
                             "type": {
@@ -5649,14 +5780,6 @@
                             },
                             "createRequired": true,
                             "description": "The action's event type.\n\n It must be one of the event types supported by the connection of the action."
-                        },
-                        {
-                            "name": "enabled",
-                            "placeholder": "true",
-                            "type": {
-                                "name": "Boolean"
-                            },
-                            "description": "Indicate if the action is enabled once created."
                         },
                         {
                             "name": "filter",
@@ -6073,20 +6196,20 @@
                                 "description": "The entity on which the action operates. It is always `\"Events\"` when the action sends events to an app."
                             },
                             {
-                                "name": "eventType",
-                                "placeholder": "\"send_add_to_cart\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The action's event type."
-                            },
-                            {
                                 "name": "enabled",
                                 "placeholder": "true",
                                 "type": {
                                     "name": "Boolean"
                                 },
                                 "description": "Indicates if the action is enabled."
+                            },
+                            {
+                                "name": "eventType",
+                                "placeholder": "\"send_add_to_cart\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The action's event type."
                             },
                             {
                                 "name": "filter",
@@ -6178,6 +6301,15 @@
                                 },
                                 "nullable": true,
                                 "description": "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\nSee the [filters documentation](/filters) for more details."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "nullable": true,
+                                "description": ""
                             },
                             {
                                 "name": "outSchema",

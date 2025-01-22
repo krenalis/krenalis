@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"HubSpot"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -202,14 +201,6 @@ func init() {
 							Placeholder: "true",
 							Description: "Indicates if the action is enabled.",
 						},
-						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
-						},
-						scheduleStartParameter,
-						importSchedulePeriodParameter,
 						filterParameter,
 						{
 							Name:        "inSchema",
@@ -226,6 +217,9 @@ func init() {
 							Type:        types.Parameter("transformation"),
 							Placeholder: `{...}`,
 						},
+						runningParameter,
+						scheduleStartParameter,
+						importSchedulePeriodParameter,
 					},
 				},
 				Errors: []Error{

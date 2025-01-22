@@ -262,14 +262,6 @@ func init() {
 								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
 						},
 						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
-						},
-						scheduleStartParameter,
-						importSchedulePeriodParameter,
-						{
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
@@ -284,6 +276,9 @@ func init() {
 							Type:        types.Parameter("transformation"),
 							Placeholder: `{...}`,
 						},
+						runningParameter,
+						scheduleStartParameter,
+						importSchedulePeriodParameter,
 					},
 				},
 				Errors: []Error{

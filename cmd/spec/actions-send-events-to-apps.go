@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"Mixpanel"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -58,18 +57,18 @@ func init() {
 						Description:    "The entity on which the action operates, which must be `\"Events\"` in order to create an action that sends events.",
 					},
 					{
+						Name:        "enabled",
+						Type:        types.Boolean(),
+						Placeholder: "true",
+						Description: "Indicate if the action is enabled once created.",
+					},
+					{
 						Name:           "eventType",
 						Type:           types.Text(),
 						CreateRequired: true,
 						Placeholder:    `"send_add_to_cart"`,
 						Description: "The action's event type.\n\n" +
 							" It must be one of the event types supported by the connection of the action.",
-					},
-					{
-						Name:        "enabled",
-						Type:        types.Boolean(),
-						Placeholder: "true",
-						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
 					{
@@ -197,18 +196,24 @@ func init() {
 							Description: "The entity on which the action operates. It is always `\"Events\"` when the action sends events to an app.",
 						},
 						{
-							Name:        "eventType",
-							Type:        types.Text(),
-							Placeholder: `"send_add_to_cart"`,
-							Description: "The action's event type.",
-						},
-						{
 							Name:        "enabled",
 							Type:        types.Boolean(),
 							Placeholder: "true",
 							Description: "Indicates if the action is enabled.",
 						},
+						{
+							Name:        "eventType",
+							Type:        types.Text(),
+							Placeholder: `"send_add_to_cart"`,
+							Description: "The action's event type.",
+						},
 						filterParameter,
+						{
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Nullable:    true,
+							Placeholder: `{...}`,
+						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),

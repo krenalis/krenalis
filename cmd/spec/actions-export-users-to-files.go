@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"Newsletter Subscribers"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -29,7 +28,6 @@ func init() {
 		Description: "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
-
 	formatParameter := types.Property{
 		Name:           "format",
 		Type:           types.Text().WithValues("CVS", "Excel", "Parquet", "JSON"),
@@ -37,7 +35,6 @@ func init() {
 		Placeholder:    `"Excel"`,
 		Description:    "The file format. It correspond to the name of a file connector.",
 	}
-
 	pathParameter := types.Property{
 		Name:           "path",
 		Type:           types.Text().WithCharLen(1024),
@@ -45,7 +42,6 @@ func init() {
 		Placeholder:    `"subscribers.xlsx"`,
 		Description:    "The file path relative to the root path defined in the file storage. Refer to the file storage documentation for details on the specific format.",
 	}
-
 	sheetParameter := types.Property{
 		Name:           "sheet",
 		Type:           types.Text(),
@@ -54,14 +50,12 @@ func init() {
 		Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 			"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
 	}
-
 	compressionParameter := types.Property{
 		Name:        "compression",
 		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
 		Placeholder: `"Gzip"`,
 		Description: "The format used to compress the file. If not provided or empty, the file will remain uncompressed.",
 	}
-
 	formatSettingsParameter := types.Property{
 		Name:        "formatSettings",
 		Type:        types.Parameter("Settings"),
@@ -236,11 +230,11 @@ func init() {
 						formatParameter,
 						pathParameter,
 						{
-							Name:           "sheet",
-							Type:           types.Text(),
-							Placeholder:    `"Sheet1"`,
-							UpdateRequired: true,
-							Description:    "The name of the sheet. It is empty if the format is not Excel.",
+							Name:        "sheet",
+							Type:        types.Text(),
+							Nullable:    true,
+							Placeholder: `"Sheet1"`,
+							Description: "The name of the sheet. It is empty if the format is not Excel.",
 						},
 						{
 							Name:        "compression",
@@ -255,12 +249,7 @@ func init() {
 							CreateRequired: true,
 							Placeholder:    `{...}`,
 						},
-						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
-						},
+						runningParameter,
 						scheduleStartParameter,
 						exportSchedulePeriodParameter,
 					},

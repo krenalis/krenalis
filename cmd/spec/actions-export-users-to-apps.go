@@ -246,12 +246,6 @@ func init() {
 							Placeholder: "true",
 							Description: "Indicates if the action is enabled.",
 						},
-						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
-						},
 						filterParameter,
 						exportModeParameter,
 						{
@@ -298,12 +292,7 @@ func init() {
 							Type:        types.Parameter("transformation"),
 							Placeholder: `{...}`,
 						},
-						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
-						},
+						runningParameter,
 						scheduleStartParameter,
 						exportSchedulePeriodParameter,
 					},

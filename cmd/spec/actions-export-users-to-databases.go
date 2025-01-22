@@ -20,7 +20,14 @@ func init() {
 		Placeholder:    `"PostgreSQL"`,
 		Description:    "The action's name.",
 	}
-
+	filterParameter := types.Property{
+		Name:        "filter",
+		Type:        filterType,
+		Nullable:    true,
+		Placeholder: `{ "logical": "and", "conditions": [ { "property": "country", "operator": "is", "values": [ "US" ] } ] }`,
+		Description: "The filter applied to the users in the database table. If it's not null, only the users that match the filter will be included.\n\n" +
+			"See the [filters documentation](/filters) for more details.",
+	}
 	tableNameParameter := types.Property{
 		Name:           "tableName",
 		Type:           types.Text().WithCharLen(1024),
@@ -28,7 +35,6 @@ func init() {
 		Placeholder:    `"customers"`,
 		Description:    "The name of the table where the users will be exported.",
 	}
-
 	tableKeyParameter := types.Property{
 		Name:           "tableKey",
 		Type:           types.Text(),
@@ -211,6 +217,7 @@ func init() {
 							Placeholder: "true",
 							Description: "Indicates if the action is enabled.",
 						},
+						filterParameter,
 						{
 							Name:           "tableName",
 							Type:           types.Text().WithCharLen(1024),
@@ -243,12 +250,7 @@ func init() {
 							Type:        types.Parameter("transformation"),
 							Placeholder: `{...}`,
 						},
-						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
-						},
+						runningParameter,
 						scheduleStartParameter,
 						exportSchedulePeriodParameter,
 					},

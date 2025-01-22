@@ -19,7 +19,6 @@ func init() {
 		Placeholder:    `"Site example.com"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -62,12 +61,6 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
 					{
 						Name:           "outSchema",
 						Type:           types.Parameter("schema"),
@@ -118,12 +111,6 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
 					{
 						Name:           "outSchema",
 						Type:           types.Parameter("schema"),
@@ -204,12 +191,6 @@ func init() {
 						filterParameter,
 						{
 							Name:           "inSchema",
-							Type:           types.Parameter("schema"),
-							CreateRequired: true,
-							Placeholder:    `{...}`,
-						},
-						{
-							Name:           "outSchema",
 							Type:           types.Parameter("schema"),
 							CreateRequired: true,
 							Placeholder:    `{...}`,

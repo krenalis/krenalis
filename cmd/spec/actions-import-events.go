@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"Site example.com"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -168,6 +167,12 @@ func init() {
 							Description: "Indicates if the action is enabled.",
 						},
 						filterParameter,
+						{
+							Name:           "inSchema",
+							Type:           types.Parameter("schema"),
+							CreateRequired: true,
+							Placeholder:    `{...}`,
+						},
 					},
 				},
 				Errors: []Error{

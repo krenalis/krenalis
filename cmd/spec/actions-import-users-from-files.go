@@ -20,7 +20,6 @@ func init() {
 		Placeholder:    `"Newsletter Subscribers"`,
 		Description:    "The action's name.",
 	}
-
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -29,7 +28,6 @@ func init() {
 		Description: "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
-
 	formatParameter := types.Property{
 		Name:           "format",
 		Type:           types.Text().WithValues("CVS", "Excel", "Parquet", "JSON"),
@@ -37,7 +35,6 @@ func init() {
 		Placeholder:    `"Excel"`,
 		Description:    "The file format. It correspond to the name of a file connector.",
 	}
-
 	pathParameter := types.Property{
 		Name:           "path",
 		Type:           types.Text().WithCharLen(1024),
@@ -45,7 +42,6 @@ func init() {
 		Placeholder:    `"subscribers.xlsx"`,
 		Description:    "The file path relative to the root path defined in the file storage connection. Refer to the file storage connector documentation for details on the specific format.",
 	}
-
 	sheetParameter := types.Property{
 		Name:           "sheet",
 		Type:           types.Text(),
@@ -54,7 +50,6 @@ func init() {
 		Description: "The sheet name. It can only be used with the Excel format, where it is required.\n\n" +
 			"When provided, it must have a length between 1 and 31 characters, not start or end with a single quote `'`, and cannot contain any of the following characters: `*`, `/`, `:`, `?`, `[`, `\\`, and `]`.",
 	}
-
 	compressionParameter := types.Property{
 		Name:        "compression",
 		Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
@@ -62,7 +57,6 @@ func init() {
 		Description: "The compression format of the file. It is an empty if the file is not compressed.\n\n" +
 			"Note that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed.",
 	}
-
 	formatSettingsParameter := types.Property{
 		Name:        "formatSettings",
 		Type:        types.Parameter("Settings"),
@@ -70,6 +64,31 @@ func init() {
 		Placeholder: `{ "HasColumnNames": true }`,
 		Description: "The settings for the file format. Refer to the documentation for the [file connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` field may be omitted or set to null.",
+	}
+	identityPropertyParameter := types.Property{
+		Name:           "identityProperty",
+		Type:           types.Text().WithCharLen(1024),
+		CreateRequired: true,
+		Placeholder:    `"email"`,
+		Description: "The column that uniquely identifies each user in the file. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\n" +
+			"Only columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`.",
+	}
+	lastChangeTimeProperty := types.Property{
+		Name:        "lastChangeTimeProperty",
+		Type:        types.Text().WithCharLen(1024),
+		Placeholder: `"updated_at"`,
+		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\n" +
+			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
+			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`.",
+	}
+	lastChangeTimeFormat := types.Property{
+		Name:           "lastChangeTimeFormat",
+		Type:           types.Text().WithCharLen(64),
+		UpdateRequired: true,
+		Placeholder:    `"ISO8601"`,
+		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
+			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
+			"This field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -111,6 +130,9 @@ func init() {
 					compressionParameter,
 					formatSettingsParameter,
 					filterParameter,
+					identityPropertyParameter,
+					lastChangeTimeProperty,
+					lastChangeTimeFormat,
 					{
 						Name:           "inSchema",
 						Type:           types.Parameter("schema"),
@@ -172,6 +194,9 @@ func init() {
 					sheetParameter,
 					compressionParameter,
 					filterParameter,
+					identityPropertyParameter,
+					lastChangeTimeProperty,
+					lastChangeTimeFormat,
 					{
 						Name:           "inSchema",
 						Type:           types.Parameter("schema"),
@@ -258,14 +283,18 @@ func init() {
 							Placeholder: "true",
 							Description: "Indicates if the action is enabled.",
 						},
+						formatParameter,
+						pathParameter,
 						{
-							Name:        "running",
-							Type:        types.Boolean(),
-							Placeholder: "false",
-							Description: "Indicates if the action is running.",
+							Name:        "sheet",
+							Type:        types.Text(),
+							Nullable:    true,
+							Placeholder: `"Sheet1"`,
+							Description: "The name of the sheet. It is empty if the format is not Excel.",
 						},
-						scheduleStartParameter,
-						importSchedulePeriodParameter,
+						compressionParameter,
+						filterParameter,
+
 						{
 							Name:           "inSchema",
 							Type:           types.Parameter("schema"),
@@ -278,17 +307,15 @@ func init() {
 							CreateRequired: true,
 							Placeholder:    `{...}`,
 						},
-						filterParameter,
 						{
 							Name:           "transformation",
 							Type:           types.Parameter("transformation"),
 							CreateRequired: true,
 							Placeholder:    `{...}`,
 						},
-						formatParameter,
-						pathParameter,
-						sheetParameter,
-						compressionParameter,
+						runningParameter,
+						scheduleStartParameter,
+						importSchedulePeriodParameter,
 					},
 				},
 				Errors: []Error{
