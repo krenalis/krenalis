@@ -761,7 +761,6 @@ func (state *State) endActionExecution(n notification) {
 type ExecuteAction struct {
 	ID        int
 	Action    int
-	Storage   int
 	Reload    bool
 	Cursor    time.Time
 	StartTime time.Time
@@ -774,16 +773,11 @@ func (state *State) executeAction(n notification) {
 		return
 	}
 	a := state.actions[e.Action]
-	var storage *Connection
-	if e.Storage > 0 {
-		storage = state.connections[e.Storage]
-	}
 	a.mu.Lock()
 	a.execution = &ActionExecution{
 		mu:        &sync.Mutex{},
 		ID:        e.ID,
 		action:    a,
-		storage:   storage,
 		Reload:    e.Reload,
 		Cursor:    e.Cursor,
 		StartTime: e.StartTime,

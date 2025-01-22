@@ -441,21 +441,17 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read the non-terminated action executions.
-		err = state.db.QueryScan(ctx, "SELECT id, action, storage, cursor, reload, start_time\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, action, cursor, reload, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					exe := ActionExecution{}
 					var actionID int
-					var storage *int
-					err := rows.Scan(&exe.ID, &actionID, &storage, &exe.Cursor, &exe.Reload, &exe.StartTime)
+					err := rows.Scan(&exe.ID, &actionID, &exe.Cursor, &exe.Reload, &exe.StartTime)
 					if err != nil {
 						return err
 					}
 					exe.action = state.actions[actionID]
-					if storage != nil {
-						exe.storage = state.connections[*storage]
-					}
 					exe.action.execution = &exe
 				}
 				return nil

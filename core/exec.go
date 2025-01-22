@@ -48,11 +48,6 @@ func (this *Action) addExecution(ctx context.Context, reload bool) (int, error) 
 		StartTime: time.Now().UTC(),
 	}
 
-	c := this.action.Connection()
-	if c.Connector().Type == state.FileStorage {
-		n.Storage = c.ID
-	}
-
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var cursor time.Time
 		var executing bool
@@ -81,8 +76,8 @@ func (this *Action) addExecution(ctx context.Context, reload bool) (int, error) 
 		if !n.Reload {
 			n.Cursor = cursor
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, storage, cursor, reload, start_time)\n"+
-			"VALUES ($1, NULLIF($2, 0), $3, $4, $5)\nRETURNING id", n.Action, n.Storage, n.Cursor, n.Reload, n.StartTime).Scan(&n.ID)
+		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, cursor, reload, start_time)\n"+
+			"VALUES ($1, $2, $3, $4)\nRETURNING id", n.Action, n.Cursor, n.Reload, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "actions_executions_action_fkey" {

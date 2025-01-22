@@ -1154,7 +1154,6 @@ type ActionExecution struct {
 	mu        *sync.Mutex
 	ID        int
 	action    *Action
-	storage   *Connection
 	Reload    bool
 	Cursor    time.Time
 	StartTime time.Time
@@ -1166,15 +1165,6 @@ func (ex *ActionExecution) Action() *Action {
 	a := ex.action
 	ex.mu.Unlock()
 	return a
-}
-
-// Storage returns the storage of the execution.
-// The boolean return value reports whether the execution has a storage.
-func (ex *ActionExecution) Storage() (*Connection, bool) {
-	ex.mu.Lock()
-	s := ex.storage
-	ex.mu.Unlock()
-	return s, s != nil
 }
 
 // Connection returns the connection of the action.
