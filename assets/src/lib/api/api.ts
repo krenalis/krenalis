@@ -390,9 +390,15 @@ class Connections {
 	};
 
 	executeAction = async (action: number): Promise<number> => {
-		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/exec`, http.POST, this.workspaceID, {
-			reload: false,
-		});
+		const res = await call(
+			`${this.apiURL}/actions/${encodeURIComponent(action)}/exec`,
+			http.POST,
+			this.workspaceID,
+			{
+				reload: false,
+			},
+		);
+		return res.id as number;
 	};
 
 	actionUiEvent = async (

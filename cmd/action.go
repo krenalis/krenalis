@@ -43,7 +43,11 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	return a.Execute(r.Context(), body.Reload)
+	id, err := a.Execute(r.Context(), body.Reload)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]int{"id": id}, nil
 }
 
 // ServeUI serves the UI of an action.
