@@ -77,7 +77,7 @@ func Connectors() map[string]ConnectorInfo {
 // RegisterApp is called twice with the same name or if new is nil, it panics.
 func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + app.Name)
 	}
 	app.newFunc = reflect.ValueOf(new)
 	app.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -94,7 +94,7 @@ func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {
 // panics.
 func RegisterDatabase[T Database](database DatabaseInfo, new DatabaseNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + database.Name)
 	}
 	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -110,7 +110,7 @@ func RegisterDatabase[T Database](database DatabaseInfo, new DatabaseNewFunc[T])
 // RegisterFile is called twice with the same name or if new is nil, it panics.
 func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + file.Name)
 	}
 	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -127,7 +127,7 @@ func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
 // nil, it panics.
 func RegisterFileStorage[T FileStorage](storage FileStorageInfo, new FileStorageNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + storage.Name)
 	}
 	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -144,7 +144,7 @@ func RegisterFileStorage[T FileStorage](storage FileStorageInfo, new FileStorage
 // panics.
 func RegisterMobile[T Mobile](mobile MobileInfo, new MobileNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + mobile.Name)
 	}
 	mobile.newFunc = reflect.ValueOf(new)
 	mobile.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -161,7 +161,7 @@ func RegisterMobile[T Mobile](mobile MobileInfo, new MobileNewFunc[T]) {
 // panics.
 func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + server.Name)
 	}
 	server.newFunc = reflect.ValueOf(new)
 	server.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -178,7 +178,7 @@ func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
 // panics.
 func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + stream.Name)
 	}
 	stream.newFunc = reflect.ValueOf(new)
 	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -195,7 +195,7 @@ func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
 // is nil, it panics.
 func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriverNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for warehouse driver " + typ.Name)
 	}
 	typ.newFunc = reflect.ValueOf(new)
 	typ.ct = reflect.TypeOf((*T)(nil)).Elem()
@@ -212,7 +212,7 @@ func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriv
 // panics.
 func RegisterWebsite[T Website](website WebsiteInfo, new WebsiteNewFunc[T]) {
 	if new == nil {
-		panic("meergo: new function is nil")
+		panic("meergo: new function is nil for connector " + website.Name)
 	}
 	website.newFunc = reflect.ValueOf(new)
 	website.ct = reflect.TypeOf((*T)(nil)).Elem()
