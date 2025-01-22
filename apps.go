@@ -42,7 +42,7 @@ const (
 type Targets int
 
 const (
-	Events = 1 << iota
+	Events Targets = 1 << iota
 	Users
 	Groups
 )
