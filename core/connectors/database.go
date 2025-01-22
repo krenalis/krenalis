@@ -21,12 +21,51 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+type databaseConnector interface {
+
+	// Close closes the database. When Close is called, no other calls to
+	// connector's methods are in progress and no more will be made.
+	Close() error
+
+	// Columns returns the columns of the given table.
+	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
+	// error.
+	Columns(ctx context.Context, table string) ([]meergo.Column, error)
+
+	// LastChangeTimeCondition returns the query condition used for the
+	// last_change_time placeholder in the form "column >= value" or, if column is
+	// empty, a true value.
+	//
+	// column, if not empty, is the name of the column, typ is its type (can be
+	// DateTime, Date, JSON, or Text), and value is the value for the condition:
+	//
+	//   - for DateTime and Date types, it is a time.Time value.
+	//   - for JSON and Text types, it is a string value.
+	//
+	// For example, it could return `"updated_at" >= '2024-06-18 16:12:25'` or
+	// `TRUE`.
+	LastChangeTimeCondition(column string, typ types.Type, value any) string
+
+	// Merge performs batch insert and update operations on the specified table,
+	// basing on the table keys. rows contains the rows to be inserted or updated;
+	// rows with matching table keys are updated, while new rows are inserted.
+	//
+	// Some connectors may check that the table keys actually match the primary keys
+	// of the table, returning an error if they do not.
+	Merge(ctx context.Context, table meergo.Table, rows [][]any) error
+
+	// Query executes the given query and returns the resulting rows and columns.
+	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
+	// error.
+	Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error)
+}
+
 // Database represents the database of a database connection.
 type Database struct {
 	closed      bool
 	connector   string
 	timeLayouts *state.TimeLayouts
-	inner       meergo.Database
+	inner       databaseConnector
 	err         error
 }
 
@@ -42,10 +81,12 @@ func (connectors *Connectors) Database(connection *state.Connection) *Database {
 		connector:   connection.Connector().Name,
 		timeLayouts: &connector.TimeLayouts,
 	}
-	database.inner, database.err = meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseConfig{
+	inner, err := meergo.RegisteredDatabase(connector.Name).New(&meergo.DatabaseConfig{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
+	database.inner = inner.(databaseConnector)
+	database.err = err
 	return database
 }
 
@@ -298,7 +339,7 @@ type databaseWriter struct {
 	schema types.Type
 	rows   [][]any
 	ids    []string
-	inner  meergo.Database
+	inner  databaseConnector
 	closed bool
 }
 

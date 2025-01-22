@@ -31,6 +31,31 @@ import (
 	"github.com/golang/snappy"
 )
 
+type fileContentTypeConnector interface {
+	// ContentType returns the content type of the file.
+	ContentType(ctx context.Context) string
+}
+
+type fileReadConnector interface {
+	// Read reads the records from r and writes them to records. If the connector
+	// has multiple sheets, sheet is the name of the sheet to be read.
+	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
+	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
+	// error
+	Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error
+}
+
+type fileWriteConnector interface {
+	// Write writes to w the records read from records. If the connector has
+	// multiple sheets, sheet is the name of the sheet to be written to.
+	Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error
+}
+
+type fileSheetConnector interface {
+	// Sheets returns the sheets of the file read from r.
+	Sheets(ctx context.Context, r io.Reader) ([]string, error)
+}
+
 // storageTimeout represents the duration between consecutive calls to the Read
 // method of the io.Reader passed to a storage within the Write method.
 var storageTimeout = 10 * time.Second
@@ -39,7 +64,7 @@ type File struct {
 	state       *state.State
 	action      *state.Action
 	timeLayouts *state.TimeLayouts
-	inner       meergo.File
+	inner       any
 	err         error
 }
 
@@ -59,17 +84,11 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 	return file
 }
 
-// ContentType returns the content type of the file.
-func (file *File) ContentType(ctx context.Context) (string, error) {
-	if file.err != nil {
-		return "", file.err
-	}
-	return file.inner.ContentType(ctx), nil
-}
-
 // Records returns an iterator to iterate over the file's records that are not
 // older of the provided starting time. If the starting time is the zero time,
 // it iterates over all the records.
+//
+// file must support reading of records, otherwise this method panics.
 //
 // record will contain, in the Properties field, the properties of the input
 // schema of the action passed to the constructor of File, with the same types.
@@ -114,7 +133,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 		rw:    rw,
 		rc:    rc,
 		sheet: file.action.Sheet,
-		inner: file.inner,
+		inner: file.inner.(fileReadConnector),
 	}
 	return records, nil
 }
@@ -122,6 +141,9 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // Writer returns a Writer for writing records into the file located at the path
 // of the file's action. schema contains the properties of the records to be
 // written.
+//
+// This method panics if the FileStorage or the file do not support writing
+// operations.
 //
 // If pathReplacer is not nil, then the placeholders in path are replaced using
 // it; in this case, a *PlaceholderError error may be returned in case of an
@@ -149,7 +171,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 			return nil, err
 		}
 	}
-	sw, err := s.Writer(ctx, path, file.inner.ContentType(ctx), extension)
+	sw, err := s.Writer(ctx, path, file.inner.(fileContentTypeConnector).ContentType(ctx), extension)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -160,7 +182,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 	// Call the connector's Write method in its own goroutine.
 	go func() {
 		r := newRecordReader(columns, records, ack)
-		err = file.inner.Write(writeCtx, sw, file.action.Sheet, r)
+		err = file.inner.(fileWriteConnector).Write(writeCtx, sw, file.action.Sheet, r)
 		if err2 := sw.CloseWithError(err); err2 != nil && err == nil {
 			err = err2
 		}
@@ -176,7 +198,7 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer, 
 }
 
 // storage returns the inner storage connection of the file.
-func (file *File) storage() (meergo.FileStorage, error) {
+func (file *File) storage() (any, error) {
 	conn := file.action.Connection()
 	connector := file.action.Connection().Connector()
 	return meergo.RegisteredFileStorage(connector.Name).New(&meergo.FileStorageConfig{
@@ -205,23 +227,26 @@ func IsValidSheetName(name string) bool {
 // compressorStorage implements a storage capable of compressing and
 // decompressing data read from or written to a FileStorage.
 type compressorStorage struct {
-	storage     meergo.FileStorage
+	storage     any // can implement read, write or both operations.
 	compression state.Compression
 }
 
 // newCompressedStorage returns a compressor storage that wraps s and performs
 // file compression and decompression using c as the compression method.
 // If c is NoCompression, it does not perform any compression or decompression.
-func newCompressedStorage(s meergo.FileStorage, c state.Compression) *compressorStorage {
+func newCompressedStorage(s any, c state.Compression) *compressorStorage {
 	return &compressorStorage{s, c}
 }
 
 // Reader opens the file at the provided path name and returns an io.ReadCloser
 // from which to read the file and its last change time.
+//
+// The storage must support read operations, otherwise this method panics.
+//
 // It returns an *UnavailableError error if the connector returns an error.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	r, t, err := cs.storage.Reader(ctx, name)
+	r, t, err := cs.storage.(fileStorageReaderConnector).Reader(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, connectorError(err)
 	}
@@ -322,6 +347,8 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 // Writer returns a Writer that compress the data if needed, and then writes it
 // directly to the underlying storage.
 //
+// The storage must support write operations, otherwise this method panics.
+//
 // If the data should be compressed, it passes path to the underlying storage
 // with an appended extension, and an appropriate content type.
 //
@@ -364,7 +391,7 @@ func (cs compressorStorage) Writer(ctx context.Context, path, contentType, exten
 		ctx, cancel := context.WithCancel(ctx)
 		r := newTimeoutReader(pr, storageTimeout, cancel)
 		defer r.Close()
-		err := cs.storage.Write(ctx, r, path, contentType)
+		err := cs.storage.(fileStorageWriteConnector).Write(ctx, r, path, contentType)
 		if err != nil {
 			_ = pr.CloseWithError(connectorError(err))
 		} else {
@@ -452,7 +479,7 @@ type fileRecords struct {
 	rw     *recordWriter
 	rc     io.ReadCloser
 	sheet  string
-	inner  meergo.File
+	inner  fileReadConnector
 	err    error
 	closed bool
 }

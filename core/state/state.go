@@ -540,12 +540,12 @@ type Connector struct {
 	Name                   string
 	Icon                   string
 	Type                   ConnectorType
-	Role                   Role
+	SourceTargets          ConnectorTargets
+	DestinationTargets     ConnectorTargets
 	SourceDescription      string
 	DestinationDescription string
 	TermForUsers           string
 	TermForGroups          string
-	Targets                ConnectorTargets
 	SendingMode            *SendingMode
 	HasSheets              bool
 	HasSourceSettings      bool

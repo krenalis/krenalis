@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"slices"
 	"time"
@@ -24,8 +25,34 @@ import (
 type FileStorage struct {
 	state   *state.State
 	storage *state.Connection
-	inner   meergo.FileStorage
+	inner   any
 	err     error
+}
+
+type fileStorageCompletePathConnector interface {
+	// CompletePath returns the complete representation of the given path name. It
+	// returns *InvalidPathError if name is not valid for use in calls to Reader and
+	// Write.
+	//
+	// name's length in runes will be in range [1, 1024].
+	CompletePath(ctx context.Context, name string) (string, error)
+}
+
+type fileStorageReaderConnector interface {
+	// Reader opens a file and returns a ReadCloser from which to read its content.
+	// name is the path name of the file to read and the returned time.Time is the
+	// last update time of the file.
+	//
+	// The use of the provided context is extended to the Read method calls.
+	// After the context is canceled, any subsequent Read invocations will result in
+	// an error. It is the caller's responsibility to close the returned reader.
+	Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
+}
+
+type fileStorageWriteConnector interface {
+	// Write writes the data read from r into the file with the given path name.
+	// contentType is the file's content type.
+	Write(ctx context.Context, r io.Reader, name, contentType string) error
 }
 
 // FileStorage returns a file storage on the provided file storage connection.
@@ -62,22 +89,25 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 			return "", err
 		}
 	}
-	path, err := storage.inner.CompletePath(ctx, name)
+	path, err := storage.inner.(fileStorageCompletePathConnector).CompletePath(ctx, name)
 	if err != nil {
 		return "", connectorError(err)
 	}
 	return path, nil
 }
 
-// Read reads the records from file in the storage at the provided path name
-// and returns the columns and the records. name must be UTF-8 encoded with a
-// length in range [1, 1024].
+// Read reads the records from file in the storage at the provided path name and
+// returns the columns and the records. name must be UTF-8 encoded with a length
+// in range [1, 1024].
 //
-// file refers to the file connector to use. If it supports multiple sheets,
-// sheet is a valid sheet name; otherwise, it must be an empty string. A valid
-// sheet name is UTF-8 encoded, has a length in the range [1, 31], does not
-// start or end with "'", and does not contain any of "*", "/", ":", "?", "[",
-// "\", and "]". Sheet names are case-insensitive.
+// This method can only be called if both the FileStorage and the file allow
+// reading; otherwise, it will panic.
+//
+// file refers to the file connector to use. It must support reading of records.
+// If it supports multiple sheets, sheet is a valid sheet name; otherwise, it
+// must be an empty string. A valid sheet name is UTF-8 encoded, has a length in
+// the range [1, 31], does not start or end with "'", and does not contain any
+// of "*", "/", ":", "?", "[", "\", and "]". Sheet names are case-insensitive.
 //
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how, and limit restricts
@@ -114,7 +144,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		return nil, nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasSourceSettings {
-		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
+		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -131,7 +161,7 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 		records = append(records, record.Properties)
 		return true
 	})
-	err = _file.Read(ctx, r, sheet, rw)
+	err = _file.(fileReadConnector).Read(ctx, r, sheet, rw)
 	rw.close()
 	if err != nil && err != errRecordStop {
 		return nil, nil, connectorError(err)
@@ -151,6 +181,8 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // Sheets returns the sheets of the file with the provided name. Sheet names
 // are case-insensitive.
 //
+// If the file does not have sheets, this method panics.
+//
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how.
 //
@@ -169,13 +201,13 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 		return nil, fmt.Errorf("failed to register the file: %s", err)
 	}
 	if file.HasSourceSettings {
-		_, err = _file.(meergo.UIHandler).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
+		_, err = _file.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(storage.storage.Role))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	sheetsFile := _file.(meergo.Sheets)
+	sheetsFile := _file.(fileSheetConnector)
 	s := newCompressedStorage(storage.inner, compression)
 	r, _, err := s.Reader(ctx, name)
 	if err != nil {

@@ -33,26 +33,29 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppOAuth, AppRecords, and Webhooks
-// interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppOAuth
-	meergo.AppRecords
-	meergo.Webhooks
-} = (*HubSpot)(nil)
+// TODO(Gianluca): Groups are partially supported by this connector. When they
+// are fully supported by both the connector and Meergo, re-enable the
+// descriptions that refer to the groups and add the target "Groups" where
+// needed.
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "HubSpot",
-		Targets:                meergo.Users,
-		SourceDescription:      "Import contacts as users and companies as groups from HubSpot",
-		DestinationDescription: "Export users as contacts and groups as companies to HubSpot",
-		TermForUsers:           "contacts",
-		TermForGroups:          "companies",
-		IdentityIDLabel:        "HubSpot ID",
-		Icon:                   icon,
-		WebhooksPer:            meergo.WebhooksPerConnector,
+		Name: "HubSpot",
+		AsSource: &meergo.AsAppSource{
+			// Description: "Import contacts as users and companies as groups from HubSpot",
+			Description: "Import contacts as users from HubSpot",
+			Targets:     meergo.Users,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			// Description: "Export users as contacts and groups as companies to HubSpot",
+			Description: "Export users as contacts to HubSpot",
+			Targets:     meergo.Users,
+		},
+		TermForUsers:    "contacts",
+		TermForGroups:   "companies",
+		IdentityIDLabel: "HubSpot ID",
+		Icon:            icon,
+		WebhooksPer:     meergo.WebhooksPerConnector,
 		OAuth: meergo.OAuth{
 			AuthURL:           "https://app-eu1.hubspot.com/oauth/authorize",
 			TokenURL:          "https://api.hubapi.com/oauth/v1/token",

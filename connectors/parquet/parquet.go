@@ -32,16 +32,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File interface.
-var _ interface {
-	meergo.File
-} = (*Parquet)(nil)
-
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "Parquet",
 		Icon:      icon,
 		Extension: "parquet",
+		AsSource:  &meergo.AsSourceFile{},
 	}, New)
 }
 
@@ -51,11 +47,6 @@ func New(conf *meergo.FileConfig) (*Parquet, error) {
 }
 
 type Parquet struct{}
-
-// ContentType returns the content type of the file.
-func (pq *Parquet) ContentType(ctx context.Context) string {
-	return "" // TODO: implement file writing for Parquet.
-}
 
 // Read reads the records from r and writes them to records.
 func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records meergo.RecordWriter) error {
@@ -144,12 +135,6 @@ func (pq *Parquet) Read(ctx context.Context, r io.Reader, sheet string, records 
 		}
 	}
 
-	return nil
-}
-
-// Write writes to w the records read from records.
-func (pq *Parquet) Write(ctx context.Context, w io.Writer, sheet string, records meergo.RecordReader) error {
-	// TODO(marco)
 	return nil
 }
 

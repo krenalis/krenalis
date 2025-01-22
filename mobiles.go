@@ -29,9 +29,9 @@ func (info MobileInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new mobile connector instance.
-func (info MobileInfo) New(conf *MobileConfig) (Mobile, error) {
+func (info MobileInfo) New(conf *MobileConfig) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(Mobile)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -44,7 +44,4 @@ type MobileConfig struct {
 
 // MobileNewFunc represents functions that create new mobile connector
 // instances.
-type MobileNewFunc[T Mobile] func(*MobileConfig) (T, error)
-
-// Mobile is the interface implemented by mobile connectors.
-type Mobile interface{}
+type MobileNewFunc[T any] func(*MobileConfig) (T, error)

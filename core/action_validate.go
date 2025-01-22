@@ -43,7 +43,8 @@ type validationState struct {
 	connection struct {
 		role      state.Role
 		connector struct {
-			typ state.ConnectorType
+			typ     state.ConnectorType
+			targets state.ConnectorTargets
 		}
 	}
 
@@ -54,6 +55,7 @@ type validationState struct {
 	// struct.
 	format struct {
 		typ         state.ConnectorType
+		targets     state.ConnectorTargets
 		hasSettings bool
 		hasSheets   bool
 	}
@@ -76,24 +78,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	outSchema := action.OutSchema
 
 	// Check if the target is allowed.
-	var targetIsAllowed bool
-	switch v.connection.role {
-	case state.Source:
-		switch v.connection.connector.typ {
-		case state.App, state.Database, state.FileStorage:
-			targetIsAllowed = target == state.Users || target == state.Groups
-		case state.Mobile, state.Server, state.Website:
-			targetIsAllowed = true
-		}
-	case state.Destination:
-		switch v.connection.connector.typ {
-		case state.App:
-			targetIsAllowed = true
-		case state.Database, state.FileStorage:
-			targetIsAllowed = target == state.Users || target == state.Groups
-		}
-	}
-	if !targetIsAllowed {
+	if !v.connection.connector.targets.Contains(target) {
 		role := strings.ToLower(v.connection.role.String())
 		typ := v.connection.connector.typ.String()
 		return errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
@@ -143,6 +128,9 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if v.format.typ != state.File {
 			return errors.BadRequest("format does not refer to a file connector")
 		}
+	}
+	if actionOnFile && !v.format.targets.Contains(target) {
+		return errors.BadRequest("target is not supported by the file format")
 	}
 
 	// First, do formal validations.

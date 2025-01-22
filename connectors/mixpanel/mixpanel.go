@@ -27,21 +27,16 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents and UIHandler interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppEvents
-	meergo.UIHandler
-} = (*Mixpanel)(nil)
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Mixpanel",
-		Role:                   meergo.Destination,
-		Targets:                meergo.Events,
-		DestinationDescription: "Send events to Mixpanel",
-		Icon:                   icon,
-		SendingMode:            meergo.Cloud,
+		Name: "Mixpanel",
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Send events to Mixpanel",
+			Targets:     meergo.Events,
+			HasSettings: true,
+			SendingMode: meergo.Cloud,
+		},
+		Icon: icon,
 		BackoffPolicy: meergo.BackoffPolicy{
 			// https://developer.mixpanel.com/reference/import-events#rate-limits
 			"429 502 503": meergo.ExponentialStrategy(2 * time.Second),

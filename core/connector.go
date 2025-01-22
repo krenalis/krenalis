@@ -22,9 +22,8 @@ type Connector struct {
 	connector       *state.Connector
 	Name            string                `json:"name"`
 	Type            ConnectorType         `json:"type"`
-	Source          *SourceConnector      `json:"source"`
-	Destination     *DestinationConnector `json:"destination"`
-	Targets         []Target              `json:"targets"`
+	AsSource        *SourceConnector      `json:"asSource"`
+	AsDestination   *DestinationConnector `json:"asDestination"`
 	IdentityIDLabel string                `json:"identityIDLabel"`
 	HasSheets       bool                  `json:"hasSheets"`
 	FileExtension   string                `json:"fileExtension"`
@@ -36,6 +35,7 @@ type Connector struct {
 
 type SourceConnector struct {
 	Description string      `json:"description"`
+	Targets     []Target    `json:"targets"`
 	HasSettings bool        `json:"hasSettings"`
 	SampleQuery string      `json:"sampleQuery"`
 	WebhooksPer WebhooksPer `json:"webhooksPer"`
@@ -43,6 +43,7 @@ type SourceConnector struct {
 
 type DestinationConnector struct {
 	Description string       `json:"description"`
+	Targets     []Target     `json:"targets"`
 	HasSettings bool         `json:"hasSettings"`
 	SendingMode *SendingMode `json:"sendingMode"`
 }

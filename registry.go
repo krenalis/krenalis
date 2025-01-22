@@ -75,12 +75,13 @@ func Connectors() map[string]ConnectorInfo {
 
 // RegisterApp makes an app connector available by the provided name. If
 // RegisterApp is called twice with the same name or if new is nil, it panics.
-func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {
+func RegisterApp[T any](app AppInfo, new AppNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + app.Name)
 	}
 	app.newFunc = reflect.ValueOf(new)
 	app.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateAppConnector(app)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.apps[app.Name]; dup {
@@ -92,12 +93,13 @@ func RegisterApp[T App](app AppInfo, new AppNewFunc[T]) {
 // RegisterDatabase makes a database connector available by the provided name.
 // If RegisterDatabase is called twice with the same name or if new is nil, it
 // panics.
-func RegisterDatabase[T Database](database DatabaseInfo, new DatabaseNewFunc[T]) {
+func RegisterDatabase[T any](database DatabaseInfo, new DatabaseNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + database.Name)
 	}
 	database.newFunc = reflect.ValueOf(new)
 	database.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateDatabaseConnector(database)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.databases[database.Name]; dup {
@@ -108,12 +110,13 @@ func RegisterDatabase[T Database](database DatabaseInfo, new DatabaseNewFunc[T])
 
 // RegisterFile makes a file connector available by the provided name. If
 // RegisterFile is called twice with the same name or if new is nil, it panics.
-func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
+func RegisterFile[T any](file FileInfo, new FileNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + file.Name)
 	}
 	file.newFunc = reflect.ValueOf(new)
 	file.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateFileConnector(file)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[file.Name]; dup {
@@ -125,12 +128,13 @@ func RegisterFile[T File](file FileInfo, new FileNewFunc[T]) {
 // RegisterFileStorage makes a file storage connector available by the provided
 // name. If RegisterFileStorage is called twice with the same name or if new is
 // nil, it panics.
-func RegisterFileStorage[T FileStorage](storage FileStorageInfo, new FileStorageNewFunc[T]) {
+func RegisterFileStorage[T any](storage FileStorageInfo, new FileStorageNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + storage.Name)
 	}
 	storage.newFunc = reflect.ValueOf(new)
 	storage.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateFileStorageConnector(storage)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.storages[storage.Name]; dup {
@@ -142,7 +146,7 @@ func RegisterFileStorage[T FileStorage](storage FileStorageInfo, new FileStorage
 // RegisterMobile makes a mobile connector available by the provided name. If
 // RegisterDatabase is called twice with the same name or if new is nil, it
 // panics.
-func RegisterMobile[T Mobile](mobile MobileInfo, new MobileNewFunc[T]) {
+func RegisterMobile[T any](mobile MobileInfo, new MobileNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + mobile.Name)
 	}
@@ -159,7 +163,7 @@ func RegisterMobile[T Mobile](mobile MobileInfo, new MobileNewFunc[T]) {
 // RegisterServer makes a server connector available by the provided name. If
 // RegisterServer is called twice with the same name or if new is nil, it
 // panics.
-func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
+func RegisterServer[T any](server ServerInfo, new ServerNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + server.Name)
 	}
@@ -176,12 +180,13 @@ func RegisterServer[T Server](server ServerInfo, new ServerNewFunc[T]) {
 // RegisterStream makes a stream connector available by the provided name.
 // If RegisterStream is called twice with the same name or if new is nil, it
 // panics.
-func RegisterStream[T Stream](stream StreamInfo, new StreamNewFunc[T]) {
+func RegisterStream[T any](stream StreamInfo, new StreamNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + stream.Name)
 	}
 	stream.newFunc = reflect.ValueOf(new)
 	stream.ct = reflect.TypeOf((*T)(nil)).Elem()
+	validateStreamConnector(stream)
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, dup := registry.files[stream.Name]; dup {
@@ -210,7 +215,7 @@ func RegisterWarehouseDriver[T Warehouse](typ WarehouseDriver, new WarehouseDriv
 // RegisterWebsite makes a website connector available by the provided name. If
 // RegisterWebsite is called twice with the same name or if new is nil, it
 // panics.
-func RegisterWebsite[T Website](website WebsiteInfo, new WebsiteNewFunc[T]) {
+func RegisterWebsite[T any](website WebsiteInfo, new WebsiteNewFunc[T]) {
 	if new == nil {
 		panic("meergo: new function is nil for connector " + website.Name)
 	}

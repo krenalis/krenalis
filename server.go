@@ -29,9 +29,9 @@ func (info ServerInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new server connector instance.
-func (info ServerInfo) New(conf *ServerConfig) (Server, error) {
+func (info ServerInfo) New(conf *ServerConfig) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(Server)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -44,7 +44,4 @@ type ServerConfig struct {
 
 // ServerNewFunc represents functions that create new server connector
 // instances.
-type ServerNewFunc[T Server] func(*ServerConfig) (T, error)
-
-// Server is the interface implemented by server connectors.
-type Server interface{}
+type ServerNewFunc[T any] func(*ServerConfig) (T, error)

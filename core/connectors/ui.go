@@ -19,6 +19,21 @@ import (
 	"github.com/meergo/meergo/json"
 )
 
+type uiHandlerConnector interface {
+	// ServeUI serves the connector's user interface. event is the event to be
+	// served, settings are the connector's settings, and role is the
+	// connection's role, it can be Source or Destination.
+	//
+	// The first time ServeUI is called to display the UI, event is "load" and
+	// settings is nil. The connector saves the settings only when serving the
+	// "save" event; for other events, it returns an updated interface without
+	// saving the settings.
+	//
+	// If event does not exist, it returns an ErrUIEventNotExist.
+	// If the settings are invalid, it returns an InvalidSettingsError error.
+	ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error)
+}
+
 // ServeActionUI serves the user interface of the provided file action and
 // returns the new serialized interface to be sent back to the client. event is
 // the event to be served, and settings are the format settings.
@@ -38,7 +53,7 @@ func (connectors *Connectors) ServeActionUI(ctx context.Context, action *state.A
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, settings, role)
+	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, role)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -72,12 +87,12 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 			HTTPClient:   connectors.http.ConnectionClient(connection.ID),
 			WebhookURL:   webhookURL(connection, accountID)})
 	case state.Database:
-		var database meergo.Database
+		var database any
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{
 			Settings:    connection.Settings,
 			SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 		})
-		defer database.Close()
+		defer database.(databaseConnector).Close()
 		inner = database
 	case state.FileStorage:
 		inner, err = meergo.RegisteredFileStorage(c.Name).New(&meergo.FileStorageConfig{
@@ -108,7 +123,7 @@ func (connectors *Connectors) ServeConnectionUI(ctx context.Context, connection 
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, settings, meergo.Role(connection.Role))
+	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, meergo.Role(connection.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -143,9 +158,9 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 			HTTPClient:   connectors.http.Client(conf.OAuth.ClientSecret, conf.OAuth.AccessToken, c.BackoffPolicy),
 		})
 	case state.Database:
-		var database meergo.Database
+		var database any
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{})
-		defer database.Close()
+		defer database.(databaseConnector).Close()
 		inner = database
 	case state.File:
 		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{})
@@ -163,7 +178,7 @@ func (connectors *Connectors) ServeConnectorUI(ctx context.Context, connector *s
 	if err != nil {
 		return nil, err
 	}
-	ui, err := inner.(meergo.UIHandler).ServeUI(ctx, event, settings, meergo.Role(conf.Role))
+	ui, err := inner.(uiHandlerConnector).ServeUI(ctx, event, settings, meergo.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -199,9 +214,9 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 			SetSettings:  setSettings,
 		})
 	case state.Database:
-		var database meergo.Database
+		var database any
 		database, err = meergo.RegisteredDatabase(c.Name).New(&meergo.DatabaseConfig{SetSettings: setSettings})
-		defer database.Close()
+		defer database.(databaseConnector).Close()
 		inner = database
 	case state.File:
 		inner, err = meergo.RegisteredFile(c.Name).New(&meergo.FileConfig{SetSettings: setSettings})
@@ -219,7 +234,7 @@ func (connectors *Connectors) UpdatedSettings(ctx context.Context, connector *st
 	if err != nil {
 		return nil, err
 	}
-	_, err = inner.(meergo.UIHandler).ServeUI(ctx, "save", settings, meergo.Role(conf.Role))
+	_, err = inner.(uiHandlerConnector).ServeUI(ctx, "save", settings, meergo.Role(conf.Role))
 	if err != nil {
 		return nil, connectorError(err)
 	}

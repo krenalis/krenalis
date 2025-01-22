@@ -14,21 +14,23 @@ import (
 
 // CompletePathTest is a test for FileStorage.CompletePath.
 type CompletePathTest struct {
-	Name     string      // path name.
-	Expected string      // expected complete path.
-	Storage  FileStorage // storage to use, if not nil.
+	Name     string // path name.
+	Expected string // expected complete path.
+	Storage  any    // storage to use, if not nil.
 }
 
 // TestCompletePath tests FileStorage.CompletePath of the connector executing the
 // given tests. It returns an error if a test fails.
-func TestCompletePath(storage FileStorage, tests []CompletePathTest) error {
+func TestCompletePath(storage any, tests []CompletePathTest) error {
 	ctx := context.Background()
 	for _, test := range tests {
 		s := storage
 		if test.Storage != nil {
 			s = test.Storage
 		}
-		got, err := s.CompletePath(ctx, test.Name)
+		got, err := s.(interface {
+			CompletePath(ctx context.Context, name string) (string, error)
+		}).CompletePath(ctx, test.Name)
 		if err != nil {
 			_, ok := err.(*InvalidPathError)
 			if !ok {

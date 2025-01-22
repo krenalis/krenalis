@@ -21,7 +21,7 @@ func init() {
 	websites := []meergo.WebsiteInfo{
 		{
 			Name:              "JavaScript",
-			SourceDescription: "Import events, users and groups from a website using JavaScript",
+			SourceDescription: "Import events and users from a website using JavaScript",
 			Icon:              iconJavaScript,
 		},
 	}

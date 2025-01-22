@@ -1,19 +1,12 @@
-import {
-	SourceConnector,
-	DestinationConnector,
-	ConnectorTarget,
-	ConnectorType,
-	SendingMode,
-} from '../api/types/connector';
+import { SourceConnector, DestinationConnector, ConnectorType, SendingMode } from '../api/types/connector';
 import * as icons from '../../constants/icons';
 import { Role } from '../api/types/types';
 
 class TransformedConnector {
 	name: string;
 	type: ConnectorType;
-	source: SourceConnector | null;
-	destination: DestinationConnector | null;
-	targets: ConnectorTarget[];
+	asSource: SourceConnector | null;
+	asDestination: DestinationConnector | null;
 	identityIDLabel: string;
 	hasSheets: boolean;
 	fileExtension: string;
@@ -25,9 +18,8 @@ class TransformedConnector {
 	constructor(
 		name: string,
 		type: ConnectorType,
-		source: SourceConnector | null,
-		destination: DestinationConnector | null,
-		targets: ConnectorTarget[],
+		asSource: SourceConnector | null,
+		asDestination: DestinationConnector | null,
 		identityIDLabel: string,
 		hasSheets: boolean,
 		fileExtension: string,
@@ -38,9 +30,8 @@ class TransformedConnector {
 	) {
 		this.name = name;
 		this.type = type;
-		this.source = source;
-		this.destination = destination;
-		this.targets = targets;
+		this.asSource = asSource;
+		this.asDestination = asDestination;
 		this.identityIDLabel = identityIDLabel;
 		this.hasSheets = hasSheets;
 		this.fileExtension = fileExtension;
@@ -83,16 +74,16 @@ class TransformedConnector {
 	}
 
 	get supportedSendingModes(): SendingMode[] {
-		if (this.destination == null) {
+		if (this.asDestination == null) {
 			return [];
 		}
-		switch (this.destination.sendingMode) {
+		switch (this.asDestination.sendingMode) {
 			case null:
 				return [];
 			case 'Combined':
 				return ['Cloud', 'Device', 'Combined'];
 			default:
-				return [this.destination.sendingMode];
+				return [this.asDestination.sendingMode];
 		}
 	}
 
@@ -113,7 +104,8 @@ class TransformedConnector {
 
 	hasSettings(role: Role): boolean {
 		return (
-			(role === 'Source' && this.source.hasSettings) || (role === 'Destination' && this.destination.hasSettings)
+			(role === 'Source' && this.asSource.hasSettings) ||
+			(role === 'Destination' && this.asDestination.hasSettings)
 		);
 	}
 }

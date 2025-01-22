@@ -9,18 +9,11 @@ package state
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"reflect"
 	"sync"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/postgres"
-)
-
-var (
-	sheetsType    = reflect.TypeOf((*meergo.Sheets)(nil)).Elem()
-	uiHandlerType = reflect.TypeOf((*meergo.UIHandler)(nil)).Elem()
 )
 
 // load loads the state.
@@ -44,23 +37,23 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		state.connectors = make(map[string]*Connector, len(connectors))
 		for name, connector := range connectors {
 			c := Connector{}
-			var ct reflect.Type
 			switch connector := connector.(type) {
 			case meergo.AppInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = App
-				c.Role = Role(connector.Role)
-				c.Targets = ConnectorTargets(connector.Targets)
-				if c.Targets.Contains(Groups) {
-					// TODO(Gianluca): https://github.com/meergo/meergo/issues/895.
-					return errors.New("target Groups is not supported by this installation of Meergo")
+				if asSource := connector.AsSource; asSource != nil {
+					c.SourceTargets = ConnectorTargets(asSource.Targets)
+					c.SourceDescription = asSource.Description
+					c.HasSourceSettings = asSource.HasSettings
 				}
-				c.SourceDescription = connector.SourceDescription
-				c.DestinationDescription = connector.DestinationDescription
+				if asDest := connector.AsDestination; asDest != nil {
+					c.DestinationTargets = ConnectorTargets(asDest.Targets)
+					c.DestinationDescription = asDest.Description
+					c.HasDestinationSettings = asDest.HasSettings
+				}
 				c.TermForUsers = connector.TermForUsers
 				c.TermForGroups = connector.TermForGroups
-				switch connector.SendingMode {
+				switch connector.AsDestination.SendingMode {
 				case meergo.Cloud:
 					mode := Cloud
 					c.SendingMode = &mode
@@ -70,10 +63,6 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 				case meergo.Combined:
 					mode := Combined
 					c.SendingMode = &mode
-				}
-				if ct.Implements(uiHandlerType) {
-					c.HasSourceSettings = connector.HasSettings == meergo.Source || connector.HasSettings == meergo.Both
-					c.HasDestinationSettings = connector.HasSettings == meergo.Destination || connector.HasSettings == meergo.Both
 				}
 				c.IdentityIDLabel = connector.IdentityIDLabel
 				c.WebhooksPer = WebhooksPer(connector.WebhooksPer)
@@ -92,81 +81,87 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					}
 				}
 			case meergo.DatabaseInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Database
-				c.Role = Both
-				c.Targets = UsersFlag
+				// It is assumed that each Database connector supports both read
+				// and write operations.
+				c.SourceTargets = UsersFlag
+				c.DestinationTargets = UsersFlag
+				// It is assumed that each Database connector always have both
+				// source and destination settings.
 				c.HasSourceSettings = true
 				c.HasDestinationSettings = true
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.SampleQuery = connector.SampleQuery
 				c.Icon = connector.Icon
 			case meergo.FileInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = File
-				c.Role = Both
-				if ct.Implements(uiHandlerType) {
-					c.HasSourceSettings = connector.HasSettings == meergo.Source || connector.HasSettings == meergo.Both
-					c.HasDestinationSettings = connector.HasSettings == meergo.Destination || connector.HasSettings == meergo.Both
+				if connector.AsSource != nil {
+					c.HasSourceSettings = connector.AsSource.HasSettings
+					c.SourceTargets = UsersFlag
+				}
+				if connector.AsDestination != nil {
+					c.HasDestinationSettings = connector.AsDestination.HasSettings
+					c.DestinationTargets = UsersFlag
 				}
 				c.FileExtension = connector.Extension
 				c.TimeLayouts = TimeLayouts(connector.TimeLayouts)
 				c.Icon = connector.Icon
-				c.HasSheets = ct.Implements(sheetsType)
+				c.HasSheets = connector.HasSheets
 			case meergo.FileStorageInfo:
 				c.Name = connector.Name
 				c.Type = FileStorage
-				c.Role = Both
-				c.HasSourceSettings = true
-				c.HasDestinationSettings = true
-				c.Targets = UsersFlag
+				if connector.AsSource {
+					// It is assumed that, if a FileStorage connector can be
+					// used as a source, it always have source settings.
+					c.HasSourceSettings = true
+					c.SourceTargets = UsersFlag
+				}
+				if connector.AsDestination {
+					// It is assumed that, if a FileStorage connector can be
+					// used as a destination, it always have destination
+					// settings.
+					c.HasDestinationSettings = true
+					c.DestinationTargets = UsersFlag
+				}
 				c.Icon = connector.Icon
-				ct = connector.ReflectType()
 			case meergo.MobileInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Mobile
-				c.Role = Source
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
-				c.Targets = EventsFlag | UsersFlag
+				c.SourceTargets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 			case meergo.ServerInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Server
-				c.Role = Source
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
-				c.Targets = EventsFlag | UsersFlag
+				c.SourceTargets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 			case meergo.StreamInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Stream
-				c.Role = Both
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
-				c.Targets = EventsFlag
+				c.SourceTargets = EventsFlag
+				// It is assumed that a stream connector always have settings.
 				c.HasSourceSettings = true
 				c.HasDestinationSettings = true
 				c.Icon = connector.Icon
 			case meergo.WebsiteInfo:
-				ct = connector.ReflectType()
 				c.Name = connector.Name
 				c.Type = Website
-				c.Role = Source
 				c.SourceDescription = connector.SourceDescription
 				c.DestinationDescription = connector.DestinationDescription
 				c.TermForUsers = "users"
 				c.TermForGroups = "groups"
-				c.Targets = EventsFlag | UsersFlag
+				c.SourceTargets = EventsFlag | UsersFlag
 				c.Icon = connector.Icon
 			}
 			state.connectors[name] = &c

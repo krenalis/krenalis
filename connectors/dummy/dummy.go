@@ -30,25 +30,22 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents, AppRecords, and UIHandler interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppEvents
-	meergo.UIHandler
-	meergo.AppRecords
-} = (*Dummy)(nil)
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Dummy",
-		Targets:                meergo.Events | meergo.Users,
-		SourceDescription:      "Import users from Dummy",
-		DestinationDescription: "Export users and send events to Dummy",
-		HasSettings:            meergo.Destination,
-		TermForUsers:           "users",
-		IdentityIDLabel:        "Dummy Unique ID",
-		Icon:                   icon,
-		SendingMode:            meergo.Combined,
+		Name: "Dummy",
+		AsSource: &meergo.AsAppSource{
+			Description: "Import users from Dummy",
+			Targets:     meergo.Users,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Export users and send events to Dummy",
+			Targets:     meergo.Events | meergo.Users,
+			SendingMode: meergo.Combined,
+			HasSettings: true,
+		},
+		TermForUsers:    "users",
+		IdentityIDLabel: "Dummy Unique ID",
+		Icon:            icon,
 	}, New)
 }
 

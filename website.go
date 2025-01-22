@@ -29,9 +29,9 @@ func (info WebsiteInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new website connector instance.
-func (info WebsiteInfo) New(conf *WebsiteConfig) (Website, error) {
+func (info WebsiteInfo) New(conf *WebsiteConfig) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(Website)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -44,7 +44,4 @@ type WebsiteConfig struct {
 
 // WebsiteNewFunc represents functions that create new website connector
 // instances.
-type WebsiteNewFunc[T Website] func(*WebsiteConfig) (T, error)
-
-// Website is the interface implemented by website connectors.
-type Website interface{}
+type WebsiteNewFunc[T any] func(*WebsiteConfig) (T, error)

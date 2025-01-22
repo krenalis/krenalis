@@ -1101,7 +1101,7 @@ const computeDefaultAction = (
 		outSchema: null,
 	};
 	if (fields.includes('Query')) {
-		action.query = connection.connector.source.sampleQuery;
+		action.query = connection.connector.asSource.sampleQuery;
 		action.identityProperty = '';
 		action.lastChangeTimeProperty = '';
 		action.lastChangeTimeFormat = '';

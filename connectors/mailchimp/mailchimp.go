@@ -33,25 +33,22 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppOAuth, AppRecords, UI, and Webhooks
-// interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppOAuth
-	meergo.AppRecords
-	meergo.UIHandler
-	meergo.Webhooks
-} = (*MailChimp)(nil)
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Mailchimp",
-		Targets:                meergo.Users,
-		SourceDescription:      "Import contacts as users from Mailchimp",
-		DestinationDescription: "Export users as contacts to Mailchimp",
-		TermForUsers:           "contacts",
-		Icon:                   icon,
-		WebhooksPer:            meergo.WebhooksPerConnection,
+		Name: "Mailchimp",
+		AsSource: &meergo.AsAppSource{
+			Description: "Import contacts as users from Mailchimp",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Export users as contacts to Mailchimp",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		TermForUsers: "contacts",
+		Icon:         icon,
+		WebhooksPer:  meergo.WebhooksPerConnection,
 		OAuth: meergo.OAuth{
 			AuthURL:   "https://login.mailchimp.com/oauth2/authorize?response_type=code",
 			TokenURL:  "https://login.mailchimp.com/oauth2/token",

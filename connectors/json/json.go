@@ -25,17 +25,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File and UIHandler interfaces.
-var _ interface {
-	meergo.File
-	meergo.UIHandler
-} = (*JSON)(nil)
-
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name:      "JSON",
-		Icon:      icon,
+		Name: "JSON",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
 		Extension: "json",
+		Icon:      icon,
 	}, New)
 }
 

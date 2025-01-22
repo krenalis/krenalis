@@ -34,12 +34,6 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Database and UIHandler interfaces.
-var _ interface {
-	meergo.Database
-	meergo.UIHandler
-} = (*PostgreSQL)(nil)
-
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",

@@ -8,7 +8,6 @@
 package meergo
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -31,23 +30,6 @@ func (err *InvalidSettingsError) Error() string {
 
 func NewInvalidsettingsError(msg string) error {
 	return &InvalidSettingsError{msg}
-}
-
-// UIHandler is implemented by connectors that have a UI.
-type UIHandler interface {
-
-	// ServeUI serves the connector's user interface. event is the event to be
-	// served, settings are the connector's settings, and role is the
-	// connection's role, it can be Source or Destination.
-	//
-	// The first time ServeUI is called to display the UI, event is "load" and
-	// settings is nil. The connector saves the settings only when serving the
-	// "save" event; for other events, it returns an updated interface without
-	// saving the settings.
-	//
-	// If event does not exist, it returns an ErrUIEventNotExist.
-	// If the settings are invalid, it returns an InvalidSettingsError error.
-	ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 }
 
 // UI represents the user interface of a connector that is shown to users.

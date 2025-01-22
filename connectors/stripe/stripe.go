@@ -35,14 +35,6 @@ const maxEventPayload = 1024 * 1024
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppRecords, UI, and Webhooks interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppRecords
-	meergo.UIHandler
-	meergo.Webhooks
-} = (*Stripe)(nil)
-
 var baseURL = "https://api.stripe.com"
 
 type webhookSettings struct {
@@ -62,11 +54,18 @@ type Stripe struct {
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Stripe",
-		Targets:                meergo.Users,
-		SourceDescription:      "Import customers as users",
-		DestinationDescription: "Export users as customers",
-		TermForUsers:           "customers",
+		Name: "Stripe",
+		AsSource: &meergo.AsAppSource{
+			Description: "Import customers as users",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Export users as customers",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		TermForUsers: "customers",
 		BackoffPolicy: meergo.BackoffPolicy{
 			// https://docs.stripe.com/api/errors
 			"429 500 502 503 504": meergo.ExponentialStrategy(200 * time.Millisecond),

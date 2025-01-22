@@ -26,12 +26,6 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the Stream and the UIHandler interfaces.
-var _ interface {
-	meergo.Stream
-	meergo.UIHandler
-} = (*RabbitMQ)(nil)
-
 func init() {
 	meergo.RegisterStream(meergo.StreamInfo{
 		Name: "RabbitMQ",

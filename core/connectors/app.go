@@ -36,21 +36,80 @@ type App struct {
 	httpClient  *httpclient.Client
 	users       schema
 	targets     state.ConnectorTargets
-	inner       meergo.App
+	inner       any
 	err         error
+}
+
+type appSchemaConnector interface {
+	// Schema returns the schema of the specified target in the specified role. For
+	// Users or Groups, role can be Source or Destination, and it returns their
+	// respective schemas. For Events, role is Destination, and it returns the
+	// schema of the specified event type.
+	//
+	// For events, the returned schema describes properties required by the
+	// connector to dispatch an event of this type. Actions based on the specified
+	// event type will have a transformation that, given the received event,
+	// provides the properties required by the connector. These properties, along
+	// with the received event, are passed to the connector's EventRequest method.
+	//
+	// If no extra information is needed for the event type, the returned schema is
+	// the invalid schema. If the event type does not exist, it returns the
+	// ErrEventTypeNotExist error.
+	Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error)
+}
+
+type appRecordsConnector = appwriter.AppRecordsConnector
+
+type appEventsConnector interface {
+	// EventRequest returns a request to dispatch an event to the app. event is the
+	// event to dispatch, eventType is the type of event to dispatch, schema is its
+	// schema, properties are the property values conforming to the schema, and
+	// redacted indicates whether authentication data must be redacted in the
+	// returned request.
+	//
+	// If the event type does not have a schema, schema is the invalid schema and
+	// properties is nil.
+	//
+	// This method is safe for concurrent use by multiple goroutines. If the
+	// specified event type does not exist, it returns the ErrEventTypeNotExist
+	// error.
+	EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error)
+
+	// EventTypes returns the event types of the connector's instance.
+	EventTypes(ctx context.Context) ([]*EventType, error)
+}
+
+type webhookConnector interface {
+	// ReceiveWebhook receives a webhook request and returns its payloads. If
+	// webhooks are per connection, role is the connection's role, otherwise is
+	// Both. It returns the ErrWebhookUnauthorized error is the request was not
+	// authorized. The context is the request's context.
+	ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo.WebhookPayload, error)
+}
+
+type appOAuthConnector interface {
+	// OAuthAccount returns the app's account associated with the OAuth
+	// authorization.
+	OAuthAccount(ctx context.Context) (string, error)
 }
 
 // App returns an app for the provided connection. Errors are deferred until an
 // app's method is called. It panics if connection is not an app connection.
 func (connectors *Connectors) App(connection *state.Connection) *App {
 	connector := connection.Connector()
+	var targets state.ConnectorTargets
+	if connection.Role == state.Source {
+		targets = connector.SourceTargets
+	} else {
+		targets = connector.DestinationTargets
+	}
 	app := &App{
 		name:        connector.Name,
 		role:        connection.Role,
 		timeLayouts: &connector.TimeLayouts,
 		httpClient:  connectors.http.ConnectionClient(connection.ID),
 		users:       schema{lock: make(chan struct{}, 1)},
-		targets:     connector.Targets,
+		targets:     targets,
 	}
 	var accountID int
 	var accountCode string
@@ -88,11 +147,7 @@ func (app *App) EventRequest(ctx context.Context, event Event, eventType string,
 	if app.err != nil {
 		return nil, app.err
 	}
-	appEvents, ok := app.inner.(meergo.AppEvents)
-	if !ok {
-		panic("app does not support the Events target")
-	}
-	eventTypeSchema, err := app.inner.Schema(ctx, meergo.Events, meergo.Destination, eventType)
+	eventTypeSchema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Destination, eventType)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -108,7 +163,7 @@ func (app *App) EventRequest(ctx context.Context, event Event, eventType string,
 		properties = map[string]any{}
 	}
 	// Return the event request.
-	request, err := appEvents.EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
+	request, err := app.inner.(appEventsConnector).EventRequest(ctx, event, eventType, eventTypeSchema, properties, redacted)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -122,7 +177,7 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypes, err := app.inner.(meergo.AppEvents).EventTypes(ctx)
+	eventTypes, err := app.inner.(appEventsConnector).EventTypes(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -157,7 +212,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	}
 	switch target {
 	case state.Events:
-		schema, err := app.inner.Schema(ctx, meergo.Events, meergo.Role(role), eventType)
+		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Role(role), eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -169,7 +224,7 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 		}
 		return schema, nil
 	case state.Groups:
-		schema, err := app.inner.Schema(ctx, meergo.Groups, meergo.Role(role), "")
+		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Groups, meergo.Role(role), "")
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -268,7 +323,7 @@ func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (
 	writer := appwriter.New(
 		appwriter.AckFunc(ack),
 		meergo.Targets(action.Target),
-		app.inner.(meergo.AppRecords),
+		app.inner.(appwriter.AppWriterType),
 		app.name)
 	return writer, nil
 }
@@ -291,7 +346,7 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if schema := app.users.schemas[role-1]; schema.Valid() {
 		return schema, nil
 	}
-	schema, err := app.inner.Schema(ctx, meergo.Users, meergo.Role(role), "")
+	schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Users, meergo.Role(role), "")
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
@@ -372,7 +427,7 @@ type appRecords struct {
 	timeLayouts    *state.TimeLayouts
 	lastChangeTime time.Time
 	appName        string
-	inner          meergo.App
+	inner          any
 	last           bool
 	err            error
 	closed         bool
@@ -400,7 +455,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(meergo.AppRecords).Records(ctx, meergo.Users, r.appSchema, r.lastChangeTime, nil, names, cursor)
+			users, cursor, err = r.inner.(appRecordsConnector).Records(ctx, meergo.Users, r.appSchema, r.lastChangeTime, nil, names, cursor)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

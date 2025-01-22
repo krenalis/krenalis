@@ -27,18 +27,16 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File, Sheets, and UIHandler interfaces.
-var _ interface {
-	meergo.File
-	meergo.Sheets
-	meergo.UIHandler
-} = (*Excel)(nil)
-
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
-		Name:      "Excel",
-		Icon:      icon,
-		Extension: "xlsx",
+		Name: "Excel",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{},
+		HasSheets:     true,
+		Extension:     "xlsx",
+		Icon:          icon,
 	}, New)
 }
 

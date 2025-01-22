@@ -14,10 +14,38 @@ import (
 	"github.com/meergo/meergo/core/state"
 )
 
+// Stream is the interface implemented by stream connectors.
+// A Stream value can be used for sending or receiving but not both.
+type streamConnector interface {
+
+	// Close closes the stream. When Close is called, no other calls to the
+	// connector's methods are in progress and no more will be made.
+	Close() error
+
+	// Receive receives an event from the stream. Callers call the ack function to
+	// notify that the event has been received. The connector resends the event if
+	// not acknowledged.
+	//
+	// Caller do not modify the event data, even temporarily, and event is not
+	// retained after the ack function has been called.
+	//
+	// Receive can be used by multiple goroutines at the same time.
+	Receive(ctx context.Context) (event []byte, ack func(), err error)
+
+	// Send sends an event to the stream. If ack is not nil, connector calls ack
+	// when the event has been stored or when an error occurred.
+	//
+	// Send can modify the event data, but event is not retained after the ack
+	// function has been called.
+	//
+	// Send can be used by multiple goroutines at the same time.
+	Send(ctx context.Context, event []byte, options meergo.SendOptions, ack func(err error)) error
+}
+
 // Stream represents the stream of a stream connection.
 type Stream struct {
 	closed bool
-	inner  meergo.Stream
+	inner  streamConnector
 }
 
 // Stream returns a stream for the provided connection. It panics if connection
@@ -27,14 +55,14 @@ type Stream struct {
 // longer needed.
 func (connectors *Connectors) Stream(connection *state.Connection) (*Stream, error) {
 	stream := &Stream{}
-	var err error
-	stream.inner, err = meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamConfig{
+	inner, err := meergo.RegisteredStream(connection.Connector().Name).New(&meergo.StreamConfig{
 		Settings:    connection.Settings,
 		SetSettings: setConnectionSettingsFunc(connectors.state, connection),
 	})
 	if err != nil {
 		return nil, err
 	}
+	stream.inner = inner.(streamConnector)
 	return stream, nil
 }
 

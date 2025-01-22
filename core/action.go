@@ -363,8 +363,18 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	v := validationState{}
 	v.connection.role = c.Role
 	v.connection.connector.typ = c.Connector().Type
+	if c.Role == state.Source {
+		v.connection.connector.targets = c.Connector().SourceTargets
+	} else {
+		v.connection.connector.targets = c.Connector().DestinationTargets
+	}
 	if format != nil {
 		v.format.typ = format.Type
+		if c.Role == state.Source {
+			v.format.targets = format.SourceTargets
+		} else {
+			v.format.targets = format.DestinationTargets
+		}
 		v.format.hasSheets = format.HasSheets
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}

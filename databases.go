@@ -8,7 +8,6 @@
 package meergo
 
 import (
-	"context"
 	"reflect"
 
 	"github.com/meergo/meergo/types"
@@ -32,9 +31,9 @@ func (info DatabaseInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new database connector instance.
-func (info DatabaseInfo) New(conf *DatabaseConfig) (Database, error) {
+func (info DatabaseInfo) New(conf *DatabaseConfig) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(Database)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -47,47 +46,7 @@ type DatabaseConfig struct {
 
 // DatabaseNewFunc represents functions that create new database connector
 // instances.
-type DatabaseNewFunc[T Database] func(*DatabaseConfig) (T, error)
-
-// Database is the interface implemented by database connectors.
-type Database interface {
-
-	// Close closes the database. When Close is called, no other calls to
-	// connector's methods are in progress and no more will be made.
-	Close() error
-
-	// Columns returns the columns of the given table.
-	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
-	// error.
-	Columns(ctx context.Context, table string) ([]Column, error)
-
-	// LastChangeTimeCondition returns the query condition used for the
-	// last_change_time placeholder in the form "column >= value" or, if column is
-	// empty, a true value.
-	//
-	// column, if not empty, is the name of the column, typ is its type (can be
-	// DateTime, Date, JSON, or Text), and value is the value for the condition:
-	//
-	//   - for DateTime and Date types, it is a time.Time value.
-	//   - for JSON and Text types, it is a string value.
-	//
-	// For example, it could return `"updated_at" >= '2024-06-18 16:12:25'` or
-	// `TRUE`.
-	LastChangeTimeCondition(column string, typ types.Type, value any) string
-
-	// Merge performs batch insert and update operations on the specified table,
-	// basing on the table keys. rows contains the rows to be inserted or updated;
-	// rows with matching table keys are updated, while new rows are inserted.
-	//
-	// Some connectors may check that the table keys actually match the primary keys
-	// of the table, returning an error if they do not.
-	Merge(ctx context.Context, table Table, rows [][]any) error
-
-	// Query executes the given query and returns the resulting rows and columns.
-	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
-	// error.
-	Query(ctx context.Context, query string) (Rows, []Column, error)
-}
+type DatabaseNewFunc[T any] func(*DatabaseConfig) (T, error)
 
 // Table represents a database table.
 type Table struct {

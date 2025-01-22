@@ -341,17 +341,19 @@ func (core *Core) Connector(name string) (*Connector, error) {
 		TermForGroups:   c.TermForGroups,
 		Icon:            c.Icon,
 	}
-	if c.Role == state.Source || c.Role == state.Both {
-		connector.Source = &SourceConnector{
+	if c.SourceTargets != 0 {
+		connector.AsSource = &SourceConnector{
 			Description: c.SourceDescription,
+			Targets:     stateToCoreTargets(c.SourceTargets),
 			HasSettings: c.HasSourceSettings,
 			SampleQuery: c.SampleQuery,
 			WebhooksPer: WebhooksPer(c.WebhooksPer),
 		}
 	}
-	if c.Role == state.Destination || c.Role == state.Both {
-		connector.Destination = &DestinationConnector{
+	if c.DestinationTargets != 0 {
+		connector.AsDestination = &DestinationConnector{
 			Description: c.DestinationDescription,
+			Targets:     stateToCoreTargets(c.DestinationTargets),
 			HasSettings: c.HasDestinationSettings,
 			SendingMode: (*SendingMode)(c.SendingMode),
 		}
@@ -362,17 +364,6 @@ func (core *Core) Connector(name string) (*Connector, error) {
 	if connector.TermForGroups == "" {
 		connector.TermForGroups = "groups"
 	}
-	targets := []Target{}
-	if c.Targets.Contains(state.Users) {
-		targets = append(targets, Users)
-	}
-	if c.Targets.Contains(state.Groups) {
-		targets = append(targets, Groups)
-	}
-	if c.Targets.Contains(state.Events) {
-		targets = append(targets, Events)
-	}
-	connector.Targets = targets
 	return &connector, nil
 }
 
@@ -395,17 +386,19 @@ func (core *Core) Connectors() []*Connector {
 			TermForGroups:   c.TermForGroups,
 			Icon:            c.Icon,
 		}
-		if c.Role == state.Source || c.Role == state.Both {
-			connector.Source = &SourceConnector{
+		if c.SourceTargets != 0 {
+			connector.AsSource = &SourceConnector{
 				Description: c.SourceDescription,
+				Targets:     stateToCoreTargets(c.SourceTargets),
 				HasSettings: c.HasSourceSettings,
 				SampleQuery: c.SampleQuery,
 				WebhooksPer: WebhooksPer(c.WebhooksPer),
 			}
 		}
-		if c.Role == state.Destination || c.Role == state.Both {
-			connector.Destination = &DestinationConnector{
+		if c.DestinationTargets != 0 {
+			connector.AsDestination = &DestinationConnector{
 				Description: c.DestinationDescription,
+				Targets:     stateToCoreTargets(c.DestinationTargets),
 				HasSettings: c.HasDestinationSettings,
 				SendingMode: (*SendingMode)(c.SendingMode),
 			}
@@ -416,17 +409,6 @@ func (core *Core) Connectors() []*Connector {
 		if connector.TermForGroups == "" {
 			connector.TermForGroups = "groups"
 		}
-		targets := []Target{}
-		if c.Targets.Contains(state.Users) {
-			targets = append(targets, Users)
-		}
-		if c.Targets.Contains(state.Groups) {
-			targets = append(targets, Groups)
-		}
-		if c.Targets.Contains(state.Events) {
-			targets = append(targets, Events)
-		}
-		connector.Targets = targets
 		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {
@@ -833,6 +815,20 @@ func isValidInvitationToken(token string) bool {
 	}
 	_, err := base64.URLEncoding.DecodeString(token)
 	return err == nil
+}
+
+func stateToCoreTargets(targets state.ConnectorTargets) []Target {
+	ts := []Target{}
+	if targets.Contains(state.Users) {
+		ts = append(ts, Users)
+	}
+	if targets.Contains(state.Groups) {
+		ts = append(ts, Groups)
+	}
+	if targets.Contains(state.Events) {
+		ts = append(ts, Events)
+	}
+	return ts
 }
 
 // validateStringField validates a string field identified by the provided name.

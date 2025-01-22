@@ -8,7 +8,6 @@
 package meergo
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"iter"
@@ -17,7 +16,6 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/decimal"
-	"github.com/meergo/meergo/types"
 )
 
 // ErrEventTypeNotExist is returned by the Schema method if the event type does
@@ -49,24 +47,37 @@ const (
 
 // AppInfo represents an app connector info.
 type AppInfo struct {
-	Name                   string
-	Targets                Targets
-	Role                   Role // role, can be Both, Source, or Destination.
-	SourceDescription      string
-	DestinationDescription string
-	HasSettings            Role // specifies whether the connection has settings when used as data source, a destination, or both.
-	TermForUsers           string
-	TermForGroups          string
-	IdentityIDLabel        string
-	WebhooksPer            WebhooksPer   // indicates if webhooks are per account, connection, or connector.
-	OAuth                  OAuth         // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
-	BackoffPolicy          BackoffPolicy // backoff policy. It controls retry timing using provided strategies or custom ones.
-	SendingMode            SendingMode   // mode of event sending. None for sources and non-supporting event apps.
-	TimeLayouts            TimeLayouts   // layouts for time values. If left empty, it is ISO 8601.
-	Icon                   string        // icon in SVG format.
+	Name            string
+	AsSource        *AsAppSource
+	AsDestination   *AsAppDestination
+	TermForUsers    string
+	TermForGroups   string
+	IdentityIDLabel string
+	WebhooksPer     WebhooksPer   // indicates if webhooks are per account, connection, or connector.
+	OAuth           OAuth         // OAuth 2.0 configuration. If the URL is empty the connector does not support OAuth 2.0.
+	BackoffPolicy   BackoffPolicy // backoff policy. It controls retry timing using provided strategies or custom ones.
+	TimeLayouts     TimeLayouts   // layouts for time values. If left empty, it is ISO 8601.
+	Icon            string        // icon in SVG format.
 
 	newFunc reflect.Value
 	ct      reflect.Type
+}
+
+// AsAppSource represents the specific information of an app connector used as a
+// source.
+type AsAppSource struct {
+	Description string
+	Targets     Targets
+	HasSettings bool
+}
+
+// AsAppDestination represents the specific information of an app connector used
+// as a destination.
+type AsAppDestination struct {
+	Description string
+	Targets     Targets
+	HasSettings bool
+	SendingMode SendingMode // mode of event sending. 'None' for sources and non-supporting event apps.
 }
 
 // OAuth represents the OAuth 2.0 connector information.
@@ -97,9 +108,9 @@ func (app AppInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new app connector instance.
-func (app AppInfo) New(conf *AppConfig) (App, error) {
+func (app AppInfo) New(conf *AppConfig) (any, error) {
 	out := app.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(App)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -114,30 +125,7 @@ type AppConfig struct {
 }
 
 // AppNewFunc represents functions that create new app connector instances.
-type AppNewFunc[T App] func(*AppConfig) (T, error)
-
-// App is the interface implemented by app connectors.
-//
-// An app connector can also implement the AppEvents, AppOAuth, AppRecords, and
-// Webhooks interfaces.
-type App interface {
-
-	// Schema returns the schema of the specified target in the specified role. For
-	// Users or Groups, role can be Source or Destination, and it returns their
-	// respective schemas. For Events, role is Destination, and it returns the
-	// schema of the specified event type.
-	//
-	// For events, the returned schema describes properties required by the
-	// connector to dispatch an event of this type. Actions based on the specified
-	// event type will have a transformation that, given the received event,
-	// provides the properties required by the connector. These properties, along
-	// with the received event, are passed to the connector's EventRequest method.
-	//
-	// If no extra information is needed for the event type, the returned schema is
-	// the invalid schema. If the event type does not exist, it returns the
-	// ErrEventTypeNotExist error.
-	Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
-}
+type AppNewFunc[T any] func(*AppConfig) (T, error)
 
 // EventRequest represents an event request.
 type EventRequest struct {
@@ -154,38 +142,6 @@ type EventType struct {
 	ID          string // identifier; must be unique for each event type
 	Name        string // name to be displayed
 	Description string // description to be displayed
-}
-
-// AppEvents is the interface implemented by app connectors to which events can
-// be sent.
-type AppEvents interface {
-	App
-
-	// EventRequest returns a request to dispatch an event to the app. event is the
-	// event to dispatch, eventType is the type of event to dispatch, schema is its
-	// schema, properties are the property values conforming to the schema, and
-	// redacted indicates whether authentication data must be redacted in the
-	// returned request.
-	//
-	// If the event type does not have a schema, schema is the invalid schema and
-	// properties is nil.
-	//
-	// This method is safe for concurrent use by multiple goroutines. If the
-	// specified event type does not exist, it returns the ErrEventTypeNotExist
-	// error.
-	EventRequest(ctx context.Context, event Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*EventRequest, error)
-
-	// EventTypes returns the event types of the connector's instance.
-	EventTypes(ctx context.Context) ([]*EventType, error)
-}
-
-// AppOAuth is the interface implemented by apps that support OAuth.
-type AppOAuth interface {
-	App
-
-	// OAuthAccount returns the app's account associated with the OAuth
-	// authorization.
-	OAuthAccount(ctx context.Context) (string, error)
 }
 
 // Record represents an app record.
@@ -205,47 +161,6 @@ type Record struct {
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
 	Err error
-}
-
-// AppRecords is the interface implemented by app connectors that manage users,
-// groups, or both. The target parameter is Users or Groups depending on the
-// connector supported targets.
-type AppRecords interface {
-	App
-
-	// Records returns the records of the specified target. The target can only be
-	// either Users or Groups, and it must be a target supported by the connector.
-	// Schema is the expected schema of the returned records.
-	//
-	// If lastChangeTime is not the zero time, only the records changed or created
-	// at or after that time will be returned, and its precision is limited to
-	// microseconds. If ids is not nil, only records with identifiers in ids will be
-	// returned, if any. properties are the names of the properties to read, and
-	// cursor represents the position from which to start reading the records; it is
-	// the cursor value returned by the previous call in a paginated query.
-	// Subsequent calls will use this cursor value to retrieve the next batch of
-	// records.
-	//
-	// The properties returned in records may include more than those requested and
-	// must conform to the schema returned by the Schema method. The string return
-	// value is used as the cursor in the subsequent call. It can be any UTF-8
-	// encoded string, including an empty string. If there are no more records to
-	// return, the method returns the last records read (if any) along with the
-	// io.EOF error.
-	Records(ctx context.Context, target Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
-
-	// Upsert updates or creates records in the app for the specified target.
-	//
-	// Upsert is expected to make a single call to the app per invocation.
-	// It processes one or more records, depending on the app's API capabilities.
-	// The caller will need to make successive calls for any unread records.
-	//
-	// If it returns an error, all read records are considered failed. If it returns
-	// a RecordsError value, only the records with indices as keys in the error
-	// value are considered failed, along with the respective error. All read
-	// records, whether failed or not, will no longer be available in successive
-	// invocations of the same export.
-	Upsert(ctx context.Context, target Targets, records Records) error
 }
 
 // RecordsError is returned by the AppRecords.Upsert method when only some
@@ -293,18 +208,6 @@ type Records interface {
 	// index. Skip may only be called during iterations from All or Same, and only
 	// if the record's properties have not been modified.
 	Skip()
-}
-
-// Webhooks is the interface implemented by app connectors that can receive
-// webhooks.
-type Webhooks interface {
-	App
-
-	// ReceiveWebhook receives a webhook request and returns its payloads. If
-	// webhooks are per connection, role is the connection's role, otherwise is
-	// Both. It returns the ErrWebhookUnauthorized error is the request was not
-	// authorized. The context is the request's context.
-	ReceiveWebhook(r *http.Request, role Role) ([]WebhookPayload, error)
 }
 
 // Event represents an event.

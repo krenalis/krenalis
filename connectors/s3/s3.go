@@ -30,16 +30,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileStorage and the UIHandler interfaces.
-var _ interface {
-	meergo.FileStorage
-	meergo.UIHandler
-} = (*S3)(nil)
-
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name: "S3",
-		Icon: icon,
+		Name:          "S3",
+		AsSource:      true,
+		AsDestination: true,
+		Icon:          icon,
 	}, New)
 }
 

@@ -9,9 +9,8 @@ type ConnectorTarget = 'Events' | 'Users' | 'Groups';
 interface Connector {
 	name: string;
 	type: ConnectorType;
-	source: SourceConnector | null;
-	destination: DestinationConnector | null;
-	targets: ConnectorTarget[];
+	asSource: SourceConnector | null;
+	asDestination: DestinationConnector | null;
 	identityIDLabel: string;
 	hasSheets: boolean;
 	fileExtension: string;
@@ -23,6 +22,7 @@ interface Connector {
 
 interface SourceConnector {
 	description: string;
+	targets: ConnectorTarget[];
 	hasSettings: boolean;
 	sampleQuery: string;
 	WebhooksPer: WebhooksPer;
@@ -30,6 +30,7 @@ interface SourceConnector {
 
 interface DestinationConnector {
 	description: string;
+	targets: ConnectorTarget[];
 	hasSettings: boolean;
 	sendingMode: SendingMode | null;
 }

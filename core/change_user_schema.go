@@ -141,7 +141,7 @@ func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, 
 		if source.Role != state.Source {
 			return errors.BadRequest("primary source %d is not a source connection", s)
 		}
-		if !source.Connector().Targets.Contains(state.Users) {
+		if !source.Connector().SourceTargets.Contains(state.Users) {
 			return errors.BadRequest("primary source %d does not support Users target", s)
 		}
 	}

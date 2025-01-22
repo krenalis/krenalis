@@ -27,13 +27,19 @@ func init() {
 			Description: "The type of connector.",
 		},
 		{
-			Name: "source",
+			Name: "asSource",
 			Type: types.Object([]types.Property{
 				{
 					Name:        "description",
 					Type:        types.Text(),
 					Placeholder: `"import contacts as users and companies as groups from HubSpot"`,
 					Description: `A brief description of the connector when it is used as a source.`,
+				},
+				{
+					Name:        "targets",
+					Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
+					Placeholder: `[ "Users", "Groups" ]`,
+					Description: "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`",
 				},
 				{
 					Name:        "hasSettings",
@@ -60,13 +66,19 @@ func init() {
 			Description: `The characteristics of the connector when it is used as a data source. This will be null if the connector cannot function as a data source.`,
 		},
 		{
-			Name: "destination",
+			Name: "asDestination",
 			Type: types.Object([]types.Property{
 				{
 					Name:        "description",
 					Type:        types.Text(),
 					Placeholder: `"export users as contacts and groups as companies to HubSpot"`,
 					Description: `A brief description of the connector when it is used as a destination.`,
+				},
+				{
+					Name:        "targets",
+					Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
+					Placeholder: `[ "Users", "Groups" ]`,
+					Description: "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`",
 				},
 				{
 					Name:        "hasSettings",
@@ -99,13 +111,6 @@ func init() {
 			Placeholder: `"companies"`,
 			Description: `The term used by an app to indicate the groups. For example "organizations", "teams", or "groups".` +
 				"\n\nIt will be empty if the connector is not an app or if the app does not handle groups.",
-		},
-		{
-			Name:        "targets",
-			Type:        types.Array(types.Text().WithValues("Events", "Users", "Groups")),
-			Placeholder: `[ "Users", "Groups" ]`,
-			Description: "The targets supported by the app connector. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`.\n\n" +
-				"It will be empty if the connector is not an app.",
 		},
 		{
 			Name:        "hasSheets",

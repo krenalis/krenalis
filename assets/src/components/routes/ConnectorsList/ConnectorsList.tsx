@@ -53,8 +53,8 @@ const ConnectorsList = () => {
 	const connectorsCards = [];
 	for (const c of connectors) {
 		if (
-			(connectionRole === 'Source' && c.source == null) ||
-			(connectionRole === 'Destination' && c.destination == null)
+			(connectionRole === 'Source' && c.asSource == null) ||
+			(connectionRole === 'Destination' && c.asDestination == null)
 		) {
 			continue;
 		}
@@ -66,7 +66,7 @@ const ConnectorsList = () => {
 					name={c.name}
 					icon={c.icon}
 					type={c.type}
-					description={connectionRole === 'Source' ? c.source.description : c.destination.description}
+					description={connectionRole === 'Source' ? c.asSource.description : c.asDestination.description}
 				>
 					<SlTooltip content={`Add ${c.name}`}>
 						<Link

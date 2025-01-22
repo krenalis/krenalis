@@ -34,16 +34,12 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the FileStorage and the UIHandler interfaces.
-var _ interface {
-	meergo.FileStorage
-	meergo.UIHandler
-} = (*SFTP)(nil)
-
 func init() {
 	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name: "SFTP",
-		Icon: icon,
+		Name:          "SFTP",
+		AsSource:      true,
+		AsDestination: true,
+		Icon:          icon,
 	}, New)
 }
 

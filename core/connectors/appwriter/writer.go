@@ -12,8 +12,10 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/types"
 )
 
 const assert = true // enable during development for assertions
@@ -24,6 +26,54 @@ type AckFunc func(ids []string, err error)
 const maxAvailable = 1000
 const dontConsume = -1
 
+// AppRecordsConnector is a convenience interface used by this package, and it
+// is exported because it is also referenced above, within 'core/connectors'.
+
+type AppRecordsConnector interface {
+	// Records returns the records of the specified target. The target can only be
+	// either Users or Groups, and it must be a target supported by the connector.
+	// Schema is the expected schema of the returned records.
+	//
+	// If lastChangeTime is not the zero time, only the records changed or created
+	// at or after that time will be returned, and its precision is limited to
+	// microseconds. If ids is not nil, only records with identifiers in ids will be
+	// returned, if any. properties are the names of the properties to read, and
+	// cursor represents the position from which to start reading the records; it is
+	// the cursor value returned by the previous call in a paginated query.
+	// Subsequent calls will use this cursor value to retrieve the next batch of
+	// records.
+	//
+	// The properties returned in records may include more than those requested and
+	// must conform to the schema returned by the Schema method. The string return
+	// value is used as the cursor in the subsequent call. It can be any UTF-8
+	// encoded string, including an empty string. If there are no more records to
+	// return, the method returns the last records read (if any) along with the
+	// io.EOF error.
+	Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
+}
+
+type appUpsertType interface {
+	// Upsert updates or creates records in the app for the specified target.
+	//
+	// Upsert is expected to make a single call to the app per invocation.
+	// It processes one or more records, depending on the app's API capabilities.
+	// The caller will need to make successive calls for any unread records.
+	//
+	// If it returns an error, all read records are considered failed. If it returns
+	// a RecordsError value, only the records with indices as keys in the error
+	// value are considered failed, along with the respective error. All read
+	// records, whether failed or not, will no longer be available in successive
+	// invocations of the same export.
+	Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error
+}
+
+// AppWriterType is a convenience interface used by this package, and it is
+// exported because it is also referenced above, within 'core/connectors'.
+type AppWriterType interface {
+	AppRecordsConnector
+	appUpsertType
+}
+
 // Writer represents a writer for app records.
 // It implements the connectors.Writer interface.
 //
@@ -32,10 +82,10 @@ const dontConsume = -1
 // called for confirmation. To ensure that all records are successfully sent to
 // the app, the Close method must be called after all writes.
 type Writer struct {
-	target meergo.Targets    // target, can be Users or Groups
-	app    meergo.AppRecords // app connector
-	name   string            // name of the app connector
-	ack    AckFunc           // ack function
+	target meergo.Targets // target, can be Users or Groups
+	app    AppWriterType  // app connector
+	name   string         // name of the app connector
+	ack    AckFunc        // ack function
 
 	mu        sync.Mutex // mutex for consumer, records, index, and available fields
 	consumer  *consumer  // current consumer, if any; protected by mu
@@ -62,7 +112,7 @@ type record struct {
 
 // New returns a new writer for the provided target and app. name is the
 // name of the app connector.
-func New(ack AckFunc, target meergo.Targets, app meergo.AppRecords, name string) *Writer {
+func New(ack AckFunc, target meergo.Targets, app AppWriterType, name string) *Writer {
 	w := &Writer{
 		target:  target,
 		app:     app,

@@ -8,11 +8,8 @@
 package meergo
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"reflect"
-	"time"
 )
 
 // An InvalidPathError value is returned by FileStorage.CompletePath when the
@@ -33,11 +30,12 @@ func (err *InvalidPathError) Error() string {
 
 // FileStorageInfo represents a file storage connector info.
 type FileStorageInfo struct {
-	Name string
-	Icon string // icon in SVG format
-
-	newFunc reflect.Value
-	ct      reflect.Type
+	Name          string
+	AsSource      bool
+	AsDestination bool
+	Icon          string // icon in SVG format
+	newFunc       reflect.Value
+	ct            reflect.Type
 }
 
 // ReflectType returns the type of the value implementing the file storage
@@ -47,9 +45,9 @@ func (info FileStorageInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new file storage connector instance.
-func (info FileStorageInfo) New(conf *FileStorageConfig) (FileStorage, error) {
+func (info FileStorageInfo) New(conf *FileStorageConfig) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(FileStorage)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -62,28 +60,4 @@ type FileStorageConfig struct {
 
 // FileStorageNewFunc represents functions that create new file storage
 // connector instances.
-type FileStorageNewFunc[T FileStorage] func(*FileStorageConfig) (T, error)
-
-// FileStorage is the interface implemented by file storage connectors.
-type FileStorage interface {
-
-	// CompletePath returns the complete representation of the given path name. It
-	// returns *InvalidPathError if name is not valid for use in calls to Reader and
-	// Write.
-	//
-	// name's length in runes will be in range [1, 1024].
-	CompletePath(ctx context.Context, name string) (string, error)
-
-	// Reader opens a file and returns a ReadCloser from which to read its content.
-	// name is the path name of the file to read and the returned time.Time is the
-	// last update time of the file.
-	//
-	// The use of the provided context is extended to the Read method calls.
-	// After the context is canceled, any subsequent Read invocations will result in
-	// an error. It is the caller's responsibility to close the returned reader.
-	Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
-
-	// Write writes the data read from r into the file with the given path name.
-	// contentType is the file's content type.
-	Write(ctx context.Context, r io.Reader, name, contentType string) error
-}
+type FileStorageNewFunc[T any] func(*FileStorageConfig) (T, error)

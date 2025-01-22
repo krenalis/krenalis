@@ -307,7 +307,12 @@ func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
 	var actionTypes []ActionType
 	c := this.connection
 	connector := c.Connector()
-	targets := connector.Targets
+	var targets state.ConnectorTargets
+	if c.Role == state.Source {
+		targets = connector.SourceTargets
+	} else {
+		targets = connector.DestinationTargets
+	}
 	if targets.Contains(state.Users) {
 		switch typ := c.Connector().Type; typ {
 		case
@@ -510,7 +515,7 @@ func (this *Connection) AppEventSchema(ctx context.Context, eventType string) (t
 	if c.Role != state.Destination {
 		return types.Type{}, errors.BadRequest("connection %d is not a destination", c.ID)
 	}
-	if !connector.Targets.Contains(state.Events) {
+	if !connector.DestinationTargets.Contains(state.Events) {
 		return types.Type{}, errors.BadRequest("connection %d does not support events", c.ID)
 	}
 	schema, err := this.app().SchemaAsRole(ctx, state.Destination, state.Events, eventType)
@@ -559,6 +564,9 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 
 	if this.connection.Connector().Type != state.App {
 		return nil, "", errors.BadRequest("connection %d is not an app connection", this.connection.ID)
+	}
+	if !this.connection.Connector().SourceTargets.Contains(state.Users) {
+		return nil, "", errors.BadRequest("connection %d does not support reading of users", this.connection.ID)
 	}
 	if !schema.Valid() {
 		return nil, "", errors.BadRequest("schema is not valid")
@@ -698,8 +706,18 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	v := validationState{}
 	v.connection.role = this.connection.Role
 	v.connection.connector.typ = this.connection.Connector().Type
+	if this.connection.Role == state.Source {
+		v.connection.connector.targets = this.connection.Connector().SourceTargets
+	} else {
+		v.connection.connector.targets = this.connection.Connector().DestinationTargets
+	}
 	if format != nil {
 		v.format.typ = format.Type
+		if this.connection.Role == state.Source {
+			v.format.targets = format.SourceTargets
+		} else {
+			v.format.targets = format.DestinationTargets
+		}
 		v.format.hasSheets = format.HasSheets
 		v.format.hasSettings = this.connection.Role == state.Source && format.HasSourceSettings || this.connection.Role == state.Destination && format.HasDestinationSettings
 	}
@@ -1135,15 +1153,16 @@ type Execution struct {
 }
 
 // File returns the records and schema of the file located at the specified path
-// within the connection. The connection must be a file storage connection. path
-// must be UTF-8 encoded with a length in range [1, MaxFilePathSize].
+// within the connection. The connection must be a file storage connection which
+// supports read operations. path must be UTF-8 encoded with a length in range
+// [1, MaxFilePathSize].
 //
-// format specifies the file format and must match the name of a file connector.
-// If the connector supports sheets, sheet must be a valid sheet name;
-// otherwise, it must be an empty string. A valid sheet name is UTF-8 encoded,
-// has a length in the range [1, 31], does not start or end with "'", and does
-// not contain any of "*", "/", ":", "?", "[", "\", and "]". Sheet names are
-// case-insensitive.
+// format specifies the file format and must match the name of a file connector
+// which supports reading of records. If the connector supports sheets, sheet
+// must be a valid sheet name; otherwise, it must be an empty string. A valid
+// sheet name is UTF-8 encoded, has a length in the range [1, 31], does not
+// start or end with "'", and does not contain any of "*", "/", ":", "?", "[",
+// "\", and "]". Sheet names are case-insensitive.
 //
 // compression indicates if the file is compressed and how. settings are the
 // format settings, and limit restricts the number of records to return, between
@@ -1167,6 +1186,11 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 		return nil, types.Type{}, errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
 
+	// Ensure that the FileStorage connection supports read operations.
+	if !c.Connector().SourceTargets.Contains(state.Users) {
+		return nil, types.Type{}, errors.BadRequest("connection %d does not support read operations", c.ID)
+	}
+
 	// Validate the path.
 	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
 		return nil, types.Type{}, errors.BadRequest("%s", err)
@@ -1179,6 +1203,9 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	}
 	if formatConnector.Type != state.File {
 		return nil, types.Type{}, errors.BadRequest("format %q does not refer to a file connector", format)
+	}
+	if !formatConnector.SourceTargets.Contains(state.Users) {
+		return nil, types.Type{}, errors.BadRequest("format %q does not support reading of users", format)
 	}
 
 	// Validate the sheet.
@@ -1300,7 +1327,7 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 	// Validate the source connection.
 	if c := this.connection; c.Role == state.Destination {
 		return errors.BadRequest("connection %d is not a source", this.connection.ID)
-	} else if !c.Connector().Targets.Contains(state.Events) {
+	} else if !c.Connector().SourceTargets.Contains(state.Events) {
 		return errors.BadRequest("source %d does not support events", this.connection.ID)
 	}
 	// Validate the destination connection.
@@ -1311,7 +1338,7 @@ func (this *Connection) LinkConnection(ctx context.Context, dst int) error {
 		return errors.BadRequest("connection %d is not a destination", dst)
 	} else if connector := c.Connector(); connector.Type != state.App {
 		return errors.BadRequest("destination %d is not an app", dst)
-	} else if !connector.Targets.Contains(state.Events) {
+	} else if !connector.DestinationTargets.Contains(state.Events) {
 		return errors.BadRequest("destination %d does not support events", dst)
 	}
 	n := state.LinkConnection{
@@ -1365,7 +1392,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	if c.Role != state.Destination {
 		return nil, errors.BadRequest("connection %d is not a destination", c.ID)
 	}
-	if !c.Connector().Targets.Contains(state.Events) {
+	if !c.Connector().DestinationTargets.Contains(state.Events) {
 		return nil, errors.BadRequest("connection %d does not support events", c.ID)
 	}
 	if typ == "" {
@@ -1602,8 +1629,8 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 // be UTF-8 encoded with a length in range [1, MaxFilePathSize].
 //
 // format specifies the file format and must match the name of a file connector
-// that supports sheets. compression indicates if the file is compressed and
-// how. settings are the format settings.
+// that has sheets. compression indicates if the file is compressed and how.
+// settings are the format settings.
 //
 // It returns an errors.UnprocessableError error with code
 //   - FormatNotExist, if the format does not exist.
@@ -1628,6 +1655,9 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	}
 	if formatConnector.Type != state.File {
 		return nil, errors.BadRequest("format %q does not refer to a file connector", format)
+	}
+	if !formatConnector.HasSheets {
+		return nil, errors.BadRequest("format %q does not have sheets", format)
 	}
 
 	// Validate the settings.
@@ -1712,7 +1742,7 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 	// Validate the source connection.
 	if c := this.connection; c.Role == state.Destination {
 		return errors.BadRequest("connection %d is not a source", this.connection.ID)
-	} else if !c.Connector().Targets.Contains(state.Events) {
+	} else if !c.Connector().SourceTargets.Contains(state.Events) {
 		return errors.BadRequest("source %d does not support events", this.connection.ID)
 	}
 	// Validate the destination connection.
@@ -1723,7 +1753,7 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst int) error {
 		return errors.BadRequest("connection %d is not a destination", dst)
 	} else if connector := c.Connector(); connector.Type != state.App {
 		return errors.BadRequest("destination %d is not an app", dst)
-	} else if !connector.Targets.Contains(state.Events) {
+	} else if !connector.DestinationTargets.Contains(state.Events) {
 		return errors.BadRequest("destination %d does not support events", dst)
 	}
 
@@ -1875,7 +1905,7 @@ func (this *Connection) appSchemas(ctx context.Context, target state.Target) (sr
 		err = errors.BadRequest("connection %d is not an app", c.ID)
 		return
 	}
-	if !connector.Targets.Contains(target) {
+	if !connector.DestinationTargets.Contains(target) {
 		err = errors.BadRequest("connection %d does not support %s", c.ID, target)
 		return
 	}
@@ -1930,20 +1960,6 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	// the specifications in the file "core/Actions.csv" for more details).
 	c := this.connection
 	connector := c.Connector()
-	var supported bool
-	switch connector.Type {
-	case state.App:
-		supported = c.Role == state.Destination || target != Events
-	case state.Database, state.FileStorage:
-		supported = target != Events
-	case state.Mobile, state.Server, state.Website:
-		supported = c.Role == state.Source
-	case state.Stream:
-		supported = false
-	}
-	if !supported {
-		return types.Type{}, errors.BadRequest("%s are not supported by %s connections", strings.ToLower(target.String()), connector.Type)
-	}
 	if target == Events {
 		if c.Role == state.Source && eventType != "" {
 			return types.Type{}, errors.BadRequest("source connections do not have an event type")
@@ -1953,7 +1969,13 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		}
 	}
 	// Check if the target is supported by the connection.
-	if !connector.Targets.Contains(state.Target(target)) {
+	var supportedTargets state.ConnectorTargets
+	if c.Role == state.Source {
+		supportedTargets = connector.SourceTargets
+	} else {
+		supportedTargets = connector.DestinationTargets
+	}
+	if !supportedTargets.Contains(state.Target(target)) {
 		return types.Type{}, errors.BadRequest("connection %d does not support %s target", c.ID, target)
 	}
 	// Check if the event type is supported by the connection.
@@ -2076,8 +2098,10 @@ func validateLinkedConnections(connections []int, c *state.Connector, ws *state.
 	if len(connections) == 0 {
 		return errors.BadRequest("event connections cannot be empty")
 	}
-	if !c.Targets.Contains(state.Events) {
-		return errors.BadRequest("connector %s does not support event connections", c.Name)
+	if role == state.Source {
+		if !c.SourceTargets.Contains(state.Events) {
+			return errors.BadRequest("connector %s, used as destination, does not support event connections", c.Name)
+		}
 	}
 	for i, id := range connections {
 		if id < 1 || id > maxInt32 {
@@ -2092,8 +2116,18 @@ func validateLinkedConnections(connections []int, c *state.Connector, ws *state.
 		if !ok {
 			return errors.Unprocessable(LinkedConnectionNotExist, "linked connection %d does not exist", id)
 		}
-		if !ec.Connector().Targets.Contains(state.Events) {
-			return errors.BadRequest("event connection %d does not support events", id)
+		if role == state.Source {
+			// If the connector is Source, the connection's connector must
+			// support events as Destination.
+			if !ec.Connector().DestinationTargets.Contains(state.Events) {
+				return errors.BadRequest("event connection %d does not support events", id)
+			}
+		} else {
+			// If the connector is Destination, the connection's connector must
+			// support events as Source.
+			if !ec.Connector().SourceTargets.Contains(state.Events) {
+				return errors.BadRequest("event connection %d does not support events", id)
+			}
 		}
 		if ec.Role == role {
 			if ec.Role == state.Source {

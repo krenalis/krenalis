@@ -234,6 +234,8 @@ func (connectors *Connectors) AuthorizationEndpoint(connector *state.Connector, 
 
 // GrantAuthorization grants an OAuth authorization from an app connector
 // provided an authorization code and a redirection URI.
+//
+// This method can only be called on a connector that implements OAuth.
 func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
 	accessToken, refreshToken, expiresIn, err := connectors.http.GrantAuthorization(ctx, connector.OAuth, code, redirectionURI)
 	if err != nil {
@@ -245,11 +247,7 @@ func (connectors *Connectors) GrantAuthorization(ctx context.Context, connector 
 	if err != nil {
 		return nil, err
 	}
-	aa, ok := app.(meergo.AppOAuth)
-	if !ok {
-		return nil, errors.New("connector does not implement the AppOAuth interface")
-	}
-	account, err := aa.OAuthAccount(ctx)
+	account, err := app.(appOAuthConnector).OAuthAccount(ctx)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -283,14 +281,11 @@ func (connectors *Connectors) ReceivePerAccountWebhook(account *state.Account, r
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(meergo.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, meergo.Both)
-		if err != nil {
-			return nil, err
-		}
-		return payload, nil
+	payload, err := inner.(webhookConnector).ReceiveWebhook(req, meergo.Both)
+	if err != nil {
+		return nil, err
 	}
-	return nil, ErrNoWebhooks
+	return payload, nil
 }
 
 // ReceivePerConnectionWebhook receives a per connection webhook request and
@@ -320,14 +315,11 @@ func (connectors *Connectors) ReceivePerConnectionWebhook(connection *state.Conn
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(meergo.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, meergo.Role(connection.Role))
-		if err != nil {
-			return nil, err
-		}
-		return payload, nil
+	payload, err := inner.(webhookConnector).ReceiveWebhook(req, meergo.Role(connection.Role))
+	if err != nil {
+		return nil, err
 	}
-	return nil, ErrNoWebhooks
+	return payload, nil
 }
 
 // ReceivePerConnectorWebhook receives a per connector webhook request and
@@ -344,14 +336,11 @@ func (connectors *Connectors) ReceivePerConnectorWebhook(connector *state.Connec
 	if err != nil {
 		return nil, err
 	}
-	if inner, ok := inner.(meergo.Webhooks); ok {
-		payload, err := inner.ReceiveWebhook(req, meergo.Both)
-		if err != nil {
-			return nil, err
-		}
-		return payload, nil
+	payload, err := inner.(webhookConnector).ReceiveWebhook(req, meergo.Both)
+	if err != nil {
+		return nil, err
 	}
-	return nil, ErrNoWebhooks
+	return payload, nil
 }
 
 // ReplacePlaceholders replaces the placeholders in s with the values read

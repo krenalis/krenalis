@@ -29,28 +29,27 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents, AppRecords, and UIHandler interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppEvents
-	meergo.AppRecords
-	meergo.UIHandler
-} = (*Klavyio)(nil)
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Klaviyo",
-		Targets:                meergo.Events | meergo.Users,
-		SourceDescription:      "Import profiles as users from Klaviyo",
-		DestinationDescription: "Export users as profiles and send events to Klaviyo",
-		TermForUsers:           "clients",
-		Icon:                   icon,
+		Name: "Klaviyo",
+		AsSource: &meergo.AsAppSource{
+			Description: "Import profiles as users from Klaviyo",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Export users as profiles and send events to Klaviyo",
+			Targets:     meergo.Events | meergo.Users,
+			HasSettings: true,
+			SendingMode: meergo.Cloud,
+		},
+		TermForUsers: "clients",
+		Icon:         icon,
 		BackoffPolicy: meergo.BackoffPolicy{
 			// https://developers.klaviyo.com/en/docs/rate_limits_and_error_handling
 			"429":     meergo.RetryAfterStrategy(),
 			"500 503": meergo.ExponentialStrategy(100 * time.Millisecond),
 		},
-		SendingMode: meergo.Cloud,
 	}, New)
 }
 

@@ -7787,7 +7787,7 @@
                                                 "description": "The type of connector."
                                             },
                                             {
-                                                "name": "source",
+                                                "name": "asSource",
                                                 "placeholder": "...",
                                                 "type": {
                                                     "name": "Object",
@@ -7799,6 +7799,22 @@
                                                                 "name": "Text"
                                                             },
                                                             "description": "A brief description of the connector when it is used as a source."
+                                                        },
+                                                        {
+                                                            "name": "targets",
+                                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                                            "type": {
+                                                                "name": "Array",
+                                                                "elementType": {
+                                                                    "name": "Text",
+                                                                    "values": [
+                                                                        "Events",
+                                                                        "Users",
+                                                                        "Groups"
+                                                                    ]
+                                                                }
+                                                            },
+                                                            "description": "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
                                                         },
                                                         {
                                                             "name": "hasSettings",
@@ -7836,7 +7852,7 @@
                                                 "description": "The characteristics of the connector when it is used as a data source. This will be null if the connector cannot function as a data source."
                                             },
                                             {
-                                                "name": "destination",
+                                                "name": "asDestination",
                                                 "placeholder": "...",
                                                 "type": {
                                                     "name": "Object",
@@ -7848,6 +7864,22 @@
                                                                 "name": "Text"
                                                             },
                                                             "description": "A brief description of the connector when it is used as a destination."
+                                                        },
+                                                        {
+                                                            "name": "targets",
+                                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                                            "type": {
+                                                                "name": "Array",
+                                                                "elementType": {
+                                                                    "name": "Text",
+                                                                    "values": [
+                                                                        "Events",
+                                                                        "Users",
+                                                                        "Groups"
+                                                                    ]
+                                                                }
+                                                            },
+                                                            "description": "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
                                                         },
                                                         {
                                                             "name": "hasSettings",
@@ -7891,22 +7923,6 @@
                                                     "name": "Text"
                                                 },
                                                 "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
-                                            },
-                                            {
-                                                "name": "targets",
-                                                "placeholder": "[ \"Users\", \"Groups\" ]",
-                                                "type": {
-                                                    "name": "Array",
-                                                    "elementType": {
-                                                        "name": "Text",
-                                                        "values": [
-                                                            "Events",
-                                                            "Users",
-                                                            "Groups"
-                                                        ]
-                                                    }
-                                                },
-                                                "description": "The targets supported by the app connector. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`.\n\nIt will be empty if the connector is not an app."
                                             },
                                             {
                                                 "name": "hasSheets",
@@ -8004,7 +8020,7 @@
                                 "description": "The type of connector."
                             },
                             {
-                                "name": "source",
+                                "name": "asSource",
                                 "placeholder": "...",
                                 "type": {
                                     "name": "Object",
@@ -8016,6 +8032,22 @@
                                                 "name": "Text"
                                             },
                                             "description": "A brief description of the connector when it is used as a source."
+                                        },
+                                        {
+                                            "name": "targets",
+                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                            "type": {
+                                                "name": "Array",
+                                                "elementType": {
+                                                    "name": "Text",
+                                                    "values": [
+                                                        "Events",
+                                                        "Users",
+                                                        "Groups"
+                                                    ]
+                                                }
+                                            },
+                                            "description": "The targets supported by the connector when it is used as a source. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
                                         },
                                         {
                                             "name": "hasSettings",
@@ -8053,7 +8085,7 @@
                                 "description": "The characteristics of the connector when it is used as a data source. This will be null if the connector cannot function as a data source."
                             },
                             {
-                                "name": "destination",
+                                "name": "asDestination",
                                 "placeholder": "...",
                                 "type": {
                                     "name": "Object",
@@ -8065,6 +8097,22 @@
                                                 "name": "Text"
                                             },
                                             "description": "A brief description of the connector when it is used as a destination."
+                                        },
+                                        {
+                                            "name": "targets",
+                                            "placeholder": "[ \"Users\", \"Groups\" ]",
+                                            "type": {
+                                                "name": "Array",
+                                                "elementType": {
+                                                    "name": "Text",
+                                                    "values": [
+                                                        "Events",
+                                                        "Users",
+                                                        "Groups"
+                                                    ]
+                                                }
+                                            },
+                                            "description": "The targets supported by the connector when it is used as a destination. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`"
                                         },
                                         {
                                             "name": "hasSettings",
@@ -8108,22 +8156,6 @@
                                     "name": "Text"
                                 },
                                 "description": "The term used by an app to indicate the groups. For example \"organizations\", \"teams\", or \"groups\".\n\nIt will be empty if the connector is not an app or if the app does not handle groups."
-                            },
-                            {
-                                "name": "targets",
-                                "placeholder": "[ \"Users\", \"Groups\" ]",
-                                "type": {
-                                    "name": "Array",
-                                    "elementType": {
-                                        "name": "Text",
-                                        "values": [
-                                            "Events",
-                                            "Users",
-                                            "Groups"
-                                        ]
-                                    }
-                                },
-                                "description": "The targets supported by the app connector. It includes one or more of the following: `\"Events\"`, `\"Users\"`, and `\"Groups\"`.\n\nIt will be empty if the connector is not an app."
                             },
                             {
                                 "name": "hasSheets",

@@ -29,17 +29,17 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the File and UIHandler interfaces.
-var _ interface {
-	meergo.File
-	meergo.UIHandler
-} = (*CSV)(nil)
-
 func init() {
 	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "CSV",
 		Icon:      icon,
 		Extension: "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
 	}, New)
 }
 

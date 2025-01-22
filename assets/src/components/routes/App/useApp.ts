@@ -79,9 +79,8 @@ const useApp = (
 					new TransformedConnector(
 						c.name,
 						c.type,
-						c.source,
-						c.destination,
-						c.targets,
+						c.asSource,
+						c.asDestination,
 						c.identityIDLabel,
 						c.hasSheets,
 						c.fileExtension,

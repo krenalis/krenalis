@@ -10,7 +10,6 @@ package meergo
 import (
 	"context"
 	"errors"
-	"io"
 	"reflect"
 
 	"github.com/meergo/meergo/types"
@@ -21,14 +20,28 @@ var ErrSheetNotExist = errors.New("sheet does not exist")
 
 // FileInfo represents a file connector info.
 type FileInfo struct {
-	Name        string
-	HasSettings Role        // specifies whether the format settings can be used as a source, a destination, or both.
-	TimeLayouts TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
-	Extension   string      // default extension of the file
-	Icon        string      // icon in SVG format
+	Name          string
+	AsSource      *AsSourceFile
+	AsDestination *AsDestinationFile
+	HasSheets     bool
+	TimeLayouts   TimeLayouts // layouts for time values. If left empty, it is ISO 8601.
+	Extension     string      // default extension of the file
+	Icon          string      // icon in SVG format
 
 	newFunc reflect.Value
 	ct      reflect.Type
+}
+
+// AsSourceFile represents the specific information of a file connector used as
+// a source.
+type AsSourceFile struct {
+	HasSettings bool
+}
+
+// AsDestinationFile represents the specific information of a file connector
+// used as a destination.
+type AsDestinationFile struct {
+	HasSettings bool
 }
 
 // ReflectType returns the type of the value implementing the file connector info.
@@ -37,9 +50,9 @@ func (info FileInfo) ReflectType() reflect.Type {
 }
 
 // New returns a new file connector instance.
-func (info FileInfo) New(conf *FileConfig) (File, error) {
+func (info FileInfo) New(conf *FileConfig) (any, error) {
 	out := info.newFunc.Call([]reflect.Value{reflect.ValueOf(conf)})
-	c := out[0].Interface().(File)
+	c := out[0].Interface()
 	err, _ := out[1].Interface().(error)
 	return c, err
 }
@@ -51,33 +64,7 @@ type FileConfig struct {
 }
 
 // FileNewFunc represents functions that create new file connector instances.
-type FileNewFunc[T File] func(*FileConfig) (T, error)
-
-// File is the interface implemented by file connectors.
-type File interface {
-
-	// ContentType returns the content type of the file.
-	ContentType(ctx context.Context) string
-
-	// Read reads the records from r and writes them to records. If the connector
-	// has multiple sheets, sheet is the name of the sheet to be read.
-	// If the provided sheet does not exist, it returns the ErrSheetNotExist error.
-	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
-	// error
-	Read(ctx context.Context, r io.Reader, sheet string, records RecordWriter) error
-
-	// Write writes to w the records read from records. If the connector has
-	// multiple sheets, sheet is the name of the sheet to be written to.
-	Write(ctx context.Context, w io.Writer, sheet string, records RecordReader) error
-}
-
-// Sheets is implemented by file connectors that have multiple sheets.
-type Sheets interface {
-	File
-
-	// Sheets returns the sheets of the file read from r.
-	Sheets(ctx context.Context, r io.Reader) ([]string, error)
-}
+type FileNewFunc[T any] func(*FileConfig) (T, error)
 
 // A RecordReader interface is used by file connectors to read the records to be
 // written.

@@ -17,17 +17,15 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
-// Make sure it implements the App and UIHandler interfaces.
-var _ interface {
-	meergo.App
-	meergo.UIHandler
-} = (*UISample)(nil)
-
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:              "UISample",
-		SourceDescription: "Test the UI components",
-		Icon:              "",
+		Name: "UISample",
+		AsSource: &meergo.AsAppSource{
+			Description: "Test the UI components",
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Test the UI components",
+		},
 	}, New)
 }
 

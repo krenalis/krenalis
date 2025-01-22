@@ -25,13 +25,6 @@ import (
 // Connector icon.
 var icon = "<svg></svg>"
 
-// Make sure it implements the App, AppEvents, and UIHandler interfaces.
-var _ interface {
-	meergo.App
-	meergo.AppEvents
-	meergo.UIHandler
-} = (*Analytics)(nil)
-
 // sendToDebugServer controls whether the events should be sent to the debug
 // server instead of the production server.
 //
@@ -41,11 +34,14 @@ const sendToDebugServer = false
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Google Analytics",
-		Targets:                meergo.Events,
-		DestinationDescription: "Send events to Google Analytics",
-		Icon:                   icon,
-		SendingMode:            meergo.Cloud,
+		Name: "Google Analytics",
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Send events to Google Analytics",
+			Targets:     meergo.Events,
+			HasSettings: true,
+			SendingMode: meergo.Cloud,
+		},
+		Icon: icon,
 	}, New)
 }
 
