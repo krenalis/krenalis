@@ -535,7 +535,7 @@ func (c *Meergo) WaitEventsStoredIntoWarehouse(ctx context.Context, expected int
 // error for the entire execution), see the method
 // WaitForExecutionsCompletionAllowFailed.
 func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
-	c.waitForExecutionsCompletion(conn, false, executions...)
+	c.waitForExecutionsCompletion(false, executions...)
 }
 
 // WaitForExecutionsCompletionAllowFailed waits for the executions with the
@@ -546,7 +546,7 @@ func (c *Meergo) WaitForExecutionsCompletion(conn int, executions ...int) {
 // If you want the method to result in an error even in the case of one or more
 // "Failed", see the method WaitForExecutionsCompletion.
 func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...int) {
-	c.waitForExecutionsCompletion(conn, true, executions...)
+	c.waitForExecutionsCompletion(true, executions...)
 }
 
 func (c *Meergo) EventWriteKeys(conn int) []string {
@@ -562,7 +562,7 @@ func (c *Meergo) Workspace() Workspace {
 	return ws
 }
 
-func (c *Meergo) waitForExecutionsCompletion(conn int, allowFailed bool, executions ...int) {
+func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, executions ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
 		completed := true
