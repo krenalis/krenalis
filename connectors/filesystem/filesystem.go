@@ -62,7 +62,7 @@ func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (st
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
 		if name == "/" {
-			return "", meergo.InvalidPathErrorf("path name cannot be “" + originalName + "“")
+			return "", meergo.InvalidPathErrorf("path name cannot be “%s“", originalName)
 		}
 		name = name[1:]
 	}
