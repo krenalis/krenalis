@@ -123,7 +123,7 @@ const ConnectionOverview = () => {
 
 	const steps = useMemo(() => {
 		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
-		switch (c.type) {
+		switch (c.connector.type) {
 			case 'App':
 				if (c.role == 'Destination') {
 					if (selectedTarget == 'Users') {

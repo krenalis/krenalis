@@ -132,16 +132,34 @@ func init() {
 						},
 						nameParameter,
 						{
+							Name:        "connector",
+							Type:        types.Text(),
+							Placeholder: `"Android"`,
+							Description: "The name of the connection's connector.",
+						},
+						{
+							Name:        "connectorType",
+							Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Website"),
+							Placeholder: `"Website"`,
+							Description: "The type of the connection's connector. It is always `\"Mobile\"`, `\"Server\"`, or `\"Website\"` when the action imports events.",
+						},
+						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
 							Description: "The ID of the connection from which the events are received. It is a source website, mobile, or server.",
 						},
 						{
+							Name:        "connectionRole",
+							Type:        types.Text().WithValues("Source", "Destination"),
+							Placeholder: `"Source"`,
+							Description: "The role of the action's connection. It is always `\"Source\"` when the action imports events.",
+						},
+						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Events"),
+							Type:        types.Text().WithValues("Users", "Events"),
 							Placeholder: `"Events"`,
-							Description: "The entity on which the action operates. It is always `\"Events\"` for an action that imports events.",
+							Description: "The entity on which the action operates. It is always `\"Events\"` when the action imports events.",
 						},
 						{
 							Name:        "enabled",

@@ -167,16 +167,34 @@ func init() {
 						},
 						nameParameter,
 						{
+							Name:        "connector",
+							Type:        types.Text(),
+							Placeholder: `"HubSpot"`,
+							Description: "The name of the connection's connector.",
+						},
+						{
+							Name:        "connectorType",
+							Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Website"),
+							Placeholder: `"App"`,
+							Description: "The type of the connection's connector. It is always `\"App\"` when the action imports users from an app.",
+						},
+						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
-							Description: "The ID of the connection from which users are read. It is a source app that supports events.",
+							Description: "The ID of the connection from which users are read. It is a source app that supports users.",
+						},
+						{
+							Name:        "connectionRole",
+							Type:        types.Text().WithValues("Source", "Destination"),
+							Placeholder: `"Source"`,
+							Description: "The role of the action's connection. It is always `\"Source\"` when the action imports users from an app.",
 						},
 						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Users"),
+							Type:        types.Text().WithValues("Users", "Events"),
 							Placeholder: `"Users"`,
-							Description: "The entity on which the action operates. It is always `\"Users\"` for an action that imports users.",
+							Description: "The entity on which the action operates. It is always `\"Users\"` when the action imports users from an app.",
 						},
 						{
 							Name:        "enabled",

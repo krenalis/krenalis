@@ -1017,6 +1017,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"Mailchimp\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"App\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"App\"` when the action exports users to an app."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -1026,15 +1050,28 @@
                                 "description": "The ID of the connection to which the users will be exported. It is a destination app."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Destination\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to an app."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Users\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that exports users."
+                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action exports users to an app."
                             },
                             {
                                 "name": "enabled",
@@ -1540,6 +1577,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"PostgreSQL\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"Database\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"Database\"` when the action exports users to a database."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -1549,15 +1610,28 @@
                                 "description": "The ID of the connection to which the users will be exported. It is a destination database."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Destination\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to a database."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Users\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that exports users."
+                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action exports users to a database."
                             },
                             {
                                 "name": "enabled",
@@ -2157,6 +2231,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"S3\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"FileStorage\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"FileStorage\"` when the action exports users to a file."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -2166,12 +2264,25 @@
                                 "description": "The ID of the connection to which the file is written. It is a destination file storage."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Destination\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action exports users to a file."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Users\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
                                 "description": "The entity on which the action operates. It is always `\"Users\"` for an action that exports users."
@@ -2746,6 +2857,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"Android\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"Website\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"Mobile\"`, `\"Server\"`, or `\"Website\"` when the action imports events."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -2755,15 +2890,28 @@
                                 "description": "The ID of the connection from which the events are received. It is a source website, mobile, or server."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Source\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports events."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Events\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
+                                        "Users",
                                         "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Events\"` for an action that imports events."
+                                "description": "The entity on which the action operates. It is always `\"Events\"` when the action imports events."
                             },
                             {
                                 "name": "enabled",
@@ -3300,13 +3448,49 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"HubSpot\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"App\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"App\"` when the action imports users from an app."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
                                     "name": "Int",
                                     "bitSize": 32
                                 },
-                                "description": "The ID of the connection from which users are read. It is a source app that supports events."
+                                "description": "The ID of the connection from which users are read. It is a source app that supports users."
+                            },
+                            {
+                                "name": "connectionRole",
+                                "placeholder": "\"Source\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from an app."
                             },
                             {
                                 "name": "target",
@@ -3314,10 +3498,11 @@
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that imports users."
+                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from an app."
                             },
                             {
                                 "name": "enabled",
@@ -3804,6 +3989,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"MySQL\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"Database\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"Database\"` when the action imports users from a database."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -3813,15 +4022,28 @@
                                 "description": "The ID of the connection from which users are read. It is a source database."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Source\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from a database."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Users\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that imports users."
+                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from a database."
                             },
                             {
                                 "name": "enabled",
@@ -4357,6 +4579,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"Java\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"Website\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"Mobile\"`, `\"Server\"`, or `\"Website\"` when the action imports users from events."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -4366,15 +4612,28 @@
                                 "description": "The ID of the connection from which the events are received. It is a source website, mobile, or server."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Source\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from events."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Users\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that imports users."
+                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from events."
                             },
                             {
                                 "name": "name",
@@ -5055,6 +5314,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"SFTP\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"FileStorage\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"FileStorage\"` when the action imports users from a file."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -5064,15 +5347,28 @@
                                 "description": "The ID of the connection from which the file is read. It is a source file storage."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Source\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Source\"` when the action imports users from a file."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Users\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
-                                        "Users"
+                                        "Users",
+                                        "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Users\"` for an action that imports users."
+                                "description": "The entity on which the action operates. It is always `\"Users\"` when the action imports users from a file."
                             },
                             {
                                 "name": "enabled",
@@ -5722,6 +6018,30 @@
                                 "description": "The action's name."
                             },
                             {
+                                "name": "connector",
+                                "placeholder": "\"Klavyio\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's connector."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"Website\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "App",
+                                        "Database",
+                                        "FileStorage",
+                                        "Mobile",
+                                        "Server",
+                                        "Website"
+                                    ]
+                                },
+                                "description": "The type of the connection's connector. It is always `\"Mobile\"`, `\"Server\"`, or `\"Website\"` when the action sends events to an app."
+                            },
+                            {
                                 "name": "connection",
                                 "placeholder": "1371036433",
                                 "type": {
@@ -5731,15 +6051,28 @@
                                 "description": "The ID of the connection to which the events will be sent. It is a destination app that supports events."
                             },
                             {
+                                "name": "connectionRole",
+                                "placeholder": "\"Destination\"",
+                                "type": {
+                                    "name": "Text",
+                                    "values": [
+                                        "Source",
+                                        "Destination"
+                                    ]
+                                },
+                                "description": "The role of the action's connection. It is always `\"Destination\"` when the action sends events to an app."
+                            },
+                            {
                                 "name": "target",
                                 "placeholder": "\"Events\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
+                                        "Users",
                                         "Events"
                                     ]
                                 },
-                                "description": "The entity on which the action operates. It is always `\"Events\"` for an action that sends events."
+                                "description": "The entity on which the action operates. It is always `\"Events\"` when the action sends events to an app."
                             },
                             {
                                 "name": "eventType",
@@ -6951,8 +7284,16 @@
                                                 "description": "The connection's name."
                                             },
                                             {
-                                                "name": "type",
-                                                "placeholder": "Website",
+                                                "name": "connector",
+                                                "placeholder": "\"WebSite\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "The name of the connection's [connector](/connectors/)."
+                                            },
+                                            {
+                                                "name": "connectorType",
+                                                "placeholder": "\"Website\"",
                                                 "type": {
                                                     "name": "Text",
                                                     "values": [
@@ -6979,14 +7320,6 @@
                                                 },
                                                 "createRequired": true,
                                                 "description": "Indicates if the connection is a data source or a data destination."
-                                            },
-                                            {
-                                                "name": "connector",
-                                                "placeholder": "\"WebSite\"",
-                                                "type": {
-                                                    "name": "Text"
-                                                },
-                                                "description": "The name of the connection's [connector](/connectors/)."
                                             },
                                             {
                                                 "name": "strategy",
@@ -7118,8 +7451,16 @@
                                 "description": "The connection's name."
                             },
                             {
-                                "name": "type",
-                                "placeholder": "Website",
+                                "name": "connector",
+                                "placeholder": "\"WebSite\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The name of the connection's [connector](/connectors/)."
+                            },
+                            {
+                                "name": "connectorType",
+                                "placeholder": "\"Website\"",
                                 "type": {
                                     "name": "Text",
                                     "values": [
@@ -7146,14 +7487,6 @@
                                 },
                                 "createRequired": true,
                                 "description": "Indicates if the connection is a data source or a data destination."
-                            },
-                            {
-                                "name": "connector",
-                                "placeholder": "\"WebSite\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "description": "The name of the connection's [connector](/connectors/)."
                             },
                             {
                                 "name": "strategy",

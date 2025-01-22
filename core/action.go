@@ -35,7 +35,10 @@ type Action struct {
 	action                   *state.Action
 	connection               *Connection
 	ID                       int             `json:"id"`
+	Connector                string          `json:"connector"`
+	ConnectorType            ConnectorType   `json:"connectorType"`
 	Connection               int             `json:"connection"`
+	ConnectionRole           Role            `json:"connectionRole"`
 	Target                   Target          `json:"target"`
 	Name                     string          `json:"name"`
 	Enabled                  bool            `json:"enabled"`
@@ -548,11 +551,15 @@ func (this *Action) file() *connectors.File {
 // fromState serializes action into this.
 func (this *Action) fromState(core *Core, store *datastore.Store, action *state.Action) {
 	c := action.Connection()
+	connector := c.Connector()
 	this.core = core
 	this.action = action
 	this.connection = &Connection{core: core, store: store, connection: c}
 	this.ID = action.ID
+	this.Connector = connector.Name
+	this.ConnectorType = ConnectorType(connector.Type)
 	this.Connection = c.ID
+	this.ConnectionRole = Role(c.Role)
 	this.Target = Target(action.Target)
 	this.Name = action.Name
 	this.Enabled = action.Enabled

@@ -41,7 +41,7 @@ const LinkedConnectionSelector = ({
 		const linkableConnections: TransformedConnection[] = [];
 		const selectableConnections: TransformedConnection[] = [];
 		for (const c of connections) {
-			if (isEventConnection(c.role, c.type, c.connector.targets) && c.role !== role) {
+			if (isEventConnection(c.role, c.connector.type, c.connector.targets) && c.role !== role) {
 				linkableConnections.push(c);
 				const isAlreadySelected = linkedConnections?.find((id) => id === c.id) != null;
 				if (!isAlreadySelected) {

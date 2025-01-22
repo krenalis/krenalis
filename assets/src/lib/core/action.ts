@@ -979,7 +979,7 @@ const transformInActionToSet = async (
 	}
 
 	const isDatabaseExportOnUsers =
-		connection.type === 'Database' && connection.role === 'Destination' && actionType.target === 'Users';
+		connection.connector.type === 'Database' && connection.role === 'Destination' && actionType.target === 'Users';
 
 	if (isDatabaseExportOnUsers) {
 		// the table key must be defined for database type actions that
@@ -1031,7 +1031,8 @@ const transformInActionToSet = async (
 	//
 	// the input schema must be nil, which means the schema of the events.
 	let importEventsIntoWarehouse = connection.isSource && connection.isEventBased && actionType.target == 'Events';
-	let dispatchEventsToApps = connection.isDestination && connection.type == 'App' && actionType.target == 'Events';
+	let dispatchEventsToApps =
+		connection.isDestination && connection.connector.type == 'App' && actionType.target == 'Events';
 	let importIdentitiesFromEvents = connection.isSource && connection.isEventBased && actionType.target == 'Users';
 	if (importIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps) {
 		inSchema = null;
@@ -1142,11 +1143,11 @@ const computeActionTypeFields = (
 
 	// Filters are always allowed except for actions that import users
 	// from databases.
-	if (!(connection.role === 'Source' && connection.type === 'Database' && actionType.target === 'Users')) {
+	if (!(connection.role === 'Source' && connection.connector.type === 'Database' && actionType.target === 'Users')) {
 		fields.push('Filter');
 	}
 
-	if (connection.type === 'App') {
+	if (connection.connector.type === 'App') {
 		if (connection.role === 'Source') {
 			fields.push('Transformation');
 		} else {
@@ -1156,18 +1157,22 @@ const computeActionTypeFields = (
 				fields.push('Transformation');
 			}
 		}
-	} else if (connection.type === 'Database') {
+	} else if (connection.connector.type === 'Database') {
 		fields.push('Transformation');
-	} else if (connection.type === 'FileStorage' && connection.role === 'Source') {
+	} else if (connection.connector.type === 'FileStorage' && connection.role === 'Source') {
 		fields.push('Transformation');
-	} else if (connection.type === 'Mobile' || connection.type === 'Server' || connection.type === 'Website') {
+	} else if (
+		connection.connector.type === 'Mobile' ||
+		connection.connector.type === 'Server' ||
+		connection.connector.type === 'Website'
+	) {
 		if (connection.role === 'Source' && (actionType.target === 'Users' || actionType.target === 'Groups')) {
 			fields.push('Transformation');
 		}
 	}
 
 	if (
-		connection.type === 'App' &&
+		connection.connector.type === 'App' &&
 		connection.role === 'Destination' &&
 		(actionType.target === 'Users' || actionType.target === 'Groups')
 	) {
@@ -1177,11 +1182,11 @@ const computeActionTypeFields = (
 		fields.push('Filter');
 	}
 
-	if (connection.type === 'Database' && connection.role === 'Source') {
+	if (connection.connector.type === 'Database' && connection.role === 'Source') {
 		fields.push('Query');
 	}
 
-	if (connection.type === 'FileStorage') {
+	if (connection.connector.type === 'FileStorage') {
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
 			if (actionType.target === 'Users') {
@@ -1191,7 +1196,7 @@ const computeActionTypeFields = (
 		fields.push('File');
 	}
 
-	if (connection.type === 'Database' && connection.role === 'Destination') {
+	if (connection.connector.type === 'Database' && connection.role === 'Destination') {
 		fields.push('TableName');
 	}
 
@@ -1227,7 +1232,7 @@ const getTransformationFunctionParameterName = (
 	connection: TransformedConnection,
 	actionType: TransformedActionType,
 ): String => {
-	if (isSourceEventConnection(connection.role, connection.type) && actionType.target === 'Users') {
+	if (isSourceEventConnection(connection.role, connection.connector.type) && actionType.target === 'Users') {
 		return 'event';
 	}
 	if (actionType.target === 'Users') {

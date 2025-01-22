@@ -68,7 +68,7 @@ const ConnectionsList = () => {
 				<div className='connections-list__name-cell'>
 					{getConnectorLogo(c.connector.icon)} {c.name}
 				</div>,
-				c.type,
+				c.connector.type,
 				c.connector.name,
 				<div className='connections-list__status-cell'>
 					<StatusDot status={c.status} />

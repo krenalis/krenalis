@@ -141,9 +141,8 @@ const useApp = (
 				const transformedConnection = new TransformedConnection(
 					c.id,
 					c.name,
-					c.type,
-					c.role,
 					connector,
+					c.role,
 					c.actionsCount,
 					c.health,
 					c.storage,
@@ -209,9 +208,8 @@ const useApp = (
 				const transformedConnection = new TransformedConnection(
 					c.id,
 					c.name,
-					c.type,
-					c.role,
 					connector,
+					c.role,
 					c.actionsCount,
 					c.health,
 					c.storage,

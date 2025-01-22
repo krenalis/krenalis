@@ -198,14 +198,32 @@ func init() {
 						},
 						nameParameter,
 						{
+							Name:        "connector",
+							Type:        types.Text(),
+							Placeholder: `"S3"`,
+							Description: "The name of the connection's connector.",
+						},
+						{
+							Name:        "connectorType",
+							Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Website"),
+							Placeholder: `"FileStorage"`,
+							Description: "The type of the connection's connector. It is always `\"FileStorage\"` when the action exports users to a file.",
+						},
+						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
 							Description: "The ID of the connection to which the file is written. It is a destination file storage.",
 						},
 						{
+							Name:        "connectionRole",
+							Type:        types.Text().WithValues("Source", "Destination"),
+							Placeholder: `"Destination"`,
+							Description: "The role of the action's connection. It is always `\"Destination\"` when the action exports users to a file.",
+						},
+						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Users"),
+							Type:        types.Text().WithValues("Users", "Events"),
 							Placeholder: `"Users"`,
 							Description: "The entity on which the action operates. It is always `\"Users\"` for an action that exports users.",
 						},

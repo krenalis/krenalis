@@ -157,7 +157,7 @@ const ConnectionActions = () => {
 				)}
 			</Section>
 
-			{isEventConnection(connection.role, connection.type, connection.connector.targets) && (
+			{isEventConnection(connection.role, connection.connector.type, connection.connector.targets) && (
 				<Section
 					title={connection.isSource ? 'Linked destinations' : 'Linked sources'}
 					description={

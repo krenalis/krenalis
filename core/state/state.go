@@ -764,8 +764,8 @@ type Connection struct {
 	workspace         *Workspace
 	ID                int
 	Name              string
-	Role              Role
 	connector         *Connector
+	Role              Role
 	account           *Account
 	Strategy          *Strategy
 	SendingMode       *SendingMode

@@ -84,7 +84,7 @@ const ConnectionSettings = () => {
 	const tabs = useMemo(() => {
 		const tabs: TabName[] = ['general'];
 
-		if ((c.type === 'Website' || c.type === 'Mobile') && c.role === 'Source') {
+		if ((c.connector.type === 'Website' || c.connector.type === 'Mobile') && c.role === 'Source') {
 			tabs.push('snippet');
 		}
 
@@ -92,7 +92,10 @@ const ConnectionSettings = () => {
 			tabs.push('connection');
 		}
 
-		if ((c.type === 'Mobile' || c.type === 'Server' || c.type === 'Website') && c.role === 'Source') {
+		if (
+			(c.connector.type === 'Mobile' || c.connector.type === 'Server' || c.connector.type === 'Website') &&
+			c.role === 'Source'
+		) {
 			tabs.push('keys');
 		}
 
@@ -139,10 +142,10 @@ const ConnectionSettings = () => {
 				{tabs.includes('connection') && (
 					<>
 						<SlTab slot='nav' panel='connection'>
-							{c.type} Settings
+							{c.connector.type} Settings
 						</SlTab>
 						<SlTabPanel name='connection'>
-							<div className='connection-settings__panel-title'>{c.type} Settings</div>
+							<div className='connection-settings__panel-title'>{c.connector.type} Settings</div>
 							<ConnectionConnectorSettings connection={c} />
 						</SlTabPanel>
 					</>

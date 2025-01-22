@@ -92,7 +92,7 @@ const useLinkedConnectionsGrid = (
 			);
 
 			const row: GridRow = {
-				cells: [nameCell, fc.type, fc.connector.name, healthCell, unlinkButtonCell],
+				cells: [nameCell, fc.connector.type, fc.connector.name, healthCell, unlinkButtonCell],
 				key: String(fc.id),
 			};
 			if (isClickable) {

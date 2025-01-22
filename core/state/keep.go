@@ -348,8 +348,8 @@ type CreateConnection struct {
 	Workspace int      // workspace identifier
 	ID        int      // identifier
 	Name      string   // name
-	Role      Role     // role
 	Connector string   // connector name
+	Role      Role     // role
 	Account   struct { // account.
 		ID           int       // identifier, can be zero
 		Code         string    // code, can be empty.
@@ -414,8 +414,8 @@ func (state *State) createConnection(n notification) {
 		workspace:         workspace,
 		ID:                e.ID,
 		Name:              e.Name,
-		Role:              e.Role,
 		connector:         connector,
+		Role:              e.Role,
 		account:           a,
 		Strategy:          e.Strategy,
 		SendingMode:       e.SendingMode,

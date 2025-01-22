@@ -53,9 +53,9 @@ type Connection struct {
 	store             *datastore.Store
 	ID                int           `json:"id"`
 	Name              string        `json:"name"`
-	Type              ConnectorType `json:"type"`
-	Role              Role          `json:"role"`
 	Connector         string        `json:"connector"`
+	ConnectorType     ConnectorType `json:"connectorType"`
+	Role              Role          `json:"role"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	WebsiteHost       string        `json:"websiteHost"`
@@ -83,7 +83,7 @@ type Strategy string
 
 // Action returns the action with identifier id of the connection.
 // It returns an errors.NotFound error if the action does not exist.
-func (this *Connection) Action(ctx context.Context, id int) (*Action, error) {
+func (this *Connection) Action(id int) (*Action, error) {
 	this.core.mustBeOpen()
 	if id < 1 || id > maxInt32 {
 		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)

@@ -10,9 +10,9 @@ type Health = 'Healthy' | 'NoRecentData' | 'RecentError';
 interface Connection {
 	id: number;
 	name: string;
-	type: ConnectorType;
-	role: ConnectionRole;
 	connector: string;
+	connectorType: ConnectorType;
+	role: ConnectionRole;
 	storage: number;
 	compression: Compression;
 	strategy?: Strategy | null;

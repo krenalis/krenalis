@@ -154,7 +154,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	};
 
 	const isActionExecutionSupported =
-		connection.type !== 'Website' && connection.type !== 'Mobile' && connection.type !== 'Server';
+		connection.connector.type !== 'Website' &&
+		connection.connector.type !== 'Mobile' &&
+		connection.connector.type !== 'Server';
 
 	const rows: GridRow[] = [];
 	for (const a of actions) {

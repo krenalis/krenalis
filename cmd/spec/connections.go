@@ -84,18 +84,18 @@ func init() {
 		idParameter,
 		nameParameter,
 		{
-			Name:        "type",
-			Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Stream", "Website"),
-			Placeholder: "Website",
-			Description: "The type of the connection's connector.",
-		},
-		roleParameter,
-		{
 			Name:        "connector",
 			Type:        types.Text(),
 			Placeholder: `"WebSite"`,
 			Description: "The name of the connection's [connector](/connectors/).",
 		},
+		{
+			Name:        "connectorType",
+			Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Stream", "Website"),
+			Placeholder: `"Website"`,
+			Description: "The type of the connection's connector.",
+		},
+		roleParameter,
 		{
 			Name:        "strategy",
 			Type:        types.Text().WithValues("Conversion", "Fusion", "Isolation", "Preservation"),

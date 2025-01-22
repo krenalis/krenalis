@@ -20,9 +20,8 @@ interface ConnectionStatus {
 class TransformedConnection {
 	id: number;
 	name: string;
-	type: ConnectorType;
-	role: ConnectionRole;
 	connector: TransformedConnector;
+	role: ConnectionRole;
 	actionsCount: number;
 	health: Health;
 	storage: number;
@@ -40,9 +39,8 @@ class TransformedConnection {
 	constructor(
 		id: number,
 		name: string,
-		type: ConnectorType,
-		role: ConnectionRole,
 		connector: TransformedConnector,
+		role: ConnectionRole,
 		actionsCount: number,
 		health: Health,
 		storage: number,
@@ -59,9 +57,8 @@ class TransformedConnection {
 	) {
 		this.id = id;
 		this.name = name;
-		this.type = type;
-		this.role = role;
 		this.connector = connector;
+		this.role = role;
 		this.actionsCount = actionsCount;
 		this.health = health;
 		this.storage = storage == null ? 0 : storage;
@@ -80,35 +77,35 @@ class TransformedConnection {
 	}
 
 	get isApp() {
-		return this.type === 'App';
+		return this.connector.type === 'App';
 	}
 
 	get isDatabase() {
-		return this.type === 'Database';
+		return this.connector.type === 'Database';
 	}
 
 	get isFile() {
-		return this.type === 'File' && this.storage !== 0;
+		return this.connector.type === 'File' && this.storage !== 0;
 	}
 
 	get isFileStorage() {
-		return this.type === 'FileStorage';
+		return this.connector.type === 'FileStorage';
 	}
 
 	get isMobile() {
-		return this.type === 'Mobile';
+		return this.connector.type === 'Mobile';
 	}
 
 	get isServer() {
-		return this.type === 'Server';
+		return this.connector.type === 'Server';
 	}
 
 	get isStream() {
-		return this.type === 'Stream';
+		return this.connector.type === 'Stream';
 	}
 
 	get isWebsite() {
-		return this.type === 'Website';
+		return this.connector.type === 'Website';
 	}
 
 	get isSource() {
@@ -120,15 +117,19 @@ class TransformedConnection {
 	}
 
 	get isEventBased() {
-		return this.type === 'Mobile' || this.type === 'Server' || this.type === 'Website';
+		return (
+			this.connector.type === 'Mobile' || this.connector.type === 'Server' || this.connector.type === 'Website'
+		);
 	}
 
 	get hasIdentities() {
-		return this.role === 'Source' && this.type !== 'Stream';
+		return this.role === 'Source' && this.connector.type !== 'Stream';
 	}
 
 	get hasAnonymousIdentifiers() {
-		return this.type === 'Mobile' || this.type === 'Server' || this.type === 'Website';
+		return (
+			this.connector.type === 'Mobile' || this.connector.type === 'Server' || this.connector.type === 'Website'
+		);
 	}
 
 	get hasSettings(): boolean {

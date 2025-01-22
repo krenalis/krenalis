@@ -93,7 +93,8 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 	};
 
 	const showStrategy =
-		connection.role === 'Source' && (connection.type === 'Mobile' || connection.type === 'Website');
+		connection.role === 'Source' &&
+		(connection.connector.type === 'Mobile' || connection.connector.type === 'Website');
 
 	return (
 		<div className='connection-settings__general-settings'>
@@ -151,7 +152,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				</SlSelect>
 			)}
 
-			{connection.type === 'Website' && (
+			{connection.connector.type === 'Website' && (
 				<SlInput
 					label='Website host'
 					className='connection-settings__website-host-field'

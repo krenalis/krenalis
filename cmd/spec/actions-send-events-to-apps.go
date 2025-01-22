@@ -167,16 +167,34 @@ func init() {
 						},
 						nameParameter,
 						{
+							Name:        "connector",
+							Type:        types.Text(),
+							Placeholder: `"Klavyio"`,
+							Description: "The name of the connection's connector.",
+						},
+						{
+							Name:        "connectorType",
+							Type:        types.Text().WithValues("App", "Database", "FileStorage", "Mobile", "Server", "Website"),
+							Placeholder: `"Website"`,
+							Description: "The type of the connection's connector. It is always `\"Mobile\"`, `\"Server\"`, or `\"Website\"` when the action sends events to an app.",
+						},
+						{
 							Name:        "connection",
 							Type:        types.Int(32),
 							Placeholder: "1371036433",
 							Description: "The ID of the connection to which the events will be sent. It is a destination app that supports events.",
 						},
 						{
+							Name:        "connectionRole",
+							Type:        types.Text().WithValues("Source", "Destination"),
+							Placeholder: `"Destination"`,
+							Description: "The role of the action's connection. It is always `\"Destination\"` when the action sends events to an app.",
+						},
+						{
 							Name:        "target",
-							Type:        types.Text().WithValues("Events"),
+							Type:        types.Text().WithValues("Users", "Events"),
 							Placeholder: `"Events"`,
-							Description: "The entity on which the action operates. It is always `\"Events\"` for an action that sends events.",
+							Description: "The entity on which the action operates. It is always `\"Events\"` when the action sends events to an app.",
 						},
 						{
 							Name:        "eventType",

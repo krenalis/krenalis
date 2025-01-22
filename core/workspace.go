@@ -429,9 +429,9 @@ func (this *Workspace) Connection(ctx context.Context, id int) (*Connection, err
 		connection:        c,
 		ID:                c.ID,
 		Name:              c.Name,
-		Type:              ConnectorType(conn.Type),
-		Role:              Role(c.Role),
 		Connector:         conn.Name,
+		ConnectorType:     ConnectorType(conn.Type),
+		Role:              Role(c.Role),
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		WebsiteHost:       c.WebsiteHost,
@@ -481,9 +481,9 @@ func (this *Workspace) Connections() []*Connection {
 			connection:        c,
 			ID:                c.ID,
 			Name:              c.Name,
-			Type:              ConnectorType(conn.Type),
-			Role:              Role(c.Role),
 			Connector:         conn.Name,
+			ConnectorType:     ConnectorType(conn.Type),
+			Role:              Role(c.Role),
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			WebsiteHost:       c.WebsiteHost,
@@ -565,8 +565,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	n := state.CreateConnection{
 		Workspace:         this.workspace.ID,
 		Name:              connection.Name,
-		Role:              state.Role(connection.Role),
 		Connector:         connection.Connector,
+		Role:              state.Role(connection.Role),
 		Strategy:          (*state.Strategy)(connection.Strategy),
 		SendingMode:       (*state.SendingMode)(connection.SendingMode),
 		WebsiteHost:       connection.WebsiteHost,
@@ -741,11 +741,11 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 		// Insert the connection.
 		_, err = tx.Exec(ctx, "INSERT INTO connections "+
-			"(id, workspace, name, type, role, connector, account,"+
+			"(id, workspace, name, connector, role, account,"+
 			" strategy, sending_mode, website_host, linked_connections, settings)"+
-			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-			n.ID, n.Workspace, n.Name, c.Type, n.Role, n.Connector, n.Account.ID,
-			n.Strategy, n.SendingMode, n.WebsiteHost, n.LinkedConnections, string(n.Settings))
+			" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+			n.ID, n.Workspace, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
+			n.SendingMode, n.WebsiteHost, n.LinkedConnections, string(n.Settings))
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "connections_workspace_fkey" {
 				err = errors.Unprocessable(WorkspaceNotExist, "workspace %d does not exist", n.Workspace)
