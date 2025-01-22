@@ -101,7 +101,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			return;
 		}
 
-		let execution: Execution;
+		let execution: Execution | null = null;
 		while (execution == null) {
 			let executions: Execution[];
 			try {
