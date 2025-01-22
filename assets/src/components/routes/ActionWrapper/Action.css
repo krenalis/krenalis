@@ -729,6 +729,17 @@ inherit the disabled style */
 	background-color: var(--bg-primary);
 }
 
+.fullscreen-transformation__panel-title-text {
+	color: var(--sl-color-neutral-700);
+	font-size: 15px;
+	font-weight: 500;
+}
+
+.fullscreen-transformation__panel-sub-title {
+	color: var(--sl-color-neutral-600);
+	font-size: 12px;
+}
+
 .fullscreen-transformation__panel-schema-search::part(base) {
 	border-radius: 0;
 	border: 0;

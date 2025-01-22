@@ -1599,37 +1599,6 @@ const FullscreenTransformation = ({
 		setOutputError('');
 	};
 
-	let InputPanelTitle = '';
-	let OutputPanelTitle = '';
-	if (connection.isSource) {
-		if (actionType.target === 'Users') {
-			const term = connection.connector.termForUsers;
-			if (isEventBasedUserImport) {
-				InputPanelTitle = 'Events';
-			} else {
-				InputPanelTitle = term[0].toUpperCase() + term.slice(1, term.length);
-			}
-			OutputPanelTitle = 'Resulting user';
-		} else if (actionType.target === 'Groups') {
-			const term = connection.connector.termForGroups;
-			InputPanelTitle = term[0].toUpperCase() + term.slice(1, term.length);
-			OutputPanelTitle = 'Resulting group';
-		}
-	} else {
-		if (actionType.target === 'Events') {
-			InputPanelTitle = 'Events';
-			OutputPanelTitle = 'Request';
-		} else if (actionType.target === 'Users') {
-			InputPanelTitle = 'Users';
-			const term = removeTrailingS(connection.connector.termForUsers);
-			OutputPanelTitle = 'Resulting ' + term;
-		} else if (actionType.target === 'Groups') {
-			InputPanelTitle = 'Groups';
-			const term = removeTrailingS(connection.connector.termForGroups);
-			OutputPanelTitle = 'Resulting ' + term;
-		}
-	}
-
 	let inputPanelContent: ReactNode = null;
 	if (isInputSchemaSelected) {
 		inputPanelContent = (
@@ -1937,7 +1906,10 @@ const FullscreenTransformation = ({
 							slot='start'
 						>
 							<div className='fullscreen-transformation__panel-title-wrapper'>
-								<div className='fullscreen-transformation__panel-title'>{InputPanelTitle}</div>
+								<div className='fullscreen-transformation__panel-title'>
+									<div className='fullscreen-transformation__panel-title-text'>Input</div>
+									<div className='fullscreen-transformation__panel-sub-title'>{`from ${connection.isSource ? connection.connector.name : 'warehouse'}`}</div>
+								</div>
 								<SlButtonGroup>
 									<SlButton
 										size='small'
@@ -1983,7 +1955,10 @@ const FullscreenTransformation = ({
 					slot='end'
 				>
 					<div className='fullscreen-transformation__panel-title-wrapper'>
-						<div className='fullscreen-transformation__panel-title'>{OutputPanelTitle}</div>
+						<div className='fullscreen-transformation__panel-title'>
+							<div className='fullscreen-transformation__panel-title-text'>Output</div>
+							<div className='fullscreen-transformation__panel-sub-title'>{`to ${connection.isDestination ? connection.connector.name : 'warehouse'}`}</div>
+						</div>
 						<SlButtonGroup>
 							<SlButton
 								size='small'
@@ -1999,7 +1974,7 @@ const FullscreenTransformation = ({
 								onClick={onSelectOutputResult}
 								disabled={isExecuting}
 							>
-								{OutputPanelTitle === 'Request' ? 'Preview' : 'Result'}
+								{connection.isDestination && actionType.target === 'Events' ? 'Preview' : 'Result'}
 							</SlButton>
 						</SlButtonGroup>
 					</div>
@@ -2581,13 +2556,6 @@ function toPythonType(type: Type, nullable: boolean) {
 	}
 
 	return t;
-}
-
-function removeTrailingS(str: string) {
-	if (str.endsWith('s')) {
-		return str.slice(0, -1);
-	}
-	return str;
 }
 
 function removeQuotes(v: any | null) {
