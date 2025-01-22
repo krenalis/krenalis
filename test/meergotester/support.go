@@ -30,9 +30,9 @@ var defaultStrategy Strategy = "Conversion"
 // This file contains support methods which reduce verbosity of tests.
 
 func (c *Meergo) Action(action int) Action {
-	method := fmt.Sprintf("/api/actions/%d", action)
+	path := fmt.Sprintf("/api/actions/%d", action)
 	var response map[string]any
-	c.MustCall("GET", method, nil, &response)
+	c.MustCall("GET", path, nil, &response)
 	data, err := json.Marshal(response)
 	if err != nil {
 		c.t.Fatal(err)
@@ -46,12 +46,12 @@ func (c *Meergo) Action(action int) Action {
 }
 
 func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) map[string]any {
-	method := fmt.Sprintf("/api/connections/%d/actions/schemas/%s", conn, target)
+	path := fmt.Sprintf("/api/connections/%d/actions/schemas/%s", conn, target)
 	if eventType != "" {
-		method += "/" + eventType
+		path += "/" + eventType
 	}
 	var schemas map[string]any
-	c.MustCall("GET", method, nil, &schemas)
+	c.MustCall("GET", path, nil, &schemas)
 	return schemas
 }
 
@@ -59,8 +59,8 @@ func (c *Meergo) CompletePath(storage int, path string) string {
 	var response struct {
 		Path string `json:"path"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/files/%s/absolute", storage, url.PathEscape(path))
-	c.MustCall("GET", method, nil, &response)
+	endpointPath := fmt.Sprintf("/api/connections/%d/files/%s/absolute", storage, url.PathEscape(path))
+	c.MustCall("GET", endpointPath, nil, &response)
 	return response.Path
 }
 
@@ -73,15 +73,15 @@ func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, i
 		Identities []UserIdentity `json:"identities"`
 		Total      int            `json:"total"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/identities", conn)
-	c.MustCall("POST", method, req, &response)
+	path := fmt.Sprintf("/api/connections/%d/identities", conn)
+	c.MustCall("POST", path, req, &response)
 	return response.Identities, response.Total
 }
 
 func (c *Meergo) ConnectionUI(connection int) map[string]any {
-	method := fmt.Sprintf("/api/connections/%d/ui", connection)
+	path := fmt.Sprintf("/api/connections/%d/ui", connection)
 	var ui map[string]any
-	c.MustCall("GET", method, nil, &ui)
+	c.MustCall("GET", path, nil, &ui)
 	return ui
 }
 
@@ -254,14 +254,14 @@ func (c *Meergo) CreateSourcePostgreSQL() int {
 }
 
 func (c *Meergo) DeleteConnection(conn int) {
-	method := fmt.Sprintf("/api/connections/%d", conn)
-	c.MustCall("DELETE", method, nil, nil)
+	path := fmt.Sprintf("/api/connections/%d", conn)
+	c.MustCall("DELETE", path, nil, nil)
 }
 
 func (c *Meergo) ExecuteAction(action int, reload bool) int {
-	method := fmt.Sprintf("/api/actions/%d/exec", action)
+	path := fmt.Sprintf("/api/actions/%d/exec", action)
 	var id int
-	c.MustCall("POST", method, map[string]any{"reload": reload}, &id)
+	c.MustCall("POST", path, map[string]any{"reload": reload}, &id)
 	return id
 }
 
@@ -283,8 +283,8 @@ func (c *Meergo) File(storage int, path, format, sheet string, compression Compr
 		Records []map[string]any `json:"records"`
 		Schema  types.Type       `json:"schema"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/files/%s", storage, url.PathEscape(path))
-	c.MustCall("POST", method, req, &response)
+	endpointPath := fmt.Sprintf("/api/connections/%d/files/%s", storage, url.PathEscape(path))
+	c.MustCall("POST", endpointPath, req, &response)
 	return response.Records, response.Schema
 }
 
@@ -377,15 +377,15 @@ func (c *Meergo) Sheets(storage int, path string, format string, compression Com
 	var response struct {
 		Sheets []string `json:"sheets"`
 	}
-	method := fmt.Sprintf("/api/connections/%d/files/%s/sheets", storage, url.PathEscape(path))
-	c.MustCall("POST", method, request, &response)
+	endpointPath := fmt.Sprintf("/api/connections/%d/files/%s/sheets", storage, url.PathEscape(path))
+	c.MustCall("POST", endpointPath, request, &response)
 	return response.Sheets
 }
 
 func (c *Meergo) TableSchema(conn int, table string) types.Type {
 	var schema types.Type
-	method := fmt.Sprintf("/api/connections/%d/tables/%s", conn, url.PathEscape(table))
-	c.MustCall("GET", method, nil, &schema)
+	path := fmt.Sprintf("/api/connections/%d/tables/%s", conn, url.PathEscape(table))
+	c.MustCall("GET", path, nil, &schema)
 	return schema
 }
 
@@ -412,8 +412,8 @@ func (c *Meergo) TestWorkspaceCreation(name string, userSchema types.Type,
 }
 
 func (c *Meergo) UpdateAction(actionID int, action ActionToSet) {
-	method := fmt.Sprintf("/api/actions/%d", actionID)
-	c.MustCall("PUT", method, action, nil)
+	path := fmt.Sprintf("/api/actions/%d", actionID)
+	c.MustCall("PUT", path, action, nil)
 }
 
 func (c *Meergo) UpdateIdentityResolution(runOnBatchImport bool, identifiers []string) {
@@ -487,8 +487,8 @@ func (c *Meergo) UserIdentities(user uuid.UUID, first, limit int) ([]UserIdentit
 		Identities []UserIdentity `json:"identities"`
 		Total      int            `json:"total"`
 	}
-	method := fmt.Sprintf("/api/users/%s/identities?first=%d&limit=%d", user, first, limit)
-	c.MustCall("GET", method, nil, &response)
+	path := fmt.Sprintf("/api/users/%s/identities?first=%d&limit=%d", user, first, limit)
+	c.MustCall("GET", path, nil, &response)
 	return response.Identities, response.Total
 }
 
@@ -551,8 +551,8 @@ func (c *Meergo) WaitForExecutionsCompletionAllowFailed(conn int, executions ...
 
 func (c *Meergo) EventWriteKeys(conn int) []string {
 	var keys []string
-	method := fmt.Sprintf("/api/connections/%d/event-write-keys", conn)
-	c.MustCall("GET", method, nil, &keys)
+	path := fmt.Sprintf("/api/connections/%d/event-write-keys", conn)
+	c.MustCall("GET", path, nil, &keys)
 	return keys
 }
 
