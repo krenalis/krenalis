@@ -22,8 +22,6 @@ import { Variant } from '../App/App.types';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
-const TIME_DELTA = 1000;
-
 interface ActionsGridProps {
 	newActionID: React.MutableRefObject<number>;
 	actions: Action[];
@@ -88,9 +86,9 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 	const executeAction = async (actionID: number) => {
 		runButtonRefs.current[actionID].current!.load();
-		const startTime = new Date().getTime();
+		let executionID: number;
 		try {
-			await api.workspaces.connections.executeAction(actionID);
+			executionID = await api.workspaces.connections.executeAction(actionID);
 		} catch (err) {
 			if (err instanceof UnprocessableError) {
 				runButtonRefs.current[actionID].current!.error(err.message);
@@ -103,29 +101,16 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 
 		let execution: Execution | null = null;
 		while (execution == null) {
-			let executions: Execution[];
+			await sleep(500);
 			try {
-				executions = await api.workspaces.connections.executions();
+				execution = await api.workspaces.connections.execution(executionID);
 			} catch (err) {
 				handleError(err);
 				return;
 			}
-
-			const exec = executions
-				.filter((imp) => {
-					return imp.action === actionID;
-				})
-				.filter((imp) => {
-					return new Date(imp.startTime).getTime() >= startTime - TIME_DELTA;
-				})[0];
-
-			if (!exec || exec.endTime == null) {
-				// wait before making a new request.
-				await sleep(500);
-				continue;
+			if (execution.endTime == null) {
+				execution = null;
 			}
-
-			execution = exec;
 		}
 
 		if (execution.error !== '') {

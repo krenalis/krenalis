@@ -5985,7 +5985,7 @@
                 },
                 {
                     "name": "Execute action",
-                    "description": "Starts an action execution to import its users into the data warehouse or export the user in the data warehouse to the app, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\nThe action must be enabled.",
+                    "description": "Starts an action execution to import its users into the data warehouse or export the user in the data warehouse to the app, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\nThe action must be enabled.",
                     "method": "POST",
                     "url": "/v0/actions/:id/exec",
                     "parameters": [
@@ -6061,6 +6061,99 @@
                     "description": "Returns all action executions.\n\nActions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
                     "method": "GET",
                     "url": "/v0/actions/executions",
+                    "parameters": [],
+                    "moreParameters": [],
+                    "response": {
+                        "description": "",
+                        "parameters": [
+                            {
+                                "name": "executions",
+                                "type": {
+                                    "name": "Array",
+                                    "elementType": {
+                                        "name": "Object",
+                                        "properties": [
+                                            {
+                                                "name": "id",
+                                                "placeholder": "609461413",
+                                                "type": {
+                                                    "name": "Int",
+                                                    "bitSize": 32
+                                                },
+                                                "description": "The ID of the execution."
+                                            },
+                                            {
+                                                "name": "action",
+                                                "placeholder": "705981339",
+                                                "type": {
+                                                    "name": "Int",
+                                                    "bitSize": 32
+                                                },
+                                                "description": "The ID of the executed action."
+                                            },
+                                            {
+                                                "name": "startTime",
+                                                "placeholder": "\"2024/11/27T18:22:47.937Z\"",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "description": "The start time in ISO 8601 format."
+                                            },
+                                            {
+                                                "name": "endTime",
+                                                "placeholder": "\"2024/11/27T18:49:07.150Z\"",
+                                                "type": {
+                                                    "name": "DateTime"
+                                                },
+                                                "nullable": true,
+                                                "description": "The end time in ISO 8601 format. It is null if the execution has not yet finished."
+                                            },
+                                            {
+                                                "name": "passed",
+                                                "placeholder": "22947",
+                                                "type": {
+                                                    "name": "Int",
+                                                    "bitSize": 32
+                                                },
+                                                "description": "The number of passed users or events."
+                                            },
+                                            {
+                                                "name": "failed",
+                                                "placeholder": "172",
+                                                "type": {
+                                                    "name": "Int",
+                                                    "bitSize": 32
+                                                },
+                                                "description": "The number of failed users or events."
+                                            },
+                                            {
+                                                "name": "error",
+                                                "placeholder": "\"\"",
+                                                "type": {
+                                                    "name": "Text"
+                                                },
+                                                "description": "An error occurred during execution, causing it to stop prematurely. It is empty if the execution has not yet finished or if no error occurred."
+                                            }
+                                        ]
+                                    }
+                                },
+                                "description": "The action executions."
+                            }
+                        ]
+                    },
+                    "errors": [
+                        {
+                            "status": 404,
+                            "code": "NotFound",
+                            "message": "workspace does not exist"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get execution",
+                    "description": "Returns an action execution.\n\nActions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
+                    "method": "GET",
+                    "url": "/v0/actions/executions/:id",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {

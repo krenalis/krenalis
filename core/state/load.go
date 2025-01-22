@@ -222,6 +222,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					ws := &Workspace{
 						mu:          new(sync.Mutex),
 						connections: map[int]*Connection{},
+						executions:  map[int]*ActionExecution{},
 						accounts:    map[int]*Account{},
 					}
 					if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehouseType,
@@ -440,7 +441,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			return err
 		}
 
-		// Read the non-terminated action executions.
+		// Read running action executions.
 		err = state.db.QueryScan(ctx, "SELECT id, action, cursor, reload, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *postgres.Rows) error {
@@ -451,8 +452,11 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 					if err != nil {
 						return err
 					}
-					exe.action = state.actions[actionID]
-					exe.action.execution = &exe
+					action := state.actions[actionID]
+					exe.action = action
+					action.execution = &exe
+					ws := exe.action.connection.workspace
+					ws.executions[exe.ID] = &exe
 				}
 				return nil
 			})

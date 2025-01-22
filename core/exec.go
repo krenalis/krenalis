@@ -133,6 +133,7 @@ func (this *Action) exec(ctx context.Context) {
 
 		n := state.EndActionExecution{
 			ID:     execution.ID,
+			Action: this.action.ID,
 			Health: state.Healthy,
 		}
 

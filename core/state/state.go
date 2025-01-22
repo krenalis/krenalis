@@ -422,6 +422,7 @@ type Workspace struct {
 		Settings json.RawMessage
 	}
 	connections                    map[int]*Connection
+	executions                     map[int]*ActionExecution // running action executions.
 	ID                             int
 	organization                   *Organization
 	Name                           string
@@ -491,6 +492,15 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
+// Execution returns the action execution of the workspace with the given id.
+// The boolean return value reports whether the execution exists.
+func (workspace *Workspace) Execution(id int) (*ActionExecution, bool) {
+	workspace.mu.Lock()
+	exe, ok := workspace.executions[id]
+	workspace.mu.Unlock()
+	return exe, ok
+}
+
 // NumActionsToPurge returns the number of actions to purge for the workspace.
 func (workspace *Workspace) NumActionsToPurge() int {
 	workspace.mu.Lock()
@@ -505,7 +515,6 @@ func (workspace *Workspace) Organization() *Organization {
 	organization := workspace.organization
 	workspace.mu.Unlock()
 	return organization
-
 }
 
 // UIPreferences represents the UI preferences of a workspace.

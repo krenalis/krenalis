@@ -471,6 +471,7 @@ func (state *State) createWorkspace(n notification) {
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
 		connections:                    map[int]*Connection{},
+		executions:                     map[int]*ActionExecution{},
 		ID:                             e.ID,
 		organization:                   organization,
 		Name:                           e.Name,
@@ -737,6 +738,7 @@ func (state *State) electLeader(n notification) {
 // EndActionExecution is the event sent when action execution ends.
 type EndActionExecution struct {
 	ID     int
+	Action int
 	Health Health
 }
 
@@ -746,15 +748,15 @@ func (state *State) endActionExecution(n notification) {
 	if !decodeNotification(n, &e) {
 		return
 	}
-	for _, a := range state.actions {
-		if ex := a.execution; ex != nil && ex.ID == e.ID {
-			state.replaceAction(a.ID, func(a *Action) {
-				a.execution = nil
-				a.Health = e.Health
-			})
-			break
-		}
-	}
+	a := state.actions[e.Action]
+	ws := a.connection.workspace
+	ws.mu.Lock()
+	delete(ws.executions, e.ID)
+	ws.mu.Unlock()
+	state.replaceAction(a.ID, func(a *Action) {
+		a.execution = nil
+		a.Health = e.Health
+	})
 }
 
 // ExecuteAction is the event sent when an action is executed.
@@ -773,8 +775,8 @@ func (state *State) executeAction(n notification) {
 		return
 	}
 	a := state.actions[e.Action]
-	a.mu.Lock()
-	a.execution = &ActionExecution{
+	ws := a.connection.workspace
+	exe := &ActionExecution{
 		mu:        &sync.Mutex{},
 		ID:        e.ID,
 		action:    a,
@@ -782,6 +784,11 @@ func (state *State) executeAction(n notification) {
 		Cursor:    e.Cursor,
 		StartTime: e.StartTime,
 	}
+	ws.mu.Lock()
+	ws.executions[exe.ID] = exe
+	ws.mu.Unlock()
+	a.mu.Lock()
+	a.execution = exe
 	a.mu.Unlock()
 	dispatchNotification(state, e)
 }

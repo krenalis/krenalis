@@ -265,10 +265,19 @@ func (c *Meergo) ExecuteAction(action int, reload bool) int {
 	return id
 }
 
+func (c *Meergo) Execution(id int) Execution {
+	var exe Execution
+	path := fmt.Sprintf("/api/actions/executions/%d", id)
+	c.MustCall("GET", path, nil, &exe)
+	return exe
+}
+
 func (c *Meergo) Executions() []Execution {
-	var executions []Execution
-	c.MustCall("GET", "/api/actions/executions", nil, &executions)
-	return executions
+	var response struct {
+		Executions []Execution
+	}
+	c.MustCall("GET", "/api/actions/executions", nil, &response)
+	return response.Executions
 }
 
 func (c *Meergo) File(storage int, path, format, sheet string, compression Compression, settings json.RawMessage, limit int) ([]map[string]any, types.Type) {
@@ -562,31 +571,45 @@ func (c *Meergo) Workspace() Workspace {
 	return ws
 }
 
-func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, executions ...int) {
+func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
 	time.Sleep(500 * time.Millisecond)
 	for {
+		if len(ids) == 1 {
+			exe := c.Execution(ids[0])
+			if exe.EndTime != nil {
+				// If the action execution ended with an error, make the test fail.
+				if exe.Error != "" {
+					c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exe.Action, exe.ID, exe.Error)
+				}
+				if exe.Failed > 0 && !allowFailed {
+					c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exe.Action, exe.ID, exe.Failed)
+				}
+				return
+			}
+			time.Sleep(1 * time.Second)
+			continue
+		}
 		completed := true
-		for _, exec := range c.Executions() {
-			if !slices.Contains(executions, exec.ID) {
+		for _, exe := range c.Executions() {
+			if !slices.Contains(ids, exe.ID) {
 				continue
 			}
-			if exec.EndTime == nil {
+			if exe.EndTime == nil {
 				completed = false
 				continue
 			}
 			// If the action execution ended with an error, make the test fail.
-			if exec.Error != "" {
-				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exec.Action, exec.ID, exec.Error)
+			if exe.Error != "" {
+				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exe.Action, exe.ID, exe.Error)
 			}
-			if exec.Failed > 0 && !allowFailed {
-				c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exec.Action, exec.ID, exec.Failed)
+			if exe.Failed > 0 && !allowFailed {
+				c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exe.Action, exe.ID, exe.Failed)
 			}
 		}
-		if !completed {
-			time.Sleep(1 * time.Second)
-			continue
+		if completed {
+			return
 		}
-		return
+		time.Sleep(1 * time.Second)
 	}
 }
 

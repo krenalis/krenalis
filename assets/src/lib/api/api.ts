@@ -201,6 +201,10 @@ class Connections {
 		);
 	};
 
+	execution = async (id: number): Promise<Execution> => {
+		return await call(`${this.apiURL}/actions/executions/${id}`, http.GET, this.workspaceID);
+	};
+
 	executions = async (): Promise<Execution[]> => {
 		return await call(`${this.apiURL}/actions/executions`, http.GET, this.workspaceID);
 	};
@@ -385,7 +389,7 @@ class Connections {
 		});
 	};
 
-	executeAction = async (action: number): Promise<void> => {
+	executeAction = async (action: number): Promise<number> => {
 		return await call(`${this.apiURL}/actions/${encodeURIComponent(action)}/exec`, http.POST, this.workspaceID, {
 			reload: false,
 		});

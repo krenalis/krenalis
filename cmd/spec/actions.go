@@ -40,6 +40,52 @@ var exportSchedulePeriodParameter = types.Property{
 
 func init() {
 
+	executionParameters := []types.Property{
+		{
+			Name:        "id",
+			Type:        types.Int(32),
+			Placeholder: "609461413",
+			Description: "The ID of the execution.",
+		},
+		{
+			Name:        "action",
+			Type:        types.Int(32),
+			Placeholder: "705981339",
+			Description: "The ID of the executed action.",
+		},
+		{
+			Name:        "startTime",
+			Type:        types.DateTime(),
+			Placeholder: `"2024/11/27T18:22:47.937Z"`,
+			Description: "The start time in ISO 8601 format.",
+		},
+		{
+			Name:        "endTime",
+			Type:        types.DateTime(),
+			Nullable:    true,
+			Placeholder: `"2024/11/27T18:49:07.150Z"`,
+			Description: "The end time in ISO 8601 format. It is null if the execution has not yet finished.",
+		},
+		{
+			Name:        "passed",
+			Type:        types.Int(32),
+			Placeholder: "22947",
+			Description: "The number of passed users or events.",
+		},
+		{
+			Name:        "failed",
+			Type:        types.Int(32),
+			Placeholder: "172",
+			Description: "The number of failed users or events.",
+		},
+		{
+			Name:        "error",
+			Type:        types.Text(),
+			Placeholder: `""`,
+			Description: "An error occurred during execution, causing it to stop prematurely. It is empty if the execution has not yet finished or if no error occurred.",
+		},
+	}
+
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions",
 		Name: "Actions",
@@ -104,7 +150,7 @@ func init() {
 			{
 				Name: "Execute action",
 				Description: "Starts an action execution to import its users into the data warehouse or export the user in the data warehouse to the app, applying the action's filter and transformation.\n\n" +
-					"It returns immediately without waiting for the execution to complete. To track the progress, call the [`/executions/:id`](/api/executions) endpoint using the returned execution ID.\n\n" +
+					"It returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\n" +
 					"The action must be enabled.",
 				Method: POST,
 				URL:    "/v0/actions/:id/exec",
@@ -153,49 +199,24 @@ func init() {
 				Response: &Response{
 					Parameters: []types.Property{
 						{
-							Name:        "id",
-							Type:        types.Int(32),
-							Placeholder: "609461413",
-							Description: "The ID of the execution.",
-						},
-						{
-							Name:        "action",
-							Type:        types.Int(32),
-							Placeholder: "705981339",
-							Description: "The ID of the executed action.",
-						},
-						{
-							Name:        "startTime",
-							Type:        types.DateTime(),
-							Placeholder: `"2024/11/27T18:22:47.937Z"`,
-							Description: "The start time in ISO 8601 format.",
-						},
-						{
-							Name:        "endTime",
-							Type:        types.DateTime(),
-							Nullable:    true,
-							Placeholder: `"2024/11/27T18:49:07.150Z"`,
-							Description: "The end time in ISO 8601 format. It is null if the execution has not yet finished.",
-						},
-						{
-							Name:        "passed",
-							Type:        types.Int(32),
-							Placeholder: "22947",
-							Description: "The number of passed users or events.",
-						},
-						{
-							Name:        "failed",
-							Type:        types.Int(32),
-							Placeholder: "172",
-							Description: "The number of failed users or events.",
-						},
-						{
-							Name:        "error",
-							Type:        types.Text(),
-							Placeholder: `""`,
-							Description: "An error occurred during execution, causing it to stop prematurely. It is empty if the execution has not yet finished or if no error occurred.",
+							Name:        "executions",
+							Type:        types.Array(types.Object(executionParameters)),
+							Description: "The action executions.",
 						},
 					},
+				},
+				Errors: []Error{
+					{404, NotFound, "workspace does not exist"},
+				},
+			},
+			{
+				Name: "Get execution",
+				Description: "Returns an action execution.\n\n" +
+					"Actions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
+				Method: GET,
+				URL:    "/v0/actions/executions/:id",
+				Response: &Response{
+					Parameters: executionParameters,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},

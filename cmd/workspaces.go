@@ -526,13 +526,34 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 	return ws.AuthToken(r.Context(), connector, redirectURI, authCode)
 }
 
+// Execution returns the execution of an action in a workspace.
+func (workspace workspace) Execution(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.workspace(r)
+	if err != nil {
+		return nil, err
+	}
+	v := r.PathValue("id")
+	if v[0] == '+' {
+		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", v)
+	}
+	id, _ := strconv.Atoi(v)
+	if id <= 0 {
+		return nil, errors.BadRequest("identifier %q is not a valid execution identifier", v)
+	}
+	return ws.Execution(r.Context(), id)
+}
+
 // Executions returns the executions of the actions of a workspace.
 func (workspace workspace) Executions(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	return ws.Executions(r.Context())
+	executions, err := ws.Executions(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"executions": executions}, nil
 }
 
 // IdentityResolutionSettings returns the identity resolution settings of the

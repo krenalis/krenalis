@@ -89,6 +89,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"DELETE /workspaces/current":                             workspace.Delete,
 		"GET    /actions/errors/{start}/{end}":                   workspace.ActionErrors,
 		"GET    /actions/executions":                             workspace.Executions,
+		"GET    /actions/executions/{id}":                        workspace.Execution,
 		"GET    /actions/metrics/dates/{start}/{end}":            workspace.ActionMetricsPerDate,
 		"GET    /actions/metrics/days/{days}":                    workspace.ActionMetricsPerDay,
 		"GET    /actions/metrics/hours/{hours}":                  workspace.ActionMetricsPerHour,

@@ -940,6 +940,44 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
+// Execution returns the execution with the specified identifier for an action
+// in the workspace.
+//
+// If the execution does not exist, it returns an errors.NotFound error.
+func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error) {
+	this.core.mustBeOpen()
+	if id < 1 || id > maxInt32 {
+		return nil, errors.BadRequest("identifier %d is not a valid execution identifier", id)
+	}
+	// Check if the execution is running.
+	if exe, ok := this.workspace.Execution(id); ok {
+		return &Execution{
+			ID:        exe.ID,
+			Action:    exe.Action().ID,
+			StartTime: exe.StartTime,
+		}, nil
+	}
+	var exe Execution
+	err := this.core.db.QueryRow(ctx,
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error_message\n"+
+			"FROM actions_executions e\n"+
+			"INNER JOIN actions a ON a.id = e.action\n"+
+			"INNER JOIN connections c ON c.id = a.connection\n"+
+			"WHERE c.workspace = $1 AND e.id = $2", this.workspace.ID, id).Scan(
+		&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed, &exe.Failed, &exe.Error)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.NotFound("action execution %d does not exist", id)
+		}
+		return nil, err
+	}
+	if exe.EndTime == nil {
+		exe.Passed = 0
+		exe.Failed = 0
+	}
+	return &exe, nil
+}
+
 // Executions returns the executions of the actions of the workspace.
 func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 
