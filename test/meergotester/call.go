@@ -76,11 +76,12 @@ func (c *Meergo) call(method, path string, body any, response any) error {
 		req.Header.Set("Meergo-Workspace", strconv.Itoa(id))
 	}
 
-	c.t.Logf("[info] %s %s", method, url)
+	c.t.Logf("[info] %s %s: executing request", method, url)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
+	c.t.Logf("[info] %s %s: Meergo responded with HTTP status %d", method, url, resp.StatusCode)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		text, err := io.ReadAll(resp.Body)
