@@ -64,6 +64,13 @@ func init() {
 		Description: "The settings for the file format. Refer to the documentation for the [connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` field may be omitted or set to null.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description:    "The schema of the properties in the filter, along with the other properties from the workspace's user schema, to be exported into the file.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-files",
@@ -104,12 +111,7 @@ func init() {
 					compressionParameter,
 					formatSettingsParameter,
 					filterParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
+					inSchemaParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -153,12 +155,7 @@ func init() {
 					sheetParameter,
 					compressionParameter,
 					filterParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
+					inSchemaParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -244,10 +241,10 @@ func init() {
 						},
 						filterParameter,
 						{
-							Name:           "inSchema",
-							Type:           types.Parameter("schema"),
-							CreateRequired: true,
-							Placeholder:    `{...}`,
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The input schema.",
 						},
 						runningParameter,
 						scheduleStartParameter,

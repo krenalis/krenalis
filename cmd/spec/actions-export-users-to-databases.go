@@ -45,6 +45,19 @@ func init() {
 			"If a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\n" +
 			"The type of this column must match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`.",
 	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema for the table key property and the output properties within the transformation.\n\n" +
+			"When exporting users to a database, this should be a subset of the database table schema.",
+	}
+	transformationParameter := types.Property{
+		Name:        "transformation",
+		Type:        types.Parameter("transformation"),
+		Placeholder: `{...}`,
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-databases",
@@ -82,20 +95,15 @@ func init() {
 					tableNameParameter,
 					tableKeyParameter,
 					{
-						Name:        "inSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
+						Name:           "inSchema",
+						Type:           types.Parameter("schema"),
+						Placeholder:    `{...}`,
+						CreateRequired: true,
+						Description: "The schema of the properties used in the filter and the input properties within the transformation.\n\n" +
+							"It should be a subset of the workspace's user schema.",
 					},
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Placeholder: `{...}`,
-					},
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -136,21 +144,8 @@ func init() {
 					},
 					tableNameParameter,
 					tableKeyParameter,
-					{
-						Name:        "inSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Placeholder: `{...}`,
-					},
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -239,11 +234,13 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema of the properties used in the filter and the input properties within the transformation.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema of the table key property and the output properties within the transformation.",
 						},
 						{
 							Name:        "transformation",

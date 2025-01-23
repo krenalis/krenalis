@@ -28,6 +28,28 @@ func init() {
 		Description: "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\n" +
+			"When importing users from apps, this should be a subset of the app’s destination schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the output properties of the transformation.\n\n" +
+			"When importing users from apps, this should be a subset of the workspace's user schema.",
+	}
+	transformationParameter := types.Property{
+		Name:           "transformation",
+		Type:           types.Parameter("transformation"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-apps",
@@ -47,7 +69,7 @@ func init() {
 						Type:           types.Int(32),
 						CreateRequired: true,
 						Placeholder:    "230527183",
-						Description:    "The ID of the connection from which to read the users. It must be a source app connection that imports users.",
+						Description:    "The ID of the connection from which to read the users. It must be a source app that can imports users.",
 					},
 					{
 						Name:           "target",
@@ -63,24 +85,9 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
-					{
-						Name:           "outSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
-					{
-						Name:           "transformation",
-						Type:           types.Parameter("transformation"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
+					inSchemaParameter,
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -120,21 +127,9 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					{
-						Name:        "inSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Placeholder: `{...}`,
-					},
+					inSchemaParameter,
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -206,11 +201,13 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema for the output properties of the transformation.",
 						},
 						{
 							Name:        "transformation",

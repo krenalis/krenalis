@@ -40,7 +40,7 @@ func init() {
 		Description: "The column that uniquely identifies each user in the database. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`.",
 	}
-	lastChangeTimeProperty := types.Property{
+	lastChangeTimeParameter := types.Property{
 		Name:        "lastChangeTimeProperty",
 		Type:        types.Text().WithCharLen(1024),
 		Placeholder: `"updated_at"`,
@@ -48,7 +48,7 @@ func init() {
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
 			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`.",
 	}
-	lastChangeTimeFormat := types.Property{
+	lastChangeTimeFormatParameter := types.Property{
 		Name:           "lastChangeTimeFormat",
 		Type:           types.Text().WithCharLen(64),
 		UpdateRequired: true,
@@ -56,6 +56,28 @@ func init() {
 		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`.",
+	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\n" +
+			"When importing users from databases, this should be a subset of the query schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the output properties of the transformation.\n\n" +
+			"When importing users from databases, this should be a subset of the workspace's user schema.",
+	}
+	transformationParameter := types.Property{
+		Name:           "transformation",
+		Type:           types.Parameter("transformation"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -93,23 +115,11 @@ func init() {
 					},
 					queryParameter,
 					identityPropertyParameter,
-					lastChangeTimeProperty,
-					lastChangeTimeFormat,
-					{
-						Name:        "inSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Placeholder: `{...}`,
-					},
+					lastChangeTimeParameter,
+					lastChangeTimeFormatParameter,
+					inSchemaParameter,
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -150,23 +160,11 @@ func init() {
 					},
 					queryParameter,
 					identityPropertyParameter,
-					lastChangeTimeProperty,
-					lastChangeTimeFormat,
-					{
-						Name:        "inSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Placeholder: `{...}`,
-					},
+					lastChangeTimeParameter,
+					lastChangeTimeFormatParameter,
+					inSchemaParameter,
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -265,11 +263,13 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema for the output properties of the transformation.",
 						},
 						{
 							Name:        "transformation",

@@ -27,6 +27,21 @@ func init() {
 		Description: "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		UpdateRequired: true,
+		Nullable:       true,
+		Description: "The schema for the output properties of the transformation. It is required if a transformation is present.\n\n" +
+			"When importing users from events, this should be a subset of the workspace's user schema.",
+	}
+	transformationParameter := types.Property{
+		Name:        "transformation",
+		Type:        types.Parameter("transformation"),
+		Placeholder: `{...}`,
+		Nullable:    true,
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:          "actions-import-users-from-events",
@@ -61,18 +76,8 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
-					{
-						Name:           "outSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
-					{
-						Name:           "transformation",
-						Type:           types.Parameter("transformation"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -111,18 +116,8 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					{
-						Name:           "outSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
-					{
-						Name:           "transformation",
-						Type:           types.Parameter("transformation"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -190,16 +185,23 @@ func init() {
 						},
 						filterParameter,
 						{
-							Name:           "inSchema",
-							Type:           types.Parameter("schema"),
-							CreateRequired: true,
-							Placeholder:    `{...}`,
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema for the properties used in the filter and any input properties for the transformation.",
 						},
 						{
-							Name:           "transformation",
-							Type:           types.Parameter("transformation"),
-							CreateRequired: true,
-							Placeholder:    `{...}`,
+							Name:        "outSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Nullable:    true,
+							Description: "The schema for the output properties of the transformation. If no transformation is present, it is null.",
+						},
+						{
+							Name:        "transformation",
+							Type:        types.Parameter("transformation"),
+							Placeholder: `{...}`,
+							Nullable:    true,
 						},
 					},
 				},

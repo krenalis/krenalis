@@ -702,7 +702,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of workspace's user schema."
                         },
                         {
                             "name": "outSchema",
@@ -711,7 +711,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
                         },
                         {
                             "name": "transformation",
@@ -937,7 +937,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of workspace's user schema."
                         },
                         {
                             "name": "outSchema",
@@ -945,7 +946,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
                         },
                         {
                             "name": "transformation",
@@ -953,6 +955,7 @@
                             "type": {
                                 "name": "transformation"
                             },
+                            "createRequired": true,
                             "description": ""
                         }
                     ],
@@ -1223,7 +1226,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation."
                             },
                             {
                                 "name": "outSchema",
@@ -1231,7 +1234,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema of the output matching property and the output properties within the transformation."
                             },
                             {
                                 "name": "transformation",
@@ -1373,7 +1376,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema of the properties used in the filter and the input properties within the transformation.\n\nIt should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "outSchema",
@@ -1381,7 +1385,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         },
                         {
                             "name": "transformation",
@@ -1484,20 +1489,13 @@
                             "description": "The name of the table column that contains a value identifying a user within the table. This column must be included in the output schema.\n\nTypically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\nIf a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\nThe type of this column must match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "description": ""
-                        },
-                        {
                             "name": "outSchema",
                             "placeholder": "{...}",
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         },
                         {
                             "name": "transformation",
@@ -1749,7 +1747,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema of the properties used in the filter and the input properties within the transformation."
                             },
                             {
                                 "name": "outSchema",
@@ -1757,7 +1755,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema of the table key property and the output properties within the transformation."
                             },
                             {
                                 "name": "transformation",
@@ -2029,7 +2027,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema of the properties in the filter, along with the other properties from the workspace's user schema, to be exported into the file."
                         }
                     ],
                     "moreParameters": [],
@@ -2240,7 +2238,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema of the properties in the filter, along with the other properties from the workspace's user schema, to be exported into the file."
                         }
                     ],
                     "moreParameters": [],
@@ -2523,8 +2521,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "createRequired": true,
-                                "description": ""
+                                "description": "The input schema."
                             },
                             {
                                 "name": "running",
@@ -3101,8 +3098,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "createRequired": true,
-                                "description": ""
+                                "description": "The input schema. When importing events, it is the event schema."
                             }
                         ]
                     },
@@ -3150,7 +3146,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which to read the users. It must be a source app connection that imports users."
+                            "description": "The ID of the connection from which to read the users. It must be a source app that can imports users."
                         },
                         {
                             "name": "target",
@@ -3270,7 +3266,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app’s destination schema."
                         },
                         {
                             "name": "outSchema",
@@ -3279,7 +3275,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -3460,7 +3456,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app’s destination schema."
                         },
                         {
                             "name": "outSchema",
@@ -3468,7 +3465,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -3476,6 +3474,7 @@
                             "type": {
                                 "name": "transformation"
                             },
+                            "createRequired": true,
                             "description": ""
                         }
                     ],
@@ -3701,7 +3700,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema for the properties used in the filter, as well as the input properties for the transformation."
                             },
                             {
                                 "name": "outSchema",
@@ -3709,7 +3708,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema for the output properties of the transformation."
                             },
                             {
                                 "name": "transformation",
@@ -3871,7 +3870,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
                         },
                         {
                             "name": "outSchema",
@@ -3879,7 +3879,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -3887,6 +3888,7 @@
                             "type": {
                                 "name": "transformation"
                             },
+                            "createRequired": true,
                             "description": ""
                         }
                     ],
@@ -4007,7 +4009,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
                         },
                         {
                             "name": "outSchema",
@@ -4015,7 +4018,8 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -4023,6 +4027,7 @@
                             "type": {
                                 "name": "transformation"
                             },
+                            "createRequired": true,
                             "description": ""
                         }
                     ],
@@ -4192,7 +4197,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema for the identity property, the last change time property, and the input properties for the transformation."
                             },
                             {
                                 "name": "outSchema",
@@ -4200,7 +4205,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": ""
+                                "description": "The schema for the output properties of the transformation."
                             },
                             {
                                 "name": "transformation",
@@ -4414,8 +4419,9 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "createRequired": true,
-                            "description": ""
+                            "updateRequired": true,
+                            "nullable": true,
+                            "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -4423,7 +4429,7 @@
                             "type": {
                                 "name": "transformation"
                             },
-                            "createRequired": true,
+                            "nullable": true,
                             "description": ""
                         }
                     ],
@@ -4591,8 +4597,9 @@
                             "type": {
                                 "name": "schema"
                             },
-                            "createRequired": true,
-                            "description": ""
+                            "updateRequired": true,
+                            "nullable": true,
+                            "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -4600,7 +4607,7 @@
                             "type": {
                                 "name": "transformation"
                             },
-                            "createRequired": true,
+                            "nullable": true,
                             "description": ""
                         }
                     ],
@@ -4821,8 +4828,16 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "createRequired": true,
-                                "description": ""
+                                "description": "The schema for the properties used in the filter and any input properties for the transformation."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "nullable": true,
+                                "description": "The schema for the output properties of the transformation. If no transformation is present, it is null."
                             },
                             {
                                 "name": "transformation",
@@ -4830,7 +4845,7 @@
                                 "type": {
                                     "name": "transformation"
                                 },
-                                "createRequired": true,
+                                "nullable": true,
                                 "description": ""
                             }
                         ]
@@ -4879,7 +4894,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which to read the file. It must be a source file storage."
+                            "description": "The ID of the connection from which to read the users. It must be a source file storage."
                         },
                         {
                             "name": "target",
@@ -5085,7 +5100,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
                         },
                         {
                             "name": "outSchema",
@@ -5094,7 +5109,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -5343,7 +5358,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
                         },
                         {
                             "name": "outSchema",
@@ -5352,7 +5367,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the workspace's user schema."
                         },
                         {
                             "name": "transformation",
@@ -5644,8 +5659,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "createRequired": true,
-                                "description": ""
+                                "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation."
                             },
                             {
                                 "name": "outSchema",
@@ -5653,8 +5667,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "createRequired": true,
-                                "description": ""
+                                "description": "The schema for the output properties of the transformation."
                             },
                             {
                                 "name": "transformation",
@@ -5662,7 +5675,6 @@
                                 "type": {
                                     "name": "transformation"
                                 },
-                                "createRequired": true,
                                 "description": ""
                             },
                             {
@@ -5773,15 +5785,6 @@
                             "description": "Indicate if the action is enabled once created."
                         },
                         {
-                            "name": "eventType",
-                            "placeholder": "\"send_add_to_cart\"",
-                            "type": {
-                                "name": "Text"
-                            },
-                            "createRequired": true,
-                            "description": "The action's event type.\n\n It must be one of the event types supported by the connection of the action."
-                        },
-                        {
                             "name": "filter",
                             "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"type\", \"operator\": \"is\", \"values\": [ \"track\" ] } ] }",
                             "type": {
@@ -5878,8 +5881,9 @@
                             "type": {
                                 "name": "schema"
                             },
+                            "updateRequired": true,
                             "nullable": true,
-                            "description": ""
+                            "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
                         },
                         {
                             "name": "transformation",
@@ -6065,8 +6069,9 @@
                             "type": {
                                 "name": "schema"
                             },
+                            "updateRequired": true,
                             "nullable": true,
-                            "description": ""
+                            "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
                         },
                         {
                             "name": "transformation",
@@ -6308,8 +6313,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "nullable": true,
-                                "description": ""
+                                "description": "The schema for the properties used in the filter and the input properties in the transformation.\n\nWhen sending events to apps, this is the event schema."
                             },
                             {
                                 "name": "outSchema",
@@ -6318,7 +6322,7 @@
                                     "name": "schema"
                                 },
                                 "nullable": true,
-                                "description": ""
+                                "description": "The schema for the output properties of the transformation. It is null if no transformation is present."
                             },
                             {
                                 "name": "transformation",
@@ -12373,7 +12377,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which to read the file. It must be a source file storage."
+                            "description": "The ID of the connection from which to read the users. It must be a source file storage."
                         },
                         {
                             "name": "path",
@@ -12503,7 +12507,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the connection from which to read the file. It must be a source file storage."
+                            "description": "The ID of the connection from which to read the users. It must be a source file storage."
                         },
                         {
                             "name": "path",

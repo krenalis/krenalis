@@ -67,6 +67,28 @@ func init() {
 		Description: "Determines whether a user should be exported even if there are multiple matching users in the app.\n\n" +
 			"If set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\n" +
+			"When exporting users to apps, it should be a subset of workspace's user schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema of the output matching property and the output properties within the transformation.\n\n" +
+			"When exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present.",
+	}
+	transformationParameter := types.Property{
+		Name:           "transformation",
+		Type:           types.Parameter("transformation"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-apps",
@@ -105,24 +127,9 @@ func init() {
 					exportModeParameter,
 					matchingParameter,
 					exportOnDuplicatesParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
-					{
-						Name:           "outSchema",
-						Type:           types.Parameter("schema"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
-					{
-						Name:           "transformation",
-						Type:           types.Parameter("transformation"),
-						CreateRequired: true,
-						Placeholder:    `{...}`,
-					},
+					inSchemaParameter,
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -165,21 +172,9 @@ func init() {
 					exportModeParameter,
 					matchingParameter,
 					exportOnDuplicatesParameter,
-					{
-						Name:        "inSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Placeholder: `{...}`,
-					},
+					inSchemaParameter,
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -281,11 +276,13 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
+							Description: "The schema of the output matching property and the output properties within the transformation.",
 						},
 						{
 							Name:        "transformation",

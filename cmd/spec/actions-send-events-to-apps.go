@@ -28,6 +28,21 @@ func init() {
 		Description: "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Nullable:       true,
+		Placeholder:    `{...}`,
+		UpdateRequired: true,
+		Description: "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\n" +
+			"It should be a subset of the schema of the passed event type.",
+	}
+	transformationParameter := types.Property{
+		Name:        "transformation",
+		Type:        types.Parameter("transformation"),
+		Nullable:    true,
+		Placeholder: `{...}`,
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-send-events-to-apps",
@@ -62,27 +77,9 @@ func init() {
 						Placeholder: "true",
 						Description: "Indicate if the action is enabled once created.",
 					},
-					{
-						Name:           "eventType",
-						Type:           types.Text(),
-						CreateRequired: true,
-						Placeholder:    `"send_add_to_cart"`,
-						Description: "The action's event type.\n\n" +
-							" It must be one of the event types supported by the connection of the action.",
-					},
 					filterParameter,
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Nullable:    true,
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Nullable:    true,
-						Placeholder: `{...}`,
-					},
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -123,18 +120,8 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					{
-						Name:        "outSchema",
-						Type:        types.Parameter("schema"),
-						Nullable:    true,
-						Placeholder: `{...}`,
-					},
-					{
-						Name:        "transformation",
-						Type:        types.Parameter("transformation"),
-						Nullable:    true,
-						Placeholder: `{...}`,
-					},
+					outSchemaParameter,
+					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -211,14 +198,16 @@ func init() {
 						{
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
-							Nullable:    true,
 							Placeholder: `{...}`,
+							Description: "The schema for the properties used in the filter and the input properties in the transformation.\n\n" +
+								"When sending events to apps, this is the event schema.",
 						},
 						{
 							Name:        "outSchema",
 							Type:        types.Parameter("schema"),
 							Nullable:    true,
 							Placeholder: `{...}`,
+							Description: "The schema for the output properties of the transformation. It is null if no transformation is present.",
 						},
 						{
 							Name:        "transformation",

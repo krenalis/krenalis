@@ -18,7 +18,7 @@ func init() {
 		Type:           types.Int(32),
 		Placeholder:    "1371036433",
 		CreateRequired: true,
-		Description:    "The ID of the connection from which to read the file. It must be a source file storage.",
+		Description:    "The ID of the connection from which to read the users. It must be a source file storage.",
 	}
 	pathParameter := types.Property{
 		Name:           "path",
