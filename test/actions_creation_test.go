@@ -124,12 +124,12 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Format: "CSV",
+				Format:  "CSV",
+				OrderBy: "email",
 				FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 					"Comma":          ",",
 					"HasColumnNames": true,
 				}),
-				FileOrderingPropertyPath: "email",
 			},
 		},
 		{

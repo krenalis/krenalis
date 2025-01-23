@@ -263,33 +263,33 @@ func (state *State) createAPIKey(n notification) {
 
 // CreateAction is the event sent when an action is created.
 type CreateAction struct {
-	ID                       int
-	Connection               int
-	Target                   Target
-	EventType                string
-	Name                     string
-	Enabled                  bool
-	ScheduleStart            int16
-	SchedulePeriod           int16
-	InSchema                 types.Type
-	OutSchema                types.Type
-	Filter                   json.RawMessage `json:",omitempty"`
-	Transformation           Transformation
-	Query                    string
-	Format                   string
-	Path                     string
-	Sheet                    string
-	Compression              Compression
-	FormatSettings           []byte
-	ExportMode               ExportMode
-	Matching                 Matching
-	ExportOnDuplicates       bool
-	TableName                string
-	TableKey                 string
-	IdentityProperty         string
-	LastChangeTimeProperty   string
-	LastChangeTimeFormat     string
-	FileOrderingPropertyPath string
+	ID                     int
+	Connection             int
+	Target                 Target
+	EventType              string
+	Name                   string
+	Enabled                bool
+	ScheduleStart          int16
+	SchedulePeriod         int16
+	InSchema               types.Type
+	OutSchema              types.Type
+	Filter                 json.RawMessage `json:",omitempty"`
+	Transformation         Transformation
+	Query                  string
+	Format                 string
+	Path                   string
+	Sheet                  string
+	Compression            Compression
+	OrderBy                string
+	FormatSettings         []byte
+	ExportMode             ExportMode
+	Matching               Matching
+	ExportOnDuplicates     bool
+	TableName              string
+	TableKey               string
+	IdentityProperty       string
+	LastChangeTimeProperty string
+	LastChangeTimeFormat   string
 }
 
 // createAction creates a new action.
@@ -301,33 +301,33 @@ func (state *State) createAction(n notification) {
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
 	action := &Action{
-		mu:                       new(sync.Mutex),
-		ID:                       e.ID,
-		connection:               c,
-		format:                   format,
-		Target:                   e.Target,
-		Name:                     e.Name,
-		Enabled:                  e.Enabled,
-		EventType:                e.EventType,
-		ScheduleStart:            e.ScheduleStart,
-		SchedulePeriod:           e.SchedulePeriod,
-		InSchema:                 e.InSchema,
-		OutSchema:                e.OutSchema,
-		Transformation:           e.Transformation,
-		Query:                    e.Query,
-		Path:                     e.Path,
-		Sheet:                    e.Sheet,
-		Compression:              e.Compression,
-		FormatSettings:           e.FormatSettings,
-		ExportMode:               e.ExportMode,
-		Matching:                 e.Matching,
-		ExportOnDuplicates:       e.ExportOnDuplicates,
-		TableName:                e.TableName,
-		TableKey:                 e.TableKey,
-		IdentityProperty:         e.IdentityProperty,
-		LastChangeTimeProperty:   e.LastChangeTimeProperty,
-		LastChangeTimeFormat:     e.LastChangeTimeFormat,
-		FileOrderingPropertyPath: e.FileOrderingPropertyPath,
+		mu:                     new(sync.Mutex),
+		ID:                     e.ID,
+		connection:             c,
+		format:                 format,
+		Target:                 e.Target,
+		Name:                   e.Name,
+		Enabled:                e.Enabled,
+		EventType:              e.EventType,
+		ScheduleStart:          e.ScheduleStart,
+		SchedulePeriod:         e.SchedulePeriod,
+		InSchema:               e.InSchema,
+		OutSchema:              e.OutSchema,
+		Transformation:         e.Transformation,
+		Query:                  e.Query,
+		Path:                   e.Path,
+		Sheet:                  e.Sheet,
+		Compression:            e.Compression,
+		OrderBy:                e.OrderBy,
+		FormatSettings:         e.FormatSettings,
+		ExportMode:             e.ExportMode,
+		Matching:               e.Matching,
+		ExportOnDuplicates:     e.ExportOnDuplicates,
+		TableName:              e.TableName,
+		TableKey:               e.TableKey,
+		IdentityProperty:       e.IdentityProperty,
+		LastChangeTimeProperty: e.LastChangeTimeProperty,
+		LastChangeTimeFormat:   e.LastChangeTimeFormat,
 	}
 	if e.Filter != nil {
 		action.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
@@ -1001,28 +1001,28 @@ func (state *State) setConnectionSettings(n notification) {
 
 // UpdateAction is the event sent when an action is updated.
 type UpdateAction struct {
-	ID                       int
-	Name                     string
-	Enabled                  bool
-	InSchema                 types.Type
-	OutSchema                types.Type
-	Filter                   json.RawMessage `json:",omitempty"`
-	Transformation           Transformation
-	Query                    string
-	Format                   string
-	Path                     string
-	Sheet                    string
-	Compression              Compression
-	FormatSettings           []byte
-	ExportMode               ExportMode
-	Matching                 Matching
-	ExportOnDuplicates       bool
-	TableName                string
-	TableKey                 string
-	IdentityProperty         string
-	LastChangeTimeProperty   string
-	LastChangeTimeFormat     string
-	FileOrderingPropertyPath string
+	ID                     int
+	Name                   string
+	Enabled                bool
+	InSchema               types.Type
+	OutSchema              types.Type
+	Filter                 json.RawMessage `json:",omitempty"`
+	Transformation         Transformation
+	Query                  string
+	Format                 string
+	Path                   string
+	Sheet                  string
+	Compression            Compression
+	OrderBy                string
+	FormatSettings         []byte
+	ExportMode             ExportMode
+	Matching               Matching
+	ExportOnDuplicates     bool
+	TableName              string
+	TableKey               string
+	IdentityProperty       string
+	LastChangeTimeProperty string
+	LastChangeTimeFormat   string
 }
 
 // updateAction updates an action.
@@ -1048,6 +1048,7 @@ func (state *State) updateAction(n notification) {
 		a.Path = e.Path
 		a.Sheet = e.Sheet
 		a.Compression = e.Compression
+		a.OrderBy = e.OrderBy
 		a.FormatSettings = e.FormatSettings
 		a.ExportMode = e.ExportMode
 		a.Matching = e.Matching
@@ -1057,7 +1058,6 @@ func (state *State) updateAction(n notification) {
 		a.IdentityProperty = e.IdentityProperty
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
-		a.FileOrderingPropertyPath = e.FileOrderingPropertyPath
 	})
 	dispatchNotification(state, e)
 }

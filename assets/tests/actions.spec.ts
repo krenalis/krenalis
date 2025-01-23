@@ -1135,11 +1135,11 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"transformation": null,
 			"path": "test.csv",
 			"sheet": null,
-			"fileOrderingPropertyPath": "email",
 			"identityProperty": "",
 			"lastChangeTimeProperty": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",
+			"orderBy": "email",
 			"format": "CSV",
 			"formatSettings": {
 				"Comma": ",",

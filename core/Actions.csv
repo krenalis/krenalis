@@ -24,7 +24,7 @@ Transformation,,,,,,,,,,
 ,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
 Additional information,,,,,,,,,,
 ,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
-,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Ordering property path
+,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,
 ,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"
@@ -36,7 +36,7 @@ Transformation,,,,,,,,,,
 ,Constant Transformation Allowed,No,No,No,Yes,-,No,Yes,No,-
 Additional information,,,,,,,,,,
 ,Identity and Last Change Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
-,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Ordering property path
+,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,
 ,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"

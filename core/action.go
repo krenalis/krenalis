@@ -31,39 +31,39 @@ import (
 
 // Action represents an action of a connection.
 type Action struct {
-	core                     *Core
-	action                   *state.Action
-	connection               *Connection
-	ID                       int             `json:"id"`
-	Connector                string          `json:"connector"`
-	ConnectorType            ConnectorType   `json:"connectorType"`
-	Connection               int             `json:"connection"`
-	ConnectionRole           Role            `json:"connectionRole"`
-	Target                   Target          `json:"target"`
-	Name                     string          `json:"name"`
-	Enabled                  bool            `json:"enabled"`
-	EventType                *string         `json:"eventType"`
-	Running                  bool            `json:"running"`
-	ScheduleStart            *int            `json:"scheduleStart"`
-	SchedulePeriod           *SchedulePeriod `json:"schedulePeriod"`
-	InSchema                 types.Type      `json:"inSchema"`
-	OutSchema                types.Type      `json:"outSchema"`
-	Filter                   *Filter         `json:"filter"`
-	Transformation           *Transformation `json:"transformation"`
-	Query                    *string         `json:"query"`
-	Format                   string          `json:"format"`
-	Path                     *string         `json:"path"`
-	Sheet                    *string         `json:"sheet"`
-	Compression              Compression     `json:"compression"`
-	ExportMode               *ExportMode     `json:"exportMode"`
-	Matching                 *Matching       `json:"matching"`
-	ExportOnDuplicates       *bool           `json:"exportOnDuplicates"`
-	TableName                *string         `json:"tableName"`
-	TableKey                 *string         `json:"tableKey"`
-	IdentityProperty         *string         `json:"identityProperty"`
-	LastChangeTimeProperty   *string         `json:"lastChangeTimeProperty"`
-	LastChangeTimeFormat     *string         `json:"lastChangeTimeFormat"`
-	FileOrderingPropertyPath *string         `json:"fileOrderingPropertyPath"`
+	core                   *Core
+	action                 *state.Action
+	connection             *Connection
+	ID                     int             `json:"id"`
+	Connector              string          `json:"connector"`
+	ConnectorType          ConnectorType   `json:"connectorType"`
+	Connection             int             `json:"connection"`
+	ConnectionRole         Role            `json:"connectionRole"`
+	Target                 Target          `json:"target"`
+	Name                   string          `json:"name"`
+	Enabled                bool            `json:"enabled"`
+	EventType              *string         `json:"eventType"`
+	Running                bool            `json:"running"`
+	ScheduleStart          *int            `json:"scheduleStart"`
+	SchedulePeriod         *SchedulePeriod `json:"schedulePeriod"`
+	InSchema               types.Type      `json:"inSchema"`
+	OutSchema              types.Type      `json:"outSchema"`
+	Filter                 *Filter         `json:"filter"`
+	Transformation         *Transformation `json:"transformation"`
+	Query                  *string         `json:"query"`
+	Format                 string          `json:"format"`
+	Path                   *string         `json:"path"`
+	Sheet                  *string         `json:"sheet"`
+	Compression            Compression     `json:"compression"`
+	OrderBy                *string         `json:"orderBy"`
+	ExportMode             *ExportMode     `json:"exportMode"`
+	Matching               *Matching       `json:"matching"`
+	ExportOnDuplicates     *bool           `json:"exportOnDuplicates"`
+	TableName              *string         `json:"tableName"`
+	TableKey               *string         `json:"tableKey"`
+	IdentityProperty       *string         `json:"identityProperty"`
+	LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
+	LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
 }
 
 // Matching establishes a relationship between a property in Meergo (input
@@ -394,26 +394,26 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	}
 
 	n := state.UpdateAction{
-		ID:                       this.action.ID,
-		Name:                     action.Name,
-		Enabled:                  action.Enabled,
-		InSchema:                 inSchema,
-		OutSchema:                action.OutSchema,
-		Transformation:           toStateTransformation(action.Transformation, inSchema, action.OutSchema),
-		Query:                    action.Query,
-		Format:                   action.Format,
-		Path:                     action.Path,
-		Sheet:                    action.Sheet,
-		Compression:              state.Compression(action.Compression),
-		ExportMode:               state.ExportMode(action.ExportMode),
-		Matching:                 state.Matching(action.Matching),
-		ExportOnDuplicates:       action.ExportOnDuplicates,
-		TableName:                action.TableName,
-		TableKey:                 action.TableKey,
-		IdentityProperty:         action.IdentityProperty,
-		LastChangeTimeProperty:   action.LastChangeTimeProperty,
-		LastChangeTimeFormat:     action.LastChangeTimeFormat,
-		FileOrderingPropertyPath: action.FileOrderingPropertyPath,
+		ID:                     this.action.ID,
+		Name:                   action.Name,
+		Enabled:                action.Enabled,
+		InSchema:               inSchema,
+		OutSchema:              action.OutSchema,
+		Transformation:         toStateTransformation(action.Transformation, inSchema, action.OutSchema),
+		Query:                  action.Query,
+		Format:                 action.Format,
+		Path:                   action.Path,
+		Sheet:                  action.Sheet,
+		Compression:            state.Compression(action.Compression),
+		OrderBy:                action.OrderBy,
+		ExportMode:             state.ExportMode(action.ExportMode),
+		Matching:               state.Matching(action.Matching),
+		ExportOnDuplicates:     action.ExportOnDuplicates,
+		TableName:              action.TableName,
+		TableKey:               action.TableKey,
+		IdentityProperty:       action.IdentityProperty,
+		LastChangeTimeProperty: action.LastChangeTimeProperty,
+		LastChangeTimeFormat:   action.LastChangeTimeFormat,
 	}
 
 	// Add the filter to the notification.
@@ -518,15 +518,15 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
 			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
-			"compression = $17, format_settings = $18, export_mode = $19, matching_in = $20, matching_out = $21, "+
-			"allow_duplicates = $22, table_name = $23, table_key = $24, identity_property = $25, "+
-			"reload = reload OR $26, last_change_time_property = $27, last_change_time_format = $28, "+
-			"file_ordering_property_path = $29\nWHERE id = $30",
+			"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, "+
+			"matching_out = $22, allow_duplicates = $23, table_name = $24, table_key = $25, identity_property = $26, "+
+			"reload = reload OR $27, last_change_time_property = $28, last_change_time_format = $29\n"+
+			"WHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
-			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, string(n.FormatSettings),
-			n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName, n.TableKey,
-			n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.FileOrderingPropertyPath, n.ID,
+			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
+			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName,
+			n.TableKey, n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ID,
 		)
 		if err != nil {
 			return err
@@ -651,9 +651,9 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		format := action.LastChangeTimeFormat
 		this.LastChangeTimeFormat = &format
 	}
-	if action.FileOrderingPropertyPath != "" {
-		p := action.FileOrderingPropertyPath
-		this.FileOrderingPropertyPath = &p
+	if action.OrderBy != "" {
+		p := action.OrderBy
+		this.OrderBy = &p
 	}
 }
 
@@ -739,6 +739,12 @@ type ActionToSet struct {
 	// In any other case, must be 0.
 	Compression Compression `json:"compression"`
 
+	// OrderBy is the property path for which to order users when they are
+	// exported to a file, and must therefore refer to a property of the
+	// action's output schema (OutSchema). It cannot be longer than 1024 runes.
+	// For actions that do not export users to file, this is the empty string.
+	OrderBy string `json:"orderBy"`
+
 	// FormatSettings represents the format settings of a file connector.
 	// It must be nil if the connector does not have settings.
 	FormatSettings json.Value `json:"formatSettings"`
@@ -796,13 +802,6 @@ type ActionToSet struct {
 	//
 	// It cannot be longer than MaxLastChangeTimeFormatSize runes.
 	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
-
-	// FileOrderingPropertyPath is the property path for which to order users
-	// when they are exported to a file, and must therefore refer to a property
-	// of the action's output schema (OutSchema).
-	// It cannot be longer than 1024 runes.
-	// For actions that do not export users to file, this is the empty string.
-	FileOrderingPropertyPath string `json:"fileOrderingPropertyPath"`
 }
 
 // SchedulePeriod represents a scheduler period in minutes.

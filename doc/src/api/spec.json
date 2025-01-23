@@ -1921,6 +1921,16 @@
                             "description": "The format used to compress the file. If not provided or empty, the file will remain uncompressed."
                         },
                         {
+                            "name": "orderBy",
+                            "placeholder": "\"customer_id\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 1024
+                            },
+                            "createRequired": true,
+                            "description": "The property path by which users will be ordered in the exported file."
+                        },
+                        {
                             "name": "formatSettings",
                             "placeholder": "{ \"HasColumnNames\": true }",
                             "type": {
@@ -2139,6 +2149,16 @@
                                 ]
                             },
                             "description": "The format used to compress the file. If not provided or empty, the file will remain uncompressed."
+                        },
+                        {
+                            "name": "orderBy",
+                            "placeholder": "\"customer_id\"",
+                            "type": {
+                                "name": "Text",
+                                "charLen": 1024
+                            },
+                            "createRequired": true,
+                            "description": "The property path by which users will be ordered in the exported file."
                         },
                         {
                             "name": "filter",
@@ -2423,6 +2443,15 @@
                                     ]
                                 },
                                 "description": "The format used to compress the file. If empty, the file will remain uncompressed."
+                            },
+                            {
+                                "name": "orderBy",
+                                "placeholder": "\"customer_id\"",
+                                "type": {
+                                    "name": "Text",
+                                    "charLen": 1024
+                                },
+                                "description": "The property path by which users will be ordered in the exported file."
                             },
                             {
                                 "name": "filter",

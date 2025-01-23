@@ -310,9 +310,9 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		return fields;
 	}, [fileFields]);
 
-	const orderingPropertyError = useMemo<string>(() => {
+	const orderByError = useMemo<string>(() => {
 		const filteredSchema = filterOrderingPropertySchema(actionType.inputSchema);
-		const property = action.fileOrderingPropertyPath;
+		const property = action.orderBy;
 		if (filteredSchema == null || property === '') {
 			return '';
 		}
@@ -349,7 +349,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		const hasEmailColumn = actionType.inputSchema.properties.find((p) => p.name === 'email');
 		if (hasEmailColumn) {
 			const a = { ...action };
-			a.fileOrderingPropertyPath = 'email';
+			a.orderBy = 'email';
 			setAction(a);
 		}
 	}, []);
@@ -527,15 +527,15 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		setAction(a);
 	};
 
-	const onOrderingPropertyChange = (_: string, value: string) => {
+	const onOrderByChange = (_: string, value: string) => {
 		const a = { ...action };
-		a.fileOrderingPropertyPath = value;
+		a.orderBy = value;
 		setAction(a);
 	};
 
-	const onOrderingPropertySelect = (_: string, value: string) => {
+	const onOrderBySelect = (_: string, value: string) => {
 		const a = { ...action };
-		a.fileOrderingPropertyPath = value;
+		a.orderBy = value;
 		setAction(a);
 	};
 
@@ -746,16 +746,16 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				<SlOption value='Gzip'>Gzip</SlOption>
 				<SlOption value='Snappy'>Snappy</SlOption>
 			</SlSelect>
-			{actionType.fields.includes('FileOrderingProperty') && (
+			{actionType.fields.includes('OrderBy') && (
 				<div className='action__file-ordering'>
 					<Combobox
-						value={action.fileOrderingPropertyPath}
-						onInput={onOrderingPropertyChange}
-						onSelect={onOrderingPropertySelect}
+						value={action.orderBy}
+						onInput={onOrderByChange}
+						onSelect={onOrderBySelect}
 						items={getOrderingPropertyPathComboboxItems(actionType.inputSchema)}
 						label='Order users by'
 						isExpression={false}
-						error={orderingPropertyError && orderingPropertyError}
+						error={orderByError && orderByError}
 						name='ordering'
 						caret={true}
 					/>

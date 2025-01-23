@@ -97,7 +97,7 @@ func TestExportUsersToFile(t *testing.T) {
 		FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 			"Comma": ",",
 		}),
-		FileOrderingPropertyPath: "email",
+		OrderBy: "email",
 	})
 
 	compressions := []core.Compression{
@@ -141,8 +141,8 @@ func TestExportUsersToFile(t *testing.T) {
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 				"Comma": ",",
 			}),
-			Compression:              meergotester.Compression(compression),
-			FileOrderingPropertyPath: "email",
+			Compression: meergotester.Compression(compression),
+			OrderBy:     "email",
 		}, nil)
 
 		// Execute the action that export users.

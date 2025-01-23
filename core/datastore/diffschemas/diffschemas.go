@@ -102,7 +102,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	droppedNames := difference(oldNames, newNames)
 	keptNames := intersection(oldNames, newNames)
 
-	// Keep track of property renamings, it will be useful later to determine
+	// Keep track of property renaming, it will be useful later to determine
 	// whether the ordering has changed or not.
 	newNameOf := map[string]string{}
 

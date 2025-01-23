@@ -161,7 +161,7 @@ type ActionTypeField =
 	| 'ExportMode'
 	| 'Query'
 	| 'File'
-	| 'FileOrderingProperty'
+	| 'OrderBy'
 	| 'TableName';
 
 interface TransformedActionType {
@@ -198,7 +198,7 @@ interface TransformedAction {
 	identityProperty?: string | null;
 	lastChangeTimeProperty?: string | null;
 	lastChangeTimeFormat?: string | null;
-	fileOrderingPropertyPath?: string | null;
+	orderBy?: string | null;
 	exportMode?: ExportMode | null;
 	matching?: Matching | null;
 	exportOnDuplicates?: boolean | null;
@@ -529,12 +529,12 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		identityProperty: action.identityProperty,
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
-		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
 		exportMode: action.exportMode,
 		matching: action.matching,
 		exportOnDuplicates: action.exportOnDuplicates,
 		format: action.format,
 		compression: action.compression,
+		orderBy: action.orderBy,
 	};
 };
 
@@ -965,8 +965,8 @@ const transformInActionToSet = async (
 		}
 	}
 
-	if (action.fileOrderingPropertyPath != null) {
-		const p = action.fileOrderingPropertyPath;
+	if (action.orderBy != null) {
+		const p = action.orderBy;
 		if (p === '') {
 			throw new Error('File ordering property cannot be empty');
 		}
@@ -1053,11 +1053,11 @@ const transformInActionToSet = async (
 		tableName: action.table,
 		tableKey: action.tableKey,
 		sheet: action.sheet,
-		fileOrderingPropertyPath: action.fileOrderingPropertyPath,
 		identityProperty: action.identityProperty,
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		compression: action.compression,
+		orderBy: action.orderBy,
 		format: action.format,
 		formatSettings: formatSettings,
 	};
@@ -1115,8 +1115,8 @@ const computeDefaultAction = (
 		action.compression = '';
 		action.format = '';
 	}
-	if (fields.includes('FileOrderingProperty')) {
-		action.fileOrderingPropertyPath = '';
+	if (fields.includes('OrderBy')) {
+		action.orderBy = '';
 	}
 	if (fields.includes('TableName')) {
 		action.table = '';
@@ -1190,7 +1190,7 @@ const computeActionTypeFields = (
 		if (connection.role === 'Destination') {
 			fields.push('Filter');
 			if (actionType.target === 'Users') {
-				fields.push('FileOrderingProperty');
+				fields.push('OrderBy');
 			}
 		}
 		fields.push('File');

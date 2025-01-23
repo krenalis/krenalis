@@ -56,6 +56,13 @@ func init() {
 		Placeholder: `"Gzip"`,
 		Description: "The format used to compress the file. If not provided or empty, the file will remain uncompressed.",
 	}
+	orderByParameter := types.Property{
+		Name:           "orderBy",
+		Type:           types.Text().WithCharLen(1024),
+		Placeholder:    `"customer_id"`,
+		CreateRequired: true,
+		Description:    "The property path by which users will be ordered in the exported file.",
+	}
 	formatSettingsParameter := types.Property{
 		Name:        "formatSettings",
 		Type:        types.Parameter("Settings"),
@@ -109,6 +116,7 @@ func init() {
 					pathParameter,
 					sheetParameter,
 					compressionParameter,
+					orderByParameter,
 					formatSettingsParameter,
 					filterParameter,
 					inSchemaParameter,
@@ -154,6 +162,7 @@ func init() {
 					pathParameter,
 					sheetParameter,
 					compressionParameter,
+					orderByParameter,
 					filterParameter,
 					inSchemaParameter,
 				},
@@ -238,6 +247,12 @@ func init() {
 							Type:        types.Text().WithValues("", "Zip", "Gzip", "Snappy"),
 							Placeholder: `"Gzip"`,
 							Description: "The format used to compress the file. If empty, the file will remain uncompressed.",
+						},
+						{
+							Name:        "orderBy",
+							Type:        types.Text().WithCharLen(1024),
+							Placeholder: `"customer_id"`,
+							Description: "The property path by which users will be ordered in the exported file.",
 						},
 						filterParameter,
 						{

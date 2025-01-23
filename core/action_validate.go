@@ -372,13 +372,13 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			return errors.BadRequest("%s", err)
 		}
 	}
-	// Validate the file ordering property path.
-	if action.FileOrderingPropertyPath != "" {
-		if !types.IsValidPropertyPath(action.FileOrderingPropertyPath) {
-			return errors.BadRequest("the specified file ordering is a not valid property path")
+	// Validate the "order by" property path.
+	if action.OrderBy != "" {
+		if !types.IsValidPropertyPath(action.OrderBy) {
+			return errors.BadRequest("the specified order by is not a valid property path")
 		}
-		if utf8.RuneCountInString(action.FileOrderingPropertyPath) > 1024 {
-			return errors.BadRequest("file ordering property path is longer than 1024 runes")
+		if utf8.RuneCountInString(action.OrderBy) > 1024 {
+			return errors.BadRequest("the specified order by is longer than 1024 runes")
 		}
 	}
 
@@ -535,14 +535,14 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if outSchema.Valid() {
 			return errors.BadRequest("output schema must be invalid when exporting users to file")
 		}
-		// Check that FileOrderingPropertyPath is defined and exists in the out
+		// Check that OrderBy is defined and exists in the out
 		// schema.
-		if action.FileOrderingPropertyPath == "" {
-			return errors.BadRequest("file ordering property path cannot be empty when exporting users to file")
+		if action.OrderBy == "" {
+			return errors.BadRequest("order by property cannot be empty when exporting users to file")
 		}
-		p, err := types.PropertyByPath(inSchema, action.FileOrderingPropertyPath)
+		p, err := types.PropertyByPath(inSchema, action.OrderBy)
 		if err != nil {
-			return errors.BadRequest("file ordering property path cannot be found in action's input schema: %s", err)
+			return errors.BadRequest("order by property cannot be found in action's input schema: %s", err)
 		}
 		// Check the allowed types.
 		// Regarding the allowed types, we can use the same criterion used for
@@ -553,14 +553,14 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			// Ok.
 		case types.DecimalKind:
 			if p.Type.Precision() != 0 {
-				return errors.BadRequest("the Decimal type of the file ordering property cannot have a precision greater than 0")
+				return errors.BadRequest("the Decimal type of the order by property cannot have a precision greater than 0")
 			}
 		default:
-			return errors.BadRequest("file ordering property cannot have kind %s", p.Type.Kind())
+			return errors.BadRequest("order by property cannot have kind %s", p.Type.Kind())
 		}
 	} else {
-		if action.FileOrderingPropertyPath != "" {
-			return errors.BadRequest("actions that do not export users to files cannot specify a file ordering property path")
+		if action.OrderBy != "" {
+			return errors.BadRequest("actions that do not export users to files cannot specify a order by property")
 		}
 	}
 

@@ -369,9 +369,9 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		err = state.db.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
 			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_paths,\n"+
-			"transformation_out_paths, query, format, path, sheet, compression::TEXT, format_settings, export_mode,\n"+
+			"transformation_out_paths, query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode,\n"+
 			"matching_in, matching_out, allow_duplicates, table_name, table_key, identity_property,\n"+
-			"last_change_time_property, last_change_time_format, health, file_ordering_property_path\n"+
+			"last_change_time_property, last_change_time_format, health\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
@@ -385,10 +385,10 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						&action.Enabled, &action.ScheduleStart, &action.SchedulePeriod, &rawInSchema, &rawOutSchema,
 						&filter, &mapping, &function.Source, &function.Language, &function.Version, &function.PreserveJSON,
 						&action.Transformation.InPaths, &action.Transformation.OutPaths, &action.Query, &format,
-						&action.Path, &action.Sheet, &action.Compression, &action.FormatSettings, &action.ExportMode,
+						&action.Path, &action.Sheet, &action.Compression, &action.OrderBy, &action.FormatSettings, &action.ExportMode,
 						&action.Matching.In, &action.Matching.Out, &action.ExportOnDuplicates, &action.TableName,
 						&action.TableKey, &action.IdentityProperty, &action.LastChangeTimeProperty,
-						&action.LastChangeTimeFormat, &action.Health, &action.FileOrderingPropertyPath)
+						&action.LastChangeTimeFormat, &action.Health)
 					if err != nil {
 						return err
 					}

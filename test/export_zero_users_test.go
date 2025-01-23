@@ -92,11 +92,11 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
-			Format: "CSV",
+			Format:  "CSV",
+			OrderBy: "email",
 			FormatSettings: meergotester.JSONEncodeSettings(map[string]any{
 				"Comma": ",",
 			}),
-			FileOrderingPropertyPath: "email",
 		})
 
 		// Remove the export file, if exists.

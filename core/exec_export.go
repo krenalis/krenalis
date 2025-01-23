@@ -70,7 +70,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	// Determine the "order by" property.
 	var orderBy string
 	if action.Connection().Connector().Type == state.FileStorage {
-		orderBy = action.FileOrderingPropertyPath
+		orderBy = action.OrderBy
 	} else {
 		// For any other type of connector other than FileStorage, don't order
 		// the results.

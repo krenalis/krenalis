@@ -98,11 +98,11 @@ interface Action {
 	identityProperty: string | null;
 	lastChangeTimeProperty: string | null;
 	lastChangeTimeFormat: string | null;
-	fileOrderingPropertyPath: string | null;
 	exportMode: ExportMode | null;
 	matching: Matching | null;
 	exportOnDuplicates: boolean | null;
 	compression: Compression;
+	orderBy: string | null;
 	format: string;
 }
 
@@ -128,11 +128,11 @@ interface ActionToSet {
 	identityProperty?: string | null;
 	lastChangeTimeProperty?: string | null;
 	lastChangeTimeFormat?: string | null;
-	fileOrderingPropertyPath?: string | null;
 	exportMode?: ExportMode;
 	matching?: Matching;
 	exportOnDuplicates?: boolean;
 	compression: Compression;
+	orderBy?: string | null;
 	format: string;
 	formatSettings?: ConnectorSettings | null;
 }

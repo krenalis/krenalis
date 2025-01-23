@@ -97,6 +97,7 @@ CREATE TABLE actions (
     path varchar(1024) NOT NULL DEFAULT '',
     sheet varchar(31) NOT NULL DEFAULT '',
     compression compression NOT NULL DEFAULT '',
+    order_by varchar(1024) NOT NULL DEFAULT '',
     format_settings varchar(65535),
     export_mode export_mode NOT NULL DEFAULT '',
     matching_in text NOT NULL,
@@ -109,7 +110,6 @@ CREATE TABLE actions (
     last_change_time_format varchar(64) NOT NULL DEFAULT '',
     reload boolean NOT NULL DEFAULT FALSE,
     health health NOT NULL DEFAULT 'Healthy',
-    file_ordering_property_path varchar(1024) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 
