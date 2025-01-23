@@ -795,8 +795,8 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 
 	// Marshal the mapping.
 	var mapping []byte
-	if action.Transformation.Mapping != nil {
-		mapping, err = json.Marshal(action.Transformation.Mapping)
+	if tr := action.Transformation; tr != nil && tr.Mapping != nil {
+		mapping, err = json.Marshal(tr.Mapping)
 		if err != nil {
 			return 0, err
 		}

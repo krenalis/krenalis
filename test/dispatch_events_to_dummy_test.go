@@ -51,7 +51,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	c.CreateEventAction(dummyID, "send_identity", meergotester.ActionToSet{
 		Name:    "Send events",
 		Enabled: true,
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "'dummy@email.example.com'",
 			},

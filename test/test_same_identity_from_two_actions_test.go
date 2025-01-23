@@ -35,7 +35,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "firstName",
 			},
@@ -54,7 +54,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"last_name": "lastName",
 			},

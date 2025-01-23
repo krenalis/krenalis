@@ -57,7 +57,7 @@ func TestImportUsersFromFile(t *testing.T) {
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"first_name": "name",
 				"email":      "email",

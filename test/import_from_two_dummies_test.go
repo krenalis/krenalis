@@ -41,7 +41,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",

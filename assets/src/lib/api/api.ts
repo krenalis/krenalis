@@ -181,6 +181,15 @@ class Connections {
 			http.GET,
 			this.workspaceID,
 		);
+		// Transform the 'actions.transformation' field to match the expected format used throughout the rest of the codebase.
+		for (let action of c.actions) {
+			if (action.transformation == null) {
+				action.transformation = {
+					mapping: null,
+					function: null,
+				};
+			}
+		}
 		return c as Connection;
 	};
 
@@ -361,6 +370,12 @@ class Connections {
 		eventType: string,
 		action: ActionToSet,
 	): Promise<number> => {
+		// Transform the 'actions.transformation' field to match the API expected format.
+		if ('transformation' in action) {
+			if (action.transformation.mapping == null && action.transformation.function == null) {
+				action.transformation = null;
+			}
+		}
 		return await call(`${this.apiURL}/actions`, http.POST, this.workspaceID, {
 			connection,
 			target,
@@ -370,6 +385,12 @@ class Connections {
 	};
 
 	updateAction = async (id: number, action: ActionToSet): Promise<void> => {
+		// Transform the 'actions.transformation' field to match the API expected format.
+		if ('transformation' in action) {
+			if (action.transformation.mapping == null && action.transformation.function == null) {
+				action.transformation = null;
+			}
+		}
 		return await call(`${this.apiURL}/actions/${encodeURIComponent(id)}`, http.PUT, this.workspaceID, action);
 	};
 

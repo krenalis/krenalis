@@ -72,7 +72,7 @@ func TestIdentityResolution(t *testing.T) {
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",
@@ -87,7 +87,7 @@ func TestIdentityResolution(t *testing.T) {
 		Path:      "users.json",
 		InSchema:  types.Object(inSchemaProps),
 		OutSchema: types.Object(outSchemaProps),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: mapping,
 		},
 		IdentityProperty: "dummyId",

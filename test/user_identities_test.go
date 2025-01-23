@@ -45,7 +45,7 @@ func Test_UserIdentities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},
@@ -69,7 +69,7 @@ func Test_UserIdentities(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "email",
 			},

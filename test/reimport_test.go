@@ -43,7 +43,7 @@ func TestReimport(t *testing.T) {
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":      "email",
 				"first_name": "firstName",
@@ -90,7 +90,7 @@ func TestReimport(t *testing.T) {
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"last_name": "lastName",

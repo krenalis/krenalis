@@ -49,7 +49,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 				{Property: "messageId", Operator: "is", Values: []string{"message3"}}, // message of the not-anonymous identity
 			},
 		},
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -71,7 +71,7 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 				{Property: "messageId", Operator: "is", Values: []string{"message2"}}, // message of the anonymous identity
 			},
 		},
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},

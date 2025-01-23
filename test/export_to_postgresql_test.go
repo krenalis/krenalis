@@ -41,7 +41,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
-			Transformation: meergotester.Transformation{
+			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":      "coalesce(email, 'default.email@example.com')",
 					"first_name": "firstName",
@@ -94,7 +94,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 			{Name: "full_name", Type: types.Text()},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"full_name": `first_name " " last_name`,
@@ -127,7 +127,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.Text()},
 			{Name: "full_name", Type: types.Text()},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email":     "email",
 				"full_name": `""`,

@@ -39,7 +39,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 				{Name: "title", Type: types.Text(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"favorite_movie.title": "favourite_movie",
 				"email":                "email",

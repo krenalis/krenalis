@@ -1132,7 +1132,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 				]
 			},
 			"outSchema": null,
-			"transformation": {},
+			"transformation": null,
 			"path": "test.csv",
 			"sheet": null,
 			"fileOrderingPropertyPath": "email",
@@ -1223,7 +1223,7 @@ test(`Add "Import events" action on Javascript`, async ({ page }) => {
 		},
 		"inSchema": null,
 		"outSchema": null,
-		"transformation": {}
+		"transformation": null
 	}
 	`;
 
@@ -1297,7 +1297,7 @@ test(`Add "Import users" action on Javascript`, async ({ page }) => {
 		},
 		"inSchema": null,
 		"outSchema": null,
-		"transformation": {}
+		"transformation": null
 	}
 	`;
 

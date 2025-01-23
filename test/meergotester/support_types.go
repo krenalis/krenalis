@@ -57,7 +57,7 @@ type ActionToSet struct {
 	Filter                   *Filter         `json:"filter"`
 	InSchema                 types.Type      `json:"inSchema"`
 	OutSchema                types.Type      `json:"outSchema"`
-	Transformation           Transformation  `json:"transformation"`
+	Transformation           *Transformation `json:"transformation"`
 	Format                   string          `json:"format"`
 	Query                    string          `json:"query"`
 	Path                     string          `json:"path"`

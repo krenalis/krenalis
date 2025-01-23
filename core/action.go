@@ -49,7 +49,7 @@ type Action struct {
 	InSchema                 types.Type      `json:"inSchema"`
 	OutSchema                types.Type      `json:"outSchema"`
 	Filter                   *Filter         `json:"filter"`
-	Transformation           Transformation  `json:"transformation"`
+	Transformation           *Transformation `json:"transformation"`
 	Query                    *string         `json:"query"`
 	Format                   string          `json:"format"`
 	Path                     *string         `json:"path"`
@@ -440,7 +440,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 
 	// Marshal the mapping.
 	var mapping []byte
-	if action.Transformation.Mapping != nil {
+	if tr := action.Transformation; tr != nil && tr.Mapping != nil {
 		mapping, err = json.Marshal(action.Transformation.Mapping)
 		if err != nil {
 			return err
@@ -591,14 +591,20 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	if action.Filter != nil {
 		this.Filter = convertWhereToFilter(action.Filter, action.InSchema)
 	}
-	this.Transformation.Mapping = maps.Clone(action.Transformation.Mapping)
+	if action.Transformation.Mapping != nil {
+		this.Transformation = &Transformation{
+			Mapping: maps.Clone(action.Transformation.Mapping),
+		}
+	}
 	if function := action.Transformation.Function; function != nil {
-		this.Transformation.Function = &TransformationFunction{
-			Source:       function.Source,
-			Language:     Language(function.Language.String()),
-			PreserveJSON: function.PreserveJSON,
-			InPaths:      slices.Clone(action.Transformation.InPaths),
-			OutPaths:     slices.Clone(action.Transformation.OutPaths),
+		this.Transformation = &Transformation{
+			Function: &TransformationFunction{
+				Source:       function.Source,
+				Language:     Language(function.Language.String()),
+				PreserveJSON: function.PreserveJSON,
+				InPaths:      slices.Clone(action.Transformation.InPaths),
+				OutPaths:     slices.Clone(action.Transformation.OutPaths),
+			},
 		}
 	}
 	if action.Query != "" {
@@ -708,7 +714,7 @@ type ActionToSet struct {
 	// Please refer to the 'Actions.csv' file for details about this
 	// transformation and the properties it eventually operates on, based on the
 	// connection and the action type.
-	Transformation Transformation `json:"transformation"`
+	Transformation *Transformation `json:"transformation"`
 
 	// Query is the query of the action, if it has one, otherwise it is the
 	// empty string. It cannot be longer than MaxQuerySize runes.
@@ -1011,33 +1017,35 @@ func shouldReload(a *state.Action, n *state.UpdateAction) bool {
 // toStateTransformation converts a transformation to a state.Transformation
 // value. It does not perform a deep copy and may modify the passed
 // transformation.
-func toStateTransformation(transformation Transformation, inSchema, outSchema types.Type) state.Transformation {
+func toStateTransformation(transformation *Transformation, inSchema, outSchema types.Type) state.Transformation {
 	var tr state.Transformation
+	if transformation == nil {
+		return tr
+	}
 	if m := transformation.Mapping; m != nil {
 		m, _ := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
-		tr = state.Transformation{
+		return state.Transformation{
 			Mapping:  transformation.Mapping,
 			InPaths:  m.InPaths(),
 			OutPaths: m.OutPaths(),
 		}
-	} else if fn := transformation.Function; fn != nil {
-		slices.Sort(fn.InPaths)
-		slices.Sort(fn.OutPaths)
-		language := state.JavaScript
-		if fn.Language == "Python" {
-			language = state.Python
-		}
-		tr = state.Transformation{
-			Function: &state.TransformationFunction{
-				Source:       fn.Source,
-				Language:     language,
-				PreserveJSON: fn.PreserveJSON,
-			},
-			InPaths:  fn.InPaths,
-			OutPaths: fn.OutPaths,
-		}
 	}
-	return tr
+	fn := transformation.Function
+	slices.Sort(fn.InPaths)
+	slices.Sort(fn.OutPaths)
+	language := state.JavaScript
+	if fn.Language == "Python" {
+		language = state.Python
+	}
+	return state.Transformation{
+		Function: &state.TransformationFunction{
+			Source:       fn.Source,
+			Language:     language,
+			PreserveJSON: fn.PreserveJSON,
+		},
+		InPaths:  fn.InPaths,
+		OutPaths: fn.OutPaths,
+	}
 }
 
 // transformationFunctionName returns the name of the transformation function

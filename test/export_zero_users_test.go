@@ -46,7 +46,7 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "email", Type: types.Text()},
 				{Name: "lastName", Type: types.Text()},
 			}),
-			Transformation: meergotester.Transformation{
+			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
 					"lastName": "last_name",
 				},

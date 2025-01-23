@@ -52,7 +52,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			}),
-			Transformation: meergotester.Transformation{
+			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":      "email",
 					"first_name": "firstName",
@@ -101,7 +101,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				{Name: "gender", Type: types.Text(), ReadOptional: true},
 			}),
-			Transformation: meergotester.Transformation{
+			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{
 					"email":  "email",
 					"gender": "gender",
@@ -151,7 +151,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},

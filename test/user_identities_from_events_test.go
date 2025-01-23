@@ -39,7 +39,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "traits.email",
 			},
@@ -89,7 +89,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Mapping: map[string]string{
 				"email": "'a@b'", // a constant email for every user
 			},
@@ -122,7 +122,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
 				Source: `import random
 

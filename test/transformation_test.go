@@ -43,7 +43,7 @@ func TestImportWithTransformation(t *testing.T) {
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			{Name: "gender", Type: types.Text(), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
 				Source: `
 def transform(user: dict) -> dict:

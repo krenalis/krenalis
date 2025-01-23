@@ -45,7 +45,7 @@ func TestTransformation2(t *testing.T) {
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
 				Source: `
 def transform(user: dict) -> dict:

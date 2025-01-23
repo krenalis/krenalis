@@ -160,69 +160,75 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			usedInPaths = properties
 		}
 	}
-	// An action cannot have both mappings and transformations.
-	if action.Transformation.Mapping != nil && action.Transformation.Function != nil {
-		return errors.BadRequest("action cannot have both mappings and transformation")
-	}
-	// Validate the mapping.
 	var usedOutPaths []string
 	var mappingInPaths int
-	if mapping := action.Transformation.Mapping; mapping != nil {
-		if len(mapping) == 0 {
-			return errors.BadRequest("transformation mapping must have mapped properties")
-		}
-		if !inSchema.Valid() && !allowConstantTransformation {
-			return errors.BadRequest("input schema is required by the mapping")
-		}
-		if !outSchema.Valid() {
-			return errors.BadRequest("output schema is required by the mapping")
-		}
-		transformer, err := mappings.New(mapping, inSchema, outSchema, false, nil)
-		if err != nil {
-			return errors.BadRequest("invalid mapping: %s", err)
-		}
-		// Input property paths.
-		inProps := transformer.InPaths()
-		mappingInPaths = len(inProps)
-		usedInPaths = append(usedInPaths, inProps...)
-		// Output property paths.
-		usedOutPaths = transformer.OutPaths()
-	}
-	// Validate the transformation function.
-	if function := action.Transformation.Function; function != nil {
-		if !inSchema.Valid() && !allowConstantTransformation {
-			return errors.BadRequest("input schema is required by the transformation function")
-		}
-		if !outSchema.Valid() {
-			return errors.BadRequest("output schema is required by the transformation function")
-		}
-		if err := validateStringField("source of transformation function", function.Source, MaxFunctionSourceSize); err != nil {
-			return errors.BadRequest("%s", err)
-		}
-		switch function.Language {
-		case "JavaScript":
-			if v.provider == nil || !v.provider.SupportLanguage(state.JavaScript) {
-				return errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language is not supported")
+	if tr := action.Transformation; tr != nil {
+		switch {
+		case tr.Mapping != nil:
+			if tr.Function != nil {
+				return errors.BadRequest("action cannot have both mappings and transformation")
 			}
-		case "Python":
-			if v.provider == nil || !v.provider.SupportLanguage(state.Python) {
-				return errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
+			// Validate the transformation mapping.
+			if len(tr.Mapping) == 0 {
+				return errors.BadRequest("transformation mapping must have mapped properties")
 			}
-		case "":
-			return errors.BadRequest("transformation language is empty")
+			if !inSchema.Valid() && !allowConstantTransformation {
+				return errors.BadRequest("input schema is required by the mapping")
+			}
+			if !outSchema.Valid() {
+				return errors.BadRequest("output schema is required by the mapping")
+			}
+			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false, nil)
+			if err != nil {
+				return errors.BadRequest("invalid mapping: %s", err)
+			}
+			// Input property paths.
+			inProps := transformer.InPaths()
+			mappingInPaths = len(inProps)
+			usedInPaths = append(usedInPaths, inProps...)
+			// Output property paths.
+			usedOutPaths = transformer.OutPaths()
+		case tr.Function != nil:
+			if tr.Mapping != nil {
+				return errors.BadRequest("action cannot have both mappings and transformation")
+			}
+			// Validate the transformation function.
+			if !inSchema.Valid() && !allowConstantTransformation {
+				return errors.BadRequest("input schema is required by the transformation function")
+			}
+			if !outSchema.Valid() {
+				return errors.BadRequest("output schema is required by the transformation function")
+			}
+			if err := validateStringField("source of transformation function", tr.Function.Source, MaxFunctionSourceSize); err != nil {
+				return errors.BadRequest("%s", err)
+			}
+			switch tr.Function.Language {
+			case "JavaScript":
+				if v.provider == nil || !v.provider.SupportLanguage(state.JavaScript) {
+					return errors.Unprocessable(UnsupportedLanguage, "JavaScript transformation language is not supported")
+				}
+			case "Python":
+				if v.provider == nil || !v.provider.SupportLanguage(state.Python) {
+					return errors.Unprocessable(UnsupportedLanguage, "Python transformation language is not supported")
+				}
+			case "":
+				return errors.BadRequest("transformation language is empty")
+			default:
+				return errors.BadRequest("transformation language %q is not valid", tr.Function.Language)
+			}
+			err := validateTransformationFunctionPaths("input", inSchema, tr.Function.InPaths, allowConstantTransformation)
+			if err != nil {
+				return errors.BadRequest("%s", err.Error())
+			}
+			err = validateTransformationFunctionPaths("output", outSchema, tr.Function.OutPaths, allowConstantTransformation)
+			if err != nil {
+				return errors.BadRequest("%s", err.Error())
+			}
+			usedInPaths = append(usedInPaths, tr.Function.InPaths...)
+			usedOutPaths = tr.Function.OutPaths
 		default:
-			return errors.BadRequest("transformation language %q is not valid", action.Transformation.Function.Language)
+			return errors.BadRequest("action cannot have a transformation without mapping and function.")
 		}
-		err := validateTransformationFunctionPaths("input", inSchema, function.InPaths, allowConstantTransformation)
-		if err != nil {
-			return errors.BadRequest("%s", err.Error())
-		}
-		err = validateTransformationFunctionPaths("output", outSchema, function.OutPaths, allowConstantTransformation)
-		if err != nil {
-			return errors.BadRequest("%s", err.Error())
-		}
-		usedInPaths = append(usedInPaths, function.InPaths...)
-		usedOutPaths = function.OutPaths
 	}
 	// Validate the path.
 	if action.Path != "" {
@@ -324,13 +330,15 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			}
 		}
 		// Check that the output property has not been transformed.
-		if m := action.Transformation.Mapping; m != nil {
-			if _, ok := m[action.Matching.Out]; ok {
-				return errors.BadRequest("mapping cannot map over the output matching property")
-			}
-		} else if fn := action.Transformation.Function; fn != nil {
-			if slices.Contains(fn.OutPaths, action.Matching.Out) {
-				return errors.BadRequest("transformation function cannot transform over the output matching property")
+		if tr := action.Transformation; tr != nil {
+			if tr.Mapping != nil {
+				if _, ok := tr.Mapping[action.Matching.Out]; ok {
+					return errors.BadRequest("mapping cannot map over the output matching property")
+				}
+			} else {
+				if slices.Contains(tr.Function.OutPaths, action.Matching.Out) {
+					return errors.BadRequest("transformation function cannot transform over the output matching property")
+				}
 			}
 		}
 	}
@@ -578,13 +586,15 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		if !canBeUsedAsTableKey(p.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as table key", p.Type)
 		}
-		if m := action.Transformation.Mapping; m != nil {
-			if _, ok := m[action.TableKey]; !ok {
-				return errors.BadRequest("an expression must be mapped to the table key")
-			}
-		} else if t := action.Transformation.Function; t != nil {
-			if !slices.Contains(t.OutPaths, action.TableKey) {
-				return errors.BadRequest("the out properties of the transformation function must contain the table key")
+		if tr := action.Transformation; tr != nil {
+			if tr.Mapping != nil {
+				if _, ok := tr.Mapping[action.TableKey]; !ok {
+					return errors.BadRequest("an expression must be mapped to the table key")
+				}
+			} else {
+				if !slices.Contains(tr.Function.OutPaths, action.TableKey) {
+					return errors.BadRequest("the out properties of the transformation function must contain the table key")
+				}
 			}
 		}
 	} else {
@@ -623,8 +633,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	targetUsersOrGroups := target == state.Users || target == state.Groups
 	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && target == state.Events) ||
 		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
-	haveTransformation := action.Transformation.Mapping != nil || action.Transformation.Function != nil
-	if transformationProhibited && haveTransformation {
+	if transformationProhibited && action.Transformation != nil {
 		return errors.BadRequest("action cannot have a transformation")
 	}
 
@@ -633,18 +642,18 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	transformationMandatory := targetUsersOrGroups &&
 		(v.connection.connector.typ == state.App || v.connection.connector.typ == state.Database ||
 			(v.connection.role == state.Source && v.connection.connector.typ == state.FileStorage))
-	if transformationMandatory && !haveTransformation {
+	if transformationMandatory && action.Transformation == nil {
 		return errors.BadRequest("action must have a transformation")
 	}
 
 	// If constant transformations are not allowed, there must be at least one
 	// property used as input to the transformation, either in mappings or
 	// functions.
-	if !allowConstantTransformation {
-		if action.Transformation.Mapping != nil && mappingInPaths == 0 {
+	if tr := action.Transformation; tr != nil && !allowConstantTransformation {
+		if tr.Mapping != nil && mappingInPaths == 0 {
 			return errors.BadRequest("transformation must map at least one property")
 		}
-		if action.Transformation.Function != nil && len(action.Transformation.Function.InPaths) == 0 {
+		if tr.Function != nil && len(action.Transformation.Function.InPaths) == 0 {
 			return errors.BadRequest("transformation function must have at least one input property")
 		}
 	}

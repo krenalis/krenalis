@@ -38,7 +38,7 @@ func TestImportObjectsIntoWarehouse(t *testing.T) {
 				{Name: "idfa", Type: types.Text(), ReadOptional: true},
 			}), ReadOptional: true},
 		}),
-		Transformation: meergotester.Transformation{
+		Transformation: &meergotester.Transformation{
 			Function: &meergotester.TransformationFunction{
 				Source: `
 def transform(user: dict) -> dict:

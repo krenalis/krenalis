@@ -68,7 +68,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "Email",
 						"timestamp": "timestamp",
@@ -98,7 +98,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "__email__", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"__email__": "__email__",
 						"timestamp": "timestamp",
@@ -146,7 +146,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -175,7 +175,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 					{Name: "timestamp", Type: types.DateTime(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -204,7 +204,7 @@ func TestActionsCreation(t *testing.T) {
 					{Name: "email", Type: types.Text()},
 					{Name: "timestamp", Type: types.DateTime()},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email":     "email",
 						"timestamp": "timestamp",
@@ -231,7 +231,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -273,7 +273,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -301,7 +301,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -324,7 +324,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -346,7 +346,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -369,7 +369,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "email",
 					},
@@ -387,7 +387,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},
@@ -407,7 +407,7 @@ func TestActionsCreation(t *testing.T) {
 				OutSchema: types.Object([]types.Property{
 					{Name: "email", Type: types.Text(), ReadOptional: true},
 				}),
-				Transformation: meergotester.Transformation{
+				Transformation: &meergotester.Transformation{
 					Mapping: map[string]string{
 						"email": "traits.email",
 					},

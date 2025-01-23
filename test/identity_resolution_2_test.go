@@ -118,7 +118,7 @@ func TestIdentityResolution2(t *testing.T) {
 				{Name: "last_change_time", Type: types.JSON()},
 			}),
 			OutSchema: schema,
-			Transformation: meergotester.Transformation{
+			Transformation: &meergotester.Transformation{
 				// This transformation functions returns the user without the
 				// properties that are "null".
 				Function: &meergotester.TransformationFunction{
