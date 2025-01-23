@@ -9,6 +9,7 @@ package meergotester
 
 import (
 	"os"
+	"sync"
 )
 
 type TestsSettings struct {
@@ -42,6 +43,7 @@ func PostgresWarehouseSettings() []byte {
 }
 
 var testsSettings *TestsSettings
+var testsSettingsMu sync.Mutex
 
 func init() {
 	testsSettings = &TestsSettings{

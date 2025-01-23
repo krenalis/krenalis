@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -163,8 +164,11 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 		}
 	}()
 
+	containersStarted := sync.WaitGroup{}
+	containersStarted.Add(2)
+
 	// Start the PostgreSQL container and set the global test settings.
-	{
+	go func() {
 		postgresContainer, err := _postgres.Run(ctx,
 			testimages.PostgreSQL,
 			_postgres.WithDatabase("test_postgres"),
@@ -179,15 +183,15 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			return testcontainers.TerminateContainer(postgresContainer)
 		}
 		if err != nil {
-			t.Fatalf("cannot start the PostgreSQL container: %s", err)
+			panic(fmt.Sprintf("cannot start the PostgreSQL container: %s", err))
 		}
 		postgresHost, err := postgresContainer.Host(ctx)
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 		postgresPort, err := postgresContainer.MappedPort(ctx, "5432/tcp")
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 		{
 			// TODO(Gianluca): this is a workaround for
@@ -196,12 +200,15 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 				postgresHost = "127.0.0.1"
 			}
 		}
+		testsSettingsMu.Lock()
 		testsSettings.Database.Host = postgresHost
 		testsSettings.Database.Port = postgresPort.Int()
-	}
+		testsSettingsMu.Unlock()
+		containersStarted.Done()
+	}()
 
 	// Start the warehouse container and set the global test settings.
-	{
+	go func() {
 		warehouseContainer, err := _postgres.Run(ctx,
 			testimages.PostgreSQL,
 			_postgres.WithDatabase("test_warehouse"),
@@ -216,15 +223,15 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 			return testcontainers.TerminateContainer(warehouseContainer)
 		}
 		if err != nil {
-			t.Fatalf("cannot start the warehouse container: %s", err)
+			panic(fmt.Sprintf("cannot start the warehouse container: %s", err))
 		}
 		warehouseHost, err := warehouseContainer.Host(ctx)
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 		warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 		{
 			// TODO(Gianluca): this is a workaround for
@@ -233,9 +240,17 @@ func InitAndLaunch(t *testing.T, options ...TestingOption) *Meergo {
 				warehouseHost = "127.0.0.1"
 			}
 		}
+		testsSettingsMu.Lock()
 		testsSettings.Warehouse.Host = warehouseHost
 		testsSettings.Warehouse.Port = warehousePort.Int()
-	}
+		testsSettingsMu.Unlock()
+		containersStarted.Done()
+	}()
+
+	// Wait for the containers to be started.
+	t.Log("waiting for the containers to be started")
+	containersStarted.Wait()
+	t.Log("containers started")
 
 	// Initialize the PostgreSQL database.
 	err = initializePostgreSQLDatabase(ctx, testsSettings.Database)
