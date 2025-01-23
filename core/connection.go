@@ -81,22 +81,6 @@ type EventType struct {
 // Can be "Conversion", "Fusion", "Isolation", and "Preservation".
 type Strategy string
 
-// Action returns the action with identifier id of the connection.
-// It returns an errors.NotFound error if the action does not exist.
-func (this *Connection) Action(id int) (*Action, error) {
-	this.core.mustBeOpen()
-	if id < 1 || id > maxInt32 {
-		return nil, errors.BadRequest("identifier %d is not a valid action identifier", id)
-	}
-	a, ok := this.connection.Action(id)
-	if !ok {
-		return nil, errors.NotFound("action %d does not exist", id)
-	}
-	var action Action
-	action.fromState(this.core, this.store, a)
-	return &action, nil
-}
-
 type ActionSchemas struct {
 	In        types.Type              `json:"in"`
 	Out       types.Type              `json:"out"`
