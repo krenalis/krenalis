@@ -1263,7 +1263,7 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:             state.Source,
 			connectionConnectorType:    state.App,
 			connectionConnectorTargets: state.UsersFlag,
-			err:                        "action cannot have both mappings and transformation",
+			err:                        "action cannot have both transformation mapping and function",
 		},
 		{
 			name: "BAD: Source/FileStorage/Users - path too long",
