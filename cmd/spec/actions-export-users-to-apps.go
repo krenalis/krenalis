@@ -34,9 +34,9 @@ func init() {
 		CreateRequired: true,
 		Placeholder:    `"CreateOnly"`,
 		Description: "The mode in which users are exported:\n\n" +
-			"* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n" +
-			"* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n" +
-			"* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
+			"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
+			"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
+			"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
 	}
 	matchingParameter := types.Property{
 		Name: "matching",
@@ -84,10 +84,58 @@ func init() {
 			"When exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present.",
 	}
 	transformationParameter := types.Property{
-		Name:           "transformation",
-		Type:           types.Parameter("transformation"),
+		Name: "transformation",
+		Type: types.Object([]types.Property{
+			{
+				Name:        "mapping",
+				Type:        types.Map(types.Text()),
+				Placeholder: `{ "firstName": "first_name" }`,
+				Nullable:    true,
+				Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema.",
+			},
+			{
+				Name: "function",
+				Type: types.Object([]types.Property{
+					{
+						Name:        "source",
+						Type:        types.Text().WithCharLen(50_000),
+						Placeholder: `const transform = (user) => { ... }`,
+						Description: "The source code of the JavaScript or Python function.",
+					},
+					{
+						Name:        "language",
+						Type:        types.Text().WithValues("JavaScript", "Python"),
+						Placeholder: "JavaScript",
+						Description: "The language of the function.",
+					},
+					{
+						Name:        "preserveJSON",
+						Type:        types.Boolean(),
+						Placeholder: "false",
+						Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
+					},
+					{
+						Name:        "inPaths",
+						Type:        types.Array(types.Text()),
+						Placeholder: `[ "email", "first_name", "last_name" ]`,
+						Description: "The paths of the properties that will be passed to the function. At least one path must be present.",
+					},
+					{
+						Name:        "outPaths",
+						Type:        types.Array(types.Text()),
+						Placeholder: `[ "emailAddress", "firstName", "lastName" ]`,
+						Description: "The paths of the properties that may be returned by the function. At least one path must be present.",
+					},
+				}),
+				Placeholder: `null`,
+				Nullable:    true,
+				Description: "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user.",
+			},
+		}),
+		Placeholder:    `...`,
 		CreateRequired: true,
-		Placeholder:    `{...}`,
+		Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
+			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -285,9 +333,57 @@ func init() {
 							Description: "The schema of the output matching property and the output properties within the transformation.",
 						},
 						{
-							Name:        "transformation",
-							Type:        types.Parameter("transformation"),
-							Placeholder: `{...}`,
+							Name: "transformation",
+							Type: types.Object([]types.Property{
+								{
+									Name:        "mapping",
+									Type:        types.Map(types.Text()),
+									Placeholder: `{ "firstName": "first_name" }`,
+									Nullable:    true,
+									Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema.",
+								},
+								{
+									Name: "function",
+									Type: types.Object([]types.Property{
+										{
+											Name:        "source",
+											Type:        types.Text().WithCharLen(50_000),
+											Placeholder: `const transform = (user) => { ... }`,
+											Description: "The source code of the JavaScript or Python function.",
+										},
+										{
+											Name:        "language",
+											Type:        types.Text().WithValues("JavaScript", "Python"),
+											Placeholder: "JavaScript",
+											Description: "The language of the function.",
+										},
+										{
+											Name:        "preserveJSON",
+											Type:        types.Boolean(),
+											Placeholder: "false",
+											Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
+										},
+										{
+											Name:        "inPaths",
+											Type:        types.Array(types.Text()),
+											Placeholder: `[ "email", "first_name", "last_name" ]`,
+											Description: "The paths of the properties that will be passed to the function. It contains at least one property path.",
+										},
+										{
+											Name:        "outPaths",
+											Type:        types.Array(types.Text()),
+											Placeholder: `[ "emailAddress", "firstName", "lastName" ]`,
+											Description: "The paths of the properties that may be returned by the function. It contains at least one property path.",
+										},
+									}),
+									Placeholder: `null`,
+									Nullable:    true,
+									Description: "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user.",
+								},
+							}),
+							Placeholder: `...`,
+							Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
+								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
 						},
 						runningParameter,
 						scheduleStartParameter,

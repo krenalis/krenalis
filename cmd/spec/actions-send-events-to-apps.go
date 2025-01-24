@@ -31,17 +31,66 @@ func init() {
 	outSchemaParameter := types.Property{
 		Name:           "outSchema",
 		Type:           types.Parameter("schema"),
-		Nullable:       true,
 		Placeholder:    `{...}`,
 		UpdateRequired: true,
+		Nullable:       true,
 		Description: "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\n" +
 			"It should be a subset of the schema of the passed event type.",
 	}
 	transformationParameter := types.Property{
-		Name:        "transformation",
-		Type:        types.Parameter("transformation"),
+		Name: "transformation",
+		Type: types.Object([]types.Property{
+			{
+				Name:        "mapping",
+				Type:        types.Map(types.Text()),
+				Placeholder: `{ "first_name": "firstName" }`,
+				Nullable:    true,
+				Description: "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema.",
+			},
+			{
+				Name: "function",
+				Type: types.Object([]types.Property{
+					{
+						Name:        "source",
+						Type:        types.Text().WithCharLen(50_000),
+						Placeholder: `const transform = (event) => { ... }`,
+						Description: "The source code of the JavaScript or Python function.",
+					},
+					{
+						Name:        "language",
+						Type:        types.Text().WithValues("JavaScript", "Python"),
+						Placeholder: "JavaScript",
+						Description: "The language of the function.",
+					},
+					{
+						Name:        "preserveJSON",
+						Type:        types.Boolean(),
+						Placeholder: "false",
+						Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
+					},
+					{
+						Name:        "inPaths",
+						Type:        types.Array(types.Text()),
+						Placeholder: `[ "traits.firstName", "traits.lastName" ]`,
+						Description: "The property paths that will be passed to the function. This can be empty if the function does not rely on the event to generate the response.",
+					},
+					{
+						Name:        "outPaths",
+						Type:        types.Array(types.Text()),
+						Placeholder: `[ "first_name", "last_name" ]`,
+						Description: "The paths of the properties that may be returned by the function. At least one path must be present.",
+					},
+				}),
+				Placeholder: `null`,
+				Nullable:    true,
+				Description: "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app.",
+			},
+		}),
+		Placeholder: `...`,
 		Nullable:    true,
-		Placeholder: `{...}`,
+		Description: "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\n" +
+			"If the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\n" +
+			"If a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -210,10 +259,58 @@ func init() {
 							Description: "The schema for the output properties of the transformation. It is null if no transformation is present.",
 						},
 						{
-							Name:        "transformation",
-							Type:        types.Parameter("transformation"),
+							Name: "transformation",
+							Type: types.Object([]types.Property{
+								{
+									Name:        "mapping",
+									Type:        types.Map(types.Text()),
+									Placeholder: `{ "first_name": "firstName" }`,
+									Nullable:    true,
+									Description: "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema.",
+								},
+								{
+									Name: "function",
+									Type: types.Object([]types.Property{
+										{
+											Name:        "source",
+											Type:        types.Text().WithCharLen(50_000),
+											Placeholder: `const transform = (event) => { ... }`,
+											Description: "The source code of the JavaScript or Python function.",
+										},
+										{
+											Name:        "language",
+											Type:        types.Text().WithValues("JavaScript", "Python"),
+											Placeholder: "JavaScript",
+											Description: "The language of the function.",
+										},
+										{
+											Name:        "preserveJSON",
+											Type:        types.Boolean(),
+											Placeholder: "false",
+											Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
+										},
+										{
+											Name:        "inPaths",
+											Type:        types.Array(types.Text()),
+											Placeholder: `[ "traits.firstName", "traits.lastName" ]`,
+											Description: "The property paths that will be passed to the function. If empty, the function does not rely on the event to generate the response.",
+										},
+										{
+											Name:        "outPaths",
+											Type:        types.Array(types.Text()),
+											Placeholder: `[ "first_name", "last_name" ]`,
+											Description: "The paths of the properties that may be returned by the function. It contains at least one property path.",
+										},
+									}),
+									Placeholder: `null`,
+									Nullable:    true,
+									Description: "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app.",
+								},
+							}),
+							Placeholder: `...`,
 							Nullable:    true,
-							Placeholder: `{...}`,
+							Description: "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\n" +
+								"If there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null.",
 						},
 					},
 				},

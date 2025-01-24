@@ -107,10 +107,59 @@ func init() {
 			"When importing users from files, this should be a subset of the workspace's user schema.",
 	}
 	transformationParameter := types.Property{
-		Name:           "transformation",
-		Type:           types.Parameter("transformation"),
-		Placeholder:    `{...}`,
+		Name: "transformation",
+		Type: types.Object([]types.Property{
+			{
+				Name:        "mapping",
+				Type:        types.Map(types.Text()),
+				Placeholder: `{ "first_name": "firstName" }`,
+				Nullable:    true,
+				Description: "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file.",
+			},
+			{
+				Name: "function",
+				Type: types.Object([]types.Property{
+					{
+						Name:        "source",
+						Type:        types.Text().WithCharLen(50_000),
+						Placeholder: `const transform = (user) => { ... }`,
+						Description: "The source code of the JavaScript or Python function.",
+					},
+					{
+						Name:        "language",
+						Type:        types.Text().WithValues("JavaScript", "Python"),
+						Placeholder: "JavaScript",
+						Description: "The language of the function.",
+					},
+					{
+						Name:        "preserveJSON",
+						Type:        types.Boolean(),
+						Placeholder: "false",
+						Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
+					},
+					{
+						Name:        "inPaths",
+						Type:        types.Array(types.Text()),
+						Placeholder: `[ "email", "firstName", "lastName" ]`,
+						Description: "The paths of the properties that will be passed to the function. At least one path must be present.",
+					},
+					{
+						Name:        "outPaths",
+						Type:        types.Array(types.Text()),
+						Placeholder: `[ "email_address", "first_name", "last_name" ]`,
+						Description: "The paths of the properties that may be returned by the function. At least one path must be present.",
+					},
+				}),
+				Placeholder: `null`,
+				Nullable:    true,
+				Description: "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity.",
+			},
+		}),
+		Placeholder:    `...`,
 		CreateRequired: true,
+		Description: "The mapping or function responsible for transforming file users into user identities linked to the action. " +
+			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
+			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
@@ -285,7 +334,60 @@ func init() {
 							Description: "The name of the sheet. It is empty if the format is not Excel.",
 						},
 						compressionParameter,
-						filterParameter,
+						{
+							Name: "transformation",
+							Type: types.Object([]types.Property{
+								{
+									Name:        "mapping",
+									Type:        types.Map(types.Text()),
+									Placeholder: `{ "first_name": "firstName" }`,
+									Nullable:    true,
+									Description: "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file.",
+								},
+								{
+									Name: "function",
+									Type: types.Object([]types.Property{
+										{
+											Name:        "source",
+											Type:        types.Text().WithCharLen(50_000),
+											Placeholder: `const transform = (user) => { ... }`,
+											Description: "The source code of the JavaScript or Python function.",
+										},
+										{
+											Name:        "language",
+											Type:        types.Text().WithValues("JavaScript", "Python"),
+											Placeholder: "JavaScript",
+											Description: "The language of the function.",
+										},
+										{
+											Name:        "preserveJSON",
+											Type:        types.Boolean(),
+											Placeholder: "false",
+											Description: "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding.",
+										},
+										{
+											Name:        "inPaths",
+											Type:        types.Array(types.Text()),
+											Placeholder: `[ "email", "firstName", "lastName" ]`,
+											Description: "The paths of the properties that will be passed to the function. At least one path must be present.",
+										},
+										{
+											Name:        "outPaths",
+											Type:        types.Array(types.Text()),
+											Placeholder: `[ "email_address", "first_name", "last_name" ]`,
+											Description: "The paths of the properties that may be returned by the function. At least one path must be present.",
+										},
+									}),
+									Placeholder: `null`,
+									Nullable:    true,
+									Description: "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity.",
+								},
+							}),
+							Placeholder: `...`,
+							Description: "The mapping or function responsible for transforming file users into user identities linked to the action. " +
+								"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
+								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
+						},
 						{
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),

@@ -657,7 +657,7 @@
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
                         },
                         {
                             "name": "matching",
@@ -715,12 +715,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"firstName\": \"first_name\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"emailAddress\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -893,7 +969,7 @@
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
                         },
                         {
                             "name": "matching",
@@ -951,12 +1027,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"firstName\": \"first_name\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"emailAddress\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -1182,7 +1334,7 @@
                                     "name": "Text"
                                 },
                                 "createRequired": true,
-                                "description": "The mode in which users are exported:\n\n* `CreateOnly`: Only new users are created in the app. No existing users are modified.\n* `UpdateOnly`: Only existing users are updated in the app. No new users are created.\n* `CreateOrUpdate`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                                "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
                             },
                             {
                                 "name": "matching",
@@ -1238,11 +1390,87 @@
                             },
                             {
                                 "name": "transformation",
-                                "placeholder": "{...}",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "transformation"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "mapping",
+                                            "placeholder": "{ \"firstName\": \"first_name\" }",
+                                            "type": {
+                                                "name": "Map",
+                                                "elementType": {
+                                                    "name": "Text"
+                                                }
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (user) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"email\", \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that will be passed to the function. It contains at least one property path."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"emailAddress\", \"firstName\", \"lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. It contains at least one property path."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
+                                        }
+                                    ]
                                 },
-                                "description": ""
+                                "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "running",
@@ -1329,7 +1557,7 @@
                                 "bitSize": 32
                             },
                             "createRequired": true,
-                            "description": "The ID of the destination database connection to which the users will be written."
+                            "description": "The ID of the connection to which the users will be written. It must be a destination database."
                         },
                         {
                             "name": "target",
@@ -1390,11 +1618,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"firstName\": \"first_name\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"emailAddress\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "A JavaScript or Python function that, given a workspace user, returns a user record to be written to the database table."
+                                    }
+                                ]
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The mapping or function responsible for transforming unified users into database users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -1499,11 +1804,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"firstName\": \"first_name\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"emailAddress\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "A JavaScript or Python function that, given a workspace user, returns a user record to be written to the database table."
+                                    }
+                                ]
                             },
-                            "description": ""
+                            "createRequired": true,
+                            "description": "The mapping or function responsible for transforming unified users into database users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -1759,11 +2141,87 @@
                             },
                             {
                                 "name": "transformation",
-                                "placeholder": "{...}",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "transformation"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "mapping",
+                                            "placeholder": "{ \"firstName\": \"first_name\" }",
+                                            "type": {
+                                                "name": "Map",
+                                                "elementType": {
+                                                    "name": "Text"
+                                                }
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (user) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"email\", \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that will be passed to the function. It contains at least one property path."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"emailAddress\", \"firstName\", \"lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. It contains at least one property path."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "A JavaScript or Python function that, given a workspace user, returns a user record to be written to the database table."
+                                        }
+                                    ]
                                 },
-                                "description": ""
+                                "description": "The mapping or function responsible for transforming unified users into database users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "running",
@@ -3308,12 +3766,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -3499,12 +4033,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -3741,11 +4351,87 @@
                             },
                             {
                                 "name": "transformation",
-                                "placeholder": "{...}",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "transformation"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "mapping",
+                                            "placeholder": "{ \"first_name\": \"firstName\" }",
+                                            "type": {
+                                                "name": "Map",
+                                                "elementType": {
+                                                    "name": "Text"
+                                                }
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (user) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that will be passed to the function. It contains at least one property path."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. It contains at least one property path."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
+                                        }
+                                    ]
                                 },
-                                "description": ""
+                                "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "running",
@@ -3913,12 +4599,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the database table."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given a user in the database, returns a user identity."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming database users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -4052,12 +4814,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the database table."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given a user in the database, returns a user identity."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming database users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -4238,11 +5076,87 @@
                             },
                             {
                                 "name": "transformation",
-                                "placeholder": "{...}",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "transformation"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "mapping",
+                                            "placeholder": "{ \"first_name\": \"firstName\" }",
+                                            "type": {
+                                                "name": "Map",
+                                                "elementType": {
+                                                    "name": "Text"
+                                                }
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the database table."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (user) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that will be passed to the function. It contains at least one property path."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. It contains at least one property path."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation function. A JavaScript or Python function that given a user in the database, returns a user identity."
+                                        }
+                                    ]
                                 },
-                                "description": ""
+                                "description": "The mapping or function responsible for transforming database users into user identities linked to the action. Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "running",
@@ -4454,12 +5368,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (event) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"traits.firstName\", \"traits.lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given an event, returns a user identity."
+                                    }
+                                ]
                             },
                             "nullable": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming incoming events into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n* If no transformation is provided (or if it's set to null), the imported user identity will not have any properties.\n* If a mapping or function is provided, only one of them should be specified. The other must either be absent or set to null.\n\nIn any case, the imported user identity will always include an Anonymous ID and, if available, a User ID."
                         }
                     ],
                     "moreParameters": [],
@@ -4632,12 +5622,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (event) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"traits.firstName\", \"traits.lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given an event, returns a user identity."
+                                    }
+                                ]
                             },
                             "nullable": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming incoming events into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n* If no transformation is provided (or if it's set to null), the imported user identity will not have any properties.\n* If a mapping or function is provided, only one of them should be specified. The other must either be absent or set to null.\n\nIn any case, the imported user identity will always include an Anonymous ID and, if available, a User ID."
                         }
                     ],
                     "moreParameters": [],
@@ -4870,12 +5936,88 @@
                             },
                             {
                                 "name": "transformation",
-                                "placeholder": "{...}",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "transformation"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "mapping",
+                                            "placeholder": "{ \"first_name\": \"firstName\" }",
+                                            "type": {
+                                                "name": "Map",
+                                                "elementType": {
+                                                    "name": "Text"
+                                                }
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (event) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"traits.firstName\", \"traits.lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that will be passed to the function. It contains at least one property path."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. It contains at least one property path."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation function. A JavaScript or Python function that given an event, returns a user identity."
+                                        }
+                                    ]
                                 },
                                 "nullable": true,
-                                "description": ""
+                                "description": "The mapping or function responsible for transforming incoming events into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n* If no transformation is present, it is null.\n* If a transformation is present, either a mapping or a function will be present, but not both. The one that is not present it is null."
                             }
                         ]
                     },
@@ -5142,12 +6284,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming file users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -5400,12 +6618,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (user) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity."
+                                    }
+                                ]
                             },
                             "createRequired": true,
-                            "description": ""
+                            "description": "The mapping or function responsible for transforming file users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -5592,95 +6886,88 @@
                                 "description": "The compression format of the file. It is an empty if the file is not compressed.\n\nNote that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed."
                             },
                             {
-                                "name": "filter",
-                                "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"country\", \"operator\": \"is\", \"values\": [ \"US\" ] } ] }",
+                                "name": "transformation",
+                                "placeholder": "...",
                                 "type": {
                                     "name": "Object",
                                     "properties": [
                                         {
-                                            "name": "logical",
-                                            "placeholder": "and",
+                                            "name": "mapping",
+                                            "placeholder": "{ \"first_name\": \"firstName\" }",
                                             "type": {
-                                                "name": "Text",
-                                                "values": [
-                                                    "and",
-                                                    "or"
-                                                ]
-                                            },
-                                            "createRequired": true,
-                                            "description": ""
-                                        },
-                                        {
-                                            "name": "conditions",
-                                            "placeholder": "and",
-                                            "type": {
-                                                "name": "Array",
+                                                "name": "Map",
                                                 "elementType": {
-                                                    "name": "Object",
-                                                    "properties": [
-                                                        {
-                                                            "name": "property",
-                                                            "type": {
-                                                                "name": "Text"
-                                                            },
-                                                            "createRequired": true,
-                                                            "description": "The name or path of the property. If the property has a JSON type, it can include a JSON path."
-                                                        },
-                                                        {
-                                                            "name": "operator",
-                                                            "type": {
-                                                                "name": "Text",
-                                                                "values": [
-                                                                    "is",
-                                                                    "is not",
-                                                                    "is less than",
-                                                                    "is less than or equal to",
-                                                                    "is greater than",
-                                                                    "is greater than or equal to",
-                                                                    "is between",
-                                                                    "is not between",
-                                                                    "contains",
-                                                                    "does not contain",
-                                                                    "is one of",
-                                                                    "is not one of",
-                                                                    "starts with",
-                                                                    "ends with",
-                                                                    "is before",
-                                                                    "is on or before",
-                                                                    "is after",
-                                                                    "is on or after",
-                                                                    "is true",
-                                                                    "is false",
-                                                                    "is null",
-                                                                    "is not null",
-                                                                    "exists",
-                                                                    "does not exist"
-                                                                ]
-                                                            },
-                                                            "createRequired": true,
-                                                            "description": "The condition's operator. The allowed values depend on the property's type."
-                                                        },
-                                                        {
-                                                            "name": "values",
-                                                            "type": {
-                                                                "name": "Array",
-                                                                "elementType": {
-                                                                    "name": "Text",
-                                                                    "charLen": 60
-                                                                }
-                                                            },
-                                                            "description": "The values the operator applies to, if any. These depend on both the operator and the property's type, including whether they're present and how many there are."
-                                                        }
-                                                    ]
+                                                    "name": "Text"
                                                 }
                                             },
-                                            "createRequired": true,
-                                            "description": "A filter's condition."
+                                            "nullable": true,
+                                            "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (user) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"email\", \"firstName\", \"lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that will be passed to the function. At least one path must be present."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"email_address\", \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity."
                                         }
                                     ]
                                 },
-                                "nullable": true,
-                                "description": "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
+                                "description": "The mapping or function responsible for transforming file users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
                             },
                             {
                                 "name": "inSchema",
@@ -5916,12 +7203,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (event) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"traits.firstName\", \"traits.lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The property paths that will be passed to the function. This can be empty if the function does not rely on the event to generate the response."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
+                                    }
+                                ]
                             },
                             "nullable": true,
-                            "description": ""
+                            "description": "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -6104,12 +7467,88 @@
                         },
                         {
                             "name": "transformation",
-                            "placeholder": "{...}",
+                            "placeholder": "...",
                             "type": {
-                                "name": "transformation"
+                                "name": "Object",
+                                "properties": [
+                                    {
+                                        "name": "mapping",
+                                        "placeholder": "{ \"first_name\": \"firstName\" }",
+                                        "type": {
+                                            "name": "Map",
+                                            "elementType": {
+                                                "name": "Text"
+                                            }
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema."
+                                    },
+                                    {
+                                        "name": "function",
+                                        "placeholder": "null",
+                                        "type": {
+                                            "name": "Object",
+                                            "properties": [
+                                                {
+                                                    "name": "source",
+                                                    "placeholder": "const transform = (event) => { ... }",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "charLen": 50000
+                                                    },
+                                                    "description": "The source code of the JavaScript or Python function."
+                                                },
+                                                {
+                                                    "name": "language",
+                                                    "placeholder": "JavaScript",
+                                                    "type": {
+                                                        "name": "Text",
+                                                        "values": [
+                                                            "JavaScript",
+                                                            "Python"
+                                                        ]
+                                                    },
+                                                    "description": "The language of the function."
+                                                },
+                                                {
+                                                    "name": "preserveJSON",
+                                                    "placeholder": "false",
+                                                    "type": {
+                                                        "name": "Boolean"
+                                                    },
+                                                    "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                },
+                                                {
+                                                    "name": "inPaths",
+                                                    "placeholder": "[ \"traits.firstName\", \"traits.lastName\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The property paths that will be passed to the function. This can be empty if the function does not rely on the event to generate the response."
+                                                },
+                                                {
+                                                    "name": "outPaths",
+                                                    "placeholder": "[ \"first_name\", \"last_name\" ]",
+                                                    "type": {
+                                                        "name": "Array",
+                                                        "elementType": {
+                                                            "name": "Text"
+                                                        }
+                                                    },
+                                                    "description": "The paths of the properties that may be returned by the function. At least one path must be present."
+                                                }
+                                            ]
+                                        },
+                                        "nullable": true,
+                                        "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
+                                    }
+                                ]
                             },
                             "nullable": true,
-                            "description": ""
+                            "description": "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
                         }
                     ],
                     "moreParameters": [],
@@ -6355,12 +7794,88 @@
                             },
                             {
                                 "name": "transformation",
-                                "placeholder": "{...}",
+                                "placeholder": "...",
                                 "type": {
-                                    "name": "transformation"
+                                    "name": "Object",
+                                    "properties": [
+                                        {
+                                            "name": "mapping",
+                                            "placeholder": "{ \"first_name\": \"firstName\" }",
+                                            "type": {
+                                                "name": "Map",
+                                                "elementType": {
+                                                    "name": "Text"
+                                                }
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema."
+                                        },
+                                        {
+                                            "name": "function",
+                                            "placeholder": "null",
+                                            "type": {
+                                                "name": "Object",
+                                                "properties": [
+                                                    {
+                                                        "name": "source",
+                                                        "placeholder": "const transform = (event) => { ... }",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "charLen": 50000
+                                                        },
+                                                        "description": "The source code of the JavaScript or Python function."
+                                                    },
+                                                    {
+                                                        "name": "language",
+                                                        "placeholder": "JavaScript",
+                                                        "type": {
+                                                            "name": "Text",
+                                                            "values": [
+                                                                "JavaScript",
+                                                                "Python"
+                                                            ]
+                                                        },
+                                                        "description": "The language of the function."
+                                                    },
+                                                    {
+                                                        "name": "preserveJSON",
+                                                        "placeholder": "false",
+                                                        "type": {
+                                                            "name": "Boolean"
+                                                        },
+                                                        "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
+                                                    },
+                                                    {
+                                                        "name": "inPaths",
+                                                        "placeholder": "[ \"traits.firstName\", \"traits.lastName\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The property paths that will be passed to the function. If empty, the function does not rely on the event to generate the response."
+                                                    },
+                                                    {
+                                                        "name": "outPaths",
+                                                        "placeholder": "[ \"first_name\", \"last_name\" ]",
+                                                        "type": {
+                                                            "name": "Array",
+                                                            "elementType": {
+                                                                "name": "Text"
+                                                            }
+                                                        },
+                                                        "description": "The paths of the properties that may be returned by the function. It contains at least one property path."
+                                                    }
+                                                ]
+                                            },
+                                            "nullable": true,
+                                            "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
+                                        }
+                                    ]
                                 },
                                 "nullable": true,
-                                "description": ""
+                                "description": "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\nIf there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null."
                             }
                         ]
                     },
