@@ -161,7 +161,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const rows: GridRow[] = [];
 	for (const action of actions) {
 		const actionType = connection.actionTypes.find(
-			(t) => action.target === t.target && action.eventType === t.eventType,
+			(t) => action.target === t.target && (!('eventType' in action) || action.eventType === t.eventType),
 		);
 		if (actionType == null) {
 			throw new Error(
@@ -184,13 +184,13 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						{c.property} {c.operator}{' '}
 						{c.values != null
 							? c.values.map((val, i) => {
-								let v = '';
-								if (i > 0) {
-									v += '-';
-								}
-								v += val;
-								return v;
-							})
+									let v = '';
+									if (i > 0) {
+										v += '-';
+									}
+									v += val;
+									return v;
+								})
 							: ''}
 					</div>,
 				);

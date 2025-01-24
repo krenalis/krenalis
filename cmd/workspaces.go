@@ -40,7 +40,11 @@ func (workspace workspace) Action(_ http.ResponseWriter, r *http.Request) (any, 
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Action(id)
+	action, err := ws.Action(id)
+	if err != nil {
+		return nil, err
+	}
+	return toAPIAction(action), nil
 }
 
 // ActionErrors returns the action errors of the workspace.
@@ -320,7 +324,44 @@ func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (a
 	if id <= 0 {
 		return nil, errors.NotFound("")
 	}
-	return ws.Connection(r.Context(), id)
+	c, err := ws.Connection(r.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	// Transform and overwrite the Actions field to match the API's expected format.
+	connection := struct {
+		ID                int                `json:"id"`
+		Name              string             `json:"name"`
+		Connector         string             `json:"connector"`
+		ConnectorType     core.ConnectorType `json:"connectorType"`
+		Role              core.Role          `json:"role"`
+		Strategy          *core.Strategy     `json:"strategy"`
+		SendingMode       *core.SendingMode  `json:"sendingMode"`
+		WebsiteHost       string             `json:"websiteHost"`
+		LinkedConnections []int              `json:"linkedConnections,format:emitnull"`
+		ActionsCount      int                `json:"actionsCount"`
+		Health            core.Health        `json:"health"`
+		Actions           []any              `json:"actions"`
+		EventTypes        *[]core.EventType  `json:"eventTypes,omitzero"`
+	}{
+		ID:                c.ID,
+		Name:              c.Name,
+		Connector:         c.Connector,
+		ConnectorType:     c.ConnectorType,
+		Role:              c.Role,
+		Strategy:          c.Strategy,
+		SendingMode:       c.SendingMode,
+		WebsiteHost:       c.WebsiteHost,
+		LinkedConnections: c.LinkedConnections,
+		ActionsCount:      c.ActionsCount,
+		Health:            c.Health,
+		Actions:           make([]any, len(*c.Actions)),
+		EventTypes:        c.EventTypes,
+	}
+	for i, action := range *c.Actions {
+		connection.Actions[i] = toAPIAction(&action)
+	}
+	return connection, nil
 }
 
 // Connections returns the connections of a workspace.
