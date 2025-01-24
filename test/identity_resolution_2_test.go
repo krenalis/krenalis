@@ -151,7 +151,7 @@ func TestIdentityResolution2(t *testing.T) {
 	c.WaitForExecutionsCompletion(sourceC, exec3)
 
 	// Resolve the identities.
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Test that the execution of the Identity Resolution has ended and that its
 	// duration has a reasonable value.
@@ -203,7 +203,7 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 	c.UpdateUserSchema(schema, primarySources, nil)
 
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	users, _, total = c.Users(types.PropertyNames(schema), "", false, 0, 100)
 	if total != 1 {

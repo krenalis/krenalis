@@ -121,7 +121,7 @@ func TestEvents(t *testing.T) {
 	}
 
 	time.Sleep(time.Second)
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	ctx := context.Background()
 
@@ -131,7 +131,7 @@ func TestEvents(t *testing.T) {
 
 	// Run the identity resolution, so that the events GID are updated.
 	time.Sleep(time.Second)
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Retrieve the user imported from the event.
 	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)

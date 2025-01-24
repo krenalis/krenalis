@@ -62,7 +62,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 1)
 	time.Sleep(time.Second)
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Retrieve the user imported from the event.
 	users, _, total := c.Users([]string{"email"}, "", false, 0, 100)
@@ -106,7 +106,7 @@ func TestUserIdentitiesFromEvents(t *testing.T) {
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 2)
 	time.Sleep(time.Second)
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Check that the user has been created.
 	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)
@@ -147,7 +147,7 @@ def transform(event: dict) -> dict:
 	})
 	c.WaitEventsStoredIntoWarehouse(ctx, 3)
 	time.Sleep(time.Second)
-	c.StartIdentityResolution()
+	c.RunIdentityResolution()
 
 	// Check that the user has been created.
 	_, _, total = c.Users([]string{"email"}, "", false, 0, 100)

@@ -347,11 +347,20 @@ func (c *Meergo) RepairWarehouse() {
 	c.MustCall("POST", "/api/warehouse/repair", nil, nil)
 }
 
-func (c *Meergo) StartIdentityResolution() {
+// RunIdentityResolution starts the identity resolution and waits for it to
+// complete.
+func (c *Meergo) RunIdentityResolution() {
+	ts := time.Now().UTC()
 	c.MustCall("POST", "/api/identity-resolution/start", nil, nil)
-	// TODO(Gianluca): a timeout is used here until we implement a reliable
-	// mechanism to check the current status of Identity Resolution.
-	time.Sleep(3 * time.Second)
+	// Waits for the Identity Resolution that was started following the call to
+	// this method to finish.
+	for {
+		time.Sleep(50 * time.Millisecond)
+		startTime, endTime := c.LatestIdentityResolution()
+		if startTime.After(ts) && endTime != nil {
+			break
+		}
+	}
 }
 
 func (c *Meergo) SendEvent(writeKey string, message analytics.Message) {
