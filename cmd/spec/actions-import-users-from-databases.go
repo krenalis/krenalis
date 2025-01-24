@@ -57,22 +57,6 @@ func init() {
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`.",
 	}
-	inSchemaParameter := types.Property{
-		Name:           "inSchema",
-		Type:           types.Parameter("schema"),
-		CreateRequired: true,
-		Placeholder:    `{...}`,
-		Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\n" +
-			"When importing users from databases, this should be a subset of the query schema.",
-	}
-	outSchemaParameter := types.Property{
-		Name:           "outSchema",
-		Type:           types.Parameter("schema"),
-		CreateRequired: true,
-		Placeholder:    `{...}`,
-		Description: "The schema for the output properties of the transformation.\n\n" +
-			"When importing users from databases, this should be a subset of the workspace's user schema.",
-	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -128,6 +112,22 @@ func init() {
 			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\n" +
+			"When importing users from databases, this should be a subset of the query schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the output properties of the transformation.\n\n" +
+			"When importing users from databases, this should be a subset of the user schema.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-databases",
@@ -166,9 +166,9 @@ func init() {
 					identityPropertyParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -211,9 +211,9 @@ func init() {
 					identityPropertyParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -309,18 +309,6 @@ func init() {
 								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
 						},
 						{
-							Name:        "inSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.",
-						},
-						{
-							Name:        "outSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema for the output properties of the transformation.",
-						},
-						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
 								{
@@ -373,6 +361,18 @@ func init() {
 							Description: "The mapping or function responsible for transforming database users into user identities linked to the action. " +
 								"Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\n" +
 								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
+						},
+						{
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.",
+						},
+						{
+							Name:        "outSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema for the output properties of the transformation.",
 						},
 						runningParameter,
 						scheduleStartParameter,

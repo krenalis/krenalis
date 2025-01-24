@@ -671,7 +671,7 @@
                                             "name": "Text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the workspace's user schema. Its definition must also be included in the action's input schema."
+                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the user schema. Its definition must also be included in the action's input schema."
                                     },
                                     {
                                         "name": "out",
@@ -696,24 +696,6 @@
                             "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of workspace's user schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -729,7 +711,7 @@
                                             }
                                         },
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
                                     {
                                         "name": "function",
@@ -797,6 +779,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of user schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
                         }
                     ],
                     "moreParameters": [],
@@ -983,7 +983,7 @@
                                             "name": "Text"
                                         },
                                         "createRequired": true,
-                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the workspace's user schema. Its definition must also be included in the action's input schema."
+                                        "description": "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the user schema. Its definition must also be included in the action's input schema."
                                     },
                                     {
                                         "name": "out",
@@ -1008,24 +1008,6 @@
                             "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of workspace's user schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -1041,7 +1023,7 @@
                                             }
                                         },
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                        "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
                                     {
                                         "name": "function",
@@ -1109,6 +1091,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of user schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema of the output matching property and the output properties within the transformation.\n\nWhen exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present."
                         }
                     ],
                     "moreParameters": [],
@@ -1348,7 +1348,7 @@
                                                 "name": "Text"
                                             },
                                             "createRequired": true,
-                                            "description": "The matching input property.\n\nIt represents the name of the property in the workspace's user schema. Its definition is included in the action's input schema."
+                                            "description": "The matching input property.\n\nIt represents the name of the property in the user schema. Its definition is included in the action's input schema."
                                         },
                                         {
                                             "name": "out",
@@ -1373,22 +1373,6 @@
                                 "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf true, the export will proceed regardless of duplicates. If false, the user will not be exported, and an error will be logged."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation."
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema of the output matching property and the output properties within the transformation."
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -1404,7 +1388,7 @@
                                                 }
                                             },
                                             "nullable": true,
-                                            "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                            "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                         },
                                         {
                                             "name": "function",
@@ -1471,6 +1455,22 @@
                                     ]
                                 },
                                 "description": "The mapping or function responsible for transforming unified users into app users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema of the output matching property and the output properties within the transformation."
                             },
                             {
                                 "name": "running",
@@ -1599,24 +1599,6 @@
                             "description": "The name of the table column that contains a value identifying a user within the table. This column must be included in the output schema.\n\nTypically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\nIf a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\nThe type of this column must match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema of the properties used in the filter and the input properties within the transformation.\n\nIt should be a subset of the workspace's user schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -1632,7 +1614,7 @@
                                             }
                                         },
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                        "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
                                     {
                                         "name": "function",
@@ -1700,6 +1682,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming unified users into database users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema of the properties used in the filter and the input properties within the transformation.\n\nIt should be a subset of the user schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         }
                     ],
                     "moreParameters": [],
@@ -1794,15 +1794,6 @@
                             "description": "The name of the table column that contains a value identifying a user within the table. This column must be included in the output schema.\n\nTypically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\nIf a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\nThe type of this column must match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`."
                         },
                         {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -1818,7 +1809,7 @@
                                             }
                                         },
                                         "nullable": true,
-                                        "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                        "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
                                     {
                                         "name": "function",
@@ -1886,6 +1877,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming unified users into database users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema of the properties used in the filter and the input properties within the transformation.\n\nIt should be a subset of the user schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         }
                     ],
                     "moreParameters": [],
@@ -2124,22 +2133,6 @@
                                 "description": "The name of the table column that contains a value identifying a user within the table.\n\nTypically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\nIf a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\nThe type of this column match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema of the properties used in the filter and the input properties within the transformation."
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema of the table key property and the output properties within the transformation."
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -2155,7 +2148,7 @@
                                                 }
                                             },
                                             "nullable": true,
-                                            "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema."
+                                            "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                         },
                                         {
                                             "name": "function",
@@ -2222,6 +2215,22 @@
                                     ]
                                 },
                                 "description": "The mapping or function responsible for transforming unified users into database users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema of the properties used in the filter and the input properties within the transformation."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema of the table key property and the output properties within the transformation."
                             },
                             {
                                 "name": "running",
@@ -2495,7 +2504,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema of the properties in the filter, along with the other properties from the workspace's user schema, to be exported into the file."
+                            "description": "The schema of the properties in the filter, along with the other properties from the user schema, to be exported into the file."
                         }
                     ],
                     "moreParameters": [],
@@ -2716,7 +2725,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema of the properties in the filter, along with the other properties from the workspace's user schema, to be exported into the file."
+                            "description": "The schema of the properties in the filter, along with the other properties from the user schema, to be exported into the file."
                         }
                     ],
                     "moreParameters": [],
@@ -3747,24 +3756,6 @@
                             "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app’s destination schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -3848,6 +3839,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app’s destination schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -4014,24 +4023,6 @@
                             "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app’s destination schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -4115,6 +4106,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\nWhen importing users from apps, this should be a subset of the app’s destination schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from apps, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -4334,22 +4343,6 @@
                                 "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema for the properties used in the filter, as well as the input properties for the transformation."
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema for the output properties of the transformation."
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -4432,6 +4425,22 @@
                                     ]
                                 },
                                 "description": "The mapping or function responsible for transforming app users into user identities linked to the action. Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema for the properties used in the filter, as well as the input properties for the transformation."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema for the output properties of the transformation."
                             },
                             {
                                 "name": "running",
@@ -4580,24 +4589,6 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -4681,6 +4672,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming database users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -4795,24 +4804,6 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -4896,6 +4887,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming database users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from databases, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -5059,22 +5068,6 @@
                                 "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema for the identity property, the last change time property, and the input properties for the transformation."
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema for the output properties of the transformation."
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -5157,6 +5150,22 @@
                                     ]
                                 },
                                 "description": "The mapping or function responsible for transforming database users into user identities linked to the action. Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\nOne of either a mapping or a function is present, but not both. The one that is not present is null."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema for the identity property, the last change time property, and the input properties for the transformation."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema for the output properties of the transformation."
                             },
                             {
                                 "name": "running",
@@ -5357,16 +5366,6 @@
                             "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "updateRequired": true,
-                            "nullable": true,
-                            "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -5450,6 +5449,16 @@
                             },
                             "nullable": true,
                             "description": "The mapping or function responsible for transforming incoming events into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n* If no transformation is provided (or if it's set to null), the imported user identity will not have any properties.\n* If a mapping or function is provided, only one of them should be specified. The other must either be absent or set to null.\n\nIn any case, the imported user identity will always include an Anonymous ID and, if available, a User ID."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "updateRequired": true,
+                            "nullable": true,
+                            "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -5611,16 +5620,6 @@
                             "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "updateRequired": true,
-                            "nullable": true,
-                            "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -5704,6 +5703,16 @@
                             },
                             "nullable": true,
                             "description": "The mapping or function responsible for transforming incoming events into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n* If no transformation is provided (or if it's set to null), the imported user identity will not have any properties.\n* If a mapping or function is provided, only one of them should be specified. The other must either be absent or set to null.\n\nIn any case, the imported user identity will always include an Anonymous ID and, if available, a User ID."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "updateRequired": true,
+                            "nullable": true,
+                            "description": "The schema for the output properties of the transformation. It is required if a transformation is present.\n\nWhen importing users from events, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -5918,23 +5927,6 @@
                                 "description": "The filter applied to the events. If it's not null, only the users of events that match the filter will be imported.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema for the properties used in the filter and any input properties for the transformation."
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "nullable": true,
-                                "description": "The schema for the output properties of the transformation. If no transformation is present, it is null."
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -6018,6 +6010,23 @@
                                 },
                                 "nullable": true,
                                 "description": "The mapping or function responsible for transforming incoming events into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n* If no transformation is present, it is null.\n* If a transformation is present, either a mapping or a function will be present, but not both. The one that is not present it is null."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema for the properties used in the filter and any input properties for the transformation."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "nullable": true,
+                                "description": "The schema for the output properties of the transformation. If no transformation is present, it is null."
                             }
                         ]
                     },
@@ -6265,24 +6274,6 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -6366,6 +6357,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming file users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -6599,24 +6608,6 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
-                            "name": "inSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
-                        },
-                        {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "createRequired": true,
-                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the workspace's user schema."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -6700,6 +6691,24 @@
                             },
                             "createRequired": true,
                             "description": "The mapping or function responsible for transforming file users into user identities linked to the action. Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\nOne of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null."
+                        },
+                        {
+                            "name": "inSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "createRequired": true,
+                            "description": "The schema for the output properties of the transformation.\n\nWhen importing users from files, this should be a subset of the user schema."
                         }
                     ],
                     "moreParameters": [],
@@ -6986,14 +6995,6 @@
                                 "description": "The schema for the output properties of the transformation."
                             },
                             {
-                                "name": "transformation",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "transformation"
-                                },
-                                "description": ""
-                            },
-                            {
                                 "name": "running",
                                 "placeholder": "false",
                                 "type": {
@@ -7192,16 +7193,6 @@
                             "description": "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "updateRequired": true,
-                            "nullable": true,
-                            "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -7285,6 +7276,16 @@
                             },
                             "nullable": true,
                             "description": "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "updateRequired": true,
+                            "nullable": true,
+                            "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
                         }
                     ],
                     "moreParameters": [],
@@ -7456,16 +7457,6 @@
                             "description": "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "outSchema",
-                            "placeholder": "{...}",
-                            "type": {
-                                "name": "schema"
-                            },
-                            "updateRequired": true,
-                            "nullable": true,
-                            "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
-                        },
-                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -7549,6 +7540,16 @@
                             },
                             "nullable": true,
                             "description": "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\nIf the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\nIf a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null."
+                        },
+                        {
+                            "name": "outSchema",
+                            "placeholder": "{...}",
+                            "type": {
+                                "name": "schema"
+                            },
+                            "updateRequired": true,
+                            "nullable": true,
+                            "description": "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\nIt should be a subset of the schema of the passed event type."
                         }
                     ],
                     "moreParameters": [],
@@ -7776,23 +7777,6 @@
                                 "description": "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
-                                "name": "inSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "description": "The schema for the properties used in the filter and the input properties in the transformation.\n\nWhen sending events to apps, this is the event schema."
-                            },
-                            {
-                                "name": "outSchema",
-                                "placeholder": "{...}",
-                                "type": {
-                                    "name": "schema"
-                                },
-                                "nullable": true,
-                                "description": "The schema for the output properties of the transformation. It is null if no transformation is present."
-                            },
-                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -7876,6 +7860,23 @@
                                 },
                                 "nullable": true,
                                 "description": "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\nIf there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null."
+                            },
+                            {
+                                "name": "inSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "description": "The schema for the properties used in the filter and the input properties in the transformation.\n\nWhen sending events to apps, this is the event schema."
+                            },
+                            {
+                                "name": "outSchema",
+                                "placeholder": "{...}",
+                                "type": {
+                                    "name": "schema"
+                                },
+                                "nullable": true,
+                                "description": "The schema for the output properties of the transformation. It is null if no transformation is present."
                             }
                         ]
                     },

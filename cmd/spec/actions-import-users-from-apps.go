@@ -28,22 +28,6 @@ func init() {
 		Description: "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
-	inSchemaParameter := types.Property{
-		Name:           "inSchema",
-		Type:           types.Parameter("schema"),
-		CreateRequired: true,
-		Placeholder:    `{...}`,
-		Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\n" +
-			"When importing users from apps, this should be a subset of the app’s destination schema.",
-	}
-	outSchemaParameter := types.Property{
-		Name:           "outSchema",
-		Type:           types.Parameter("schema"),
-		CreateRequired: true,
-		Placeholder:    `{...}`,
-		Description: "The schema for the output properties of the transformation.\n\n" +
-			"When importing users from apps, this should be a subset of the workspace's user schema.",
-	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -99,6 +83,22 @@ func init() {
 			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.\n\n" +
+			"When importing users from apps, this should be a subset of the app’s destination schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		CreateRequired: true,
+		Placeholder:    `{...}`,
+		Description: "The schema for the output properties of the transformation.\n\n" +
+			"When importing users from apps, this should be a subset of the user schema.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-apps",
@@ -134,9 +134,9 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -176,9 +176,9 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -247,18 +247,6 @@ func init() {
 						},
 						filterParameter,
 						{
-							Name:        "inSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.",
-						},
-						{
-							Name:        "outSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema for the output properties of the transformation.",
-						},
-						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
 								{
@@ -311,6 +299,18 @@ func init() {
 							Description: "The mapping or function responsible for transforming app users into user identities linked to the action. " +
 								"Once identity resolution is completed, the user identities associated to all actions are merged into unified users.\n\n" +
 								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
+						},
+						{
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema for the properties used in the filter, as well as the input properties for the transformation.",
+						},
+						{
+							Name:        "outSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema for the output properties of the transformation.",
 						},
 						runningParameter,
 						scheduleStartParameter,

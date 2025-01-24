@@ -76,7 +76,7 @@ func init() {
 		Type:           types.Parameter("schema"),
 		Placeholder:    `{...}`,
 		CreateRequired: true,
-		Description:    "The schema of the properties in the filter, along with the other properties from the workspace's user schema, to be exported into the file.",
+		Description:    "The schema of the properties in the filter, along with the other properties from the user schema, to be exported into the file.",
 	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{

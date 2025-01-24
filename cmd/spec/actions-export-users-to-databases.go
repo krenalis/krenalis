@@ -45,14 +45,6 @@ func init() {
 			"If a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\n" +
 			"The type of this column must match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`.",
 	}
-	outSchemaParameter := types.Property{
-		Name:           "outSchema",
-		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
-		CreateRequired: true,
-		Description: "The schema for the table key property and the output properties within the transformation.\n\n" +
-			"When exporting users to a database, this should be a subset of the database table schema.",
-	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -61,7 +53,7 @@ func init() {
 				Type:        types.Map(types.Text()),
 				Placeholder: `{ "firstName": "first_name" }`,
 				Nullable:    true,
-				Description: "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema.",
+				Description: "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
 			},
 			{
 				Name: "function",
@@ -107,6 +99,22 @@ func init() {
 		Description: "The mapping or function responsible for transforming unified users into database users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema of the properties used in the filter and the input properties within the transformation.\n\n" +
+			"It should be a subset of the user schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema for the table key property and the output properties within the transformation.\n\n" +
+			"When exporting users to a database, this should be a subset of the database table schema.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-databases",
@@ -143,16 +151,9 @@ func init() {
 					},
 					tableNameParameter,
 					tableKeyParameter,
-					{
-						Name:           "inSchema",
-						Type:           types.Parameter("schema"),
-						Placeholder:    `{...}`,
-						CreateRequired: true,
-						Description: "The schema of the properties used in the filter and the input properties within the transformation.\n\n" +
-							"It should be a subset of the workspace's user schema.",
-					},
-					outSchemaParameter,
 					transformationParameter,
+					inSchemaParameter,
+					outSchemaParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -193,8 +194,9 @@ func init() {
 					},
 					tableNameParameter,
 					tableKeyParameter,
-					outSchemaParameter,
 					transformationParameter,
+					inSchemaParameter,
+					outSchemaParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -280,18 +282,6 @@ func init() {
 								"The type of this column match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`.",
 						},
 						{
-							Name:        "inSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema of the properties used in the filter and the input properties within the transformation.",
-						},
-						{
-							Name:        "outSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema of the table key property and the output properties within the transformation.",
-						},
-						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
 								{
@@ -299,7 +289,7 @@ func init() {
 									Type:        types.Map(types.Text()),
 									Placeholder: `{ "firstName": "first_name" }`,
 									Nullable:    true,
-									Description: "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema.",
+									Description: "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
 								},
 								{
 									Name: "function",
@@ -343,7 +333,20 @@ func init() {
 							Placeholder: `...`,
 							Description: "The mapping or function responsible for transforming unified users into database users.\n\n" +
 								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
-						}, runningParameter,
+						},
+						{
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema of the properties used in the filter and the input properties within the transformation.",
+						},
+						{
+							Name:        "outSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema of the table key property and the output properties within the transformation.",
+						},
+						runningParameter,
 						scheduleStartParameter,
 						exportSchedulePeriodParameter,
 					},

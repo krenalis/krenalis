@@ -28,15 +28,6 @@ func init() {
 		Description: "The filter applied to the events. If it's not null, only the events that match the filter will be sent to the destination.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
-	outSchemaParameter := types.Property{
-		Name:           "outSchema",
-		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
-		UpdateRequired: true,
-		Nullable:       true,
-		Description: "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\n" +
-			"It should be a subset of the schema of the passed event type.",
-	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -92,6 +83,15 @@ func init() {
 			"If the event type's schema requires a specific property, you should provide a transformation that returns a value for this property.\n" +
 			"If a mapping or function is provided (not null), only one of them should be specified. The other must either be absent or set to null.",
 	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		UpdateRequired: true,
+		Nullable:       true,
+		Description: "The schema for the output properties of the transformation. It is required and must not be null if a transformation is present.\n\n" +
+			"It should be a subset of the schema of the passed event type.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-send-events-to-apps",
@@ -127,8 +127,8 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
-					outSchemaParameter,
 					transformationParameter,
+					outSchemaParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -169,8 +169,8 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					outSchemaParameter,
 					transformationParameter,
+					outSchemaParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -245,20 +245,6 @@ func init() {
 						},
 						filterParameter,
 						{
-							Name:        "inSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema for the properties used in the filter and the input properties in the transformation.\n\n" +
-								"When sending events to apps, this is the event schema.",
-						},
-						{
-							Name:        "outSchema",
-							Type:        types.Parameter("schema"),
-							Nullable:    true,
-							Placeholder: `{...}`,
-							Description: "The schema for the output properties of the transformation. It is null if no transformation is present.",
-						},
-						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
 								{
@@ -311,6 +297,20 @@ func init() {
 							Nullable:    true,
 							Description: "This mapping or function is responsible for transforming unified users into the necessary values for sending the event to the app.\n\n" +
 								"If there is no mapping, it is null. Otherwise one of either a mapping or a function is present, but not both. The one that is not present is null.",
+						},
+						{
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema for the properties used in the filter and the input properties in the transformation.\n\n" +
+								"When sending events to apps, this is the event schema.",
+						},
+						{
+							Name:        "outSchema",
+							Type:        types.Parameter("schema"),
+							Nullable:    true,
+							Placeholder: `{...}`,
+							Description: "The schema for the output properties of the transformation. It is null if no transformation is present.",
 						},
 					},
 				},

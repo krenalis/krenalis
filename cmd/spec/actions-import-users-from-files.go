@@ -90,22 +90,6 @@ func init() {
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`.",
 	}
-	inSchemaParameter := types.Property{
-		Name:           "inSchema",
-		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
-		CreateRequired: true,
-		Description: "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\n" +
-			"When importing users from files, this should be a subset of the file schema.",
-	}
-	outSchemaParameter := types.Property{
-		Name:           "outSchema",
-		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
-		CreateRequired: true,
-		Description: "The schema for the output properties of the transformation.\n\n" +
-			"When importing users from files, this should be a subset of the workspace's user schema.",
-	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -161,6 +145,22 @@ func init() {
 			"Once the identity resolution process is complete, the user identities associated with all actions are merged into unified users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\n" +
+			"When importing users from files, this should be a subset of the file schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema for the output properties of the transformation.\n\n" +
+			"When importing users from files, this should be a subset of the user schema.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-import-users-from-files",
@@ -204,9 +204,9 @@ func init() {
 					identityPropertyParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -253,9 +253,9 @@ func init() {
 					identityPropertyParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -399,11 +399,6 @@ func init() {
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
 							Description: "The schema for the output properties of the transformation.",
-						},
-						{
-							Name:        "transformation",
-							Type:        types.Parameter("transformation"),
-							Placeholder: `{...}`,
 						},
 						runningParameter,
 						scheduleStartParameter,

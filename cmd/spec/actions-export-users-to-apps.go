@@ -46,7 +46,7 @@ func init() {
 				Type:           types.Text(),
 				CreateRequired: true,
 				Placeholder:    `"email"`,
-				Description:    "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the workspace's user schema. Its definition must also be included in the action's input schema.",
+				Description:    "The matching input property. It cannot be empty.\n\nIt represents the name of the property in the user schema. Its definition must also be included in the action's input schema.",
 			},
 			{
 				Name:           "out",
@@ -67,22 +67,6 @@ func init() {
 		Description: "Determines whether a user should be exported even if there are multiple matching users in the app.\n\n" +
 			"If set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged.",
 	}
-	inSchemaParameter := types.Property{
-		Name:           "inSchema",
-		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
-		CreateRequired: true,
-		Description: "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\n" +
-			"When exporting users to apps, it should be a subset of workspace's user schema.",
-	}
-	outSchemaParameter := types.Property{
-		Name:           "outSchema",
-		Type:           types.Parameter("schema"),
-		Placeholder:    `{...}`,
-		CreateRequired: true,
-		Description: "The schema of the output matching property and the output properties within the transformation.\n\n" +
-			"When exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present.",
-	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -91,7 +75,7 @@ func init() {
 				Type:        types.Map(types.Text()),
 				Placeholder: `{ "firstName": "first_name" }`,
 				Nullable:    true,
-				Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema.",
+				Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
 			},
 			{
 				Name: "function",
@@ -137,6 +121,22 @@ func init() {
 		Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
 			"One of either a mapping or a function must be provided, but not both. The one that is not provided can be either missing or set to null.",
 	}
+	inSchemaParameter := types.Property{
+		Name:           "inSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.\n\n" +
+			"When exporting users to apps, it should be a subset of user schema.",
+	}
+	outSchemaParameter := types.Property{
+		Name:           "outSchema",
+		Type:           types.Parameter("schema"),
+		Placeholder:    `{...}`,
+		CreateRequired: true,
+		Description: "The schema of the output matching property and the output properties within the transformation.\n\n" +
+			"When exporting users to apps, it should be a subset of app's destination schema, also including the schema of the output matching property if it is not already present.",
+	}
 
 	Specification.Resources = append(Specification.Resources, &Resource{
 		ID:   "actions-export-users-to-apps",
@@ -175,9 +175,9 @@ func init() {
 					exportModeParameter,
 					matchingParameter,
 					exportOnDuplicatesParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Response: &Response{
 					Parameters: []types.Property{
@@ -220,9 +220,9 @@ func init() {
 					exportModeParameter,
 					matchingParameter,
 					exportOnDuplicatesParameter,
+					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
-					transformationParameter,
 				},
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
@@ -299,7 +299,7 @@ func init() {
 									Type:           types.Text(),
 									CreateRequired: true,
 									Placeholder:    `"email"`,
-									Description:    "The matching input property.\n\nIt represents the name of the property in the workspace's user schema. Its definition is included in the action's input schema.",
+									Description:    "The matching input property.\n\nIt represents the name of the property in the user schema. Its definition is included in the action's input schema.",
 								},
 								{
 									Name:           "out",
@@ -321,18 +321,6 @@ func init() {
 								"If true, the export will proceed regardless of duplicates. If false, the user will not be exported, and an error will be logged.",
 						},
 						{
-							Name:        "inSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.",
-						},
-						{
-							Name:        "outSchema",
-							Type:        types.Parameter("schema"),
-							Placeholder: `{...}`,
-							Description: "The schema of the output matching property and the output properties within the transformation.",
-						},
-						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
 								{
@@ -340,7 +328,7 @@ func init() {
 									Type:        types.Map(types.Text()),
 									Placeholder: `{ "firstName": "first_name" }`,
 									Nullable:    true,
-									Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the workspace's user schema.",
+									Description: "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema.",
 								},
 								{
 									Name: "function",
@@ -384,6 +372,18 @@ func init() {
 							Placeholder: `...`,
 							Description: "The mapping or function responsible for transforming unified users into app users.\n\n" +
 								"One of either a mapping or a function is present, but not both. The one that is not present is null.",
+						},
+						{
+							Name:        "inSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema of the input matching property, the properties used in the filter, and the input properties within the transformation.",
+						},
+						{
+							Name:        "outSchema",
+							Type:        types.Parameter("schema"),
+							Placeholder: `{...}`,
+							Description: "The schema of the output matching property and the output properties within the transformation.",
 						},
 						runningParameter,
 						scheduleStartParameter,

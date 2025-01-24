@@ -169,18 +169,18 @@ func toAPIAction(action *core.Action) any {
 				return struct {
 					apiAction
 					Filter         *core.Filter         `json:"filter"`
+					Transformation core.Transformation  `json:"transformation"`
 					InSchema       types.Type           `json:"inSchema"`
 					OutSchema      types.Type           `json:"outSchema"`
-					Transformation core.Transformation  `json:"transformation"`
 					Running        bool                 `json:"running"`
 					ScheduleStart  *int                 `json:"scheduleStart"`
 					SchedulePeriod *core.SchedulePeriod `json:"schedulePeriod"`
 				}{
 					apiAction:      a,
 					Filter:         action.Filter,
+					Transformation: *action.Transformation,
 					InSchema:       action.InSchema,
 					OutSchema:      action.OutSchema,
-					Transformation: *action.Transformation,
 					Running:        action.Running,
 					ScheduleStart:  action.ScheduleStart,
 					SchedulePeriod: action.SchedulePeriod,
@@ -192,9 +192,9 @@ func toAPIAction(action *core.Action) any {
 					IdentityProperty       string               `json:"identityProperty"`
 					LastChangeTimeProperty *string              `json:"lastChangeTimeProperty"`
 					LastChangeTimeFormat   *string              `json:"lastChangeTimeFormat"`
+					Transformation         core.Transformation  `json:"transformation"`
 					InSchema               types.Type           `json:"inSchema"`
 					OutSchema              types.Type           `json:"outSchema"`
-					Transformation         core.Transformation  `json:"transformation"`
 					Running                bool                 `json:"running"`
 					ScheduleStart          *int                 `json:"scheduleStart"`
 					SchedulePeriod         *core.SchedulePeriod `json:"schedulePeriod"`
@@ -203,9 +203,9 @@ func toAPIAction(action *core.Action) any {
 					Query:                *action.Query,
 					IdentityProperty:     *action.IdentityProperty,
 					LastChangeTimeFormat: action.LastChangeTimeFormat,
+					Transformation:       *action.Transformation,
 					InSchema:             action.InSchema,
 					OutSchema:            action.OutSchema,
-					Transformation:       *action.Transformation,
 					Running:              action.Running,
 					ScheduleStart:        action.ScheduleStart,
 					SchedulePeriod:       action.SchedulePeriod,
@@ -218,9 +218,9 @@ func toAPIAction(action *core.Action) any {
 					Sheet          *string              `json:"sheet"`
 					Compression    core.Compression     `json:"compression"`
 					Filter         *core.Filter         `json:"filter"`
+					Transformation core.Transformation  `json:"transformation"`
 					InSchema       types.Type           `json:"inSchema"`
 					OutSchema      types.Type           `json:"outSchema"`
-					Transformation core.Transformation  `json:"transformation"`
 					Running        bool                 `json:"running"`
 					ScheduleStart  *int                 `json:"scheduleStart"`
 					SchedulePeriod *core.SchedulePeriod `json:"schedulePeriod"`
@@ -230,9 +230,9 @@ func toAPIAction(action *core.Action) any {
 					Path:           *action.Path,
 					Sheet:          action.Sheet,
 					Compression:    action.Compression,
+					Transformation: *action.Transformation,
 					InSchema:       action.InSchema,
 					OutSchema:      action.OutSchema,
-					Transformation: *action.Transformation,
 					Running:        action.Running,
 					ScheduleStart:  action.ScheduleStart,
 					SchedulePeriod: action.SchedulePeriod,
@@ -241,14 +241,14 @@ func toAPIAction(action *core.Action) any {
 				return struct {
 					apiAction
 					Filter         *core.Filter         `json:"filter"`
+					Transformation *core.Transformation `json:"transformation"`
 					InSchema       types.Type           `json:"inSchema"`
 					OutSchema      types.Type           `json:"outSchema"`
-					Transformation *core.Transformation `json:"transformation"`
 				}{
 					apiAction:      a,
+					Transformation: action.Transformation,
 					InSchema:       action.InSchema,
 					OutSchema:      action.OutSchema,
-					Transformation: action.Transformation,
 				}
 			}
 		}
@@ -274,9 +274,9 @@ func toAPIAction(action *core.Action) any {
 					ExportMode         core.ExportMode      `json:"exportMode"`
 					Matching           core.Matching        `json:"matching"`
 					ExportOnDuplicates bool                 `json:"exportOnDuplicates"`
+					Transformation     core.Transformation  `json:"transformation"`
 					InSchema           types.Type           `json:"inSchema"`
 					OutSchema          types.Type           `json:"outSchema"`
-					Transformation     core.Transformation  `json:"transformation"`
 					Running            bool                 `json:"running"`
 					ScheduleStart      *int                 `json:"scheduleStart"`
 					SchedulePeriod     *core.SchedulePeriod `json:"schedulePeriod"`
@@ -286,9 +286,9 @@ func toAPIAction(action *core.Action) any {
 					ExportMode:         *action.ExportMode,
 					Matching:           *action.Matching,
 					ExportOnDuplicates: *action.ExportOnDuplicates,
+					Transformation:     *action.Transformation,
 					InSchema:           action.InSchema,
 					OutSchema:          action.OutSchema,
-					Transformation:     *action.Transformation,
 					Running:            action.Running,
 					ScheduleStart:      action.ScheduleStart,
 					SchedulePeriod:     action.SchedulePeriod,
@@ -299,9 +299,9 @@ func toAPIAction(action *core.Action) any {
 					Filter         *core.Filter         `json:"filter"`
 					TableName      string               `json:"tableName"`
 					TableKey       string               `json:"tableKey"`
+					Transformation core.Transformation  `json:"transformation"`
 					InSchema       types.Type           `json:"inSchema"`
 					OutSchema      types.Type           `json:"outSchema"`
-					Transformation core.Transformation  `json:"transformation"`
 					Running        bool                 `json:"running"`
 					ScheduleStart  *int                 `json:"scheduleStart"`
 					SchedulePeriod *core.SchedulePeriod `json:"schedulePeriod"`
@@ -310,9 +310,9 @@ func toAPIAction(action *core.Action) any {
 					Filter:         action.Filter,
 					TableName:      *action.TableName,
 					TableKey:       *action.TableKey,
+					Transformation: *action.Transformation,
 					InSchema:       action.InSchema,
 					OutSchema:      action.OutSchema,
-					Transformation: *action.Transformation,
 					Running:        action.Running,
 					ScheduleStart:  action.ScheduleStart,
 					SchedulePeriod: action.SchedulePeriod,
@@ -350,16 +350,16 @@ func toAPIAction(action *core.Action) any {
 				apiAction
 				EventType      string               `json:"eventType"`
 				Filter         *core.Filter         `json:"filter"`
+				Transformation *core.Transformation `json:"transformation"`
 				InSchema       types.Type           `json:"inSchema"`
 				OutSchema      types.Type           `json:"outSchema"`
-				Transformation *core.Transformation `json:"transformation"`
 			}{
 				apiAction:      a,
 				EventType:      *action.EventType,
 				Filter:         action.Filter,
+				Transformation: action.Transformation,
 				InSchema:       action.InSchema,
 				OutSchema:      action.OutSchema,
-				Transformation: action.Transformation,
 			}
 		}
 	}
