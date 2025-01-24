@@ -202,14 +202,23 @@ const ActionFile = () => {
 						<LittleLogo icon={icon} />
 					</div>
 				)}
-				{formats.map((f) => (
-					<SlOption key={f.name} value={f.name}>
-						<div slot='prefix'>
-							<LittleLogo icon={f.icon} />
-						</div>
-						{f.name}
-					</SlOption>
-				))}
+				{formats.map((f) => {
+					const role = connection.role;
+					if (
+						(role === 'Source' && f.asSource == null) ||
+						(role === 'Destination' && f.asDestination == null)
+					) {
+						return null;
+					}
+					return (
+						<SlOption key={f.name} value={f.name}>
+							<div slot='prefix'>
+								<LittleLogo icon={f.icon} />
+							</div>
+							{f.name}
+						</SlOption>
+					);
+				})}
 			</SlSelect>
 			{isFormatLoading ? (
 				<SlSpinner
