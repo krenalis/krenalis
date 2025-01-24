@@ -36,7 +36,7 @@ type PostgreSQL struct {
 }
 
 // New returns a new PostgreSQL connector instance.
-func New(conf *meergo.FileConfig) (*PostgreSQL, error) {
+func New(conf *meergo.DatabaseConfig) (*PostgreSQL, error) {
 	// ...
 }
 
