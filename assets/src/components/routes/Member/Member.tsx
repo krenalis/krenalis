@@ -176,7 +176,7 @@ const Member = () => {
 					</div>
 				)}
 				<div className='member__buttons'>
-					<Link path='members'>
+					<Link path='organization/members'>
 						<SlButton className='member__cancel-button'>Cancel</SlButton>
 					</Link>
 					<SlButton className='member__save-button' variant='primary' loading={isSaving} onClick={onSave}>

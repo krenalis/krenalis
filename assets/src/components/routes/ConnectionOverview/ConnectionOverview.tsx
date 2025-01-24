@@ -9,7 +9,6 @@ import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid,
 import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
-import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import { DateRange } from 'react-date-range';
 import { ActionError, ActionErrorsResponse } from '../../../lib/api/types/responses';
@@ -18,6 +17,7 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 import considerAsUTC from '../../../utils/considerUTC';
+import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 
 interface ActionMetricsPoint {
 	time: string;
@@ -589,7 +589,7 @@ const computeActionErrorRows = (connection: TransformedConnection, actionErrors:
 				</Link>,
 				STEP_NAMES[error.step],
 				error.count,
-				<SlRelativeTime date={error.lastOccurred.toISOString()} lang='en-US' />,
+				<RelativeTime date={error.lastOccurred} />,
 				error.message,
 			],
 		};

@@ -34,6 +34,7 @@ import { Schema } from './components/routes/Schema/Schema';
 import { SchemaEditWrapper } from './components/routes/SchemaEdit/SchemaEditWrapper';
 import { WorkspaceCreate } from './components/routes/WorkspaceCreate/WorkspaceCreate';
 import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/WorkspacesWrapper';
+import { APIKeys } from './components/routes/APIKeys/APIKeys';
 
 const router = createBrowserRouter([
 	{
@@ -125,14 +126,20 @@ const router = createBrowserRouter([
 					{
 						path: 'organization',
 						element: <Organization />,
-					},
-					{
-						path: 'members/current',
-						element: <Member />,
-					},
-					{
-						path: 'members',
-						element: <Members />,
+						children: [
+							{
+								path: 'members/current',
+								element: <Member />,
+							},
+							{
+								path: 'members',
+								element: <Members />,
+							},
+							{
+								path: 'api-keys',
+								element: <APIKeys />,
+							},
+						],
 					},
 					{ path: '*', element: <NotFound /> },
 				],

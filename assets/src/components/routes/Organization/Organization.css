@@ -1,13 +1,18 @@
 .organization {
-	height: calc(100% - 70px);
+	height: 100%;
 	background-color: var(--bg-gray);
 }
 
 .organization__content {
-	max-width: 900px;
+	max-width: 950px;
 	margin: 0px auto;
 	padding: 30px;
 	animation: fade-in-entrance 0.5s;
+}
+
+.organization__content > a {
+	margin-bottom: 15px;
+	display: block;
 }
 
 .organization__title {

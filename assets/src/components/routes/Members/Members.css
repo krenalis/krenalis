@@ -1,18 +1,19 @@
-.members {
-	height: calc(100% - 70px);
-	background-color: var(--bg-gray);
-}
-
-.members__content {
-	max-width: 900px;
-	margin: 0px auto;
-	padding: 30px;
-	animation: fade-in-entrance 0.5s;
-}
-
 .members sl-spinner {
 	display: block;
 	margin: 20px auto;
+}
+
+.members__back-button::part(base) {
+	padding-left: 0;
+}
+
+.members__back-button::part(label) {
+	padding-left: 5px;
+}
+
+.members__back-button sl-icon {
+	position: relative;
+	top: 2px;
 }
 
 .members__title {
@@ -25,6 +26,7 @@
 .members__title-text {
 	font-size: 23px;
 	font-weight: 600;
+	line-height: 1;
 }
 
 .members__member {

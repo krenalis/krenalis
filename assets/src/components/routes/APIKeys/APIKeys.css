@@ -1,0 +1,107 @@
+.api-keys .grid__loading {
+	padding: 90px 30px 120px 30px;
+}
+
+.api-keys__back-button::part(base) {
+	padding-left: 0;
+}
+
+.api-keys__back-button::part(label) {
+	padding-left: 5px;
+}
+
+.api-keys__back-button sl-icon {
+	position: relative;
+	top: 2px;
+}
+
+.api-keys__title {
+	display: flex;
+	margin-bottom: 15px;
+	justify-content: space-between;
+	align-items: end;
+}
+
+.api-keys__title-text {
+	font-size: 23px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.api-keys__workspace {
+	color: var(--sl-color-primary-600);
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.api-keys__token-cell {
+	font-family: var(--monospace-fonts);
+}
+
+.api-keys__grid-buttons {
+	display: flex;
+	gap: 10px;
+}
+
+.api-keys__grid-any-workspace {
+	color: var(--sl-color-neutral-400);
+}
+
+.api-keys__dialog--copy::part(close-button) {
+	display: none;
+}
+
+.api-keys__dialog-workspaces {
+	margin-top: 20px;
+}
+
+.api-keys__dialog-error {
+	color: var(--sl-color-danger-600);
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin-top: 3px;
+	font-size: 15px;
+}
+
+.api-keys__dialog-error sl-icon {
+	color: var(--sl-color-danger-600);
+	font-size: 14px;
+}
+
+.api-keys__dialog-save {
+	margin-top: 30px;
+	display: block;
+}
+
+.api-keys__dialog-created-description {
+	margin-bottom: 10px;
+	margin-top: 5px;
+	font-size: 14px;
+	color: var(--sl-color-neutral-800);
+}
+
+.api-keys__dialog-done {
+	margin-top: 30px;
+	margin-left: auto;
+	display: block;
+	max-width: 100px;
+}
+
+.api-keys__key-copy {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.api-keys__key-copy > sl-input {
+	width: 100%;
+}
+
+.api-keys__key-copy > sl-input::part(input) {
+	font-family: var(--monospace-fonts);
+}
+
+.api-keys__key-copy > sl-input::part(base) {
+	font-size: 14px;
+}

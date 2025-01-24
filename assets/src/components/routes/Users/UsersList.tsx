@@ -5,7 +5,6 @@ import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
@@ -16,6 +15,7 @@ import { useUsersGrid } from './useUsersGrid';
 import { UserProperty } from './Users.types';
 import AppContext from '../../../context/AppContext';
 import { LatestIdentityResolution } from '../../../lib/api/types/workspace';
+import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 
 const UsersList = () => {
 	const [selectedUser, setSelectedUser] = useState<string>('');
@@ -170,7 +170,7 @@ const UsersList = () => {
 							) : lastIRExecutionEnd ? (
 								<div className='users-list__identity-resolution-end-time'>
 									<span>Latest Identity Resolution:</span>
-									<SlRelativeTime lang='en-US' date={lastIRExecutionEnd} />
+									<RelativeTime date={lastIRExecutionEnd} />
 								</div>
 							) : (
 								''

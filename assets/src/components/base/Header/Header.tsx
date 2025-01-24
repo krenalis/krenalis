@@ -22,7 +22,7 @@ const Header = ({ title, member }: HeaderProps) => {
 				<Link path='organization'>
 					<IconWrapper name='building' moat={true}></IconWrapper>
 				</Link>
-				<Link path='members/current'>
+				<Link path='organization/members/current'>
 					<SlAvatar
 						className='header__account-avatar'
 						initials={member.initials}

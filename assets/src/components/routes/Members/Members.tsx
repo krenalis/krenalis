@@ -1,4 +1,4 @@
-import React, { useState, useContext, useLayoutEffect, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import './Members.css';
 import AppContext from '../../../context/AppContext';
 import ListTile from '../../base/ListTile/ListTile';
@@ -21,13 +21,9 @@ const Members = () => {
 	const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState<boolean>(false);
 	const [members, setMembers] = useState<TransformedMember[]>();
 
-	const { setTitle, api, handleError, member: loggedMember } = useContext(AppContext);
+	const { api, handleError, member: loggedMember } = useContext(AppContext);
 
 	const pendingDeletedMember = useRef<number>(0);
-
-	useLayoutEffect(() => {
-		setTitle('Members');
-	}, []);
 
 	useEffect(() => {
 		const fetchMembers = async () => {
@@ -96,6 +92,12 @@ const Members = () => {
 		return (
 			<div className='members'>
 				<div className='members__content'>
+					<Link path='organization'>
+						<SlButton className='members__back-button' variant='text'>
+							<SlIcon slot='prefix' name='arrow-left' />
+							Organization
+						</SlButton>
+					</Link>
 					<div className='members__title'>
 						<p className='members__title-text'>Members</p>
 						<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
@@ -134,7 +136,7 @@ const Members = () => {
 									action={
 										<div className='members__member-actions'>
 											{member.id === loggedMember.id && (
-												<Link path={'members/current'}>
+												<Link path={'organization/members/current'}>
 													<SlButton size='small'>Edit</SlButton>
 												</Link>
 											)}

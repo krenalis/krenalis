@@ -24,6 +24,7 @@ import Workspace, {
 	PrimarySources,
 } from './types/workspace';
 import {
+	APIKeyResponse,
 	ActionErrorsResponse,
 	ActionSchemasResponse,
 	AppUsersResponse,
@@ -31,6 +32,7 @@ import {
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
 	ConnectorUIResponse,
+	CreateAPIKeyResponse,
 	CreateEventListenerResponse,
 	Event,
 	EventListenerEventsResponse,
@@ -158,6 +160,27 @@ class API {
 
 	deleteMember = async (member: number): Promise<void> => {
 		return await call(`${this.apiURL}/members/${member}`, http.DELETE, this.workspaceID);
+	};
+
+	keys = async (): Promise<APIKeyResponse> => {
+		return await call(`${this.apiURL}/keys`, http.GET, this.workspaceID);
+	};
+
+	createAPIKey = async (name: string, workspace: number | null): Promise<CreateAPIKeyResponse> => {
+		return await call(`${this.apiURL}/keys`, http.POST, this.workspaceID, {
+			name,
+			workspace,
+		});
+	};
+
+	updateAPIKey = async (key: number, name: string): Promise<void> => {
+		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.PUT, this.workspaceID, {
+			name,
+		});
+	};
+
+	deleteAPIKey = async (key: number): Promise<void> => {
+		return await call(`${this.apiURL}/keys/${encodeURIComponent(key)}`, http.DELETE, this.workspaceID);
 	};
 }
 

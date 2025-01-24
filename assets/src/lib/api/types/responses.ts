@@ -137,6 +137,23 @@ interface MemberInvitationResponse {
 	organization: string;
 }
 
+interface APIKey {
+	id: number;
+	workspace: number | null;
+	name: string;
+	token: string;
+	createdAt: string;
+}
+
+interface APIKeyResponse {
+	keys: APIKey[];
+}
+
+interface CreateAPIKeyResponse {
+	id: number;
+	token: string;
+}
+
 type RePaths = Record<string, string | null>;
 
 interface PreviewUserSchemaUpdateResponse {
@@ -168,6 +185,9 @@ export type {
 	MemberAvatar,
 	MemberInvitationResponse,
 	MemberToSet,
+	APIKey,
+	APIKeyResponse,
+	CreateAPIKeyResponse,
 	PreviewSendEventResponse,
 	PreviewUserSchemaUpdateResponse,
 	RePaths,
