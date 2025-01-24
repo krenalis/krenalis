@@ -166,7 +166,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		switch {
 		case tr.Mapping != nil:
 			if tr.Function != nil {
-				return errors.BadRequest("action cannot have both mappings and transformation")
+				return errors.BadRequest("action cannot have both transformation mapping and function")
 			}
 			// Validate the transformation mapping.
 			if len(tr.Mapping) == 0 {
@@ -190,7 +190,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			usedOutPaths = transformer.OutPaths()
 		case tr.Function != nil:
 			if tr.Mapping != nil {
-				return errors.BadRequest("action cannot have both mappings and transformation")
+				return errors.BadRequest("action cannot have both transformation mapping and function")
 			}
 			// Validate the transformation function.
 			if !inSchema.Valid() && !allowConstantTransformation {
