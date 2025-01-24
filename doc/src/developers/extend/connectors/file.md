@@ -7,7 +7,9 @@
 
 File connectors allow to read and write specific types of files such as Excel, CSV, or Parquet files.
 
-File connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and interfaces.
+File connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
+
+Note that it is possible to implement a file connector that supports only reading or only writing of records, as it is not necessary that a file connector supports both. It is sufficient to specify the functionalities that the connector implements through the `FileInfo`, described below, then implement the required methods for those functionalities.
 
 ## Quick start
 
@@ -28,6 +30,12 @@ func init() {
 	meergo.RegisterFile(meergo.FileInfo{
 		Name:      "CSV",
 		Extension: "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
 	}, New)
 }
 
@@ -77,9 +85,13 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `FileInfo` type describes information about the file connector:
 
 - `Name`: short name, typically the name of the file type. For example, "Excel", "CSV", "Parquet", etc.
-- `HasSettings`: indicates whether the connection has format settings when used in the specified role. This field is relevant only if the connector implements the `UIHandler` interface.
+- `AsSource`: information about the file connector when it used as source. This should be set only when the file connector can be used as a source, otherwise should be nil.
+  - `HasSettings`: indicates whether the connection has format settings when used as source.
+- `AsDestination`: information about the file connector when it used as destination. This should be set only when the file connector can be used as a destination, otherwise should be nil.
+  - `HasSettings`: indicates whether the connection has format settings when used as destination.
+- `HasSheets`
 - `TimeLayouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
-- `Extension`: main extension of the file type that the connector reads and writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
+- `Extension`: main extension of the file type that the connector reads and/or writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
 - `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterFile` function that, executed during package initialization, registers the file connector:
@@ -87,10 +99,16 @@ This information is passed to the `RegisterFile` function that, executed during 
 ```go
 func init() {
     meergo.RegisterFile(meergo.FileInfo{
-        Name:      "CSV",
-        Icon:      icon,
-        Extension: "csv",
-    }, New)
+		Name:      "CSV",
+		Icon:      icon,
+		Extension: "csv",
+		AsSource: &meergo.AsSourceFile{
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsDestinationFile{
+			HasSettings: true,
+		},
+	}, New)
 }
 ```
 
@@ -202,12 +220,12 @@ The `Ack` method is called to confirm the writing of a record. If a decision is 
 
 ### Sheets method
 
-If your file format supports multiple sheets, as the Excel file format, to determine which sheets are present in a file, the connector should implement the `Sheets` method:
+If your file format supports multiple sheets, as the Excel file format, to determine which sheets are present in a file, the connector should indicate that in the `FileInfo` with `HasSheets: true` and implement the `Sheets` method:
 
 ```go
 Sheets(ctx context.Context, r io.Reader) ([]string, error)
 ```
 
-The `Read` and `Write` methods receive the sheet from which to read or write records as an argument. If the connector implements the `Sheets` method, the argument passed will always be a valid sheet name, otherwise it will always be an empty string.
+The `Read` and `Write` methods receive the sheet from which to read or write records as an argument. If the connector has sheets, the argument passed will always be a valid sheet name, otherwise it will always be an empty string.
 
 > A valid sheet name is UTF-8 encoded, has a length in the range [1,31], does not start or end with “ ' ”, and does not contain any of *, /, :, ?,[, \\, and ]. Sheet names are case-insensitive.

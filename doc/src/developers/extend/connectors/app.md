@@ -7,7 +7,9 @@
 
 App connectors allow to connect to apps, such as klaviyo, Salesforce, or Mailchimp, to import and export users and groups and to dispatch events.
 
-App connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and interfaces.
+App connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
+
+Note that it is possible to implement an app connector that supports only reading or only writing of records, or only dispatching of events, as it is not necessary that an app connector supports all of them. It is sufficient to specify the functionalities that the connector implements through the `AppInfo`, described below, then implement the required methods for those functionalities.
 
 ## Quick start
 
@@ -27,12 +29,19 @@ import (
 
 func init() {
 	meergo.RegisterApp(meergo.AppInfo{
-		Name:                   "Klaviyo",
-		Targets:                meergo.Events | meergo.Users,
-		SourceDescription:      "Import clients as users from Klaviyo",
-		DestinationDescription: "Export users as clients and dispatch events to Klaviyo",
-		TermForUsers:           "clients",
-		SendingMode:            meergo.Cloud,
+		Name: "Klaviyo",
+		AsSource: &meergo.AsAppSource{
+			Description: "Import profiles as users from Klaviyo",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Export users as profiles and send events to Klaviyo",
+			Targets:     meergo.Events | meergo.Users,
+			HasSettings: true,
+			SendingMode: meergo.Cloud,
+		},
+		TermForUsers: "clients",
 	}, New)
 }
 
@@ -97,21 +106,21 @@ Later on, you can [build an executable with your connector](../../getting-starte
 The `AppInfo` type describes information about the app connector:
 
 - `Name`: short name, typically the name of the app. For example, "HubSpot", "Google Analytics", "Salesforce", etc.
-- `Targets`: targets supported by the app connector. Can contain `Events`, `Users`, and `Groups`.
-- `Role`: specifies the role supported by the app connector. It can be one of the following:  
-   - `Source`: indicates that the connection can only be used as a data source,
-   - `Destination`: indicates that the connection can only be used as a data destination,
-   - `Both`: (default) indicates that the connection can be used as both a data source and a data destination.
-- `SourceDescription`: brief description of the connector when the connector is used as a source.
-- `DestinationDescription`: brief description of the connector when the connector is used as a destination.
-- `HasSettings`: indicates whether the connection has settings when used in the specified role. This field is relevant only if the connector implements the `UIHandler` interface.   
+- `AsSource`: information about the app connector when it used as source. This should be set only when the app connector can be used as a source, otherwise should be nil.
+  - `Description`: brief description of the connector when it is used as a source.
+  - `Targets`: targets supported by the app connector when it is used as source. Can contain `Users` and `Groups`.
+  - `HasSettings`: indicates whether the connection has settings when used as a source
+- `AsDestination`: information about the app connector when it used as destination. This should be set only when the app connector can be used as a destination, otherwise should be nil.
+  - `Description`: brief description of the connector when it is used as a destination.
+  - `Targets`: targets supported by the app connector when it is used as a destination. Can contain `Events`, `Users`, and `Groups`.
+  - `HasSettings`: indicates whether the connection has settings when used as destination
+  - `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `TermForUsers`: term used by the app to indicate the users. For example "clients", "customers", or "users".
 - `TermForGroups`: term used by the app to indicate the groups, if they are supported. For example "organizations", "teams", or "groups".
 - `IdentityIDLabel`: descriptive name of the identifier used by the app to identify a user. For example "ID", "User ID", or "HubSpot ID".
 - `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
 - `BackoffPolicy`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff).
-- `SendingMode`: mode used to dispatch the events to the app, if the app supports events. It can be `Cloud`, `Device`, or `Combined`.
 - `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
@@ -119,15 +128,22 @@ This information is passed to the `RegisterApp` function that, executed during p
 
 ```go
 func init() {
-    meergo.RegisterApp(meergo.AppInfo{
-        Name:                   "Klaviyo",
-        Targets:                meergo.Events | meergo.Users,
-        SourceDescription:      "import clients as users from Klaviyo",
-        DestinationDescription: "export users as clients and dispatch events to Klaviyo",
-        TermForUsers:           "clients",
-        SendingMode:            meergo.Cloud,
-        Icon:                   icon,
-    }, New)
+	meergo.RegisterApp(meergo.AppInfo{
+		Name: "Klaviyo",
+		AsSource: &meergo.AsAppSource{
+			Description: "Import profiles as users from Klaviyo",
+			Targets:     meergo.Users,
+			HasSettings: true,
+		},
+		AsDestination: &meergo.AsAppDestination{
+			Description: "Export users as profiles and send events to Klaviyo",
+			Targets:     meergo.Events | meergo.Users,
+			HasSettings: true,
+			SendingMode: meergo.Cloud,
+		},
+		TermForUsers: "clients",
+		Icon:         icon,
+	}, New)
 }
 ```
 

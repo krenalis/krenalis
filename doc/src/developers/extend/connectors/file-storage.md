@@ -7,7 +7,9 @@
 
 File storage connectors allow to read and write file content on a file storage such as SFTP, HTTP and S3.
 
-File storage connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and interfaces.
+File storage connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
+
+Note that it is possible to implement a file storage connector that supports only reading or only writing operations, as it is not necessary that a file storage connector supports both. It is sufficient to specify the functionalities that the connector implements through the `FileStorageInfo`, described below, then implement the required methods for those functionalities.
 
 ## Quick start
 
@@ -26,9 +28,11 @@ import (
 )
 
 func init() {
-	meergo.RegisterFileStorage(meergo.FileStorageInfo{
-		Name: "S3",
-	}, New)
+    meergo.RegisterFileStorage(meergo.FileStorageInfo{
+        Name: "S3",
+        AsSource:      true,
+        AsDestination: true,
+    }, New)
 }
 
 type S3 struct {
@@ -86,6 +90,8 @@ This information is passed to the `RegisterFileStorage` function that, executed 
 func init() {
     meergo.RegisterFileStorage(meergo.FileStorageInfo{
         Name: "S3",
+        AsSource:      true,
+        AsDestination: true,
         Icon: icon,
     }, New)
 }

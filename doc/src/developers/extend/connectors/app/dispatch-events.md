@@ -4,22 +4,27 @@
 
 # Dispatching events to apps
 
-Meergo makes it easy to dispatch events to apps that can receive them. This involves implementing the `AppEvents` interface within the connector and adjusting the `Schema` method to also provide schema information for event types.
+Meergo makes it easy to dispatch events to apps that can receive them.
 
 Here’s how to get started with setting up your connector to dispatch events:
 
 ```go
 meergo.RegisterApp(meergo.AppInfo{
-    ...
-    Targets: meergo.Users | meergo.Events,
-    ...
-})
+	...
+	AsDestination: &meergo.AsAppDestination{
+		...
+		Targets:  meergo.Users | meergo.Events,
+		...
+	},
+	...
+}, New)
 ```
 
-This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users). Next, you'll need to implement two key methods within your connector:
+This piece of code registers your connector, telling Meergo that it's ready to manage events (as well as users) when used as destination. Next, you'll need to implement two key methods within your connector:
 
 - `EventTypes`: Lists the types of events the app can work with.
 - `EventRequest`: Takes an event and turns it into an HTTP request for dispatching the event to the app.
+- `Schema`: Provides the schema of an event, given its event type. If the connector already handles users, probably this method is already implemented and should only be extended to support events.
 
 Let's look more closely at what each part does.
 

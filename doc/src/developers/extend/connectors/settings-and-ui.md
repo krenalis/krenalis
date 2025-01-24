@@ -94,7 +94,7 @@ json.Value(`{"MeasurementID":"G-2XYZBEB6AB","APISecret":"ZuHCHFZbRBi8V7u8crWFUz"
 
 ### Serving the UI
 
-To provide the interface to the user and respond to events triggered by user interaction, the connector must implement the `ServeUI` method:
+To provide the interface to the user and respond to events triggered by user interaction, the connector must implement the `ServeUI` method and eventually declare in its configuration that it has settings (see the documentation specific for the connector type):
 
 ```go
 ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error)

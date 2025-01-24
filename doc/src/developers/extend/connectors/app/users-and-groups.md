@@ -6,14 +6,23 @@
 
 An app connector, if the related app allows it, can read, create, and update users and groups within the app, enabling Meergo to import and export users and groups. An app connector may support users only, groups only, or both.
 
-Firstly, include the `Users` and `Groups` flags during connector registration, based on what the connector supports, as the target:
+Firstly, include the `Users` and `Groups` flags during connector registration, based on what the connector supports, as the targets for source and destination:
 
 ```go
 meergo.RegisterApp(meergo.AppInfo{
-    ...
-    Targets: meergo.Events | meergo.Users | meergo.Groups,
-    ...
-})
+	...
+	AsSource: &meergo.AsAppSource{
+		...
+		Targets:  meergo.Users,
+		...
+	},
+	AsDestination: &meergo.AsAppDestination{
+		...
+		Targets:  meergo.Users,
+		...
+	},
+	...
+}, New)
 ```
 
 After that, to read, update, and create app records, the connector must implement the `Records` and `Upserts` methods. These methods take the target they should operate on as an argument, which can be either `Users` or `Groups`. They should only implement the targets that the connector supports.

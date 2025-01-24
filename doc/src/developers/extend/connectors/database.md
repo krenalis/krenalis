@@ -7,7 +7,7 @@
 
 Database connectors allow to connect to databases (DBMS), such as PostgreSQL, MySQL, or Snowflake, to execute queries to import and export data.
 
-Database connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and interfaces.
+Database connectors, like other types of connectors, are written in Go. A connector is a Go module that implements specific functions and methods.
 
 ## Quick start
 
