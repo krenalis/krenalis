@@ -11,7 +11,7 @@ import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
-import { Action, ActionType } from '../../../lib/api/types/action';
+import { Action } from '../../../lib/api/types/action';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { Execution } from '../../../lib/api/types/responses';
@@ -159,44 +159,38 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		connection.connector.type !== 'Server';
 
 	const rows: GridRow[] = [];
-	for (const a of actions) {
-		let linkedActionType: ActionType | null = null;
-		for (const t of connection.actionTypes!) {
-			if (a.target === 'Users' || a.target === 'Groups') {
-				if (a.target === t.target) {
-					linkedActionType = t;
-				}
-			} else {
-				const eventActionTypes = connection.actionTypes.filter((actionType) => actionType.target === 'Events');
-				linkedActionType = eventActionTypes.find((actionType) => actionType.eventType === a.eventType);
-			}
-		}
-		if (linkedActionType == null) {
-			throw new Error(`Event type '${a.eventType}' of action ${a.id} does not exist anymore`);
+	for (const action of actions) {
+		const actionType = connection.actionTypes.find(
+			(t) => action.target === t.target && action.eventType === t.eventType,
+		);
+		if (actionType == null) {
+			throw new Error(
+				`Connection ${connection.id} no longer has target '${action.target}' and event type '${action.eventType}' for action ${action.id}`,
+			);
 		}
 		const nameCell = (
 			<div className='connection-actions__action-name'>
-				<div className='connection-actions__action-name-name'>{a.name}</div>
-				<div className='connection-actions__action-name-description'>{linkedActionType.description}</div>
+				<div className='connection-actions__action-name-name'>{action.name}</div>
+				<div className='connection-actions__action-name-description'>{actionType.description}</div>
 			</div>
 		);
 
 		let conditionsCell: ReactNode;
-		if (a.filter != null) {
+		if (action.filter != null) {
 			const cells: ReactNode[] = [];
-			for (const [i, c] of a.filter.conditions.entries()) {
+			for (const [i, c] of action.filter.conditions.entries()) {
 				cells.push(
 					<div key={i}>
 						{c.property} {c.operator}{' '}
 						{c.values != null
 							? c.values.map((val, i) => {
-									let v = '';
-									if (i > 0) {
-										v += '-';
-									}
-									v += val;
-									return v;
-								})
+								let v = '';
+								if (i > 0) {
+									v += '-';
+								}
+								v += val;
+								return v;
+							})
 							: ''}
 					</div>,
 				);
@@ -206,23 +200,25 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			conditionsCell = '-';
 		}
 
-		const enabledCell = <SlSwitch onSlChange={() => onActionStatusSwitch(a.id)} checked={a.enabled}></SlSwitch>;
+		const enabledCell = (
+			<SlSwitch onSlChange={() => onActionStatusSwitch(action.id)} checked={action.enabled}></SlSwitch>
+		);
 
 		let scheduleDotVariant: Variant = 'neutral';
-		if (a.enabled && a.schedulePeriod != null) {
+		if (action.enabled && action.schedulePeriod != null) {
 			scheduleDotVariant = 'success';
 		}
 		const actionsCell = (
 			<div className='connection-actions__buttons'>
-				{(a.target === 'Users' || a.target === 'Groups') && isActionExecutionSupported && (
+				{(action.target === 'Users' || action.target === 'Groups') && isActionExecutionSupported && (
 					<>
 						<FeedbackButton
-							ref={runButtonRefs.current[a.id]}
+							ref={runButtonRefs.current[action.id]}
 							className='connection-actions__run-button'
 							size='small'
-							onClick={() => executeAction(a.id)}
-							loading={runningActions.includes(a.id)}
-							disabled={!a.enabled}
+							onClick={() => executeAction(action.id)}
+							loading={runningActions.includes(action.id)}
+							disabled={!action.enabled}
 							hoist={true}
 						>
 							<SlIcon slot='prefix' name='play' />
@@ -236,7 +232,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 								className='connection-actions__scheduler-button'
 							>
 								<SlIcon slot='prefix' name='clock' />
-								Schedule: {a.schedulePeriod || 'Off'}
+								Schedule: {action.schedulePeriod || 'Off'}
 								<SlIcon
 									slot='suffix'
 									className={`connection-actions__scheduler-dot connection-actions__scheduler-dot--${scheduleDotVariant}`}
@@ -246,8 +242,8 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 							<SlMenu className='connection-actions__scheduler-options'>
 								<SlRadioGroup
 									size='small'
-									onSlChange={(e) => onSchedulerPeriodChange(e, a.id)}
-									value={a.schedulePeriod || 'Off'}
+									onSlChange={(e) => onSchedulerPeriodChange(e, action.id)}
+									value={action.schedulePeriod || 'Off'}
 								>
 									{SCHEDULE_PERIODS.map((period) => (
 										<SlRadio key={period} value={period}>
@@ -259,22 +255,22 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 						</SlDropdown>
 					</>
 				)}
-				<SlButton variant='default' size='small' onClick={() => onManageClick(a)}>
+				<SlButton variant='default' size='small' onClick={() => onManageClick(action)}>
 					Manage...
 				</SlButton>
 				<SlButton
 					className='connection-actions__delete-action'
 					variant='danger'
 					size='small'
-					onClick={() => onDeleteAction(a.id)}
+					onClick={() => onDeleteAction(action.id)}
 				>
 					Delete
 				</SlButton>
 			</div>
 		);
 
-		const row: GridRow = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: String(a.id) };
-		if (a.id === newActionID.current && connection.actions!.length > 1) {
+		const row: GridRow = { cells: [nameCell, conditionsCell, enabledCell, actionsCell], key: String(action.id) };
+		if (action.id === newActionID.current && connection.actions!.length > 1) {
 			row.animation = 'fade-in';
 		}
 
