@@ -710,6 +710,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
@@ -726,6 +727,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -738,6 +740,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -757,6 +760,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -768,10 +772,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
                                     }
@@ -1022,6 +1028,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a path of a property in the destination schema of the app, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
@@ -1038,6 +1045,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -1050,6 +1058,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -1069,6 +1078,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -1080,10 +1090,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given a workspace's user, returns an app user."
                                     }
@@ -1613,6 +1625,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
@@ -1629,6 +1642,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -1649,6 +1663,7 @@
                                                     "type": {
                                                         "name": "Boolean"
                                                     },
+                                                    "createRequired": true,
                                                     "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
                                                 },
                                                 {
@@ -1660,6 +1675,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -1671,10 +1687,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "A JavaScript or Python function that, given a workspace user, returns a user record to be written to the database table."
                                     }
@@ -1808,6 +1826,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents the name of a column in the database table, and its corresponding value is an expression. This expression can reference property paths from the user schema."
                                     },
@@ -1824,6 +1843,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -1844,6 +1864,7 @@
                                                     "type": {
                                                         "name": "Boolean"
                                                     },
+                                                    "createRequired": true,
                                                     "description": "Specifies whether JSON values are passed to and returned from the function as strings, keeping their original format without any encoding or decoding."
                                                 },
                                                 {
@@ -1855,6 +1876,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -1866,10 +1888,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "A JavaScript or Python function that, given a workspace user, returns a user record to be written to the database table."
                                     }
@@ -2163,6 +2187,7 @@
                                                             "name": "Text",
                                                             "charLen": 50000
                                                         },
+                                                        "createRequired": true,
                                                         "description": "The source code of the JavaScript or Python function."
                                                     },
                                                     {
@@ -3770,6 +3795,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
                                     },
@@ -3786,6 +3812,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -3798,6 +3825,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -3817,6 +3845,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -3828,10 +3857,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
                                     }
@@ -4037,6 +4068,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property paths from the source schema of the app."
                                     },
@@ -4053,6 +4085,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -4065,6 +4098,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -4084,6 +4118,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -4095,10 +4130,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given an app user, returns a user identity."
                                     }
@@ -4603,6 +4640,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the database table."
                                     },
@@ -4619,6 +4657,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -4631,6 +4670,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -4650,6 +4690,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -4661,10 +4702,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given a user in the database, returns a user identity."
                                     }
@@ -4818,6 +4861,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the database table."
                                     },
@@ -4834,6 +4878,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -4846,6 +4891,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -4865,6 +4911,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -4876,10 +4923,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given a user in the database, returns a user identity."
                                     }
@@ -5380,6 +5429,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema."
                                     },
@@ -5396,6 +5446,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -5408,6 +5459,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -5427,6 +5479,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -5438,10 +5491,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given an event, returns a user identity."
                                     }
@@ -5634,6 +5689,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference property path from the event schema."
                                     },
@@ -5650,6 +5706,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -5662,6 +5719,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -5681,6 +5739,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -5692,10 +5751,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given an event, returns a user identity."
                                     }
@@ -6288,6 +6349,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file."
                                     },
@@ -6304,6 +6366,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -6316,6 +6379,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -6335,6 +6399,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -6346,10 +6411,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity."
                                     }
@@ -6622,6 +6689,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. A key represents a property path in the user schema, and its corresponding value is an expression. This expression can reference columns of the file."
                                     },
@@ -6638,6 +6706,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -6650,6 +6719,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -6669,6 +6739,7 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that will be passed to the function. At least one path must be present."
                                                 },
                                                 {
@@ -6680,10 +6751,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that given a user in the file, returns a user identity."
                                     }
@@ -7207,6 +7280,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema."
                                     },
@@ -7223,6 +7297,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -7235,6 +7310,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -7254,7 +7330,8 @@
                                                             "name": "Text"
                                                         }
                                                     },
-                                                    "description": "The property paths that will be passed to the function. This can be empty if the function does not rely on the event to generate the response."
+                                                    "createRequired": true,
+                                                    "description": "The property paths that will be passed to the function. If the function does not depend on the event to produce its response, specify an empty array."
                                                 },
                                                 {
                                                     "name": "outPaths",
@@ -7265,10 +7342,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
                                     }
@@ -7471,6 +7550,7 @@
                                                 "name": "Text"
                                             }
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation mapping. Each key represents a property path in the event type schema, and its corresponding value is an expression. This expression can reference property paths from the event schema."
                                     },
@@ -7487,6 +7567,7 @@
                                                         "name": "Text",
                                                         "charLen": 50000
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The source code of the JavaScript or Python function."
                                                 },
                                                 {
@@ -7499,6 +7580,7 @@
                                                             "Python"
                                                         ]
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The language of the function."
                                                 },
                                                 {
@@ -7518,7 +7600,8 @@
                                                             "name": "Text"
                                                         }
                                                     },
-                                                    "description": "The property paths that will be passed to the function. This can be empty if the function does not rely on the event to generate the response."
+                                                    "createRequired": true,
+                                                    "description": "The property paths that will be passed to the function. If the function does not depend on the event to produce its response, specify an empty array."
                                                 },
                                                 {
                                                     "name": "outPaths",
@@ -7529,10 +7612,12 @@
                                                             "name": "Text"
                                                         }
                                                     },
+                                                    "createRequired": true,
                                                     "description": "The paths of the properties that may be returned by the function. At least one path must be present."
                                                 }
                                             ]
                                         },
+                                        "updateRequired": true,
                                         "nullable": true,
                                         "description": "The transformation function. A JavaScript or Python function that, given an event, returns the values needed to send the event to the app."
                                     }
