@@ -7613,7 +7613,7 @@
                             },
                             {
                                 "name": "connector",
-                                "placeholder": "\"Klavyio\"",
+                                "placeholder": "\"Klaviyo\"",
                                 "type": {
                                     "name": "Text"
                                 },

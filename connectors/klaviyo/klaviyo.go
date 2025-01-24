@@ -57,8 +57,8 @@ func init() {
 const apiRevision = "2024-07-15"
 
 // New returns a new Klaviyo connector instance.
-func New(conf *meergo.AppConfig) (*Klavyio, error) {
-	c := Klavyio{conf: conf}
+func New(conf *meergo.AppConfig) (*Klaviyo, error) {
+	c := Klaviyo{conf: conf}
 	if len(conf.Settings) > 0 {
 		err := json.Value(conf.Settings).Unmarshal(&c.settings)
 		if err != nil {
@@ -68,7 +68,7 @@ func New(conf *meergo.AppConfig) (*Klavyio, error) {
 	return &c, nil
 }
 
-type Klavyio struct {
+type Klaviyo struct {
 	conf     *meergo.AppConfig
 	settings *innerSettings
 }
@@ -78,7 +78,7 @@ type innerSettings struct {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ky *Klavyio) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
+func (ky *Klaviyo) EventRequest(ctx context.Context, event meergo.Event, eventType string, schema types.Type, properties map[string]any, redacted bool) (*meergo.EventRequest, error) {
 	req := &meergo.EventRequest{
 		Method: "POST",
 		URL:    "https://a.klaviyo.com/api/events/",
@@ -122,7 +122,7 @@ func (ky *Klavyio) EventRequest(ctx context.Context, event meergo.Event, eventTy
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	return []*meergo.EventType{
 		{
 			ID:          "create_event",
@@ -133,7 +133,7 @@ func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, _ types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
@@ -231,7 +231,7 @@ func (ky *Klavyio) Records(ctx context.Context, _ meergo.Targets, _ types.Type, 
 }
 
 // Schema returns the schema of the specified target in the specified role.
-func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 
 	if target == meergo.Events {
 		if eventType != "create_event" {
@@ -395,7 +395,7 @@ func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meerg
 }
 
 // ServeUI serves the connector's user interface.
-func (ky *Klavyio) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
+func (ky *Klaviyo) ServeUI(ctx context.Context, event string, settings json.Value, role meergo.Role) (*meergo.UI, error) {
 
 	switch event {
 	case "load":
@@ -421,7 +421,7 @@ func (ky *Klavyio) ServeUI(ctx context.Context, event string, settings json.Valu
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
 	record := records.First()
 
@@ -453,7 +453,7 @@ func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records me
 }
 
 // saveSettings validates and saves the settings.
-func (ky *Klavyio) saveSettings(ctx context.Context, settings json.Value) error {
+func (ky *Klaviyo) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
 	err := settings.Unmarshal(&s)
 	if err != nil {
@@ -508,7 +508,7 @@ func (err *klaviyoError) Error() string {
 	return fmt.Sprintf("unexpected error from Klaviyo (%d): %s", err.statusCode, &msg)
 }
 
-func (ky *Klavyio) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {
+func (ky *Klaviyo) call(ctx context.Context, method, url string, body io.Reader, expectedStatus int, response any) error {
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {

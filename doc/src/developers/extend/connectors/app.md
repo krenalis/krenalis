@@ -46,32 +46,32 @@ func New(conf *meergo.AppConfig) (*Klaviyo, error) {
 }
 
 // EventRequest returns a request to dispatch an event to the app.
-func (ky *Klavyio) EventRequest(ctx context.Context, typ string, event *meergo.Event, extra map[string]any, schema types.Type, redacted bool) (*meergo.EventRequest, error) {
+func (ky *Klaviyo) EventRequest(ctx context.Context, typ string, event *meergo.Event, extra map[string]any, schema types.Type, redacted bool) (*meergo.EventRequest, error) {
 	// ...
 }
 
 // EventTypes returns the event types of the connector's instance.
-func (ky *Klavyio) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
 	// ...
 }
 
 // ReceiveWebhook receives a webhook request and returns its payloads.
-func (ky *Klavyio) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, error) {
+func (ky *Klaviyo) ReceiveWebhook(r *http.Request) ([]meergo.WebhookPayload, error) {
 	// ...
 }
 
 // Records returns the records of the specified target.
-func (ky *Klavyio) Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
 	// ...
 }
 
 // Schema returns the schema of the specified target in the specified role.
-func (ky *Klavyio) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+func (ky *Klaviyo) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	// ...
 }
 
 // Upsert updates or creates records in the app for the specified target.
-func (ky *Klavyio) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+func (ky *Klaviyo) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 	// ...
 }
 ```

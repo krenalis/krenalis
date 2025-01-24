@@ -204,7 +204,7 @@ func init() {
 						{
 							Name:        "connector",
 							Type:        types.Text(),
-							Placeholder: `"Klavyio"`,
+							Placeholder: `"Klaviyo"`,
 							Description: "The name of the connection's connector.",
 						},
 						{
