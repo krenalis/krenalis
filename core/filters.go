@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/types"
 
@@ -594,7 +595,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			k = p.Type.Elem().Kind()
 		}
 		for _, value := range cond.Values {
-			if err := validateStringField("condition value", value, 60); err != nil {
+			if err := util.ValidateStringField("condition value", value, 60); err != nil {
 				return nil, err
 			}
 			var valid bool

@@ -24,6 +24,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
@@ -136,7 +137,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// First, do formal validations.
 
 	// Validate the name.
-	if err := validateStringField("name", action.Name, 60); err != nil {
+	if err := util.ValidateStringField("name", action.Name, 60); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	// Check that, if the schemas are valid, they have type Object.
@@ -199,7 +200,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			if !outSchema.Valid() {
 				return errors.BadRequest("output schema is required by the transformation function")
 			}
-			if err := validateStringField("source of transformation function", tr.Function.Source, MaxFunctionSourceSize); err != nil {
+			if err := util.ValidateStringField("source of transformation function", tr.Function.Source, MaxFunctionSourceSize); err != nil {
 				return errors.BadRequest("%s", err)
 			}
 			switch tr.Function.Language {
@@ -232,7 +233,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 	// Validate the path.
 	if action.Path != "" {
-		if err := validateStringField("path", action.Path, MaxFilePathSize); err != nil {
+		if err := util.ValidateStringField("path", action.Path, MaxFilePathSize); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 		switch v.connection.role {
@@ -255,7 +256,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 	// Validate the table name.
 	if action.TableName != "" {
-		if err := validateStringField("table name", action.TableName, MaxTableNameSize); err != nil {
+		if err := util.ValidateStringField("table name", action.TableName, MaxTableNameSize); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
@@ -425,7 +426,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Check if the query is allowed.
 	if needsQuery := v.connection.connector.typ == state.Database && v.connection.role == state.Source; needsQuery {
-		if err := validateStringField("query", action.Query, MaxQuerySize); err != nil {
+		if err := util.ValidateStringField("query", action.Query, MaxQuerySize); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	} else {
@@ -825,7 +826,7 @@ func validateLastChangeTimeFormat(format string) error {
 		"Excel":
 		return nil
 	}
-	if err := validateStringField("last change time format", format, MaxLastChangeTimeFormatSize); err != nil {
+	if err := util.ValidateStringField("last change time format", format, MaxLastChangeTimeFormatSize); err != nil {
 		return err
 	}
 	if !strings.Contains(format, "%") {

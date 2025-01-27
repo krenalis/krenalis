@@ -28,6 +28,7 @@ import (
 	"github.com/meergo/meergo/core/metrics"
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
@@ -520,7 +521,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if connection.Connector == "" {
 		return 0, errors.BadRequest("connector name is empty")
 	}
-	if err := validateStringField("name", connection.Name, 100); err != nil {
+	if err := util.ValidateStringField("name", connection.Name, 100); err != nil {
 		return 0, errors.BadRequest("%s", err)
 	}
 	if s := connection.Strategy; s != nil {
@@ -1122,7 +1123,7 @@ func (this *Workspace) Rename(ctx context.Context, name string) error {
 	if name == this.workspace.Name {
 		return nil
 	}
-	if err := validateStringField("name", name, 100); err != nil {
+	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	n := state.RenameWorkspace{
@@ -1344,7 +1345,7 @@ func (this *Workspace) Traits(ctx context.Context, user string) (json.Value, err
 // or alternatively a valid property name between 1 and 100 runes long.
 func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UIPreferences) error {
 	this.core.mustBeOpen()
-	if err := validateStringField("name", name, 100); err != nil {
+	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	if err := validateUIPreferences(uiPreferences); err != nil {

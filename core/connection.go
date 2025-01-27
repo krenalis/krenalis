@@ -32,6 +32,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -627,7 +628,7 @@ func (this *Connection) CompletePath(ctx context.Context, path string) (string, 
 	if c.Connector().Type != state.FileStorage {
 		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
 	}
-	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
+	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
 	var replacer connectors.PlaceholderReplacer
@@ -1051,7 +1052,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	this.core.mustBeOpen()
 
-	if err := validateStringField("query", query, queryMaxSize); err != nil {
+	if err := util.ValidateStringField("query", query, queryMaxSize); err != nil {
 		return nil, types.Type{}, errors.BadRequest("%s", err)
 	}
 	if limit < 0 || limit > 100 {
@@ -1175,7 +1176,7 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	}
 
 	// Validate the path.
-	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
+	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
 		return nil, types.Type{}, errors.BadRequest("%s", err)
 	}
 
@@ -1551,7 +1552,7 @@ func (this *Connection) Rename(ctx context.Context, name string) error {
 	if name == this.connection.Name {
 		return nil
 	}
-	if err := validateStringField("name", name, 100); err != nil {
+	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	n := state.RenameConnection{
@@ -1627,7 +1628,7 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	if c.Connector().Type != state.FileStorage {
 		return nil, errors.BadRequest("connection %d is not a file storage", c.ID)
 	}
-	if err := validateStringField("path", path, MaxFilePathSize); err != nil {
+	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 
@@ -1689,7 +1690,7 @@ func (this *Connection) TableSchema(ctx context.Context, table string) (types.Ty
 	if c.Role != state.Destination {
 		return types.Type{}, errors.BadRequest("database %d is not a destination", c.ID)
 	}
-	if err := validateStringField("table name", table, MaxTableNameSize); err != nil {
+	if err := util.ValidateStringField("table name", table, MaxTableNameSize); err != nil {
 		return types.Type{}, errors.BadRequest("%s", err)
 	}
 	database := this.database()
@@ -1775,7 +1776,7 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 
 	this.core.mustBeOpen()
 
-	if err := validateStringField("name", connection.Name, 100); err != nil {
+	if err := util.ValidateStringField("name", connection.Name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	if s := connection.Strategy; s != nil && !isValidStrategy(*s) {
@@ -2046,7 +2047,7 @@ func marshalSchema(schema types.Type) ([]byte, error) {
 // If no port is present, it defaults to returning 443 as the port.
 func parseWebsiteHost(s string) (string, int, error) {
 	h, p, found := strings.Cut(s, ":")
-	if err := validateStringField("website host", h, 255); err != nil {
+	if err := util.ValidateStringField("website host", h, 255); err != nil {
 		return "", 0, err
 	}
 	port := 443
