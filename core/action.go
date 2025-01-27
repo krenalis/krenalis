@@ -242,6 +242,236 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	return this.addExecution(ctx, reload)
 }
 
+// MarshalJSON encodes the Action as JSON.
+func (this *Action) MarshalJSON() ([]byte, error) {
+	type serializedAction struct {
+		ID             int           `json:"id"`
+		Name           string        `json:"name"`
+		Connector      string        `json:"connector"`
+		ConnectorType  ConnectorType `json:"connectorType"`
+		Connection     int           `json:"connection"`
+		ConnectionRole Role          `json:"connectionRole"`
+		Target         Target        `json:"target"`
+		Enabled        bool          `json:"enabled"`
+	}
+	a := serializedAction{
+		ID:             this.ID,
+		Name:           this.Name,
+		Connector:      this.Connector,
+		ConnectorType:  this.ConnectorType,
+		Connection:     this.Connection,
+		ConnectionRole: this.ConnectionRole,
+		Target:         this.Target,
+		Enabled:        this.Enabled,
+	}
+	var serialized any
+	if a.ConnectionRole == Source {
+		if a.Target == Users {
+			switch a.ConnectorType {
+			case App:
+				serialized = struct {
+					serializedAction
+					Filter         *Filter         `json:"filter"`
+					Transformation Transformation  `json:"transformation"`
+					InSchema       types.Type      `json:"inSchema"`
+					OutSchema      types.Type      `json:"outSchema"`
+					Running        bool            `json:"running"`
+					ScheduleStart  *int            `json:"scheduleStart"`
+					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+				}{
+					serializedAction: a,
+					Filter:           this.Filter,
+					Transformation:   *this.Transformation,
+					InSchema:         this.InSchema,
+					OutSchema:        this.OutSchema,
+					Running:          this.Running,
+					ScheduleStart:    this.ScheduleStart,
+					SchedulePeriod:   this.SchedulePeriod,
+				}
+			case Database:
+				serialized = struct {
+					serializedAction
+					Query                  string          `json:"query"`
+					IdentityProperty       string          `json:"identityProperty"`
+					LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
+					LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
+					Transformation         Transformation  `json:"transformation"`
+					InSchema               types.Type      `json:"inSchema"`
+					OutSchema              types.Type      `json:"outSchema"`
+					Running                bool            `json:"running"`
+					ScheduleStart          *int            `json:"scheduleStart"`
+					SchedulePeriod         *SchedulePeriod `json:"schedulePeriod"`
+				}{
+					serializedAction:     a,
+					Query:                *this.Query,
+					IdentityProperty:     *this.IdentityProperty,
+					LastChangeTimeFormat: this.LastChangeTimeFormat,
+					Transformation:       *this.Transformation,
+					InSchema:             this.InSchema,
+					OutSchema:            this.OutSchema,
+					Running:              this.Running,
+					ScheduleStart:        this.ScheduleStart,
+					SchedulePeriod:       this.SchedulePeriod,
+				}
+			case FileStorage:
+				serialized = struct {
+					serializedAction
+					Format         string          `json:"format"`
+					Path           string          `json:"path"`
+					Sheet          *string         `json:"sheet"`
+					Compression    Compression     `json:"compression"`
+					Filter         *Filter         `json:"filter"`
+					Transformation Transformation  `json:"transformation"`
+					InSchema       types.Type      `json:"inSchema"`
+					OutSchema      types.Type      `json:"outSchema"`
+					Running        bool            `json:"running"`
+					ScheduleStart  *int            `json:"scheduleStart"`
+					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+				}{
+					serializedAction: a,
+					Format:           this.Format,
+					Path:             *this.Path,
+					Sheet:            this.Sheet,
+					Compression:      this.Compression,
+					Transformation:   *this.Transformation,
+					InSchema:         this.InSchema,
+					OutSchema:        this.OutSchema,
+					Running:          this.Running,
+					ScheduleStart:    this.ScheduleStart,
+					SchedulePeriod:   this.SchedulePeriod,
+				}
+			case Mobile, Server, Website:
+				serialized = struct {
+					serializedAction
+					Filter         *Filter         `json:"filter"`
+					Transformation *Transformation `json:"transformation"`
+					InSchema       types.Type      `json:"inSchema"`
+					OutSchema      types.Type      `json:"outSchema"`
+				}{
+					serializedAction: a,
+					Transformation:   this.Transformation,
+					InSchema:         this.InSchema,
+					OutSchema:        this.OutSchema,
+				}
+			}
+		}
+		if a.Target == Events {
+			serialized = struct {
+				serializedAction
+				Filter   *Filter    `json:"filter"`
+				InSchema types.Type `json:"inSchema"`
+			}{
+				serializedAction: a,
+				Filter:           this.Filter,
+				InSchema:         this.InSchema,
+			}
+		}
+	}
+	if a.ConnectionRole == Destination {
+		if a.Target == Users {
+			switch a.ConnectorType {
+			case App:
+				serialized = struct {
+					serializedAction
+					Filter             *Filter         `json:"filter"`
+					ExportMode         ExportMode      `json:"exportMode"`
+					Matching           Matching        `json:"matching"`
+					ExportOnDuplicates bool            `json:"exportOnDuplicates"`
+					Transformation     Transformation  `json:"transformation"`
+					InSchema           types.Type      `json:"inSchema"`
+					OutSchema          types.Type      `json:"outSchema"`
+					Running            bool            `json:"running"`
+					ScheduleStart      *int            `json:"scheduleStart"`
+					SchedulePeriod     *SchedulePeriod `json:"schedulePeriod"`
+				}{
+					serializedAction:   a,
+					Filter:             this.Filter,
+					ExportMode:         *this.ExportMode,
+					Matching:           *this.Matching,
+					ExportOnDuplicates: *this.ExportOnDuplicates,
+					Transformation:     *this.Transformation,
+					InSchema:           this.InSchema,
+					OutSchema:          this.OutSchema,
+					Running:            this.Running,
+					ScheduleStart:      this.ScheduleStart,
+					SchedulePeriod:     this.SchedulePeriod,
+				}
+			case Database:
+				serialized = struct {
+					serializedAction
+					Filter         *Filter         `json:"filter"`
+					TableName      string          `json:"tableName"`
+					TableKey       string          `json:"tableKey"`
+					Transformation Transformation  `json:"transformation"`
+					InSchema       types.Type      `json:"inSchema"`
+					OutSchema      types.Type      `json:"outSchema"`
+					Running        bool            `json:"running"`
+					ScheduleStart  *int            `json:"scheduleStart"`
+					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+				}{
+					serializedAction: a,
+					Filter:           this.Filter,
+					TableName:        *this.TableName,
+					TableKey:         *this.TableKey,
+					Transformation:   *this.Transformation,
+					InSchema:         this.InSchema,
+					OutSchema:        this.OutSchema,
+					Running:          this.Running,
+					ScheduleStart:    this.ScheduleStart,
+					SchedulePeriod:   this.SchedulePeriod,
+				}
+			case FileStorage:
+				serialized = struct {
+					serializedAction
+					Format         string          `json:"format"`
+					Path           string          `json:"path"`
+					Sheet          *string         `json:"sheet"`
+					Compression    Compression     `json:"compression"`
+					OrderBy        string          `json:"orderBy"`
+					Filter         *Filter         `json:"filter"`
+					InSchema       types.Type      `json:"inSchema"`
+					Running        bool            `json:"running"`
+					ScheduleStart  *int            `json:"scheduleStart"`
+					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+				}{
+					serializedAction: a,
+					Format:           this.Format,
+					Path:             *this.Path,
+					Sheet:            this.Sheet,
+					Compression:      this.Compression,
+					OrderBy:          *this.OrderBy,
+					Filter:           this.Filter,
+					InSchema:         this.InSchema,
+					Running:          this.Running,
+					ScheduleStart:    this.ScheduleStart,
+					SchedulePeriod:   this.SchedulePeriod,
+				}
+			}
+		}
+		if a.Target == Events {
+			serialized = struct {
+				serializedAction
+				EventType      string          `json:"eventType"`
+				Filter         *Filter         `json:"filter"`
+				Transformation *Transformation `json:"transformation"`
+				InSchema       types.Type      `json:"inSchema"`
+				OutSchema      types.Type      `json:"outSchema"`
+			}{
+				serializedAction: a,
+				EventType:        *this.EventType,
+				Filter:           this.Filter,
+				Transformation:   this.Transformation,
+				InSchema:         this.InSchema,
+				OutSchema:        this.OutSchema,
+			}
+		}
+	}
+	if serialized == nil {
+		panic(fmt.Sprintf("unexpected role: %s, target: %s, type: %s", a.ConnectionRole, a.Target, a.ConnectorType))
+	}
+	return json.Marshal(serialized)
+}
+
 // ServeUI serves the user interface for the format settings of a file action.
 // event is the event to be served and settings are the updated settings.
 //
