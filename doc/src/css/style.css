@@ -74,7 +74,7 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article aside ul a, .article aside ul a:visited { color: #333; }
 .article aside ul a:hover, .article aside ul a.expanded { background: #edecff; border-radius: 3px; }
 .article aside ul a.selected { background: #4f46e5; border-radius: 3px; color: #fff6ed; }
-.article .content { flex-grow: 1; margin: 0 0 4em 0; min-width: 0; }
+.article .content { flex-grow: 1; margin: 0 0 4em 0; min-width: 0; overflow-x: auto; width: 100%; }
 .article .content a, .article .content a:visited { color: #5f943d; }
 .article h1 { color: #0a1922; font-size: 2.2rem; }
 .article nav + p { color: #666; font-size: .9em; font-weight: bold; }
@@ -83,7 +83,8 @@ nav.sections a.selected { border-bottom: 2px solid #4f46e5; }
 .article h3 { color: #0a1922; margin-top: 40px; }
 .article h4 { color: #666; font-weight: normal; }
 .article pre { background: #f4f4fb; border-radius: 3px; padding: 1rem; overflow-x: auto; }
-.article code { background: #f4f4fb; border-radius: 2px; color: #454567; padding: .2rem .5rem; }
+.article code { background: #f4f4fb; border-radius: 2px; color: #454567; display: inline-block; font-size: 0.9rem; padding: .2rem .5rem; position: relative; white-space: pre-wrap; }
+.article code::before { background-color: transparent; bottom: 0; content: ""; left: 0; position: absolute; top: 0; width: .5rem; }
 .article a code { color: #5f943d; }
 .article pre code { padding: 0; }
 .article blockquote { background: #edecff; border-left: 5px solid #5954ab; border-radius: 3px; margin: 0; padding: .5rem 1rem; }
