@@ -22,7 +22,7 @@ const UsersList = () => {
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
 	const [askRunIRConfirmation, setAskResolveIdentitiesConfirmation] = useState<boolean>(false);
 	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
-	const [lastIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
+	const [latestIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 
 	const { api, handleError } = useContext(AppContext);
 	const { users, usersTotal, usersProperties, isLoading, fetchUsers } = useContext(UsersContext);
@@ -149,7 +149,7 @@ const UsersList = () => {
 						</SlMenu>
 					</SlDropdown>
 					<div
-						className={`users-list__identity-resolution${!secondsSinceIRStart && !lastIRExecutionEnd && !isLoadingIdentityResolution ? ' users-list__identity-resolution--is-first-execution' : ''}`}
+						className={`users-list__identity-resolution${!secondsSinceIRStart && !latestIRExecutionEnd && !isLoadingIdentityResolution ? ' users-list__identity-resolution--is-first-execution' : ''}`}
 					>
 						<SlButton
 							onClick={() => setAskResolveIdentitiesConfirmation(true)}
@@ -167,10 +167,10 @@ const UsersList = () => {
 						<span className='users-list__identity-resolution-progress'>
 							{secondsSinceIRStart ? (
 								<div className='users-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
-							) : lastIRExecutionEnd ? (
+							) : latestIRExecutionEnd ? (
 								<div className='users-list__identity-resolution-end-time'>
 									<span>Latest Identity Resolution:</span>
-									<RelativeTime date={lastIRExecutionEnd} />
+									<RelativeTime date={latestIRExecutionEnd} />
 								</div>
 							) : (
 								''
