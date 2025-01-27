@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext, ReactNode } from 'react';
 import './ConnectionsList.css';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import Grid from '../../base/Grid/Grid';
-import StatusDot from '../../base/StatusDot/StatusDot';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -39,9 +38,11 @@ const ConnectionsList = () => {
 			{
 				name: 'Connector',
 			},
+			/* See issue https://github.com/meergo/meergo/issues/1255.
 			{
 				name: 'Health',
 			},
+*/
 			{
 				name: 'Actions',
 				alignment: 'center',
@@ -70,10 +71,12 @@ const ConnectionsList = () => {
 				</div>,
 				c.connector.type,
 				c.connector.name,
+				/* See issue https://github.com/meergo/meergo/issues/1255.
 				<div className='connections-list__status-cell'>
 					<StatusDot status={c.status} />
 					<div>{c.status.text}</div>
 				</div>,
+*/
 				c.actionsCount,
 			];
 			if (hasEventConnections) {

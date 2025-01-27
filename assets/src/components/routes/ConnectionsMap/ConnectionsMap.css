@@ -207,6 +207,10 @@
 	justify-content: end;
 }
 
+.connection-block .status-dot {
+	display: none;
+}
+
 .connection-block .status-dot__hover-area {
 	width: 15px;
 	height: 15px;

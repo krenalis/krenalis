@@ -4,7 +4,6 @@ import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
-import StatusDot from '../StatusDot/StatusDot';
 
 const LINKED_CONNECTIONS_COLUMNS: GridColumn[] = [
 	{
@@ -16,9 +15,11 @@ const LINKED_CONNECTIONS_COLUMNS: GridColumn[] = [
 	{
 		name: 'Connector',
 	},
+	/* See issue https://github.com/meergo/meergo/issues/1255.
 	{
 		name: 'Health',
 	},
+*/
 	{
 		name: '', // the column for the remove button.
 	},
@@ -84,15 +85,17 @@ const useLinkedConnectionsGrid = (
 					Unlink
 				</SlButton>
 			);
+			/* See issue https://github.com/meergo/meergo/issues/1255.
 			const healthCell = (
 				<div className='linked-connection-grid__status'>
 					<StatusDot status={fc.status} />
 					{fc.health}
 				</div>
 			);
+*/
 
 			const row: GridRow = {
-				cells: [nameCell, fc.connector.type, fc.connector.name, healthCell, unlinkButtonCell],
+				cells: [nameCell, fc.connector.type, fc.connector.name, unlinkButtonCell],
 				key: String(fc.id),
 			};
 			if (isClickable) {

@@ -126,13 +126,14 @@ func init() {
 			Placeholder: `3`,
 			Description: "The total number of actions of the connection.",
 		},
+		/* See issue https://github.com/meergo/meergo/issues/1255.
 		{
 			Name:        "health",
 			Type:        types.Text().WithValues("Healthy", "NoRecentData", "RecentError"),
 			Placeholder: `"Healthy"`,
 			Description: "The connection's health.",
 		},
-	}
+		*/}
 	getReturnsConnection := append(listReturnsConnection,
 		types.Property{
 			Name:        "actions",

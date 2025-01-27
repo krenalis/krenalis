@@ -9144,19 +9144,6 @@
                                                     "bitSize": 32
                                                 },
                                                 "description": "The total number of actions of the connection."
-                                            },
-                                            {
-                                                "name": "health",
-                                                "placeholder": "\"Healthy\"",
-                                                "type": {
-                                                    "name": "Text",
-                                                    "values": [
-                                                        "Healthy",
-                                                        "NoRecentData",
-                                                        "RecentError"
-                                                    ]
-                                                },
-                                                "description": "The connection's health."
                                             }
                                         ]
                                     }
@@ -9311,19 +9298,6 @@
                                     "bitSize": 32
                                 },
                                 "description": "The total number of actions of the connection."
-                            },
-                            {
-                                "name": "health",
-                                "placeholder": "\"Healthy\"",
-                                "type": {
-                                    "name": "Text",
-                                    "values": [
-                                        "Healthy",
-                                        "NoRecentData",
-                                        "RecentError"
-                                    ]
-                                },
-                                "description": "The connection's health."
                             },
                             {
                                 "name": "actions",

@@ -62,7 +62,7 @@ type Connection struct {
 	WebsiteHost       string        `json:"websiteHost"`
 	LinkedConnections []int         `json:"linkedConnections,format:emitnull"`
 	ActionsCount      int           `json:"actionsCount"`
-	Health            Health        `json:"health"`
+	Health            Health        `json:"-"` // See issue https://github.com/meergo/meergo/issues/1255.
 
 	// Actions is populated only by the (*Workspace).Connection method.
 	Actions *[]Action `json:"actions,omitzero"`
