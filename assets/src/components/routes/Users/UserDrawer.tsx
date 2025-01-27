@@ -89,36 +89,31 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 		setSelectedUser('');
 	};
 
-	let userImage: any;
-	let userFirstName: any;
-	let userLastName: any;
-	let userExtra: any;
-	if (traits && traits.size > 0) {
-		// TODO(Gianluca): this code needs to be revised.
-		// Currently 'traits' is a Map, but its elements are 'object'. This
-		// requires separate handling of the two cases.
-		function getValueFromPath(obj: Map<string, any>, path: string) {
+	let userImage: string | number | undefined;
+	let userFirstName: string | number | undefined;
+	let userLastName: string | number | undefined;
+	let userExtra: string | number | undefined;
+	if (traits && Object.keys(traits).length > 0) {
+		function getValueFromPath(path: string): string | number | undefined {
 			if (path == '') {
 				return undefined;
 			}
-			let v = obj;
+			let v: any = traits;
 			for (const part of path.split('.')) {
-				if (v instanceof Map && v.has(part)) {
-					v = v.get(part);
-				}
 				if (typeof v === 'object' && v !== null && part in v) {
 					v = v[part];
 				}
 			}
-			if (typeof v != 'string') {
-				v = undefined;
+			if (typeof v != 'string' && typeof v != 'number') {
+				return undefined;
+			} else {
+				return v;
 			}
-			return v;
 		}
-		userImage = getValueFromPath(traits, workspace.uiPreferences.userProfile.image);
-		userFirstName = getValueFromPath(traits, workspace.uiPreferences.userProfile.firstName);
-		userLastName = getValueFromPath(traits, workspace.uiPreferences.userProfile.lastName);
-		userExtra = getValueFromPath(traits, workspace.uiPreferences.userProfile.extra);
+		userImage = getValueFromPath(workspace.uiPreferences.userProfile.image);
+		userFirstName = getValueFromPath(workspace.uiPreferences.userProfile.firstName);
+		userLastName = getValueFromPath(workspace.uiPreferences.userProfile.lastName);
+		userExtra = getValueFromPath(workspace.uiPreferences.userProfile.extra);
 	}
 
 	const spinner = (
@@ -145,7 +140,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 				<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
 			</div>
 			<div className='user-drawer__top-section'>
-				<SlAvatar className='user-drawer__image' image={userImage || ''} />
+				<SlAvatar className='user-drawer__image' image={String(userImage) || ''} />
 				<div className='user-drawer__user-properties'>
 					<span className='user-drawer__first-name'>{userFirstName || ''}</span>{' '}
 					<span className='user-drawer__last-name'>{userLastName || ''}</span>
@@ -174,8 +169,8 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 					<div className='user-drawer__traits'>
 						{isLoading ? (
 							spinner
-						) : traits && traits.size > 0 ? (
-							Array.from(traits).map(([key, value]) => {
+						) : traits && Object.keys(traits).length > 0 ? (
+							Object.entries(traits).map(([key, value]) => {
 								return (
 									<Fragment key={key}>
 										<span className='user-drawer__trait-key'>{key}:</span>{' '}

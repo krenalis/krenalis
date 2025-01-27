@@ -10,7 +10,7 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
-import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
+import { getUIPreferencesComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { flattenSchema } from '../../../lib/core/action';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { UIPreferences } from '../../../lib/api/types/workspace';
@@ -61,7 +61,7 @@ const GeneralSettings = () => {
 		fetchUserSchema();
 	}, []);
 
-	const userSchemaComboboxItems = useMemo(() => getSchemaComboboxItems(userSchema), [userSchema]);
+	const userSchemaComboboxItems = useMemo(() => getUIPreferencesComboboxItems(userSchema), [userSchema]);
 
 	const flatUserSchema = useMemo(() => flattenSchema(userSchema), [userSchema]);
 

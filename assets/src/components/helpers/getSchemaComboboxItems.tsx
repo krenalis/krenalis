@@ -15,6 +15,21 @@ const getSchemaComboboxItems = (schema: ObjectType | TransformedMapping): Combob
 	return computeItems(schema as TransformedMapping);
 };
 
+const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+	if (schema == null) {
+		return [];
+	}
+	const flatSchema = flattenSchema(schema);
+	const filteredSchema: TransformedMapping = {};
+	for (const [k, v] of Object.entries(flatSchema)) {
+		const typ = flatSchema[k].type;
+		if (typ === 'Int' || typ === 'Uint' || typ === 'UUID' || typ === 'Decimal' || typ === 'Text') {
+			filteredSchema[k] = v;
+		}
+	}
+	return computeItems(filteredSchema);
+};
+
 const getFilterPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
@@ -132,6 +147,7 @@ const computeItems = (flatSchema: TransformedMapping) => {
 
 export {
 	getSchemaComboboxItems,
+	getUIPreferencesComboboxItems,
 	getIdentityPropertyComboboxItems,
 	getLastChangeTimeComboboxItems,
 	filterOrderingPropertySchema,

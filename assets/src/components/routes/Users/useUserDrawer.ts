@@ -6,7 +6,7 @@ import { UserTab } from './Users.types';
 import { UserEvent, UserIdentity } from '../../../lib/api/types/user';
 
 const useUserDrawer = (id: string, selectedTab: UserTab) => {
-	const [traits, setTraits] = useState<Map<string, any>>();
+	const [traits, setTraits] = useState<Record<string, any>>();
 	const [events, setEvents] = useState<UserEvent[]>();
 	const [identities, setIdentities] = useState<UserIdentity[]>();
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -36,11 +36,7 @@ const useUserDrawer = (id: string, selectedTab: UserTab) => {
 				handleError(err);
 				return;
 			}
-			const m = new Map();
-			for (const key in traitsResponse.traits) {
-				m.set(key, traitsResponse.traits[key]);
-			}
-			setTraits(m);
+			setTraits(traitsResponse.traits);
 			setTimeout(() => setIsLoading(false), 200);
 			return;
 		};
