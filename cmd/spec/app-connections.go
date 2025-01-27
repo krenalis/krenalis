@@ -51,7 +51,7 @@ func init() {
 						{
 							Name:        "users",
 							Type:        types.Array(types.Map(types.JSON())),
-							Placeholder: `{ { "id": "30cae655-4f86-4696-ae2c-2c9105b282ba" } }`,
+							Placeholder: `[ { "id": "30cae655-4f86-4696-ae2c-2c9105b282ba" } ]`,
 							Description: "The app users from the provided cursor.",
 						},
 						{

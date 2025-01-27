@@ -8406,7 +8406,7 @@
                         "parameters": [
                             {
                                 "name": "users",
-                                "placeholder": "{ { \"id\": \"30cae655-4f86-4696-ae2c-2c9105b282ba\" } }",
+                                "placeholder": "[ { \"id\": \"30cae655-4f86-4696-ae2c-2c9105b282ba\" } ]",
                                 "type": {
                                     "name": "Array",
                                     "elementType": {
