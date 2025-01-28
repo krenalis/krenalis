@@ -816,14 +816,13 @@ const transformInActionToSet = async (
 				if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
 					throw new Error(`External matching property "${outMatching}" does not exist`);
 				} else {
-					p = { ...a };
+					p = a;
 				}
 			}
 			const isAlreadyInSchema = outSchema.properties!.findIndex((p) => p.name === outMatching) !== -1;
 			if (isAlreadyInSchema) {
 				throw new Error(`External matching property cannot be used in the transformation`);
 			}
-			delete p.updateRequired;
 			outSchema.properties.push(p);
 		}
 	}
