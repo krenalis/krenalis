@@ -178,10 +178,8 @@ func (mapping *Mapping) Transform(properties map[string]any, purpose Purpose) (m
 		}
 		if v == nil && !e.nullable {
 			if e.createRequired && purpose == Create || e.updateRequired && purpose == Update {
-				return nil, &validationError{
-					path: e.path,
-					msg:  "evaluation returned null, but a non-null value was required",
-				}
+				msg := fmt.Sprintf("required property %q cannot be null", e.path)
+				return nil, &validationError{path: e.path, msg: msg}
 			}
 			continue
 		}

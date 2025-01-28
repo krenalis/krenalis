@@ -123,6 +123,8 @@ func Test_Transform(t *testing.T) {
 		{Name: "C", Type: types.JSON()},
 		{Name: "D", Type: types.JSON(), Nullable: true},
 		{Name: "E", Type: types.Int(32)},
+		{Name: "F", Type: types.Text(), CreateRequired: true},
+		{Name: "G", Type: types.Text(), UpdateRequired: true},
 	})
 
 	tests := []struct {
@@ -306,6 +308,21 @@ func Test_Transform(t *testing.T) {
 			properties:  map[string]any{"a": "foo", "b": "boo", "c": 24},
 			expected:    map[string]any{"A": "foo"},
 		},
+
+		{
+			name:        `null assigned to a non nullable create required property -> error`,
+			expressions: map[string]string{"F": "c.z"},
+			properties:  map[string]any{"c.z": nil},
+			purpose:     Create,
+			err:         &validationError{path: "F", msg: `required property "F" cannot be null`},
+		},
+		{
+			name:        `null assigned to a non nullable update required property -> error`,
+			expressions: map[string]string{"G": "c.z"},
+			properties:  map[string]any{"c.z": nil},
+			purpose:     Update,
+			err:         &validationError{path: "G", msg: `required property "G" cannot be null`},
+		},
 	}
 
 	for _, test := range tests {
@@ -319,7 +336,7 @@ func Test_Transform(t *testing.T) {
 				if test.err == nil {
 					t.Fatalf("unexpected error: %q (%T)", err, err)
 				}
-				if !cmp.Equal(test.err, err) {
+				if test.err.Error() != err.Error() {
 					t.Fatalf("expected error %q (%T), got %q (%T)", test.err, test.err, err, err)
 				}
 				return
