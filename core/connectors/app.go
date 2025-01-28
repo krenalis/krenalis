@@ -212,11 +212,14 @@ func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.
 	}
 	switch target {
 	case state.Events:
-		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Role(role), eventType)
+		if role != state.Destination {
+			panic("invalid role")
+		}
+		schema, err := app.inner.(appSchemaConnector).Schema(ctx, meergo.Events, meergo.Destination, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
-		return schema, nil
+		return types.AsRole(schema, types.Destination), nil
 	case state.Users:
 		schema, err := app.userSchema(ctx, role)
 		if err != nil {
@@ -353,8 +356,9 @@ func (app *App) userSchema(ctx context.Context, role state.Role) (types.Type, er
 	if !schema.Valid() {
 		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.name, strings.ToLower(role.String())))
 	}
+	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
-	return app.users.schemas[role-1], nil
+	return schema, nil
 }
 
 // sameValue checks if v and v2 have the same value, with t being the type of v.
