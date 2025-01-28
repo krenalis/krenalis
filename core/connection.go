@@ -729,8 +729,6 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		Name:                   action.Name,
 		Enabled:                action.Enabled,
 		EventType:              eventType,
-		ScheduleStart:          int16(mathrand.IntN(24 * 60)),
-		SchedulePeriod:         60,
 		InSchema:               inSchema,
 		OutSchema:              action.OutSchema,
 		Transformation:         toStateTransformation(action.Transformation, inSchema, action.OutSchema),
@@ -748,6 +746,12 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		IdentityProperty:       action.IdentityProperty,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
 		LastChangeTimeFormat:   action.LastChangeTimeFormat,
+	}
+
+	// Set the scheduler.
+	if n.Target == state.Users || n.Target == state.Groups {
+		n.ScheduleStart = int16(mathrand.IntN(24 * 60))
+		n.SchedulePeriod = 60
 	}
 
 	// Add the filter to the notification.
