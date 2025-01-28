@@ -20,8 +20,40 @@ type PathNotExistError struct {
 	Path string
 }
 
+// Role represents a role.
+type Role int
+
+const (
+	Source Role = 1 + iota
+	Destination
+)
+
 func (err PathNotExistError) Error() string {
 	return fmt.Sprintf("property path %q does not exist", err.Path)
+}
+
+// AsRole returns a copy of t with the ReadOptional, CreateRequired, and
+// UpdateRequired fields of each property adjusted to ensure compatibility with
+// the specified role:
+//
+// - If the role is Source, CreateRequired and UpdateRequired are set to false.
+// - If the role is Destination, ReadOptional is set to false.
+//
+// If all properties of t are already compatible with the specified role, the
+// function returns t unchanged. It panics if t is not of the Object type or if
+// the role is neither Source nor Destination.
+func AsRole(t Type, role Role) Type {
+	if !t.Valid() {
+		panic("type is not valid")
+	}
+	if t.kind != ObjectKind {
+		panic("cannot return type as role for non-Object type")
+	}
+	if role != Source && role != Destination {
+		panic("role is not valid")
+	}
+	t, _ = asRole(t, role)
+	return t
 }
 
 // Equal reports whether two types are equal.
@@ -434,6 +466,46 @@ func WalkAll(t Type) iter.Seq2[string, Property] {
 // It panics if t is not an Object.
 func WalkObjects(t Type) iter.Seq2[string, Property] {
 	return walk(t, false)
+}
+
+// asRole is a recursive function called by the Type.AsRole method. t must be an
+// Object type, and role must be either Source or Destination. It returns the
+// resulting type and a boolean indicating whether the returned type is
+// different from t.
+func asRole(t Type, role Role) (Type, bool) {
+	var pp = t.vl.([]Property)
+	var ppc []Property
+	for i := 0; i < len(pp); i++ {
+		if pp[i].Type.Kind() == ObjectKind {
+			if t, ok := asRole(pp[i].Type, role); ok {
+				if ppc == nil {
+					ppc = slices.Clone(pp)
+				}
+				ppc[i].Type = t
+			}
+		}
+		switch role {
+		case Source:
+			if pp[i].CreateRequired || pp[i].UpdateRequired {
+				if ppc == nil {
+					ppc = slices.Clone(pp)
+				}
+				ppc[i].CreateRequired = false
+				ppc[i].UpdateRequired = false
+			}
+		case Destination:
+			if pp[i].ReadOptional {
+				if ppc == nil {
+					ppc = slices.Clone(pp)
+				}
+				ppc[i].ReadOptional = false
+			}
+		}
+	}
+	if ppc == nil {
+		return t, false
+	}
+	return Type{kind: ObjectKind, vl: ppc}, true
 }
 
 // walk is the internal function underlying the exported functions WalkAll and

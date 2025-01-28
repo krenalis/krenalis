@@ -13,6 +13,193 @@ import (
 	"testing"
 )
 
+func Test_AsRole(t *testing.T) {
+	cases := []struct {
+		object   Type
+		role     Role
+		expected Type
+	}{
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+			role: Source,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+			role: Destination,
+			expected: Object([]Property{
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					ReadOptional: true,
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					ReadOptional:   true,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+			role: Source,
+			expected: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					ReadOptional: true,
+				},
+				{
+					Name: "FirstName",
+					Type: Text(),
+				},
+				{
+					Name:         "LastName",
+					Type:         Text(),
+					ReadOptional: true,
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name:         "ID",
+					Type:         Text(),
+					ReadOptional: true,
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					ReadOptional:   true,
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+			role: Destination,
+			expected: Object([]Property{
+				{
+					Name: "ID",
+					Type: Text(),
+				},
+				{
+					Name:           "FirstName",
+					Type:           Text(),
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+				{
+					Name:           "LastName",
+					Type:           Text(),
+					CreateRequired: true,
+					UpdateRequired: true,
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), ReadOptional: true},
+						{Name: "City", Type: Text()},
+						{Name: "Country", Type: Text(), UpdateRequired: true},
+					}),
+					ReadOptional: true,
+				},
+			}),
+			role: Destination,
+			expected: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text()},
+						{Name: "City", Type: Text()},
+						{Name: "Country", Type: Text(), UpdateRequired: true},
+					}),
+				},
+			}),
+		},
+		{
+			object: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), ReadOptional: true},
+						{Name: "City", Type: Text(), CreateRequired: true, UpdateRequired: true},
+						{Name: "Country", Type: Text(), ReadOptional: true, UpdateRequired: true},
+					}),
+				},
+			}),
+			role: Source,
+			expected: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: Text(), ReadOptional: true},
+						{Name: "City", Type: Text()},
+						{Name: "Country", Type: Text(), ReadOptional: true},
+					}),
+				},
+			}),
+		},
+	}
+	for _, cas := range cases {
+		t.Run("", func(t *testing.T) {
+			got := AsRole(cas.object, cas.role)
+			gotValid := got.Valid()
+			expectedValid := cas.expected.Valid()
+			if !expectedValid && !gotValid {
+				// Ok.
+				return
+			}
+			if expectedValid && !gotValid {
+				t.Fatal("unexpected invalid schema")
+			}
+			if !expectedValid && gotValid {
+				t.Fatalf("expected an invalid schema, got %#v", got)
+			}
+			if !Equal(cas.expected, got) {
+				t.Fatalf("expected schema %#v != got %#v", cas.expected, got)
+			}
+		})
+	}
+
+}
+
 func Test_IsValidPropertyPath(t *testing.T) {
 	tests := []struct {
 		path     string
