@@ -108,30 +108,6 @@ func isMetaProperty(name string) bool {
 	return len(name) > 5 && strings.HasPrefix(name, "__") && strings.HasSuffix(name, "__")
 }
 
-// propertiesToColumns returns the columns of properties of t.
-func propertiesToColumns(t types.Type) []meergo.Column {
-
-	// NOTE: keep in sync with the copy of this function in the package
-	// "diffschemas".
-
-	columns := make([]meergo.Column, 0, types.NumProperties(t))
-	for _, p := range t.Properties() {
-		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range propertiesToColumns(p.Type) {
-				column.Name = p.Name + "_" + column.Name
-				columns = append(columns, column)
-			}
-			continue
-		}
-		columns = append(columns, meergo.Column{
-			Name:     p.Name,
-			Type:     p.Type,
-			Nullable: p.Nullable,
-		})
-	}
-	return columns
-}
-
 func unflatRow(pk *propertyKey, row []any, omitNil bool) map[string]any {
 	v := unflatRowRec(pk, row, omitNil)
 	if v == nil {

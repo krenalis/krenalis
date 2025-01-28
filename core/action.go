@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 )
@@ -697,7 +697,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	// Transformation.
 	if fn := n.Transformation.Function; fn != nil {
 		if this.action.Transformation.Function == nil {
-			name := transformationFunctionName(n.ID, fn.Language)
+			name := util.TransformationFunctionName(n.ID, fn.Language)
 			version, err := this.core.transformerProvider.Create(ctx, name, fn.Source)
 			if err == transformers.ErrFunctionExist {
 				version, err = this.core.transformerProvider.Update(ctx, name, fn.Source)
@@ -707,7 +707,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			}
 			n.Transformation.Function.Version = version
 		} else if this.action.Transformation.Function.Source != fn.Source || this.action.Transformation.Function.Language != fn.Language {
-			name := transformationFunctionName(n.ID, fn.Language)
+			name := util.TransformationFunctionName(n.ID, fn.Language)
 			version, err := this.core.transformerProvider.Update(ctx, name, fn.Source)
 			if err == transformers.ErrFunctionNotExist {
 				version, err = this.core.transformerProvider.Create(ctx, name, fn.Source)
@@ -1275,21 +1275,4 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 		InPaths:  fn.InPaths,
 		OutPaths: fn.OutPaths,
 	}
-}
-
-// transformationFunctionName returns the name of the transformation function
-// for an action in the specified language.
-//
-// Keep in sync with the function having the same name in the mappings package.
-func transformationFunctionName(action int, language state.Language) string {
-	var ext string
-	switch language {
-	case state.JavaScript:
-		ext = ".js"
-	case state.Python:
-		ext = ".py"
-	default:
-		panic("unexpected language")
-	}
-	return "action-" + strconv.Itoa(action) + ext
 }

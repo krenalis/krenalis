@@ -10,6 +10,7 @@ package datastore
 import (
 	"testing"
 
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/types"
 )
 
@@ -87,7 +88,7 @@ func Test_propertiesToColumns(t *testing.T) {
 		{Name: "k_a", Type: typ},
 	}
 
-	got := propertiesToColumns(types.Object(properties))
+	got := util.PropertiesToColumns(types.Object(properties))
 	if len(got) != len(columns) {
 		t.Fatalf("expected %d columns, got %d", len(columns), len(got))
 	}

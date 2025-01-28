@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/types"
 )
 
@@ -122,7 +123,7 @@ func (ds *Datastore) Initialize(ctx context.Context, typ string, settings []byte
 		return err
 	}
 	defer dw.Close()
-	userColumns := propertiesToColumns(userSchema)
+	userColumns := util.PropertiesToColumns(userSchema)
 	err = dw.Initialize(ctx, userColumns)
 	if err != nil {
 		return err
@@ -273,7 +274,7 @@ func (ds *Datastore) onUpdateUserSchema(n state.UpdateUserSchema) {
 // A property conflicts with another if their representation as columns in the
 // data warehouse has the same name when compared case-insensitively.
 func CheckConflictingProperties(io string, schema types.Type) error {
-	columns := propertiesToColumns(schema)
+	columns := util.PropertiesToColumns(schema)
 	names := make(map[string]struct{})
 	for _, c := range columns {
 		name := strings.ToLower(c.Name)

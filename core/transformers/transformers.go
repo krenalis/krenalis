@@ -12,10 +12,10 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
 
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers/mappings"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/types"
 )
 
@@ -159,7 +159,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 	}
 
 	// Transform using the function.
-	funcName := transformationFunctionName(t.action, t.function.Language)
+	funcName := util.TransformationFunctionName(t.action, t.function.Language)
 	err := t.provider.Call(ctx, funcName, t.function.Version, t.inSchema, t.outSchema, t.function.PreserveJSON, records)
 	if err != nil {
 		if err, ok := err.(FunctionExecutionError); ok {
@@ -193,21 +193,4 @@ func setCreateRequired(schema types.Type) types.Type {
 		properties[i].CreateRequired = true
 	}
 	return types.Object(properties)
-}
-
-// transformationFunctionName returns the name of the transformation function
-// for an action in the specified language.
-//
-// Keep in sync with the function having the same name in the core package.
-func transformationFunctionName(action int, language state.Language) string {
-	var ext string
-	switch language {
-	case state.JavaScript:
-		ext = ".js"
-	case state.Python:
-		ext = ".py"
-	default:
-		panic("unexpected language")
-	}
-	return "action-" + strconv.Itoa(action) + ext
 }

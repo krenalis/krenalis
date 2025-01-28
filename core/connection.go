@@ -789,7 +789,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 
 	var function state.TransformationFunction
 	if n.Transformation.Function != nil {
-		name := transformationFunctionName(n.ID, n.Transformation.Function.Language)
+		name := util.TransformationFunctionName(n.ID, n.Transformation.Function.Language)
 		version, err := this.core.transformerProvider.Create(ctx, name, n.Transformation.Function.Source)
 		if err != nil {
 			return 0, err

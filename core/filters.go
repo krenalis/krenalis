@@ -150,11 +150,11 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.DateKind:
 				v, _ = time.Parse(time.DateOnly, value)
 			case types.TimeKind:
-				v, _ = parseTime(value)
+				v, _ = util.ParseTime(value)
 			case types.YearKind:
 				v, _ = parseYear(value)
 			case types.UUIDKind:
-				v, _ = ParseUUID(value)
+				v, _ = util.ParseUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
 				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
@@ -363,45 +363,6 @@ func parseYear(s string) (int, bool) {
 		return 0, false
 	}
 	return year, true
-}
-
-// parseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as
-// the time on January 1, 1970 UTC. The sub-second part can contain from 1 to 9
-// digits or can be missing. The hour must be in range [0, 23], minute and second
-// must be in range [0, 59], and any trailing characters are discarded.
-// The boolean return value indicates whether the time was successfully parsed.
-//
-// Keep in sync with the parseTime function in the mappings package.
-func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
-	if len(p) < 8 {
-		return
-	}
-	parse := func(n bytes) int {
-		if n[0] < '0' || n[0] > '9' || n[1] < '0' || n[1] > '9' {
-			return -1
-		}
-		return int(n[0]-'0')*10 + int(n[1]-'0')
-	}
-	h, m, s := parse(p[0:2]), parse(p[3:5]), parse(p[6:8])
-	if h < 0 || h > 23 || p[2] != ':' || m < 0 || m > 59 || p[5] != ':' || s < 0 || s > 59 {
-		return
-	}
-	p = p[8:]
-	var ns int
-	if len(p) > 0 && p[0] == '.' {
-		p = p[1:]
-		var i int
-		for ; i < 9 && i < len(p) && '0' <= p[i] && p[i] <= '9'; i++ {
-			ns = ns*10 + int(p[i]-'0')
-		}
-		if i == 0 {
-			return
-		}
-		for ; i < 9; i++ {
-			ns *= 10
-		}
-	}
-	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
 }
 
 // parseUint parses an Uint(64) from s and returns the Uint(64) value and true.
@@ -619,11 +580,11 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 					valid = types.MinYear <= y && y <= types.MaxYear
 				}
 			case types.TimeKind:
-				_, valid = parseTime(value)
+				_, valid = util.ParseTime(value)
 			case types.YearKind:
 				_, valid = parseYear(value)
 			case types.UUIDKind:
-				_, valid = ParseUUID(value)
+				_, valid = util.ParseUUID(value)
 			case types.JSONKind, types.TextKind:
 				valid = utf8.ValidString(value)
 			case types.InetKind:

@@ -16,6 +16,7 @@ import (
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/events"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
@@ -787,7 +788,7 @@ func (workspace workspace) UserEvents(_ http.ResponseWriter, r *http.Request) (a
 
 	// Parse the user ID.
 	id := r.PathValue("id")
-	if _, ok := core.ParseUUID(id); !ok {
+	if _, ok := util.ParseUUID(id); !ok {
 		return nil, errors.BadRequest("value %q is not a valid user identifier", id)
 	}
 

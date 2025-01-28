@@ -21,11 +21,11 @@ import (
 
 	"github.com/meergo/meergo/core/errors"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
 
-	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 )
 
@@ -410,7 +410,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if s == "" && nullable {
 				return nil, nil
 			}
-			value, valid = parseUUID(s)
+			value, valid = util.ParseUUID(s)
 		}
 	case types.JSONKind:
 		var data []byte
@@ -698,19 +698,4 @@ func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 		return time.Unix(0, int64(n)), true
 	}
 	return time.Time{}, false
-}
-
-// parseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-// Keep in sync with the function on the "core" package.
-func parseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
 }

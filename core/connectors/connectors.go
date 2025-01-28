@@ -34,7 +34,6 @@ import (
 )
 
 // maxSettingsLen is the maximum length of settings in runes.
-// Keep in sync with the events.maxSettingsLen constant.
 const maxSettingsLen = 10_000
 
 // AckFunc is the function called when a write of one or more records
@@ -422,7 +421,6 @@ func formatLastChangeTimeProperty(format string, t time.Time) string {
 // isExcelSimpleFloat reports whether s is a string representing a float value
 // encoding an Excel date / datetime value.
 func isExcelSimpleFloat(s string) bool {
-	// NOTE: keep in sync with the function within 'core/transformers/mappings'.
 	if len(s) < 3 {
 		return false
 	}

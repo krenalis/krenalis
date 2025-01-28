@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -360,7 +361,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			t = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 		case types.TextKind:
 			var ok bool
-			t, ok = parseTime(v.(string))
+			t, ok = util.ParseTime(v.(string))
 			if !ok {
 				return nil, errInvalidConversion
 			}
@@ -370,7 +371,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return nil, errInvalidConversion
 			}
 			var ok bool
-			t, ok = parseTime(v.Bytes())
+			t, ok = util.ParseTime(v.Bytes())
 			if !ok {
 				return nil, errInvalidConversion
 			}
@@ -864,45 +865,6 @@ func isSimpleFloat(s string) bool {
 		}
 	}
 	return true
-}
-
-// parseTime parses a time formatted as "hh:mm:ss.nnnnnnnnn" and returns it as
-// the time on January 1, 1970 UTC. The sub-second part can contain from 1 to 9
-// digits or can be missing. The hour must be in range [0, 23], minute and second
-// must be in range [0, 59], and any trailing characters are discarded.
-// The boolean return value indicates whether the time was successfully parsed.
-//
-// Keep in sync with the parseTime function in the core package.
-func parseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
-	if len(p) < 8 {
-		return
-	}
-	parse := func(n bytes) int {
-		if n[0] < '0' || n[0] > '9' || n[1] < '0' || n[1] > '9' {
-			return -1
-		}
-		return int(n[0]-'0')*10 + int(n[1]-'0')
-	}
-	h, m, s := parse(p[0:2]), parse(p[3:5]), parse(p[6:8])
-	if h < 0 || h > 23 || p[2] != ':' || m < 0 || m > 59 || p[5] != ':' || s < 0 || s > 59 {
-		return
-	}
-	p = p[8:]
-	var ns int
-	if len(p) > 0 && p[0] == '.' {
-		p = p[1:]
-		var i int
-		for ; i < 9 && i < len(p) && '0' <= p[i] && p[i] <= '9'; i++ {
-			ns = ns*10 + int(p[i]-'0')
-		}
-		if i == 0 {
-			return
-		}
-		for ; i < 9; i++ {
-			ns *= 10
-		}
-	}
-	return time.Date(1970, 1, 1, h, m, s, ns, time.UTC), true
 }
 
 func parseUint(s string) int {

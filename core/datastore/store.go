@@ -21,6 +21,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/telemetry"
 	"github.com/meergo/meergo/types"
@@ -143,7 +144,7 @@ func (store *Store) AlterUserSchema(ctx context.Context, schema types.Type, oper
 		return err
 	}
 	defer done()
-	columns := propertiesToColumns(schema)
+	columns := util.PropertiesToColumns(schema)
 	// TODO(Gianluca): The Background context is used here, since the store does
 	// not provide any. See issue https://github.com/meergo/meergo/issues/1224.
 	return store.warehouse().AlterUserColumns(context.Background(), columns, operations)
@@ -474,7 +475,7 @@ func (store *Store) PreviewUserSchemaUpdate(ctx context.Context, schema types.Ty
 		return nil, err
 	}
 	defer done()
-	userColumns := propertiesToColumns(schema)
+	userColumns := util.PropertiesToColumns(schema)
 	return store.warehouse().AlterUserColumnsQueries(ctx, userColumns, operations)
 }
 
@@ -520,7 +521,7 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 		return err
 	}
 	defer done()
-	userColumns := propertiesToColumns(userSchema)
+	userColumns := util.PropertiesToColumns(userSchema)
 	return store.warehouse().Repair(ctx, userColumns)
 }
 
@@ -565,7 +566,7 @@ func (store *Store) StartIdentityResolution(ctx context.Context) error {
 	}
 
 	// Determine the user columns.
-	userColumns := propertiesToColumns(ws.UserSchema)
+	userColumns := util.PropertiesToColumns(ws.UserSchema)
 
 	// Determine the primary sources for every user column.
 	userPrimarySources := make(map[string]int, len(ws.UserPrimarySources))

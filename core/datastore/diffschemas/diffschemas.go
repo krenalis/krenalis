@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/types"
 )
 
@@ -123,7 +124,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					return nil, fmt.Errorf("it is not possible to rename an Object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
 
 				}
-				for _, c := range propertiesToColumns(newProp.Type) {
+				for _, c := range util.PropertiesToColumns(newProp.Type) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
@@ -147,7 +148,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They do not appear in "rePaths".
 		p := newPropsByName[addedName]
 		if p.Type.Kind() == types.ObjectKind {
-			for _, c := range propertiesToColumns(p.Type) {
+			for _, c := range util.PropertiesToColumns(p.Type) {
 				operations = append(operations, meergo.AlterOperation{
 					Operation: meergo.OperationAddColumn,
 					Column:    pathToColumn(appendPath(path, addedName)) + "_" + c.Name,
@@ -237,7 +238,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					})
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range propertiesToColumns(newProp.Type) {
+				for _, c := range util.PropertiesToColumns(newProp.Type) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationAddColumn,
 						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
@@ -268,7 +269,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			}
 			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
-				for _, c := range propertiesToColumns(newProp.Type) {
+				for _, c := range util.PropertiesToColumns(newProp.Type) {
 					operations = append(operations, meergo.AlterOperation{
 						Operation: meergo.OperationRenameColumn,
 						Column:    pathToColumn(oldPath) + "_" + c.Name,
@@ -349,30 +350,6 @@ func pathToColumn(path string) string {
 func propPathToName(path string) string {
 	parts := strings.Split(path, ".")
 	return parts[len(parts)-1]
-}
-
-// propertiesToColumns returns the columns of properties of t.
-func propertiesToColumns(t types.Type) []meergo.Column {
-
-	// NOTE: keep in sync with the copy of this function in the package
-	// "datastore".
-
-	columns := make([]meergo.Column, 0, types.NumProperties(t))
-	for _, p := range t.Properties() {
-		if p.Type.Kind() == types.ObjectKind {
-			for _, column := range propertiesToColumns(p.Type) {
-				column.Name = p.Name + "_" + column.Name
-				columns = append(columns, column)
-			}
-			continue
-		}
-		columns = append(columns, meergo.Column{
-			Name:     p.Name,
-			Type:     p.Type,
-			Nullable: p.Nullable,
-		})
-	}
-	return columns
 }
 
 func propertyPaths(obj types.Type) []string {

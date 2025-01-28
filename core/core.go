@@ -764,7 +764,7 @@ func (core *Core) onDeleteAction(n state.DeleteAction) {
 		go func() {
 			for _, language := range [...]state.Language{state.JavaScript, state.Python} {
 				if core.transformerProvider.SupportLanguage(language) {
-					name := transformationFunctionName(n.ID, language)
+					name := util.TransformationFunctionName(n.ID, language)
 					err := core.transformerProvider.Delete(core.close.ctx, name)
 					if err != nil {
 						slog.Debug("cannot delete transformer function", "name", name, "err", err)
@@ -790,21 +790,6 @@ func (core *Core) onExecuteAction(n state.ExecuteAction) {
 		defer core.close.Done()
 		a.exec(core.close.ctx)
 	}()
-}
-
-// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-// Keep in sync with the function on the "core/connectors" package.
-func ParseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
 }
 
 func isValidInvitationToken(token string) bool {
