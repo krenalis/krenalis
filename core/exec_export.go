@@ -163,22 +163,21 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		this.core.metrics.ReceivePassed(action.ID, 1)
 
 		if connector.Type == state.App {
-			if record.MatchingID == "" {
-				// Create the user.
+			user := User{Record: record}
+			isCreate := record.MatchingID == ""
+			if !isCreate {
+				user.ID = record.MatchingID
+			}
+			if isCreate || matchingOut.UpdateRequired {
 				value := record.Properties[matchingIn.Name]
-				value, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, matchingIn.Name, matchingOut.Name)
+				user.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, matchingIn.Name, matchingOut.Name)
 				if err != nil {
 					this.core.metrics.InputValidationFailed(action.ID, 1, err.Error())
 					goto Next
 				}
-				// The matching property and its value will be added to the properties after the transformation.
-				users = append(users, User{Record: record, MatchingValue: value})
-			} else {
-				// Update the user.
-				users = append(users, User{ID: record.MatchingID, Record: record})
 			}
+			users = append(users, user)
 		} else {
-			// Create the user.
 			users = append(users, User{Record: record})
 		}
 
