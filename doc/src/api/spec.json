@@ -7178,7 +7178,8 @@
                             "name": "eventType",
                             "placeholder": "\"send_add_to_cart\"",
                             "type": {
-                                "name": "Text"
+                                "name": "Text",
+                                "charLen": 100
                             },
                             "createRequired": true,
                             "description": "The action's event type, which is one of the event types supported by the connection."
@@ -7775,7 +7776,8 @@
                                 "name": "eventType",
                                 "placeholder": "\"send_add_to_cart\"",
                                 "type": {
-                                    "name": "Text"
+                                    "name": "Text",
+                                    "charLen": 100
                                 },
                                 "createRequired": true,
                                 "description": "The action's event type, which is one of the event types supported by the connection."
@@ -9329,7 +9331,8 @@
                                             {
                                                 "name": "id",
                                                 "type": {
-                                                    "name": "Text"
+                                                    "name": "Text",
+                                                    "charLen": 100
                                                 },
                                                 "description": "The event type ID, which uniquely identifies it in the context of the connection."
                                             },

@@ -591,13 +591,9 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 
 	// Validate the action.
 	v := validationState{}
+	v.target = this.action.Target
 	v.connection.role = c.Role
 	v.connection.connector.typ = c.Connector().Type
-	if c.Role == state.Source {
-		v.connection.connector.targets = c.Connector().SourceTargets
-	} else {
-		v.connection.connector.targets = c.Connector().DestinationTargets
-	}
 	if format != nil {
 		v.format.typ = format.Type
 		if c.Role == state.Source {
@@ -609,7 +605,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.transformerProvider
-	err := validateAction(action, this.action.Target, v)
+	err := validateActionToSet(action, v)
 	if err != nil {
 		return err
 	}

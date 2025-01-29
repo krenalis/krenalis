@@ -139,9 +139,17 @@ type EventRequest struct {
 
 // EventType represents a type of event that the app can receive.
 type EventType struct {
-	ID          string // identifier; must be unique for each event type
-	Name        string // name to be displayed
-	Description string // description to be displayed
+	// ID is the identifier of the event type. It must be unique for every event
+	// type of the connection.
+	//
+	// It cannot be longer than 100 runes.
+	ID string
+
+	// Name is the name of the event type to be displayed.
+	Name string
+
+	// Description is the description of the event type to be displayed.
+	Description string
 }
 
 // Record represents an app record.

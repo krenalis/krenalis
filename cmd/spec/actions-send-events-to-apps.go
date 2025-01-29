@@ -22,7 +22,7 @@ func init() {
 	}
 	eventType := types.Property{
 		Name:           "eventType",
-		Type:           types.Text(),
+		Type:           types.Text().WithCharLen(100),
 		CreateRequired: true,
 		Placeholder:    `"send_add_to_cart"`,
 		Description:    "The action's event type, which is one of the event types supported by the connection.",

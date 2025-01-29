@@ -40,12 +40,14 @@ const (
 // validationState is a state for the validation of an action.
 type validationState struct {
 
+	// target is the action's target.
+	target state.Target
+
 	// connection is the action's connection.
 	connection struct {
 		role      state.Role
 		connector struct {
-			typ     state.ConnectorType
-			targets state.ConnectorTargets
+			typ state.ConnectorType
 		}
 	}
 
@@ -65,30 +67,23 @@ type validationState struct {
 	provider transformers.Provider
 }
 
-// validateAction validates action and target, in the context of the given
-// validation state.
+// validateActionToSet validates the given ActionToSet, in the context of the
+// given validation state.
 //
 // It returns an errors.UnprocessableError error with code:
 //
 //   - FormatNotExist, if the action is on file and the specified format does
 //     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func validateAction(action ActionToSet, target state.Target, v validationState) error {
+func validateActionToSet(action ActionToSet, v validationState) error {
 
 	inSchema := action.InSchema
 	outSchema := action.OutSchema
 
-	// Check if the target is allowed.
-	if !v.connection.connector.targets.Contains(target) {
-		role := strings.ToLower(v.connection.role.String())
-		typ := v.connection.connector.typ.String()
-		return errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
-	}
-
-	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, target)
-	dispatchEventsToApps := isDispatchingEventsToApps(v.connection.connector.typ, v.connection.role, target)
-	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, target)
-	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, target)
+	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToApps := isDispatchingEventsToApps(v.connection.connector.typ, v.connection.role, v.target)
+	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
+	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
 	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApps
 
@@ -130,7 +125,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 			return errors.BadRequest("format does not refer to a file connector")
 		}
 	}
-	if actionOnFile && !v.format.targets.Contains(target) {
+	if actionOnFile && !v.format.targets.Contains(v.target) {
 		return errors.BadRequest("target is not supported by the file format")
 	}
 
@@ -391,12 +386,12 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Do some validations on the input and the output schemas.
 	if inSchema.Valid() && !inSchemaIsEventSchema {
-		if err := validateActionSchema("input", inSchema, v.connection.role, target, v.connection.connector.typ, action.TableKey); err != nil {
+		if err := validateActionSchema("input", inSchema, v.connection.role, v.target, v.connection.connector.typ, action.TableKey); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
 	if outSchema.Valid() {
-		if err := validateActionSchema("output", outSchema, v.connection.role, target, v.connection.connector.typ, action.TableKey); err != nil {
+		if err := validateActionSchema("output", outSchema, v.connection.role, v.target, v.connection.connector.typ, action.TableKey); err != nil {
 			return errors.BadRequest("%s", err)
 		}
 	}
@@ -439,7 +434,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	// Note that filters are always allowed except for actions that import users
 	// from databases.
 	filtersAllowed := !(v.connection.role == state.Source &&
-		v.connection.connector.typ == state.Database && target == state.Users)
+		v.connection.connector.typ == state.Database && v.target == state.Users)
 	if action.Filter != nil && !filtersAllowed {
 		return errors.BadRequest("filters are not allowed")
 	}
@@ -566,7 +561,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 	}
 
 	// Do some checks related to exporting users to databases.
-	exportUsersToDatabase := v.connection.connector.typ == state.Database && v.connection.role == state.Destination && target == state.Users
+	exportUsersToDatabase := v.connection.connector.typ == state.Database && v.connection.role == state.Destination && v.target == state.Users
 	if exportUsersToDatabase {
 		if action.TableName == "" {
 			return errors.BadRequest("table name cannot be empty for destination database actions")
@@ -609,7 +604,7 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 
 	// Check if the export options are needed.
 	needsExportOptions := v.connection.connector.typ == state.App &&
-		v.connection.role == state.Destination && target == state.Users
+		v.connection.role == state.Destination && v.target == state.Users
 	if needsExportOptions {
 		if action.ExportMode == "" {
 			return errors.BadRequest("export mode cannot be empty")
@@ -631,8 +626,8 @@ func validateAction(action ActionToSet, target state.Target, v validationState) 
 		v.connection.connector.typ == state.Website
 
 	// Check the connections for which the transformation is prohibited.
-	targetUsersOrGroups := target == state.Users || target == state.Groups
-	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && target == state.Events) ||
+	targetUsersOrGroups := v.target == state.Users || v.target == state.Groups
+	transformationProhibited := (v.connection.role == state.Source && eventBasedConn && v.target == state.Events) ||
 		(v.connection.role == state.Destination && v.connection.connector.typ == state.FileStorage && targetUsersOrGroups)
 	if transformationProhibited && action.Transformation != nil {
 		return errors.BadRequest("action cannot have a transformation")

@@ -23,6 +23,7 @@ import (
 	"github.com/meergo/meergo/core/connectors/httpclient"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
@@ -201,6 +202,11 @@ func (app *App) EventTypes(ctx context.Context) ([]*EventType, error) {
 	eventTypes, err := app.inner.(appEventsConnector).EventTypes(ctx)
 	if err != nil {
 		return nil, connectorError(err)
+	}
+	for _, typ := range eventTypes {
+		if err := util.ValidateStringField("event type", typ.ID, 100); err != nil {
+			return nil, err
+		}
 	}
 	return eventTypes, nil
 }

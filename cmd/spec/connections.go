@@ -145,7 +145,7 @@ func init() {
 			Type: types.Array(types.Object([]types.Property{
 				{
 					Name:        "id",
-					Type:        types.Text(),
+					Type:        types.Text().WithCharLen(100),
 					Description: "The event type ID, which uniquely identifies it in the context of the connection.",
 				},
 				{

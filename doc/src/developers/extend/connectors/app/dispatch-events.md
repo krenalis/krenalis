@@ -40,7 +40,7 @@ For every event type you support, you'll define a unique ID, a user-friendly nam
 
 ```go
 type EventType struct {
-    ID          string // unique identifier for the event type
+    ID          string // unique identifier for the event type. Cannot be longer than 100 runes.
     Name        string // display name for the event type
     Description string // description of the event type
 }

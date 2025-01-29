@@ -681,50 +681,73 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		format, _ = this.core.state.Connector(action.Format)
 	}
 
-	// Validate the target and the event type.
-	_, err := this.validateTargetAndEventType(ctx, target, eventType)
-	if err != nil {
-		return 0, err
+	c := this.connection
+	connector := c.Connector()
+
+	// Validate the target.
+	if target != Users && target != Groups && target != Events {
+		return 0, errors.BadRequest("target %d is not valid", int(target))
+	}
+	var connectorsTargets state.ConnectorTargets
+	if c.Role == state.Source {
+		connectorsTargets = connector.SourceTargets
+	} else {
+		connectorsTargets = connector.DestinationTargets
+	}
+	if !connectorsTargets.Contains(state.Target(target)) {
+		role := strings.ToLower(c.Role.String())
+		typ := connector.Type.String()
+		return 0, errors.BadRequest("action with target '%s' not allowed for %s %s connections", target, role, typ)
+	}
+
+	// Validate the event type.
+	requiresEventType := c.Role == state.Destination && connector.Type == state.App && target == Events
+	if requiresEventType && eventType == "" {
+		return 0, errors.BadRequest("eventType is required for actions that send events to apps")
+	}
+	if !requiresEventType && eventType != "" {
+		role := strings.ToLower(c.Role.String())
+		typ := strings.ToLower(connector.Type.String())
+		return 0, errors.BadRequest("actions with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
+	}
+	if eventType != "" {
+		if err := util.ValidateStringField("eventType", eventType, 100); err != nil {
+			return 0, errors.BadRequest("%s", err)
+		}
 	}
 
 	// Validate the action.
 	v := validationState{}
-	v.connection.role = this.connection.Role
-	v.connection.connector.typ = this.connection.Connector().Type
-	if this.connection.Role == state.Source {
-		v.connection.connector.targets = this.connection.Connector().SourceTargets
-	} else {
-		v.connection.connector.targets = this.connection.Connector().DestinationTargets
-	}
+	v.target = state.Target(target)
+	v.connection.role = c.Role
+	v.connection.connector.typ = connector.Type
 	if format != nil {
 		v.format.typ = format.Type
-		if this.connection.Role == state.Source {
+		if c.Role == state.Source {
 			v.format.targets = format.SourceTargets
 		} else {
 			v.format.targets = format.DestinationTargets
 		}
 		v.format.hasSheets = format.HasSheets
-		v.format.hasSettings = this.connection.Role == state.Source && format.HasSourceSettings || this.connection.Role == state.Destination && format.HasDestinationSettings
+		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.transformerProvider
-	err = validateAction(action, state.Target(target), v)
+	err := validateActionToSet(action, v)
 	if err != nil {
 		return 0, err
 	}
 
-	connector := this.connection.Connector()
-
 	// Determine the input schema.
 	inSchema := action.InSchema
-	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, this.connection.Role, state.Target(target))
-	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, this.connection.Role, state.Target(target))
-	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, this.connection.Role, state.Target(target))
+	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(connector.Type, c.Role, state.Target(target))
+	dispatchEventsToApps := isDispatchingEventsToApps(connector.Type, c.Role, state.Target(target))
+	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(connector.Type, c.Role, state.Target(target))
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
 		inSchema = events.Schema
 	}
 
 	n := state.CreateAction{
-		Connection:             this.connection.ID,
+		Connection:             c.ID,
 		Target:                 state.Target(target),
 		Name:                   action.Name,
 		Enabled:                action.Enabled,
@@ -1383,8 +1406,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	if !c.Connector().DestinationTargets.Contains(state.Events) {
 		return nil, errors.BadRequest("connection %d does not support events", c.ID)
 	}
-	if typ == "" {
-		return nil, errors.BadRequest("type is empty")
+	err := util.ValidateStringField("type", typ, 100)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 	if event == nil {
 		return nil, errors.BadRequest("event is missing")
@@ -1931,6 +1955,10 @@ func (this *Connection) storage() *connectors.FileStorage {
 
 // validateTargetAndEventType validates a target and an event type and, if the
 // event type is not empty, it returns its schema.
+//
+// TODO(Gianluca): this function is deprecated and should no longer be used.
+// This is retained until https://github.com/meergo/meergo/issues/1266 is
+// resolved, then this method will be removed.
 //
 // It returns an errors.BadRequestError error if target or eventType is not
 // valid, or the connection does not support them, and returns an
