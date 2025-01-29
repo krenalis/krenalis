@@ -4,7 +4,7 @@
 
 # Mailchimp data source
 
-The **Mailchimp** data source allows you to read contacts from a Mailchimp list and then unify them as users in Meergo.
+The **Mailchimp** data source allows you to read contacts from a Mailchimp audience and then unify them as users in Meergo.
 
 Mailchimp is an email marketing platform that helps businesses design and send marketing emails, manage mailing lists, and automate campaigns. It also offers tools for audience segmentation, performance tracking, and basic CRM functionalities to improve customer engagement.
 
@@ -39,7 +39,7 @@ Now proceed to add a Mailchimp data source:
 4. Next to the **Mailchimp** source, click the **+** icon.  A page will open on the Mailchimp site.
 5. Follow the instructions provided by Mailchimp to authorize access to your account to read contacts. Once finished, you will return to the Meergo admin.
 6. Optional: In the **Name** field, enter a name for the source to easily recognize it later.
-7. In the **List** field, select the Mailchimp list from which to read the contacts. You can change it later.
+7. In the **Audience** field, select the Mailchimp audience from which to read the contacts. You can change it later.
 8. Click **Add**.
 
 Once the Mailchimp data source is added, the **Actions** page will be displayed. This page indicates what actions to perform with the contacts read from Mailchimp.

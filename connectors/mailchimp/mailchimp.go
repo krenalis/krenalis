@@ -6,28 +6,34 @@
 //
 
 // Package mailchimp implements the Mailchimp connector.
-// (https://mailchimp.com/developer/)
+// (https://mailchimp.com/developer/marketing/)
 package mailchimp
 
 import (
-	"bytes"
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	_ "embed"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"math/big"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/backoff"
 	"github.com/meergo/meergo/json"
 	"github.com/meergo/meergo/types"
+
+	"github.com/relvacode/iso8601"
 )
 
 // Connector icon.
@@ -84,7 +90,7 @@ type MailChimp struct {
 }
 
 type innerSettings struct {
-	List          string
+	Audience      string
 	DataCenter    string
 	WebhookSecret string
 }
@@ -153,9 +159,34 @@ func (mc *MailChimp) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meergo
 // Records returns the records of the specified target.
 func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, _ types.Type, lastChangeTime time.Time, _, properties []string, cursor string) ([]meergo.Record, string, error) {
 
-	path := "/lists/" + mc.settings.List + "/members"
+	path := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
+
+	hasID := false
+	hasLastChanged := false
+
+	var fields strings.Builder
+	for i, name := range properties {
+		if i > 0 {
+			fields.WriteByte(',')
+		}
+		fields.WriteString("members.")
+		fields.WriteString(name)
+		switch name {
+		case "id":
+			hasID = true
+		case "last_changed":
+			hasLastChanged = true
+		}
+	}
+	if !hasID {
+		fields.WriteString(",members.id")
+	}
+	if !hasLastChanged {
+		fields.WriteString(",members.last_changed")
+	}
+
 	values := url.Values{
-		"fields":     {serializeProperties(properties)},
+		"fields":     {fields.String()},
 		"sort_field": {"timestamp_signup"},
 		"sort_dir":   {"ASC"},
 		"count":      {"1000"},
@@ -168,8 +199,8 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, _ types.Type
 	}
 
 	var response struct {
-		Members    []Member `json:"members"`
-		TotalItems int      `json:"total_items"`
+		Members    []map[string]any `json:"members"`
+		TotalItems int              `json:"total_items"`
 	}
 
 	err := mc.call(ctx, "GET", path, values, nil, 200, &response)
@@ -180,249 +211,145 @@ func (mc *MailChimp) Records(ctx context.Context, _ meergo.Targets, _ types.Type
 		return nil, "", io.EOF
 	}
 
-	users := make([]meergo.Record, len(response.Members))
-	for i, member := range response.Members {
-		users[i] = meergo.Record{
-			ID:             member.ID,
-			Properties:     member.Properties(),
-			LastChangeTime: member.LastChanged.UTC(),
+	records := make([]meergo.Record, len(response.Members))
+
+	for i, properties := range response.Members {
+		id, _ := properties["id"].(string)
+		if id == "" {
+			return nil, "", errors.New("server returned an invalid 'id' property for a member")
+		}
+		if !hasID {
+			delete(properties, "id")
+		}
+		lastChanged, _ := properties["last_changed"].(string)
+		lastChangeTime, err = iso8601.ParseString(lastChanged)
+		if err != nil {
+			return nil, "", errors.New("server returned an invalid 'last_changed' property for a member")
+		}
+		if !hasLastChanged {
+			delete(properties, "last_changed")
+		}
+		records[i] = meergo.Record{
+			ID:             id,
+			Properties:     properties,
+			LastChangeTime: lastChangeTime.UTC(),
 		}
 	}
 
 	offset, _ := strconv.Atoi(cursor)
 	eof := offset+len(response.Members) >= response.TotalItems
-	if last := users[len(users)-1]; last.LastChangeTime.Equal(lastChangeTime) {
+	if last := records[len(records)-1]; last.LastChangeTime.Equal(lastChangeTime) {
 		offset += len(response.Members)
 	} else {
 		offset = 0
 	}
 	if eof {
-		return users, strconv.Itoa(offset), io.EOF
+		return records, strconv.Itoa(offset), io.EOF
 	}
 
-	return users, strconv.Itoa(offset), nil
+	return records, strconv.Itoa(offset), nil
 }
+
+// addressType is the types.Type corresponding to the Mailchimp "address" type.
+var addressType = types.Object([]types.Property{
+	{Name: "addr1", Type: types.Text(), UpdateRequired: true},
+	{Name: "addr2", Type: types.Text()},
+	{Name: "city", Type: types.Text(), UpdateRequired: true},
+	{Name: "state", Type: types.Text(), UpdateRequired: true},
+	{Name: "zip", Type: types.Text(), UpdateRequired: true},
+	{Name: "country", Type: types.Text()},
+})
 
 // Schema returns the schema of the specified target in the specified role.
 func (mc *MailChimp) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
-	params := url.Values{
-		"fields": []string{"merge_fields.options.choices,merge_fields.name,merge_fields.tag,merge_fields.type"},
-	}
+
+	// Fetch the contact fields, also known as audience fields or merge fields.
+	// Mailchimp allows for more than 1,000 fields per audience, but the connector reasonably reads only the first 1,000.
+	// See https://mailchimp.com/developer/marketing/docs/merge-fields/.
 	var res struct {
 		MergeFields []struct {
-			Options struct {
+			Tag          string `json:"tag"`
+			Name         string `json:"name"`
+			Type         string `json:"type"`
+			Required     bool   `json:"required"`
+			DisplayOrder int    `json:"display_order"`
+			Options      struct {
 				Choices []string `json:"choices"`
 			} `json:"options"`
-			Name string `json:"name"`
-			Tag  string `json:"tag"`
-			Type string `json:"type"`
 		} `json:"merge_fields"`
 	}
-	err := mc.call(ctx, "GET", "/lists/"+mc.settings.List+"/merge-fields", params, nil, 200, &res)
+	params := url.Values{
+		"count":  []string{"1000"},
+		"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
+	}
+	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(mc.settings.Audience)+"/merge-fields", params, nil, 200, &res)
 	if err != nil {
 		return types.Type{}, err
 	}
-
-	// Merge fields.
-	mergeFields := make([]types.Property, len(res.MergeFields))
-	for i, mf := range res.MergeFields {
-		field := types.Property{
-			Name:        mf.Tag,
-			Description: mf.Name,
+	fields := make([]types.Property, 0, len(res.MergeFields))
+	for _, f := range res.MergeFields {
+		if !types.IsValidPropertyName(f.Tag) {
+			continue
 		}
-		switch mf.Type {
-		case "address":
-			field.Type = types.JSON()
+		var field types.Property
+		switch f.Type {
+		case "text":
+			field.Type = types.Text().WithCharLen(255)
+		case "number":
+			field.Type = types.Decimal(14, 2)
+			field.Nullable = true
 		case "radio", "dropdown":
-			field.Type = types.Text().WithValues(mf.Options.Choices...)
-		default:
+			var values []string
+		Choices:
+			// Remove duplicated values.
+			for i, value := range f.Options.Choices {
+				for _, value2 := range f.Options.Choices[i+1:] {
+					if value == value2 {
+						continue Choices
+					}
+				}
+				values = append(values, value)
+			}
+			if values == nil {
+				continue
+			}
+			field.Type = types.Text().WithValues(values...)
+			if !slices.Contains(values, "") {
+				field.Nullable = true
+			}
+		case "date":
+			field.Type = types.Date()
+			field.Nullable = true
+		case "birthday":
+			field.Type = types.Text().WithCharLen(5)
+		case "address":
+			field.Type = addressType
+		case "zip":
+			field.Type = types.Text().WithCharLen(5)
+		case "phone":
 			field.Type = types.Text()
+		case "url":
+			field.Type = types.Text()
+		default:
+			continue
 		}
-		mergeFields[i] = field
+		field.Name = f.Tag
+		field.UpdateRequired = f.Required
+		field.Description = f.Name
+		fields = append(fields, field)
 	}
 
-	schema, err := types.ObjectOf([]types.Property{
-		{
-			Name:        "ConsentsToOneToOneMessaging",
-			Type:        types.Boolean(),
-			Description: "Consents to OneToOne messaging",
-		}, {
-			Name:        "ContactID",
-			Type:        types.Text(),
-			Description: "Contact ID",
-		}, {
-			Name:        "EmailAddress",
-			Type:        types.Text(),
-			Description: "Email address",
-		}, {
-			Name:        "EmailClient",
-			Type:        types.Text(),
-			Description: "Email client",
-		}, {
-			Name:        "EmailType",
-			Type:        types.Text(),
-			Description: "Email type",
-		}, {
-			Name:        "FullName",
-			Type:        types.Text(),
-			Description: "Full name",
-		}, {
-			Name: "ID",
-			Type: types.Text(),
-		}, {
-			Name: "Interests",
-			Type: types.JSON(),
-		}, {
-			Name:        "IPOpt",
-			Type:        types.Text(),
-			Description: "Opt-in IP address",
-		}, {
-			Name:        "IPSignup",
-			Type:        types.Text(),
-			Description: "Sign up IP address",
-		}, {
-			Name:        "Language",
-			Type:        types.Text(),
-			Description: "Subscriber's language",
-		}, {
-			Name:        "LastChanged",
-			Type:        types.DateTime(),
-			Description: "Time of the last update",
-		}, {
-			Name: "LastNote",
-			Type: types.Object([]types.Property{
-				{
-					Name: "note_id",
-					Type: types.Int(32),
-				}, {
-					Name: "created_at",
-					Type: types.DateTime(),
-				}, {
-					Name: "created_by",
-					Type: types.Text(),
-				}, {
-					Name: "note",
-					Type: types.Text(),
-				},
-			}),
-			Description: "Last Note",
-		}, {
-			Name:        "ListID",
-			Type:        types.Text(),
-			Description: "List ID",
-		}, {
-			Name: "Location",
-			Type: types.Object([]types.Property{
-				{
-					Name:        "latitude",
-					Type:        types.Int(32),
-					Description: "Latitude",
-				}, {
-					Name:        "longitude",
-					Type:        types.Int(32),
-					Description: "Longitude",
-				}, {
-					Name:        "gmtoff",
-					Type:        types.Int(32),
-					Description: "Time difference in hours from GMT",
-				}, {
-					Name:        "dstoff",
-					Type:        types.Int(32),
-					Description: "Daylight saving time offset",
-				}, {
-					Name:        "country_code",
-					Type:        types.Text(),
-					Description: "Country code",
-				}, {
-					Name:        "timezone",
-					Type:        types.Text(),
-					Description: "Time zone",
-				}, {
-					Name:        "region",
-					Type:        types.Text(),
-					Description: "Region",
-				},
-			}),
-			Description: "Location",
-		}, {
-			Name:        "MarketingPermissions",
-			Type:        types.JSON(),
-			Description: "Marketing permissions",
-		}, {
-			Name:        "MemberRating",
-			Type:        types.Int(32),
-			Description: "Member rating",
-		},
-		{
-			Name:        "MergeFields",
-			Type:        types.Object(mergeFields),
-			Description: "Merge fields",
-		},
-		{
-			Name:        "Source",
-			Type:        types.Text(),
-			Description: "Source",
-		}, {
-			Name: "Stats",
-			Type: types.Object([]types.Property{
-				{
-					Name:        "avg_open_rate",
-					Type:        types.Int(32),
-					Description: "Open rate",
-				}, {
-					Name:        "avg_click_rate",
-					Type:        types.Int(32),
-					Description: "Click rate",
-				}, {
-					Name:        "ecommerce_data",
-					Type:        types.JSON(),
-					Description: "Ecommerce data",
-				},
-			}),
-			Description: "Stats",
-		}, {
-			Name:        "Status",
-			Type:        types.Text(),
-			Description: "Status",
-		}, {
-			Name:        "Tags",
-			Type:        types.JSON(),
-			Description: "Tags",
-		}, {
-			Name:        "TagsCount",
-			Type:        types.Int(32),
-			Description: "Tags count",
-		}, {
-			Name:        "TimestampOpt",
-			Type:        types.DateTime(),
-			Description: "Opt-in time",
-		}, {
-			Name:        "TimestampSignup",
-			Type:        types.DateTime(),
-			Description: "Sign up time",
-		}, {
-			Name:        "UniqueEmailID",
-			Type:        types.Text(),
-			Description: "Unique email ID",
-		}, {
-			Name:        "UnsubscribeReason",
-			Type:        types.Text(),
-			Description: "Unsubscribe reason",
-		}, {
-			Name:        "WebID",
-			Type:        types.Int(32),
-			Description: "Web ID",
-		}, {
-			Name:        "Vip",
-			Type:        types.Boolean(),
-			Description: "VIP status",
-		},
-	})
-	if err != nil {
-		return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
+	// Build the schema.
+	properties := make([]types.Property, len(staticProperties)+1)
+	copy(properties[:2], staticProperties[:2])
+	properties[2] = types.Property{
+		Name:        "merge_fields",
+		Type:        types.Object(fields),
+		Description: "Audience fields",
 	}
+	copy(properties[3:], staticProperties[2:])
 
-	return schema, nil
+	return types.Object(properties), nil
 }
 
 // ServeUI serves the connector's user interface.
@@ -441,22 +368,22 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Va
 		return nil, meergo.ErrUIEventNotExist
 	}
 
-	// Get the lists.
-	lists, err := mc.lists(ctx)
+	// Get the audiences.
+	audiences, err := mc.audiences(ctx)
 	if err != nil {
 		return nil, err
 	}
-	listOptions := make([]meergo.Option, len(lists))
-	for i, list := range lists {
-		listOptions[i] = meergo.Option{
-			Text:  list.Name,
-			Value: list.ID,
+	options := make([]meergo.Option, len(audiences))
+	for i, audience := range audiences {
+		options[i] = meergo.Option{
+			Text:  audience.Name,
+			Value: audience.ID,
 		}
 	}
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Select{Name: "List", Label: "List", Options: listOptions},
+			&meergo.Select{Name: "Audience", Label: "Audience", Options: options},
 		},
 		Settings: settings,
 	}
@@ -464,95 +391,204 @@ func (mc *MailChimp) ServeUI(ctx context.Context, event string, settings json.Va
 	return ui, nil
 }
 
+const maxBodyRecordsBytes = 100 * 1024 * 1024
+const maxBodyRecords = 5000
+
 // Upsert updates or creates records in the app for the specified target.
 func (mc *MailChimp) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
-	record := records.First()
-	if record.ID == "" {
-		panic("TODO: create not implemented")
-	}
+	basePath := "/lists/" + url.PathEscape(mc.settings.Audience) + "/members"
 
-	var r struct {
-		Operations []batchOperation `json:"operations"`
+	var body json.Buffer
+	body.WriteString(`{"operations":[`)
+
+	for i, record := range records.All() {
+		n := body.Len()
+		if i > 0 {
+			body.WriteByte(',')
+		}
+		method := "PUT"
+		if record.ID == "" {
+			method = "PATCH"
+		}
+		body.WriteString(`{"method":"`)
+		body.WriteString(method)
+		body.WriteString(`","path":"`)
+		body.WriteString(basePath)
+		if record.ID != "" {
+			body.WriteByte('/')
+			body.WriteString(url.PathEscape(record.ID))
+		}
+		body.WriteString(`","params":{"skip_merge_validation":true},"body":`)
+		_ = body.EncodeQuoted(record.Properties)
+		body.WriteByte('}')
+		if n > maxBodyRecordsBytes {
+			body.Truncate(n)
+			records.Skip()
+			break
+		}
+		if i+1 == maxBodyRecords {
+			break
+		}
 	}
-	var basePath = "/lists/" + mc.settings.List + "/members/"
-	body, err := json.Marshal(record.Properties)
+	body.WriteString(`]}`)
+
+	type batchResponse struct {
+		ID                string `json:"id"`
+		Status            string `json:"status"`
+		ErroredOperations int    `json:"errored_operations"`
+		ResponseBodyURL   string `json:"response_body_url"`
+	}
+	var res batchResponse
+	err := mc.call(ctx, "POST", "/batches", nil, &body, 200, &res)
 	if err != nil {
 		return err
 	}
-	r.Operations = append(r.Operations, batchOperation{
-		Method: "PUT",
-		Path:   basePath + record.ID,
-		Params: map[string]string{"skip_merge_validation": "true"},
-		Body:   string(body),
-	})
-	rq, err := json.Marshal(r)
-	if err != nil {
-		return err
+	if res.Status == "finished" && res.ErroredOperations == 0 {
+		return nil
 	}
 
-	var response batchResponse
-	err = mc.call(ctx, "POST", "/batches", nil, bytes.NewReader(rq), 200, &response)
-	if err != nil {
-		return err
-	}
-
-	if response.Status != "finished" {
-		// Retrieve the batch at one minute intervals until it's status is finished.
-		path := "/batches/" + response.ID
-		response := batchResponse{}
-		for i := 0; i < 5; i++ {
-			time.Sleep(time.Minute)
-			err = mc.call(ctx, "GET", path, nil, bytes.NewReader(rq), 200, &response)
+	// The batch operation is not finished or some operations are failed.
+	if res.Status != "finished" {
+		bo := backoff.New(100)
+		bo.SetCap(1 * time.Minute)
+		batchID := res.ID
+		if batchID == "" {
+			return errors.New("server does not returned the batch identifier")
+		}
+		statusPath := "/batches/" + url.PathEscape(batchID)
+		for res.Status != "finished" && bo.Next(ctx) {
+			err = mc.call(ctx, "GET", statusPath, nil, nil, 200, &res)
 			if err != nil {
 				return err
 			}
-			if response.Status != "finished" {
-				continue
-			}
-			if response.ErroredOperations != 0 {
-				return errors.New("could not update all users")
-			}
 		}
-		return errors.New("could not complete batch operation")
+		if res.Status != "finished" {
+			return errors.New("server does not responded in time to batch operation")
+		}
 	}
 
-	return nil
+	// The batch operation has completed; check the status of each operation if errors occurred.
+	if res.ErroredOperations == 0 {
+		return nil
+	}
+
+	// At least one operation failed. Read the results for all operations.
+	if _, err := url.Parse(res.ResponseBodyURL); err != nil {
+		return errors.New("server returned an invalid response body URL")
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", res.ResponseBodyURL, nil)
+	if err != nil {
+		return err
+	}
+	r, err := mc.conf.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+
+	// recordsErr is the error that will be returned containing all the operation errors.
+	recordsErr := meergo.RecordsError{}
+
+	// The 'tar.gz' JSON file, returned from Mailchimp, will be deserialized into the 'result' struct.
+	var result struct {
+		Response   string `json:"response"`
+		StatusCode int    `json:"status_code"`
+	}
+	// The JSON code in 'result.Response' will be deserialized into the 'response' struct.
+	var response struct {
+		Detail string `json:"detail"`
+		Errors []struct {
+			Field   string `json:"field"`
+			Message string `json:"message"`
+		} `json:"errors"`
+		Title string `json:"title"`
+	}
+
+	// Parse the response.
+	gzResults, err := gzip.NewReader(r.Body)
+	if err != nil {
+		return fmt.Errorf("cannot read the gzip file response from Mailchimp: %s", err)
+	}
+	tarResults := tar.NewReader(gzResults)
+	for {
+		header, err := tarResults.Next()
+		if err != nil {
+			if err == io.EOF {
+				return errors.New("gzip file response from Mailchimp does not contain any files")
+			}
+			return fmt.Errorf("cannot read gzip file response from Mailchimp: %s", err)
+		}
+		if !header.FileInfo().IsDir() {
+			break
+		}
+	}
+	dec := json.NewDecoder(tarResults)
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return fmt.Errorf("cannot parse the JSON response from Mailchimp: %s", err)
+	}
+	if tok.Kind() != '[' {
+		return fmt.Errorf("cannot parse the JSON response from Mailchimp; expecting Array, got %s", tok.Kind())
+	}
+	for i := 0; dec.PeekKind() == '{'; i++ {
+		err = dec.Decode(&result)
+		if err != nil {
+			return err
+		}
+		if result.StatusCode != 200 {
+			err = json.Unmarshal([]byte(result.Response), &response)
+			if err != nil {
+				return fmt.Errorf("cannot parse the JSON response from Mailchimp: %s", err)
+			}
+			if result.StatusCode == 400 {
+				slog.Error("Mailchimp has returned a 400 error", "details", response.Detail)
+				recordsErr[i] = fmt.Errorf("mailchimp has returned a 400 %s error to the connector", response.Title)
+				continue
+			}
+			recordsErr[i] = fmt.Errorf("%s: %s", response.Errors[0].Field, response.Errors[0].Message)
+		}
+	}
+
+	return recordsErr
 }
 
 // saveSettings validates and saves the settings.
 func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) error {
-	var list struct {
-		List string
+	var audience struct {
+		Audience string
 	}
-	err := settings.Unmarshal(&list)
+	err := settings.Unmarshal(&audience)
 	if err != nil {
 		return err
 	}
-	if list.List == "" || len(list.List) > 100 {
-		return meergo.NewInvalidsettingsError("list length must be in range [1, 100]")
+	if audience.Audience == "" || len(audience.Audience) > 100 {
+		return meergo.NewInvalidsettingsError("audience length must be in range [1, 100]")
 	}
-	// Check if the list exists.
-	lists, err := mc.lists(ctx)
+	// Check if the audience exists.
+	audiences, err := mc.audiences(ctx)
 	if err != nil {
 		return err
 	}
 	var found bool
-	for _, l := range lists {
-		if l.ID == list.List {
+	for _, l := range audiences {
+		if l.ID == audience.Audience {
 			found = true
 			break
 		}
 	}
 	if !found {
-		return meergo.NewInvalidsettingsError("list does not exist")
+		return meergo.NewInvalidsettingsError("audience does not exist")
 	}
 	dataCenter, _, err := mc.metadata()
 	if err != nil {
 		return err
 	}
 	s := innerSettings{
-		List:       list.List,
+		Audience:   audience.Audience,
 		DataCenter: dataCenter,
 	}
 	b, err := json.Marshal(s)
@@ -565,20 +601,6 @@ func (mc *MailChimp) saveSettings(ctx context.Context, settings json.Value) erro
 	}
 	mc.settings = &s
 	return nil
-}
-
-type batchOperation struct {
-	Method string            `json:"method"`
-	Path   string            `json:"path"`
-	Params map[string]string `json:"params"`
-	Body   string            `json:"body"`
-}
-
-type batchResponse struct {
-	ID                string `json:"id"`
-	Status            string `json:"status"`
-	ErroredOperations int    `json:"errored_operations"`
-	ResponseBodyURL   string `json:"response_body_url"`
 }
 
 type mailchimpError struct {
@@ -603,87 +625,6 @@ func (err *mailchimpError) Error() string {
 		}
 	}
 	return s
-}
-
-// serializeProperties serializes the properties in the Mailchimp "fields"
-// parameter format.
-func serializeProperties(properties []string) string {
-	var hasID, hasLastChange bool
-	for i, p := range properties {
-		var realName string
-		switch p {
-		case "ConsentsToOneToOneMessaging":
-			realName = "consents_to_one_to_one_messaging"
-		case "ContactID":
-			realName = "contact_id"
-		case "EmailAddress":
-			realName = "email_address"
-		case "EmailClient":
-			realName = "email_client"
-		case "EmailType":
-			realName = "email_type"
-		case "FullName":
-			realName = "full_name"
-		case "ID":
-			realName = "id"
-			hasID = true
-		case "Interests":
-			realName = "interests"
-		case "IPOpt":
-			realName = "ip_opt"
-		case "IPSignup":
-			realName = "ip_signup"
-		case "Language":
-			realName = "language"
-		case "LastChanged":
-			realName = "last_changed"
-			hasLastChange = true
-		case "LastNote":
-			realName = "last_note"
-		case "ListID":
-			realName = "list_id"
-		case "Location":
-			realName = "location"
-		case "MarketingPermissions":
-			realName = "marketing_permissions"
-		case "MemberRating":
-			realName = "member_rating"
-		case "MergeFields":
-			realName = "merge_fields"
-		case "Source":
-			realName = "source"
-		case "Stats":
-			realName = "stats"
-		case "Status":
-			realName = "status"
-		case "Tags":
-			realName = "tags"
-		case "TagsCount":
-			realName = "tags_count"
-		case "TimestampOpt":
-			realName = "timestamp_opt"
-		case "TimestampSignup":
-			realName = "timestamp_signup"
-		case "UniqueEmailID":
-			realName = "unique_email_id"
-		case "UnsubscribeReason":
-			realName = "unsubscribe_reason"
-		case "WebID":
-			realName = "web_id"
-		case "Vip":
-			realName = "vip"
-		}
-		properties[i] = "members." + realName
-	}
-	var plist []string
-	if !hasID {
-		plist = append(plist, "members.id")
-	}
-	if !hasLastChange {
-		plist = append(plist, "members.last_changed")
-	}
-	plist = append(plist, properties...)
-	return strings.Join(plist, ",")
 }
 
 // call calls the Mailchimp API.
@@ -736,37 +677,38 @@ func (mc *MailChimp) call(ctx context.Context, method, path string, params url.V
 	return nil
 }
 
-type list struct {
+type audience struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// lists returns the lists.
-func (mc *MailChimp) lists(ctx context.Context) ([]list, error) {
+// audiences returns the audiences.
+func (mc *MailChimp) audiences(ctx context.Context) ([]audience, error) {
 	params := url.Values{
 		"fields":     {"lists.name,lists.id"},
 		"count":      {"1000"},
 		"sort_field": {"date_created"},
 		"sort_dir":   {"ASC"},
 	}
-	var lists []list
+	var audiences []audience
+	var response struct {
+		Audiences []audience `json:"lists"`
+	}
 	for {
-		if len(lists) > 0 {
-			params.Set("offset", strconv.Itoa(len(lists)))
-		}
-		var response struct {
-			Lists []list `json:"lists"`
+		if len(audiences) > 0 {
+			params.Set("offset", strconv.Itoa(len(audiences)))
 		}
 		err := mc.call(ctx, "GET", "/lists", params, nil, 200, &response)
 		if err != nil {
 			return nil, err
 		}
-		lists = append(lists, response.Lists...)
-		if len(response.Lists) < 1000 {
+		audiences = append(audiences, response.Audiences...)
+		if len(response.Audiences) < 1000 {
 			break
 		}
+		response.Audiences = response.Audiences[:0]
 	}
-	return lists, nil
+	return audiences, nil
 }
 
 type webhook struct {
@@ -793,7 +735,7 @@ func (mc *MailChimp) initWebhooks(ctx context.Context) error {
 		return nil
 	}
 	baseURL := mc.conf.WebhookURL
-	webhooks, err := mc.webhooks(ctx, mc.settings.List)
+	webhooks, err := mc.webhooks(ctx, mc.settings.Audience)
 	if err != nil {
 		return err
 	}
@@ -816,7 +758,7 @@ func (mc *MailChimp) initWebhooks(ctx context.Context) error {
 					webhook.Events.Unsubscribe &&
 					webhook.Events.Upemail &&
 					!webhook.Events.Campaign) {
-					err = mc.updateWebhook(ctx, mc.settings.List, webhook.ID)
+					err = mc.updateWebhook(ctx, mc.settings.Audience, webhook.ID)
 					if err != nil {
 						return err
 					}
@@ -824,10 +766,10 @@ func (mc *MailChimp) initWebhooks(ctx context.Context) error {
 				continue
 			}
 		}
-		_ = mc.deleteWebhook(ctx, mc.settings.List, webhook.ID)
+		_ = mc.deleteWebhook(ctx, mc.settings.Audience, webhook.ID)
 	}
 	if secret == "" {
-		secret, err = mc.createWebhook(ctx, mc.settings.List)
+		secret, err = mc.createWebhook(ctx, mc.settings.Audience)
 		if err != nil {
 			return fmt.Errorf("cannot create webhook: %s", err)
 		}
@@ -840,27 +782,28 @@ func (mc *MailChimp) initWebhooks(ctx context.Context) error {
 	return mc.conf.SetSettings(ctx, b)
 }
 
-var errListNotExist = errors.New("list does not exist")
+var errAudienceNotExist = errors.New("audience does not exist")
 
-// webhooks returns the webhooks for list.
-// If list does not exist, it returns the errListNotExist error.
-func (mc *MailChimp) webhooks(ctx context.Context, list string) ([]webhook, error) {
+// webhooks returns the webhooks for the provide audience.
+// If audience does not exist, it returns the errAudienceNotExist error.
+func (mc *MailChimp) webhooks(ctx context.Context, audience string) ([]webhook, error) {
 	var response struct {
 		Webhooks []webhook `json:"webhooks"`
 	}
-	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(list)+"/webhooks", nil, nil, 200, &response)
+	err := mc.call(ctx, "GET", "/lists/"+url.PathEscape(audience)+"/webhooks", nil, nil, 200, &response)
 	if err != nil {
 		if err, ok := err.(*mailchimpError); ok && err.Status == 404 {
-			return nil, errListNotExist
+			return nil, errAudienceNotExist
 		}
 		return nil, err
 	}
 	return response.Webhooks, nil
 }
 
-// createWebhook creates a webhook for list and returns its secret.
-func (mc *MailChimp) createWebhook(ctx context.Context, list string) (string, error) {
-	path := "/lists/" + url.PathEscape(list) + "/webhooks"
+// createWebhook creates a webhook for the provided audience and returns its
+// secret.
+func (mc *MailChimp) createWebhook(ctx context.Context, audience string) (string, error) {
+	path := "/lists/" + url.PathEscape(audience) + "/webhooks"
 	secret, err := generateRandomString(20)
 	if err != nil {
 		return "", err
@@ -876,132 +819,20 @@ func (mc *MailChimp) createWebhook(ctx context.Context, list string) (string, er
 }
 
 // deleteWebhook deletes webhook. It does nothing if the webhook does not exist.
-func (mc *MailChimp) deleteWebhook(ctx context.Context, list, webhook string) error {
-	err := mc.call(ctx, "DELETE", "/lists/"+url.PathEscape(list)+"/webhooks/"+url.PathEscape(webhook), nil, nil, 204, nil)
+func (mc *MailChimp) deleteWebhook(ctx context.Context, audience, webhook string) error {
+	err := mc.call(ctx, "DELETE", "/lists/"+url.PathEscape(audience)+"/webhooks/"+url.PathEscape(webhook), nil, nil, 204, nil)
 	if e, ok := err.(*mailchimpError); ok && e.Status == 404 {
 		err = nil
 	}
 	return err
 }
 
-// updateWebhook updates the webhook for list.
-func (mc *MailChimp) updateWebhook(ctx context.Context, list, webhook string) error {
-	path := "/lists/" + url.PathEscape(list) + "/webhooks/" + url.PathEscape(webhook)
+// updateWebhook updates the webhook for the provided audience.
+func (mc *MailChimp) updateWebhook(ctx context.Context, audience, webhook string) error {
+	path := "/lists/" + url.PathEscape(audience) + "/webhooks/" + url.PathEscape(webhook)
 	body := `{"events":{"subscribe":true,"unsubscribe":true,"profile":true,"cleaned":true,"upemail":true,"campaign":false},` +
 		`"sources":{"user":true,"admin":true,"api":true}`
 	return mc.call(ctx, "PATCH", path, nil, strings.NewReader(body), 200, nil)
-}
-
-// parseCursor parses a cursor and returns the last modified datetime and offset.
-func parseCursor(cursor string) (string, int) {
-	if cursor == "" {
-		return "", 0
-	}
-	parts := strings.SplitN(cursor, "/", 2)
-	offset, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		return "", 0
-	}
-	return parts[0], int(offset)
-}
-
-// serializeCursor serializes time and an offset as cursor.
-func serializeCursor(time string, offset int) string {
-	return time + "/" + strconv.Itoa(offset)
-}
-
-type Member struct {
-	ConsentsToOneToOneMessaging bool            `json:"consents_to_one_to_one_messaging"`
-	ContactID                   string          `json:"contact_id"`
-	EmailAddress                string          `json:"email_address"`
-	EmailClient                 string          `json:"email_client"`
-	EmailType                   string          `json:"email_type"`
-	FullName                    string          `json:"full_name"`
-	ID                          string          `json:"id"`
-	Interests                   map[string]bool `json:"interests"`
-	IPOpt                       string          `json:"ip_opt"`
-	IPSignup                    string          `json:"ip_signup"`
-	Language                    string          `json:"language"`
-	LastChanged                 time.Time       `json:"last_changed"`
-	LastNote                    struct {
-		NoteID    int       `json:"note_id"`
-		CreatedAt time.Time `json:"created_at"`
-		CreatedBy string    `json:"created_by"`
-		Note      string    `json:"note"`
-	} `json:"last_note"`
-	ListID   string `json:"list_id"`
-	Location struct {
-		Latitude    int    `json:"latitude"`
-		Longitude   int    `json:"longitude"`
-		Gmtoff      int    `json:"gmtoff"`
-		Dstoff      int    `json:"dstoff"`
-		CountryCode string `json:"country_code"`
-		Timezone    string `json:"timezone"`
-		Region      string `json:"region"`
-	} `json:"location"`
-	MarketingPermissions []struct {
-		MarketingPermissionID string `json:"marketing_permission_id"`
-		Text                  string `json:"text"`
-		Enabled               bool   `json:"enabled"`
-	} `json:"marketing_permissions"`
-	MemberRating int            `json:"member_rating"`
-	MergeFields  map[string]any `json:"merge_fields"`
-	Source       string         `json:"source"`
-	Stats        struct {
-		AvgOpenRate   int `json:"avg_open_rate"`
-		AvgClickRate  int `json:"avg_click_rate"`
-		EcommerceData struct {
-			TotalRevenue   int    `json:"total_revenue"`
-			NumberOfOrders int    `json:"number_of_orders"`
-			CurrencyCode   string `json:"currency_code"`
-		} `json:"ecommerce_data"`
-	} `json:"stats"`
-	Status string `json:"status"`
-	Tags   []struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-	} `json:"tags"`
-	TagsCount         int    `json:"tags_count"`
-	TimestampOpt      string `json:"timestamp_opt"`
-	TimestampSignup   string `json:"timestamp_signup"`
-	UniqueEmailID     string `json:"unique_email_id"`
-	UnsubscribeReason string `json:"unsubscribe_reason"`
-	Vip               bool   `json:"vip"`
-	WebID             int    `json:"web_id"`
-}
-
-func (m *Member) Properties() map[string]any {
-	return map[string]any{
-		"ConsentsToOneToOneMessaging": m.ConsentsToOneToOneMessaging,
-		"ContactID":                   m.ContactID,
-		"EmailAddress":                m.EmailAddress,
-		"EmailClient":                 m.EmailClient,
-		"EmailType":                   m.EmailType,
-		"FullName":                    m.FullName,
-		"ID":                          m.ID,
-		"Interests":                   m.Interests,
-		"IPOpt":                       m.IPOpt,
-		"IPSignup":                    m.IPSignup,
-		"Language":                    m.Language,
-		"LastChanged":                 m.LastChanged,
-		"LastNote":                    m.LastNote,
-		"ListID":                      m.ListID,
-		"Location":                    m.Location,
-		"MarketingPermissions":        m.MarketingPermissions,
-		"MemberRating":                m.MemberRating,
-		"MergeFields":                 m.MergeFields,
-		"Source":                      m.Source,
-		"Stats":                       m.Stats,
-		"Status":                      m.Status,
-		"Tags":                        m.Tags,
-		"TagsCount":                   m.TagsCount,
-		"TimestampOpt":                m.TimestampOpt,
-		"TimestampSignup":             m.TimestampSignup,
-		"UniqueEmailID":               m.UniqueEmailID,
-		"UnsubscribeReason":           m.UnsubscribeReason,
-		"WebID":                       m.WebID,
-		"Vip":                         m.Vip,
-	}
 }
 
 // metadata returns the datacenter and the account id.
@@ -1048,4 +879,183 @@ func generateRandomString(length int) (string, error) {
 		s[i] = charset[n.Int64()]
 	}
 	return string(s), nil
+}
+
+// staticProperties contains the static properties of the user schema.
+var staticProperties []types.Property
+
+func init() {
+	staticProperties = []types.Property{
+		{
+			Name:           "email_address",
+			Type:           types.Text(),
+			CreateRequired: true,
+			Description:    "Email address",
+		},
+		{
+			Name:           "status",
+			Type:           types.Text().WithValues("subscribed", "unsubscribed", "cleaned", "pending", "transactional", "archived"),
+			CreateRequired: true,
+			Description:    "Status",
+		},
+		{
+			Name:        "id",
+			Type:        types.Text(),
+			Description: "ID",
+		},
+		{
+			Name:        "unique_email_id",
+			Type:        types.Text(),
+			Description: "Unique email ID",
+		},
+		{
+			Name:        "contact_id",
+			Type:        types.Text(),
+			Description: "Contact ID",
+		},
+		{
+			Name:        "full_name",
+			Type:        types.Text(),
+			Description: "Full name",
+		},
+		{
+			Name:        "web_id",
+			Type:        types.Int(32),
+			Description: "Web ID",
+		},
+		{
+			Name:        "email_type",
+			Type:        types.Text().WithValues("html", "text"),
+			Description: "Email type",
+		},
+		{
+			Name:         "unsubscribe_reason",
+			Type:         types.Text(),
+			ReadOptional: true,
+			Description:  "Unsubscribe reason",
+		},
+		{
+			Name:        "consents_to_one_to_one_messaging",
+			Type:        types.Boolean(),
+			Description: "Consents to 1:1 messaging",
+		},
+		{
+			Name:        "interests",
+			Type:        types.Map(types.Boolean()),
+			Nullable:    true,
+			Description: "Interests",
+		},
+		{
+			Name: "stats",
+			Type: types.Object([]types.Property{
+				{Name: "avg_open_rate", Type: types.Decimal(14, 2), Description: "Average open rate"},
+				{Name: "avg_click_rate", Type: types.Decimal(14, 2), Description: "Average click-through rate"},
+				{Name: "ecommerce_data", Type: types.Object([]types.Property{
+					{Name: "total_revenue", Type: types.Decimal(14, 2), Description: "Total revenue"},
+					{Name: "number_of_orders", Type: types.Decimal(14, 2), Description: "Number of orders"},
+					{Name: "currency_code", Type: types.Text().WithCharLen(3), Description: "Currency code"},
+				}), ReadOptional: true, Nullable: true, Description: "Ecommerce"},
+			}),
+			Description: "Stats",
+		},
+		{
+			Name:        "ip_signup",
+			Type:        types.Inet(),
+			Nullable:    true,
+			Description: "Sign-up IP address",
+		},
+		{
+			Name:        "timestamp_signup",
+			Type:        types.DateTime(),
+			Nullable:    true,
+			Description: "Sign-up date",
+		},
+		{
+			Name:        "ip_opt",
+			Type:        types.Inet(),
+			Description: "Opt-in IP address",
+		},
+		{
+			Name:        "timestamp_opt",
+			Type:        types.DateTime(),
+			Description: "Opt-in date",
+		},
+		{
+			Name:        "member_rating",
+			Type:        types.Int(8).WithIntRange(1, 5),
+			Description: "Star rating",
+		},
+		{
+			Name:        "last_changed",
+			Type:        types.DateTime(),
+			Description: "Last info update",
+		},
+		{
+			Name:        "language",
+			Type:        types.Text().WithCharLen(5),
+			Description: "Language",
+		},
+		{
+			Name:        "vip",
+			Type:        types.Boolean(),
+			Description: "VIP status",
+		},
+		{
+			Name:        "email_client",
+			Type:        types.Text(),
+			Description: "Email client",
+		},
+		{
+			Name: "location",
+			Type: types.Object([]types.Property{
+				{Name: "latitude", Type: types.Int(32), Description: "Latitude"},
+				{Name: "longitude", Type: types.Int(32), Description: "Longitude"},
+				{Name: "gmtoff", Type: types.Int(32), Description: "GMT offset"},
+				{Name: "dstoff", Type: types.Int(32), Description: "DST offset"},
+				{Name: "country_code", Type: types.Text().WithCharLen(2), Description: "Country code"},
+				{Name: "timezone", Type: types.Text(), Description: "Location timezone"},
+				{Name: "region", Type: types.Text(), Description: "Location region"},
+			}),
+			Description: "Location",
+		},
+		{
+			Name: "marketing_permissions",
+			Type: types.Object([]types.Property{
+				{Name: "marketing_permission_id", Type: types.Text(), Description: "ID"},
+				{Name: "text", Type: types.Text(), Description: "Text"},
+				{Name: "enabled", Type: types.Boolean(), Description: "Opt-in"},
+			}),
+			ReadOptional: true,
+			Nullable:     true,
+			Description:  "Marketing permissions",
+		},
+		{
+			Name: "last_note",
+			Type: types.Object([]types.Property{
+				{Name: "note_id", Type: types.Int(32), Description: "ID"},
+				{Name: "created_at", Type: types.DateTime(), Description: "Creation"},
+				{Name: "created_by", Type: types.Text(), Description: "Author"},
+				{Name: "note", Type: types.Text(), Description: "Content"},
+			}),
+			Description: "Last note",
+		},
+		{
+			Name:        "source",
+			Type:        types.Text(),
+			Description: "Subscriber source",
+		},
+		{
+			Name:        "tags_count",
+			Type:        types.Int(32),
+			Description: "Tag count",
+		},
+		{
+			Name: "tags",
+			Type: types.Array(types.Object([]types.Property{
+				{Name: "id", Type: types.Int(32), Description: "ID"},
+				{Name: "name", Type: types.Text(), Description: "Name"},
+			})),
+			Description: "Tags",
+		},
+	}
 }
