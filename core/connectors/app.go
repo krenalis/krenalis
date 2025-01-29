@@ -58,7 +58,28 @@ type appSchemaConnector interface {
 	Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error)
 }
 
-type appRecordsConnector = appwriter.AppRecordsConnector
+type appRecordsConnector interface {
+	// Records returns the records of the specified target. The target can only be
+	// either Users or Groups, and it must be a target supported by the connector.
+	// Schema is the expected schema of the returned records.
+	//
+	// If lastChangeTime is not the zero time, only the records changed or created
+	// at or after that time will be returned, and its precision is limited to
+	// microseconds. If ids is not nil, only records with identifiers in ids will be
+	// returned, if any. properties are the names of the properties to read, and
+	// cursor represents the position from which to start reading the records; it is
+	// the cursor value returned by the previous call in a paginated query.
+	// Subsequent calls will use this cursor value to retrieve the next batch of
+	// records.
+	//
+	// The properties returned in records may include more than those requested and
+	// must conform to the schema returned by the Schema method. The string return
+	// value is used as the cursor in the subsequent call. It can be any UTF-8
+	// encoded string, including an empty string. If there are no more records to
+	// return, the method returns the last records read (if any) along with the
+	// io.EOF error.
+	Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
+}
 
 type appEventsConnector interface {
 	// EventRequest returns a request to dispatch an event to the app. event is the
@@ -326,7 +347,7 @@ func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (
 	writer := appwriter.New(
 		appwriter.AckFunc(ack),
 		meergo.Targets(action.Target),
-		app.inner.(appwriter.AppWriterType),
+		app.inner.(appwriter.UpsertableApp),
 		app.name)
 	return writer, nil
 }
