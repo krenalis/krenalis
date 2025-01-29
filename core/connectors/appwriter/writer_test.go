@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/types"
 )
 
@@ -40,7 +41,7 @@ func Test_Writer(t *testing.T) {
 		t.Run(fmt.Sprintf("%d/%d/%f", test.num, test.seed, test.create), func(t *testing.T) {
 
 			app := newApp(t, test.seed)
-			w := New(app.ack, meergo.Users, app, "test")
+			w := New(app.ack, state.Users, app, "test")
 
 			ctx := context.Background()
 

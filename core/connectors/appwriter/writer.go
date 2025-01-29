@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/core/state"
 )
 
 const assert = true // enable during development for assertions
@@ -78,9 +79,9 @@ type record struct {
 
 // New returns a new writer for the provided target and app. name is the
 // name of the app connector.
-func New(ack AckFunc, target meergo.Targets, app UpsertableApp, name string) *Writer {
+func New(ack AckFunc, target state.Target, app UpsertableApp, name string) *Writer {
 	w := &Writer{
-		target:  target,
+		target:  meergo.Targets(target),
 		app:     app,
 		name:    name,
 		ack:     ack,

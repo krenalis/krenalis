@@ -113,7 +113,13 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	// Get the writer.
 	switch connector.Type {
 	case state.App:
-		writer, err = this.app().Writer(ctx, action, ack)
+		outSchema := action.OutSchema
+		if action.ExportMode == state.UpdateOnly && !matchingOut.UpdateRequired {
+			outSchema = types.SubsetFunc(outSchema, func(p types.Property) bool {
+				return p.Name != action.Matching.Out
+			})
+		}
+		writer, err = this.app().Writer(ctx, outSchema, action.ExportMode, action.Target, ack)
 	case state.Database:
 		writer, err = this.database().Writer(ctx, action, ack)
 	case state.FileStorage:

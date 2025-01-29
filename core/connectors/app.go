@@ -309,46 +309,31 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	return records, nil
 }
 
-// Writer returns a Writer to create and update app of the provided action.
-// action must be a destination app action on users or groups, and ack cannot be
-// nil.
+// Writer returns a Writer for creating and updating users or groups in the app.
+// outSchema is the output schema of the action, exportMode is the export mode,
+// and target is the target of the action. ack is the function that will receive
+// the acknowledgments and cannot be nil.
 //
 // If the action's output schema does not align with the app's destination
-// schema, it returns a *schemas.Error error.
-func (app *App) Writer(ctx context.Context, action *state.Action, ack AckFunc) (Writer, error) {
+// schema, it returns a *schemas.Error indicating the mismatch.
+func (app *App) Writer(ctx context.Context, outSchema types.Type, exportMode state.ExportMode, target state.Target, ack AckFunc) (Writer, error) {
 	if app.err != nil {
 		return nil, app.err
 	}
 	if ack == nil {
 		return nil, errors.New("ack function is missing")
 	}
-	if action.ExportMode == "" {
-		return nil, errors.New("action is not a valid destination app action")
-	}
 	// Get the destination schema.
 	destinationSchema, err := app.SchemaAsRole(ctx, state.Destination, state.Users, "")
 	if err != nil {
 		return nil, err
 	}
-	// Get the output schema.
-	outSchema := action.OutSchema
-	if action.ExportMode == state.UpdateOnly {
-		// Remove the output matching property from the output schema.
-		outName := action.Matching.Out
-		outSchema = types.SubsetFunc(outSchema, func(p types.Property) bool {
-			return p.Name != outName
-		})
-	}
 	// Check that the output schema is aligned with the destination schema.
-	err = schemas.CheckAlignment(outSchema, destinationSchema, &action.ExportMode)
+	err = schemas.CheckAlignment(outSchema, destinationSchema, &exportMode)
 	if err != nil {
 		return nil, err
 	}
-	writer := appwriter.New(
-		appwriter.AckFunc(ack),
-		meergo.Targets(action.Target),
-		app.inner.(appwriter.UpsertableApp),
-		app.name)
+	writer := appwriter.New(appwriter.AckFunc(ack), target, app.inner.(appwriter.UpsertableApp), app.name)
 	return writer, nil
 }
 
