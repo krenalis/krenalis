@@ -7175,6 +7175,15 @@
                             "description": "Indicate if the action is enabled once created."
                         },
                         {
+                            "name": "eventType",
+                            "placeholder": "\"send_add_to_cart\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The action's event type, which is one of the event types supported by the connection."
+                        },
+                        {
                             "name": "filter",
                             "placeholder": "{ \"logical\": \"and\", \"conditions\": [ { \"property\": \"type\", \"operator\": \"is\", \"values\": [ \"track\" ] } ] }",
                             "type": {
@@ -7768,7 +7777,8 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "description": "The action's event type."
+                                "createRequired": true,
+                                "description": "The action's event type, which is one of the event types supported by the connection."
                             },
                             {
                                 "name": "filter",
