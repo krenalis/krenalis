@@ -106,10 +106,6 @@ const ActionQuery = () => {
 			handleError('The query is too long');
 			return;
 		}
-		if (!/\${\s*limit\s*}/i.test(q)) {
-			handleError('The query does not contain the ${limit} placeholder');
-			return;
-		}
 		let res: ExecQueryResponse;
 		try {
 			res = await api.workspaces.connections.execQuery(connection.id, q, limit);

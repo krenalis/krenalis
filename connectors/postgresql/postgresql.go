@@ -37,7 +37,7 @@ var icon = "<svg></svg>"
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",
-		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\nLIMIT ${limit}\n",
+		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
 		Icon:        icon,
 	}, New)
 }

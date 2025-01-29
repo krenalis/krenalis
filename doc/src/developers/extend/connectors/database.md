@@ -27,7 +27,7 @@ import (
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",
-		SampleQuery: "SELECT * FROM users LIMIT ${limit}",
+		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
 	}, New)
 }
 
@@ -100,7 +100,7 @@ This information is passed to the `RegisterDatabase` function that, executed dur
 func init() {
     meergo.RegisterDatabase(meergo.DatabaseInfo{
         Name:        "PostgreSQL",
-        SampleQuery: "SELECT * FROM users LIMIT ${limit}",
+        SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
         Icon:        icon,
     }, New)
 }
@@ -178,10 +178,7 @@ Let's take the following query as an example:
 SELECT first_name, last_name, phone_number
 FROM customers
 WHERE ${last_change_time}
-LIMIT ${limit}
 ```
-
-Suppose the `limit` placeholder is 1000.
 
 The call `LastChangeTimeCondition("updated_at", types.DateTime(), time.Date(2024, 6, 18, 16, 12, 25, 837, time.UTC))` might return `"\"updated_at\" >= '2024-06-18 16:12:25.837'"` and the query would become:
 
@@ -189,7 +186,6 @@ The call `LastChangeTimeCondition("updated_at", types.DateTime(), time.Date(2024
 SELECT first_name, last_name, phone_number
 FROM customers
 WHERE "updated_at" >= '2024-06-18 16:12:25.837'
-LIMIT 1000
 ```
 
 The call `LastChangeTimeCondition("timestamp", types.Text(), "2014-07-18T16:12:25")` might return `"\"timestamp\" >= '2024-06-18T16:12:25'"` and the query would become:
@@ -198,7 +194,6 @@ The call `LastChangeTimeCondition("timestamp", types.Text(), "2014-07-18T16:12:2
 SELECT first_name, last_name, phone_number
 FROM customers
 WHERE "timestamp" >= '2024-06-18T16:12:25'
-LIMIT 1000
 ```
 
 Note that if the value is a string, `LastChangeTimeCondition` simply needs to quote the string.
@@ -209,7 +204,6 @@ The call `LastChangeTimeCondition("", time.Time{}, nil)` might return `"TRUE"` a
 SELECT first_name, last_name, phone_number
 FROM customers
 WHERE TRUE
-LIMIT 1000
 ```
 
 ### Merge method

@@ -1067,8 +1067,8 @@ func (this *Connection) DeleteEventWriteKey(ctx context.Context, key string) err
 // resulting rows and schema. The connection must be a source database
 // connection.
 //
-// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes and
-// must contain the "limit" placeholder. limit must be in range [0, 100].
+// query must be UTF-8 encoded, it cannot be longer than 16,777,215 runes.
+// limit must be in range [0, 100].
 //
 // If the connection does not exist, it returns an errors.NotFoundError error.
 // It returns an errors.UnprocessableError error with code:
@@ -1125,6 +1125,9 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	// Scan the rows.
 	var results []any
 	for rows.Next() {
+		if len(results) == limit {
+			break
+		}
 		row, err := rows.Scan()
 		if err != nil {
 			if _, ok := err.(*connectors.UnavailableError); ok {
@@ -1141,6 +1144,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 		}
 		return nil, types.Type{}, err
 	}
+	_ = rows.Close()
 
 	schema := types.Object(rows.Columns())
 
