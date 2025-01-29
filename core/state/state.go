@@ -563,7 +563,7 @@ type Connector struct {
 type ConnectorTargets int
 
 const (
-	EventsFlag = 1 << iota
+	EventsFlag ConnectorTargets = 1 << iota
 	UsersFlag
 	GroupsFlag
 )
