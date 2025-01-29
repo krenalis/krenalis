@@ -23,14 +23,14 @@ import (
 type Purpose int
 
 const (
-	None   Purpose = iota // used when importing a user or group into the data warehouse.
+	Import Purpose = iota // used when importing a user or group into the data warehouse.
 	Create                // used when creating a user or group in an app or sending an event to an app.
 	Update                // used when updating a user or group in an app.
 )
 
 // Record represents a record to transform.
 type Record struct {
-	Purpose    Purpose
+	Purpose    Purpose // defaults to Import.
 	Properties map[string]any
 	Err        error
 }
