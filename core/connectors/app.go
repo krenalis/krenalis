@@ -229,7 +229,7 @@ func (app *App) Schema(ctx context.Context, target state.Target, eventType strin
 // If the event type does not exist, it returns the meergo.ErrEventTypeNotExist
 // error. If the connector returns an error, it returns a *UnavailableError
 // error.
-// It panics is role is not Source or Destination.
+// It panics if role is not Source or Destination.
 func (app *App) SchemaAsRole(ctx context.Context, role state.Role, target state.Target, eventType string) (types.Type, error) {
 	if app.err != nil {
 		return types.Type{}, app.err
