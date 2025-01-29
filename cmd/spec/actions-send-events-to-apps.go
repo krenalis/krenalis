@@ -20,13 +20,6 @@ func init() {
 		Placeholder:    `"Mixpanel"`,
 		Description:    "The action's name.",
 	}
-	eventType := types.Property{
-		Name:           "eventType",
-		Type:           types.Text().WithCharLen(100),
-		CreateRequired: true,
-		Placeholder:    `"send_add_to_cart"`,
-		Description:    "The action's event type, which is one of the event types supported by the connection.",
-	}
 	filterParameter := types.Property{
 		Name:        "filter",
 		Type:        filterType,
@@ -139,7 +132,14 @@ func init() {
 						Placeholder: "true",
 						Description: "Indicate if the action is enabled once created.",
 					},
-					eventType,
+					{
+						Name:           "eventType",
+						Type:           types.Text().WithCharLen(100),
+						CreateRequired: true,
+						Placeholder:    `"send_add_to_cart"`,
+						Description: "The action's event type.\n\n" +
+							"This should be the ID of one of the event types supported by the connection, which can be retrieved with the [`/connections/:id`](connections#get-connection) method.",
+					},
 					filterParameter,
 					transformationParameter,
 					outSchemaParameter,
@@ -251,7 +251,13 @@ func init() {
 							Placeholder: "true",
 							Description: "Indicates if the action is enabled.",
 						},
-						eventType,
+						{
+							Name:           "eventType",
+							Type:           types.Text().WithCharLen(100),
+							CreateRequired: true,
+							Placeholder:    `"send_add_to_cart"`,
+							Description:    "The action's event type.",
+						},
 						filterParameter,
 						{
 							Name: "transformation",

@@ -7182,7 +7182,7 @@
                                 "charLen": 100
                             },
                             "createRequired": true,
-                            "description": "The action's event type, which is one of the event types supported by the connection."
+                            "description": "The action's event type.\n\nThis should be the ID of one of the event types supported by the connection, which can be retrieved with the [`/connections/:id`](connections#get-connection) method."
                         },
                         {
                             "name": "filter",
@@ -7780,7 +7780,7 @@
                                     "charLen": 100
                                 },
                                 "createRequired": true,
-                                "description": "The action's event type, which is one of the event types supported by the connection."
+                                "description": "The action's event type."
                             },
                             {
                                 "name": "filter",
