@@ -87,6 +87,9 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	id, err := org.CreateWorkspace(r.Context(), body.Name, body.UserSchema,
 		body.UIPreferences, body.Warehouse.Type, body.Warehouse.Settings, body.Warehouse.Mode)
 	if err != nil {
+		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
+			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
+		}
 		return nil, err
 	}
 	return map[string]int{"id": id}, nil

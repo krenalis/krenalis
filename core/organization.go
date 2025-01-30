@@ -231,12 +231,10 @@ func (this *Organization) CreateAPIKey(ctx context.Context, name string, workspa
 //
 // whMode specifies the initial mode of the workspace's data warehouse.
 //
-// It returns an errors.NotFoundError error if the organization does not exist
-// anymore.
-//
 // It returns an errors.UnprocessableError error with code:
 //
 //   - InvalidWarehouseSettings, if the warehouse settings are not valid.
+//   - OrganizationNotExist, if the organization does not exist.
 //   - WarehouseNonInitializable, if the warehouse is not initializable.
 //   - WarehouseTypeNotExist, if a warehouse type does not exist.
 func (this *Organization) CreateWorkspace(ctx context.Context, name string,
@@ -294,7 +292,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "workspaces_organization_fkey" {
-					return errors.NotFound("organization %d does not exist", n.Organization)
+					return errors.Unprocessable(OrganizationNotExist, "organization %d does not exist", n.Organization)
 				}
 			}
 			return err
