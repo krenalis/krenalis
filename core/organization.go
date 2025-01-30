@@ -293,7 +293,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string,
 			n.Warehouse.Type, n.Warehouse.Mode, n.Warehouse.Settings)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
-				if postgres.ErrConstraintName(err) == "workspaces_keys_organization_fkey" {
+				if postgres.ErrConstraintName(err) == "workspaces_organization_fkey" {
 					return errors.NotFound("organization %d does not exist", n.Organization)
 				}
 			}
