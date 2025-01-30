@@ -1100,7 +1100,7 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 	replacer := func(name string) (string, bool) {
 		switch name {
 		case "last_change_time":
-			v, _ := database.LastChangeTimeCondition(nil)
+			v, _ := database.LastChangeTimePlaceholder(nil)
 			return v, true
 		case "limit":
 			return strconv.Itoa(limit), true

@@ -32,7 +32,7 @@ var icon = "<svg></svg>"
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "Snowflake",
-		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
+		SampleQuery: "SELECT *\nFROM users\n",
 		Icon:        icon,
 	}, New)
 }
@@ -76,20 +76,6 @@ func (sf *Snowflake) Columns(ctx context.Context, table string) ([]meergo.Column
 	return columns, nil
 }
 
-// LastChangeTimeCondition returns the query condition used for the
-// last_change_time placeholder in the form "column >= value" or, if column is
-// empty, a true value.
-func (sf *Snowflake) LastChangeTimeCondition(column string, typ types.Type, value any) string {
-	if column == "" {
-		return "TRUE"
-	}
-	b := strings.Builder{}
-	b.WriteString(quoteIdent(column))
-	b.WriteString(` >= `)
-	quoteValue(&b, value, typ)
-	return b.String()
-}
-
 // Merge performs batch insert, update, and delete operations on the specified
 // table.
 func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
@@ -109,6 +95,17 @@ func (sf *Snowflake) Merge(ctx context.Context, table meergo.Table, rows [][]any
 // Query executes the given query and returns the resulting rows and columns.
 func (sf *Snowflake) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return sf.query(ctx, query)
+}
+
+// QuoteTime returns a quoted time value for the specified type or "NULL" if the
+// value is nil.
+func (sf *Snowflake) QuoteTime(value any, typ types.Type) string {
+	if value == nil {
+		return "NULL"
+	}
+	var b strings.Builder
+	quoteValue(&b, value, typ)
+	return b.String()
 }
 
 // ServeUI serves the connector's user interface.

@@ -59,10 +59,10 @@ func (this *Action) importUsers(ctx context.Context) error {
 			case "last_change_time":
 				var v string
 				if execution.Reload {
-					v, _ = database.LastChangeTimeCondition(nil)
+					v, _ = database.LastChangeTimePlaceholder(nil)
 				} else {
 					purge = execution.Cursor.IsZero()
-					v, _ = database.LastChangeTimeCondition(action)
+					v, _ = database.LastChangeTimePlaceholder(action)
 				}
 				return v, true
 			case "limit":

@@ -133,7 +133,7 @@ const ActionQuery = () => {
 		<>
 			<Section
 				title='Query'
-				description='The query used to import the data. It must contain the placeholder ${limit}.'
+				description='The query used to import the data.'
 				className='action__query'
 				padded={true}
 				annotated={true}

@@ -50,13 +50,6 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Colum
 	// ...
 }
 
-// LastChangeTimeCondition returns the query condition used for the
-// last_change_time placeholder in the form "column >= value" or, if column is
-// empty, a true value.
-func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, value any) string {
-	// ...
-}
-
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
@@ -65,6 +58,12 @@ func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]an
 
 // Query executes the given query and returns the resulting rows and columns.
 func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
+	// ...
+}
+
+// QuoteTime returns a quoted time value for the specified type or "NULL" if the
+// value is nil.
+func (ps *PostgreSQL) QuoteTime(value any, typ types.Type) string {
 	// ...
 }
 ```
@@ -158,54 +157,6 @@ type Column struct {
 
 If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.  
 
-### LastChangeTimeCondition method
-
-```go
-LastChangeTimeCondition(column string, typ types.Type, value any) string
-```
-
-Meergo calls the `LastChangeTimeCondition` method to construct the value for the `last_change_time` placeholder. The `last_change_time` placeholder is used in a query to implement a cursor, returning only the rows starting from a specified time.
-
-The value of the `last_change_time` placeholder is a condition that can be used in a `WHERE` statement, like `"updated_at" >= '2024-03-16 09:26:33'`. `LastChangeTimeCondition` receives the name of the column, its type, and the value. The type can only be `DateTime`, `Date`, `JSON`, and `Text`. For the `DateTime` and `Date` types, the value is of type `time.Time` set to UTC, while for the `JSON` and `Text` types, the value is of type `string`. `LastChangeTimeCondition` must construct the condition based on these parameters.
-
-As a special case, if `column` is empty, it must return an always true condition, usually returning `"TRUE"`. This occurs when the query should not limit the rows returned.
-
-#### Examples
-
-Let's take the following query as an example:
-
-```sql
-SELECT first_name, last_name, phone_number
-FROM customers
-WHERE ${last_change_time}
-```
-
-The call `LastChangeTimeCondition("updated_at", types.DateTime(), time.Date(2024, 6, 18, 16, 12, 25, 837, time.UTC))` might return `"\"updated_at\" >= '2024-06-18 16:12:25.837'"` and the query would become:
-
-```sql
-SELECT first_name, last_name, phone_number
-FROM customers
-WHERE "updated_at" >= '2024-06-18 16:12:25.837'
-```
-
-The call `LastChangeTimeCondition("timestamp", types.Text(), "2014-07-18T16:12:25")` might return `"\"timestamp\" >= '2024-06-18T16:12:25'"` and the query would become:
-
-```sql
-SELECT first_name, last_name, phone_number
-FROM customers
-WHERE "timestamp" >= '2024-06-18T16:12:25'
-```
-
-Note that if the value is a string, `LastChangeTimeCondition` simply needs to quote the string.
-
-The call `LastChangeTimeCondition("", time.Time{}, nil)` might return `"TRUE"` and the query would become:
-
-```sql
-SELECT first_name, last_name, phone_number
-FROM customers
-WHERE TRUE
-```
-
 ### Merge method
 
 ```go
@@ -254,3 +205,53 @@ type Rows interface {
 The standard Go library's `sql.Rows` type implements this interface. So, the connector can just return a `sql.Rows` value.
 
 If a column has an unsupported type, return an `*UnsupportedColumnTypeError` error. Use the `NewUnsupportedColumnTypeError` function from the `meergo` package to create this error.
+
+### QuoteTime method
+
+```go
+QuoteTime(value any, typ types.Type) string
+```
+
+Meergo calls the `QuoteTime` method to construct the value for the `last_change_time` placeholder, used in a query to implement a cursor that returns rows starting from a specified time.
+
+The `last_change_time` placeholder can either be `NULL` or a timestamp representation. The `QuoteTime` method receives the value and its type, which can be one of `DateTime`, `Date`, `JSON`, or `Text`. For `DateTime` and `Date` types, the value is a `time.Time` object set to UTC. For `JSON` and `Text`, the value is a string. If the value is `nil`, `QuoteTime` returns `"NULL"` or the appropriate database representation.
+
+#### Examples
+
+Consider the following query:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE updated_at >= ${last_change_time} OR ${last_change_time} IS NULL 
+ORDER BY updated_at
+```
+
+The call `QuoteTime(time.Date(2025, 01, 30, 16, 12, 25, 837, time.UTC), types.DateTime())` might return `"'2025-01-30 16:12:25.837'"`, resulting in:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE updated_at >= '2025-01-30 16:12:25.837' OR '2025-01-30 16:12:25.837' IS NULL
+ORDER BY updated_at
+```
+
+The call `QuoteTime("2025-02-13T16:12:25", types.Text())` might return `"'2025-02-13T16:12:25'"`, resulting in:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE updated_at >= '2025-02-13T16:12:25' OR '2025-02-13T16:12:25' IS NULL
+ORDER BY updated_at
+```
+
+The call `QuoteTime(nil, time.Time{})` might return `"NULL"`, resulting in:
+
+```sql
+SELECT first_name, last_name, phone_number
+FROM customers
+WHERE updated_at >= NULL OR NULL IS NULL
+ORDER BY updated_at
+```
+
+In this case, `updated_at >= NULL OR NULL IS NULL` evaluates to `TRUE`, returning all rows as expected.

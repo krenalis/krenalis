@@ -32,7 +32,7 @@ var icon = "<svg></svg>"
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "ClickHouse",
-		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
+		SampleQuery: "SELECT *\nFROM users\n",
 		Icon:        icon,
 	}, New)
 }
@@ -81,25 +81,6 @@ func (ch *ClickHouse) Columns(ctx context.Context, table string) ([]meergo.Colum
 	return columns, nil
 }
 
-// LastChangeTimeCondition returns the query condition used for the
-// last_change_time placeholder in the form "column >= value" or, if column is
-// empty, a true value.
-func (ch *ClickHouse) LastChangeTimeCondition(column string, typ types.Type, value any) string {
-	if column == "" {
-		return "TRUE"
-	}
-	var err error
-	column, err = quoteColumn(column)
-	if err != nil {
-		panic(err)
-	}
-	b := strings.Builder{}
-	b.WriteString(column)
-	b.WriteString(` >= `)
-	quoteValue(&b, value, typ)
-	return b.String()
-}
-
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
@@ -113,6 +94,17 @@ func (ch *ClickHouse) Merge(ctx context.Context, table meergo.Table, rows [][]an
 // Query executes the given query and returns the resulting rows and columns.
 func (ch *ClickHouse) Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error) {
 	return ch.query(ctx, query)
+}
+
+// QuoteTime returns a quoted time value for the specified type or "NULL" if the
+// value is nil.
+func (ch *ClickHouse) QuoteTime(value any, typ types.Type) string {
+	if value == nil {
+		return "NULL"
+	}
+	var b strings.Builder
+	quoteValue(&b, value, typ)
+	return b.String()
 }
 
 // ServeUI serves the connector's user interface.

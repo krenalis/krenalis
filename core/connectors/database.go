@@ -32,20 +32,6 @@ type databaseConnector interface {
 	// error.
 	Columns(ctx context.Context, table string) ([]meergo.Column, error)
 
-	// LastChangeTimeCondition returns the query condition used for the
-	// last_change_time placeholder in the form "column >= value" or, if column is
-	// empty, a true value.
-	//
-	// column, if not empty, is the name of the column, typ is its type (can be
-	// DateTime, Date, JSON, or Text), and value is the value for the condition:
-	//
-	//   - for DateTime and Date types, it is a time.Time value.
-	//   - for JSON and Text types, it is a string value.
-	//
-	// For example, it could return `"updated_at" >= '2024-06-18 16:12:25'` or
-	// `TRUE`.
-	LastChangeTimeCondition(column string, typ types.Type, value any) string
-
 	// Merge performs batch insert and update operations on the specified table,
 	// basing on the table keys. rows contains the rows to be inserted or updated;
 	// rows with matching table keys are updated, while new rows are inserted.
@@ -58,6 +44,16 @@ type databaseConnector interface {
 	// If a column type is not supported, it returns a *UnsupportedColumnTypeError
 	// error.
 	Query(ctx context.Context, query string) (meergo.Rows, []meergo.Column, error)
+
+	// QuoteTime returns a quoted time value for the specified type or "NULL" if the
+	// value is nil.
+	//
+	// value is the time value to quote, and typ specifies its type, which can be
+	// DateTime, Date, Text, or JSON:
+	//
+	//   - For DateTime and Date types, value is a time.Time.
+	//   - For Text and JSON types, value is a string.
+	QuoteTime(value any, typ types.Type) string
 }
 
 // Database represents the database of a database connection.
@@ -106,6 +102,37 @@ func (database *Database) Close() error {
 	return connectorError(err)
 }
 
+// LastChangeTimePlaceholder returns the value used for the last_change_time
+// placeholder for the provided action.
+func (database *Database) LastChangeTimePlaceholder(action *state.Action) (string, error) {
+	if database.err != nil {
+		return "", database.err
+	}
+	if action == nil {
+		return database.inner.QuoteTime(nil, types.Type{}), nil
+	}
+	execution, ok := action.Execution()
+	if !ok {
+		return "", errors.New("action is not currently executing")
+	}
+	cursor := execution.Cursor
+	property := action.LastChangeTimeProperty
+	if property == "" || cursor.IsZero() {
+		return database.inner.QuoteTime(nil, types.Type{}), nil
+	}
+	p, _ := action.InSchema.Property(property)
+	var value any
+	switch p.Type.Kind() {
+	case types.DateTimeKind:
+		value = execution.Cursor
+	case types.DateKind:
+		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
+	case types.TextKind, types.JSONKind:
+		value = formatLastChangeTimeProperty(action.LastChangeTimeFormat, cursor)
+	}
+	return database.inner.QuoteTime(value, p.Type), nil
+}
+
 // Schema returns the schema of the provided table and role. If a column type is
 // not supported, it returns a *meergo.UnsupportedColumnTypeError error. If the
 // connector returns an error, it returns an *UnavailableError error.
@@ -129,38 +156,6 @@ func (database *Database) Schema(ctx context.Context, table string, role state.R
 		return types.Type{}, rewriteColumnErrors(err)
 	}
 	return schema, nil
-}
-
-// LastChangeTimeCondition returns the query condition, for the given action,
-// used for the last_change_time placeholder in the form "column >= value" or
-// "TRUE". If action is nil, it returns the placeholder in the "TRUE" form.
-func (database *Database) LastChangeTimeCondition(action *state.Action) (string, error) {
-	if database.err != nil {
-		return "", database.err
-	}
-	if action == nil {
-		return database.inner.LastChangeTimeCondition("", types.Type{}, nil), nil
-	}
-	execution, ok := action.Execution()
-	if !ok {
-		return "", errors.New("action is not currently executing")
-	}
-	cursor := execution.Cursor
-	property := action.LastChangeTimeProperty
-	if property == "" || cursor.IsZero() {
-		return database.inner.LastChangeTimeCondition("", types.Type{}, nil), nil
-	}
-	p, _ := action.InSchema.Property(property)
-	var value any
-	switch p.Type.Kind() {
-	case types.DateTimeKind:
-		value = execution.Cursor
-	case types.DateKind:
-		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
-	case types.TextKind, types.JSONKind:
-		value = formatLastChangeTimeProperty(action.LastChangeTimeFormat, cursor)
-	}
-	return database.inner.LastChangeTimeCondition(property, p.Type, value), nil
 }
 
 // Query executes a query and returns the resulting rows.

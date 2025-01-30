@@ -37,7 +37,7 @@ var icon = "<svg></svg>"
 func init() {
 	meergo.RegisterDatabase(meergo.DatabaseInfo{
 		Name:        "PostgreSQL",
-		SampleQuery: "SELECT *\nFROM users\nWHERE ${last_change_time}\n",
+		SampleQuery: "SELECT *\nFROM users\n",
 		Icon:        icon,
 	}, New)
 }
@@ -85,20 +85,6 @@ func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Colum
 	return columns, nil
 }
 
-// LastChangeTimeCondition returns the query condition used for the
-// last_change_time placeholder in the form "column >= value" or, if column is
-// empty, a true value.
-func (ps *PostgreSQL) LastChangeTimeCondition(column string, typ types.Type, value any) string {
-	if column == "" {
-		return "TRUE"
-	}
-	b := strings.Builder{}
-	b.WriteString(quoteIdent(column))
-	b.WriteString(` >= `)
-	quoteValue(&b, value, typ)
-	return b.String()
-}
-
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (ps *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any) error {
@@ -141,6 +127,17 @@ func (ps *PostgreSQL) Query(ctx context.Context, query string) (meergo.Rows, []m
 		}
 	}
 	return withCloseError{rows}, columns, nil
+}
+
+// QuoteTime returns a quoted time value for the specified type or "NULL" if the
+// value is nil.
+func (ps *PostgreSQL) QuoteTime(value any, typ types.Type) string {
+	if value == nil {
+		return "NULL"
+	}
+	var b strings.Builder
+	quoteValue(&b, value, typ)
+	return b.String()
 }
 
 type withCloseError struct {
