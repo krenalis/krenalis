@@ -316,29 +316,35 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 			case FileStorage:
 				serialized = struct {
 					serializedAction
-					Format         string          `json:"format"`
-					Path           string          `json:"path"`
-					Sheet          *string         `json:"sheet"`
-					Compression    Compression     `json:"compression"`
-					Filter         *Filter         `json:"filter"`
-					Transformation Transformation  `json:"transformation"`
-					InSchema       types.Type      `json:"inSchema"`
-					OutSchema      types.Type      `json:"outSchema"`
-					Running        bool            `json:"running"`
-					ScheduleStart  *int            `json:"scheduleStart"`
-					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+					Format                 string          `json:"format"`
+					Path                   string          `json:"path"`
+					Sheet                  *string         `json:"sheet"`
+					Compression            Compression     `json:"compression"`
+					Filter                 *Filter         `json:"filter"`
+					IdentityProperty       string          `json:"identityProperty"`
+					LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
+					LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
+					Transformation         Transformation  `json:"transformation"`
+					InSchema               types.Type      `json:"inSchema"`
+					OutSchema              types.Type      `json:"outSchema"`
+					Running                bool            `json:"running"`
+					ScheduleStart          *int            `json:"scheduleStart"`
+					SchedulePeriod         *SchedulePeriod `json:"schedulePeriod"`
 				}{
-					serializedAction: a,
-					Format:           this.Format,
-					Path:             *this.Path,
-					Sheet:            this.Sheet,
-					Compression:      this.Compression,
-					Transformation:   *this.Transformation,
-					InSchema:         this.InSchema,
-					OutSchema:        this.OutSchema,
-					Running:          this.Running,
-					ScheduleStart:    this.ScheduleStart,
-					SchedulePeriod:   this.SchedulePeriod,
+					serializedAction:       a,
+					Format:                 this.Format,
+					Path:                   *this.Path,
+					Sheet:                  this.Sheet,
+					Compression:            this.Compression,
+					IdentityProperty:       *this.IdentityProperty,
+					LastChangeTimeProperty: this.LastChangeTimeProperty,
+					LastChangeTimeFormat:   this.LastChangeTimeFormat,
+					Transformation:         *this.Transformation,
+					InSchema:               this.InSchema,
+					OutSchema:              this.OutSchema,
+					Running:                this.Running,
+					ScheduleStart:          this.ScheduleStart,
+					SchedulePeriod:         this.SchedulePeriod,
 				}
 			case Mobile, Server, Website:
 				serialized = struct {

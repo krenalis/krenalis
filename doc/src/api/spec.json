@@ -6332,7 +6332,7 @@
                                 "charLen": 64
                             },
                             "updateRequired": true,
-                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
+                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
                             "name": "transformation",
@@ -6672,7 +6672,7 @@
                                 "charLen": 64
                             },
                             "updateRequired": true,
-                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
+                            "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
                             "name": "transformation",
@@ -6966,6 +6966,32 @@
                                     ]
                                 },
                                 "description": "The compression format of the file. It is an empty if the file is not compressed.\n\nNote that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed."
+                            },
+                            {
+                                "name": "identityProperty",
+                                "placeholder": "\"email\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "description": "The column that uniquely identifies each user in the file."
+                            },
+                            {
+                                "name": "lastChangeTimeProperty",
+                                "placeholder": "\"updated_at\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "nullable": true,
+                                "description": "The column that stores the timestamp of the last update to a user record. It is null if no such column exists."
+                            },
+                            {
+                                "name": "lastChangeTimeFormat",
+                                "placeholder": "\"ISO8601\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "nullable": true,
+                                "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
                             },
                             {
                                 "name": "transformation",

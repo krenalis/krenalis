@@ -86,7 +86,7 @@ func init() {
 		Type:           types.Text().WithCharLen(64),
 		UpdateRequired: true,
 		Placeholder:    `"ISO8601"`,
-		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
+		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`.",
 	}
@@ -340,6 +340,29 @@ func init() {
 							Description: "The name of the sheet. It is empty if the format is not Excel.",
 						},
 						compressionParameter,
+						{
+							Name:        "identityProperty",
+							Type:        types.Text(),
+							Placeholder: `"email"`,
+							Description: "The column that uniquely identifies each user in the file.",
+						},
+						{
+							Name:        "lastChangeTimeProperty",
+							Type:        types.Text(),
+							Nullable:    true,
+							Placeholder: `"updated_at"`,
+							Description: "The column that stores the timestamp of the last update to a user record. It is null if no such column exists.",
+						},
+						{
+							Name:        "lastChangeTimeFormat",
+							Type:        types.Text(),
+							Nullable:    true,
+							Placeholder: `"ISO8601"`,
+							Description: "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\n" +
+								"It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
+								"It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. " +
+								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
+						},
 						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{
