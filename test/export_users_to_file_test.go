@@ -62,7 +62,7 @@ func TestExportUsersToFile(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID, true)
+		exec := c.ExecuteAction(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -146,7 +146,7 @@ func TestExportUsersToFile(t *testing.T) {
 		}, nil)
 
 		// Execute the action that export users.
-		exec := c.ExecuteAction(exportUsersActionID, true)
+		exec := c.ExecuteAction(exportUsersActionID)
 
 		// Wait for the import to finish.
 		c.WaitForExecutionsCompletion(fsID, exec)

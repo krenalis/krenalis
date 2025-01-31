@@ -143,9 +143,9 @@ func TestIdentityResolution2(t *testing.T) {
 	actionB := addJSONAction(sourceB, "B.json", properties)
 	actionC := addJSONAction(sourceC, "C.json", properties)
 
-	exec1 := c.ExecuteAction(actionA, true)
-	exec2 := c.ExecuteAction(actionB, true)
-	exec3 := c.ExecuteAction(actionC, true)
+	exec1 := c.ExecuteAction(actionA)
+	exec2 := c.ExecuteAction(actionB)
+	exec3 := c.ExecuteAction(actionC)
 	c.WaitForExecutionsCompletion(sourceA, exec1)
 	c.WaitForExecutionsCompletion(sourceB, exec2)
 	c.WaitForExecutionsCompletion(sourceC, exec3)

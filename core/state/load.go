@@ -437,13 +437,13 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 		}
 
 		// Read running action executions.
-		err = state.db.QueryScan(ctx, "SELECT id, action, cursor, reload, start_time\n"+
+		err = state.db.QueryScan(ctx, "SELECT id, action, cursor, incremental, start_time\n"+
 			"FROM actions_executions\nWHERE end_time IS NULL",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
 					exe := ActionExecution{}
 					var actionID int
-					err := rows.Scan(&exe.ID, &actionID, &exe.Cursor, &exe.Reload, &exe.StartTime)
+					err := rows.Scan(&exe.ID, &actionID, &exe.Cursor, &exe.Incremental, &exe.StartTime)
 					if err != nil {
 						return err
 					}

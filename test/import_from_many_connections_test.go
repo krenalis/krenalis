@@ -60,7 +60,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(dummyAction, true)
+		exec := c.ExecuteAction(dummyAction)
 		c.WaitForExecutionsCompletion(dummy, exec)
 	}
 
@@ -116,7 +116,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 				"HasColumnNames": true,
 			}),
 		})
-		exec := c.ExecuteAction(csvAction, true)
+		exec := c.ExecuteAction(csvAction)
 		c.WaitForExecutionsCompletion(fs, exec)
 	}
 

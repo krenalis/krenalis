@@ -46,7 +46,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID, true)
+		exec := c.ExecuteAction(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -75,7 +75,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 			},
 			ExportOnDuplicates: false,
 		})
-		exec := c.ExecuteAction(exportUsersActionID, true)
+		exec := c.ExecuteAction(exportUsersActionID)
 		c.WaitForExecutionsCompletion(dummyDest, exec)
 	}
 
@@ -104,7 +104,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID, true)
+		exec := c.ExecuteAction(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 		users, _, _ := c.Users([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(users) == 0 {

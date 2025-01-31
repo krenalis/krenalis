@@ -269,10 +269,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 func (this *Action) syncDestinationUsers(ctx context.Context) error {
 
 	execution, _ := this.action.Execution()
-	cursor := execution.Cursor
 
 	// Delete the outdated destination users.
-	if execution.Reload {
+	if !execution.Incremental {
 		store := this.connection.store
 		err := store.DeleteDestinationUsers(ctx, this.action.ID)
 		if err != nil {
@@ -284,6 +283,7 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	matchingOut, _ := this.action.OutSchema.Property(this.action.Matching.Out)
 	schema := types.Object([]types.Property{matchingOut})
 
+	cursor := execution.Cursor
 	records, err := this.app().Users(ctx, schema, cursor)
 	if err != nil {
 		return err

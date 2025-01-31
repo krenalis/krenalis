@@ -55,8 +55,8 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 
 	// Import from both actions - and implicitly trigger the identity resolution
 	// process.
-	exec1 := c.ExecuteAction(action1, true)
-	exec2 := c.ExecuteAction(action2, true)
+	exec1 := c.ExecuteAction(action1)
+	exec2 := c.ExecuteAction(action2)
 	c.WaitForExecutionsCompletion(dummy1, exec1)
 	c.WaitForExecutionsCompletion(dummy2, exec2)
 

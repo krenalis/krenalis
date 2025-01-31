@@ -99,7 +99,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 	})
 
 	// Import from the first action, which should import just the first name.
-	exec := c.ExecuteAction(actionFirstName, true)
+	exec := c.ExecuteAction(actionFirstName)
 	c.WaitForExecutionsCompletion(fsID, exec)
 
 	// Check the users.
@@ -123,7 +123,7 @@ func TestImportUsersFromFileWithTwoActions(t *testing.T) {
 
 	// Import from the second action, which should import just the last name,
 	// and that should result in users with both first name and last name.
-	exec = c.ExecuteAction(actionLastName, true)
+	exec = c.ExecuteAction(actionLastName)
 	c.WaitForExecutionsCompletion(fsID, exec)
 
 	// Check the users.

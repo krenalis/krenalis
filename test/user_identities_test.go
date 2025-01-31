@@ -82,8 +82,8 @@ func Test_UserIdentities(t *testing.T) {
 		}),
 	})
 
-	exec1 := c.ExecuteAction(action1, true)
-	exec2 := c.ExecuteAction(action2, true)
+	exec1 := c.ExecuteAction(action1)
+	exec2 := c.ExecuteAction(action2)
 
 	c.WaitForExecutionsCompletion(fs1, exec1)
 	c.WaitForExecutionsCompletion(fs2, exec2)

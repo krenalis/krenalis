@@ -136,6 +136,28 @@ func Test_validateAction(t *testing.T) {
 			provider:                testProvider{},
 		},
 		{
+			name: "GOOD: Source/App/Users - incremental",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Incremental: true,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.App,
+			provider:                testProvider{},
+		},
+		{
 			name: "GOOD: Source/Database/Users - with mapping",
 			action: ActionToSet{
 				Name: "Import users",
@@ -155,6 +177,32 @@ func Test_validateAction(t *testing.T) {
 				Query:                "SELECT id, timestamp, email_in FROM my_table",
 				IdentityColumn:       "id",
 				LastChangeTimeColumn: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Database,
+		},
+		{
+			name: "GOOD: Source/Database/Users - incremental",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Query:                "SELECT id, timestamp, email_in FROM my_table",
+				IdentityColumn:       "id",
+				LastChangeTimeColumn: "timestamp",
+				Incremental:          true,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
@@ -226,6 +274,37 @@ func Test_validateAction(t *testing.T) {
 				Path:                 "my_file.csv",
 				IdentityColumn:       "id",
 				LastChangeTimeColumn: "timestamp",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+		},
+		{
+			name: "GOOD: Source/FileStorage/Users - incremental",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Format:               "CSV",
+				Path:                 "my_file.csv",
+				IdentityColumn:       "id",
+				LastChangeTimeColumn: "timestamp",
+				Incremental:          true,
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
@@ -1140,6 +1219,31 @@ func Test_validateAction(t *testing.T) {
 			err:                     "identity column \"id\" not found within input schema",
 		},
 		{
+			name: "BAD: Source/Database/Users - incremental without last change time column",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Query:          "SELECT id, email_in FROM my_table",
+				IdentityColumn: "id",
+				Incremental:    true,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Database,
+			err:                     "incremental requires a last change time column",
+		},
+		{
 			name: "BAD: Source/Database/Users - identity column has invalid type",
 			action: ActionToSet{
 				Name: "Import users",
@@ -1350,6 +1454,36 @@ func Test_validateAction(t *testing.T) {
 			formatHasSettings:       false,
 			formatHasSheets:         false,
 			err:                     "input schema is required by the mapping",
+		},
+		{
+			name: "BAD: Source/FileStorage/Users - incremental without last change time column",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Format:         "CSV",
+				Path:           "my_file.csv",
+				IdentityColumn: "id",
+				Incremental:    true,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+			err:                     "incremental requires a last change time column",
 		},
 		{
 			name: "BAD: Destination/Database/Users - table name contains invalid UTF-8 encoded characters",
@@ -1629,6 +1763,28 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.App,
 			err:                     `input action schema property "__id__" is a meta property`,
+		},
+		{
+			name: "BAD: Destination/App/Users - incremental is not supported",
+			action: ActionToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				Incremental: true,
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.App,
+			err:                     "incremental cannot be true for destination actions",
 		},
 		{
 			name: "BAD: Destination/App/Events - input schema must be invalid",

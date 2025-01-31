@@ -3781,6 +3781,14 @@
                             "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
+                            "name": "incremental",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether users are imported incrementally:\n* `true`: imports only users who were created or updated since the last import.\n* `false`: imports all users, regardless of previous imports."
+                        },
+                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -4052,6 +4060,14 @@
                             },
                             "nullable": true,
                             "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
+                        },
+                        {
+                            "name": "incremental",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether users are imported incrementally:\n* `true`: imports only users who were created or updated since the last import.\n* `false`: imports all users, regardless of previous imports."
                         },
                         {
                             "name": "transformation",
@@ -4380,6 +4396,14 @@
                                 "description": "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
+                                "name": "incremental",
+                                "placeholder": "true",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates whether users are imported incrementally:\n* `true`: imports only users who were created or updated since the last import.\n* `false`: imports all users, regardless of previous imports."
+                            },
+                            {
                                 "name": "transformation",
                                 "placeholder": "...",
                                 "type": {
@@ -4626,6 +4650,14 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
+                            "name": "incremental",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether users are imported incrementally:\n* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n* `false`: all users are imported again, regardless of their last change time. `false` is the default value.\n\nIf set to `true`, a column for the last change time must be specified (i.e., `lastChangeTimeColumn` is not null). Additionally, if the last change time column type corresponds to the Meergo `Text` or `JSON` types, the values in the column must be sortable."
+                        },
+                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -4845,6 +4877,14 @@
                             },
                             "updateRequired": true,
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`."
+                        },
+                        {
+                            "name": "incremental",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether users are imported incrementally:\n* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n* `false`: all users are imported again, regardless of their last change time. `false` is the default value.\n\nIf set to `true`, a column for the last change time must be specified (i.e., `lastChangeTimeColumn` is not null). Additionally, if the last change time column type corresponds to the Meergo `Text` or `JSON` types, the values in the column must be sortable."
                         },
                         {
                             "name": "transformation",
@@ -5115,6 +5155,14 @@
                                 },
                                 "nullable": true,
                                 "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
+                            },
+                            {
+                                "name": "incremental",
+                                "placeholder": "true",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates whether users are imported incrementally:\n* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n* `false`: all users are imported again, regardless of their last change time."
                             },
                             {
                                 "name": "transformation",
@@ -6335,6 +6383,14 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
+                            "name": "incremental",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether users are imported incrementally:\n* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n* `false`: all users are imported again, regardless of their last change time. `false` is the default value.\n\nIf set to `true`, a column for the last change time must be specified (i.e., `lastChangeTimeColumn` is not null)."
+                        },
+                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -6675,6 +6731,14 @@
                             "description": "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\nThis field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`."
                         },
                         {
+                            "name": "incremental",
+                            "placeholder": "true",
+                            "type": {
+                                "name": "Boolean"
+                            },
+                            "description": "Determines whether users are imported incrementally:\n* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n* `false`: all users are imported again, regardless of their last change time. `false` is the default value.\n\nIf set to `true`, a column for the last change time must be specified (i.e., `lastChangeTimeColumn` is not null)."
+                        },
+                        {
                             "name": "transformation",
                             "placeholder": "...",
                             "type": {
@@ -6992,6 +7056,14 @@
                                 },
                                 "nullable": true,
                                 "description": "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\nIt is `\"ISO8601\"` if the column value follows the ISO 8601 format. It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior)."
+                            },
+                            {
+                                "name": "incremental",
+                                "placeholder": "true",
+                                "type": {
+                                    "name": "Boolean"
+                                },
+                                "description": "Indicates whether users are imported incrementally:\n* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n* `false`: all users are imported again, regardless of their last change time."
                             },
                             {
                                 "name": "transformation",
@@ -8135,12 +8207,13 @@
                             "description": "The ID of the action that imports or exports users."
                         },
                         {
-                            "name": "reload",
-                            "placeholder": "false",
+                            "name": "incremental",
+                            "placeholder": "true",
                             "type": {
                                 "name": "Boolean"
                             },
-                            "description": " Indicates whether the users should be re-imported or re-exported from scratch. If set to false or omitted, only new users and those modified since the last execution are processed."
+                            "nullable": true,
+                            "description": "Determines whether users should be imported from scratch (`false`) or incrementally from the previous import (`true`).  If omitted or nil, the action's default setting will be used.\n\nFor source database and file actions, the action must include a \"last change time\" property.\n\nFor destination actions, this parameter must be omitted or set to nil."
                         }
                     ],
                     "moreParameters": [],
@@ -8173,6 +8246,11 @@
                             "status": 422,
                             "code": "ActionDisabled",
                             "message": "action is disabled"
+                        },
+                        {
+                            "status": 422,
+                            "code": "CannotExecuteIncrementally",
+                            "message": "incremental requires a last change time column"
                         },
                         {
                             "status": 422,

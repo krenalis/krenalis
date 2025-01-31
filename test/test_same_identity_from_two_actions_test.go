@@ -61,8 +61,8 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		},
 	})
 
-	exec1 := c.ExecuteAction(action1, false)
-	exec2 := c.ExecuteAction(action2, false)
+	exec1 := c.ExecuteAction(action1)
+	exec2 := c.ExecuteAction(action2)
 	c.WaitForExecutionsCompletion(dummy, exec1, exec2)
 
 	// Check that there are 10 users.

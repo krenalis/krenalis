@@ -37,13 +37,13 @@ func (action action) Execute(_ http.ResponseWriter, r *http.Request) (any, error
 		return nil, err
 	}
 	var body struct {
-		Reload bool `json:"reload"`
+		Incremental *bool `json:"incremental"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := a.Execute(r.Context(), body.Reload)
+	id, err := a.Execute(r.Context(), body.Incremental)
 	if err != nil {
 		return nil, err
 	}

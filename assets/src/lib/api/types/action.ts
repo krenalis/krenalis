@@ -128,6 +128,7 @@ interface ActionToSet {
 	identityColumn?: string | null;
 	lastChangeTimeColumn?: string | null;
 	lastChangeTimeFormat?: string | null;
+	incremental?: boolean;
 	exportMode?: ExportMode;
 	matching?: Matching;
 	exportOnDuplicates?: boolean;

@@ -377,6 +377,21 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("the specified order by is longer than 1024 runes")
 		}
 	}
+	// Validate incremental.
+	if action.Incremental {
+		if v.connection.role == state.Destination {
+			return errors.BadRequest("incremental cannot be true for destination actions")
+		}
+		switch v.connection.connector.typ {
+		case state.App:
+		case state.Database, state.FileStorage:
+			if action.LastChangeTimeColumn == "" {
+				return errors.BadRequest("incremental requires a last change time column")
+			}
+		default:
+			return errors.BadRequest("incremental cannot be true for %s actions", v.connection.connector.typ)
+		}
+	}
 
 	// Second, do validations based on the workspace and the connection.
 

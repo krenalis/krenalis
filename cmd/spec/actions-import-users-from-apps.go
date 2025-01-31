@@ -28,6 +28,14 @@ func init() {
 		Description: "The filter applied to the app users. If it's not null, only the app users that match the filter will be included, otherwise all users will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
+	incrementalParameter := types.Property{
+		Name:        "incremental",
+		Type:        types.Boolean(),
+		Placeholder: `true`,
+		Description: "Determines whether users are imported incrementally:\n" +
+			"* `true`: imports only users who were created or updated since the last import.\n" +
+			"* `false`: imports all users, regardless of previous imports.",
+	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -140,6 +148,7 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
+					incrementalParameter,
 					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
@@ -182,6 +191,7 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
+					incrementalParameter,
 					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
@@ -252,6 +262,14 @@ func init() {
 							Description: "Indicates if the action is enabled.",
 						},
 						filterParameter,
+						{
+							Name:        "incremental",
+							Type:        types.Boolean(),
+							Placeholder: `true`,
+							Description: "Indicates whether users are imported incrementally:\n" +
+								"* `true`: imports only users who were created or updated since the last import.\n" +
+								"* `false`: imports all users, regardless of previous imports.",
+						},
 						{
 							Name: "transformation",
 							Type: types.Object([]types.Property{

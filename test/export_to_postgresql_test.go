@@ -50,7 +50,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 				},
 			},
 		})
-		exec := c.ExecuteAction(importUsersID, true)
+		exec := c.ExecuteAction(importUsersID)
 		c.WaitForExecutionsCompletion(dummySrc, exec)
 	}
 
@@ -101,7 +101,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(exportAction, false)
+	exec := c.ExecuteAction(exportAction)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.
@@ -134,7 +134,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			},
 		},
 	})
-	exec = c.ExecuteAction(exportAction, false)
+	exec = c.ExecuteAction(exportAction)
 	c.WaitForExecutionsCompletion(pgsql, exec)
 
 	// Check if the export completed successfully.

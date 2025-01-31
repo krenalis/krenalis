@@ -34,29 +34,29 @@ func (err actionError) Error() string {
 	return err.err.Error()
 }
 
-// addExecution adds an execution to the action and returns its identifier.
+// createExecution creates an execution for the action and returns its
+// identifier.
 //
 // It returns an errors.NotFoundError error if the action does not exist
 // anymore.
 // It returns an errors.UnprocessableError error with code ExecutionInProgress
 // if the action is already in progress.
-func (this *Action) addExecution(ctx context.Context, reload bool) (int, error) {
+func (this *Action) createExecution(ctx context.Context, incremental *bool) (int, error) {
 
 	n := state.ExecuteAction{
 		Action:    this.action.ID,
-		Reload:    reload,
 		StartTime: time.Now().UTC(),
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *state.Tx) error {
+		var inc, executing bool
 		var cursor time.Time
-		var executing bool
-		err := tx.QueryRow(ctx, "SELECT a.reload, COALESCE(e.cursor, '0001-01-01 00:00:00+00'), e.id IS NOT NULL AND e.end_time IS NULL\n"+
+		err := tx.QueryRow(ctx, "SELECT a.incremental, a.cursor, e.id IS NOT NULL AND e.end_time IS NULL\n"+
 			"FROM actions AS a\n"+
 			"LEFT JOIN actions_executions AS e ON a.id = e.action\n"+
 			"WHERE a.id = $1\n"+
 			"ORDER BY e.id DESC\n"+
-			"LIMIT 1", n.Action).Scan(&reload, &cursor, &executing)
+			"LIMIT 1", n.Action).Scan(&inc, &cursor, &executing)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return errors.NotFound("action %d does not exist", n.Action)
@@ -66,18 +66,16 @@ func (this *Action) addExecution(ctx context.Context, reload bool) (int, error) 
 		if executing {
 			return errors.Unprocessable(ExecutionInProgress, "execution of action %d is in progress", this.action.ID)
 		}
-		if reload {
-			_, err = tx.Exec(ctx, "UPDATE actions SET reload = FALSE WHERE id = $1", n.Action)
-			if err != nil {
-				return err
-			}
+		if incremental == nil {
+			n.Incremental = inc
+		} else {
+			n.Incremental = *incremental
 		}
-		n.Reload = n.Reload || reload
-		if !n.Reload {
+		if n.Incremental {
 			n.Cursor = cursor
 		}
-		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, cursor, reload, start_time)\n"+
-			"VALUES ($1, $2, $3, $4)\nRETURNING id", n.Action, n.Cursor, n.Reload, n.StartTime).Scan(&n.ID)
+		err = tx.QueryRow(ctx, "INSERT INTO actions_executions (action, cursor, incremental, start_time)\n"+
+			"VALUES ($1, $2, $3, $4)\nRETURNING id", n.Action, n.Cursor, n.Incremental, n.StartTime).Scan(&n.ID)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) {
 				if postgres.ErrConstraintName(err) == "actions_executions_action_fkey" {
@@ -153,8 +151,8 @@ func (this *Action) exec(ctx context.Context) {
 				return err
 			}
 			var exists bool
-			err = tx.QueryRow(ctx, "UPDATE actions SET health = $1 WHERE id = $2 RETURNING true",
-				n.Health, this.action.ID).Scan(&exists)
+			err = tx.QueryRow(ctx, "UPDATE actions SET cursor = (SELECT cursor FROM actions_executions WHERE id = $1 LIMIT 1), health = $2 WHERE id = $3 RETURNING true",
+				n.ID, n.Health, this.action.ID).Scan(&exists)
 			if err != nil {
 				if err == sql.ErrNoRows {
 					// The action does not exist anymore.

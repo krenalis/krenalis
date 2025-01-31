@@ -78,6 +78,7 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 				{ "name": "last_name", "type": { "name": "Text", "charLen": 300 }, "readOptional": true, "description": "" }
 			]
 		},
+		"incremental": true,
 		"transformation": {
 			"mapping": {
 				"email": "email",

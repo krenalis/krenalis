@@ -46,7 +46,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 			},
 		},
 	})
-	exec := c.ExecuteAction(importUsersID, true)
+	exec := c.ExecuteAction(importUsersID)
 	c.WaitForExecutionsCompletion(dummySrc, exec)
 
 	// Test that the "favorite_movie.title" property, which has been imported

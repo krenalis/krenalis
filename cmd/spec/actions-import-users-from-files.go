@@ -90,6 +90,15 @@ func init() {
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
 			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`.",
 	}
+	incrementalParameter := types.Property{
+		Name:        "incremental",
+		Type:        types.Boolean(),
+		Placeholder: `true`,
+		Description: "Determines whether users are imported incrementally:\n" +
+			"* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n" +
+			"* `false`: all users are imported again, regardless of their last change time. `false` is the default value.\n\n" +
+			"If set to `true`, a column for the last change time must be specified (i.e., `lastChangeTimeColumn` is not null).",
+	}
 	transformationParameter := types.Property{
 		Name: "transformation",
 		Type: types.Object([]types.Property{
@@ -210,6 +219,7 @@ func init() {
 					identityColumnParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
+					incrementalParameter,
 					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
@@ -259,6 +269,7 @@ func init() {
 					identityColumnParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
+					incrementalParameter,
 					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
@@ -362,6 +373,14 @@ func init() {
 								"It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
 								"It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. " +
 								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",
+						},
+						{
+							Name:        "incremental",
+							Type:        types.Boolean(),
+							Placeholder: `true`,
+							Description: "Indicates whether users are imported incrementally:\n" +
+								"* `true`: are imported only users whose last change time is equal to or later than the last imported user's change time.\n" +
+								"* `false`: all users are imported again, regardless of their last change time.",
 						},
 						{
 							Name: "transformation",

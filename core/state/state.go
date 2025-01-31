@@ -1090,6 +1090,7 @@ type Action struct {
 	LastChangeTimeColumn string
 	LastChangeTimeFormat string
 	Reload               bool
+	Incremental          bool
 	Health               Health
 }
 
@@ -1160,12 +1161,12 @@ const (
 
 // ActionExecution represents an action execution.
 type ActionExecution struct {
-	mu        *sync.Mutex
-	ID        int
-	action    *Action
-	Reload    bool
-	Cursor    time.Time
-	StartTime time.Time
+	mu          *sync.Mutex
+	ID          int
+	action      *Action
+	Incremental bool
+	Cursor      time.Time
+	StartTime   time.Time
 }
 
 // Action returns the action of the execution.

@@ -45,12 +45,8 @@ func (this *Action) importUsers(ctx context.Context) error {
 
 	switch connector.Type {
 	case state.App:
-		var lastChangeTime time.Time
-		if !execution.Reload {
-			lastChangeTime = execution.Cursor
-		}
-		purge = lastChangeTime.IsZero()
-		records, err = this.app().Users(ctx, action.InSchema, lastChangeTime)
+		purge = execution.Cursor.IsZero()
+		records, err = this.app().Users(ctx, action.InSchema, execution.Cursor)
 	case state.Database:
 		database := this.database()
 		defer database.Close()
@@ -58,11 +54,11 @@ func (this *Action) importUsers(ctx context.Context) error {
 			switch name {
 			case "last_change_time":
 				var v string
-				if execution.Reload {
-					v, _ = database.LastChangeTimePlaceholder(nil)
-				} else {
+				if execution.Incremental {
 					purge = execution.Cursor.IsZero()
 					v, _ = database.LastChangeTimePlaceholder(action)
+				} else {
+					v, _ = database.LastChangeTimePlaceholder(nil)
 				}
 				return v, true
 			case "limit":
@@ -73,7 +69,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		records, err = database.Records(ctx, action, replacer)
 	case state.FileStorage:
 		var lastChangeTime time.Time
-		if !execution.Reload && action.LastChangeTimeColumn != "" {
+		if !execution.Cursor.IsZero() && action.LastChangeTimeColumn != "" {
 			lastChangeTime = execution.Cursor
 		}
 		purge = lastChangeTime.IsZero()

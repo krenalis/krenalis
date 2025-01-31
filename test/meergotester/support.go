@@ -258,12 +258,12 @@ func (c *Meergo) DeleteConnection(conn int) {
 	c.MustCall("DELETE", path, nil, nil)
 }
 
-func (c *Meergo) ExecuteAction(action int, reload bool) int {
+func (c *Meergo) ExecuteAction(action int) int {
 	var response struct {
 		ID int
 	}
 	path := fmt.Sprintf("/api/actions/%d/exec", action)
-	c.MustCall("POST", path, map[string]any{"reload": reload}, &response)
+	c.MustCall("POST", path, nil, &response)
 	return response.ID
 }
 

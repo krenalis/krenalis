@@ -46,7 +46,7 @@ func TestImportFromDatabase(t *testing.T) {
 		LastChangeTimeFormat: "",
 	})
 
-	exec := c.ExecuteAction(importUsers, false)
+	exec := c.ExecuteAction(importUsers)
 
 	c.WaitForExecutionsCompletion(pgSQL, exec)
 

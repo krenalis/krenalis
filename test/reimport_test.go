@@ -52,7 +52,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import the users from dummy.
-	exec := c.ExecuteAction(dummyAction, true)
+	exec := c.ExecuteAction(dummyAction)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check the users.
@@ -99,7 +99,7 @@ func TestReimport(t *testing.T) {
 	})
 
 	// Import again the users from dummy.
-	exec = c.ExecuteAction(dummyAction, true) // reload = true
+	exec = c.ExecuteAction(dummyAction)
 	c.WaitForExecutionsCompletion(dummy, exec)
 
 	// Check the users again.

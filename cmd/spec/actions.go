@@ -170,12 +170,15 @@ func init() {
 						Description:    "The ID of the action that imports or exports users.",
 					},
 					{
-						Name:           "reload",
+						Name:           "incremental",
 						Type:           types.Boolean(),
 						CreateRequired: false,
-						Placeholder:    "false",
-						Description: " Indicates whether the users should be re-imported or re-exported from scratch. " +
-							"If set to false or omitted, only new users and those modified since the last execution are processed.",
+						Placeholder:    "true",
+						Nullable:       true,
+						Description: "Determines whether users should be imported from scratch (`false`) or incrementally from the previous import (`true`). " +
+							" If omitted or nil, the action's default setting will be used.\n\n" +
+							"For source database and file actions, the action must include a \"last change time\" property.\n\n" +
+							"For destination actions, this parameter must be omitted or set to nil.",
 					},
 				},
 				Response: &Response{
@@ -192,6 +195,7 @@ func init() {
 					{404, NotFound, "workspace does not exist"},
 					{404, NotFound, "action does not exist"},
 					{422, ActionDisabled, "action is disabled"},
+					{422, CannotExecuteIncrementally, "incremental requires a last change time column"},
 					{422, ExecutionInProgress, "action is already in progress"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
 					{422, MaintenanceMode, "data warehouse is in maintenance mode"},

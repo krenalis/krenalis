@@ -220,7 +220,7 @@ func newActionSchedulerExecutor(core *Core, wg *sync.WaitGroup, ctx context.Cont
 						wg.Add(1)
 						go func() {
 							defer wg.Done()
-							_, err := a.addExecution(ctx, false)
+							_, err := a.createExecution(ctx, nil)
 							if err != nil {
 								if _, ok := err.(*errors.NotFoundError); ok {
 									return

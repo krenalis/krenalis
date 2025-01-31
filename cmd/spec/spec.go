@@ -105,6 +105,7 @@ const (
 	ActionDisabled               = "ActionDisabled"
 	AlterSchemaInProgress        = "AlterSchemaInProgress"
 	AuthenticationFailed         = "AuthenticationFailed"
+	CannotExecuteIncrementally   = "CannotExecuteIncrementally"
 	ConnectionNotExist           = "ConnectionNotExist"
 	ConnectorNotExist            = "ConnectorNotExist"
 	DifferentWarehouse           = "DifferentWarehouse"

@@ -64,6 +64,7 @@ type Action struct {
 	IdentityColumn       *string         `json:"identityColumn"`
 	LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
 	LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
+	Incremental          bool            `json:"incremental"`
 }
 
 // Matching establishes a relationship between a property in Meergo (input
@@ -213,19 +214,30 @@ func (this *Action) Delete(ctx context.Context) error {
 // It returns an errors.UnprocessableError error with code
 //
 //   - ActionDisabled, if the action is disabled.
+//   - CannotExecuteIncrementally, if incremental requires a last change time
+//     column.
 //   - ExecutionInProgress, if the action is already in progress.
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
+func (this *Action) Execute(ctx context.Context, incremental *bool) (int, error) {
 	this.core.mustBeOpen()
 	c := this.action.Connection()
 	if t := this.action.Target; t != state.Users && t != state.Groups {
 		return 0, errors.BadRequest("action %d with target %s cannot be executed", this.action.ID, t)
 	}
-	switch typ := c.Connector().Type; typ {
+	typ := c.Connector().Type
+	switch typ {
 	case state.App, state.Database, state.FileStorage:
 	default:
 		return 0, errors.BadRequest("%s actions cannot be executed", strings.ToLower(typ.String()))
+	}
+	if incremental != nil {
+		if c.Role == state.Destination {
+			return 0, errors.BadRequest("incremental cannot be provided for destination actions")
+		}
+		if *incremental && typ != state.App && this.action.LastChangeTimeColumn == "" {
+			return 0, errors.Unprocessable(CannotExecuteIncrementally, "incremental requires a last change time column")
+		}
 	}
 	if !this.action.Enabled {
 		return 0, errors.Unprocessable(ActionDisabled, "action %d is disabled", c.ID)
@@ -239,7 +251,7 @@ func (this *Action) Execute(ctx context.Context, reload bool) (int, error) {
 	case state.Maintenance:
 		return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
-	return this.addExecution(ctx, reload)
+	return this.createExecution(ctx, incremental)
 }
 
 // MarshalJSON encodes the Action as JSON.
@@ -272,6 +284,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				serialized = struct {
 					serializedAction
 					Filter         *Filter         `json:"filter"`
+					Incremental    bool            `json:"incremental"`
 					Transformation Transformation  `json:"transformation"`
 					InSchema       types.Type      `json:"inSchema"`
 					OutSchema      types.Type      `json:"outSchema"`
@@ -281,6 +294,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				}{
 					serializedAction: a,
 					Filter:           this.Filter,
+					Incremental:      this.Incremental,
 					Transformation:   *this.Transformation,
 					InSchema:         this.InSchema,
 					OutSchema:        this.OutSchema,
@@ -295,6 +309,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					IdentityColumn       string          `json:"identityColumn"`
 					LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
 					LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
+					Incremental          bool            `json:"incremental"`
 					Transformation       Transformation  `json:"transformation"`
 					InSchema             types.Type      `json:"inSchema"`
 					OutSchema            types.Type      `json:"outSchema"`
@@ -307,6 +322,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					IdentityColumn:       *this.IdentityColumn,
 					LastChangeTimeColumn: this.LastChangeTimeColumn,
 					LastChangeTimeFormat: this.LastChangeTimeFormat,
+					Incremental:          this.Incremental,
 					Transformation:       *this.Transformation,
 					InSchema:             this.InSchema,
 					OutSchema:            this.OutSchema,
@@ -325,6 +341,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					IdentityColumn       string          `json:"identityColumn"`
 					LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
 					LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
+					Incremental          bool            `json:"incremental"`
 					Transformation       Transformation  `json:"transformation"`
 					InSchema             types.Type      `json:"inSchema"`
 					OutSchema            types.Type      `json:"outSchema"`
@@ -340,6 +357,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					IdentityColumn:       *this.IdentityColumn,
 					LastChangeTimeColumn: this.LastChangeTimeColumn,
 					LastChangeTimeFormat: this.LastChangeTimeFormat,
+					Incremental:          this.Incremental,
 					Transformation:       *this.Transformation,
 					InSchema:             this.InSchema,
 					OutSchema:            this.OutSchema,
@@ -647,6 +665,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		IdentityColumn:       action.IdentityColumn,
 		LastChangeTimeColumn: action.LastChangeTimeColumn,
 		LastChangeTimeFormat: action.LastChangeTimeFormat,
+		Incremental:          action.Incremental,
 	}
 
 	// Add the filter to the notification.
@@ -725,8 +744,18 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		}
 	}
 
-	// Check if the next execution of the action requires reloading.
-	reload := shouldReload(this.action, &n)
+	update := "UPDATE actions SET\n" +
+		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, " +
+		"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, " +
+		"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, " +
+		"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, " +
+		"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, " +
+		"matching_out = $22, export_on_duplicates = $23, table_name = $24, table_key = $25, " +
+		"identity_column = $26, last_change_time_column = $27, last_change_time_format = $28, incremental = $29"
+	if (c.Role == state.Source && !action.Incremental) || shouldReload(this.action, &n) {
+		update += ", cursor = '0001-01-01 00:00:00+00'"
+	}
+	update += "\nWHERE id = $30"
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var function state.TransformationFunction
@@ -746,20 +775,12 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			}
 			function = *n.Transformation.Function
 		}
-		result, err := tx.Exec(ctx, "UPDATE actions SET\n"+
-			"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, "+
-			"transformation_mapping = $6, transformation_source = $7, transformation_language = $8, "+
-			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
-			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
-			"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, "+
-			"matching_out = $22, export_on_duplicates = $23, table_name = $24, table_key = $25, identity_column = $26, "+
-			"reload = reload OR $27, last_change_time_column = $28, last_change_time_format = $29\n"+
-			"WHERE id = $30",
+		result, err := tx.Exec(ctx, update,
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName,
-			n.TableKey, n.IdentityColumn, reload, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.ID,
+			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.ID,
 		)
 		if err != nil {
 			return err
@@ -884,6 +905,7 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		format := action.LastChangeTimeFormat
 		this.LastChangeTimeFormat = &format
 	}
+	this.Incremental = action.Incremental
 	if action.OrderBy != "" {
 		p := action.OrderBy
 		this.OrderBy = &p
@@ -1035,6 +1057,10 @@ type ActionToSet struct {
 	//
 	// It cannot be longer than MaxLastChangeTimeFormatSize runes.
 	LastChangeTimeFormat string `json:"lastChangeTimeFormat"`
+
+	// Incremental determine whether users should be imported incrementally.
+	// If false, users will be re-imported from scratch.
+	Incremental bool `json:"incremental"`
 }
 
 // SchedulePeriod represents a scheduler period in minutes.

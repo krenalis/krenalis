@@ -439,7 +439,7 @@ class Connections {
 			http.POST,
 			this.workspaceID,
 			{
-				reload: false,
+				increment: null,
 			},
 		);
 		return res.id as number;

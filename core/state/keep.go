@@ -290,6 +290,7 @@ type CreateAction struct {
 	IdentityColumn       string
 	LastChangeTimeColumn string
 	LastChangeTimeFormat string
+	Incremental          bool
 }
 
 // createAction creates a new action.
@@ -328,6 +329,7 @@ func (state *State) createAction(n notification) {
 		IdentityColumn:       e.IdentityColumn,
 		LastChangeTimeColumn: e.LastChangeTimeColumn,
 		LastChangeTimeFormat: e.LastChangeTimeFormat,
+		Incremental:          true,
 	}
 	if e.Filter != nil {
 		action.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
@@ -761,11 +763,11 @@ func (state *State) endActionExecution(n notification) {
 
 // ExecuteAction is the event sent when an action is executed.
 type ExecuteAction struct {
-	ID        int
-	Action    int
-	Reload    bool
-	Cursor    time.Time
-	StartTime time.Time
+	ID          int
+	Action      int
+	Incremental bool
+	Cursor      time.Time
+	StartTime   time.Time
 }
 
 // executeAction executes an action.
@@ -777,12 +779,12 @@ func (state *State) executeAction(n notification) {
 	a := state.actions[e.Action]
 	ws := a.connection.workspace
 	exe := &ActionExecution{
-		mu:        &sync.Mutex{},
-		ID:        e.ID,
-		action:    a,
-		Reload:    e.Reload,
-		Cursor:    e.Cursor,
-		StartTime: e.StartTime,
+		mu:          &sync.Mutex{},
+		ID:          e.ID,
+		action:      a,
+		Incremental: e.Incremental,
+		Cursor:      e.Cursor,
+		StartTime:   e.StartTime,
 	}
 	ws.mu.Lock()
 	ws.executions[exe.ID] = exe
@@ -1023,6 +1025,7 @@ type UpdateAction struct {
 	IdentityColumn       string
 	LastChangeTimeColumn string
 	LastChangeTimeFormat string
+	Incremental          bool
 }
 
 // updateAction updates an action.
@@ -1058,6 +1061,7 @@ func (state *State) updateAction(n notification) {
 		a.IdentityColumn = e.IdentityColumn
 		a.LastChangeTimeColumn = e.LastChangeTimeColumn
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
+		a.Incremental = e.Incremental
 	})
 	dispatchNotification(state, e)
 }

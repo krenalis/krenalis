@@ -146,7 +146,7 @@ func TestIdentityResolution(t *testing.T) {
 		}
 
 		// Import the users in the JSON.
-		exec := c.ExecuteAction(action, false)
+		exec := c.ExecuteAction(action)
 		c.WaitForExecutionsCompletion(fsID, exec)
 		c.RunIdentityResolution()
 

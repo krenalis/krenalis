@@ -1073,6 +1073,10 @@ const transformInActionToSet = async (
 		actionToSet.exportMode = action.exportMode;
 	}
 
+	if (action.lastChangeTimeColumn || (connection.isSource && connection.isApp)) {
+		actionToSet.incremental = true;
+	}
+
 	try {
 		validateTransformation(connection, actionType, actionToSet);
 	} catch (err) {
