@@ -1090,7 +1090,9 @@ const computeDefaultAction = (
 ): TransformedAction => {
 	const action: TransformedAction = {
 		name: actionType.name,
-		enabled: false,
+		// The action is enabled by default only for batch operations importing or exporting users.
+		enabled:
+			actionType.target == 'Users' && (connection.isApp || connection.isDatabase || connection.isFileStorage),
 		filter: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema),

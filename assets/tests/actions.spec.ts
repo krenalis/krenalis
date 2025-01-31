@@ -58,7 +58,7 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 		"target": "Users",
 		"eventType": null,
 		"name": "Import users",
-		"enabled": false,
+		"enabled": true,
 		"filter": null,
 		"inSchema": {
 			"name": "Object",
@@ -164,7 +164,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 		"target": "Users",
 		"eventType": null,
 		"name": "Export users",
-		"enabled": false,
+		"enabled": true,
 		"filter": {
 			"logical": "or",
 			"conditions": [
@@ -402,7 +402,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 		"target": "Users",
 		"eventType": null,
 		"name": "Import users",
-		"enabled": false,
+		"enabled": true,
 		"filter": null,
 		"inSchema": {
 			"name": "Object",
@@ -539,7 +539,7 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 		"target": "Users",
 		"eventType": null,
 		"name": "Export users",
-		"enabled": false,
+		"enabled": true,
 		"filter": {
 			"logical": "or",
 			"conditions": [
@@ -737,7 +737,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			"target": "Users",
 			"eventType": null,
 			"name": "Import users",
-			"enabled": false,
+			"enabled": true,
 			"filter": null,
 			"inSchema": {
 				"name": "Object",
@@ -885,7 +885,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"target": "Users",
 			"eventType": null,
 			"name": "Export users",
-			"enabled": false,
+			"enabled": true,
 			"filter": {
 				"logical": "or",
 				"conditions": [

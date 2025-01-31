@@ -774,7 +774,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 	// Set the scheduler.
 	if n.Target == state.Users || n.Target == state.Groups {
 		n.ScheduleStart = int16(mathrand.IntN(24 * 60))
-		n.SchedulePeriod = 60
+		n.SchedulePeriod = 0 // do not automatically schedule the action when creating it.
 	}
 
 	// Add the filter to the notification.
