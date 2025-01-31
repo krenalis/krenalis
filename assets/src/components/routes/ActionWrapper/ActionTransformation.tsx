@@ -94,7 +94,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
 	const sharedMapping = useRef<TransformedMapping>();
 
-	const hasIdentityAndTimestamp = useMemo(() => {
+	const hasIdentityColumns = useMemo(() => {
 		return (
 			connection.isSource && (connection.isDatabase || connection.isFileStorage) && actionType.target === 'Users'
 		);
@@ -134,7 +134,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (!hasIdentityAndTimestamp || !action.lastChangeTimeProperty) {
+		if (!hasIdentityColumns || !action.lastChangeTimeProperty) {
 			return;
 		}
 		// check if the last change time format is custom.
@@ -145,7 +145,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (hasIdentityAndTimestamp && isFirstCompilation.current && !isEditing) {
+		if (hasIdentityColumns && isFirstCompilation.current && !isEditing) {
 			// precompile the 'IdentityProperty' and 'lastChangeTimeProperty'
 			// fields, if possible.
 			const a = { ...action };
@@ -416,13 +416,18 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 			className={`action__transformation${isTransformationDisabled ? ' action__transformation--disabled' : ''}`}
 			ref={ref}
 		>
-			{hasIdentityAndTimestamp && (
-				<Section title='Special properties' padded={true} annotated={true}>
-					<div className='action__transformation-special-properties'>
+			{hasIdentityColumns && (
+				<Section
+					title='Identity columns'
+					description='The columns from which to import the value to uniquely identify a user identity, and possibly the time of its last modification.'
+					padded={true}
+					annotated={true}
+				>
+					<div className='action__transformation-identity-columns'>
 						<div className='action__transformation-identity-property'>
-							<div className='action__transformation-special-properties-label'>
+							<div className='action__transformation-identity-columns-label'>
 								Identity
-								<span className='action__transformation-special-properties-asterisk'>*</span>:
+								<span className='action__transformation-identity-columns-asterisk'>*</span>:
 							</div>
 							<Combobox
 								onInput={onUpdateIdentityProperty}
@@ -443,12 +448,12 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 										: identityPropertyError
 								}
 								size='small'
-								helpText='A property that uniquely identifies a user'
+								helpText='A column that uniquely identifies a user identity'
 							/>
 						</div>
 						<div className='action__transformation-last-change-time-property'>
 							<div className='action__transformation-last-change-time'>
-								<div className='action__transformation-special-properties-label'>Last change time:</div>
+								<div className='action__transformation-identity-columns-label'>Last change time:</div>
 								<Combobox
 									onInput={onUpdateLastChangeTimeProperty}
 									onSelect={onUpdateLastChangeTimeProperty}
@@ -462,12 +467,12 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 									clearable={action.lastChangeTimeProperty?.length > 0}
 									error={lastChangeTimePropertyError}
 									size='small'
-									helpText='A property with the time of the last modification of a user'
+									helpText='A column with the time of the last modification of a user identity'
 								/>
 							</div>
 							<div className='action__transformation-last-change-format-property'>
 								<div className='action__transformation-last-change-format'>
-									<div className='action__transformation-special-properties-label'>Format:</div>
+									<div className='action__transformation-identity-columns-label'>Format:</div>
 									<SlSelect
 										onSlChange={onChangeLastChangeTimeFormat}
 										value={

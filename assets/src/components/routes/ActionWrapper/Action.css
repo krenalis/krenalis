@@ -275,7 +275,7 @@
 	margin-bottom: 30px;
 }
 
-.action__transformation-special-properties :last-child {
+.action__transformation-identity-columns :last-child {
 	margin-bottom: 0;
 }
 
@@ -311,7 +311,7 @@
 	position: absolute;
 }
 
-.action__transformation-last-change-format .action__transformation-special-properties-label {
+.action__transformation-last-change-format .action__transformation-identity-columns-label {
 	text-wrap: nowrap;
 }
 
@@ -319,11 +319,11 @@
 	width: 100%;
 }
 
-.action__transformation-special-properties-label {
+.action__transformation-identity-columns-label {
 	font-size: 14px;
 }
 
-.action__transformation-special-properties-asterisk {
+.action__transformation-identity-columns-asterisk {
 	color: var(--sl-color-danger-500);
 }
 
