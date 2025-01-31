@@ -12,14 +12,10 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/types"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // pgTypeInfo holds information about a PostgreSQL type, as read from the
@@ -36,24 +32,13 @@ type pgTypeInfo struct {
 	scale      *string
 }
 
-type tableSchema struct {
-	name    string
-	columns []meergo.Column
-	fds     []pgconn.FieldDescription
-}
-
-// tablesSchemas returns the schemas for the existing tables in the schema
-// specified in tableNames. Therefore, if none of the tables indicated in
-// tableNames exists, this function returns an empty slice. tableNames must
-// always contain at least one table name.
+// columns returns the columns of the table in schema.
+//
+// If the table does not exist, this method returns an error.
 //
 // It returns a *meergo.UnsupportedColumnTypeError error, if a column type is
 // not supported.
-func (ps *PostgreSQL) tablesSchemas(ctx context.Context, schema string, tableNames []string) ([]*tableSchema, error) {
-
-	if len(tableNames) == 0 {
-		return nil, errors.New("tableNames cannot be empty")
-	}
+func (ps *PostgreSQL) columns(ctx context.Context, schema, table string) ([]meergo.Column, error) {
 
 	if err := ps.openDB(ctx); err != nil {
 		return nil, err
@@ -64,189 +49,142 @@ func (ps *PostgreSQL) tablesSchemas(ctx context.Context, schema string, tableNam
 	}
 	defer tx.Rollback(ctx)
 
-	var table *tableSchema
-	var tables []*tableSchema
-
-	// Read the available enums.
-
-	// TODO(Gianluca): enum are not supported when alter schemas in the
-	// PostgreSQL driver. Should we keep the support here? This must be
-	// reviewed along with https://github.com/meergo/meergo/issues/582.
-
-	query := "SELECT pg_type.typname, pg_enum.enumlabel FROM pg_type JOIN pg_enum ON pg_enum.enumtypid = pg_type.oid"
-	rows, err := tx.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	rawEnums := map[string][]string{}
-	for rows.Next() {
-		var typName, enumLabel string
-		if err = rows.Scan(&typName, &enumLabel); err != nil {
-			return nil, err
-		}
-		if typName == "" {
-			return nil, errors.New("invalid empty enum name")
-		}
-		if !utf8.ValidString(enumLabel) {
-			return nil, fmt.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
-		}
-		rawEnums[typName] = append(rawEnums[typName], enumLabel)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
+	// Read the enums.
 	enums := map[string]types.Type{}
-	for name, values := range rawEnums {
-		enums[name] = types.Text().WithValues(values...)
-	}
-
-	// Read the 'atttypmod' attribute of column types, where relevant.
-	query = "SELECT c.relname, a.attname, a.atttypmod\n" +
-		"FROM pg_attribute AS a\n" +
-		"INNER JOIN pg_class AS c ON a.attrelid = c.oid\n" +
-		"INNER JOIN pg_namespace AS n ON c.relnamespace = n.oid\n" +
-		"WHERE n.nspname = '" + schema + "' AND a.atttypmod <> -1"
-	rows, err = tx.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	attTypMods := map[string]map[string]*int{}
-	for rows.Next() {
-		var relname, attname string
-		var atttypmod int
-		err := rows.Scan(&relname, &attname, &atttypmod)
+	{
+		query := "SELECT pg_type.typname, pg_enum.enumlabel FROM pg_type JOIN pg_enum ON pg_enum.enumtypid = pg_type.oid"
+		rows, err := tx.Query(ctx, query)
 		if err != nil {
 			return nil, err
 		}
-		if attTypMods[relname] == nil {
-			attTypMods[relname] = map[string]*int{attname: &atttypmod}
-		} else {
-			attTypMods[relname][attname] = &atttypmod
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	// Read columns.
-	var tablesNamesStr strings.Builder
-	for i, name := range tableNames {
-		if i > 0 {
-			tablesNamesStr.WriteByte(',')
-		}
-		quoteString(&tablesNamesStr, name)
-	}
-	query = "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
-		" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable\n" +
-		"FROM information_schema.columns c\n" +
-		"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
-		"WHERE t.table_schema = '" + schema + "' AND t.table_type = 'BASE TABLE' AND" +
-		" ( t.table_name IN (" + tablesNamesStr.String() + "))\n" +
-		"ORDER BY c.table_name, c.ordinal_position"
-
-	rows, err = tx.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var row pgTypeInfo
-		var tableName, columnName, dataType, udtName, isNullable, isUpdatable *string
-		if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType,
-			&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable); err != nil {
-			return nil, err
-		}
-		if tableName == nil {
-			return nil, errors.New("database has returned NULL as table name")
-		}
-		row.table = *tableName
-		if columnName == nil {
-			return nil, errors.New("database has returned NULL as column name")
-		}
-		row.column = *columnName
-		if isNullable == nil {
-			return nil, errors.New("database has returned NULL as nullability of column")
-		}
-		if dataType == nil {
-			return nil, errors.New("database has returned NULL as column data type")
-		}
-		row.dataType = *dataType
-		if udtName == nil {
-			return nil, errors.New("database has returned NULL as column udt name")
-		}
-		row.udtName = *udtName
-		if isUpdatable == nil {
-			return nil, errors.New("database has returned NULL as updatability of column")
-		}
-		column := meergo.Column{
-			Name:     row.column,
-			Nullable: *isNullable == "YES",
-		}
-		column.Type, err = columnType(row, enums, attTypMods)
-		if err != nil {
-			if _, ok := err.(*meergo.UnsupportedColumnTypeError); ok {
+		defer rows.Close()
+		rawEnums := map[string][]string{}
+		for rows.Next() {
+			var typName, enumLabel string
+			if err = rows.Scan(&typName, &enumLabel); err != nil {
 				return nil, err
 			}
-			return nil, fmt.Errorf("database has returned an invalid type: %s", err)
+			if typName == "" {
+				return nil, errors.New("invalid empty enum name")
+			}
+			if !utf8.ValidString(enumLabel) {
+				return nil, fmt.Errorf("not-valid UTF-8 encoded enum label for type %q", typName)
+			}
+			rawEnums[typName] = append(rawEnums[typName], enumLabel)
 		}
-		if *isUpdatable == "YES" {
-			column.Writable = true
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
 		}
-		if table == nil || row.table != table.name {
-			table = &tableSchema{name: row.table}
-			tables = append(tables, table)
+		for name, values := range rawEnums {
+			enums[name] = types.Text().WithValues(values...)
 		}
-		table.columns = append(table.columns, column)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
-	// Read the field descriptions of the tables.
-	for _, table := range tables {
-		var cols []string
-		for _, c := range table.columns {
-			cols = append(cols, c.Name)
-		}
-		fds, err := tableFds(ctx, tx, table.name, cols)
+	// Read the "attTypMods".
+	// They are necessary to build the Meergo type of certain columns with
+	// specific PostgreSQL types.
+	attTypMods := map[string]map[string]*int{}
+	{
+		query := "SELECT c.relname, a.attname, a.atttypmod\n" +
+			"FROM pg_attribute AS a\n" +
+			"INNER JOIN pg_class AS c ON a.attrelid = c.oid\n" +
+			"INNER JOIN pg_namespace AS n ON c.relnamespace = n.oid\n" +
+			"WHERE n.nspname = '" + schema + "' AND a.atttypmod <> -1"
+		rows, err := tx.Query(ctx, query)
 		if err != nil {
 			return nil, err
 		}
-		table.fds = fds
-	}
-
-	return tables, nil
-}
-
-func tableFds(ctx context.Context, tx pgx.Tx, table string, cols []string) ([]pgconn.FieldDescription, error) {
-	var query strings.Builder
-	query.WriteString("SELECT ")
-	for i, c := range cols {
-		if i > 0 {
-			query.WriteRune(',')
+		defer rows.Close()
+		for rows.Next() {
+			var relname, attname string
+			var atttypmod int
+			err := rows.Scan(&relname, &attname, &atttypmod)
+			if err != nil {
+				return nil, err
+			}
+			if attTypMods[relname] == nil {
+				attTypMods[relname] = map[string]*int{attname: &atttypmod}
+			} else {
+				attTypMods[relname][attname] = &atttypmod
+			}
 		}
-		query.WriteRune('"')
-		query.WriteString(c)
-		query.WriteRune('"')
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 	}
-	query.WriteString(" FROM \"")
-	query.WriteString(table)
-	query.WriteString("\" LIMIT 0")
-	rows, err := tx.Query(ctx, query.String())
-	if err != nil {
-		return nil, err
+
+	// Read the columns.
+	var columns []meergo.Column
+	{
+		query := "SELECT c.table_name, c.column_name, c.is_nullable, c.data_type, c.udt_name, c.character_maximum_length," +
+			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable\n" +
+			"FROM information_schema.columns c\n" +
+			"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
+			"WHERE t.table_schema = '" + schema + "' AND t.table_type = 'BASE TABLE' AND" +
+			" ( t.table_name IN ('" + table + "'))\n" +
+			"ORDER BY c.table_name, c.ordinal_position"
+		rows, err := tx.Query(ctx, query)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var row pgTypeInfo
+			var tableName, columnName, dataType, udtName, isNullable, isUpdatable *string
+			if err = rows.Scan(&tableName, &columnName, &isNullable, &dataType,
+				&udtName, &row.charLength, &row.precision, &row.radix, &row.scale, &isUpdatable); err != nil {
+				return nil, err
+			}
+			if tableName == nil {
+				return nil, errors.New("database has returned NULL as table name")
+			}
+			row.table = *tableName
+			if columnName == nil {
+				return nil, errors.New("database has returned NULL as column name")
+			}
+			row.column = *columnName
+			if isNullable == nil {
+				return nil, errors.New("database has returned NULL as nullability of column")
+			}
+			if dataType == nil {
+				return nil, errors.New("database has returned NULL as column data type")
+			}
+			row.dataType = *dataType
+			if udtName == nil {
+				return nil, errors.New("database has returned NULL as column udt name")
+			}
+			row.udtName = *udtName
+			if isUpdatable == nil {
+				return nil, errors.New("database has returned NULL as updatability of column")
+			}
+			column := meergo.Column{
+				Name:     row.column,
+				Nullable: *isNullable == "YES",
+			}
+			column.Type, err = columnType(row, enums, attTypMods)
+			if err != nil {
+				if _, ok := err.(*meergo.UnsupportedColumnTypeError); ok {
+					return nil, err
+				}
+				return nil, fmt.Errorf("database has returned an invalid type: %s", err)
+			}
+			if *isUpdatable == "YES" {
+				column.Writable = true
+			}
+			columns = append(columns, column)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		if columns == nil {
+			return nil, fmt.Errorf("table %q does not exist", table)
+		}
 	}
-	fds := rows.FieldDescriptions()
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return fds, nil
+
+	return columns, nil
 }
 
 // columnType returns the types.Type corresponding to the PostgreSQL type

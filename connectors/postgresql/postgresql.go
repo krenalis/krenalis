@@ -14,7 +14,6 @@ import (
 	"database/sql"
 	_ "embed"
 	"errors"
-	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -71,16 +70,9 @@ func (ps *PostgreSQL) Close() error {
 
 // Columns returns the columns of the given table.
 func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
-	tables, err := ps.tablesSchemas(ctx, "public", []string{table})
+	columns, err := ps.columns(ctx, "public", table)
 	if err != nil {
 		return nil, err
-	}
-	var columns []meergo.Column
-	if len(tables) == 1 {
-		columns = tables[0].columns
-	}
-	if len(columns) == 0 {
-		return nil, fmt.Errorf("table '%s' does not exist", table)
 	}
 	return columns, nil
 }
