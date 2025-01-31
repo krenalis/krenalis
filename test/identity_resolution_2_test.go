@@ -131,7 +131,7 @@ func TestIdentityResolution2(t *testing.T) {
 					OutPaths: []string{"email", "name", "phone_numbers", "total_orders"},
 				},
 			},
-			IdentityProperty:       "email",
+			IdentityColumn:         "email",
 			LastChangeTimeProperty: "last_change_time",
 			LastChangeTimeFormat:   "%Y-%m-%d %H:%M:%S",
 			Format:                 "JSON",

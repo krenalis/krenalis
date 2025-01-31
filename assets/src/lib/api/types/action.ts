@@ -95,7 +95,7 @@ interface Action {
 	table: string | null;
 	tableKey: string | null;
 	sheet: string | null;
-	identityProperty: string | null;
+	identityColumn: string | null;
 	lastChangeTimeProperty: string | null;
 	lastChangeTimeFormat: string | null;
 	exportMode: ExportMode | null;
@@ -125,7 +125,7 @@ interface ActionToSet {
 	tableName?: string | null;
 	tableKey?: string | null;
 	sheet?: string | null;
-	identityProperty?: string | null;
+	identityColumn?: string | null;
 	lastChangeTimeProperty?: string | null;
 	lastChangeTimeFormat?: string | null;
 	exportMode?: ExportMode;

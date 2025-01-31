@@ -96,7 +96,7 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 // If the action's input schema does not align with the file's schema, the
 // iterator, not Records, will return a *schemas.Error error.
 //
-// If the identity property specified in the action of the file is found within
+// If the identity column specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
 // The same applies for the last change time property, if specified.
 //
@@ -623,7 +623,7 @@ func newRecordWriter(format string, action *state.Action, storageLastChangeTime 
 		timeLayouts:           layout,
 		startTime:             startTime,
 		limit:                 limit,
-		identityPropertyIndex: -1,
+		identityColumnIndex:   -1,
 		lastChangeTimeIndex:   -1,
 	}
 	return &rw
@@ -637,7 +637,7 @@ type recordWriter struct {
 	timeLayouts            *state.TimeLayouts
 	startTime              time.Time
 	limit                  int
-	identityPropertyIndex  int
+	identityColumnIndex    int
 	lastChangeTimeIndex    int
 	numPropertiesPerRecord int
 	properties             []types.Property // properties of the action's schema, or the file's columns if an action has not been provided
@@ -674,16 +674,16 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 				continue
 			}
 			rw.properties[i] = p
-			if p.Name == rw.action.IdentityProperty {
-				rw.identityPropertyIndex = i
+			if p.Name == rw.action.IdentityColumn {
+				rw.identityColumnIndex = i
 			}
 			if p.Name == rw.action.LastChangeTimeProperty {
 				rw.lastChangeTimeIndex = i
 			}
 			rw.numPropertiesPerRecord++
 		}
-		if rw.action.IdentityProperty != "" && rw.identityPropertyIndex == -1 {
-			return fmt.Errorf("there is no identity property %q", rw.action.IdentityProperty)
+		if rw.action.IdentityColumn != "" && rw.identityColumnIndex == -1 {
+			return fmt.Errorf("there is no identity column %q", rw.action.IdentityColumn)
 		}
 		if rw.action.LastChangeTimeProperty != "" && rw.lastChangeTimeIndex == -1 {
 			return fmt.Errorf("there is no last change time property %q", rw.action.LastChangeTimeProperty)
@@ -728,10 +728,10 @@ func (rw *recordWriter) Record(record map[string]any) error {
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
-	// Get the identity property.
-	if i := rw.identityPropertyIndex; i >= 0 {
+	// Get the identity column.
+	if i := rw.identityColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[p.Name], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityColumn(p.Name, p.Type, record[p.Name], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -801,10 +801,10 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
-	// Get the identity property.
-	if i := rw.identityPropertyIndex; i >= 0 {
+	// Get the identity column.
+	if i := rw.identityColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[i], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityColumn(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}
@@ -866,10 +866,10 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 		LastChangeTime: lastChangeTime,
 		Err:            err,
 	}
-	// Get the identity property.
-	if i := rw.identityPropertyIndex; i >= 0 {
+	// Get the identity column.
+	if i := rw.identityColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseIdentityProperty(p.Name, p.Type, record[i], rw.timeLayouts)
+		rw.record.ID, err = parseIdentityColumn(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
 			rw.record.Err = err
 		}

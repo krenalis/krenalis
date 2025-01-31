@@ -271,7 +271,7 @@
 	opacity: 1;
 }
 
-.action__transformation-identity-property {
+.action__transformation-identity-column {
 	margin-bottom: 30px;
 }
 
@@ -285,7 +285,7 @@
 	gap: 15px;
 }
 
-.action__transformation-identity-property,
+.action__transformation-identity-column,
 .action__transformation-last-change-time {
 	display: grid;
 	justify-content: start;

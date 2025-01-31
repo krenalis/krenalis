@@ -75,9 +75,9 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: &meergotester.Transformation{
 			Mapping: mapping,
 		},
-		IdentityProperty: "dummyId",
-		Format:           "JSON",
-		FormatSettings:   meergotester.SettingsProperties(properties),
+		IdentityColumn: "dummyId",
+		Format:         "JSON",
+		FormatSettings: meergotester.SettingsProperties(properties),
 	})
 
 	// Create the action B.
@@ -90,9 +90,9 @@ func TestIdentityResolution(t *testing.T) {
 		Transformation: &meergotester.Transformation{
 			Mapping: mapping,
 		},
-		IdentityProperty: "dummyId",
-		Format:           "JSON",
-		FormatSettings:   meergotester.SettingsProperties(properties),
+		IdentityColumn: "dummyId",
+		Format:         "JSON",
+		FormatSettings: meergotester.SettingsProperties(properties),
 	})
 
 	// Define a function "expectUsers" which checks if the expected user

@@ -225,17 +225,17 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	var identityProperty, lastChangeTimeProperty types.Property
+	var identityColumn, lastChangeTimeProperty types.Property
 	for _, c := range columns {
-		if c.Name == action.IdentityProperty {
-			identityProperty, _ = action.InSchema.Property(c.Name)
+		if c.Name == action.IdentityColumn {
+			identityColumn, _ = action.InSchema.Property(c.Name)
 		}
 		if c.Name == action.LastChangeTimeProperty {
 			lastChangeTimeProperty, _ = action.InSchema.Property(c.Name)
 		}
 	}
-	if identityProperty.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no identity property %q", action.IdentityProperty)}
+	if identityColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
 	}
 	if action.LastChangeTimeProperty != "" && lastChangeTimeProperty.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no last change time property %q", action.LastChangeTimeProperty)}
@@ -480,7 +480,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				continue
 			}
 			properties[i] = p
-			if p.Name == r.action.IdentityProperty {
+			if p.Name == r.action.IdentityColumn {
 				identityIndex = i
 			}
 			if p.Name == r.action.LastChangeTimeProperty {
@@ -539,7 +539,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 					continue Rows
 				}
 				p := properties[identityIndex]
-				id, err := parseIdentityProperty(p.Name, p.Type, v, r.timeLayouts)
+				id, err := parseIdentityColumn(p.Name, p.Type, v, r.timeLayouts)
 				if err != nil {
 					record.Err = err
 					continue Rows

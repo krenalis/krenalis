@@ -61,7 +61,7 @@ type Action struct {
 	ExportOnDuplicates     *bool           `json:"exportOnDuplicates"`
 	TableName              *string         `json:"tableName"`
 	TableKey               *string         `json:"tableKey"`
-	IdentityProperty       *string         `json:"identityProperty"`
+	IdentityColumn         *string         `json:"identityColumn"`
 	LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
 	LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
 }
@@ -292,7 +292,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				serialized = struct {
 					serializedAction
 					Query                  string          `json:"query"`
-					IdentityProperty       string          `json:"identityProperty"`
+					IdentityColumn         string          `json:"identityColumn"`
 					LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
 					LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
 					Transformation         Transformation  `json:"transformation"`
@@ -304,7 +304,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				}{
 					serializedAction:     a,
 					Query:                *this.Query,
-					IdentityProperty:     *this.IdentityProperty,
+					IdentityColumn:       *this.IdentityColumn,
 					LastChangeTimeFormat: this.LastChangeTimeFormat,
 					Transformation:       *this.Transformation,
 					InSchema:             this.InSchema,
@@ -321,7 +321,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					Sheet                  *string         `json:"sheet"`
 					Compression            Compression     `json:"compression"`
 					Filter                 *Filter         `json:"filter"`
-					IdentityProperty       string          `json:"identityProperty"`
+					IdentityColumn         string          `json:"identityColumn"`
 					LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
 					LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
 					Transformation         Transformation  `json:"transformation"`
@@ -336,7 +336,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					Path:                   *this.Path,
 					Sheet:                  this.Sheet,
 					Compression:            this.Compression,
-					IdentityProperty:       *this.IdentityProperty,
+					IdentityColumn:         *this.IdentityColumn,
 					LastChangeTimeProperty: this.LastChangeTimeProperty,
 					LastChangeTimeFormat:   this.LastChangeTimeFormat,
 					Transformation:         *this.Transformation,
@@ -643,7 +643,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		ExportOnDuplicates:     action.ExportOnDuplicates,
 		TableName:              action.TableName,
 		TableKey:               action.TableKey,
-		IdentityProperty:       action.IdentityProperty,
+		IdentityColumn:         action.IdentityColumn,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
 		LastChangeTimeFormat:   action.LastChangeTimeFormat,
 	}
@@ -751,14 +751,14 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
 			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
 			"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, "+
-			"matching_out = $22, allow_duplicates = $23, table_name = $24, table_key = $25, identity_property = $26, "+
+			"matching_out = $22, allow_duplicates = $23, table_name = $24, table_key = $25, identity_column = $26, "+
 			"reload = reload OR $27, last_change_time_property = $28, last_change_time_format = $29\n"+
 			"WHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName,
-			n.TableKey, n.IdentityProperty, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ID,
+			n.TableKey, n.IdentityColumn, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ID,
 		)
 		if err != nil {
 			return err
@@ -871,9 +871,9 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		key := action.TableKey
 		this.TableKey = &key
 	}
-	if action.IdentityProperty != "" {
-		p := action.IdentityProperty
-		this.IdentityProperty = &p
+	if action.IdentityColumn != "" {
+		p := action.IdentityColumn
+		this.IdentityColumn = &p
 	}
 	if action.LastChangeTimeProperty != "" {
 		column := action.LastChangeTimeProperty
@@ -1003,10 +1003,10 @@ type ActionToSet struct {
 	// It is the empty string for any other type of action.
 	TableKey string `json:"tableKey"`
 
-	// IdentityProperty is the property name used as identity when importing
+	// IdentityColumn is the property name used as identity when importing
 	// from a file or from a database.
 	// It cannot be longer than 1024 runes.
-	IdentityProperty string `json:"identityProperty"`
+	IdentityColumn string `json:"identityColumn"`
 
 	// LastChangeTimeProperty is the last change time property when importing
 	// from a file or from a database. May be empty to indicate that no
@@ -1194,7 +1194,7 @@ func shouldReload(a *state.Action, n *state.UpdateAction) bool {
 	if !bytes.Equal(a.FormatSettings, n.FormatSettings) {
 		return true
 	}
-	if a.IdentityProperty != n.IdentityProperty {
+	if a.IdentityColumn != n.IdentityColumn {
 		return true
 	}
 	if a.LastChangeTimeProperty != n.LastChangeTimeProperty {

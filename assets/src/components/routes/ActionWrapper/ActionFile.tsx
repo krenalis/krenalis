@@ -164,7 +164,7 @@ const ActionFile = () => {
 		a.compression = '';
 		a.sheet = format.hasSheets ? '' : null;
 		a.path = '';
-		a.identityProperty = '';
+		a.identityColumn = '';
 		a.lastChangeTimeProperty = '';
 		a.lastChangeTimeFormat = '';
 		a.transformation.mapping = flattenSchema(actionType.outputSchema);

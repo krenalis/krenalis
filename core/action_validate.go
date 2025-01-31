@@ -344,13 +344,13 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	default:
 		return errors.BadRequest("compression %q is not valid", action.Compression)
 	}
-	// Validate the identity property.
-	if action.IdentityProperty != "" {
-		if !types.IsValidPropertyName(action.IdentityProperty) {
-			return errors.BadRequest("identity property is not a valid property name")
+	// Validate the identity column.
+	if action.IdentityColumn != "" {
+		if !types.IsValidPropertyName(action.IdentityColumn) {
+			return errors.BadRequest("identity column is not a valid property name")
 		}
-		if utf8.RuneCountInString(action.IdentityProperty) > 1024 {
-			return errors.BadRequest("identity property is longer than 1024 runes")
+		if utf8.RuneCountInString(action.IdentityColumn) > 1024 {
+			return errors.BadRequest("identity column is longer than 1024 runes")
 		}
 	}
 	// Validate the last change time property.
@@ -459,30 +459,30 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 
-	// Check the column for the identity property and for the timestamp.
+	// Check the column for the identity column and for the timestamp.
 	importFromColumns := v.connection.role == state.Source &&
 		(v.connection.connector.typ == state.Database || v.connection.connector.typ == state.FileStorage)
 	if importFromColumns {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema must be valid")
 		}
-		// Validate the identity property.
-		if action.IdentityProperty == "" {
-			return errors.BadRequest("identity property is mandatory")
+		// Validate the identity column.
+		if action.IdentityColumn == "" {
+			return errors.BadRequest("identity column is mandatory")
 		}
-		identityProperty, ok := inSchema.Property(action.IdentityProperty)
+		identityColumn, ok := inSchema.Property(action.IdentityColumn)
 		if !ok {
-			return errors.BadRequest("identity property %q not found within input schema", action.IdentityProperty)
+			return errors.BadRequest("identity column %q not found within input schema", action.IdentityColumn)
 		}
-		switch k := identityProperty.Type.Kind(); k {
+		switch k := identityColumn.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return errors.BadRequest("identity property %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityProperty, k)
+			return errors.BadRequest("identity column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityColumn, k)
 		}
-		if identityProperty.ReadOptional {
-			return errors.BadRequest("identity property cannot be optional")
+		if identityColumn.ReadOptional {
+			return errors.BadRequest("identity column cannot be optional")
 		}
-		usedInPaths = append(usedInPaths, action.IdentityProperty)
+		usedInPaths = append(usedInPaths, action.IdentityColumn)
 		// Validate the last change time property and format.
 		var requiresLastChangeTimeFormat bool
 		if action.LastChangeTimeProperty != "" {
@@ -510,8 +510,8 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			}
 		}
 	} else {
-		if action.IdentityProperty != "" {
-			return errors.BadRequest("action cannot specify an identity property")
+		if action.IdentityColumn != "" {
+			return errors.BadRequest("action cannot specify an identity column")
 		}
 		if action.LastChangeTimeProperty != "" {
 			return errors.BadRequest("action cannot specify a last change time property")

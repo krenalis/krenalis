@@ -105,7 +105,7 @@ CREATE TABLE actions (
     allow_duplicates boolean NOT NULL,
     table_name varchar(1024) NOT NULL DEFAULT '',
     table_key text NOT NULL,
-    identity_property varchar(1024) NOT NULL DEFAULT '',
+    identity_column varchar(1024) NOT NULL DEFAULT '',
     last_change_time_property varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',
     reload boolean NOT NULL DEFAULT FALSE,

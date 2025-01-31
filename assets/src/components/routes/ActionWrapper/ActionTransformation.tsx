@@ -2,7 +2,7 @@ import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, Re
 import { checkIfPropertyExists, updateMappingProperty, getSampleIdentifiers } from './Action.helpers';
 import {
 	getSchemaComboboxItems,
-	getIdentityPropertyComboboxItems,
+	getIdentityColumnComboboxItems,
 	getLastChangeTimeComboboxItems,
 } from '../../helpers/getSchemaComboboxItems';
 import {
@@ -146,12 +146,12 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (hasIdentityColumns && isFirstCompilation.current && !isEditing) {
-			// precompile the 'IdentityProperty' and 'lastChangeTimeProperty'
+			// precompile the 'IdentityColumn' and 'lastChangeTimeProperty'
 			// fields, if possible.
 			const a = { ...action };
 			const hasIdColumn = actionType.inputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
 			if (hasIdColumn) {
-				a.identityProperty = 'id';
+				a.identityColumn = 'id';
 				isFirstCompilation.current = false;
 			}
 			const hasLastChangeTimeProperty =
@@ -226,12 +226,12 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		return flattenSchema(actionType.inputSchema);
 	}, [actionType]);
 
-	const identityPropertyError = useMemo<string>(() => {
+	const identityColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			if (action.identityProperty === '' && !isFirstCompilation.current) {
+			if (action.identityColumn === '' && !isFirstCompilation.current) {
 				return 'The user identifier cannot be empty';
 			}
-			return checkIfPropertyExists(action.identityProperty, flatSchema);
+			return checkIfPropertyExists(action.identityColumn, flatSchema);
 		}
 	}, [action, flatSchema]);
 
@@ -241,9 +241,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [action, flatSchema]);
 
-	const { identityPropertyList, lastChangeTimeList, mappingList } = useMemo(() => {
+	const { identityColumnList, lastChangeTimeList, mappingList } = useMemo(() => {
 		return {
-			identityPropertyList: getIdentityPropertyComboboxItems(actionType.inputSchema),
+			identityColumnList: getIdentityColumnComboboxItems(actionType.inputSchema),
 			lastChangeTimeList: getLastChangeTimeComboboxItems(actionType.inputSchema),
 			mappingList: getSchemaComboboxItems(actionType.inputSchema),
 		};
@@ -300,9 +300,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	};
 
 	const onSelectProperty = async (name: string, value: string) => {
-		if (name === 'identityProperty') {
+		if (name === 'identityColumn') {
 			const a = { ...action };
-			a.identityProperty = value;
+			a.identityColumn = value;
 			setAction(a);
 			if (isFirstCompilation.current) {
 				isFirstCompilation.current = false;
@@ -320,9 +320,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		await updateMapping(name, value);
 	};
 
-	const onUpdateIdentityProperty = async (_: string, value: string) => {
+	const onUpdateIdentityColumn = async (_: string, value: string) => {
 		const a = { ...action };
-		a.identityProperty = value;
+		a.identityColumn = value;
 		setAction(a);
 		if (isFirstCompilation.current) {
 			isFirstCompilation.current = false;
@@ -424,28 +424,28 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 					annotated={true}
 				>
 					<div className='action__transformation-identity-columns'>
-						<div className='action__transformation-identity-property'>
+						<div className='action__transformation-identity-column'>
 							<div className='action__transformation-identity-columns-label'>
 								Identity
 								<span className='action__transformation-identity-columns-asterisk'>*</span>:
 							</div>
 							<Combobox
-								onInput={onUpdateIdentityProperty}
-								onSelect={onUpdateIdentityProperty}
-								name='identityProperty'
-								value={identityPropertyList.length === 0 ? '' : action.identityProperty!}
-								disabled={isTransformationDisabled || identityPropertyList.length === 0}
+								onInput={onUpdateIdentityColumn}
+								onSelect={onUpdateIdentityColumn}
+								name='identityColumn'
+								value={identityColumnList.length === 0 ? '' : action.identityColumn!}
+								disabled={isTransformationDisabled || identityColumnList.length === 0}
 								className='action__transformation-input-property'
 								isExpression={false}
-								items={identityPropertyList}
+								items={identityColumnList}
 								caret={true}
-								clearable={action.identityProperty?.length > 0}
+								clearable={action.identityColumn?.length > 0}
 								error={
-									identityPropertyList.length === 0
+									identityColumnList.length === 0
 										? `No column ${
 												connection.isFileStorage ? 'in the file' : 'returned by the query'
 											} can be used as user identifier`
-										: identityPropertyError
+										: identityColumnError
 								}
 								size='small'
 								helpText='A column that uniquely identifies a user identity'

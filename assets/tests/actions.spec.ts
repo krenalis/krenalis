@@ -383,8 +383,8 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 	await page.click('.action__query-confirm');
 	await expect(page.locator('.action__transformation')).toBeVisible();
 
-	// Identity property.
-	const identity = page.locator('.action__transformation-identity-property');
+	// Identity column.
+	const identity = page.locator('.action__transformation-identity-column');
 	await identity.locator('sl-input').click();
 	await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 
@@ -466,7 +466,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 			}
 		},
 		"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
-		"identityProperty": "email",
+		"identityColumn": "email",
 		"lastChangeTimeProperty": "",
 		"lastChangeTimeFormat": ""
 	}
@@ -715,8 +715,8 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 		await page.click('.action__file-preview-drawer >> .drawer__close');
 		await page.click('.action__file-confirm');
 
-		// Identity property.
-		const identity = page.locator('.action__transformation-identity-property');
+		// Identity column.
+		const identity = page.locator('.action__transformation-identity-column');
 		await identity.locator('sl-input').click();
 		await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 
@@ -806,7 +806,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			},
 			"path": "test.csv",
 			"sheet": null,
-			"identityProperty": "email",
+			"identityColumn": "email",
 			"lastChangeTimeProperty": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",
@@ -1135,7 +1135,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"transformation": null,
 			"path": "test.csv",
 			"sheet": null,
-			"identityProperty": "",
+			"identityColumn": "",
 			"lastChangeTimeProperty": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",

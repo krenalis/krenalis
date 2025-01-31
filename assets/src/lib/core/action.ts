@@ -195,7 +195,7 @@ interface TransformedAction {
 	table?: string | null;
 	tableKey?: string | null;
 	sheet?: string | null;
-	identityProperty?: string | null;
+	identityColumn?: string | null;
 	lastChangeTimeProperty?: string | null;
 	lastChangeTimeFormat?: string | null;
 	orderBy?: string | null;
@@ -526,7 +526,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		table: action.table,
 		tableKey: action.tableKey,
 		sheet: action.sheet,
-		identityProperty: action.identityProperty,
+		identityColumn: action.identityColumn,
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		exportMode: action.exportMode,
@@ -828,16 +828,16 @@ const transformInActionToSet = async (
 	}
 
 	if (connection.isSource && (connection.isDatabase || connection.isFileStorage)) {
-		if (action.identityProperty == null || action.identityProperty === '') {
+		if (action.identityColumn == null || action.identityColumn === '') {
 			throw new Error('User identifier cannot be empty');
 		}
-		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.identityProperty) !== -1;
+		const isAlreadyInSchema = inSchema.properties!.findIndex((p) => p.name === action.identityColumn) !== -1;
 		if (!isAlreadyInSchema) {
-			const identityProperty = flattenedInputSchema[action.identityProperty];
-			if (identityProperty == null) {
+			const identityColumn = flattenedInputSchema[action.identityColumn];
+			if (identityColumn == null) {
 				throw new Error('User identifier must be a valid property');
 			}
-			inSchema.properties.push(identityProperty.full);
+			inSchema.properties.push(identityColumn.full);
 		}
 
 		if (action.lastChangeTimeProperty) {
@@ -1052,7 +1052,7 @@ const transformInActionToSet = async (
 		tableName: action.table,
 		tableKey: action.tableKey,
 		sheet: action.sheet,
-		identityProperty: action.identityProperty,
+		identityColumn: action.identityColumn,
 		lastChangeTimeProperty: action.lastChangeTimeProperty,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		compression: action.compression,
@@ -1103,13 +1103,13 @@ const computeDefaultAction = (
 	};
 	if (fields.includes('Query')) {
 		action.query = connection.connector.asSource.sampleQuery;
-		action.identityProperty = '';
+		action.identityColumn = '';
 		action.lastChangeTimeProperty = '';
 		action.lastChangeTimeFormat = '';
 	}
 	if (fields.includes('File')) {
 		action.path = '';
-		action.identityProperty = '';
+		action.identityColumn = '';
 		action.lastChangeTimeProperty = '';
 		action.lastChangeTimeFormat = '';
 		action.sheet = null;

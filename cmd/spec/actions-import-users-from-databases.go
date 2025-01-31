@@ -32,8 +32,8 @@ func init() {
 			"Note that you can use a column alias if necessary (e.g., `SELECT 1 AS v FROM users`).\n\n" +
 			"The query should include the `last_change_time` placeholder as a condition in the WHERE clause.",
 	}
-	identityPropertyParameter := types.Property{
-		Name:           "identityProperty",
+	identityColumnParameter := types.Property{
+		Name:           "identityColumn",
 		Type:           types.Text().WithCharLen(1024),
 		CreateRequired: true,
 		Placeholder:    `"email"`,
@@ -123,7 +123,7 @@ func init() {
 		Type:           types.Parameter("schema"),
 		CreateRequired: true,
 		Placeholder:    `{...}`,
-		Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\n" +
+		Description: "The schema for the identity column, the last change time property, and the input properties for the transformation.\n\n" +
 			"When importing users from databases, this should be a subset of the query schema.",
 	}
 	outSchemaParameter := types.Property{
@@ -169,7 +169,7 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					queryParameter,
-					identityPropertyParameter,
+					identityColumnParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
 					transformationParameter,
@@ -214,7 +214,7 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					queryParameter,
-					identityPropertyParameter,
+					identityColumnParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
 					transformationParameter,
@@ -293,7 +293,7 @@ func init() {
 							Description: "The SELECT query executed on the database to retrieve the users to import.",
 						},
 						{
-							Name:        "identityProperty",
+							Name:        "identityColumn",
 							Type:        types.Text(),
 							Placeholder: `"email"`,
 							Description: "The column that uniquely identifies each user in the database.",
@@ -372,7 +372,7 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
-							Description: "The schema for the identity property, the last change time property, and the input properties for the transformation.",
+							Description: "The schema for the identity column, the last change time property, and the input properties for the transformation.",
 						},
 						{
 							Name:        "outSchema",

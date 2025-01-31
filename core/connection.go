@@ -766,7 +766,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		ExportOnDuplicates:     action.ExportOnDuplicates,
 		TableName:              action.TableName,
 		TableKey:               action.TableKey,
-		IdentityProperty:       action.IdentityProperty,
+		IdentityColumn:         action.IdentityColumn,
 		LastChangeTimeProperty: action.LastChangeTimeProperty,
 		LastChangeTimeFormat:   action.LastChangeTimeFormat,
 	}
@@ -870,7 +870,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
 			"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression, order_by,\n" +
 			"format_settings, export_mode, matching_in, matching_out, allow_duplicates, table_name, table_key,\n" +
-			"identity_property, last_change_time_property, last_change_time_format)\n" +
+			"identity_column, last_change_time_property, last_change_time_format)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"
 		_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
@@ -878,7 +878,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet,
 			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates,
-			n.TableName, n.TableKey, n.IdentityProperty, n.LastChangeTimeProperty, n.LastChangeTimeFormat)
+			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeProperty, n.LastChangeTimeFormat)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {
 				err = errors.Unprocessable(ConnectionNotExist, "connection %d does not exist", n.Connection)

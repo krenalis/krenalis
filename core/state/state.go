@@ -1086,7 +1086,7 @@ type Action struct {
 	ExportOnDuplicates     bool
 	TableName              string
 	TableKey               string
-	IdentityProperty       string
+	IdentityColumn         string
 	LastChangeTimeProperty string
 	LastChangeTimeFormat   string
 	Reload                 bool

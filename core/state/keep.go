@@ -287,7 +287,7 @@ type CreateAction struct {
 	ExportOnDuplicates     bool
 	TableName              string
 	TableKey               string
-	IdentityProperty       string
+	IdentityColumn         string
 	LastChangeTimeProperty string
 	LastChangeTimeFormat   string
 }
@@ -325,7 +325,7 @@ func (state *State) createAction(n notification) {
 		ExportOnDuplicates:     e.ExportOnDuplicates,
 		TableName:              e.TableName,
 		TableKey:               e.TableKey,
-		IdentityProperty:       e.IdentityProperty,
+		IdentityColumn:         e.IdentityColumn,
 		LastChangeTimeProperty: e.LastChangeTimeProperty,
 		LastChangeTimeFormat:   e.LastChangeTimeFormat,
 	}
@@ -1020,7 +1020,7 @@ type UpdateAction struct {
 	ExportOnDuplicates     bool
 	TableName              string
 	TableKey               string
-	IdentityProperty       string
+	IdentityColumn         string
 	LastChangeTimeProperty string
 	LastChangeTimeFormat   string
 }
@@ -1055,7 +1055,7 @@ func (state *State) updateAction(n notification) {
 		a.ExportOnDuplicates = e.ExportOnDuplicates
 		a.TableName = e.TableName
 		a.TableKey = e.TableKey
-		a.IdentityProperty = e.IdentityProperty
+		a.IdentityColumn = e.IdentityColumn
 		a.LastChangeTimeProperty = e.LastChangeTimeProperty
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
 	})

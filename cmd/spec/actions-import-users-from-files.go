@@ -65,8 +65,8 @@ func init() {
 		Description: "The settings for the file format. Refer to the documentation for the [file connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
 			"If the file format does not require any settings, the `formatSettings` field may be omitted or set to null.",
 	}
-	identityPropertyParameter := types.Property{
-		Name:           "identityProperty",
+	identityColumnParameter := types.Property{
+		Name:           "identityColumn",
 		Type:           types.Text().WithCharLen(1024),
 		CreateRequired: true,
 		Placeholder:    `"email"`,
@@ -156,7 +156,7 @@ func init() {
 		Type:           types.Parameter("schema"),
 		Placeholder:    `{...}`,
 		CreateRequired: true,
-		Description: "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\n" +
+		Description: "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation.\n\n" +
 			"When importing users from files, this should be a subset of the file schema.",
 	}
 	outSchemaParameter := types.Property{
@@ -207,7 +207,7 @@ func init() {
 					compressionParameter,
 					formatSettingsParameter,
 					filterParameter,
-					identityPropertyParameter,
+					identityColumnParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
 					transformationParameter,
@@ -256,7 +256,7 @@ func init() {
 					sheetParameter,
 					compressionParameter,
 					filterParameter,
-					identityPropertyParameter,
+					identityColumnParameter,
 					lastChangeTimeParameter,
 					lastChangeTimeFormatParameter,
 					transformationParameter,
@@ -341,7 +341,7 @@ func init() {
 						},
 						compressionParameter,
 						{
-							Name:        "identityProperty",
+							Name:        "identityColumn",
 							Type:        types.Text(),
 							Placeholder: `"email"`,
 							Description: "The column that uniquely identifies each user in the file.",
@@ -421,7 +421,7 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
-							Description: "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.",
+							Description: "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation.",
 						},
 						{
 							Name:        "outSchema",

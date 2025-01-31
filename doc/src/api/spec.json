@@ -4597,7 +4597,7 @@
                             "description": "The SELECT query executed on the database to retrieve the users to import.\n\nThe column names returned must be valid property names. They must:\n- Start with `A`...`Z`, `a`...`z`, or `_`,\n- Contain only `A`...`Z`, `a`...`z`, `0`...`9`, or `_`.\n\nNote that you can use a column alias if necessary (e.g., `SELECT 1 AS v FROM users`).\n\nThe query should include the `last_change_time` placeholder as a condition in the WHERE clause."
                         },
                         {
-                            "name": "identityProperty",
+                            "name": "identityColumn",
                             "placeholder": "\"email\"",
                             "type": {
                                 "name": "Text",
@@ -4723,7 +4723,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
+                            "description": "The schema for the identity column, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
                         },
                         {
                             "name": "outSchema",
@@ -4818,7 +4818,7 @@
                             "description": "The SELECT query executed on the database to retrieve the users to import.\n\nThe column names returned must be valid property names. They must:\n- Start with `A`...`Z`, `a`...`z`, or `_`,\n- Contain only `A`...`Z`, `a`...`z`, `0`...`9`, or `_`.\n\nNote that you can use a column alias if necessary (e.g., `SELECT 1 AS v FROM users`).\n\nThe query should include the `last_change_time` placeholder as a condition in the WHERE clause."
                         },
                         {
-                            "name": "identityProperty",
+                            "name": "identityColumn",
                             "placeholder": "\"email\"",
                             "type": {
                                 "name": "Text",
@@ -4944,7 +4944,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
+                            "description": "The schema for the identity column, the last change time property, and the input properties for the transformation.\n\nWhen importing users from databases, this should be a subset of the query schema."
                         },
                         {
                             "name": "outSchema",
@@ -5091,7 +5091,7 @@
                                 "description": "The SELECT query executed on the database to retrieve the users to import."
                             },
                             {
-                                "name": "identityProperty",
+                                "name": "identityColumn",
                                 "placeholder": "\"email\"",
                                 "type": {
                                     "name": "Text"
@@ -5206,7 +5206,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": "The schema for the identity property, the last change time property, and the input properties for the transformation."
+                                "description": "The schema for the identity column, the last change time property, and the input properties for the transformation."
                             },
                             {
                                 "name": "outSchema",
@@ -6306,7 +6306,7 @@
                             "description": "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "identityProperty",
+                            "name": "identityColumn",
                             "placeholder": "\"email\"",
                             "type": {
                                 "name": "Text",
@@ -6432,7 +6432,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
+                            "description": "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
                         },
                         {
                             "name": "outSchema",
@@ -6646,7 +6646,7 @@
                             "description": "The filter applied to the users in the file. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "identityProperty",
+                            "name": "identityColumn",
                             "placeholder": "\"email\"",
                             "type": {
                                 "name": "Text",
@@ -6772,7 +6772,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
+                            "description": "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation.\n\nWhen importing users from files, this should be a subset of the file schema."
                         },
                         {
                             "name": "outSchema",
@@ -6968,7 +6968,7 @@
                                 "description": "The compression format of the file. It is an empty if the file is not compressed.\n\nNote that an Excel file is inherently compressed, so no compression format needs to be specified unless the file has been further compressed."
                             },
                             {
-                                "name": "identityProperty",
+                                "name": "identityColumn",
                                 "placeholder": "\"email\"",
                                 "type": {
                                     "name": "Text"
@@ -7083,7 +7083,7 @@
                                 "type": {
                                     "name": "schema"
                                 },
-                                "description": "The schema for the properties used in the filter, the identity property, the last change time property, and the input properties for the transformation."
+                                "description": "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation."
                             },
                             {
                                 "name": "outSchema",

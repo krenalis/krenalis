@@ -49,7 +49,7 @@ const getFilterPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getIdentityPropertyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
+const getIdentityColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -148,7 +148,7 @@ const computeItems = (flatSchema: TransformedMapping) => {
 export {
 	getSchemaComboboxItems,
 	getUIPreferencesComboboxItems,
-	getIdentityPropertyComboboxItems,
+	getIdentityColumnComboboxItems,
 	getLastChangeTimeComboboxItems,
 	filterOrderingPropertySchema,
 	getOrderingPropertyPathComboboxItems,

@@ -456,8 +456,8 @@ func ordinal(n int) string {
 	return fmt.Sprintf("%dth", n)
 }
 
-// parseIdentityProperty parses the value for the identity property.
-func parseIdentityProperty(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
+// parseIdentityColumn parses the value for the identity column.
+func parseIdentityColumn(name string, typ types.Type, value any, layouts *state.TimeLayouts) (string, error) {
 	id, err := normalize(name, typ, value, false, layouts)
 	if err != nil {
 		return "", err

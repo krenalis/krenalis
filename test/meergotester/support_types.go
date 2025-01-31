@@ -46,7 +46,7 @@ type Action struct {
 	ExportOnDuplicates     *bool           `json:"exportOnDuplicates"`
 	TableName              *string         `json:"tableName"`
 	TableKey               *string         `json:"tableKey"`
-	IdentityProperty       *string         `json:"identityProperty"`
+	IdentityColumn         *string         `json:"identityColumn"`
 	LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
 	LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
 }
@@ -69,7 +69,7 @@ type ActionToSet struct {
 	ExportOnDuplicates     bool            `json:"exportOnDuplicates"`
 	TableName              string          `json:"tableName"`
 	TableKey               string          `json:"tableKey"`
-	IdentityProperty       string          `json:"identityProperty"`
+	IdentityColumn         string          `json:"identityColumn"`
 	LastChangeTimeProperty string          `json:"lastChangeTimeProperty"`
 	LastChangeTimeFormat   string          `json:"lastChangeTimeFormat"`
 	OrderBy                string          `json:"orderBy"`
