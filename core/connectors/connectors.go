@@ -66,7 +66,7 @@ var (
 	ErrNoWebhooks     = errors.New("app has no webhooks")
 )
 
-// LastChangeTimeColumn represents the lat change time property passed to the
+// LastChangeTimeColumn represents the last change time column passed to the
 // (*File).ReadFunc method.
 type LastChangeTimeColumn struct {
 	Name   string
