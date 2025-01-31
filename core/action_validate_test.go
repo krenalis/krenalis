@@ -1180,7 +1180,7 @@ func Test_validateAction(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				IdentityColumn: "my_id_property",
+				IdentityColumn: "my_id_column",
 			},
 			target:                  state.Users,
 			connectionRole:          state.Source,
