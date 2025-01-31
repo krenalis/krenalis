@@ -370,7 +370,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_source,\n"+
 			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_paths,\n"+
 			"transformation_out_paths, query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode,\n"+
-			"matching_in, matching_out, allow_duplicates, table_name, table_key, identity_column,\n"+
+			"matching_in, matching_out, export_on_duplicates, table_name, table_key, identity_column,\n"+
 			"last_change_time_column, last_change_time_format, health\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {

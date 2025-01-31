@@ -752,7 +752,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, "+
 			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
 			"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, "+
-			"matching_out = $22, allow_duplicates = $23, table_name = $24, table_key = $25, identity_column = $26, "+
+			"matching_out = $22, export_on_duplicates = $23, table_name = $24, table_key = $25, identity_column = $26, "+
 			"reload = reload OR $27, last_change_time_column = $28, last_change_time_format = $29\n"+
 			"WHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
