@@ -69,7 +69,7 @@ func Test_ReplacePlaceHolders(t *testing.T) {
 
 }
 
-func Test_parseLastChangeTimePropertyWithFormat(t *testing.T) {
+func Test_parseLastChangeTimeColumnWithFormat(t *testing.T) {
 	tests := []struct {
 		name        string
 		format      string
@@ -158,7 +158,7 @@ func Test_parseLastChangeTimePropertyWithFormat(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := parseLastChangeTimePropertyWithFormat(test.format, test.value)
+			got, err := parseLastChangeTimeColumnWithFormat(test.format, test.value)
 			var gotErr string
 			if err != nil {
 				gotErr = err.Error()

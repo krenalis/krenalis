@@ -9,7 +9,7 @@ import {
 	TransformedAction,
 	TransformedActionType,
 	TransformedMapping,
-	doesLastChangeTimePropertyNeedFormat,
+	doesLastChangeTimeColumnNeedFormat,
 	flattenSchema,
 	getTransformationFunctionParameterName,
 	transformInActionToSet,
@@ -134,7 +134,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	}, []);
 
 	useEffect(() => {
-		if (!hasIdentityColumns || !action.lastChangeTimeProperty) {
+		if (!hasIdentityColumns || !action.lastChangeTimeColumn) {
 			return;
 		}
 		// check if the last change time format is custom.
@@ -146,7 +146,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	useEffect(() => {
 		if (hasIdentityColumns && isFirstCompilation.current && !isEditing) {
-			// precompile the 'IdentityColumn' and 'lastChangeTimeProperty'
+			// precompile the 'IdentityColumn' and 'lastChangeTimeColumn'
 			// fields, if possible.
 			const a = { ...action };
 			const hasIdColumn = actionType.inputSchema.properties.findIndex((prop) => prop.name === 'id') !== -1;
@@ -154,11 +154,11 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				a.identityColumn = 'id';
 				isFirstCompilation.current = false;
 			}
-			const hasLastChangeTimeProperty =
+			const hasLastChangeTimeColumn =
 				actionType.inputSchema.properties.findIndex((prop) => prop.name === 'timestamp') !== -1;
-			if (hasLastChangeTimeProperty) {
-				a.lastChangeTimeProperty = 'timestamp';
-				if (doesLastChangeTimePropertyNeedFormat(a.lastChangeTimeProperty, actionType.inputSchema)) {
+			if (hasLastChangeTimeColumn) {
+				a.lastChangeTimeColumn = 'timestamp';
+				if (doesLastChangeTimeColumnNeedFormat(a.lastChangeTimeColumn, actionType.inputSchema)) {
 					a.lastChangeTimeFormat = '';
 				}
 			}
@@ -207,10 +207,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	const needFormat: boolean = useMemo(() => {
 		if (
 			(connection.isFileStorage || connection.isDatabase) &&
-			action.lastChangeTimeProperty &&
+			action.lastChangeTimeColumn &&
 			!isTransformationDisabled
 		) {
-			return doesLastChangeTimePropertyNeedFormat(action.lastChangeTimeProperty, actionType.inputSchema);
+			return doesLastChangeTimeColumnNeedFormat(action.lastChangeTimeColumn, actionType.inputSchema);
 		}
 		return false;
 	}, [action, actionType, isTransformationDisabled]);
@@ -235,9 +235,9 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	}, [action, flatSchema]);
 
-	const lastChangeTimePropertyError = useMemo<string>(() => {
+	const lastChangeTimeColumnError = useMemo<string>(() => {
 		if (connection.isFileStorage || connection.isDatabase) {
-			return checkIfPropertyExists(action.lastChangeTimeProperty, flatSchema);
+			return checkIfPropertyExists(action.lastChangeTimeColumn, flatSchema);
 		}
 	}, [action, flatSchema]);
 
@@ -308,10 +308,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				isFirstCompilation.current = false;
 			}
 			return;
-		} else if (name === 'lastChangeTimeProperty') {
+		} else if (name === 'lastChangeTimeColumn') {
 			const a = { ...action };
-			a.lastChangeTimeProperty = value;
-			if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.inputSchema)) {
+			a.lastChangeTimeColumn = value;
+			if (value === '' || !doesLastChangeTimeColumnNeedFormat(value, actionType.inputSchema)) {
 				a.lastChangeTimeFormat = '';
 			}
 			setAction(a);
@@ -329,10 +329,10 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 		}
 	};
 
-	const onUpdateLastChangeTimeProperty = async (_: string, value: string) => {
+	const onUpdateLastChangeTimeColumn = async (_: string, value: string) => {
 		const a = { ...action };
-		a.lastChangeTimeProperty = value;
-		if (value === '' || !doesLastChangeTimePropertyNeedFormat(value, actionType.inputSchema)) {
+		a.lastChangeTimeColumn = value;
+		if (value === '' || !doesLastChangeTimeColumnNeedFormat(value, actionType.inputSchema)) {
 			setIsCustomLastChangeTimeFormatSelected(false);
 			a.lastChangeTimeFormat = '';
 		}
@@ -451,21 +451,21 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								helpText='A column that uniquely identifies a user identity'
 							/>
 						</div>
-						<div className='action__transformation-last-change-time-property'>
+						<div className='action__transformation-last-change-time-column'>
 							<div className='action__transformation-last-change-time'>
 								<div className='action__transformation-identity-columns-label'>Last change time:</div>
 								<Combobox
-									onInput={onUpdateLastChangeTimeProperty}
-									onSelect={onUpdateLastChangeTimeProperty}
-									value={action.lastChangeTimeProperty!}
-									name='lastChangeTimeProperty'
+									onInput={onUpdateLastChangeTimeColumn}
+									onSelect={onUpdateLastChangeTimeColumn}
+									value={action.lastChangeTimeColumn!}
+									name='lastChangeTimeColumn'
 									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
 									isExpression={false}
 									caret={true}
 									items={lastChangeTimeList}
-									clearable={action.lastChangeTimeProperty?.length > 0}
-									error={lastChangeTimePropertyError}
+									clearable={action.lastChangeTimeColumn?.length > 0}
+									error={lastChangeTimeColumnError}
 									size='small'
 									helpText='A column with the time of the last modification of a user identity'
 								/>
@@ -478,7 +478,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 										value={
 											isCustomLastChangeTimeFormatSelected
 												? 'custom'
-												: action.lastChangeTimeProperty
+												: action.lastChangeTimeColumn
 													? Object.keys(lastChangeTimeFormats).find(
 															(key) =>
 																lastChangeTimeFormats[key] ===

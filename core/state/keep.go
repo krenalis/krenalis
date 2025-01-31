@@ -263,33 +263,33 @@ func (state *State) createAPIKey(n notification) {
 
 // CreateAction is the event sent when an action is created.
 type CreateAction struct {
-	ID                     int
-	Connection             int
-	Target                 Target
-	EventType              string
-	Name                   string
-	Enabled                bool
-	ScheduleStart          int16
-	SchedulePeriod         int16
-	InSchema               types.Type
-	OutSchema              types.Type
-	Filter                 json.RawMessage `json:",omitempty"`
-	Transformation         Transformation
-	Query                  string
-	Format                 string
-	Path                   string
-	Sheet                  string
-	Compression            Compression
-	OrderBy                string
-	FormatSettings         []byte
-	ExportMode             ExportMode
-	Matching               Matching
-	ExportOnDuplicates     bool
-	TableName              string
-	TableKey               string
-	IdentityColumn         string
-	LastChangeTimeProperty string
-	LastChangeTimeFormat   string
+	ID                   int
+	Connection           int
+	Target               Target
+	EventType            string
+	Name                 string
+	Enabled              bool
+	ScheduleStart        int16
+	SchedulePeriod       int16
+	InSchema             types.Type
+	OutSchema            types.Type
+	Filter               json.RawMessage `json:",omitempty"`
+	Transformation       Transformation
+	Query                string
+	Format               string
+	Path                 string
+	Sheet                string
+	Compression          Compression
+	OrderBy              string
+	FormatSettings       []byte
+	ExportMode           ExportMode
+	Matching             Matching
+	ExportOnDuplicates   bool
+	TableName            string
+	TableKey             string
+	IdentityColumn       string
+	LastChangeTimeColumn string
+	LastChangeTimeFormat string
 }
 
 // createAction creates a new action.
@@ -301,33 +301,33 @@ func (state *State) createAction(n notification) {
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
 	action := &Action{
-		mu:                     new(sync.Mutex),
-		ID:                     e.ID,
-		connection:             c,
-		format:                 format,
-		Target:                 e.Target,
-		Name:                   e.Name,
-		Enabled:                e.Enabled,
-		EventType:              e.EventType,
-		ScheduleStart:          e.ScheduleStart,
-		SchedulePeriod:         e.SchedulePeriod,
-		InSchema:               e.InSchema,
-		OutSchema:              e.OutSchema,
-		Transformation:         e.Transformation,
-		Query:                  e.Query,
-		Path:                   e.Path,
-		Sheet:                  e.Sheet,
-		Compression:            e.Compression,
-		OrderBy:                e.OrderBy,
-		FormatSettings:         e.FormatSettings,
-		ExportMode:             e.ExportMode,
-		Matching:               e.Matching,
-		ExportOnDuplicates:     e.ExportOnDuplicates,
-		TableName:              e.TableName,
-		TableKey:               e.TableKey,
-		IdentityColumn:         e.IdentityColumn,
-		LastChangeTimeProperty: e.LastChangeTimeProperty,
-		LastChangeTimeFormat:   e.LastChangeTimeFormat,
+		mu:                   new(sync.Mutex),
+		ID:                   e.ID,
+		connection:           c,
+		format:               format,
+		Target:               e.Target,
+		Name:                 e.Name,
+		Enabled:              e.Enabled,
+		EventType:            e.EventType,
+		ScheduleStart:        e.ScheduleStart,
+		SchedulePeriod:       e.SchedulePeriod,
+		InSchema:             e.InSchema,
+		OutSchema:            e.OutSchema,
+		Transformation:       e.Transformation,
+		Query:                e.Query,
+		Path:                 e.Path,
+		Sheet:                e.Sheet,
+		Compression:          e.Compression,
+		OrderBy:              e.OrderBy,
+		FormatSettings:       e.FormatSettings,
+		ExportMode:           e.ExportMode,
+		Matching:             e.Matching,
+		ExportOnDuplicates:   e.ExportOnDuplicates,
+		TableName:            e.TableName,
+		TableKey:             e.TableKey,
+		IdentityColumn:       e.IdentityColumn,
+		LastChangeTimeColumn: e.LastChangeTimeColumn,
+		LastChangeTimeFormat: e.LastChangeTimeFormat,
 	}
 	if e.Filter != nil {
 		action.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
@@ -1001,28 +1001,28 @@ func (state *State) setConnectionSettings(n notification) {
 
 // UpdateAction is the event sent when an action is updated.
 type UpdateAction struct {
-	ID                     int
-	Name                   string
-	Enabled                bool
-	InSchema               types.Type
-	OutSchema              types.Type
-	Filter                 json.RawMessage `json:",omitempty"`
-	Transformation         Transformation
-	Query                  string
-	Format                 string
-	Path                   string
-	Sheet                  string
-	Compression            Compression
-	OrderBy                string
-	FormatSettings         []byte
-	ExportMode             ExportMode
-	Matching               Matching
-	ExportOnDuplicates     bool
-	TableName              string
-	TableKey               string
-	IdentityColumn         string
-	LastChangeTimeProperty string
-	LastChangeTimeFormat   string
+	ID                   int
+	Name                 string
+	Enabled              bool
+	InSchema             types.Type
+	OutSchema            types.Type
+	Filter               json.RawMessage `json:",omitempty"`
+	Transformation       Transformation
+	Query                string
+	Format               string
+	Path                 string
+	Sheet                string
+	Compression          Compression
+	OrderBy              string
+	FormatSettings       []byte
+	ExportMode           ExportMode
+	Matching             Matching
+	ExportOnDuplicates   bool
+	TableName            string
+	TableKey             string
+	IdentityColumn       string
+	LastChangeTimeColumn string
+	LastChangeTimeFormat string
 }
 
 // updateAction updates an action.
@@ -1056,7 +1056,7 @@ func (state *State) updateAction(n notification) {
 		a.TableName = e.TableName
 		a.TableKey = e.TableKey
 		a.IdentityColumn = e.IdentityColumn
-		a.LastChangeTimeProperty = e.LastChangeTimeProperty
+		a.LastChangeTimeColumn = e.LastChangeTimeColumn
 		a.LastChangeTimeFormat = e.LastChangeTimeFormat
 	})
 	dispatchNotification(state, e)

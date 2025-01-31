@@ -31,39 +31,39 @@ import (
 
 // Action represents an action of a connection.
 type Action struct {
-	core                   *Core
-	action                 *state.Action
-	connection             *Connection
-	ID                     int             `json:"id"`
-	Connector              string          `json:"connector"`
-	ConnectorType          ConnectorType   `json:"connectorType"`
-	Connection             int             `json:"connection"`
-	ConnectionRole         Role            `json:"connectionRole"`
-	Target                 Target          `json:"target"`
-	Name                   string          `json:"name"`
-	Enabled                bool            `json:"enabled"`
-	EventType              *string         `json:"eventType"`
-	Running                bool            `json:"running"`
-	ScheduleStart          *int            `json:"scheduleStart"`
-	SchedulePeriod         *SchedulePeriod `json:"schedulePeriod"`
-	InSchema               types.Type      `json:"inSchema"`
-	OutSchema              types.Type      `json:"outSchema"`
-	Filter                 *Filter         `json:"filter"`
-	Transformation         *Transformation `json:"transformation"`
-	Query                  *string         `json:"query"`
-	Format                 string          `json:"format"`
-	Path                   *string         `json:"path"`
-	Sheet                  *string         `json:"sheet"`
-	Compression            Compression     `json:"compression"`
-	OrderBy                *string         `json:"orderBy"`
-	ExportMode             *ExportMode     `json:"exportMode"`
-	Matching               *Matching       `json:"matching"`
-	ExportOnDuplicates     *bool           `json:"exportOnDuplicates"`
-	TableName              *string         `json:"tableName"`
-	TableKey               *string         `json:"tableKey"`
-	IdentityColumn         *string         `json:"identityColumn"`
-	LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
-	LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
+	core                 *Core
+	action               *state.Action
+	connection           *Connection
+	ID                   int             `json:"id"`
+	Connector            string          `json:"connector"`
+	ConnectorType        ConnectorType   `json:"connectorType"`
+	Connection           int             `json:"connection"`
+	ConnectionRole       Role            `json:"connectionRole"`
+	Target               Target          `json:"target"`
+	Name                 string          `json:"name"`
+	Enabled              bool            `json:"enabled"`
+	EventType            *string         `json:"eventType"`
+	Running              bool            `json:"running"`
+	ScheduleStart        *int            `json:"scheduleStart"`
+	SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
+	InSchema             types.Type      `json:"inSchema"`
+	OutSchema            types.Type      `json:"outSchema"`
+	Filter               *Filter         `json:"filter"`
+	Transformation       *Transformation `json:"transformation"`
+	Query                *string         `json:"query"`
+	Format               string          `json:"format"`
+	Path                 *string         `json:"path"`
+	Sheet                *string         `json:"sheet"`
+	Compression          Compression     `json:"compression"`
+	OrderBy              *string         `json:"orderBy"`
+	ExportMode           *ExportMode     `json:"exportMode"`
+	Matching             *Matching       `json:"matching"`
+	ExportOnDuplicates   *bool           `json:"exportOnDuplicates"`
+	TableName            *string         `json:"tableName"`
+	TableKey             *string         `json:"tableKey"`
+	IdentityColumn       *string         `json:"identityColumn"`
+	LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
+	LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
 }
 
 // Matching establishes a relationship between a property in Meergo (input
@@ -291,16 +291,16 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 			case Database:
 				serialized = struct {
 					serializedAction
-					Query                  string          `json:"query"`
-					IdentityColumn         string          `json:"identityColumn"`
-					LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
-					LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
-					Transformation         Transformation  `json:"transformation"`
-					InSchema               types.Type      `json:"inSchema"`
-					OutSchema              types.Type      `json:"outSchema"`
-					Running                bool            `json:"running"`
-					ScheduleStart          *int            `json:"scheduleStart"`
-					SchedulePeriod         *SchedulePeriod `json:"schedulePeriod"`
+					Query                string          `json:"query"`
+					IdentityColumn       string          `json:"identityColumn"`
+					LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
+					LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
+					Transformation       Transformation  `json:"transformation"`
+					InSchema             types.Type      `json:"inSchema"`
+					OutSchema            types.Type      `json:"outSchema"`
+					Running              bool            `json:"running"`
+					ScheduleStart        *int            `json:"scheduleStart"`
+					SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
 				}{
 					serializedAction:     a,
 					Query:                *this.Query,
@@ -316,35 +316,35 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 			case FileStorage:
 				serialized = struct {
 					serializedAction
-					Format                 string          `json:"format"`
-					Path                   string          `json:"path"`
-					Sheet                  *string         `json:"sheet"`
-					Compression            Compression     `json:"compression"`
-					Filter                 *Filter         `json:"filter"`
-					IdentityColumn         string          `json:"identityColumn"`
-					LastChangeTimeProperty *string         `json:"lastChangeTimeProperty"`
-					LastChangeTimeFormat   *string         `json:"lastChangeTimeFormat"`
-					Transformation         Transformation  `json:"transformation"`
-					InSchema               types.Type      `json:"inSchema"`
-					OutSchema              types.Type      `json:"outSchema"`
-					Running                bool            `json:"running"`
-					ScheduleStart          *int            `json:"scheduleStart"`
-					SchedulePeriod         *SchedulePeriod `json:"schedulePeriod"`
+					Format               string          `json:"format"`
+					Path                 string          `json:"path"`
+					Sheet                *string         `json:"sheet"`
+					Compression          Compression     `json:"compression"`
+					Filter               *Filter         `json:"filter"`
+					IdentityColumn       string          `json:"identityColumn"`
+					LastChangeTimeColumn *string         `json:"lastChangeTimeColumn"`
+					LastChangeTimeFormat *string         `json:"lastChangeTimeFormat"`
+					Transformation       Transformation  `json:"transformation"`
+					InSchema             types.Type      `json:"inSchema"`
+					OutSchema            types.Type      `json:"outSchema"`
+					Running              bool            `json:"running"`
+					ScheduleStart        *int            `json:"scheduleStart"`
+					SchedulePeriod       *SchedulePeriod `json:"schedulePeriod"`
 				}{
-					serializedAction:       a,
-					Format:                 this.Format,
-					Path:                   *this.Path,
-					Sheet:                  this.Sheet,
-					Compression:            this.Compression,
-					IdentityColumn:         *this.IdentityColumn,
-					LastChangeTimeProperty: this.LastChangeTimeProperty,
-					LastChangeTimeFormat:   this.LastChangeTimeFormat,
-					Transformation:         *this.Transformation,
-					InSchema:               this.InSchema,
-					OutSchema:              this.OutSchema,
-					Running:                this.Running,
-					ScheduleStart:          this.ScheduleStart,
-					SchedulePeriod:         this.SchedulePeriod,
+					serializedAction:     a,
+					Format:               this.Format,
+					Path:                 *this.Path,
+					Sheet:                this.Sheet,
+					Compression:          this.Compression,
+					IdentityColumn:       *this.IdentityColumn,
+					LastChangeTimeColumn: this.LastChangeTimeColumn,
+					LastChangeTimeFormat: this.LastChangeTimeFormat,
+					Transformation:       *this.Transformation,
+					InSchema:             this.InSchema,
+					OutSchema:            this.OutSchema,
+					Running:              this.Running,
+					ScheduleStart:        this.ScheduleStart,
+					SchedulePeriod:       this.SchedulePeriod,
 				}
 			case Mobile, Server, Website:
 				serialized = struct {
@@ -626,26 +626,26 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 	}
 
 	n := state.UpdateAction{
-		ID:                     this.action.ID,
-		Name:                   action.Name,
-		Enabled:                action.Enabled,
-		InSchema:               inSchema,
-		OutSchema:              action.OutSchema,
-		Transformation:         toStateTransformation(action.Transformation, inSchema, action.OutSchema),
-		Query:                  action.Query,
-		Format:                 action.Format,
-		Path:                   action.Path,
-		Sheet:                  action.Sheet,
-		Compression:            state.Compression(action.Compression),
-		OrderBy:                action.OrderBy,
-		ExportMode:             state.ExportMode(action.ExportMode),
-		Matching:               state.Matching(action.Matching),
-		ExportOnDuplicates:     action.ExportOnDuplicates,
-		TableName:              action.TableName,
-		TableKey:               action.TableKey,
-		IdentityColumn:         action.IdentityColumn,
-		LastChangeTimeProperty: action.LastChangeTimeProperty,
-		LastChangeTimeFormat:   action.LastChangeTimeFormat,
+		ID:                   this.action.ID,
+		Name:                 action.Name,
+		Enabled:              action.Enabled,
+		InSchema:             inSchema,
+		OutSchema:            action.OutSchema,
+		Transformation:       toStateTransformation(action.Transformation, inSchema, action.OutSchema),
+		Query:                action.Query,
+		Format:               action.Format,
+		Path:                 action.Path,
+		Sheet:                action.Sheet,
+		Compression:          state.Compression(action.Compression),
+		OrderBy:              action.OrderBy,
+		ExportMode:           state.ExportMode(action.ExportMode),
+		Matching:             state.Matching(action.Matching),
+		ExportOnDuplicates:   action.ExportOnDuplicates,
+		TableName:            action.TableName,
+		TableKey:             action.TableKey,
+		IdentityColumn:       action.IdentityColumn,
+		LastChangeTimeColumn: action.LastChangeTimeColumn,
+		LastChangeTimeFormat: action.LastChangeTimeFormat,
 	}
 
 	// Add the filter to the notification.
@@ -752,13 +752,13 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, "+
 			"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, "+
 			"matching_out = $22, allow_duplicates = $23, table_name = $24, table_key = $25, identity_column = $26, "+
-			"reload = reload OR $27, last_change_time_property = $28, last_change_time_format = $29\n"+
+			"reload = reload OR $27, last_change_time_column = $28, last_change_time_format = $29\n"+
 			"WHERE id = $30",
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName,
-			n.TableKey, n.IdentityColumn, reload, n.LastChangeTimeProperty, n.LastChangeTimeFormat, n.ID,
+			n.TableKey, n.IdentityColumn, reload, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.ID,
 		)
 		if err != nil {
 			return err
@@ -875,9 +875,9 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 		p := action.IdentityColumn
 		this.IdentityColumn = &p
 	}
-	if action.LastChangeTimeProperty != "" {
-		column := action.LastChangeTimeProperty
-		this.LastChangeTimeProperty = &column
+	if action.LastChangeTimeColumn != "" {
+		column := action.LastChangeTimeColumn
+		this.LastChangeTimeColumn = &column
 	}
 	if action.LastChangeTimeFormat != "" {
 		format := action.LastChangeTimeFormat
@@ -1008,18 +1008,18 @@ type ActionToSet struct {
 	// It cannot be longer than 1024 runes.
 	IdentityColumn string `json:"identityColumn"`
 
-	// LastChangeTimeProperty is the last change time property when importing
+	// LastChangeTimeColumn is the last change time column when importing
 	// from a file or from a database. May be empty to indicate that no
 	// properties should be used for reading the last change times. Also refer
 	// to the documentation of LastChangeTimeFormat, which is strictly related
 	// to this.
 	// It cannot be longer than 1024 runes.
-	LastChangeTimeProperty string `json:"lastChangeTimeProperty"`
+	LastChangeTimeColumn string `json:"lastChangeTimeColumn"`
 
 	// LastChangeTimeFormat indicates the last change time value format for
-	// parsing the value read from the last change time property.
+	// parsing the value read from the last change time column.
 	//
-	// Represents a format when a LastChangeTimeProperty is provided and its
+	// Represents a format when a LastChangeTimeColumn is provided and its
 	// corresponding property kind is JSON or Text, otherwise it is the empty
 	// string.
 	//
@@ -1197,7 +1197,7 @@ func shouldReload(a *state.Action, n *state.UpdateAction) bool {
 	if a.IdentityColumn != n.IdentityColumn {
 		return true
 	}
-	if a.LastChangeTimeProperty != n.LastChangeTimeProperty {
+	if a.LastChangeTimeColumn != n.LastChangeTimeColumn {
 		return true
 	}
 	if a.LastChangeTimeFormat != n.LastChangeTimeFormat {

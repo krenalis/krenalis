@@ -1060,37 +1060,37 @@ func (target Target) Value() (driver.Value, error) {
 }
 
 type Action struct {
-	mu                     *sync.Mutex
-	ID                     int
-	connection             *Connection
-	format                 *Connector
-	execution              *ActionExecution
-	Target                 Target
-	Name                   string
-	Enabled                bool
-	EventType              string
-	ScheduleStart          int16
-	SchedulePeriod         int16
-	InSchema               types.Type
-	OutSchema              types.Type
-	Filter                 *Where
-	Transformation         Transformation
-	Query                  string
-	Path                   string
-	Sheet                  string
-	Compression            Compression
-	OrderBy                string
-	FormatSettings         []byte
-	ExportMode             ExportMode
-	Matching               Matching
-	ExportOnDuplicates     bool
-	TableName              string
-	TableKey               string
-	IdentityColumn         string
-	LastChangeTimeProperty string
-	LastChangeTimeFormat   string
-	Reload                 bool
-	Health                 Health
+	mu                   *sync.Mutex
+	ID                   int
+	connection           *Connection
+	format               *Connector
+	execution            *ActionExecution
+	Target               Target
+	Name                 string
+	Enabled              bool
+	EventType            string
+	ScheduleStart        int16
+	SchedulePeriod       int16
+	InSchema             types.Type
+	OutSchema            types.Type
+	Filter               *Where
+	Transformation       Transformation
+	Query                string
+	Path                 string
+	Sheet                string
+	Compression          Compression
+	OrderBy              string
+	FormatSettings       []byte
+	ExportMode           ExportMode
+	Matching             Matching
+	ExportOnDuplicates   bool
+	TableName            string
+	TableKey             string
+	IdentityColumn       string
+	LastChangeTimeColumn string
+	LastChangeTimeFormat string
+	Reload               bool
+	Health               Health
 }
 
 type Matching struct {

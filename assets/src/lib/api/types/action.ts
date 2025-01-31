@@ -96,7 +96,7 @@ interface Action {
 	tableKey: string | null;
 	sheet: string | null;
 	identityColumn: string | null;
-	lastChangeTimeProperty: string | null;
+	lastChangeTimeColumn: string | null;
 	lastChangeTimeFormat: string | null;
 	exportMode: ExportMode | null;
 	matching: Matching | null;
@@ -126,7 +126,7 @@ interface ActionToSet {
 	tableKey?: string | null;
 	sheet?: string | null;
 	identityColumn?: string | null;
-	lastChangeTimeProperty?: string | null;
+	lastChangeTimeColumn?: string | null;
 	lastChangeTimeFormat?: string | null;
 	exportMode?: ExportMode;
 	matching?: Matching;

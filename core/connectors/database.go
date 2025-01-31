@@ -116,7 +116,7 @@ func (database *Database) LastChangeTimePlaceholder(action *state.Action) (strin
 		return "", errors.New("action is not currently executing")
 	}
 	cursor := execution.Cursor
-	property := action.LastChangeTimeProperty
+	property := action.LastChangeTimeColumn
 	if property == "" || cursor.IsZero() {
 		return database.inner.QuoteTime(nil, types.Type{}), nil
 	}
@@ -128,7 +128,7 @@ func (database *Database) LastChangeTimePlaceholder(action *state.Action) (strin
 	case types.DateKind:
 		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
 	case types.TextKind, types.JSONKind:
-		value = formatLastChangeTimeProperty(action.LastChangeTimeFormat, cursor)
+		value = formatLastChangeTimeColumn(action.LastChangeTimeFormat, cursor)
 	}
 	return database.inner.QuoteTime(value, p.Type), nil
 }
@@ -225,20 +225,20 @@ func (database *Database) Records(ctx context.Context, action *state.Action, que
 			_ = rows.Close()
 		}
 	}()
-	var identityColumn, lastChangeTimeProperty types.Property
+	var identityColumn, lastChangeTimeColumn types.Property
 	for _, c := range columns {
 		if c.Name == action.IdentityColumn {
 			identityColumn, _ = action.InSchema.Property(c.Name)
 		}
-		if c.Name == action.LastChangeTimeProperty {
-			lastChangeTimeProperty, _ = action.InSchema.Property(c.Name)
+		if c.Name == action.LastChangeTimeColumn {
+			lastChangeTimeColumn, _ = action.InSchema.Property(c.Name)
 		}
 	}
 	if identityColumn.Name == "" {
 		return nil, &SchemaError{fmt.Sprintf("there is no identity column %q", action.IdentityColumn)}
 	}
-	if action.LastChangeTimeProperty != "" && lastChangeTimeProperty.Name == "" {
-		return nil, &SchemaError{fmt.Sprintf("there is no last change time property %q", action.LastChangeTimeProperty)}
+	if action.LastChangeTimeColumn != "" && lastChangeTimeColumn.Name == "" {
+		return nil, &SchemaError{fmt.Sprintf("there is no last change time column %q", action.LastChangeTimeColumn)}
 	}
 
 	// Check that schema is aligned with the query's schema.
@@ -483,7 +483,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			if p.Name == r.action.IdentityColumn {
 				identityIndex = i
 			}
-			if p.Name == r.action.LastChangeTimeProperty {
+			if p.Name == r.action.LastChangeTimeColumn {
 				lastChangeTimeIndex = i
 			}
 			n++
@@ -519,7 +519,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				p := properties[lastChangeTimeIndex]
 				var err error
-				record.LastChangeTime, err = parseLastChangeTimeProperty(p.Name, p.Type, r.action.LastChangeTimeFormat, v, p.Nullable, r.timeLayouts)
+				record.LastChangeTime, err = parseLastChangeTimeColumn(p.Name, p.Type, r.action.LastChangeTimeFormat, v, p.Nullable, r.timeLayouts)
 				if err != nil {
 					record.Err = err
 					continue Rows

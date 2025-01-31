@@ -66,9 +66,9 @@ var (
 	ErrNoWebhooks     = errors.New("app has no webhooks")
 )
 
-// LastChangeTimeProperty represents the lat change time property passed to the
+// LastChangeTimeColumn represents the lat change time property passed to the
 // (*File).ReadFunc method.
-type LastChangeTimeProperty struct {
+type LastChangeTimeColumn struct {
 	Name   string
 	Format string
 }
@@ -402,12 +402,12 @@ func connectorError(err error) error {
 	return err
 }
 
-// formatLastChangeTimeProperty formats a time.Time value with the given format.
+// formatLastChangeTimeColumn formats a time.Time value with the given format.
 // Excel formal is not allowed.
 //
 // format must be a valid change time format; for accepted formats, refer to the
 // 'core.validateLastChangeTimeFormat' function.
-func formatLastChangeTimeProperty(format string, t time.Time) string {
+func formatLastChangeTimeColumn(format string, t time.Time) string {
 	switch format {
 	case "ISO8601":
 		return t.Format(time.RFC3339)
@@ -495,14 +495,14 @@ func parseIdentityColumn(name string, typ types.Type, value any, layouts *state.
 	return "", fmt.Errorf("identify value is not a JSON string or JSON integer number")
 }
 
-// parseLastChangeTimeProperty parses a last change time property value. If the
+// parseLastChangeTimeColumn parses a last change time column value. If the
 // value cannot be parsed or is not valid, it returns an error. If the value is
 // valid but nil, and nullable is true, it returns the zero time and a nil
 // error.
 //
 // format must be a valid change time format; for accepted formats, refer to the
 // 'core.validateLastChangeTimeFormat' function.
-func parseLastChangeTimeProperty(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
+func parseLastChangeTimeColumn(name string, typ types.Type, format string, value any, nullable bool, layouts *state.TimeLayouts) (time.Time, error) {
 	v, err := normalize(name, typ, value, nullable, layouts)
 	if err != nil {
 		return time.Time{}, err
@@ -517,7 +517,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 		}
 		return v, nil
 	case string:
-		t, err := parseLastChangeTimePropertyWithFormat(format, v)
+		t, err := parseLastChangeTimeColumnWithFormat(format, v)
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -530,7 +530,7 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 		if !v.IsString() {
 			return time.Time{}, fmt.Errorf("last change time is not a JSON string")
 		}
-		t, err := parseLastChangeTimePropertyWithFormat(format, v.String())
+		t, err := parseLastChangeTimeColumnWithFormat(format, v.String())
 		if err != nil {
 			return time.Time{}, err
 		}
@@ -545,12 +545,12 @@ func parseLastChangeTimeProperty(name string, typ types.Type, format string, val
 
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
-// parseLastChangeTimePropertyWithFormat parses a last change time value with
+// parseLastChangeTimeColumnWithFormat parses a last change time value with
 // the given format.
 //
 // format must be a valid change time format; for accepted formats, refer to the
 // 'core.validateLastChangeTimeFormat' function.
-func parseLastChangeTimePropertyWithFormat(format, v string) (time.Time, error) {
+func parseLastChangeTimeColumnWithFormat(format, v string) (time.Time, error) {
 	switch format {
 	case "ISO8601":
 		dt, err := iso8601.ParseString(v)

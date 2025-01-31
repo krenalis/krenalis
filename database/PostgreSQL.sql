@@ -106,7 +106,7 @@ CREATE TABLE actions (
     table_name varchar(1024) NOT NULL DEFAULT '',
     table_key text NOT NULL,
     identity_column varchar(1024) NOT NULL DEFAULT '',
-    last_change_time_property varchar(1024) NOT NULL DEFAULT '',
+    last_change_time_column varchar(1024) NOT NULL DEFAULT '',
     last_change_time_format varchar(64) NOT NULL DEFAULT '',
     reload boolean NOT NULL DEFAULT FALSE,
     health health NOT NULL DEFAULT 'Healthy',

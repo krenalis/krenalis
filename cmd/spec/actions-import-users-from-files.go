@@ -74,7 +74,7 @@ func init() {
 			"Only columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`.",
 	}
 	lastChangeTimeParameter := types.Property{
-		Name:        "lastChangeTimeProperty",
+		Name:        "lastChangeTimeColumn",
 		Type:        types.Text().WithCharLen(1024),
 		Placeholder: `"updated_at"`,
 		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\n" +
@@ -88,7 +88,7 @@ func init() {
 		Placeholder:    `"ISO8601"`,
 		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
-			"This field is only required if the `lastChangeTimeProperty` is provided, is not empty, and has a type `JSON` or `Text`.",
+			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`.",
 	}
 	transformationParameter := types.Property{
 		Name: "transformation",
@@ -156,7 +156,7 @@ func init() {
 		Type:           types.Parameter("schema"),
 		Placeholder:    `{...}`,
 		CreateRequired: true,
-		Description: "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation.\n\n" +
+		Description: "The schema for the properties used in the filter, the identity column, the last change time column, and the input properties for the transformation.\n\n" +
 			"When importing users from files, this should be a subset of the file schema.",
 	}
 	outSchemaParameter := types.Property{
@@ -347,7 +347,7 @@ func init() {
 							Description: "The column that uniquely identifies each user in the file.",
 						},
 						{
-							Name:        "lastChangeTimeProperty",
+							Name:        "lastChangeTimeColumn",
 							Type:        types.Text(),
 							Nullable:    true,
 							Placeholder: `"updated_at"`,
@@ -421,7 +421,7 @@ func init() {
 							Name:        "inSchema",
 							Type:        types.Parameter("schema"),
 							Placeholder: `{...}`,
-							Description: "The schema for the properties used in the filter, the identity column, the last change time property, and the input properties for the transformation.",
+							Description: "The schema for the properties used in the filter, the identity column, the last change time column, and the input properties for the transformation.",
 						},
 						{
 							Name:        "outSchema",

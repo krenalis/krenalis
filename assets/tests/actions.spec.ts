@@ -467,7 +467,7 @@ test(`Add "Import users" action on PostgreSQL`, async ({ page }) => {
 		},
 		"query": "SELECT email, first_name, last_name FROM users WHERE \${last_change_time} LIMIT \${limit}",
 		"identityColumn": "email",
-		"lastChangeTimeProperty": "",
+		"lastChangeTimeColumn": "",
 		"lastChangeTimeFormat": ""
 	}
 	`;
@@ -807,7 +807,7 @@ test(`Add "Import users" action on CSV file on Filesystem`, async ({ page }) => 
 			"path": "test.csv",
 			"sheet": null,
 			"identityColumn": "email",
-			"lastChangeTimeProperty": "",
+			"lastChangeTimeColumn": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",
 			"format": "CSV",
@@ -1136,7 +1136,7 @@ test(`Add "Export users" action on CSV file on Filesystem`, async ({ page }) => 
 			"path": "test.csv",
 			"sheet": null,
 			"identityColumn": "",
-			"lastChangeTimeProperty": "",
+			"lastChangeTimeColumn": "",
 			"lastChangeTimeFormat": "",
 			"compression": "",
 			"orderBy": "email",

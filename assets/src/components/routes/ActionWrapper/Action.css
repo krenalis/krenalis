@@ -279,7 +279,7 @@
 	margin-bottom: 0;
 }
 
-.action__transformation-last-change-time-property {
+.action__transformation-last-change-time-column {
 	display: flex;
 	align-items: baseline;
 	gap: 15px;

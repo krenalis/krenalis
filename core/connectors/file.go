@@ -98,7 +98,7 @@ func (connectors *Connectors) File(action *state.Action, role state.Role) *File 
 //
 // If the identity column specified in the action of the file is found within
 // the file schema but its type is different, the iterator will return an error.
-// The same applies for the last change time property, if specified.
+// The same applies for the last change time column, if specified.
 //
 // If the action's sheet is not found in the file, the All method of the
 // iterator returns immediately, and a subsequent call to the Err method will
@@ -112,7 +112,7 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 	if file.err != nil {
 		return nil, file.err
 	}
-	if !startTime.IsZero() && file.action.LastChangeTimeProperty == "" {
+	if !startTime.IsZero() && file.action.LastChangeTimeColumn == "" {
 		return nil, fmt.Errorf("a start time has been provided, but the action does not have the last change property")
 	}
 	storage, err := file.storage()
@@ -677,7 +677,7 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 			if p.Name == rw.action.IdentityColumn {
 				rw.identityColumnIndex = i
 			}
-			if p.Name == rw.action.LastChangeTimeProperty {
+			if p.Name == rw.action.LastChangeTimeColumn {
 				rw.lastChangeTimeIndex = i
 			}
 			rw.numPropertiesPerRecord++
@@ -685,8 +685,8 @@ func (rw *recordWriter) Columns(columns []types.Property) error {
 		if rw.action.IdentityColumn != "" && rw.identityColumnIndex == -1 {
 			return fmt.Errorf("there is no identity column %q", rw.action.IdentityColumn)
 		}
-		if rw.action.LastChangeTimeProperty != "" && rw.lastChangeTimeIndex == -1 {
-			return fmt.Errorf("there is no last change time property %q", rw.action.LastChangeTimeProperty)
+		if rw.action.LastChangeTimeColumn != "" && rw.lastChangeTimeIndex == -1 {
+			return fmt.Errorf("there is no last change time column %q", rw.action.LastChangeTimeColumn)
 		}
 	}
 	if rw.limit == 0 {
@@ -706,7 +706,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[p.Name], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t
@@ -779,7 +779,7 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t
@@ -844,7 +844,7 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 	if i := rw.lastChangeTimeIndex; i >= 0 {
 		p := rw.properties[i]
 		var t time.Time
-		t, err = parseLastChangeTimeProperty(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
+		t, err = parseLastChangeTimeColumn(p.Name, p.Type, rw.action.LastChangeTimeFormat, record[i], p.Nullable, rw.timeLayouts)
 		if err == nil {
 			if !t.IsZero() {
 				lastChangeTime = t

@@ -196,7 +196,7 @@ interface TransformedAction {
 	tableKey?: string | null;
 	sheet?: string | null;
 	identityColumn?: string | null;
-	lastChangeTimeProperty?: string | null;
+	lastChangeTimeColumn?: string | null;
 	lastChangeTimeFormat?: string | null;
 	orderBy?: string | null;
 	exportMode?: ExportMode | null;
@@ -527,7 +527,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		tableKey: action.tableKey,
 		sheet: action.sheet,
 		identityColumn: action.identityColumn,
-		lastChangeTimeProperty: action.lastChangeTimeProperty,
+		lastChangeTimeColumn: action.lastChangeTimeColumn,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		exportMode: action.exportMode,
 		matching: action.matching,
@@ -840,17 +840,17 @@ const transformInActionToSet = async (
 			inSchema.properties.push(identityColumn.full);
 		}
 
-		if (action.lastChangeTimeProperty) {
+		if (action.lastChangeTimeColumn) {
 			const isAlreadyInSchema =
-				inSchema.properties!.findIndex((p) => p.name === action.lastChangeTimeProperty) !== -1;
+				inSchema.properties!.findIndex((p) => p.name === action.lastChangeTimeColumn) !== -1;
 			if (!isAlreadyInSchema) {
-				const lastChangeTimeProperty = flattenedInputSchema[action.lastChangeTimeProperty];
-				if (lastChangeTimeProperty == null) {
-					throw new Error('LastChangeTimeProperty must be a valid property');
+				const lastChangeTimeColumn = flattenedInputSchema[action.lastChangeTimeColumn];
+				if (lastChangeTimeColumn == null) {
+					throw new Error('LastChangeTimeColumn must be a valid column');
 				}
-				inSchema.properties.push(lastChangeTimeProperty.full);
+				inSchema.properties.push(lastChangeTimeColumn.full);
 			}
-			if (doesLastChangeTimePropertyNeedFormat(action.lastChangeTimeProperty, actionType.inputSchema)) {
+			if (doesLastChangeTimeColumnNeedFormat(action.lastChangeTimeColumn, actionType.inputSchema)) {
 				if (action.lastChangeTimeFormat !== 'ISO8601' && action.lastChangeTimeFormat !== 'Excel') {
 					// the format is custom.
 					try {
@@ -1053,7 +1053,7 @@ const transformInActionToSet = async (
 		tableKey: action.tableKey,
 		sheet: action.sheet,
 		identityColumn: action.identityColumn,
-		lastChangeTimeProperty: action.lastChangeTimeProperty,
+		lastChangeTimeColumn: action.lastChangeTimeColumn,
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		compression: action.compression,
 		orderBy: action.orderBy,
@@ -1104,13 +1104,13 @@ const computeDefaultAction = (
 	if (fields.includes('Query')) {
 		action.query = connection.connector.asSource.sampleQuery;
 		action.identityColumn = '';
-		action.lastChangeTimeProperty = '';
+		action.lastChangeTimeColumn = '';
 		action.lastChangeTimeFormat = '';
 	}
 	if (fields.includes('File')) {
 		action.path = '';
 		action.identityColumn = '';
-		action.lastChangeTimeProperty = '';
+		action.lastChangeTimeColumn = '';
 		action.lastChangeTimeFormat = '';
 		action.sheet = null;
 		action.compression = '';
@@ -1204,12 +1204,12 @@ const computeActionTypeFields = (
 	return fields;
 };
 
-const doesLastChangeTimePropertyNeedFormat = (lastChangeTimeProperty: string, schema: ObjectType): boolean => {
-	if (lastChangeTimeProperty == null || lastChangeTimeProperty === '') {
+const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema: ObjectType): boolean => {
+	if (lastChangeTimeColumn == null || lastChangeTimeColumn === '') {
 		return false;
 	}
 	const flatInputSchema = flattenSchema(schema);
-	const p = flatInputSchema[lastChangeTimeProperty];
+	const p = flatInputSchema[lastChangeTimeColumn];
 	if (p == null) {
 		return false;
 	}
@@ -1353,7 +1353,7 @@ export {
 	isBetweenOperator,
 	isOneOfOperator,
 	splitPropertyAndPath,
-	doesLastChangeTimePropertyNeedFormat,
+	doesLastChangeTimeColumnNeedFormat,
 	getTransformationFunctionParameterName,
 	validateMatching,
 	outPathsTypesAreEqual,

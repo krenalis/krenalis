@@ -73,7 +73,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 		records, err = database.Records(ctx, action, replacer)
 	case state.FileStorage:
 		var lastChangeTime time.Time
-		if !execution.Reload && action.LastChangeTimeProperty != "" {
+		if !execution.Reload && action.LastChangeTimeColumn != "" {
 			lastChangeTime = execution.Cursor
 		}
 		purge = lastChangeTime.IsZero()

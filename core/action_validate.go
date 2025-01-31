@@ -353,13 +353,13 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("identity column is longer than 1024 runes")
 		}
 	}
-	// Validate the last change time property.
-	if action.LastChangeTimeProperty != "" {
-		if !types.IsValidPropertyName(action.LastChangeTimeProperty) {
-			return errors.BadRequest("last change time property is a not valid property name")
+	// Validate the last change time column.
+	if action.LastChangeTimeColumn != "" {
+		if !types.IsValidPropertyName(action.LastChangeTimeColumn) {
+			return errors.BadRequest("last change time column is a not valid property name")
 		}
-		if utf8.RuneCountInString(action.LastChangeTimeProperty) > 1024 {
-			return errors.BadRequest("last change time property is longer than 1024 runes")
+		if utf8.RuneCountInString(action.LastChangeTimeColumn) > 1024 {
+			return errors.BadRequest("last change time column is longer than 1024 runes")
 		}
 	}
 	// Validate the last change time format.
@@ -483,21 +483,21 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			return errors.BadRequest("identity column cannot be optional")
 		}
 		usedInPaths = append(usedInPaths, action.IdentityColumn)
-		// Validate the last change time property and format.
+		// Validate the last change time column and format.
 		var requiresLastChangeTimeFormat bool
-		if action.LastChangeTimeProperty != "" {
-			lastChangeTime, ok := inSchema.Property(action.LastChangeTimeProperty)
+		if action.LastChangeTimeColumn != "" {
+			lastChangeTime, ok := inSchema.Property(action.LastChangeTimeColumn)
 			if !ok {
-				return errors.BadRequest("last change time property %q not found within input schema", action.LastChangeTimeProperty)
+				return errors.BadRequest("last change time column %q not found within input schema", action.LastChangeTimeColumn)
 			}
 			switch k := lastChangeTime.Type.Kind(); k {
 			case types.DateTimeKind, types.DateKind:
 			case types.JSONKind, types.TextKind:
 				requiresLastChangeTimeFormat = true
 			default:
-				return errors.BadRequest("last change time property %q has kind %s instead of DateTime, Date, JSON, or Text", action.LastChangeTimeProperty, k)
+				return errors.BadRequest("last change time column %q has kind %s instead of DateTime, Date, JSON, or Text", action.LastChangeTimeColumn, k)
 			}
-			usedInPaths = append(usedInPaths, action.LastChangeTimeProperty)
+			usedInPaths = append(usedInPaths, action.LastChangeTimeColumn)
 		}
 		if !requiresLastChangeTimeFormat && action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
@@ -513,8 +513,8 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		if action.IdentityColumn != "" {
 			return errors.BadRequest("action cannot specify an identity column")
 		}
-		if action.LastChangeTimeProperty != "" {
-			return errors.BadRequest("action cannot specify a last change time property")
+		if action.LastChangeTimeColumn != "" {
+			return errors.BadRequest("action cannot specify a last change time column")
 		}
 		if action.LastChangeTimeFormat != "" {
 			return errors.BadRequest("action cannot specify a last change time format")
@@ -813,7 +813,7 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 //   - a string containing a '%' character: the strftime() function format
 //
 // NOTE: keep in sync with the function
-// 'core/connectors.parseLastChangeTimePropertyWithFormat'.
+// 'core/connectors.parseLastChangeTimeColumnWithFormat'.
 func validateLastChangeTimeFormat(format string) error {
 	switch format {
 	case
