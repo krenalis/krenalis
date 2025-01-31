@@ -305,6 +305,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					serializedAction:     a,
 					Query:                *this.Query,
 					IdentityColumn:       *this.IdentityColumn,
+					LastChangeTimeColumn: this.LastChangeTimeColumn,
 					LastChangeTimeFormat: this.LastChangeTimeFormat,
 					Transformation:       *this.Transformation,
 					InSchema:             this.InSchema,
