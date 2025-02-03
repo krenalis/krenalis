@@ -35,8 +35,8 @@ const ActionTable = () => {
 
 	useEffect(() => {
 		tableRef.current = {
-			lastConfirmation: action.table!,
-			lastUpdate: action.table!,
+			lastConfirmation: action.tableName!,
+			lastUpdate: action.tableName!,
 		};
 	}, []);
 
@@ -44,7 +44,7 @@ const ActionTable = () => {
 		return getTableKeyComboboxItems(actionType.outputSchema);
 	}, [actionType]);
 
-	const onUpdateTable = (e) => {
+	const onUpdateTableName = (e) => {
 		const value = e.target.value;
 		tableRef.current.lastUpdate = value;
 		if (
@@ -56,7 +56,7 @@ const ActionTable = () => {
 			setIsTableChanged(false);
 		}
 		const a = { ...action };
-		a.table = value;
+		a.tableName = value;
 		setAction(a);
 	};
 
@@ -76,7 +76,7 @@ const ActionTable = () => {
 		tableConfirmationButtonRef.current!.load();
 		let schema: ObjectType;
 		try {
-			schema = await api.workspaces.connections.tableSchema(connection.id, action.table);
+			schema = await api.workspaces.connections.tableSchema(connection.id, action.tableName);
 		} catch (err) {
 			tableConfirmationButtonRef.current!.stop();
 			handleError(err);
@@ -84,7 +84,7 @@ const ActionTable = () => {
 		}
 		tableConfirmationButtonRef.current!.confirm();
 		setTimeout(() => {
-			tableRef.current.lastConfirmation = action.table;
+			tableRef.current.lastConfirmation = action.tableName;
 			setIsTableChanged(false);
 			const actionTyp = { ...actionType };
 			actionTyp.outputSchema = schema;
@@ -111,7 +111,7 @@ const ActionTable = () => {
 		<>
 			<Section title='Table' description='The name of the table of the database' padded={true} annotated={true}>
 				<div className='action__table'>
-					<SlInput value={action.table} onSlInput={onUpdateTable} />
+					<SlInput value={action.tableName} onSlInput={onUpdateTableName} />
 					<FeedbackButton
 						ref={tableConfirmationButtonRef}
 						variant='success'

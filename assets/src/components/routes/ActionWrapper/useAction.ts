@@ -203,7 +203,7 @@ const useAction = (
 				if (fields.includes('TableName') && isEditing) {
 					let schema: ObjectType;
 					try {
-						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.table);
+						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.tableName);
 						outputSchema = schema;
 					} catch (err) {
 						if (err instanceof UnprocessableError && err.code === 'UnsupportedColumnType') {

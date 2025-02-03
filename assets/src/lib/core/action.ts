@@ -192,7 +192,7 @@ interface TransformedAction {
 	transformation: TransformedTransformation | null;
 	query?: string | null;
 	path?: string | null;
-	table?: string | null;
+	tableName?: string | null;
 	tableKey?: string | null;
 	sheet?: string | null;
 	identityColumn?: string | null;
@@ -523,7 +523,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		},
 		query: action.query,
 		path: action.path,
-		table: action.table,
+		tableName: action.tableName,
 		tableKey: action.tableKey,
 		sheet: action.sheet,
 		identityColumn: action.identityColumn,
@@ -1049,7 +1049,7 @@ const transformInActionToSet = async (
 		},
 		query: query!,
 		path: action.path,
-		tableName: action.table,
+		tableName: action.tableName,
 		tableKey: action.tableKey,
 		sheet: action.sheet,
 		identityColumn: action.identityColumn,
@@ -1124,7 +1124,7 @@ const computeDefaultAction = (
 		action.orderBy = '';
 	}
 	if (fields.includes('TableName')) {
-		action.table = '';
+		action.tableName = '';
 		action.tableKey = '';
 	}
 	if (fields.includes('ExportMode')) {

@@ -92,7 +92,7 @@ interface Action {
 	transformation: Transformation | null;
 	query: string | null;
 	path: string | null;
-	table: string | null;
+	tableName: string | null;
 	tableKey: string | null;
 	sheet: string | null;
 	identityColumn: string | null;
