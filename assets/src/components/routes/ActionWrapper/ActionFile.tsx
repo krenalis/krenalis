@@ -430,7 +430,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		pathRef.current.lastUpdate = path;
 		checkIsFileChanged();
 		a.path = path;
-		if (a.sheet != null) {
+		if (a.sheet != null && isImport) {
 			a.sheet = '';
 		}
 		setAction(a);
