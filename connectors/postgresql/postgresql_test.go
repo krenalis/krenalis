@@ -31,6 +31,7 @@ const (
 	testDatabase = "meergo"
 	testUser     = "meergo"
 	testPassword = "meergo"
+	testSchema   = "public"
 )
 
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
@@ -116,6 +117,7 @@ func Test_Merge_Query(t *testing.T) {
 		Username: testUser,
 		Password: testPassword,
 		Database: testDatabase,
+		Schema:   testSchema,
 	})
 	if err != nil {
 		t.Fatal(err)

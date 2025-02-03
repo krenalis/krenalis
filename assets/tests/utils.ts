@@ -13,6 +13,7 @@ interface Config {
 	dbUsername: string;
 	dbPassword: string;
 	dbName: string;
+	dbSchema: string;
 }
 
 const config: Config = JSON.parse(readFileSync(resolve(__dirname, './test-config.json'), 'utf-8'));
@@ -105,6 +106,7 @@ const addPostgreSQLSource = async (page: Page): Promise<number> => {
 						Password: config.dbPassword,
 						Port: config.dbPort,
 						Username: config.dbUsername,
+						Schema: config.dbSchema,
 					},
 					linkedConnections: null,
 				},
@@ -134,6 +136,7 @@ const addPostgreSQLDestination = async (page: Page): Promise<number> => {
 						Password: config.dbPassword,
 						Port: config.dbPort,
 						Username: config.dbUsername,
+						Schema: config.dbSchema,
 					},
 					linkedConnections: null,
 				},

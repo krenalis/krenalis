@@ -58,6 +58,7 @@ func TestUI(t *testing.T) {
 		dbUsername = "db_test_user"
 		dbPassword = "tXALDfgwZP3"
 		dbDatabase = "db_for_import"
+		dbSchema   = "public"
 	)
 	var dbHost string
 	var dbPort int
@@ -142,6 +143,7 @@ func TestUI(t *testing.T) {
 		"dbUsername":  dbUsername,
 		"dbPassword":  dbPassword,
 		"dbName":      dbDatabase,
+		"dbSchema":    dbSchema,
 	}
 	testConfigJSONPath := filepath.Join("..", "assets", "tests", "test-config.json")
 	f, err := os.OpenFile(testConfigJSONPath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0666)

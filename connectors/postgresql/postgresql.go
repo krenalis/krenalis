@@ -70,7 +70,7 @@ func (ps *PostgreSQL) Close() error {
 
 // Columns returns the columns of the given table.
 func (ps *PostgreSQL) Columns(ctx context.Context, table string) ([]meergo.Column, error) {
-	columns, err := ps.columns(ctx, "public", table)
+	columns, err := ps.columns(ctx, ps.settings.Schema, table)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +149,7 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 		var s innerSettings
 		if ps.settings == nil {
 			s.Port = 5432
+			s.Schema = "public"
 		} else {
 			s = *ps.settings
 		}
@@ -168,6 +169,7 @@ func (ps *PostgreSQL) ServeUI(ctx context.Context, event string, settings json.V
 			&meergo.Input{Name: "Username", Label: "Username", Placeholder: "username", Type: "text", MinLength: 1, MaxLength: 63},
 			&meergo.Input{Name: "Password", Label: "Password", Placeholder: "password", Type: "password", MinLength: 1, MaxLength: 100},
 			&meergo.Input{Name: "Database", Label: "Database name", Placeholder: "database", Type: "text", MinLength: 1, MaxLength: 63},
+			&meergo.Input{Name: "Schema", Label: "Schema name", Placeholder: "public", Type: "text", MinLength: 1, MaxLength: 63},
 		},
 		Settings: settings,
 		Buttons: []meergo.Button{
@@ -184,15 +186,17 @@ type innerSettings struct {
 	Username string
 	Password string
 	Database string
+	Schema   string
 }
 
 // dsn returns the connection string, from s, in the URL format.
 func (s *innerSettings) dsn() string {
 	u := url.URL{
-		Scheme: "postgres",
-		User:   url.UserPassword(s.Username, s.Password),
-		Host:   net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
-		Path:   "/" + url.PathEscape(s.Database),
+		Scheme:   "postgres",
+		User:     url.UserPassword(s.Username, s.Password),
+		Host:     net.JoinHostPort(s.Host, strconv.Itoa(s.Port)),
+		Path:     "/" + url.PathEscape(s.Database),
+		RawQuery: "search_path=" + url.QueryEscape(s.Schema),
 	}
 	return u.String()
 }
@@ -241,6 +245,10 @@ func (ps *PostgreSQL) saveSettings(ctx context.Context, settings json.Value, tes
 	// Validate Database.
 	if n := len(s.Database); n < 1 || n > 63 {
 		return meergo.NewInvalidsettingsError("database length in bytes must be in range [1,63]")
+	}
+	// Validate Schema.
+	if n := len(s.Schema); n < 1 || n > 63 {
+		return meergo.NewInvalidsettingsError("schema length in bytes must be in range [1,63]")
 	}
 	err = testConnection(ctx, &s)
 	if err != nil || test {
