@@ -323,7 +323,7 @@ const useAction = (
 					isTransformationDisabled = true;
 				}
 				if (connection.isDestination && outputSchemaIsNotDefined) {
-					// reading the table returned an erro.
+					// reading the table returned an error.
 					isTransformationDisabled = true;
 				}
 			} else {
