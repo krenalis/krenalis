@@ -281,7 +281,7 @@
 
 .action__transformation-last-change-time-column {
 	display: flex;
-	align-items: baseline;
+	align-items: start;
 	gap: 15px;
 }
 
@@ -296,7 +296,7 @@
 
 .action__transformation-last-change-format-property {
 	display: flex;
-	align-items: baseline;
+	align-items: start;
 	gap: 15px;
 }
 

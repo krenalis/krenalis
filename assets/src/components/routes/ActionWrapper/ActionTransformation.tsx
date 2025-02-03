@@ -91,6 +91,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 	} = useContext(ActionContext);
 
 	const isFirstCompilation = useRef(true);
+	const lastChangeTimeFormatRef = useRef(null);
 	const lastChangeTimeCustomFormatInputRef = useRef(null);
 	const sharedMapping = useRef<TransformedMapping>();
 
@@ -331,10 +332,19 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 
 	const onUpdateLastChangeTimeColumn = async (_: string, value: string) => {
 		const a = { ...action };
+		const oldValue = a.lastChangeTimeColumn;
 		a.lastChangeTimeColumn = value;
-		if (value === '' || !doesLastChangeTimeColumnNeedFormat(value, actionType.inputSchema)) {
+		const needFormat = doesLastChangeTimeColumnNeedFormat(value, actionType.inputSchema);
+		if (value === '' || !needFormat) {
 			setIsCustomLastChangeTimeFormatSelected(false);
 			a.lastChangeTimeFormat = '';
+		} else {
+			const neededFormat = doesLastChangeTimeColumnNeedFormat(oldValue, actionType.inputSchema);
+			if (!neededFormat) {
+				setTimeout(() => {
+					lastChangeTimeFormatRef.current.show();
+				}, 50);
+			}
 		}
 		setAction(a);
 	};
@@ -489,6 +499,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 											}
 											name='lastChangeTimeFormat'
 											size='small'
+											ref={lastChangeTimeFormatRef}
 										>
 											<SlOption value='iso8601'>ISO 8601</SlOption>
 											{format?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
