@@ -470,45 +470,46 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 									helpText='A column with the time of the last modification of a user identity'
 								/>
 							</div>
-							<div className='action__transformation-last-change-format-property'>
-								<div className='action__transformation-last-change-format'>
-									<div className='action__transformation-identity-columns-label'>Format:</div>
-									<SlSelect
-										onSlChange={onChangeLastChangeTimeFormat}
-										value={
-											isCustomLastChangeTimeFormatSelected
-												? 'custom'
-												: action.lastChangeTimeColumn
-													? Object.keys(lastChangeTimeFormats).find(
-															(key) =>
-																lastChangeTimeFormats[key] ===
-																action.lastChangeTimeFormat,
-														)
-													: ''
-										}
-										name='lastChangeTimeFormat'
-										disabled={!needFormat}
-										size='small'
-									>
-										<SlOption value='iso8601'>ISO 8601</SlOption>
-										{format?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
-										<SlOption value='custom'>Custom...</SlOption>
-									</SlSelect>
-								</div>
-								{needFormat && isCustomLastChangeTimeFormatSelected && (
-									<div className='action__transformation-last-change-custom-format'>
-										<SlInput
-											onSlInput={onInputLastChangeTimeCustomFormat}
-											value={action.lastChangeTimeFormat}
-											name='lastChangeTimeCustomFormat'
-											placeholder='%Y-%m-%d'
-											helpText='C89 "strftime" format string'
+							{needFormat && (
+								<div className='action__transformation-last-change-format-property'>
+									<div className='action__transformation-last-change-format'>
+										<div className='action__transformation-identity-columns-label'>Format:</div>
+										<SlSelect
+											onSlChange={onChangeLastChangeTimeFormat}
+											value={
+												isCustomLastChangeTimeFormatSelected
+													? 'custom'
+													: action.lastChangeTimeColumn
+														? Object.keys(lastChangeTimeFormats).find(
+																(key) =>
+																	lastChangeTimeFormats[key] ===
+																	action.lastChangeTimeFormat,
+															)
+														: ''
+											}
+											name='lastChangeTimeFormat'
 											size='small'
-											ref={lastChangeTimeCustomFormatInputRef}
-										></SlInput>
+										>
+											<SlOption value='iso8601'>ISO 8601</SlOption>
+											{format?.name === 'Excel' && <SlOption value='excel'>Excel</SlOption>}
+											<SlOption value='custom'>Custom...</SlOption>
+										</SlSelect>
 									</div>
-								)}
-							</div>
+									{isCustomLastChangeTimeFormatSelected && (
+										<div className='action__transformation-last-change-custom-format'>
+											<SlInput
+												onSlInput={onInputLastChangeTimeCustomFormat}
+												value={action.lastChangeTimeFormat}
+												name='lastChangeTimeCustomFormat'
+												placeholder='%Y-%m-%d'
+												helpText='C89 "strftime" format string'
+												size='small'
+												ref={lastChangeTimeCustomFormatInputRef}
+											></SlInput>
+										</div>
+									)}
+								</div>
+							)}
 						</div>
 					</div>
 				</Section>
