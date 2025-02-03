@@ -1,62 +1,58 @@
-import { TransformedAction, TransformedMapping } from '../../../lib/core/action';
+import { getHierarchicalPaths, TransformedAction, TransformedMapping } from '../../../lib/core/action';
 import { SampleIdentifiers } from './Action.types';
 
-const updateMappingProperty = (action: TransformedAction, name: string, value: string, error: string) => {
-	const getAlternativeProperties = (name: string, mapping: TransformedMapping): string[] => {
-		const indentation = mapping[name].indentation;
-		const parentProperties: string[] = [];
-		for (const k in mapping) {
-			if (mapping[k].indentation! < indentation! && name.startsWith(k)) {
-				parentProperties.push(k);
-			}
-		}
-		const childrenProperties: string[] = [];
-		for (const k in mapping) {
-			if (mapping[k].indentation! > indentation! && k.startsWith(name)) {
-				childrenProperties.push(k);
-			}
-		}
-		return [...parentProperties, ...childrenProperties];
-	};
-
+const updateMappingProperty = (
+	action: TransformedAction,
+	path: string,
+	value: string,
+	error: string,
+): TransformedAction => {
 	const a = { ...action };
+	const mapping = a.transformation.mapping;
+	if (mapping == null) {
+		return a;
+	}
 
-	if (a.transformation.mapping == null) return a;
+	const oldValue = mapping[path].value;
 
-	if (a.transformation.mapping[name].value === '' && value !== '') {
-		const alternativeProperties = getAlternativeProperties(name, a.transformation.mapping);
-		// disable
-		for (const k in a.transformation.mapping) {
-			if (alternativeProperties.includes(k)) {
-				a.transformation.mapping[k].disabled = true;
-			}
+	// Update the mapping.
+	mapping[path].error = error;
+	mapping[path].value = value;
+
+	// Enable/disable the properties in the hierarchy.
+	const { ancestors, descendants } = getHierarchicalPaths(path, mapping);
+	const wasFilled = oldValue === '' && value !== '';
+	const wasCleared = value === '';
+	if (wasFilled) {
+		// Disable the properties in the hierarchy.
+		for (const p of [...ancestors, ...descendants]) {
+			mapping[p].disabled = true;
 		}
-	} else if (value === '') {
-		let hasFilledSiblings = false;
-		const { root, indentation } = a.transformation.mapping[name];
-		for (const k in a.transformation.mapping) {
-			if (
-				k !== name &&
-				a.transformation.mapping[k].root === root &&
-				a.transformation.mapping[k].indentation === indentation &&
-				a.transformation.mapping[k].value !== ''
-			) {
-				hasFilledSiblings = true;
-			}
+	} else if (wasCleared) {
+		// Enable the descendants.
+		for (const p of descendants) {
+			mapping[p].disabled = false;
 		}
-		if (!hasFilledSiblings) {
-			// enable
-			const alternativeProperties = getAlternativeProperties(name, a.transformation.mapping);
-			for (const k in a.transformation.mapping) {
-				if (alternativeProperties.includes(k)) {
-					a.transformation.mapping[k].disabled = false;
+
+		// Enable the ancestors, but only those that do not have other
+		// filled descendants.
+		for (const a of ancestors) {
+			const { descendants: desc } = getHierarchicalPaths(a, mapping);
+			let hasFilledDescendants = false;
+			for (const d of desc) {
+				if (mapping[d].value !== '') {
+					hasFilledDescendants = true;
+					break;
 				}
+			}
+			if (!hasFilledDescendants) {
+				mapping[a].disabled = false;
 			}
 		}
 	}
 
-	a.transformation.mapping[name].error = error;
-	a.transformation.mapping[name].value = value;
+	a.transformation.mapping = mapping;
+
 	return a;
 };
 

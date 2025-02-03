@@ -447,26 +447,19 @@ const transformActionType = (
 };
 
 const transformActionMapping = (mapping: Mapping, outputSchema: ObjectType): TransformedMapping => {
-	const properties = flattenSchema(outputSchema)!;
-	for (const propertyName in properties) {
-		const isPropertyMapped = mapping[propertyName] != null;
-		if (isPropertyMapped) {
-			const mappedValue = mapping[propertyName];
-			properties[propertyName].value = mappedValue;
-
-			// Disable family properties with different indentation.
-			const { root, indentation } = properties[propertyName];
-			for (const name in properties) {
-				const isFamilyProperty = properties[name].root === root;
-				const hasDifferentIndentation = properties[name].indentation !== indentation;
-				if (isFamilyProperty && hasDifferentIndentation) {
-					properties[name].disabled = true;
-				}
+	const s = flattenSchema(outputSchema)!;
+	for (const path in s) {
+		const value = mapping[path];
+		if (value != null && value !== '') {
+			s[path].value = value;
+			// Disable the properties in the hierarchy.
+			const { ancestors: parents, descendants: children } = getHierarchicalPaths(path, s);
+			for (const p of [...parents, ...children]) {
+				s[p].disabled = true;
 			}
 		}
 	}
-
-	return properties;
+	return s;
 };
 
 const transformAction = (action: Action, outputSchema: ObjectType): TransformedAction => {
@@ -1208,6 +1201,46 @@ const computeActionTypeFields = (
 	return fields;
 };
 
+interface hierarchicalPaths {
+	ancestors: string[];
+	descendants: string[];
+}
+
+// getHierarchicalPaths returns the ancestors and descendants paths of
+// the property with the given path.
+const getHierarchicalPaths = (path: string, mapping: TransformedMapping): hierarchicalPaths => {
+	const indentation = mapping[path].indentation;
+	const ancestors: string[] = [];
+	const descendants: string[] = [];
+	for (const p in mapping) {
+		if (mapping[p].indentation! < indentation! && path.startsWith(p)) {
+			ancestors.push(p);
+			continue;
+		}
+		if (mapping[p].indentation! > indentation! && p.startsWith(path)) {
+			descendants.push(p);
+			continue;
+		}
+	}
+	return {
+		ancestors,
+		descendants,
+	};
+};
+
+// getSliblingPaths returns the sibling paths of the property with
+// the given path.
+const getSliblingPaths = (path: string, mapping: TransformedMapping): string[] => {
+	const { root, indentation } = mapping[path];
+	const siblings: string[] = [];
+	for (const p in mapping) {
+		if (p !== path && mapping[p].root === root && mapping[p].indentation === indentation) {
+			siblings.push(p);
+		}
+	}
+	return siblings;
+};
+
 const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema: ObjectType): boolean => {
 	if (lastChangeTimeColumn == null || lastChangeTimeColumn === '') {
 		return false;
@@ -1357,6 +1390,8 @@ export {
 	isBetweenOperator,
 	isOneOfOperator,
 	splitPropertyAndPath,
+	getHierarchicalPaths,
+	getSliblingPaths,
 	doesLastChangeTimeColumnNeedFormat,
 	getTransformationFunctionParameterName,
 	validateMatching,

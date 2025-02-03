@@ -727,9 +727,14 @@ const TransformationBox = ({
 		const workspace = workspaces.find((w) => w.id === selectedWorkspace);
 		const mappings: ReactNode[] = [];
 		for (const k in action.transformation.mapping) {
-			const isOutMatchingProperty = action.matching?.out && action.matching.out === k;
-
 			const property = action.transformation.mapping[k];
+
+			const isOutMatchingProperty = !!action.matching?.out && action.matching.out === k;
+			const showMatchingIn = isOutMatchingProperty && property.value === '';
+			const isDisabled =
+				isTransformationDisabled ||
+				property.disabled === true ||
+				(isOutMatchingProperty && property.value === '');
 
 			const hasRequired =
 				action.exportMode != null &&
@@ -784,7 +789,6 @@ const TransformationBox = ({
 				}
 			}
 
-			const showMatchingIn = isOutMatchingProperty && property.value === '';
 			mappings.push(
 				<div
 					key={k}
@@ -802,11 +806,7 @@ const TransformationBox = ({
 						sharedMapping={showMatchingIn ? null : sharedMapping}
 						controlled={showMatchingIn}
 						name={k}
-						disabled={
-							isTransformationDisabled ||
-							property.disabled === true ||
-							(isOutMatchingProperty && property.value === '')
-						}
+						disabled={isDisabled}
 						className='action__transformation-input-property'
 						size='small'
 						error={
