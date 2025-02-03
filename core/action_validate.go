@@ -602,9 +602,16 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 				if _, ok := tr.Mapping[action.TableKey]; !ok {
 					return errors.BadRequest("an expression must be mapped to the table key")
 				}
+				if len(tr.Mapping) == 1 {
+					return errors.BadRequest("in addition to the table key, there must be at least one other mapped column")
+				}
 			} else {
 				if !slices.Contains(tr.Function.OutPaths, action.TableKey) {
 					return errors.BadRequest("the out properties of the transformation function must contain the table key")
+				}
+				if len(tr.Function.OutPaths) == 1 {
+					return errors.BadRequest("the out properties of the transformation function" +
+						" must contain at least one other property in addition to the table key")
 				}
 			}
 		}

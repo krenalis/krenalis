@@ -36,6 +36,9 @@ type databaseConnector interface {
 	// basing on the table keys. rows contains the rows to be inserted or updated;
 	// rows with matching table keys are updated, while new rows are inserted.
 	//
+	// table.Columns (and consequently each row in rows) contains at least one
+	// additional column besides the table key values.
+	//
 	// Some connectors may check that the table keys actually match the primary keys
 	// of the table, returning an error if they do not.
 	Merge(ctx context.Context, table meergo.Table, rows [][]any) error

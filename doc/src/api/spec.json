@@ -1717,7 +1717,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
+                            "description": "The schema for the table key property and the output properties within the transformation.\n\nIn addition to the table key property, it must contain at least one other output property.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         }
                     ],
                     "moreParameters": [],
@@ -1918,7 +1918,7 @@
                                 "name": "schema"
                             },
                             "createRequired": true,
-                            "description": "The schema for the table key property and the output properties within the transformation.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
+                            "description": "The schema for the table key property and the output properties within the transformation.\n\nIn addition to the table key property, it must contain at least one other output property.\n\nWhen exporting users to a database, this should be a subset of the database table schema."
                         }
                     ],
                     "moreParameters": [],

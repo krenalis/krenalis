@@ -651,9 +651,11 @@ func Test_validateAction(t *testing.T) {
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
 				}),
 				Transformation: &Transformation{
 					Function: &TransformationFunction{
@@ -661,10 +663,11 @@ func Test_validateAction(t *testing.T) {
 							`def transform(user: dict) -> dict:`,
 							`    return {`,
 							`        "email_out": user["email_in"],`,
+							`        "first_name": user["first_name"],`,
 							`    }`}, "\n"),
 						Language: "Python",
-						InPaths:  []string{"email_in"},
-						OutPaths: []string{"email_out"},
+						InPaths:  []string{"email_in", "first_name"},
+						OutPaths: []string{"email_out", "first_name"},
 					},
 				},
 				TableName: "my_users_table",
@@ -1973,14 +1976,17 @@ func Test_validateAction(t *testing.T) {
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
 					{Name: "a", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
-						"email_out": "email_in",
+						"email_out":  "email_in",
+						"first_name": "first_name",
 					},
 				},
 				TableName: "my_users_table",
@@ -1997,14 +2003,17 @@ func Test_validateAction(t *testing.T) {
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+					{Name: "first_name", Type: types.Text(), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.Text()},
+					{Name: "first_name", Type: types.Text()},
 					{Name: "x", Type: types.Text()},
 				}),
 				Transformation: &Transformation{
 					Mapping: map[string]string{
-						"email_out": "email_in",
+						"email_out":  "email_in",
+						"first_name": "first_name",
 					},
 				},
 				TableName: "my_users_table",
@@ -2761,6 +2770,60 @@ func Test_validateAction(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
 			err:                     "transformation must map at least one property",
+		},
+		{
+			name: "BAD: Destination/Database/Users - only the table key is mapped",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				TableName: "my_users_table",
+				TableKey:  "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Database,
+			err:                     "in addition to the table key, there must be at least one other mapped column",
+		},
+		{
+			name: "BAD: Destination/Database/Users - only the table key is transformed",
+			action: ActionToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.Text(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.Text()},
+				}),
+				Transformation: &Transformation{
+					Function: &TransformationFunction{
+						Source: strings.Join([]string{
+							`def transform(user: dict) -> dict:`,
+							`    return {`,
+							`        "email_out": user["email_in"],`,
+							`    }`}, "\n"),
+						Language: "Python",
+						InPaths:  []string{"email_in"},
+						OutPaths: []string{"email_out"},
+					},
+				},
+				TableName: "my_users_table",
+				TableKey:  "email_out",
+			},
+			target:                  state.Users,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Database,
+			provider:                testProvider{},
+			err:                     "the out properties of the transformation function must contain at least one other property in addition to the table key",
 		},
 	}
 

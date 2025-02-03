@@ -119,6 +119,7 @@ func init() {
 		Placeholder:    `{...}`,
 		CreateRequired: true,
 		Description: "The schema for the table key property and the output properties within the transformation.\n\n" +
+			"In addition to the table key property, it must contain at least one other output property.\n\n" +
 			"When exporting users to a database, this should be a subset of the database table schema.",
 	}
 

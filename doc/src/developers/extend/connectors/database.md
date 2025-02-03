@@ -181,6 +181,8 @@ type Table struct {
 
 The `rows` parameter contains the rows to be updated or inserted. For each `row`, `row[i]` contains the value for the column `table.Columns[i]`. If a column is nullable, the corresponding value in a raw can be `nil`, representing the `NULL` value in the database.
 
+Meergo ensures that `table.Columns` (and consequently each row in `rows`) contains at least one additional column besides the table key values.
+
 A database connector can require that the columns in `table.Keys` form the primary key and can return an error if they do not.
 
 ### Query method
