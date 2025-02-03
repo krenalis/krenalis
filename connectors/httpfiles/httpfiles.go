@@ -61,8 +61,8 @@ type innerSettings struct {
 	Headers []meergo.KV
 }
 
-// CompletePath returns the complete representation of the given path name.
-func (h *HTTPFiles) CompletePath(ctx context.Context, name string) (string, error) {
+// AbsolutePath returns the absolute representation of the given path name.
+func (h *HTTPFiles) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if name[0] != '/' {
 		name = "/" + name
 	}
@@ -96,7 +96,7 @@ func (h *HTTPFiles) CompletePath(ctx context.Context, name string) (string, erro
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (h *HTTPFiles) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	u, err := h.CompletePath(ctx, name)
+	u, err := h.AbsolutePath(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -152,7 +152,7 @@ func (h *HTTPFiles) ServeUI(ctx context.Context, event string, settings json.Val
 
 // Write writes the data read from r into the file with the given path name.
 func (h *HTTPFiles) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	u, err := h.CompletePath(ctx, name)
+	u, err := h.AbsolutePath(ctx, name)
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@
 
 | Method       | Settings | SetSettings |
 |--------------|----------|-------------|
-| CompletePath | ✓        | ✓           |
+| AbsolutePath | ✓        | ✓           |
 | Reader       | ✓        | ✓           |
 | ServeUI      | -/✓      | -/✓         |
 | Write        | ✓        | ✓           |

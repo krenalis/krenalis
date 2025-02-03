@@ -29,13 +29,13 @@ type FileStorage struct {
 	err     error
 }
 
-type fileStorageCompletePathConnector interface {
-	// CompletePath returns the complete representation of the given path name. It
+type fileStorageAbsolutePathConnector interface {
+	// AbsolutePath returns the absolute representation of the given path name. It
 	// returns *InvalidPathError if name is not valid for use in calls to Reader and
 	// Write.
 	//
 	// name's length in runes will be in range [1, 1024].
-	CompletePath(ctx context.Context, name string) (string, error)
+	AbsolutePath(ctx context.Context, name string) (string, error)
 }
 
 type fileStorageReaderConnector interface {
@@ -69,7 +69,7 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 	return s
 }
 
-// CompletePath returns the complete representation of the provided path name or
+// AbsolutePath returns the absolute representation of the provided path name or
 // an InvalidPathError value if name is not valid for use in calls to Read and
 // Write. name's length in runes must be in range [1, 1024].
 //
@@ -78,7 +78,7 @@ func (connectors *Connectors) FileStorage(storage *state.Connection) *FileStorag
 // error with placeholders.
 //
 // If the connector returns an error, it returns a *UnavailableError error.
-func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
+func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
 	}
@@ -89,7 +89,7 @@ func (storage *FileStorage) CompletePath(ctx context.Context, name string, nameR
 			return "", err
 		}
 	}
-	path, err := storage.inner.(fileStorageCompletePathConnector).CompletePath(ctx, name)
+	path, err := storage.inner.(fileStorageAbsolutePathConnector).AbsolutePath(ctx, name)
 	if err != nil {
 		return "", connectorError(err)
 	}

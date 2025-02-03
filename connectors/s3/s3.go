@@ -63,8 +63,8 @@ type innerSettings struct {
 	Bucket          string
 }
 
-// CompletePath returns the complete representation of the given path name.
-func (ss3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
+// AbsolutePath returns the absolute representation of the given path name.
+func (ss3 *S3) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if len(name) > 1024 {
 		return "", meergo.InvalidPathErrorf("path name cannot be longer than 1024 bytes")
 	}

@@ -13,10 +13,10 @@ import (
 	"github.com/meergo/meergo"
 )
 
-func TestCompletePath(t *testing.T) {
+func TestAbsolutePath(t *testing.T) {
 	httpFiles := &HTTPFiles{settings: &innerSettings{Host: "example.com", Port: 443}}
 	httpFiles2 := &HTTPFiles{settings: &innerSettings{Host: "example.com", Port: 8080}}
-	tests := []meergo.CompletePathTest{
+	tests := []meergo.AbsolutePathTest{
 		{Name: "/a", Expected: "https://example.com/a"},
 		{Name: "a", Expected: "https://example.com/a"},
 		{Name: "/a/b", Expected: "https://example.com/a/b"},
@@ -29,7 +29,7 @@ func TestCompletePath(t *testing.T) {
 		{Name: "/a/b?x=y#"},
 		{Name: "/a", Expected: "https://example.com:8080/a", Storage: httpFiles2},
 	}
-	err := meergo.TestCompletePath(httpFiles, tests)
+	err := meergo.TestAbsolutePath(httpFiles, tests)
 	if err != nil {
 		t.Errorf("HTTP Files connector: %s", err)
 	}

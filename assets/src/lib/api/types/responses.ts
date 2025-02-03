@@ -56,7 +56,7 @@ interface RecordsResponse {
 	schema: ObjectType;
 }
 
-interface CompletePathResponse {
+interface AbsolutePathResponse {
 	path: string;
 }
 
@@ -171,7 +171,7 @@ export type {
 	ActionErrorsResponse,
 	ActionSchemasResponse,
 	AppUsersResponse,
-	CompletePathResponse,
+	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
 	ConnectorUIResponse,

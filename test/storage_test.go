@@ -54,9 +54,9 @@ func TestStorage(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		expectedPathSuffix = "\\testdata\\storage\\file_with_3_sheets.xlsx"
 	}
-	gotPath := c.CompletePath(storage, "file_with_3_sheets.xlsx")
+	gotPath := c.AbsolutePath(storage, "file_with_3_sheets.xlsx")
 	if !strings.HasSuffix(gotPath, expectedPathSuffix) {
-		t.Fatalf("expected complete path to end with suffix %q, but it the complete path is %q", expectedPathSuffix, gotPath)
+		t.Fatalf("expected absolute path to end with suffix %q, but it the absolute path is %q", expectedPathSuffix, gotPath)
 	}
 
 	// Test the "/files/{path}" endpoint.

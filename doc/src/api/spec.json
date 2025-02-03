@@ -14359,7 +14359,7 @@
                                 "type": {
                                     "name": "Text"
                                 },
-                                "description": "The complete path of the file."
+                                "description": "The absolute path of the file."
                             }
                         ]
                     },

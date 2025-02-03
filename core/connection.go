@@ -108,6 +108,48 @@ type ActionType struct {
 	EventType   *string `json:"eventType"`
 }
 
+// AbsolutePath returns the absolute representation of the given path, based
+// on the connector that must be a file with a storage. path cannot be empty,
+// cannot be longer than MaxFilePathSize runes, and must be UTF-8 encoded.
+//
+// It returns an errors.UnprocessableError error with code:
+//   - InvalidPath, if path is not valid for the file storage connector.
+//   - InvalidPlaceholder, if path for source connections contains a placeholder
+//     or path for destination connections contains an invalid placeholder.
+func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, error) {
+	this.core.mustBeOpen()
+	c := this.connection
+	if c.Connector().Type != state.FileStorage {
+		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
+	}
+	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
+		return "", errors.BadRequest("%s", err)
+	}
+	var replacer connectors.PlaceholderReplacer
+	switch c.Role {
+	case state.Source:
+		_, err := connectors.ReplacePlaceholders(path, func(_ string) (string, bool) {
+			return "", false
+		})
+		if err != nil {
+			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
+		}
+	case state.Destination:
+		replacer = newPathPlaceholderReplacer(time.Now().UTC())
+	}
+	path, err := this.storage().AbsolutePath(ctx, path, replacer)
+	if err != nil {
+		switch err.(type) {
+		case *meergo.InvalidPathError:
+			err = errors.Unprocessable(InvalidPath, "%s", err)
+		case *connectors.PlaceholderError:
+			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
+		}
+		return "", err
+	}
+	return path, nil
+}
+
 // ActionSchemas returns the input and the output schemas of an action with the
 // given target and event type.
 //
@@ -612,48 +654,6 @@ func (this *Connection) AppUsers(ctx context.Context, schema types.Type, cursor 
 	}
 
 	return marshaledUsers, cursor, nil
-}
-
-// CompletePath returns the complete representation of the given path, based
-// on the connector that must be a file with a storage. path cannot be empty,
-// cannot be longer than MaxFilePathSize runes, and must be UTF-8 encoded.
-//
-// It returns an errors.UnprocessableError error with code:
-//   - InvalidPath, if path is not valid for the file storage connector.
-//   - InvalidPlaceholder, if path for source connections contains a placeholder
-//     or path for destination connections contains an invalid placeholder.
-func (this *Connection) CompletePath(ctx context.Context, path string) (string, error) {
-	this.core.mustBeOpen()
-	c := this.connection
-	if c.Connector().Type != state.FileStorage {
-		return "", errors.BadRequest("connection %d is not a file storage connection", c.ID)
-	}
-	if err := util.ValidateStringField("path", path, MaxFilePathSize); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
-	var replacer connectors.PlaceholderReplacer
-	switch c.Role {
-	case state.Source:
-		_, err := connectors.ReplacePlaceholders(path, func(_ string) (string, bool) {
-			return "", false
-		})
-		if err != nil {
-			return "", errors.Unprocessable(InvalidPlaceholder, "the path contains a placeholder syntax, but it cannot be utilized for source actions")
-		}
-	case state.Destination:
-		replacer = newPathPlaceholderReplacer(time.Now().UTC())
-	}
-	path, err := this.storage().CompletePath(ctx, path, replacer)
-	if err != nil {
-		switch err.(type) {
-		case *meergo.InvalidPathError:
-			err = errors.Unprocessable(InvalidPath, "%s", err)
-		case *connectors.PlaceholderError:
-			err = errors.Unprocessable(InvalidPlaceholder, "%s", err)
-		}
-		return "", err
-	}
-	return path, nil
 }
 
 // CreateAction creates an action for the connection returning the identifier of

@@ -28,7 +28,7 @@ import {
 	ActionErrorsResponse,
 	ActionSchemasResponse,
 	AppUsersResponse,
-	CompletePathResponse,
+	AbsolutePathResponse,
 	ConnectionIdentitiesResponse,
 	ConnectorSettings,
 	ConnectorUIResponse,
@@ -461,7 +461,7 @@ class Connections {
 		);
 	};
 
-	completePath = async (storageConnection: number, path: string): Promise<CompletePathResponse> => {
+	absolutePath = async (storageConnection: number, path: string): Promise<AbsolutePathResponse> => {
 		return await call(
 			`${this.apiURL}/connections/${encodeURIComponent(storageConnection)}/files/${encodeURIComponent(
 				path,

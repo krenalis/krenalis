@@ -18,7 +18,7 @@ import (
 func TestPathConvert(t *testing.T) {
 	fs := &Filesystem{settings: &innerSettings{Root: "/"}}
 	fs2 := &Filesystem{settings: &innerSettings{Root: "/root"}}
-	tests := []meergo.CompletePathTest{
+	tests := []meergo.AbsolutePathTest{
 		{Name: "a", Expected: "/a"},
 		{Name: "a.e", Expected: "/a.e"},
 		{Name: "a/b.e", Expected: "/a/b.e"},
@@ -33,7 +33,7 @@ func TestPathConvert(t *testing.T) {
 		{Name: "a", Expected: "/root/a", Storage: fs2},
 		{Name: "/a", Expected: "/root/a", Storage: fs2},
 	}
-	err := meergo.TestCompletePath(fs, tests)
+	err := meergo.TestAbsolutePath(fs, tests)
 	if err != nil {
 		t.Errorf("Filesystem connector: %s", err)
 	}

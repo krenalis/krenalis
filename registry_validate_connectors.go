@@ -187,7 +187,7 @@ func validateFileConnector(file FileInfo) {
 func validateFileStorageConnector(fileStorage FileStorageInfo) {
 
 	iface := reflect.TypeFor[interface {
-		CompletePath(ctx context.Context, name string) (string, error)
+		AbsolutePath(ctx context.Context, name string) (string, error)
 		ServeUI(ctx context.Context, event string, settings json.Value, role Role) (*UI, error)
 	}]()
 	if !fileStorage.ct.Implements(iface) {

@@ -103,7 +103,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connections/{id}/actions/schemas/Events/{type}": connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/actions/schemas/{target}":      connection.ActionSchemas, /* only UI */
 		"GET    /connections/{id}/event-write-keys":              connection.EventWriteKeys,
-		"GET    /connections/{id}/files/{path}/absolute":         connection.CompletePath,
+		"GET    /connections/{id}/files/{path}/absolute":         connection.AbsolutePath,
 		"GET    /connections/{id}/schemas/event/{type}":          connection.AppEventSchema,
 		"GET    /connections/{id}/schemas/user":                  connection.AppUserSchemas,
 		"GET    /connections/{id}/tables/{name}":                 connection.TableSchema,

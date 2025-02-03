@@ -56,8 +56,8 @@ type innerSettings struct {
 	Root string
 }
 
-// CompletePath returns the complete representation of the given path name.
-func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (string, error) {
+// AbsolutePath returns the absolute representation of the given path name.
+func (filesystem *Filesystem) AbsolutePath(ctx context.Context, name string) (string, error) {
 	originalName := name
 	name = filepath.ToSlash(name)
 	if name[0] == '/' {
@@ -77,7 +77,7 @@ func (filesystem *Filesystem) CompletePath(ctx context.Context, name string) (st
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (filesystem *Filesystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	path, _ := filesystem.CompletePath(ctx, name)
+	path, _ := filesystem.AbsolutePath(ctx, name)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -118,7 +118,7 @@ func (filesystem *Filesystem) ServeUI(ctx context.Context, event string, setting
 
 // Write writes the data read from r into the file with the given path name.
 func (filesystem *Filesystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	path, _ := filesystem.CompletePath(ctx, name)
+	path, _ := filesystem.AbsolutePath(ctx, name)
 	tmpPath := path + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {

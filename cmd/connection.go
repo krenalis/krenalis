@@ -70,13 +70,13 @@ func (connection connection) AppUsers(_ http.ResponseWriter, r *http.Request) (a
 	return map[string]any{"users": users, "cursor": cursor}, nil
 }
 
-// CompletePath returns the complete path of a storage path.
-func (connection connection) CompletePath(_ http.ResponseWriter, r *http.Request) (any, error) {
+// AbsolutePath returns the absolute path of a storage path.
+func (connection connection) AbsolutePath(_ http.ResponseWriter, r *http.Request) (any, error) {
 	c, err := connection.id(r)
 	if err != nil {
 		return nil, err
 	}
-	path, err := c.CompletePath(r.Context(), r.PathValue("path"))
+	path, err := c.AbsolutePath(r.Context(), r.PathValue("path"))
 	if err != nil {
 		return nil, err
 	}

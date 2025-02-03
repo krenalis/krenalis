@@ -44,8 +44,8 @@ func New(conf *meergo.FileStorageConfig) (*S3, error) {
 	// ...
 }
 
-// CompletePath returns the complete representation of the given path name.
-func (s3 *S3) CompletePath(ctx context.Context, name string) (string, error) {
+// AbsolutePath returns the absolute representation of the given path name.
+func (s3 *S3) AbsolutePath(ctx context.Context, name string) (string, error) {
 	// ...
 }
 
@@ -119,15 +119,15 @@ type FileStorageConfig struct {
 - `Settings`: Contains the instance settings in JSON format. Further details on how the connector defines its settings will be discussed later.
 - `SetSetting`: A function that enables the connector to update its settings as necessary.
 
-### CompletePath method
+### AbsolutePath method
 
 ```go
-CompletePath(ctx context.Context, name string) (string, error)
+AbsolutePath(ctx context.Context, name string) (string, error)
 ```
 
-The `CompletePath` method is invoked by Meergo to present the user with the full path of a file in the given storage, based on the path specified by the user.
+The `AbsolutePath` method is invoked by Meergo to present the user with the absolute path of a file in the given storage, based on the path specified by the user.
 
-The `name` parameter is always a UTF-8 encoded string with a length in runes ranging from 1 to 1024. It is the responsibility of the `CompletePath` method to validate the path based on its specific rules. If the path is invalid, it should return an `InvalidPathError` error; otherwise, it should return a UTF-8 encoded string representing the complete path. The returned path is intended solely for display to the user.
+The `name` parameter is always a UTF-8 encoded string with a length in runes ranging from 1 to 1024. It is the responsibility of the `AbsolutePath` method to validate the path based on its specific rules. If the path is invalid, it should return an `InvalidPathError` error; otherwise, it should return a UTF-8 encoded string representing the absolute path. The returned path is intended solely for display to the user.
 
 If the connector accepts paths with a slash (“/”) separator, the method should accommodate both paths with and without a leading slash.
 
@@ -139,7 +139,7 @@ Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error)
 
 The `Reader` method is used by Meergo to read files, such as during previews or exports.
 
-The `name` parameter represents the file path entered by the user, which has been validated with the `CompletePath` method. It also gives the last time the file was changed, if known; otherwise, it returns zero time.
+The `name` parameter represents the file path entered by the user, which has been validated with the `AbsolutePath` method. It also gives the last time the file was changed, if known; otherwise, it returns zero time.
 
 ### Write method
 
@@ -149,6 +149,6 @@ Write(ctx context.Context, r io.Reader, name, contentType string) error
 
 The `Write` method is used by Meergo to save a file to the storage when exporting.
 
-`Write` reads the content from the provided `Reader`. The `name` parameter represents the file path specified by the user, which has been validated with the `CompletePath` method. The `contentType` parameter indicates the type of content in the file, obtained from the `ContentType` method of the file connector.
+`Write` reads the content from the provided `Reader`. The `name` parameter represents the file path specified by the user, which has been validated with the `AbsolutePath` method. The `contentType` parameter indicates the type of content in the file, obtained from the `ContentType` method of the file connector.
 
 The connector should ensure, as much as possible, that the write operation is both atomic and durable. If `Write` returns an error, no file should be created. Conversely, if it returns a nil error, the file has been successfully written. 

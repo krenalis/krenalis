@@ -158,7 +158,7 @@ func init() {
 							Name:        "path",
 							Type:        types.Text(),
 							Placeholder: `"/data/users.csv"`,
-							Description: "The complete path of the file.",
+							Description: "The absolute path of the file.",
 						},
 					},
 				},

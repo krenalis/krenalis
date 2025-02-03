@@ -12,7 +12,7 @@ import (
 	"reflect"
 )
 
-// An InvalidPathError value is returned by FileStorage.CompletePath when the
+// An InvalidPathError value is returned by FileStorage.AbsolutePath when the
 // path name is not valid for the file storage connector.
 type InvalidPathError struct {
 	err error

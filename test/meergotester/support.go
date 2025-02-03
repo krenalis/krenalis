@@ -29,6 +29,15 @@ var defaultStrategy Strategy = "Conversion"
 
 // This file contains support methods which reduce verbosity of tests.
 
+func (c *Meergo) AbsolutePath(storage int, path string) string {
+	var response struct {
+		Path string `json:"path"`
+	}
+	endpointPath := fmt.Sprintf("/api/connections/%d/files/%s/absolute", storage, url.PathEscape(path))
+	c.MustCall("GET", endpointPath, nil, &response)
+	return response.Path
+}
+
 func (c *Meergo) Action(action int) Action {
 	path := fmt.Sprintf("/api/actions/%d", action)
 	var response map[string]any
@@ -53,15 +62,6 @@ func (c *Meergo) ActionSchemas(conn int, target core.Target, eventType string) m
 	var schemas map[string]any
 	c.MustCall("GET", path, nil, &schemas)
 	return schemas
-}
-
-func (c *Meergo) CompletePath(storage int, path string) string {
-	var response struct {
-		Path string `json:"path"`
-	}
-	endpointPath := fmt.Sprintf("/api/connections/%d/files/%s/absolute", storage, url.PathEscape(path))
-	c.MustCall("GET", endpointPath, nil, &response)
-	return response.Path
 }
 
 func (c *Meergo) ConnectionIdentities(conn, first, limit int) ([]UserIdentity, int) {

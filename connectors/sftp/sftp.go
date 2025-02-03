@@ -68,8 +68,8 @@ type innerSettings struct {
 	TempPath string
 }
 
-// CompletePath returns the complete representation of the given path name.
-func (sf *SFTP) CompletePath(ctx context.Context, name string) (string, error) {
+// AbsolutePath returns the absolute representation of the given path name.
+func (sf *SFTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	u := url.URL{
 		Scheme: "sftp",
 		Host:   net.JoinHostPort(sf.settings.Host, strconv.Itoa(sf.settings.Port)),

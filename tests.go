@@ -12,16 +12,16 @@ import (
 	"fmt"
 )
 
-// CompletePathTest is a test for FileStorage.CompletePath.
-type CompletePathTest struct {
+// AbsolutePathTest is a test for FileStorage.AbsolutePath.
+type AbsolutePathTest struct {
 	Name     string // path name.
-	Expected string // expected complete path.
+	Expected string // expected absolute path.
 	Storage  any    // storage to use, if not nil.
 }
 
-// TestCompletePath tests FileStorage.CompletePath of the connector executing the
+// TestAbsolutePath tests FileStorage.AbsolutePath of the connector executing the
 // given tests. It returns an error if a test fails.
-func TestCompletePath(storage any, tests []CompletePathTest) error {
+func TestAbsolutePath(storage any, tests []AbsolutePathTest) error {
 	ctx := context.Background()
 	for _, test := range tests {
 		s := storage
@@ -29,8 +29,8 @@ func TestCompletePath(storage any, tests []CompletePathTest) error {
 			s = test.Storage
 		}
 		got, err := s.(interface {
-			CompletePath(ctx context.Context, name string) (string, error)
-		}).CompletePath(ctx, test.Name)
+			AbsolutePath(ctx context.Context, name string) (string, error)
+		}).AbsolutePath(ctx, test.Name)
 		if err != nil {
 			_, ok := err.(*InvalidPathError)
 			if !ok {
@@ -48,7 +48,7 @@ func TestCompletePath(storage any, tests []CompletePathTest) error {
 			return fmt.Errorf("%q: expected error, got no errors", test.Name)
 		}
 		if got != test.Expected {
-			return fmt.Errorf("%q: expected complete path %q, got %q", test.Name, test.Expected, got)
+			return fmt.Errorf("%q: expected absolute path %q, got %q", test.Name, test.Expected, got)
 		}
 	}
 	return nil

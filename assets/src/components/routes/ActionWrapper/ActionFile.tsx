@@ -14,7 +14,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import {
-	CompletePathResponse,
+	AbsolutePathResponse,
 	RecordsResponse,
 	SheetsResponse,
 	ConnectorUIResponse,
@@ -260,8 +260,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const [sheets, setSheets] = useState<Record<string, string>>({});
 	const [areSheetsLoading, setAreSheetsLoading] = useState<boolean>(false);
 	const [hasSheetsError, setHasSheetsError] = useState<boolean>(false);
-	const [completePath, setCompletePath] = useState<string>('');
-	const [completePathError, setCompletePathError] = useState<string>('');
+	const [absolutePath, setAbsolutePath] = useState<string>('');
+	const [absolutePathError, setAbsolutePathError] = useState<string>('');
 	const [filePreviewColumns, setFilePreviewColumns] = useState<GridColumn[] | null>(null);
 	const [filePreviewRows, setFilePreviewRows] = useState<GridRow[] | null>(null);
 	const [showFilePreviewContent, setShowFilePreviewContent] = useState<boolean>(false);
@@ -284,7 +284,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		isEditing,
 	} = useContext(ActionContext);
 
-	const getCompletePathTimeoutID = useRef<number>();
+	const getAbsolutePathTimeoutID = useRef<number>();
 	const sheetsSelectRef = useRef<any>();
 	const fileConfirmButtonRef = useRef<any>();
 
@@ -424,7 +424,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	};
 
 	const onUpdatePath = async (e) => {
-		clearTimeout(getCompletePathTimeoutID.current);
+		clearTimeout(getAbsolutePathTimeoutID.current);
 		const a = { ...action };
 		const path = e.currentTarget.value;
 		pathRef.current.lastUpdate = path;
@@ -434,24 +434,24 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			a.sheet = '';
 		}
 		setAction(a);
-		setCompletePath('');
-		setCompletePathError('');
+		setAbsolutePath('');
+		setAbsolutePathError('');
 		if (path === '') {
 			return;
 		}
-		getCompletePathTimeoutID.current = window.setTimeout(async () => {
-			let res: CompletePathResponse;
+		getAbsolutePathTimeoutID.current = window.setTimeout(async () => {
+			let res: AbsolutePathResponse;
 			try {
-				res = await api.workspaces.connections.completePath(connection.id, path);
+				res = await api.workspaces.connections.absolutePath(connection.id, path);
 			} catch (err) {
 				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
-					setCompletePathError(err.message);
+					setAbsolutePathError(err.message);
 					return;
 				}
 				handleError(err);
 				return;
 			}
-			setCompletePath(res.path);
+			setAbsolutePath(res.path);
 		}, 300);
 	};
 
@@ -683,14 +683,14 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					</div>
 				</SlInput>
 				<div
-					className={`action__file-complete-path-error${completePathError !== '' ? ' action__file-complete-path-error--visible' : ''}`}
+					className={`action__file-complete-path-error${absolutePathError !== '' ? ' action__file-complete-path-error--visible' : ''}`}
 				>
-					{completePathError}
+					{absolutePathError}
 				</div>
 				<div
-					className={`action__file-complete-path${completePath !== '' ? ' action__file-complete-path--visible' : ''}`}
+					className={`action__file-complete-path${absolutePath !== '' ? ' action__file-complete-path--visible' : ''}`}
 				>
-					{completePath}
+					{absolutePath}
 				</div>
 			</div>
 			{hasSheets &&
@@ -711,7 +711,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 							disabled={
 								action.path == null ||
 								action.path === '' ||
-								completePathError !== '' ||
+								absolutePathError !== '' ||
 								areSheetsLoading ||
 								(pathRef.current.lastSheetFetch === pathRef.current.lastUpdate && hasSheetsError)
 							}
