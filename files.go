@@ -94,11 +94,17 @@ type RecordWriter interface {
 	Columns(columns []types.Property) error
 
 	// Record writes a record represented as a string to any map.
+	// The record's length must equal to the number of columns.
 	Record(record map[string]any) error
 
 	// RecordSlice writes a record represented as a slice of any.
+	// The record's length must equal to the number of columns.
 	RecordSlice(record []any) error
 
 	// RecordStrings writes a record represented as a string slice.
+	// The record's length must be less than or equal to the number of columns, and
+	// record cannot be nil.
+	//
+	// RecordStrings may modify the elements of the record.
 	RecordStrings(record []string) error
 }

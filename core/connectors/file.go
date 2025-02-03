@@ -19,6 +19,7 @@ import (
 	"math"
 	"os"
 	pathPkg "path"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -766,6 +767,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 }
 
 // RecordSlice writes a record.
+// The record's length must equal to the number of columns.
 func (rw *recordWriter) RecordSlice(record []any) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling Record", rw.format)
@@ -830,13 +832,24 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 	return nil
 }
 
-// RecordStrings writes a record as a string slice.
+// RecordStrings writes a record represented as a string slice.
+// The record's length must be less than or equal to the number of columns, and
+// record cannot be nil.
+//
+// RecordStrings may modify the elements of the record.
 func (rw *recordWriter) RecordStrings(record []string) error {
 	if rw.properties == nil {
 		return fmt.Errorf("connector %s did not call the Columns method before calling RecordStrings", rw.format)
 	}
-	if len(record) != len(rw.properties) {
-		return fmt.Errorf("connector %s has returned records with different lengths", rw.format)
+	if len(record) > len(rw.properties) {
+		return fmt.Errorf("connector %s has returned a record with %d elements, but there are %d columns", rw.format, len(record), len(rw.properties))
+	}
+	// Ensure the record has the same number of elements as the columns.
+	if n := len(record); n < len(rw.properties) {
+		record = slices.Grow(record, len(rw.properties)-len(record))[:len(rw.properties)]
+		for c := n; c < len(rw.properties); c++ {
+			record[c] = ""
+		}
 	}
 	// Get the last change time.
 	var err error
