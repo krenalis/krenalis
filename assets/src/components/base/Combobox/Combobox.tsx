@@ -54,7 +54,7 @@ const Combobox = ({
 	children,
 	...rest
 }: ComboboxProps) => {
-	const [val, setVal] = useState<string>(value);
+	const [val, setVal] = useState<string>(value == null ? '' : value);
 	const [cursorPosition, setCursorPosition] = useState<number>();
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
