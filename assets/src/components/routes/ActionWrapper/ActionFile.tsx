@@ -370,8 +370,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			try {
 				res = await api.workspaces.connections.sheets(
 					connection.id,
-					action.format,
 					action.path!,
+					action.format,
 					action.compression,
 					settings,
 				);
