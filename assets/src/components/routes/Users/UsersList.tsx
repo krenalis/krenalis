@@ -83,12 +83,12 @@ const UsersList = () => {
 	};
 
 	const onToggleColumn = (name: string) => {
-		const updatedProps: UserProperty[] = [];
 		const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === name;
 		if (isLastUsed) {
 			// Prevent the user from hiding all the columns.
 			return;
 		}
+		const updatedProps: UserProperty[] = [];
 		for (const p of usersProperties) {
 			const cp = { ...p };
 			if (cp.name === name) {

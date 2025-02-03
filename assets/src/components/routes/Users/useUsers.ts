@@ -5,6 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { UserProperty } from './Users.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { FindUsersResponse, ResponseUser } from '../../../lib/api/types/responses';
+import { flattenSchema } from '../../../lib/core/action';
 
 const DEFAULT_USER_LIMIT = 1000;
 
@@ -46,46 +47,80 @@ const useUsers = () => {
 
 		// check if previous users properties are already saved in the storage.
 		const storageProperties = localStorage.getItem('meergo_ui_users_properties');
-		let preferenceProperties: UserProperty[] = [];
+		let preferences: UserProperty[] = [];
 		if (storageProperties != null) {
 			try {
-				preferenceProperties = JSON.parse(storageProperties);
+				preferences = JSON.parse(storageProperties);
 			} catch (err) {
 				// the value of the properties in the storage is corrupted.
 				localStorage.removeItem('meergo_ui_users_properties');
 			}
 		}
 
-		// compute the users properties.
-		const properties: UserProperty[] = [];
-		for (const p of schema.properties) {
-			// check if there is a preference for the visualization of the
-			// property, otherwise, show the property by default.
-			const property = preferenceProperties.find((prop) => prop.name === p.name);
-			properties.push({
-				name: p.name,
-				isUsed: property ? property.isUsed : true,
-				type: p.type.name,
+		const flatSchema = flattenSchema(schema);
+		const paths = Object.keys(flatSchema);
+
+		// compute the properties to show in the table columns and in
+		// the “Toggle columns” menu, and those that should be requested
+		// to the server.
+		const toShow: UserProperty[] = [];
+		const toFetch: string[] = [];
+		for (const path of paths) {
+			const isFirstLevel = !path.includes('.');
+			if (isFirstLevel) {
+				// fetch all the users properties by passing all the
+				// first level properties to the server.
+				toFetch.push(path);
+			}
+
+			let isParent = false;
+			const depth = path.split('.').length;
+			for (const p of paths) {
+				const isSameProperty = p === path;
+				if (isSameProperty) {
+					continue;
+				}
+				const isChildren = p.includes('.');
+				if (isChildren) {
+					const parts = p.split('.');
+					const prefix = parts.slice(0, depth).join('.');
+					if (prefix === path) {
+						isParent = true;
+						continue;
+					}
+				}
+			}
+
+			if (isParent) {
+				// show only flattened subproperties instead of full
+				// parent properties (e.g. `obj.prop.prop2` instead of
+				// `obj`).
+				continue;
+			}
+
+			// check if there is a preference for the property.
+			const preference = preferences.find((prop) => prop.name === path);
+
+			let isTypeChanged = false;
+			if (preference != null) {
+				isTypeChanged = preference.type !== flatSchema[path].type;
+			}
+
+			toShow.push({
+				name: path,
+				isUsed: preference != null && !isTypeChanged ? preference.isUsed : true,
+				type: flatSchema[path].type,
 			});
 		}
-		setUsersProperties(properties);
+		setUsersProperties(toShow);
 
 		// update the value of the properties in the storage.
-		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(properties));
-
-		// compute the names of the showed user properties to request
-		// only those properties when fetching the users.
-		const propertiesNames: string[] = [];
-		for (const p of properties) {
-			if (p.isUsed) {
-				propertiesNames.push(p.name);
-			}
-		}
+		localStorage.setItem('meergo_ui_users_properties', JSON.stringify(toShow));
 
 		// fetch the users.
 		let res: FindUsersResponse;
 		try {
-			res = await api.workspaces.users.find(propertiesNames, null, '', true, 0, DEFAULT_USER_LIMIT);
+			res = await api.workspaces.users.find(toFetch, null, '', true, 0, DEFAULT_USER_LIMIT);
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);
@@ -110,17 +145,9 @@ const useUsers = () => {
 			}, 300);
 			return;
 		}
+
 		const users = res.users;
 		const total = res.total;
-
-		for (const user of users) {
-			const traits: Record<string, any> = {};
-			for (const name of propertiesNames) {
-				const value = user.traits[name];
-				traits[name] = value ? value : undefined;
-			}
-			user.traits = traits;
-		}
 
 		setUsers(users);
 		setUsersTotal(total);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, Fragment, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useUserDrawer } from './useUserDrawer';
 import { UserTab } from './Users.types';
 import AppContext from '../../../context/AppContext';
@@ -7,13 +7,14 @@ import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
+import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import toJSDateString from '../../../utils/toJSDateString';
 import { Link } from '../../base/Link/Link';
-import JSONbig from 'json-bigint';
 
 interface UserDrawerProps {
 	selectedUser: string;
@@ -85,7 +86,11 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 		setSelectedTab(e.detail.name);
 	};
 
-	const onClose = () => {
+	const onClose = (e) => {
+		if (e.target.className === 'drawer-trait__value-copy') {
+			e.stopPropagation();
+			return;
+		}
 		setSelectedUser('');
 	};
 
@@ -129,7 +134,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 
 	return (
 		<SlDrawer
-			className='user-drawer'
+			className={`user-drawer${isLoading ? ' user-drawer--loading' : ''}`}
 			open={selectedUser !== ''}
 			contained
 			style={{ '--size': '600px' } as React.CSSProperties}
@@ -170,19 +175,14 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 						{isLoading ? (
 							spinner
 						) : traits && Object.keys(traits).length > 0 ? (
-							Object.entries(traits).map(([key, value]) => {
-								return (
-									<Fragment key={key}>
-										<span className='user-drawer__trait-key'>{key}:</span>{' '}
-										{typeof value === 'object' ? (
-											<span className='user-drawer__trait-object'>
-												{JSONbig.stringify(value)}
-											</span>
-										) : (
-											<div className='user-drawer__trait-value'>{value}</div>
-										)}
-									</Fragment>
-								);
+							Object.entries(traits).map(([name, value]) => {
+								if (typeof value === 'object') {
+									return <DrawerNestedTraits name={name} value={value} indentation={1} />;
+								} else {
+									return (
+										<DrawerTrait name={name} value={value} isParent={false} isIndented={false} />
+									);
+								}
 							})
 						) : (
 							<div className='user-drawer__no-traits'>No traits associated to this user</div>
@@ -276,6 +276,166 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 				</SlTabPanel>
 			</SlTabGroup>
 		</SlDrawer>
+	);
+};
+
+interface DrawerTraitProps {
+	name: string;
+	value: any;
+	isParent: boolean;
+	isIndented: boolean;
+	isExpanded?: boolean;
+	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const DrawerTrait = ({ name, value, isParent, isIndented, isExpanded, setIsExpanded }: DrawerTraitProps) => {
+	const preview = useMemo(() => {
+		if (!isParent) {
+			return '';
+		}
+		let p: string = '';
+		const values = Object.values(value);
+		for (let i = 0; i < values.length; i++) {
+			const v = values[i];
+			if (typeof v === 'object') {
+				p += '...';
+			} else {
+				p += String(v);
+			}
+			const isLastValue = i === values.length - 1;
+			if (!isLastValue) {
+				p += ', ';
+			}
+		}
+		return p;
+	}, [isParent, value]);
+
+	return (
+		<div
+			className={`drawer-trait${isParent ? ' drawer-trait--parent' : ''}`}
+			onClick={() => {
+				setIsExpanded(!isExpanded);
+			}}
+		>
+			<span className='drawer-trait__property-padding'>
+				{isParent && <SlIcon className='drawer-trait__property-caret' name='caret-right-fill' />}
+			</span>
+			<span className='user-drawer__trait-key'>
+				{isIndented && <span className='user-drawer__indentation-icon' />}
+				{name}
+				{!isParent && ':'}
+			</span>
+			{isParent ? (
+				<span className='drawer-trait__preview'>
+					<span className='drawer-trait__preview-overlay' />
+					{preview}
+				</span>
+			) : (
+				<span className='drawer-trait__value'>
+					{value}
+					<SlCopyButton
+						className='drawer-trait__value-copy'
+						value={value}
+						copyLabel='Click to copy'
+						successLabel='✓ Copied'
+						errorLabel='Copying to clipboard is not supported by your browser'
+					/>
+				</span>
+			)}
+		</div>
+	);
+};
+
+interface DrawerNestedTraitsProps {
+	name: string;
+	value: Record<string, any>;
+	indentation: number;
+}
+
+const DrawerNestedTraits = ({ name, value, indentation }: DrawerNestedTraitsProps) => {
+	const [isExpanded, setIsExpanded] = useState<boolean>(false);
+
+	const isFirstLoad = useRef<boolean>(true);
+
+	useEffect(() => {
+		try {
+			const v = localStorage.getItem('meergo_ui_users_expanded_traits');
+			if (v == null) {
+				isFirstLoad.current = false;
+				return;
+			}
+			let preferences = JSON.parse(v);
+			if (preferences.includes(name)) {
+				setIsExpanded(true);
+			}
+		} catch (err) {
+			console.error(`cannot read the user trait preference from local storage: ${err}`);
+			isFirstLoad.current = false;
+			return;
+		}
+		isFirstLoad.current = false;
+	}, []);
+
+	useEffect(() => {
+		if (isFirstLoad.current) {
+			return;
+		}
+
+		try {
+			let v = localStorage.getItem('meergo_ui_users_expanded_traits');
+
+			let p: string[] = [];
+			if (v != null) {
+				p = JSON.parse(v) as Array<string>;
+				const isIncluded = p.includes(name);
+				if (isExpanded) {
+					if (isIncluded) {
+						return;
+					}
+					p = [...p, name];
+				} else {
+					if (isIncluded) {
+						const i = p.findIndex((p) => p === name);
+						p = [...p.slice(0, i), ...p.slice(i + 1, p.length)];
+					}
+				}
+			} else {
+				if (isExpanded) {
+					p = [name];
+				}
+			}
+
+			localStorage.setItem('meergo_ui_users_expanded_traits', JSON.stringify(p));
+		} catch (err) {
+			console.error(`cannot write the user trait preference on local storage: ${err}`);
+			return;
+		}
+	}, [isExpanded]);
+
+	return (
+		<div className={`drawer-nested-traits${isExpanded ? ' drawer-nested-traits--expand' : ''}`}>
+			<DrawerTrait
+				name={name}
+				value={value}
+				isParent={true}
+				isIndented={indentation > 1}
+				isExpanded={isExpanded}
+				setIsExpanded={setIsExpanded}
+			/>
+			<div
+				className='drawer-nested-traits__sub-properties'
+				style={{ '--property-indentation': `${indentation * 20}px` } as React.CSSProperties}
+			>
+				{isExpanded &&
+					Object.entries(value).map(([name, value]) => {
+						if (typeof value === 'object') {
+							return <DrawerNestedTraits name={name} value={value} indentation={indentation + 1} />;
+						} else {
+							return <DrawerTrait name={name} value={value} isParent={false} isIndented={true} />;
+						}
+					})}
+			</div>
+		</div>
 	);
 };
 

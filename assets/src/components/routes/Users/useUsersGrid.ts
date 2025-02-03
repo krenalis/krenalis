@@ -16,9 +16,32 @@ const useUsersGrid = (
 			// copy the user to prevent changes in-place.
 			let userCopy = { ...user };
 			const isSelected = userCopy.id === selectedUser;
+			const traits = userCopy.traits;
+
+			const cells: any[] = [];
+			for (const p of usersProperties) {
+				if (!p.isUsed) {
+					continue;
+				}
+				const path = p.name;
+				const isSubProperty = path.includes('.');
+				if (isSubProperty) {
+					const parts = path.split('.');
+					let v: any = traits;
+					for (const part of parts) {
+						if (typeof v === 'object' && v !== null) {
+							v = v[part];
+						}
+					}
+					cells.push(v);
+				} else {
+					cells.push(traits[path]);
+				}
+			}
+
 			const row: GridRow = {
 				onClick: () => onUserClick(user.id),
-				cells: [userCopy.lastChangeTime, ...Object.values(userCopy.traits)],
+				cells: [userCopy.lastChangeTime, ...cells],
 				selected: isSelected,
 			};
 			rows.push(row);
