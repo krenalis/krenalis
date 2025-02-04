@@ -621,14 +621,10 @@ const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRa
 		let time = '';
 		if (range === 'last15Minutes') {
 			d.setMinutes(d.getMinutes() - counter);
-			if (timeUnit === 0) {
-				time = `${d.getHours()}:${d.getMinutes()}`;
-			} else {
-				time = `${d.getMinutes()}`;
-			}
+			time = `${d.getHours()}:${d.getMinutes()}`;
 		} else if (range === 'last24Hours') {
 			d.setHours(d.getHours() - counter);
-			time = `${d.getHours()}`;
+			time = `${d.getHours()}:00`;
 		} else {
 			d.setDate(d.getDate() - counter);
 			time = `${d.toLocaleDateString()}`;
