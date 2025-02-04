@@ -279,7 +279,7 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 		}
 	}
 
-	// Create a schema with only the matching property.
+	// Create a schema with only the out matching property.
 	matchingOut, _ := this.action.OutSchema.Property(this.action.Matching.Out)
 	schema := types.Object([]types.Property{matchingOut})
 
@@ -292,7 +292,6 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 
 	var users []datastore.DestinationUser
 
-	// Importing users from a destination to match identities for the export.
 	for user := range records.All(ctx) {
 
 		if user.Err != nil {

@@ -36,18 +36,18 @@ Let's start by looking at how to read records using the `Records` method.
 Meergo calls the connector's `Records` method to read records from the app:
 
 ```go
-Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
+Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error)
 ```
 
 The parameters for this method are:
 
-- `ctx`: The context, which is always non-nil.
+- `ctx`: The context.
 - `target`: Specifies whether user or group records should be returned. It can be either `Users` or `Groups`.
-- `schema`: Represents the expected schema for the returned records.
-- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
 - `lastChangeTime`: If not the zero time, return only the records that were created or modified at or after. The precision of `lastChangeTime` is limited to microseconds.
-- `properties`: Contains the names of the properties that must be returned for each record. The names correspond to the properties of the schema as returned by the `Schema` method.
+- `ids`: Identifiers of the records to return. If `nil`, `Records` should return all records.
+- `properties`: Contains the names of the properties that must be returned for each record.
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
+- `schema`: It is a recent user or group source schema, as returned by the `Schema` method.
 
 > Normally, the `Records` method would return at least one record if there are no errors. However, it is permissible to return no records even in the absence of errors, enhancing flexibility in handling different situations.
 
@@ -57,21 +57,20 @@ The `Record` type is defined as follows:
 
 ```go
 type Record struct {
-    ID             string
-    Properties     map[string]any
-    LastChangeTime time.Time
+	ID             string
+	Properties     map[string]any
+	LastChangeTime time.Time
 	Associations   []string
-	Err            error
+	Err            error // Not used by the Records method.
 }
 ```
 
 - `ID`: The record's identifier in the app. It must be a valid, non-empty UTF-8 string.
-- `Properties`: The record's properties and their values. Additional properties not requested are not considered. The connector may omit a property for a user if that user does not have that property. This is distinct from a property with a `null` value. The values of requested properties should conform to their respective schemas, as returned by the connector's `Schema` method. If a requested property is always returned, its `Required` field in the schema must be `true`; if it may not be returned for some users, it must be `false`.
+- `Properties`: The record's properties and their values. Additional properties not requested are not considered. The connector may omit a property for a user if that user does not have that property. This is distinct from a property with a `null` value.
 - `LastChangeTime`:  The date and time the record was last changed. It can have any time zone. The precision of this time is limited to microseconds; any precision beyond microseconds will be truncated. If the date is unknown, return the zero time `time.Time{}`.
 - `Associations`: Identifiers of the groups the user belongs to, if the record refers to a user, or identifiers of the users that belong to the group. If none exist, or if the app only supports users or groups, indicate `nil` or an empty slice.
-- `Err`: Any error that occurred while reading the record. It must be `io.EOF` if there are no more records to read beyond those returned. If `Err` is different from `nil` and is not `io.EOF`, then only the `ID` field, along with `Err`, is significant.
 
-If a record encounters an error, meaning `Record.Err` is not `nil`, the import process is not halted but continues with subsequent records.
+If an error occurs, `Records` must return a non-nil error, and it should not be an EOF error. 
 
 ### Making HTTP calls to the app
 

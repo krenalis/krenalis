@@ -62,24 +62,28 @@ type appSchemaConnector interface {
 type appRecordsConnector interface {
 	// Records returns the records of the specified target. The target can only be
 	// either Users or Groups, and it must be a target supported by the connector.
-	// Schema is the expected schema of the returned records.
 	//
 	// If lastChangeTime is not the zero time, only the records changed or created
 	// at or after that time will be returned, and its precision is limited to
-	// microseconds. If ids is not nil, only records with identifiers in ids will be
-	// returned, if any. properties are the names of the properties to read, and
-	// cursor represents the position from which to start reading the records; it is
-	// the cursor value returned by the previous call in a paginated query.
-	// Subsequent calls will use this cursor value to retrieve the next batch of
-	// records.
+	// microseconds. If ids is not nil, only records with identifiers in ids should
+	// be returned, if any.
 	//
-	// The properties returned in records may include more than those requested and
-	// must conform to the schema returned by the Schema method. The string return
-	// value is used as the cursor in the subsequent call. It can be any UTF-8
-	// encoded string, including an empty string. If there are no more records to
-	// return, the method returns the last records read (if any) along with the
-	// io.EOF error.
-	Records(ctx context.Context, target meergo.Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error)
+	// properties are the names of the properties to read. cursor represents the
+	// position from which to start reading the records; it is the cursor value
+	// returned by the previous call in a paginated query. Subsequent calls will use
+	// this cursor value to retrieve the next batch of records.
+	//
+	// schema must be a recent schema returned by the Schema method of the
+	// connector. There is no guarantee that the returned properties will match this
+	// schema, so the caller must validate them.
+	//
+	// The string return value is used as the cursor in the subsequent call. It can
+	// be any UTF-8 encoded string, including an empty string. If there are no more
+	// records to return, the method returns the last records read (if any) along
+	// with the io.EOF error.
+	//
+	// In case of an error, it returns a non-nil and non-EOF error.
+	Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]meergo.Record, string, error)
 }
 
 type appEventsConnector interface {
@@ -279,8 +283,9 @@ func (app *App) SendEvent(ctx context.Context, req *meergo.EventRequest) (*http.
 // record will contain, in the Properties field, the properties in schema, with
 // the same types.
 //
-// lastChangeTime is the most recent lastChangeTime value read from the previous
-// import.
+// If lastChangeTime is not the zero time, only the records changed or created
+// at or after that time will be returned, and its precision is limited to
+// microseconds.
 //
 // If the connector returns an error, it returns an *UnavailableError error. If
 // the provided schema, that must be valid, does not align with the app's source
@@ -471,7 +476,7 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			// Retrieve the users.
 			var users []meergo.Record
 			var err error
-			users, cursor, err = r.inner.(appRecordsConnector).Records(ctx, meergo.Users, r.appSchema, r.lastChangeTime, nil, names, cursor)
+			users, cursor, err = r.inner.(appRecordsConnector).Records(ctx, meergo.Users, r.lastChangeTime, nil, names, cursor, r.appSchema)
 			eof := err == io.EOF
 			if err != nil && !eof {
 				r.err = connectorError(err)

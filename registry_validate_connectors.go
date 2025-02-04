@@ -37,7 +37,7 @@ func validateAppConnector(app AppInfo) {
 		if app.AsSource.Targets&Users != 0 {
 			iface := reflect.TypeFor[interface {
 				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
-				Records(ctx context.Context, target Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
+				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
 			}]()
 			if !app.ct.Implements(iface) {
 				panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))
@@ -50,7 +50,7 @@ func validateAppConnector(app AppInfo) {
 			iface := reflect.TypeFor[interface {
 				Schema(ctx context.Context, target Targets, role Role, eventType string) (types.Type, error)
 				Upsert(ctx context.Context, target Targets, records Records) error
-				Records(ctx context.Context, target Targets, schema types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]Record, string, error)
+				Records(ctx context.Context, target Targets, lastChangeTime time.Time, ids, properties []string, cursor string, schema types.Type) ([]Record, string, error)
 			}]()
 			if !app.ct.Implements(iface) {
 				panic(fmt.Sprintf("inconsistency between the declared functionalities for the %s connector and the methods it actually implements", app.Name))

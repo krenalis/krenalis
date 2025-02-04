@@ -138,7 +138,7 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 }
 
 // Records returns the records of the specified target.
-func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, _ types.Type, lastChangeTime time.Time, ids, _ []string, _ string) ([]meergo.Record, string, error) {
+func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, _ []string, _ string, _ types.Type) ([]meergo.Record, string, error) {
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()

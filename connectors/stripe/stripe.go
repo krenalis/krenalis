@@ -196,7 +196,7 @@ func (stripe *Stripe) ReceiveWebhook(r *http.Request, role meergo.Role) ([]meerg
 }
 
 // Records returns the records of the specified target.
-func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ types.Type, _ time.Time, _, _ []string, cursor string) ([]meergo.Record, string, error) {
+func (stripe *Stripe) Records(ctx context.Context, _ meergo.Targets, _ time.Time, _, _ []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
 	var body io.Reader
 	if cursor != "" {

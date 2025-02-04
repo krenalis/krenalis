@@ -101,7 +101,7 @@ func (hs *HubSpot) OAuthAccount(ctx context.Context) (string, error) {
 }
 
 // Records returns the records of the specified target.
-func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, _ types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (hs *HubSpot) Records(ctx context.Context, target meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
 	path := "/crm/v3/objects/"
 	if target == meergo.Users {

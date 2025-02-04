@@ -133,7 +133,7 @@ func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*meergo.EventType, error) 
 }
 
 // Records returns the records of the specified target.
-func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, _ types.Type, lastChangeTime time.Time, ids, properties []string, cursor string) ([]meergo.Record, string, error) {
+func (ky *Klaviyo) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, properties []string, cursor string, _ types.Type) ([]meergo.Record, string, error) {
 
 	var hasID bool
 	var hasUpdated bool
