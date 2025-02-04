@@ -286,9 +286,9 @@ func (app *App) SendEvent(ctx context.Context, req *meergo.EventRequest) (*http.
 // record will contain, in the Properties field, the properties in schema, with
 // the same types.
 //
-// If lastChangeTime is not the zero time, only the records changed or created
-// at or after that time will be returned, and its precision is limited to
-// microseconds.
+// If lastChangeTime is not the zero time, it must be in UTC, and its year
+// cannot be before 1900. In this case, only records changed or created at or
+// after that time will be returned, with a precision limited to microseconds.
 //
 // If the connector returns an error, it returns an *UnavailableError error. If
 // the provided schema, that must be valid, does not align with the app's source
@@ -311,6 +311,15 @@ func (app *App) Users(ctx context.Context, schema types.Type, lastChangeTime tim
 	err = schemas.CheckAlignment(schema, appSchema, nil)
 	if err != nil {
 		return nil, err
+	}
+	if !lastChangeTime.IsZero() {
+		if lastChangeTime.Location() != time.UTC {
+			return nil, fmt.Errorf("lastChangeTime is not UTC")
+		}
+		if lastChangeTime.Year() < 1900 {
+			return nil, fmt.Errorf("lastChangeTime's year is before 1900")
+		}
+		lastChangeTime = lastChangeTime.Truncate(time.Microsecond)
 	}
 	records := &appRecords{
 		schema:         schema,
@@ -531,6 +540,11 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				// Validate the last change time.
 				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
 					record.Err = errors.New("record's last change time is before 1900 or in the future")
+				}
+				if !r.lastChangeTime.IsZero() && record.LastChangeTime.Before(r.lastChangeTime) {
+					r.err = fmt.Errorf("%s returned a record with a last change %s earlier than the required minimum",
+						r.appName, r.lastChangeTime.Sub(record.LastChangeTime))
+					return
 				}
 
 				if record.Err == nil {
