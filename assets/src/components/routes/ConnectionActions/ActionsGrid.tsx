@@ -19,6 +19,7 @@ import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Variant } from '../App/App.types';
+import getConnectorLogo from '../../helpers/getConnectorLogo';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
 
@@ -32,7 +33,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 	const [runningActions, setRunningActions] = useState<number[]>([]);
 	const [actionToDelete, setActionToDelete] = useState<number>();
 
-	const { api, handleError, setIsLoadingConnections } = useContext(AppContext);
+	const { api, handleError, setIsLoadingConnections, connectors } = useContext(AppContext);
 	const { connection } = useContext(ConnectionContext);
 
 	const runButtonRefs = useRef<{
@@ -168,10 +169,29 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 				`Connection ${connection.id} no longer has target '${action.target}' and event type '${action.eventType}' for action ${action.id}`,
 			);
 		}
+
+		let description = actionType.description;
+		if (connection.isFileStorage) {
+			description = `${connection.isSource ? 'Import' : 'Export'} the ${action.target.toLowerCase()} ${connection.isSource ? 'from' : 'to'} ${action.path}`;
+		}
+
+		let logo: ReactNode;
+		if (connection.isFileStorage) {
+			const formatConnector = connectors.find((c) => c.name === action.format);
+			logo = (
+				<div className='connection-actions__action-logo'>
+					<span style={{ position: 'relative', top: '3px' }}>{getConnectorLogo(formatConnector.icon)}</span>
+				</div>
+			);
+		}
+
 		const nameCell = (
 			<div className='connection-actions__action-name'>
-				<div className='connection-actions__action-name-name'>{action.name}</div>
-				<div className='connection-actions__action-name-description'>{actionType.description}</div>
+				{logo}
+				<div className='connection-actions__action-text'>
+					<div className='connection-actions__action-name-name'>{action.name}</div>
+					<div className='connection-actions__action-name-description'>{description}</div>
+				</div>
 			</div>
 		);
 

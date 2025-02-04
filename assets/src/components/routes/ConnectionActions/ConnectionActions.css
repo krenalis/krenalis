@@ -41,6 +41,15 @@
 	padding-left: 0;
 }
 
+.connection-actions__action-name {
+	display: flex;
+	gap: 8px;
+}
+
+.connection-actions__action-logo svg {
+	height: 20px;
+}
+
 .connection-actions__action-name-description {
 	font-size: 14px;
 	color: #777;
