@@ -68,20 +68,12 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		}
 	}
 
-	// Determine the "order by" property.
-	var orderBy string
-	if action.Connection().Connector().Type == state.FileStorage {
-		orderBy = action.OrderBy
-	} else {
-		// For any other type of connector other than FileStorage, don't order
-		// the results.
-	}
-
 	// Read the users.
-	records, err := store.UserRecords(ctx, datastore.Query{
-		Where:   action.Filter,
-		OrderBy: orderBy,
-	}, action.InSchema, matching)
+	query := datastore.Query{Where: action.Filter}
+	if connector.Type == state.FileStorage {
+		query.OrderBy = action.OrderBy
+	}
+	records, err := store.UserRecords(ctx, query, action.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newActionError(metrics.ReceiveStep, err)
@@ -164,9 +156,9 @@ func (this *Action) exportUsers(ctx context.Context) error {
 
 		if connector.Type == state.App {
 			user := User{Record: record}
-			isCreate := record.MatchingID == ""
+			isCreate := record.ExternalID == ""
 			if !isCreate {
-				user.ID = record.MatchingID
+				user.ID = record.ExternalID
 			}
 			if isCreate || matchingOut.UpdateRequired {
 				value := record.Properties[matchingIn.Name]

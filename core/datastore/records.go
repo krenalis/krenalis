@@ -21,7 +21,7 @@ import (
 // Record represents a record.
 type Record struct {
 	ID         any            // Identifier.
-	MatchingID string         // Matching identifier.
+	ExternalID string         // App external ID.
 	Properties map[string]any // Properties.
 	// Err reports an error that occurred while reading the record.
 	// If Err is not nil, only the ID field is significant.
@@ -58,7 +58,8 @@ func (err *SchemaError) Error() string {
 // provided, the resulting records are compared against the destination users
 // table.
 //
-// It returns, in Record.MatchingID, the matching ID if matching is not nil.
+// If matching is not nil and a matching app user exists for a record, the
+// record's ExternalID will be set to the external ID of the matched app user.
 func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
@@ -75,43 +76,37 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 	var joins []meergo.Join
 
 	if matching != nil {
-		c, ok := columnByProperty[matching.InProperty]
+		// Also select the __external_id__ column.
+		columns = append(columns, meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true})
+		// Update the WHERE condition and join the _destinations_users table.
+		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.InProperty)
 		}
-		columns = append(columns, meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true})
 		joins = []meergo.Join{
 			{
-				Type:  meergo.InnerJoin,
 				Table: "_destinations_users",
 				Condition: meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 					meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, matching.Action),
-					meergo.NewBaseExpr(c, meergo.OpIs, meergo.Column{Name: "__out_matching_value__", Type: types.Text()}),
+					meergo.NewBaseExpr(inPropertyColumn, meergo.OpIs, meergo.Column{Name: "__out_matching_value__", Type: types.Text()}),
 				}),
 			},
 		}
-		if matching.ExportMode == state.CreateOnly || matching.ExportMode == state.CreateOrUpdate {
-			// Use a Left JOIN instead.
+		switch matching.ExportMode {
+		case state.UpdateOnly:
+			// Perform an INNER JOIN to return only users with a matching destination user.
+			joins[0].Type = meergo.InnerJoin
+		case state.CreateOnly:
+			// Include only users without a corresponding match.
+			where = andExpressions(where, meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIsNull))
+			fallthrough
+		case state.CreateOrUpdate:
+			// Perform a LEFT JOIN to also return users without a matching destination user.
 			joins[0].Type = meergo.LeftJoin
-			// Add 'property IS NOT NULL' to the WHERE condition to exclude users with a NULL value for the matching property.
-			expr := meergo.NewBaseExpr(c, meergo.OpIsNotNull)
-			if where == nil {
-				where = expr
-			} else if w, ok := where.(*meergo.MultiExpr); ok && w.Operator == meergo.OpAnd {
-				w.Operands = append(w.Operands, expr)
-			} else {
-				where = meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{expr, where})
-			}
-			if matching.ExportMode == state.CreateOnly {
-				// Add '__action__ IS NULL' to the WHERE condition to include only users without a corresponding match.
-				expr = meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIsNull)
-				if w, ok := where.(*meergo.MultiExpr); ok && w.Operator == meergo.OpAnd {
-					w.Operands = append(w.Operands, expr)
-				} else {
-					where = meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{expr, where})
-				}
-			}
+			// Include only users with a value for the input matching property.
+			where = andExpressions(where, meergo.NewBaseExpr(inPropertyColumn, meergo.OpIsNotNull))
 		}
+		// Sort the results by the input matching property.
 		query.OrderBy = matching.InProperty
 		query.OrderDesc = false
 	}
@@ -127,6 +122,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		orderDesc = query.OrderDesc
 	}
 
+	// Also select the property to be used as the record's ID.
 	columns = append(columns, columnByProperty[idProperty])
 
 	rows, _, err := store.warehouse().Query(ctx, meergo.RowQuery{
@@ -151,6 +147,19 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 	}
 
 	return records, err
+}
+
+// andExpressions returns an expression resulting from the AND of expr with
+// base.
+func andExpressions(expr meergo.Expr, base *meergo.BaseExpr) meergo.Expr {
+	if expr == nil {
+		return base
+	}
+	if e, ok := expr.(*meergo.MultiExpr); ok && e.Operator == meergo.OpAnd {
+		e.Operands = append(e.Operands, base)
+		return e
+	}
+	return meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{expr, base})
 }
 
 // Records represents records read from the data warehouse.
@@ -205,11 +214,12 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 			}
 			previous := record
 			record = Record{ID: id}
-			if v := row[last-1]; v != nil {
-				record.MatchingID = v.(string)
+			// If the record has a matching app user, check for duplicate entries.
+			if externalID := row[last-1]; externalID != nil {
+				record.ExternalID = externalID.(string)
 				if id == previous.ID {
 					record.Err = fmt.Errorf("duplicates found for the matching property %q in the exported users", r.matching.InProperty)
-				} else if i > 0 && !r.matching.ExportOnDuplicates && record.MatchingID == previous.MatchingID {
+				} else if i > 0 && !r.matching.ExportOnDuplicates && record.ExternalID == previous.ExternalID {
 					record.Err = fmt.Errorf("duplicates found for the matching property %q in the app users", r.matching.InProperty)
 				}
 			}
