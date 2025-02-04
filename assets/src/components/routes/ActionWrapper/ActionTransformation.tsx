@@ -2017,7 +2017,7 @@ const FullscreenTransformation = ({
 										Show only selected properties
 									</SlSwitch>
 								)}
-								{outputSchema.properties.map((p) => {
+								{outputSchema?.properties.map((p) => {
 									if (transformationType === 'function') {
 										const isSelected = selectedOutPaths.includes(p.name);
 										const hasSelectedChildren =

@@ -11,7 +11,7 @@ import {
 } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getActionTypeFromConnection } from '../../../lib/core/connection';
-import { UnprocessableError } from '../../../lib/api/errors';
+import { UnavailableError, UnprocessableError } from '../../../lib/api/errors';
 import { Action, ActionToSet, ActionType } from '../../../lib/api/types/action';
 import {
 	ActionSchemasResponse,
@@ -146,12 +146,14 @@ const useAction = (
 						inputSchema = res.schema;
 					} catch (err) {
 						if (
-							err instanceof UnprocessableError &&
-							(err.code === 'InvalidPlaceholder' || err.code === 'UnsupportedColumnType')
+							err instanceof UnavailableError ||
+							(err instanceof UnprocessableError &&
+								(err.code === 'InvalidPlaceholder' || err.code === 'UnsupportedColumnType'))
 						) {
 							handleError(err.message);
 							// continue execution so that user can fix
-							// the action.
+							// the action (or at least can see its state
+							// in order to debug the problem).
 						} else {
 							throw err;
 						}
@@ -183,14 +185,16 @@ const useAction = (
 						inputSchema = res.schema;
 					} catch (err) {
 						if (
-							err instanceof UnprocessableError &&
-							(err.code === 'NoColumnsFound' ||
-								err.code === 'SheetNotExist' ||
-								err.code === 'UnsupportedColumnType')
+							err instanceof UnavailableError ||
+							(err instanceof UnprocessableError &&
+								(err.code === 'NoColumnsFound' ||
+									err.code === 'SheetNotExist' ||
+									err.code === 'UnsupportedColumnType'))
 						) {
 							handleError(err.message);
 							// continue execution so that user can fix
-							// the action.
+							// the action (or at least can see its state
+							// in order to debug the problem).
 						} else {
 							throw err;
 						}
@@ -206,10 +210,14 @@ const useAction = (
 						schema = await api.workspaces.connections.tableSchema(connection.id, providedAction.tableName);
 						outputSchema = schema;
 					} catch (err) {
-						if (err instanceof UnprocessableError && err.code === 'UnsupportedColumnType') {
+						if (
+							err instanceof UnavailableError ||
+							(err instanceof UnprocessableError && err.code === 'UnsupportedColumnType')
+						) {
 							handleError(err.message);
 							// continue execution so that user can fix
-							// the action.
+							// the action (or at least can see its state
+							// in order to debug the problem).
 						} else {
 							throw err;
 						}

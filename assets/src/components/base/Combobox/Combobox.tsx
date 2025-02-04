@@ -182,9 +182,9 @@ const Combobox = ({
 
 	useEffect(() => {
 		if (sharedMapping?.current) {
-			setVal(sharedMapping.current[name].value);
+			setVal(sharedMapping.current[name]?.value || '');
 		}
-	}, [sharedMapping?.current[name].value]);
+	}, [sharedMapping?.current[name]?.value]);
 
 	useLayoutEffect(() => {
 		if (listRef.current == null || !isOpen) {
