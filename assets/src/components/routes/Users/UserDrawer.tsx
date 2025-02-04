@@ -13,7 +13,7 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
-import toJSDateString from '../../../utils/toJSDateString';
+import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
 
 interface UserDrawerProps {
@@ -208,9 +208,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 											<div className='user-drawer__event-type'>{event.type}</div>
 										</div>
 										<div className='user-drawer__event-sent-at'>
-											{new Date(toJSDateString(event.sentAt)).toLocaleString('it-IT', {
-												timeZone: 'Europe/Rome',
-											})}
+											{toJSDate(event.sentAt).toLocaleString()}
 										</div>
 									</div>
 								);
@@ -243,12 +241,7 @@ const UserDrawer = ({ selectedUser, setSelectedUser }: UserDrawerProps) => {
 													</div>
 												</Link>
 												<div className='user-drawer__identity-date'>
-													{new Date(toJSDateString(identity.lastChangeTime)).toLocaleString(
-														'it-IT',
-														{
-															timeZone: 'Europe/Rome',
-														},
-													)}
+													{toJSDate(identity.lastChangeTime).toLocaleString()}
 												</div>
 											</div>
 											<div className='user-drawer__action'>

@@ -1,7 +1,7 @@
 import React from 'react';
 import './GridCell.css';
 import { GridCell as GridCellInterface } from '../Grid.types';
-import toJSDateString from '../../../../utils/toJSDateString';
+import toJSDate from '../../../../utils/toJSDate';
 import JSONbig from 'json-bigint';
 
 interface GridCellProps {
@@ -10,7 +10,7 @@ interface GridCellProps {
 }
 
 const GridCell = ({ cell, className }: GridCellProps) => {
-	let value, date;
+	let value;
 	switch (cell.type) {
 		case 'JSON':
 		case 'Array':
@@ -20,21 +20,18 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 			break;
 		case 'DateTime':
 			if (cell.value != null) {
-				date = new Date(toJSDateString(cell.value as string));
-				value = date.toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+				const date = toJSDate(cell.value as string);
+				value = date.toLocaleString();
 			}
 			break;
 		case 'Date':
 			if (cell.value != null) {
-				date = new Date(toJSDateString(cell.value as string));
-				value = date.toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' });
+				const date = toJSDate(cell.value as string);
+				value = date.toLocaleDateString();
 			}
 			break;
 		case 'Time':
-			if (cell.value != null) {
-				date = new Date(toJSDateString(cell.value as string));
-				value = date.toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome' });
-			}
+			value = cell.value;
 			break;
 		default:
 			value = cell.value;
