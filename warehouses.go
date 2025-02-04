@@ -266,10 +266,10 @@ type RowQuery struct {
 type JoinType int
 
 const (
-	Inner JoinType = iota
-	Left
-	Right
-	Full
+	InnerJoin JoinType = iota
+	LeftJoin
+	RightJoin
+	FullJoin
 )
 
 // Join represents a JOIN statement in a query.

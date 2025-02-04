@@ -82,7 +82,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		columns = append(columns, meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true})
 		joins = []meergo.Join{
 			{
-				Type:  meergo.Inner,
+				Type:  meergo.InnerJoin,
 				Table: "_destinations_users",
 				Condition: meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 					meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, matching.Action),
@@ -92,7 +92,7 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		}
 		if matching.ExportMode == state.CreateOnly || matching.ExportMode == state.CreateOrUpdate {
 			// Use a Left JOIN instead.
-			joins[0].Type = meergo.Left
+			joins[0].Type = meergo.LeftJoin
 			// Add 'property IS NOT NULL' to the WHERE condition to exclude users with a NULL value for the matching property.
 			expr := meergo.NewBaseExpr(c, meergo.OpIsNotNull)
 			if where == nil {

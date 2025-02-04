@@ -107,13 +107,13 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 func appendJoins(b *strings.Builder, joins []meergo.Join) error {
 	for _, join := range joins {
 		switch join.Type {
-		case meergo.Inner:
+		case meergo.InnerJoin:
 			b.WriteString(` JOIN `)
-		case meergo.Left:
+		case meergo.LeftJoin:
 			b.WriteString(` LEFT JOIN `)
-		case meergo.Right:
+		case meergo.RightJoin:
 			b.WriteString(` RIGHT JOIN `)
-		case meergo.Full:
+		case meergo.FullJoin:
 			b.WriteString(` FULL JOIN `)
 		}
 		b.WriteString(quoteIdent(join.Table))
