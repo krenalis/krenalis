@@ -663,7 +663,7 @@ func setConnectionSettingsFunc(st *state.State, c *state.Connection) meergo.SetS
 }
 
 // validateLastChangeTime validates the last change time t, returning an error
-// if it is before the year 1000 or too far ahead in the future.
+// if it is before the year 1900 or too far ahead in the future.
 func validateLastChangeTime(t time.Time) error {
 	if y := t.Year(); y < 1900 {
 		return fmt.Errorf("last change time %q is before the year 1900", t.Format(time.DateTime))

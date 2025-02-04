@@ -528,28 +528,30 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					Associations:   user.Associations,
 				}
 
-				// Read the properties.
-				record.Properties = make(map[string]any, len(properties))
-				for _, p := range properties {
-					v, ok := user.Properties[p.Name]
-					if !ok {
-						if !p.ReadOptional {
-							record.Err = newNormalizationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.appName)
-							break
-						}
-						continue
-					}
-					v, err = normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
-					if err != nil {
-						record.Err = err
-						break
-					}
-					record.Properties[p.Name] = v
+				// Validate the last change time.
+				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
+					record.Err = errors.New("record's last change time is before 1900 or in the future")
 				}
 
-				// validate the last change time.
-				if err = validateLastChangeTime(record.LastChangeTime); err != nil {
-					return
+				if record.Err == nil {
+					// Read the properties.
+					record.Properties = make(map[string]any, len(properties))
+					for _, p := range properties {
+						v, ok := user.Properties[p.Name]
+						if !ok {
+							if !p.ReadOptional {
+								record.Err = newNormalizationErrorf(p.Name, "(returned by %s connector) does not have a value, but the property is not optional for reading", r.appName)
+								break
+							}
+							continue
+						}
+						v, err = normalize(p.Name, p.Type, v, p.Nullable, r.timeLayouts)
+						if err != nil {
+							record.Err = err
+							break
+						}
+						record.Properties[p.Name] = v
+					}
 				}
 
 				if previous.ID != "" {
