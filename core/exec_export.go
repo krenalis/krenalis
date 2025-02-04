@@ -283,17 +283,19 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	matchingOut, _ := this.action.OutSchema.Property(this.action.Matching.Out)
 	schema := types.Object([]types.Property{matchingOut})
 
-	cursor := execution.Cursor
-	records, err := this.app().Users(ctx, schema, cursor)
+	records, err := this.app().Users(ctx, schema, execution.Cursor)
 	if err != nil {
 		return err
 	}
 	defer records.Close()
 
+	cursor := execution.Cursor
+
 	var users []datastore.DestinationUser
 
 	for user := range records.All(ctx) {
 
+		// Return if a normalization error occurred.
 		if user.Err != nil {
 			return user.Err
 		}
@@ -307,16 +309,13 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 			})
 		}
 
-		cursor = user.LastChangeTime
+		if user.LastChangeTime.After(cursor) {
+			cursor = user.LastChangeTime
+		}
 
 		if len(users) > 0 && (len(users) == 10000 || records.Last()) {
 			// Merge destination users.
 			err = this.connection.store.MergeDestinationUsers(ctx, this.action.ID, users, nil)
-			if err != nil {
-				return err
-			}
-			// Set the user cursor.
-			err = this.setExecutionCursor(ctx, cursor)
 			if err != nil {
 				return err
 			}
@@ -326,6 +325,14 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 	}
 	if err = records.Err(); err != nil {
 		return err
+	}
+
+	// Set the user cursor.
+	if !cursor.Equal(execution.Cursor) {
+		err = this.setExecutionCursor(ctx, cursor)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
