@@ -799,14 +799,20 @@ func validateActionSchema(io string, schema types.Type, role state.Role, target 
 					return fmt.Errorf("output action schema property %q cannot have UpdateRequired set to true", path)
 				}
 			case typ == state.Database:
-				if p.CreateRequired {
-					return fmt.Errorf("output action schema property %q cannot have CreateRequired set to true", path)
+				if path == tableKey {
+					if !p.CreateRequired {
+						return fmt.Errorf("table key property %q in output action schema must have CreateRequired set to true", path)
+					}
+					if p.Nullable {
+						return fmt.Errorf("table key property %q in output action schema cannot have Nullable set to true", path)
+					}
+				} else {
+					if p.CreateRequired {
+						return fmt.Errorf("output action schema property %q cannot have CreateRequired set to true", path)
+					}
 				}
 				if p.UpdateRequired {
 					return fmt.Errorf("output action schema property %q cannot have UpdateRequired set to true", path)
-				}
-				if p.Nullable && path == tableKey {
-					return fmt.Errorf("output action schema property %q cannot have Nullable set to true", path)
 				}
 			}
 			if p.ReadOptional {

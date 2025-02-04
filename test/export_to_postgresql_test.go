@@ -91,7 +91,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), CreateRequired: true},
 			{Name: "full_name", Type: types.Text()},
 		}),
 		Transformation: &meergotester.Transformation{
@@ -124,7 +124,7 @@ func TestExportToPostgreSQL(t *testing.T) {
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), CreateRequired: true},
 			{Name: "full_name", Type: types.Text()},
 		}),
 		Transformation: &meergotester.Transformation{

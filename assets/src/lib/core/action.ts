@@ -999,10 +999,13 @@ const transformInActionToSet = async (
 			}
 		}
 
-		// ensure that the table key is always non-nullable.
+		// ensure that the table key is always create required, non-update
+		// required and non-nullable.
 		for (let i = 0; i < outSchema.properties.length; i++) {
 			const p = outSchema.properties[i];
 			if (p.name === action.tableKey) {
+				p.createRequired = true;
+				p.updateRequired = false;
 				p.nullable = false;
 				break;
 			}

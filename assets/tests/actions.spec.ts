@@ -611,6 +611,8 @@ test(`Add "Export users" action on PostgreSQL`, async ({ page }) => {
 						"name": "Text",
 						"charLen": 300
 					},
+					"createRequired": true,
+					"updateRequired": false,
 					"nullable": false,
 					"description": ""
 				},
