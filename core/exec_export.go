@@ -299,12 +299,12 @@ func (this *Action) syncDestinationUsers(ctx context.Context) error {
 			return user.Err
 		}
 
-		// Store the user only if it has a matching external property, and it is not nil.
+		// Store the user only if it has a value for the out matching property, and it is not nil.
 		v, ok := user.Properties[matchingOut.Name]
 		if ok && v != nil {
 			users = append(users, datastore.DestinationUser{
-				User:     user.ID,
-				Property: matchingPropertyToString(v),
+				ExternalID:       user.ID,
+				OutMatchingValue: stringifyMatchingValue(v),
 			})
 		}
 
@@ -352,22 +352,6 @@ func newPathPlaceholderReplacer(t time.Time) func(string) (string, bool) {
 			return strconv.FormatInt(t.Unix(), 10), true
 		}
 		return "", false
-	}
-}
-
-// matchingPropertyToString returns the string representation of a value for a
-// matching property.
-// v cannot be nil.
-func matchingPropertyToString(v any) string {
-	switch v := v.(type) {
-	case int: // Int(n)
-		return strconv.Itoa(v)
-	case uint: // Uint(n)
-		return strconv.FormatUint(uint64(v), 10)
-	case string: // Text and UUID
-		return v
-	default:
-		panic(fmt.Sprintf("unexpected matching property value with type %T", v))
 	}
 }
 
@@ -481,4 +465,19 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 		}
 	}
 	panic(fmt.Sprintf("core: unexpected external kind %s", ex.Kind()))
+}
+
+// stringifyMatchingValue returns the string representation of a value for a
+// matching property. v cannot be nil.
+func stringifyMatchingValue(v any) string {
+	switch v := v.(type) {
+	case int: // Int(n)
+		return strconv.Itoa(v)
+	case uint: // Uint(n)
+		return strconv.FormatUint(uint64(v), 10)
+	case string: // Text and UUID
+		return v
+	default:
+		panic(fmt.Sprintf("unexpected matching property value with type %T", v))
+	}
 }

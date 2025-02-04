@@ -71,10 +71,10 @@ var destinationsUsersTable = meergo.Table{
 	Name: "_destinations_users",
 	Columns: []meergo.Column{
 		{Name: "__action__", Type: types.Int(32)},
-		{Name: "__user__", Type: types.Text()},
-		{Name: "__property__", Type: types.Text()},
+		{Name: "__external_id__", Type: types.Text()},
+		{Name: "__out_matching_value__", Type: types.Text()},
 	},
-	Keys: []string{"__action__", "__user__"},
+	Keys: []string{"__action__", "__external_id__"},
 }
 
 type Store struct {
@@ -294,10 +294,10 @@ func (store *Store) LatestIdentityResolution(ctx context.Context) (startTime, en
 	return store.warehouse().LatestIdentityResolution(ctx)
 }
 
-// DestinationUser represents a destination user to merge.
+// DestinationUser represents a user to be merged.
 type DestinationUser struct {
-	User     string
-	Property string
+	ExternalID       string // The unique identifier assigned to the user by the app.
+	OutMatchingValue string // The value for the out matching property in the app.
 }
 
 // MergeDestinationUsers merges the destination users for an action. users
@@ -322,8 +322,8 @@ func (store *Store) MergeDestinationUsers(ctx context.Context, action int, users
 		for i, user := range users {
 			j := i * 3
 			values[j+0] = action
-			values[j+1] = user.User
-			values[j+2] = user.Property
+			values[j+1] = user.ExternalID
+			values[j+2] = user.OutMatchingValue
 			rows[i] = values[j : j+3]
 		}
 	}

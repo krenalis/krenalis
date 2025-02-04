@@ -79,14 +79,14 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 		if !ok {
 			return nil, fmt.Errorf("matching property %s does not exist in user schema", matching.InProperty)
 		}
-		columns = append(columns, meergo.Column{Name: "__user__", Type: types.Text(), Nullable: true})
+		columns = append(columns, meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true})
 		joins = []meergo.Join{
 			{
 				Type:  meergo.Inner,
 				Table: "_destinations_users",
 				Condition: meergo.NewMultiExpr(meergo.OpAnd, []meergo.Expr{
 					meergo.NewBaseExpr(meergo.Column{Name: "__action__", Type: types.Int(32)}, meergo.OpIs, matching.Action),
-					meergo.NewBaseExpr(c, meergo.OpIs, meergo.Column{Name: "__property__", Type: types.Text()}),
+					meergo.NewBaseExpr(c, meergo.OpIs, meergo.Column{Name: "__out_matching_value__", Type: types.Text()}),
 				}),
 			},
 		}
