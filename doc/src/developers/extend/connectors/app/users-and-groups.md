@@ -49,7 +49,8 @@ The parameters for this method are:
 - `cursor`: Indicates the starting position for reading records. This is the cursor value from a previous call in a paginated query. For the first call, it is empty.
 - `schema`: It is a recent user or group source schema, as returned by the `Schema` method.
 
-> Normally, the `Records` method would return at least one record if there are no errors. However, it is permissible to return no records even in the absence of errors, enhancing flexibility in handling different situations.
+
+> Typically, the `Records` method returns at least one record if there are no errors. However, it is valid for it to return no records even when there are no errors. Additionally, the `Records` method may return duplicate records (i.e., records with the same ID), but only the first record in such cases will be processed.
 
 First, let's examine the structure of a single returned record. Then, we'll explore how the `Records` method can return records incrementally, rather than all at once, by utilizing the `cursor` input parameter and the `next` output parameter.
 

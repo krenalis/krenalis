@@ -77,6 +77,9 @@ type appRecordsConnector interface {
 	// connector. There is no guarantee that the returned properties will match this
 	// schema, so the caller must validate them.
 	//
+	// Records may return duplicate records, i.e., records with the same ID. The
+	// caller is responsible for deduplicating them.
+	//
 	// The string return value is used as the cursor in the subsequent call. It can
 	// be any UTF-8 encoded string, including an empty string. If there are no more
 	// records to return, the method returns the last records read (if any) along
@@ -471,6 +474,10 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 			names[i] = p.Name
 		}
 
+		// processedIDs contains the already read ID.
+		// It is used to deduplicate returned records.
+		processedIDs := map[string]any{}
+
 		for {
 
 			// Retrieve the users.
@@ -492,11 +499,11 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				return
 			}
-			last := len(users) - 1
 
-			// Normalize the returned users.
+			// previous is the previous read record.
+			var previous Record
 
-			for i, user := range users {
+			for _, user := range users {
 
 				select {
 				case <-ctx.Done():
@@ -504,6 +511,16 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					return
 				default:
 				}
+
+				if user.ID == "" {
+					r.err = fmt.Errorf("%s returned a record with an empty ID", r.appName)
+					return
+				}
+				// Skip the record if its ID has already been processed.
+				if _, ok := processedIDs[user.ID]; ok {
+					continue
+				}
+				processedIDs[user.ID] = struct{}{}
 
 				record := Record{
 					ID:             user.ID,
@@ -535,12 +552,20 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					return
 				}
 
-				r.last = i == last
+				if previous.ID != "" {
+					if !yield(previous) {
+						return
+					}
+				}
+				previous = record
 
-				if !yield(record) {
+			}
+
+			if previous.ID != "" {
+				r.last = true
+				if !yield(previous) {
 					return
 				}
-
 			}
 
 			if eof {
