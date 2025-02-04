@@ -435,10 +435,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 				>
 					<div className='action__transformation-identity-columns'>
 						<div className='action__transformation-identity-column'>
-							<div className='action__transformation-identity-columns-label'>
-								Identity
-								<span className='action__transformation-identity-columns-asterisk'>*</span>:
-							</div>
 							<Combobox
 								onInput={onUpdateIdentityColumn}
 								onSelect={onUpdateIdentityColumn}
@@ -448,6 +444,8 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 								className='action__transformation-input-property'
 								isExpression={false}
 								items={identityColumnList}
+								label='Identity'
+								required
 								caret={true}
 								clearable={action.identityColumn?.length > 0}
 								error={
@@ -463,7 +461,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 						</div>
 						<div className='action__transformation-last-change-time-column'>
 							<div className='action__transformation-last-change-time'>
-								<div className='action__transformation-identity-columns-label'>Last change time:</div>
 								<Combobox
 									onInput={onUpdateLastChangeTimeColumn}
 									onSelect={onUpdateLastChangeTimeColumn}
@@ -472,6 +469,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 									disabled={isTransformationDisabled}
 									className='action__transformation-input-property'
 									isExpression={false}
+									label='Last change time'
 									caret={true}
 									items={lastChangeTimeList}
 									clearable={action.lastChangeTimeColumn?.length > 0}
@@ -483,7 +481,6 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 							{needFormat && (
 								<div className='action__transformation-last-change-format-property'>
 									<div className='action__transformation-last-change-format'>
-										<div className='action__transformation-identity-columns-label'>Format:</div>
 										<SlSelect
 											onSlChange={onChangeLastChangeTimeFormat}
 											value={
@@ -498,6 +495,7 @@ const ActionTransformation = forwardRef<any>((_, ref) => {
 														: ''
 											}
 											name='lastChangeTimeFormat'
+											label='Format'
 											size='small'
 											ref={lastChangeTimeFormatRef}
 										>

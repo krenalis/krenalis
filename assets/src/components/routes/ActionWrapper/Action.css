@@ -273,6 +273,7 @@
 
 .action__transformation-identity-column {
 	margin-bottom: 30px;
+	width: 350px;
 }
 
 .action__transformation-identity-columns :last-child {
@@ -285,13 +286,8 @@
 	gap: 15px;
 }
 
-.action__transformation-identity-column,
 .action__transformation-last-change-time {
-	display: grid;
-	justify-content: start;
-	gap: 10px;
-	align-items: baseline;
-	grid-template-columns: 150px 350px;
+	width: 350px;
 }
 
 .action__transformation-last-change-format-property {
@@ -300,19 +296,9 @@
 	gap: 15px;
 }
 
-.action__transformation-last-change-format,
 .action__transformation-last-change-custom-format {
-	display: flex;
-	align-items: center;
-	gap: 15px;
-}
-
-.action__transformation-last-change-custom-format sl-input::part(form-control-help-text) {
-	position: absolute;
-}
-
-.action__transformation-last-change-format .action__transformation-identity-columns-label {
-	text-wrap: nowrap;
+	position: relative;
+	top: 29px;
 }
 
 .action__transformation-last-change-format sl-select {
@@ -321,10 +307,6 @@
 
 .action__transformation-identity-columns-label {
 	font-size: 14px;
-}
-
-.action__transformation-identity-columns-asterisk {
-	color: var(--sl-color-danger-500);
 }
 
 .action__transformation--disabled {
