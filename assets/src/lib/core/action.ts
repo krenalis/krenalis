@@ -986,16 +986,24 @@ const transformInActionToSet = async (
 			throw new Error('Table key must be a valid property');
 		}
 
-		// the table key must necessarily be transformed.
+		// the table key must necessarily be transformed and there must
+		// be another transformed property in addition to it.
 		if (mapping == null && func == null) {
 			throw new Error('Table key must be transformed');
 		} else if (mapping != null) {
-			if (!Object.keys(mapping).includes(action.tableKey)) {
+			const mappedPaths = Object.keys(mapping);
+			if (!mappedPaths.includes(action.tableKey)) {
 				throw new Error('Table key must be transformed');
+			}
+			if (mappedPaths.length === 1) {
+				throw new Error('Another property must be transformed in addition to the table key property');
 			}
 		} else if (func != null) {
 			if (!func.outPaths.includes(action.tableKey)) {
 				throw new Error('Table key must be transformed');
+			}
+			if (func.outPaths.length === 1) {
+				throw new Error('Another property must be transformed in addition to the table key property');
 			}
 		}
 
