@@ -35,6 +35,11 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	store := this.connection.store
 	connector := action.Connection().Connector()
 
+	// alreadyExportedKeys keeps track of the keys of users exported to the
+	// database during this export, indexed by their table key value (which can
+	// have Go type int, uint o string).
+	var alreadyExportedKeys map[any]struct{}
+
 	var matching *datastore.Matching
 	var matchingIn types.Property
 	var matchingOut types.Property
@@ -114,6 +119,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 		writer, err = this.app().Writer(ctx, outSchema, action.ExportMode, action.Target, ack)
 	case state.Database:
 		writer, err = this.database().Writer(ctx, action, ack)
+		alreadyExportedKeys = make(map[any]struct{})
 	case state.FileStorage:
 		replacer := newPathPlaceholderReplacer(time.Now().UTC())
 		writer, err = this.file().Writer(ctx, replacer, ack)
@@ -228,6 +234,18 @@ func (this *Action) exportUsers(ctx context.Context) error {
 				if connector.Type == state.App && len(record.Properties) == 0 {
 					this.core.metrics.FinalizePassed(action.ID, 1)
 					continue
+				}
+				// In the case of exporting to the database, make sure that
+				// users with the same value for the table key have not already
+				// been exported.
+				if connector.Type == state.Database {
+					key := record.Properties[action.TableKey]
+					if _, ok := alreadyExportedKeys[key]; ok {
+						this.core.metrics.FinalizeFailed(action.ID, 1,
+							fmt.Sprintf("cannot export multiple users having the same value for %q, which is used as export table key", action.TableKey))
+						continue
+					}
+					alreadyExportedKeys[key] = struct{}{}
 				}
 				if ok := writer.Write(ctx, user.ID, record.Properties); !ok {
 					return writer.Close(ctx)
