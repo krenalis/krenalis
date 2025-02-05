@@ -14,7 +14,7 @@ Input schema property fields,,,,,,,,,,
 ,Nullable,true or false,true or false,true or false,"(event schema, not relevant)","(event schema, not relevant)",Must be false,"(event schema, not relevant)",Must be false,Must be false
 Output schema property fields,,,,,,,,,,
 ,Placeholder,Must be empty,Must be empty,Must be empty,Must be empty,(no schema),Must be empty,Must be empty,Must be empty,(no schema)
-,CreateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false,(no schema)
+,CreateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,"Must be true for the table key, false for any other property",(no schema)
 ,UpdateRequired,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,Must be false,Must be false,(no schema)
 ,ReadOptional,Must be true,Must be true,Must be true,Must be true,(no schema),Must be false,Must be false,Must be false,(no schema)
 ,Nullable,Must be false,Must be false,Must be false,Must be false,(no schema),true or false,true or false,Must be false for the table key,(no schema)
