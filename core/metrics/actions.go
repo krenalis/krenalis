@@ -48,7 +48,7 @@ func (c *Collector) Errors(ctx context.Context, start, end time.Time, actions []
 	tsStart := TimeSlotFromTime(start)
 	tsEnd := TimeSlotFromTime(end) - 1
 
-	query := bytes.NewBufferString("SELECT action, MAX(timeslot) AS timeslot, step, count(*), message\n" +
+	query := bytes.NewBufferString("SELECT action, MAX(timeslot) AS timeslot, step, sum(count), message\n" +
 		"FROM actions_errors\nWHERE ")
 
 	query.WriteString("timeslot BETWEEN ")
