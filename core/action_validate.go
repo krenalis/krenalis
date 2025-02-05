@@ -676,6 +676,26 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		}
 	}
 
+	// It is not necessary to check that the properties of the output schema
+	// marked as CreateRequired or UpdateRequired are actually transformed, as
+	// this is already guaranteed. Because:
+	//
+	// - it is checked that every property passed in a schema is used, and since
+	//   the output schema contains only transformed properties (with two
+	//   exceptions, see below), this ensures that all properties of the output
+	//   schema (whether Create/UpdateRequired or not) are certainly
+	//   transformed;
+	//
+	// - as an exception to the first point, in the case of export to a
+	//   database, the output schema also contains the table key property, but
+	//   this is checked ad-hoc, including the fact that it must necessarily be
+	//   transformed, so there is no check to be done.
+	//
+	// - as a second and final exception to the first point, in the case of
+	//   exporting users to apps, the output schema contains the output matching
+	//   property, but this property cannot be explicitly transformed, as it is
+	//   managed by Meergo, so again, there is no check to be done.
+
 	// Ensure that every property in the input and output schemas have been used
 	// (by the mappings, by the filters, etc...).
 	if importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApps {
