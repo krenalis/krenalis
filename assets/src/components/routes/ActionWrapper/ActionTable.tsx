@@ -118,6 +118,7 @@ const ActionTable = () => {
 						size='small'
 						onClick={onConfirmTable}
 						animationDuration={CONFIRM_ANIMATION_DURATION}
+						disabled={action.tableName === ''}
 					>
 						Confirm
 					</FeedbackButton>
