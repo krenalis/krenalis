@@ -682,7 +682,10 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 		return nil, err
 	}
 	query.table = "users"
-	query.Properties = types.PropertyNames(schema)
+	query.Properties = []string{}
+	for path := range types.WalkObjects(schema) {
+		query.Properties = append(query.Properties, path)
+	}
 	return store.records(ctx, query, "__id__", store.userColumnByProperty(), true, matching)
 }
 
