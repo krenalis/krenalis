@@ -30,7 +30,25 @@ AS $$
             )
             OR {{ same_user }} -- This placeholder will be replaced by Meergo.
         );
-    
+
+    -- Reset the user identity clusters, as they may have been modified by a
+    -- previous execution of Identity Resolution. If they are not reset, user
+    -- identities that were previously considered to belong to the same cluster
+    -- will continue to be regarded as such, even though they should not be
+    -- according to the parameters of the current execution of identity
+    -- resolution.
+    WITH "numbered_users" AS (
+        SELECT 
+            "__pk__",
+            ROW_NUMBER() OVER (ORDER BY "__pk__") AS "cluster_value"
+        FROM 
+            "_user_identities"
+    )
+    UPDATE "_user_identities"
+    SET "__cluster__" = "numbered_users"."cluster_value"
+    FROM "numbered_users"
+    WHERE "_user_identities"."__pk__" = "numbered_users"."__pk__";
+
     -- Do the clustering.
     DO $clustering$
         DECLARE
