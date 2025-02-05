@@ -183,6 +183,8 @@ The `rows` parameter contains the rows to be updated or inserted. For each `row`
 
 Meergo ensures that `table.Columns` (and consequently each row in `rows`) contains at least one additional column besides the table key values.
 
+Furthermore, Meergo ensures that during the entire execution of an export to the database, to the `Merge` method are never passed two or more duplicate rows, meaning rows that have the same value for the table keys.
+
 A database connector can require that the columns in `table.Keys` form the primary key and can return an error if they do not.
 
 ### Query method
