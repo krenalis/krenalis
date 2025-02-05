@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"slices"
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/state"
@@ -47,7 +48,7 @@ func (err *SchemaError) Error() string {
 	return err.Msg
 }
 
-// records executes a query on the data warehouse and returns an iterator to
+// records executes a query on the provided warehouse and returns an iterator to
 // iterate on the resulting records. idProperty specifies the property whose
 // value is returned as ID, columnByProperty is the mapping from the path of a
 // property to the relative column, and omitNil indicates whether properties
@@ -60,7 +61,7 @@ func (err *SchemaError) Error() string {
 //
 // If matching is not nil and a matching app user exists for a record, the
 // record's ExternalID will be set to the external ID of the matched app user.
-func (store *Store) records(ctx context.Context, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
+func records(ctx context.Context, warehouse meergo.Warehouse, query Query, idProperty string, columnByProperty map[string]meergo.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
@@ -74,10 +75,25 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 	}
 
 	var joins []meergo.Join
+	var orderBy []meergo.Column
+	var orderDesc bool
 
-	if matching != nil {
+	if matching == nil {
+
+		if query.OrderBy != "" {
+			c, ok := columnByProperty[query.OrderBy]
+			if !ok {
+				return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
+			}
+			orderBy = []meergo.Column{c}
+			orderDesc = query.OrderDesc
+		}
+
+	} else {
+
 		// Also select the __external_id__ column.
-		columns = append(columns, meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true})
+		externalIDColumn := meergo.Column{Name: "__external_id__", Type: types.Text(), Nullable: true}
+		columns = append(columns, externalIDColumn)
 		// Update the WHERE condition and join the _destinations_users table.
 		inPropertyColumn, ok := columnByProperty[matching.InProperty]
 		if !ok {
@@ -106,26 +122,20 @@ func (store *Store) records(ctx context.Context, query Query, idProperty string,
 			// Include only users with a value for the input matching property.
 			where = andExpressions(where, meergo.NewBaseExpr(inPropertyColumn, meergo.OpIsNotNull))
 		}
-		// Sort the results by the input matching property.
-		query.OrderBy = matching.InProperty
-		query.OrderDesc = false
-	}
-
-	var orderBy meergo.Column
-	var orderDesc bool
-	if query.OrderBy != "" {
-		var ok bool
-		orderBy, ok = columnByProperty[query.OrderBy]
-		if !ok {
-			return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
+		// Sort the results by the input matching property, user ID, and external ID.
+		orderBy = []meergo.Column{
+			inPropertyColumn,
+			columnByProperty[idProperty],
+			externalIDColumn,
 		}
-		orderDesc = query.OrderDesc
+		query.OrderDesc = false
+
 	}
 
 	// Also select the property to be used as the record's ID.
 	columns = append(columns, columnByProperty[idProperty])
 
-	rows, _, err := store.warehouse().Query(ctx, meergo.RowQuery{
+	rows, _, err := warehouse.Query(ctx, meergo.RowQuery{
 		Columns:   columns,
 		Table:     query.table,
 		Joins:     joins,
@@ -177,16 +187,113 @@ type Records struct {
 // All returns an iterator to iterate over the records. After All completes, it
 // is also necessary to check the result of Err for any potential errors.
 func (r *Records) All(ctx context.Context) iter.Seq[Record] {
+
+	if r.matching == nil {
+		return func(yield func(Record) bool) {
+			if r.closed {
+				r.err = errors.New("All called on a closed Records")
+				return
+			}
+			defer r.Close()
+			// Read the records.
+			var previous Record
+			last := len(r.columns) - 1
+			row := make([]any, len(r.columns))
+			for r.rows.Next() {
+				select {
+				case <-ctx.Done():
+					r.err = ctx.Err()
+					return
+				default:
+				}
+				if err := r.rows.Scan(row...); err != nil {
+					r.err = err
+					return
+				}
+				if previous.Properties != nil {
+					if !yield(previous) {
+						return
+					}
+				}
+				previous = Record{
+					ID:         row[last],
+					Properties: r.unflat(row[:last]),
+				}
+			}
+			r.last = true
+			if previous.Properties != nil {
+				yield(previous)
+			}
+			if err := r.rows.Err(); err != nil {
+				r.err = err
+			}
+		}
+	}
+
 	return func(yield func(Record) bool) {
+
 		if r.closed {
 			r.err = errors.New("All called on a closed Records")
 			return
 		}
 		defer r.Close()
-		var record Record
+
+		// previous contains all previously read records with the same matching property's value.
+		var previous []Record
+
+		// yieldPrevious processes previously read records with the same value for the matching property,
+		// and calls the yield function. last reports whether this is the last call to yieldPrevious.
+		// If it returns false, the iteration should be stopped.
+		yieldPrevious := func(last bool) bool {
+			if len(previous) == 0 {
+				return true
+			}
+			if len(previous) == 1 {
+				r.last = last
+				return yield(previous[0])
+			}
+			// Verify if the previous records have the same User ID.
+			sameUserID := true
+			id := previous[0].ID
+			for _, record := range previous[1:] {
+				if record.ID != id {
+					sameUserID = false
+					break
+				}
+			}
+			if sameUserID {
+				// If exporting duplicates is not allowed, return a single record with an error;
+				// otherwise, return all the previous records.
+				if !r.matching.ExportOnDuplicates {
+					previous = previous[:1]
+					previous[0].Err = fmt.Errorf("duplicates found for the matching property %q in the the app users", r.matching.InProperty)
+				}
+				for i, record := range previous {
+					r.last = last && i == len(previous)-1
+					if !yield(record) {
+						return false
+					}
+				}
+				return true
+			}
+			// The previous records do not have the same User ID.
+			// Remove duplicates and return the records with an error.
+			previous = slices.CompactFunc(previous, func(a, b Record) bool {
+				return a.ID == b.ID
+			})
+			for i, record := range previous {
+				r.last = last && i == len(previous)-1
+				record.Err = fmt.Errorf("duplicates found for the matching property %q in exported users", r.matching.InProperty)
+				if !yield(record) {
+					return false
+				}
+			}
+			return true
+		}
+
+		// Read the records.
 		last := len(r.columns) - 1
 		row := make([]any, len(r.columns))
-		i := 0
 		for r.rows.Next() {
 			select {
 			case <-ctx.Done():
@@ -198,55 +305,28 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				r.err = err
 				return
 			}
-			id := row[last]
-			if r.matching == nil {
-				if i > 0 {
-					if !yield(record) {
-						return
-					}
-				}
-				record = Record{
-					ID:         id,
-					Properties: r.unflat(row[:last]),
-				}
-				i++
-				continue
+			record := Record{
+				ID:         row[last],              // the User ID is the last column.
+				Properties: r.unflat(row[:last-1]), // skip the last 2 columns: the External ID and the User ID.
 			}
-			previous := record
-			record = Record{ID: id}
-			// If the record has a matching app user, check for duplicate entries.
-			if externalID := row[last-1]; externalID != nil {
-				record.ExternalID = externalID.(string)
-				if id == previous.ID {
-					record.Err = fmt.Errorf("duplicates found for the matching property %q in the exported users", r.matching.InProperty)
-				} else if i > 0 && !r.matching.ExportOnDuplicates && record.ExternalID == previous.ExternalID {
-					record.Err = fmt.Errorf("duplicates found for the matching property %q in the app users", r.matching.InProperty)
-				}
+			// If there is no matching app user and the external ID is nil, assign an empty string.
+			record.ExternalID, _ = row[last-1].(string)
+			// Process the previous records if the value of the matching property differs from the previous records.
+			if len(previous) > 0 && record.Properties[r.matching.InProperty] != previous[0].Properties[r.matching.InProperty] {
+				yieldPrevious(false)
+				previous = previous[0:0]
 			}
-			if record.Err == nil {
-				record.Properties = r.unflat(row[:last-1])
-			}
-			if i > 0 {
-				if record.Err != nil && previous.Err == nil {
-					previous.Properties = nil
-					previous.Err = record.Err
-				}
-				if !yield(previous) {
-					return
-				}
-			}
-			i++
+			previous = append(previous, record)
 		}
-		if i > 0 {
-			r.last = true
-			if !yield(record) {
-				return
-			}
-		}
+		// If there was an error, don't process the previous records as they could be incomplete.
 		if err := r.rows.Err(); err != nil {
 			r.err = err
+			return
 		}
+		yieldPrevious(true)
+
 	}
+
 }
 
 // Close closes the iterator. It is automatically called by the For method

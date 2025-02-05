@@ -617,7 +617,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						query := meergo.RowQuery{
 							Columns: columns,
 							Table:   "users",
-							OrderBy: columnByName["email"],
+							OrderBy: []meergo.Column{columnByName["email"]},
 						}
 						r, _, err := wh.Query(ctx, query, true)
 						if err != nil {

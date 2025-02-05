@@ -686,7 +686,7 @@ func (store *Store) UserRecords(ctx context.Context, query Query, schema types.T
 	for path := range types.WalkObjects(schema) {
 		query.Properties = append(query.Properties, path)
 	}
-	return store.records(ctx, query, "__id__", store.userColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, "__id__", store.userColumnByProperty(), true, matching)
 }
 
 // Users returns the users according to the provided query.
@@ -837,14 +837,14 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		}
 	}
 
-	var orderBy meergo.Column
+	var orderBy []meergo.Column
 	var orderDesc bool
 	if query.OrderBy != "" {
-		var ok bool
-		orderBy, ok = columnByProperty[query.OrderBy]
+		c, ok := columnByProperty[query.OrderBy]
 		if !ok {
 			return nil, 0, fmt.Errorf("property path %s does not exist", query.OrderBy)
 		}
+		orderBy = []meergo.Column{c}
 		orderDesc = query.OrderDesc
 	}
 

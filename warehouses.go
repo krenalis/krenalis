@@ -246,9 +246,9 @@ type RowQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where Expr
 
-	// OrderBy, when provided, is the column for which the returned rows are
-	// ordered.
-	OrderBy Column
+	// OrderBy, when provided, specifies the columns used to order the returned
+	// rows.
+	OrderBy []Column
 
 	// OrderDesc, when true and OrderBy is provided, orders the returned rows in
 	// descending order instead of ascending order.

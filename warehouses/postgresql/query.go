@@ -78,13 +78,19 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query meergo.RowQuery, w
 		b.WriteString(whereExpr)
 	}
 
-	if query.OrderBy.Name != "" {
+	if query.OrderBy != nil {
 		b.WriteString(" ORDER BY ")
-		b.WriteString(quoteIdent(query.OrderBy.Name))
+		for i, column := range query.OrderBy {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(quoteIdent(column.Name))
+		}
 		if query.OrderDesc {
 			b.WriteString(" DESC")
 		}
 	}
+
 	if query.Limit > 0 {
 		b.WriteString(" LIMIT ")
 		b.WriteString(strconv.Itoa(query.Limit))
