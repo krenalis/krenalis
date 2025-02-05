@@ -741,20 +741,22 @@ const TransformationBox = ({
 
 			const isOutMatchingProperty = !!action.matching?.out && action.matching.out === k;
 			const showMatchingIn = isOutMatchingProperty && property.value === '';
+			const isTableKey = !!action.tableKey && action.tableKey === k;
 			const isDisabled =
 				isTransformationDisabled ||
 				property.disabled === true ||
 				(isOutMatchingProperty && property.value === '');
 
 			const hasRequired =
-				action.exportMode != null &&
-				((property.createRequired && action.exportMode.includes('Create')) ||
-					(property.updateRequired && action.exportMode.includes('Update')));
+				isTableKey ||
+				(action.exportMode != null &&
+					((property.createRequired && action.exportMode.includes('Create')) ||
+						(property.updateRequired && action.exportMode.includes('Update'))));
 
 			let showRequired = false;
 			if (hasRequired) {
 				const isFirstLevel = property.indentation === 0;
-				if (isFirstLevel) {
+				if (isFirstLevel || isTableKey) {
 					showRequired = true;
 				} else {
 					if (property.value !== '') {
@@ -1646,7 +1648,6 @@ const FullscreenTransformation = ({
 							return null;
 						}
 					}
-
 					if (p.type.name === 'Object') {
 						return (
 							<TransformationNestedProperties
@@ -1661,6 +1662,7 @@ const FullscreenTransformation = ({
 								flatSchema={flatInputSchema}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
+								tableKey={action.tableKey}
 							/>
 						);
 					} else {
@@ -1675,6 +1677,7 @@ const FullscreenTransformation = ({
 								searchTerm={inSearchTerm}
 								selectedPaths={selectedInPaths}
 								onChangeSelectedPath={(path) => onChangeSelectedPath('in', path)}
+								tableKey={action.tableKey}
 							/>
 						);
 					}
@@ -2039,6 +2042,7 @@ const FullscreenTransformation = ({
 												flatSchema={flatOutputSchema}
 												selectedPaths={selectedOutPaths}
 												onChangeSelectedPath={(path) => onChangeSelectedPath('out', path)}
+												tableKey={action.tableKey}
 											/>
 										);
 									} else {
@@ -2056,6 +2060,7 @@ const FullscreenTransformation = ({
 												isOutMatchingProperty={
 													action.matching?.out && action.matching.out === p.name
 												}
+												tableKey={action.tableKey}
 											/>
 										);
 									}
@@ -2116,6 +2121,7 @@ interface TransformationNestedPropertiesProps {
 	flatSchema: TransformedMapping;
 	selectedPaths: string[];
 	onChangeSelectedPath: (path: string) => void;
+	tableKey: string | null;
 }
 
 const TransformationNestedProperties = ({
@@ -2130,6 +2136,7 @@ const TransformationNestedProperties = ({
 	flatSchema,
 	selectedPaths,
 	onChangeSelectedPath,
+	tableKey,
 }: TransformationNestedPropertiesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
@@ -2188,6 +2195,7 @@ const TransformationNestedProperties = ({
 				onChangeSelectedPath={onChangeSelectedPath}
 				isExpanded={isExpanded || showSearchedChildren}
 				setIsExpanded={setIsExpanded}
+				tableKey={tableKey}
 			/>
 			<div
 				className='fullscreen-transformation__sub-properties'
@@ -2210,6 +2218,7 @@ const TransformationNestedProperties = ({
 									flatSchema={flatSchema}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
+									tableKey={tableKey}
 								/>
 							);
 						} else {
@@ -2225,6 +2234,7 @@ const TransformationNestedProperties = ({
 									searchTerm={searchTerm}
 									selectedPaths={selectedPaths}
 									onChangeSelectedPath={onChangeSelectedPath}
+									tableKey={tableKey}
 								/>
 							);
 						}
@@ -2249,6 +2259,7 @@ interface TransformationPropertyProps {
 	isExpanded?: boolean;
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 	isOutMatchingProperty?: boolean;
+	tableKey: string | null;
 }
 
 const TransformationProperty = ({
@@ -2266,6 +2277,7 @@ const TransformationProperty = ({
 	isExpanded,
 	setIsExpanded,
 	isOutMatchingProperty,
+	tableKey,
 }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
@@ -2279,6 +2291,7 @@ const TransformationProperty = ({
 	const isSelected = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
+	const isTableKey = !!tableKey && tableKey === path;
 
 	let isSearched = true;
 	if (searchTerm != null && searchTerm !== '') {
@@ -2290,14 +2303,15 @@ const TransformationProperty = ({
 	}
 
 	const hasRequired =
-		exportMode != null &&
-		((property.createRequired && exportMode.includes('Create')) ||
-			(property.updateRequired && exportMode.includes('Update')));
+		isTableKey ||
+		(exportMode != null &&
+			((property.createRequired && exportMode.includes('Create')) ||
+				(property.updateRequired && exportMode.includes('Update'))));
 
 	let showRequired = false;
 	if (hasRequired) {
 		const isFirstLevel = parentName == null;
-		if (isFirstLevel) {
+		if (isFirstLevel || isTableKey) {
 			showRequired = true;
 		} else {
 			if (isSelected) {
