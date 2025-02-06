@@ -436,6 +436,7 @@
 	display: grid;
 	grid-template-columns: 25px auto;
 	gap: 5px;
+	align-items: start;
 }
 
 .user-drawer__identity-connection-logo .little-logo {
