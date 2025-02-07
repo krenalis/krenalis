@@ -48,7 +48,7 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 						`%c meergo: ${message}${cause ? ' | Cause: ' + cause : ''}`,
 						'background:#dc362e;color:#dcdcdc',
 					);
-					throw new Error('An internal error occurred');
+					throw new Error('An error occurred');
 				} else if (res.status === 401) {
 					throw new UnauthorizedError();
 				} else if (res.status === 404) {
