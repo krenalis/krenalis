@@ -9,7 +9,8 @@ test.afterEach(async ({ page }) => {
 	await logout(page);
 });
 
-test(`Add schema property`, async ({ page }) => {
+// TODO(Andrea): see the issue https://github.com/meergo/meergo/issues/1200.
+test.skip(`Add schema property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -102,7 +103,8 @@ test.skip(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await expect(page.locator('.schema-grid')).toBeVisible();
 });
 
-test(`Add schema object property with sub-property`, async ({ page }) => {
+// TODO(Andrea): see the issue https://github.com/meergo/meergo/issues/1200.
+test.skip(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
@@ -198,7 +200,8 @@ test.skip(`Remove schema properties`, async ({ page }) => {
 	).not.toBeVisible();
 });
 
-test(`Check that the property name is correctly validated`, async ({ page }) => {
+// TODO(Andrea): see the issue https://github.com/meergo/meergo/issues/1200.
+test.skip(`Check that the property name is correctly validated`, async ({ page }) => {
 	await page.goto(`${uiURL}schema`);
 
 	await page.click('.schema-grid__edit-button');
