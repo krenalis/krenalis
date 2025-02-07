@@ -48,7 +48,9 @@ const call = async (url: string, method: string, workspaceID?: number, body?: an
 						`%c meergo: ${message}${cause ? ' | Cause: ' + cause : ''}`,
 						'background:#dc362e;color:#dcdcdc',
 					);
-					throw new Error('An error occurred');
+					throw new Error(
+						'An error occured in the application. Server responded with a Bad Request. Please contact the administrator.',
+					);
 				} else if (res.status === 401) {
 					throw new UnauthorizedError();
 				} else if (res.status === 404) {
