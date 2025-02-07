@@ -28,17 +28,6 @@ func init() {
 		Description: "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\n" +
 			"See the [filters documentation](/filters) for more details.",
 	}
-	exportModeParameter := types.Property{
-		Name:           "exportMode",
-		Type:           types.Text(),
-		CreateRequired: true,
-		Placeholder:    `"CreateOnly"`,
-		Description: "The mode in which users are exported:\n\n" +
-			"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
-			"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
-			"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\n" +
-			"It should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable.",
-	}
 	matchingParameter := types.Property{
 		Name: "matching",
 		Type: types.Object([]types.Property{
@@ -60,6 +49,17 @@ func init() {
 		CreateRequired: true,
 		Description: "The properties used to identify the match between a user in the workspace and a user in the app. " +
 			"These properties are required to determine which users should be updated and which should be created as new in the app.",
+	}
+	exportModeParameter := types.Property{
+		Name:           "exportMode",
+		Type:           types.Text(),
+		CreateRequired: true,
+		Placeholder:    `"CreateOnly"`,
+		Description: "The mode in which users are exported:\n\n" +
+			"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
+			"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
+			"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\n" +
+			"It should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable.",
 	}
 	exportOnDuplicatesParameter := types.Property{
 		Name:        "exportOnDuplicates",
@@ -179,8 +179,8 @@ func init() {
 						Description: "Indicate if the action is enabled once created.",
 					},
 					filterParameter,
-					exportModeParameter,
 					matchingParameter,
+					exportModeParameter,
 					exportOnDuplicatesParameter,
 					transformationParameter,
 					inSchemaParameter,
@@ -224,8 +224,8 @@ func init() {
 						Description: "Indicates if the action is enabled. Use the [Set status](/api/actions#set-status) endpoint to change only the action's status.",
 					},
 					filterParameter,
-					exportModeParameter,
 					matchingParameter,
+					exportModeParameter,
 					exportOnDuplicatesParameter,
 					transformationParameter,
 					inSchemaParameter,
@@ -298,16 +298,6 @@ func init() {
 						},
 						filterParameter,
 						{
-							Name:           "exportMode",
-							Type:           types.Text(),
-							CreateRequired: true,
-							Placeholder:    `"CreateOnly"`,
-							Description: "The mode in which users are exported:\n\n" +
-								"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
-								"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
-								"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
-						},
-						{
 							Name: "matching",
 							Type: types.Object([]types.Property{
 								{
@@ -328,6 +318,16 @@ func init() {
 							CreateRequired: true,
 							Description: "The properties used to identify the match between a user in the workspace and a user in the app. " +
 								"These properties determine which users should be updated and which should be created as new in the app.",
+						},
+						{
+							Name:           "exportMode",
+							Type:           types.Text(),
+							CreateRequired: true,
+							Placeholder:    `"CreateOnly"`,
+							Description: "The mode in which users are exported:\n\n" +
+								"* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n" +
+								"* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n" +
+								"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
 						},
 						{
 							Name:        "exportOnDuplicates",

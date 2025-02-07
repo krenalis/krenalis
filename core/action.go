@@ -399,8 +399,8 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				serialized = struct {
 					serializedAction
 					Filter             *Filter         `json:"filter"`
-					ExportMode         ExportMode      `json:"exportMode"`
 					Matching           Matching        `json:"matching"`
+					ExportMode         ExportMode      `json:"exportMode"`
 					ExportOnDuplicates bool            `json:"exportOnDuplicates"`
 					Transformation     Transformation  `json:"transformation"`
 					InSchema           types.Type      `json:"inSchema"`
@@ -411,8 +411,8 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 				}{
 					serializedAction:   a,
 					Filter:             this.Filter,
-					ExportMode:         *this.ExportMode,
 					Matching:           *this.Matching,
+					ExportMode:         *this.ExportMode,
 					ExportOnDuplicates: *this.ExportOnDuplicates,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,

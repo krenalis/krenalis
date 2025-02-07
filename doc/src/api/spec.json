@@ -651,15 +651,6 @@
                             "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "exportMode",
-                            "placeholder": "\"CreateOnly\"",
-                            "type": {
-                                "name": "Text"
-                            },
-                            "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
-                        },
-                        {
                             "name": "matching",
                             "type": {
                                 "name": "Object",
@@ -686,6 +677,15 @@
                             },
                             "createRequired": true,
                             "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties are required to determine which users should be updated and which should be created as new in the app."
+                        },
+                        {
+                            "name": "exportMode",
+                            "placeholder": "\"CreateOnly\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "exportOnDuplicates",
@@ -969,15 +969,6 @@
                             "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                         },
                         {
-                            "name": "exportMode",
-                            "placeholder": "\"CreateOnly\"",
-                            "type": {
-                                "name": "Text"
-                            },
-                            "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
-                        },
-                        {
                             "name": "matching",
                             "type": {
                                 "name": "Object",
@@ -1004,6 +995,15 @@
                             },
                             "createRequired": true,
                             "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties are required to determine which users should be updated and which should be created as new in the app."
+                        },
+                        {
+                            "name": "exportMode",
+                            "placeholder": "\"CreateOnly\"",
+                            "type": {
+                                "name": "Text"
+                            },
+                            "createRequired": true,
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "exportOnDuplicates",
@@ -1340,15 +1340,6 @@
                                 "description": "The filter applied to the app users. If it's not null, only the users that match the filter will be included.\n\nSee the [filters documentation](/filters) for more details."
                             },
                             {
-                                "name": "exportMode",
-                                "placeholder": "\"CreateOnly\"",
-                                "type": {
-                                    "name": "Text"
-                                },
-                                "createRequired": true,
-                                "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
-                            },
-                            {
                                 "name": "matching",
                                 "type": {
                                     "name": "Object",
@@ -1375,6 +1366,15 @@
                                 },
                                 "createRequired": true,
                                 "description": "The properties used to identify the match between a user in the workspace and a user in the app. These properties determine which users should be updated and which should be created as new in the app."
+                            },
+                            {
+                                "name": "exportMode",
+                                "placeholder": "\"CreateOnly\"",
+                                "type": {
+                                    "name": "Text"
+                                },
+                                "createRequired": true,
+                                "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
                             },
                             {
                                 "name": "exportOnDuplicates",
