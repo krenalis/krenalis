@@ -165,7 +165,7 @@ const useAction = (
 				if (fields.includes('File') && isEditing && isImport) {
 					let s: ConnectorSettings = null;
 					const connector = connectors.find((c) => c.name === providedAction.format);
-					if (connector.hasSettings) {
+					if (connector.hasSettings(connection.role)) {
 						// get the settings of the file.
 						let ui = await api.workspaces.connections.actionUiEvent(providedAction.id, 'load', null);
 						s = ui.settings;
