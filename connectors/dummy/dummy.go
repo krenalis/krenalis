@@ -296,7 +296,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 			log.Printf("[info] Dummy: CreateUser(%v)", string(properties))
 			user := maps.Clone(record.Properties)
 			id = newUserID()
-			user["id"] = id
+			user["dummyId"] = id
 			allUsers[id] = user
 		} else {
 			// Update the in-memory users.
