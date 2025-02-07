@@ -792,13 +792,13 @@ const transformInActionToSet = async (
 		// Add the out matching property to the output schema of the action.
 		{
 			// The out matching property must necessarily also be
-			// contained in the output schema of the connection in the
-			// case where the mode is "CreateOnly" or "CreateOrUpdate",
-			// whereas it may not be there in the case of ‘UpdateOnly’.
+			// contained in the destination schema in the case where the
+			// mode is "CreateOnly" or "CreateOrUpdate", whereas it may
+			// not be there in the case of ‘UpdateOnly’.
 			const a = outMatchingProperty.full;
 			const b = flattenedOutputSchema[outMatching]?.full;
 			const existsInOutputSchema =
-				b != null && outPathsTypesAreEqual(a.type, b.type) && a.nullable === b.nullable;
+				b != null && propertyTypesAreEqual(a.type, b.type) && a.nullable === b.nullable;
 			let p: Property;
 			if (existsInOutputSchema) {
 				p = {
@@ -807,7 +807,9 @@ const transformInActionToSet = async (
 				};
 			} else {
 				if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
-					throw new Error(`External matching property "${outMatching}" does not exist`);
+					throw new Error(
+						`${actionType.target} cannot be created but can be updated, as the "${action.matching.out}" property of ${connection.name} is read-only`,
+					);
 				} else {
 					p = a;
 				}
@@ -1070,7 +1072,13 @@ const transformInActionToSet = async (
 	}
 
 	if (action.exportOnDuplicates != null) {
-		actionToSet.exportOnDuplicates = action.exportOnDuplicates;
+		let exportOnDuplicates = action.exportOnDuplicates;
+		if (!action.exportMode.includes('Update')) {
+			// If export mode is "CreateOnly", `exportOnDuplicates` is
+			// not taken into consideration.
+			exportOnDuplicates = false;
+		}
+		actionToSet.exportOnDuplicates = exportOnDuplicates;
 	}
 
 	if (action.exportMode != null) {
@@ -1361,25 +1369,21 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 	}
 };
 
-const outPathsTypesAreEqual = (externalTyp: Type, outTyp: Type): boolean => {
-	if (externalTyp.name !== outTyp.name) {
+const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
+	if (aType.name !== bType.name) {
 		return false;
 	}
 
-	if (externalTyp.name === 'Int' || externalTyp.name === 'Uint') {
-		const outT = outTyp as IntType | UintType;
+	if (aType.name === 'Int' || aType.name === 'Uint') {
+		const t = bType as IntType | UintType;
+		return aType.bitSize === t.bitSize && aType.minimum === t.minimum && aType.maximum === t.maximum;
+	} else if (aType.name === 'Text') {
+		const t = bType as TextType;
 		return (
-			externalTyp.bitSize === outT.bitSize &&
-			externalTyp.minimum === outT.minimum &&
-			externalTyp.maximum === outT.maximum
-		);
-	} else if (externalTyp.name === 'Text') {
-		const outT = outTyp as TextType;
-		return (
-			externalTyp.byteLen === outT.byteLen &&
-			externalTyp.charLen === outT.charLen &&
-			externalTyp.regexp === outT.regexp &&
-			JSON.stringify(externalTyp.values) === JSON.stringify(outT.values)
+			aType.byteLen === t.byteLen &&
+			aType.charLen === t.charLen &&
+			aType.regexp === t.regexp &&
+			JSON.stringify(aType.values) === JSON.stringify(t.values)
 		);
 	}
 
@@ -1406,7 +1410,7 @@ export {
 	doesLastChangeTimeColumnNeedFormat,
 	getTransformationFunctionParameterName,
 	validateMatching,
-	outPathsTypesAreEqual,
+	propertyTypesAreEqual,
 };
 
 export type { TransformedMapping, TransformedProperty, TransformedActionType, TransformedAction, ActionTypeField };

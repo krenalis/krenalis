@@ -1,12 +1,25 @@
-import React, { useContext } from 'react';
-import Section from '../../base/Section/Section';
-import { EXPORT_MODE_OPTIONS } from '../../../lib/core/action';
+import React, { useContext, useMemo } from 'react';
+import { EXPORT_MODE_OPTIONS, flattenSchema } from '../../../lib/core/action';
 import ActionContext from '../../../context/ActionContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 
 const ActionExportMode = () => {
-	const { action, setAction } = useContext(ActionContext);
+	const { action, setAction, actionType, connection } = useContext(ActionContext);
+
+	const error = useMemo<string>(() => {
+		if (action.matching.out === '' || action.exportMode === 'UpdateOnly') {
+			return '';
+		}
+		// If the export mode is "CreateOnly" or "CreateOrUpdate", the
+		// out matching property must be present in the destination
+		// schema.
+		const flatDestinationSchema = flattenSchema(actionType.outputSchema);
+		const p = flatDestinationSchema[action.matching.out]?.full;
+		if (p == null) {
+			return `${actionType.target} cannot be created but can be updated, as the "${action.matching.out}" property of ${connection.name} is read-only`;
+		}
+	}, [action]);
 
 	const onChangeExportMode = (e) => {
 		const a = { ...action };
@@ -15,16 +28,11 @@ const ActionExportMode = () => {
 	};
 
 	return (
-		<Section
-			title='Export mode'
-			description='The mode used to export the data'
-			padded={true}
-			className='action__export-mode'
-			annotated={true}
-		>
+		<div className='action__export-mode'>
 			<SlSelect
 				className='action__export-mode-select'
 				size='medium'
+				label='What can be done with users?'
 				value={action.exportMode!}
 				onSlChange={onChangeExportMode}
 			>
@@ -34,7 +42,8 @@ const ActionExportMode = () => {
 					</SlOption>
 				))}
 			</SlSelect>
-		</Section>
+			{error != '' && <div className='action__export-mode-error'>{error}</div>}
+		</div>
 	);
 };
 

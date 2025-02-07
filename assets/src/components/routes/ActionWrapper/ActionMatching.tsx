@@ -1,9 +1,8 @@
 import React, { forwardRef, useContext, useMemo } from 'react';
-import Section from '../../base/Section/Section';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import ActionContext from '../../../context/ActionContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { flattenSchema, outPathsTypesAreEqual, TransformedMapping, validateMatching } from '../../../lib/core/action';
+import { flattenSchema, propertyTypesAreEqual, TransformedMapping, validateMatching } from '../../../lib/core/action';
 import { checkIfPropertyExists } from './Action.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
@@ -12,22 +11,21 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 		useContext(ActionContext);
 
 	const flatInMatchingSchema = useMemo(() => flattenSchema(actionType.inputMatchingSchema), [actionType]);
-
 	const { outMatchingItems, flatOutMatchingSchema } = useMemo(() => {
-		const flatExternalMatchingSchema = flattenSchema(actionType.outputMatchingSchema);
-		const flatOutputSchema = flattenSchema(actionType.outputSchema);
+		const flatSourceSchema = flattenSchema(actionType.outputMatchingSchema);
+		const flatDestinationSchema = flattenSchema(actionType.outputSchema);
 
 		let filteredSchema: TransformedMapping = {};
 		if (action.exportMode === 'CreateOnly' || action.exportMode === 'CreateOrUpdate') {
-			for (const [k, v] of Object.entries(flatExternalMatchingSchema)) {
+			for (const [k, v] of Object.entries(flatSourceSchema)) {
 				const a = v.full;
-				const b = flatOutputSchema[k]?.full;
-				if (b != null && outPathsTypesAreEqual(a.type, b.type) && a.nullable === b.nullable) {
+				const b = flatDestinationSchema[k]?.full;
+				if (b == null || (b != null && propertyTypesAreEqual(a.type, b.type) && a.nullable === b.nullable)) {
 					filteredSchema[k] = v;
 				}
 			}
 		} else {
-			filteredSchema = flatExternalMatchingSchema;
+			filteredSchema = flatSourceSchema;
 		}
 
 		return {
@@ -63,7 +61,12 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 		}
 		let isTransformed = false;
 		if (transformationType === 'mappings') {
-			isTransformed = action.transformation.mapping[action.matching.out].value !== '';
+			const m = action.transformation.mapping[action.matching.out];
+			const isInMapping = m != null;
+			if (!isInMapping) {
+				return '';
+			}
+			isTransformed = m.value !== '';
 		} else {
 			isTransformed = selectedOutPaths.includes(action.matching.out);
 		}
@@ -83,9 +86,12 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 		// automatically clear the mapping if the same value of the in
 		// matching is already mapped on the out matching.
 		if (side === 'out' && v !== '' && a.matching['in'] !== '' && transformationType === 'mappings') {
-			const isAlreadyMapped = a.transformation.mapping[v].value === a.matching['in'];
-			if (isAlreadyMapped) {
-				a.transformation.mapping[v].value = '';
+			const isInMapping = a.transformation.mapping[v] != null;
+			if (isInMapping) {
+				const isAlreadyMapped = a.transformation.mapping[v].value === a.matching['in'];
+				if (isAlreadyMapped) {
+					a.transformation.mapping[v].value = '';
+				}
 			}
 		}
 
@@ -99,9 +105,12 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 		// automatically clear the mapping if the same value of the in
 		// matching is already mapped on the out matching.
 		if (side === 'out' && v !== '' && a.matching['in'] !== '' && transformationType === 'mappings') {
-			const isAlreadyMapped = a.transformation.mapping[v].value === a.matching['in'];
-			if (isAlreadyMapped) {
-				a.transformation.mapping[v].value = '';
+			const isInMapping = a.transformation.mapping[v] != null;
+			if (isInMapping) {
+				const isAlreadyMapped = a.transformation.mapping[v].value === a.matching['in'];
+				if (isAlreadyMapped) {
+					a.transformation.mapping[v].value = '';
+				}
 			}
 		}
 
@@ -109,15 +118,9 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 	};
 
 	return (
-		<Section
-			title={`Matching properties`}
-			description='The properties used to identify and match the resources'
-			padded={true}
-			annotated={true}
-			ref={ref}
-			className='action__matching-section'
-		>
+		<div ref={ref} className='action__matching-section'>
 			<div className='action__matching-wrapper'>
+				<div className='action__matching-title'>What properties define a match between users?</div>
 				<div className='action__matching-properties'>
 					<Combobox
 						onInput={onUpdateMatching}
@@ -151,7 +154,7 @@ const ActionMatching = forwardRef<any>((_, ref) => {
 					</div>
 				)}
 			</div>
-		</Section>
+		</div>
 	);
 });
 

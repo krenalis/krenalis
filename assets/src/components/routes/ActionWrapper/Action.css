@@ -1251,6 +1251,26 @@ inherit the disabled style */
 	height: 100% !important;
 }
 
+.action__export-mode {
+	margin-top: 30px;
+	display: flex;
+	gap: 15px;
+	align-items: center;
+}
+
+.action__export-mode-select {
+	max-width: 400px;
+	min-width: 300px;
+}
+
+.action__export-mode-error {
+	font-size: 12px;
+	color: var(--sl-color-danger-600);
+	max-width: 400px;
+	position: relative;
+	top: 14px;
+}
+
 .action__matching-section .section__content {
 	padding: 36px 36px 50px 36px;
 }
@@ -1259,12 +1279,18 @@ inherit the disabled style */
 	position: relative;
 }
 
+.action__matching-title {
+	color: var(--text-light);
+	margin-bottom: 6px;
+}
+
 .action__matching-properties {
 	display: grid;
-	grid-template-columns: 1fr 100px 1fr;
+	grid-template-columns: 1fr 30px 1fr;
 	gap: 20px;
 	align-items: center;
 	justify-content: center;
+	max-width: 800px;
 }
 
 .action__matching-wrapper .combobox-input__error {
@@ -1301,6 +1327,14 @@ inherit the disabled style */
 .action__matching-empty-error sl-icon {
 	position: relative;
 	top: 1px;
+}
+
+.action__export-on-duplicates {
+	margin-top: 20px;
+}
+
+.action__export-on-duplicates-title {
+	color: var(--text-light);
 }
 
 .action__query-buttons,

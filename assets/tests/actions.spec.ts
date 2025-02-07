@@ -131,7 +131,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 	// Export mode.
 	let exportMode = page.locator('.action__export-mode');
 	await exportMode.locator('sl-select').click();
-	await exportMode.locator('sl-option[value="CreateOnly"]').click();
+	await exportMode.locator('sl-option[value="UpdateOnly"]').click();
 
 	// Matching.
 	let matching = page.locator('.action__matching-properties');
@@ -259,7 +259,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 				"lastName": "last_name"
 			}
 		},
-		"exportMode": "CreateOnly",
+		"exportMode": "UpdateOnly",
 		"matching": {
 			"in": "email",
 			"out": "email"

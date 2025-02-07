@@ -14,6 +14,7 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import ActionContext from '../../../context/ActionContext';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import Section from '../../base/Section/Section';
 
 const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
@@ -133,9 +134,21 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.fields.includes('Query') && <ActionQuery />}
 					{actionType!.fields.includes('File') && <ActionFile />}
 					{actionType!.fields.includes('TableName') && <ActionTable />}
-					{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
-					{actionType!.fields.includes('Matching') && <ActionMatching ref={matchingSectionRef} />}
-					{actionType!.fields.includes('ExportOnDuplicates') && <ActionExportOnDuplicates />}
+					{(actionType!.fields.includes('ExportMode') ||
+						actionType!.fields.includes('Matching') ||
+						actionType!.fields.includes('ExportOnDuplicates')) && (
+						<Section
+							title='Export settings'
+							description='Select the matching properties that define a match between users, and specify what can be done with users.'
+							padded={true}
+							className='action__export-settings'
+							annotated={true}
+						>
+							{actionType!.fields.includes('Matching') && <ActionMatching ref={matchingSectionRef} />}
+							{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
+							{actionType!.fields.includes('ExportOnDuplicates') && <ActionExportOnDuplicates />}
+						</Section>
+					)}
 					{actionType!.fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (
 						<ActionFilters ref={transformationSectionRef} />
 					)}
