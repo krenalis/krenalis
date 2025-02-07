@@ -688,12 +688,12 @@
                             "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
-                            "name": "exportOnDuplicates",
+                            "name": "updateOnDuplicates",
                             "placeholder": "true",
                             "type": {
                                 "name": "Boolean"
                             },
-                            "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged."
+                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -1006,12 +1006,12 @@
                             "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
-                            "name": "exportOnDuplicates",
+                            "name": "updateOnDuplicates",
                             "placeholder": "true",
                             "type": {
                                 "name": "Boolean"
                             },
-                            "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged."
+                            "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\nThis field does not affect user creation."
                         },
                         {
                             "name": "transformation",
@@ -1377,12 +1377,12 @@
                                 "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
                             },
                             {
-                                "name": "exportOnDuplicates",
+                                "name": "updateOnDuplicates",
                                 "placeholder": "true",
                                 "type": {
                                     "name": "Boolean"
                                 },
-                                "description": "Determines whether a user should be exported even if there are multiple matching users in the app.\n\nIf true, the export will proceed regardless of duplicates. If false, the user will not be exported, and an error will be logged."
+                                "description": "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\nIf set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged.\n\nThis field does not affect user creation."
                             },
                             {
                                 "name": "transformation",

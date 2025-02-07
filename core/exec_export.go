@@ -51,7 +51,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 			Action:             action.ID,
 			InProperty:         matchingIn.Name,
 			ExportMode:         this.action.ExportMode,
-			ExportOnDuplicates: action.ExportOnDuplicates,
+			UpdateOnDuplicates: action.UpdateOnDuplicates,
 		}
 		// Synchronize destinations users with the app users.
 		err := this.syncDestinationUsers(ctx)

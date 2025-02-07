@@ -36,7 +36,7 @@ type Matching struct {
 	Action             int
 	InProperty         string
 	ExportMode         state.ExportMode
-	ExportOnDuplicates bool
+	UpdateOnDuplicates bool
 }
 
 // SchemaError represents an error with a schema.
@@ -262,9 +262,9 @@ func (r *Records) All(ctx context.Context) iter.Seq[Record] {
 				}
 			}
 			if sameUserID {
-				// If exporting duplicates is not allowed, return a single record with an error;
+				// If updating duplicates is not allowed, return a single record with an error;
 				// otherwise, return all the previous records.
-				if !r.matching.ExportOnDuplicates {
+				if !r.matching.UpdateOnDuplicates {
 					previous = previous[:1]
 					previous[0].Err = fmt.Errorf("duplicates found for the matching property %q in the the app users", r.matching.InProperty)
 				}

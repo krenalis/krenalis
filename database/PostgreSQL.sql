@@ -102,7 +102,7 @@ CREATE TABLE actions (
     export_mode export_mode NOT NULL DEFAULT '',
     matching_in text NOT NULL,
     matching_out text NOT NULL,
-    export_on_duplicates boolean NOT NULL,
+    update_on_duplicates boolean NOT NULL,
     table_name varchar(1024) NOT NULL DEFAULT '',
     table_key text NOT NULL,
     identity_column varchar(1024) NOT NULL DEFAULT '',

@@ -58,7 +58,7 @@ type Action struct {
 	OrderBy              *string         `json:"orderBy"`
 	ExportMode           *ExportMode     `json:"exportMode"`
 	Matching             *Matching       `json:"matching"`
-	ExportOnDuplicates   *bool           `json:"exportOnDuplicates"`
+	UpdateOnDuplicates   *bool           `json:"updateOnDuplicates"`
 	TableName            *string         `json:"tableName"`
 	TableKey             *string         `json:"tableKey"`
 	IdentityColumn       *string         `json:"identityColumn"`
@@ -401,7 +401,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					Filter             *Filter         `json:"filter"`
 					Matching           Matching        `json:"matching"`
 					ExportMode         ExportMode      `json:"exportMode"`
-					ExportOnDuplicates bool            `json:"exportOnDuplicates"`
+					UpdateOnDuplicates bool            `json:"updateOnDuplicates"`
 					Transformation     Transformation  `json:"transformation"`
 					InSchema           types.Type      `json:"inSchema"`
 					OutSchema          types.Type      `json:"outSchema"`
@@ -413,7 +413,7 @@ func (this *Action) MarshalJSON() ([]byte, error) {
 					Filter:             this.Filter,
 					Matching:           *this.Matching,
 					ExportMode:         *this.ExportMode,
-					ExportOnDuplicates: *this.ExportOnDuplicates,
+					UpdateOnDuplicates: *this.UpdateOnDuplicates,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -660,7 +660,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		OrderBy:              action.OrderBy,
 		ExportMode:           state.ExportMode(action.ExportMode),
 		Matching:             state.Matching(action.Matching),
-		ExportOnDuplicates:   action.ExportOnDuplicates,
+		UpdateOnDuplicates:   action.UpdateOnDuplicates,
 		TableName:            action.TableName,
 		TableKey:             action.TableKey,
 		IdentityColumn:       action.IdentityColumn,
@@ -751,7 +751,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		"transformation_version = $9, transformation_preserve_json = $10, transformation_in_paths = $11, " +
 		"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, " +
 		"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, " +
-		"matching_out = $22, export_on_duplicates = $23, table_name = $24, table_key = $25, " +
+		"matching_out = $22, update_on_duplicates = $23, table_name = $24, table_key = $25, " +
 		"identity_column = $26, last_change_time_column = $27, last_change_time_format = $28, incremental = $29"
 	if (c.Role == state.Source && !action.Incremental) || shouldReload(this.action, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
@@ -780,7 +780,7 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
-			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates, n.TableName,
+			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
 			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.ID,
 		)
 		if err != nil {
@@ -885,10 +885,10 @@ func (this *Action) fromState(core *Core, store *datastore.Store, action *state.
 	if action.ExportMode != "" {
 		mode := action.ExportMode
 		matching := action.Matching
-		exportOnDuplicates := action.ExportOnDuplicates
+		updateOnDuplicates := action.UpdateOnDuplicates
 		this.ExportMode = (*ExportMode)(&mode)
 		this.Matching = (*Matching)(&matching)
-		this.ExportOnDuplicates = &exportOnDuplicates
+		this.UpdateOnDuplicates = &updateOnDuplicates
 	}
 	if action.TableKey != "" {
 		key := action.TableKey
@@ -1013,9 +1013,9 @@ type ActionToSet struct {
 	// a corresponding property in the app ("out") used during an export.
 	Matching Matching `json:"matching"`
 
-	// ExportOnDuplicates indicates whether to proceed with the export even if
+	// UpdateOnDuplicates indicates whether to proceed with the export even if
 	// duplicate users or groups are found in the app.
-	ExportOnDuplicates bool `json:"exportOnDuplicates"`
+	UpdateOnDuplicates bool `json:"updateOnDuplicates"`
 
 	// TableName is the name of the table for the export and it is defined for
 	// destination database-actions; in any other case, it is the empty string.

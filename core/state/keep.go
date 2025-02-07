@@ -284,7 +284,7 @@ type CreateAction struct {
 	FormatSettings       []byte
 	ExportMode           ExportMode
 	Matching             Matching
-	ExportOnDuplicates   bool
+	UpdateOnDuplicates   bool
 	TableName            string
 	TableKey             string
 	IdentityColumn       string
@@ -323,7 +323,7 @@ func (state *State) createAction(n notification) {
 		FormatSettings:       e.FormatSettings,
 		ExportMode:           e.ExportMode,
 		Matching:             e.Matching,
-		ExportOnDuplicates:   e.ExportOnDuplicates,
+		UpdateOnDuplicates:   e.UpdateOnDuplicates,
 		TableName:            e.TableName,
 		TableKey:             e.TableKey,
 		IdentityColumn:       e.IdentityColumn,
@@ -1019,7 +1019,7 @@ type UpdateAction struct {
 	FormatSettings       []byte
 	ExportMode           ExportMode
 	Matching             Matching
-	ExportOnDuplicates   bool
+	UpdateOnDuplicates   bool
 	TableName            string
 	TableKey             string
 	IdentityColumn       string
@@ -1055,7 +1055,7 @@ func (state *State) updateAction(n notification) {
 		a.FormatSettings = e.FormatSettings
 		a.ExportMode = e.ExportMode
 		a.Matching = e.Matching
-		a.ExportOnDuplicates = e.ExportOnDuplicates
+		a.UpdateOnDuplicates = e.UpdateOnDuplicates
 		a.TableName = e.TableName
 		a.TableKey = e.TableKey
 		a.IdentityColumn = e.IdentityColumn

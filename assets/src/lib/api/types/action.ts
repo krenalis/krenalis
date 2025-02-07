@@ -100,7 +100,7 @@ interface Action {
 	lastChangeTimeFormat: string | null;
 	exportMode: ExportMode | null;
 	matching: Matching | null;
-	exportOnDuplicates: boolean | null;
+	updateOnDuplicates: boolean | null;
 	compression: Compression;
 	orderBy: string | null;
 	format: string;
@@ -131,7 +131,7 @@ interface ActionToSet {
 	incremental?: boolean;
 	exportMode?: ExportMode;
 	matching?: Matching;
-	exportOnDuplicates?: boolean;
+	updateOnDuplicates?: boolean;
 	compression: Compression;
 	orderBy?: string | null;
 	format: string;

@@ -6,7 +6,7 @@ import ActionFile from './ActionFile';
 import ActionQuery from './ActionQuery';
 import ActionFilters from './ActionFilters';
 import ActionExportMode from './ActionExportMode';
-import ActionExportOnDuplicates from './ActionExportOnDuplicates';
+import ActionUpdateOnDuplicates from './ActionUpdateOnDuplicates';
 import ActionMatching from './ActionMatching';
 import ActionTable from './ActionTable';
 import { useAction } from './useAction';
@@ -136,7 +136,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 					{actionType!.fields.includes('TableName') && <ActionTable />}
 					{(actionType!.fields.includes('ExportMode') ||
 						actionType!.fields.includes('Matching') ||
-						actionType!.fields.includes('ExportOnDuplicates')) && (
+						actionType!.fields.includes('UpdateOnDuplicates')) && (
 						<Section
 							title='Export settings'
 							description='Select the matching properties that define a match between users, and specify what can be done with users.'
@@ -146,7 +146,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 						>
 							{actionType!.fields.includes('Matching') && <ActionMatching ref={matchingSectionRef} />}
 							{actionType!.fields.includes('ExportMode') && <ActionExportMode />}
-							{actionType!.fields.includes('ExportOnDuplicates') && <ActionExportOnDuplicates />}
+							{actionType!.fields.includes('UpdateOnDuplicates') && <ActionUpdateOnDuplicates />}
 						</Section>
 					)}
 					{actionType!.fields.includes('Filter') && isFileStorageImport && !isTransformationHidden && (

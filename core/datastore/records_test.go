@@ -148,12 +148,12 @@ func Test_Records(t *testing.T) {
 
 	tests := []struct {
 		mode               state.ExportMode
-		exportOnDuplicates bool
+		updateOnDuplicates bool
 		expected           []Record
 	}{
 		{
 			mode:               state.CreateOnly,
-			exportOnDuplicates: false,
+			updateOnDuplicates: false,
 			expected: []Record{
 				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", Properties: map[string]any{"age": 25, "id": "6", "name": "Emily Johnson"}},
 				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "name": "Daniel Brown"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
@@ -162,7 +162,7 @@ func Test_Records(t *testing.T) {
 		},
 		{
 			mode:               state.CreateOnly,
-			exportOnDuplicates: true,
+			updateOnDuplicates: true,
 			expected: []Record{
 				{ID: "445ab9fa-5689-4870-bc39-2d01c2a71b00", Properties: map[string]any{"age": 25, "id": "6", "name": "Emily Johnson"}},
 				{ID: "a415976f-279e-4653-ab6a-64ea7f74e174", Properties: map[string]any{"age": 12, "id": "7", "name": "Daniel Brown"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
@@ -171,7 +171,7 @@ func Test_Records(t *testing.T) {
 		},
 		{
 			mode:               state.UpdateOnly,
-			exportOnDuplicates: false,
+			updateOnDuplicates: false,
 			expected: []Record{
 				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "name": "Jake Thompson"}},
 				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "name": "Sophia Harris"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
@@ -181,7 +181,7 @@ func Test_Records(t *testing.T) {
 		},
 		{
 			mode:               state.UpdateOnly,
-			exportOnDuplicates: true,
+			updateOnDuplicates: true,
 			expected: []Record{
 				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "name": "Jake Thompson"}},
 				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "name": "Sophia Harris"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
@@ -192,7 +192,7 @@ func Test_Records(t *testing.T) {
 		},
 		{
 			mode:               state.CreateOrUpdate,
-			exportOnDuplicates: false,
+			updateOnDuplicates: false,
 			expected: []Record{
 				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "name": "Jake Thompson"}},
 				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "name": "Sophia Harris"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
@@ -205,7 +205,7 @@ func Test_Records(t *testing.T) {
 		},
 		{
 			mode:               state.CreateOrUpdate,
-			exportOnDuplicates: true,
+			updateOnDuplicates: true,
 			expected: []Record{
 				{ID: "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", ExternalID: "Ex1", Properties: map[string]any{"age": 43, "id": "1", "name": "Jake Thompson"}},
 				{ID: "243abf79-cbc3-4c6e-8739-e1406f2f6b51", ExternalID: "Ex2", Properties: map[string]any{"age": 19, "id": "2", "name": "Sophia Harris"}, Err: errors.New("duplicates found for the matching property \"id\" in exported users")},
@@ -228,7 +228,7 @@ func Test_Records(t *testing.T) {
 
 	for _, test := range tests {
 
-		name := fmt.Sprintf("(%s,%t)", test.mode, test.exportOnDuplicates)
+		name := fmt.Sprintf("(%s,%t)", test.mode, test.updateOnDuplicates)
 		t.Run(name, func(t *testing.T) {
 
 			query := Query{
@@ -240,7 +240,7 @@ func Test_Records(t *testing.T) {
 				Action:             actionID,
 				InProperty:         "id",
 				ExportMode:         test.mode,
-				ExportOnDuplicates: test.exportOnDuplicates,
+				UpdateOnDuplicates: test.updateOnDuplicates,
 			}
 
 			r, err := records(ctx, wh, query, "__id__", userColumnByProperty, true, matching)

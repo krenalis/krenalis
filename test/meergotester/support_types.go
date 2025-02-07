@@ -43,7 +43,7 @@ type Action struct {
 	OrderBy              string          `json:"orderBy"`
 	ExportMode           *ExportMode     `json:"exportMode"`
 	Matching             *Matching       `json:"matching"`
-	ExportOnDuplicates   *bool           `json:"exportOnDuplicates"`
+	UpdateOnDuplicates   *bool           `json:"updateOnDuplicates"`
 	TableName            *string         `json:"tableName"`
 	TableKey             *string         `json:"tableKey"`
 	IdentityColumn       *string         `json:"identityColumn"`
@@ -66,7 +66,7 @@ type ActionToSet struct {
 	FormatSettings       json.RawMessage `json:"formatSettings,omitempty"`
 	ExportMode           ExportMode      `json:"exportMode,omitempty"`
 	Matching             Matching        `json:"matching"`
-	ExportOnDuplicates   bool            `json:"exportOnDuplicates"`
+	UpdateOnDuplicates   bool            `json:"updateOnDuplicates"`
 	TableName            string          `json:"tableName"`
 	TableKey             string          `json:"tableKey"`
 	IdentityColumn       string          `json:"identityColumn"`

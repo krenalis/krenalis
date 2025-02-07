@@ -157,7 +157,7 @@ type ActionTypeField =
 	| 'Filter'
 	| 'Transformation'
 	| 'Matching'
-	| 'ExportOnDuplicates'
+	| 'UpdateOnDuplicates'
 	| 'ExportMode'
 	| 'Query'
 	| 'File'
@@ -201,7 +201,7 @@ interface TransformedAction {
 	orderBy?: string | null;
 	exportMode?: ExportMode | null;
 	matching?: Matching | null;
-	exportOnDuplicates?: boolean | null;
+	updateOnDuplicates?: boolean | null;
 	compression?: Compression;
 	format?: string;
 }
@@ -524,7 +524,7 @@ const transformAction = (action: Action, outputSchema: ObjectType): TransformedA
 		lastChangeTimeFormat: action.lastChangeTimeFormat,
 		exportMode: action.exportMode,
 		matching: action.matching,
-		exportOnDuplicates: action.exportOnDuplicates,
+		updateOnDuplicates: action.updateOnDuplicates,
 		format: action.format,
 		compression: action.compression,
 		orderBy: action.orderBy,
@@ -1071,14 +1071,14 @@ const transformInActionToSet = async (
 		actionToSet.matching = action.matching;
 	}
 
-	if (action.exportOnDuplicates != null) {
-		let exportOnDuplicates = action.exportOnDuplicates;
+	if (action.updateOnDuplicates != null) {
+		let updateOnDuplicates = action.updateOnDuplicates;
 		if (!action.exportMode.includes('Update')) {
-			// If export mode is "CreateOnly", `exportOnDuplicates` is
+			// If export mode is "CreateOnly", `updateOnDuplicates` is
 			// not taken into consideration.
-			exportOnDuplicates = false;
+			updateOnDuplicates = false;
 		}
-		actionToSet.exportOnDuplicates = exportOnDuplicates;
+		actionToSet.updateOnDuplicates = updateOnDuplicates;
 	}
 
 	if (action.exportMode != null) {
@@ -1145,8 +1145,8 @@ const computeDefaultAction = (
 	if (fields.includes('Matching')) {
 		action.matching = { in: '', out: '' };
 	}
-	if (fields.includes('ExportOnDuplicates')) {
-		action.exportOnDuplicates = false;
+	if (fields.includes('UpdateOnDuplicates')) {
+		action.updateOnDuplicates = false;
 	}
 	return action;
 };
@@ -1194,7 +1194,7 @@ const computeActionTypeFields = (
 		(actionType.target === 'Users' || actionType.target === 'Groups')
 	) {
 		fields.push('Matching');
-		fields.push('ExportOnDuplicates');
+		fields.push('UpdateOnDuplicates');
 		fields.push('ExportMode');
 		fields.push('Filter');
 	}

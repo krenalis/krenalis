@@ -763,7 +763,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 		OrderBy:              action.OrderBy,
 		ExportMode:           state.ExportMode(action.ExportMode),
 		Matching:             state.Matching(action.Matching),
-		ExportOnDuplicates:   action.ExportOnDuplicates,
+		UpdateOnDuplicates:   action.UpdateOnDuplicates,
 		TableName:            action.TableName,
 		TableKey:             action.TableKey,
 		IdentityColumn:       action.IdentityColumn,
@@ -870,7 +870,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
 			"transformation_source, transformation_language, transformation_version, transformation_preserve_json,\n" +
 			"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression, order_by,\n" +
-			"format_settings, export_mode, matching_in, matching_out, export_on_duplicates, table_name, table_key,\n" +
+			"format_settings, export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key,\n" +
 			"identity_column, last_change_time_column, last_change_time_format, incremental)\n" +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 			"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)"
@@ -878,7 +878,7 @@ func (this *Connection) CreateAction(ctx context.Context, target Target, eventTy
 			n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 			string(n.Filter), mapping, function.Source, function.Language, function.Version, function.PreserveJSON,
 			n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet,
-			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.ExportOnDuplicates,
+			n.Compression, n.OrderBy, string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
 			n.TableName, n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental)
 		if err != nil {
 			if postgres.IsForeignKeyViolation(err) && postgres.ErrConstraintName(err) == "actions_connection_fkey" {

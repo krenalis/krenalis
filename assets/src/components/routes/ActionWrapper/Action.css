@@ -1329,11 +1329,11 @@ inherit the disabled style */
 	top: 1px;
 }
 
-.action__export-on-duplicates {
+.action__update-on-duplicates {
 	margin-top: 20px;
 }
 
-.action__export-on-duplicates-title {
+.action__update-on-duplicates-title {
 	color: var(--text-light);
 }
 

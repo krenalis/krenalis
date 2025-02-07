@@ -61,12 +61,13 @@ func init() {
 			"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\n" +
 			"It should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable.",
 	}
-	exportOnDuplicatesParameter := types.Property{
-		Name:        "exportOnDuplicates",
+	updateOnDuplicatesParameter := types.Property{
+		Name:        "updateOnDuplicates",
 		Type:        types.Boolean(),
 		Placeholder: `true`,
-		Description: "Determines whether a user should be exported even if there are multiple matching users in the app.\n\n" +
-			"If set to true, the export will proceed regardless of duplicates, otherwise the user will not be exported, and an error will be logged.",
+		Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
+			"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged. The default value is false\n\n" +
+			"This field does not affect user creation.",
 	}
 	transformationParameter := types.Property{
 		Name: "transformation",
@@ -181,7 +182,7 @@ func init() {
 					filterParameter,
 					matchingParameter,
 					exportModeParameter,
-					exportOnDuplicatesParameter,
+					updateOnDuplicatesParameter,
 					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
@@ -226,7 +227,7 @@ func init() {
 					filterParameter,
 					matchingParameter,
 					exportModeParameter,
-					exportOnDuplicatesParameter,
+					updateOnDuplicatesParameter,
 					transformationParameter,
 					inSchemaParameter,
 					outSchemaParameter,
@@ -330,11 +331,12 @@ func init() {
 								"* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.",
 						},
 						{
-							Name:        "exportOnDuplicates",
+							Name:        "updateOnDuplicates",
 							Type:        types.Boolean(),
 							Placeholder: `true`,
-							Description: "Determines whether a user should be exported even if there are multiple matching users in the app.\n\n" +
-								"If true, the export will proceed regardless of duplicates. If false, the user will not be exported, and an error will be logged.",
+							Description: "Determines whether, when multiple app users match a single user in the workspace's data warehouse, they should still be updated.\n\n" +
+								"If set to true, the update will proceed regardless of duplicates, otherwise the duplicated users will not be updated, and an error will be logged.\n\n" +
+								"This field does not affect user creation.",
 						},
 						{
 							Name: "transformation",

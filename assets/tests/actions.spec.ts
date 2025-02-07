@@ -147,8 +147,8 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 		}),
 	).not.toBeVisible();
 
-	// Export on duplicates.
-	await page.locator('.action__export-on-duplicates sl-checkbox').click();
+	// Update on duplicates.
+	await page.locator('.action__update-on-duplicates sl-checkbox').click();
 
 	// Mappings.
 	let mappings = page.locator('.action__transformation');
@@ -267,7 +267,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 			"in": "email",
 			"out": "email"
 		},
-		"exportOnDuplicates": true
+		"updateOnDuplicates": true
 	}
 	`;
 

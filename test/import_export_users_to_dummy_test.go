@@ -73,7 +73,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 				In:  "email",
 				Out: "email",
 			},
-			ExportOnDuplicates: false,
+			UpdateOnDuplicates: false,
 		})
 		exec := c.ExecuteAction(exportUsersActionID)
 		c.WaitForExecutionsCompletion(dummyDest, exec)

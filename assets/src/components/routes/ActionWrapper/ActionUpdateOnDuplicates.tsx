@@ -2,19 +2,19 @@ import React, { useContext } from 'react';
 import ActionContext from '../../../context/ActionContext';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 
-const ActionExportOnDuplicates = () => {
+const ActionUpdateOnDuplicates = () => {
 	const { action, setAction } = useContext(ActionContext);
 
-	const onChangeExportOnDuplicates = (e) => {
+	const onChangeUpdateOnDuplicates = (e) => {
 		const a = { ...action };
-		a.exportOnDuplicates = e.currentTarget.checked;
+		a.updateOnDuplicates = e.currentTarget.checked;
 		setAction(a);
 	};
 
 	return (
 		action.exportMode.includes('Update') && (
-			<div className='action__export-on-duplicates'>
-				<SlCheckbox checked={action.exportOnDuplicates!} onSlChange={onChangeExportOnDuplicates}>
+			<div className='action__update-on-duplicates'>
+				<SlCheckbox checked={action.updateOnDuplicates!} onSlChange={onChangeUpdateOnDuplicates}>
 					If multiple app users match a single user, update them anyway
 				</SlCheckbox>
 			</div>
@@ -22,4 +22,4 @@ const ActionExportOnDuplicates = () => {
 	);
 };
 
-export default ActionExportOnDuplicates;
+export default ActionUpdateOnDuplicates;

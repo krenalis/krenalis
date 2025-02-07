@@ -1083,7 +1083,7 @@ type Action struct {
 	FormatSettings       []byte
 	ExportMode           ExportMode
 	Matching             Matching
-	ExportOnDuplicates   bool
+	UpdateOnDuplicates   bool
 	TableName            string
 	TableKey             string
 	IdentityColumn       string
