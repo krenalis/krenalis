@@ -195,31 +195,29 @@ type innerSettings struct {
 // Schema returns the schema of the specified target in the specified role.
 func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
 	if target == meergo.Users {
-		schema := types.Object([]types.Property{
-			{Name: "dummyId", Type: types.Text()},
+		var properties []types.Property
+		if role == meergo.Source {
+			properties = append(properties, types.Property{Name: "dummyId", Type: types.Text()})
+		}
+		properties = append(properties, []types.Property{
 			{Name: "email", Type: types.Text()},
 			{Name: "firstName", Type: types.Text()},
 			{Name: "fullName", Type: types.Text()},
 			{Name: "lastName", Type: types.Text()},
 			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
 			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
-			{Name: "additionalProperties", Type: types.Map(types.Text())},
+		}...)
+		if role == meergo.Destination {
+			properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.Text())})
+		}
+		properties = append(properties, []types.Property{
 			{Name: "address", Type: types.Object([]types.Property{
 				{Name: "street", Type: types.Text()},
 				{Name: "postal_code", Type: types.Text()},
 				{Name: "city", Type: types.Text()},
 			})},
-		})
-		if role == meergo.Source {
-			schema = types.SubsetFunc(schema, func(p types.Property) bool {
-				return p.Name != "additionalProperties"
-			})
-		} else {
-			schema = types.SubsetFunc(schema, func(p types.Property) bool {
-				return p.Name != "dummyId"
-			})
-		}
-		return schema, nil
+		}...)
+		return types.Object(properties), nil
 	}
 	switch eventType {
 	case "send_add_to_cart":
