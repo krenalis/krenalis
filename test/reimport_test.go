@@ -36,8 +36,8 @@ func TestReimport(t *testing.T) {
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "firstName", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "firstName", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -83,8 +83,8 @@ func TestReimport(t *testing.T) {
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "lastName", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "lastName", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},

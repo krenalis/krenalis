@@ -39,7 +39,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 			},
 		},
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.Text().WithCharLen(300), ReadOptional: true},

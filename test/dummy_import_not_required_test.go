@@ -30,7 +30,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.Text()},
+			{Name: "email", Type: types.Text(), Nullable: true},
 			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
 		}),
 		OutSchema: types.Object([]types.Property{

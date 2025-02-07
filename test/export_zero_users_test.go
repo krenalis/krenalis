@@ -43,8 +43,8 @@ func TestExportZeroUsers(t *testing.T) {
 				{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
 			}),
 			OutSchema: types.Object([]types.Property{
-				{Name: "email", Type: types.Text()},
-				{Name: "lastName", Type: types.Text()},
+				{Name: "email", Type: types.Text(), Nullable: true},
+				{Name: "lastName", Type: types.Text(), Nullable: true},
 			}),
 			Transformation: &meergotester.Transformation{
 				Mapping: map[string]string{

@@ -63,10 +63,10 @@ test(`Add "Import users" action on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"name": "Object",
 			"properties": [
-				{ "name": "email", "type": { "name": "Text" }, "description": "" },
+				{ "name": "email", "type": { "name": "Text" }, "description": "", "nullable": true },
 				{ "name": "dummyId", "type": { "name": "Text" }, "description": "" },
-				{ "name": "firstName", "type": { "name": "Text" }, "description": "" },
-				{ "name": "lastName", "type": { "name": "Text" }, "description": "" }
+				{ "name": "firstName", "type": { "name": "Text" }, "description": "", "nullable": true },
+				{ "name": "lastName", "type": { "name": "Text" }, "description": "", "nullable": true }
 			]
 		},
 		"outSchema": {
@@ -235,6 +235,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					"type": {
 						"name": "Text"
 					},
+					"nullable": true,
 					"description": ""
 				},
 				{
@@ -242,6 +243,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					"type": {
 						"name": "Text"
 					},
+					"nullable": true,
 					"description": ""
 				},
 				{
@@ -249,6 +251,7 @@ test(`Add "Export users" action on Dummy`, async ({ page }) => {
 					"type": {
 						"name": "Text"
 					},
+					"nullable": true,
 					"description": ""
 				}
 			]

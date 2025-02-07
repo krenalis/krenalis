@@ -75,7 +75,7 @@ var (
 //go:embed users.json
 var jsonUsers []byte
 
-func newUserID() string {
+func newDummyId() string {
 	b := make([]rune, 12)
 	for i := range b {
 		b[i] = rune(rand.IntN(20) + 'a')
@@ -200,11 +200,11 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 			properties = append(properties, types.Property{Name: "dummyId", Type: types.Text()})
 		}
 		properties = append(properties, []types.Property{
-			{Name: "email", Type: types.Text()},
-			{Name: "firstName", Type: types.Text()},
-			{Name: "fullName", Type: types.Text()},
-			{Name: "lastName", Type: types.Text()},
-			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water")},
+			{Name: "email", Type: types.Text(), Nullable: true},
+			{Name: "firstName", Type: types.Text(), Nullable: true},
+			{Name: "fullName", Type: types.Text(), Nullable: true},
+			{Name: "lastName", Type: types.Text(), Nullable: true},
+			{Name: "favouriteDrink", Type: types.Text().WithValues("tea", "beer", "wine", "water"), Nullable: true},
 			{Name: "favourite_movie", Type: types.Text(), ReadOptional: true},
 		}...)
 		if role == meergo.Destination {
@@ -212,10 +212,10 @@ func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meer
 		}
 		properties = append(properties, []types.Property{
 			{Name: "address", Type: types.Object([]types.Property{
-				{Name: "street", Type: types.Text()},
-				{Name: "postal_code", Type: types.Text()},
-				{Name: "city", Type: types.Text()},
-			})},
+				{Name: "street", Type: types.Text(), Nullable: true},
+				{Name: "postal_code", Type: types.Text(), Nullable: true},
+				{Name: "city", Type: types.Text(), Nullable: true},
+			}), Nullable: true},
 		}...)
 		return types.Object(properties), nil
 	}
@@ -276,6 +276,10 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 	return ui, nil
 }
 
+// nonRequiredProperties contains the names of the properties that are both in
+// the source and destination schema and are not requires for create.
+var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName", "favouriteDrink", "address"}
+
 // Upsert updates or creates records in the app for the specified target.
 func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
@@ -295,8 +299,24 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 			// Add a new users into the in-memory users.
 			log.Printf("[info] Dummy: CreateUser(%v)", string(properties))
 			user := maps.Clone(record.Properties)
-			id = newUserID()
+			id = newDummyId()
 			user["dummyId"] = id
+			for _, p := range nonRequiredProperties {
+				if v, ok := user[p]; !ok {
+					user[p] = nil
+				} else if p == "address" {
+					address := v.(map[string]any)
+					if _, ok := address["street"]; !ok {
+						address["street"] = nil
+					}
+					if _, ok := address["postal_code"]; !ok {
+						address["postal_code"] = nil
+					}
+					if _, ok := address["city"]; !ok {
+						address["city"] = nil
+					}
+				}
+			}
 			allUsers[id] = user
 		} else {
 			// Update the in-memory users.

@@ -30,7 +30,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		Name:    "Import users (1)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "firstName", Type: types.Text()},
+			{Name: "firstName", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "first_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
@@ -49,7 +49,7 @@ func TestSameIdentityFromTwoActions(t *testing.T) {
 		Name:    "Import users (2)",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "lastName", Type: types.Text()},
+			{Name: "lastName", Type: types.Text(), Nullable: true},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "last_name", Type: types.Text().WithCharLen(300), ReadOptional: true},
