@@ -63,7 +63,7 @@ func init() {
 		Nullable:    true,
 		Placeholder: `{ "HasColumnNames": true }`,
 		Description: "The settings for the file format. Refer to the documentation for the [file connector](/connectors/) related to the file format to understand the available settings and their corresponding values.\n\n" +
-			"If the file format does not require any settings, the `formatSettings` field may be omitted or set to null.",
+			"If the file format does not require any settings, the `formatSettings` field must be either omitted or set to null.",
 	}
 	identityColumnParameter := types.Property{
 		Name:           "identityColumn",

@@ -178,6 +178,9 @@ func (connection connection) File(_ http.ResponseWriter, r *http.Request) (any, 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
+		body.FormatSettings = nil
+	}
 	records, schema, err := c.File(r.Context(), path, body.Format, body.Sheet, body.Compression, body.FormatSettings, body.Limit)
 	if err != nil {
 		return nil, err
@@ -292,6 +295,9 @@ func (connection connection) Sheets(_ http.ResponseWriter, r *http.Request) (any
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	if body.FormatSettings != nil && body.FormatSettings.IsNull() {
+		body.FormatSettings = nil
 	}
 	sheets, err := c.Sheets(r.Context(), path, body.Format, body.Compression, body.FormatSettings)
 	if err != nil {
