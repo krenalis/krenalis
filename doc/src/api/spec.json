@@ -657,7 +657,7 @@
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "matching",
@@ -975,7 +975,7 @@
                                 "name": "Text"
                             },
                             "createRequired": true,
-                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user."
+                            "description": "The mode in which users are exported:\n\n* `\"CreateOnly\"`: Only new users are created in the app. No existing users are modified.\n* `\"UpdateOnly\"`: Only existing users are updated in the app. No new users are created.\n* `\"CreateOrUpdate\"`: If a user already exists in the app, they are updated; otherwise, they are created as a new user.\n\nIt should not be set to `\"CreateOnly\"` and `\"CreateOrUpdate\"` if the matching output property is read-only; if it is, user creation will fail because the matching output property must be writable."
                         },
                         {
                             "name": "matching",
