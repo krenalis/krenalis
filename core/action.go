@@ -513,11 +513,12 @@ func (this *Action) ServeUI(ctx context.Context, event string, settings json.Val
 	if connector.Type != state.FileStorage {
 		return nil, errors.BadRequest("cannot serve the UI of an action on a %s connection", connector.Type)
 	}
-	if connection.Role == state.Source && !connector.HasSourceSettings {
-		return nil, errors.BadRequest("connector %s does not have source settings", connector.Name)
+	formatConnector := this.action.Format()
+	if connection.Role == state.Source && !formatConnector.HasSourceSettings {
+		return nil, errors.BadRequest("connector %s does not have source settings", formatConnector.Name)
 	}
-	if connection.Role == state.Destination && !connector.HasDestinationSettings {
-		return nil, errors.BadRequest("connector %s does not have destination settings", connector.Name)
+	if connection.Role == state.Destination && !formatConnector.HasDestinationSettings {
+		return nil, errors.BadRequest("connector %s does not have destination settings", formatConnector.Name)
 	}
 	ui, err := this.core.connectors.ServeActionUI(ctx, this.action, event, settings)
 	if err != nil {
