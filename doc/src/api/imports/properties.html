@@ -4,7 +4,7 @@
   var dataType func(t any) string
   dataType = func(typ any) string {
     t := typ.(map[string]any)
-    switch name := t.name.(string); name {
+    switch kind := t.kind.(string); kind {
     case "Int":
       if t.bitSize == 32.0 {
         return "int"
@@ -26,7 +26,7 @@
     case "UIValues":
       return "object"
     default:
-      return toLower(name)
+      return toLower(kind)
     }
   }
 

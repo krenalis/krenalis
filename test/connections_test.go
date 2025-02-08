@@ -65,9 +65,12 @@ func isValidSchema(schema any) error {
 	if !ok {
 		return fmt.Errorf("unexpected type %T", schema)
 	}
-	name := s["name"]
-	if name != "Object" {
-		return fmt.Errorf("expected name %q, got %q", "Object", name)
+	kind, ok := s["kind"]
+	if !ok {
+		return fmt.Errorf("expected type kind, got no kind")
+	}
+	if kind != "Object" {
+		return fmt.Errorf("expected type kind %q, got %q", "Object", kind)
 	}
 	props := s["properties"].([]any)
 	if len(props) == 0 {

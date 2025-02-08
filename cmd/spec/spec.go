@@ -76,7 +76,7 @@ type Property struct {
 }
 
 type Type struct {
-	Name string
+	Kind string
 
 	BitSize int
 	Minimum int

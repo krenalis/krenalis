@@ -1,20 +1,20 @@
 import Type, { ArrayType, TextType, IntType, UintType, FloatType } from '../../lib/api/types/types';
 
 const enrichPropertyType = (type: Type) => {
-	let typeName: string = type.name;
-	if (typeName === 'Array') {
+	let kind: string = type.kind;
+	if (kind === 'Array') {
 		const typ = type as ArrayType;
-		typeName = 'Array(' + typ.elementType?.name + ')';
+		kind = 'Array(' + typ.elementType?.kind + ')';
 	}
 	if ('values' in type) {
 		const typ = type as TextType;
-		typeName += ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
+		kind += ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
 	}
-	if (typeName === 'Int' || typeName === 'Uint' || typeName === 'Float') {
+	if (kind === 'Int' || kind === 'Uint' || kind === 'Float') {
 		const typ = type as IntType | UintType | FloatType;
-		typeName += `(${typ.bitSize})`;
+		kind += `(${typ.bitSize})`;
 	}
-	return typeName;
+	return kind;
 };
 
 export { enrichPropertyType };

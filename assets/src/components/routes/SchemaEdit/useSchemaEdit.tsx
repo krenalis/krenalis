@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
-import Type, { ObjectType, Role, TypeName } from '../../../lib/api/types/types';
+import Type, { ObjectType, Role, TypeKind } from '../../../lib/api/types/types';
 import { SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -41,14 +41,14 @@ interface PropertyToEdit {
 interface PropertyToRemove {
 	key: string;
 	name: string;
-	type: TypeName;
+	type: TypeKind;
 }
 
 const useSchemaEdit = (
 	schema: ObjectType,
 	onAddClick: (parentKey: string, indentation: number, root: string) => void,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
-	onRemoveClick: (propertyKey: string, propertyName: string, typeName: TypeName) => void,
+	onRemoveClick: (propertyKey: string, propertyName: string, typeKind: TypeKind) => void,
 	onClose: () => void,
 ) => {
 	const [editableSchema, setEditableSchema] = useState<EditableSchema>();
@@ -76,7 +76,7 @@ const useSchemaEdit = (
 			return;
 		}
 		// Remove meta properties from the schema.
-		const s: ObjectType = { name: 'Object', properties: [] };
+		const s: ObjectType = { kind: 'Object', properties: [] };
 		for (const p of schema.properties) {
 			if (!isMetaProperty(p.name)) {
 				s.properties.push(p);
@@ -190,7 +190,7 @@ const useSchemaEdit = (
 			}
 
 			// Update the 'root' field of the children properties.
-			if (property.type.name === 'Object') {
+			if (property.type.kind === 'Object') {
 				for (let k in s) {
 					if (!s.hasOwnProperty(k)) {
 						continue;
@@ -264,7 +264,7 @@ const useSchemaEdit = (
 
 	const onRemoveProperty = (propertyKey: string) => {
 		const schema = { ...editableSchema };
-		if (schema[propertyKey].type.name === 'Object') {
+		if (schema[propertyKey].type.kind === 'Object') {
 			for (const key of Object.keys(schema)) {
 				const isNested = key.startsWith(`${propertyKey}.`);
 				if (isNested) {
@@ -408,7 +408,7 @@ const getRows = (
 	connections: TransformedConnection[],
 	onAddClick: (parentKey: string, indentation: number, root: string) => void,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
-	onRemoveClick: (propertyKey: string, propertyName: string, typeName: TypeName) => void,
+	onRemoveClick: (propertyKey: string, propertyName: string, typeKind: TypeKind) => void,
 ): SortableGridRow[] => {
 	const mappedRows = {};
 	for (const propertyKey in schema) {
@@ -431,7 +431,7 @@ const getRows = (
 			for (const prefix of prefixes) {
 				m = m[prefix];
 			}
-			if (property.type.name === 'Object') {
+			if (property.type.kind === 'Object') {
 				const subMap = {};
 				subMap[propertyKey] = buildRow(
 					propertyKey,
@@ -453,7 +453,7 @@ const getRows = (
 				);
 			}
 		} else {
-			if (property.type.name === 'Object') {
+			if (property.type.kind === 'Object') {
 				const subMap = {};
 				subMap[propertyKey] = buildRow(
 					propertyKey,
@@ -486,7 +486,7 @@ const buildRow = (
 	primarySourceConnection: TransformedConnection,
 	onAddClick: (parentKey: string, indentation: number, root: string) => void,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
-	onRemoveClick: (propertyKey: string, propertyName: string, typeName: TypeName) => void,
+	onRemoveClick: (propertyKey: string, propertyName: string, typeKind: TypeKind) => void,
 ): SortableGridRow => {
 	const buttons = (
 		<div className='schema-edit__property-buttons'>
@@ -502,17 +502,17 @@ const buildRow = (
 				className='schema-edit__property-buttons-remove'
 				variant='danger'
 				outline={true}
-				onClick={() => onRemoveClick(propertyKey, property.name, property.type.name)}
+				onClick={() => onRemoveClick(propertyKey, property.name, property.type.kind)}
 			>
 				Remove
 			</SlButton>
 		</div>
 	);
 	let typeCell: ReactNode;
-	if (property.type.name === 'Object') {
+	if (property.type.kind === 'Object') {
 		typeCell = (
 			<div className='schema-edit__editable-object-cell'>
-				{property.type.name}
+				{property.type.kind}
 				<SlButton
 					size='small'
 					variant='primary'
@@ -528,7 +528,7 @@ const buildRow = (
 		typeCell = enrichPropertyType(property.type);
 	}
 	let primarySourceCell: ReactNode;
-	if (property.type.name !== 'Object' && property.type.name !== 'Array') {
+	if (property.type.kind !== 'Object' && property.type.kind !== 'Array') {
 		if (primarySourceConnection) {
 			primarySourceCell = (
 				<div className='schema-edit__primary-source'>
@@ -571,7 +571,7 @@ const validateEditableSchema = (editableSchema: EditableSchema) => {
 		}
 		const p = editableSchema[key];
 		const typ = p.type;
-		if (typ.name === 'Object') {
+		if (typ.kind === 'Object') {
 			// Check that it has at least one sub-property.
 			const subProperties = keys.filter((k) => k.startsWith(key) && k !== key);
 			if (subProperties.length === 0) {

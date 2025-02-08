@@ -1,12 +1,12 @@
 {
-	"name": "Object",
+	"kind": "Object",
 	"properties": [
 		{
 			"name": "first_name",
 			"readOptional": true,
 			"type": {
 				"charLen": 100,
-				"name": "Text"
+				"kind": "Text"
 			}
 		},
 		{
@@ -14,7 +14,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 100,
-				"name": "Text"
+				"kind": "Text"
 			}
 		},
 		{
@@ -22,7 +22,7 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 300,
-				"name": "Text"
+				"kind": "Text"
 			}
 		},
 		{
@@ -30,28 +30,28 @@
 			"readOptional": true,
 			"type": {
 				"charLen": 15,
-				"name": "Text"
+				"kind": "Text"
 			}
 		},
 		{
 			"name": "date_of_birth",
 			"readOptional": true,
 			"type": {
-				"name": "Date"
+				"kind": "Date"
 			}
 		},
 		{
 			"name": "address",
 			"readOptional": true,
 			"type": {
-				"name": "Object",
+				"kind": "Object",
 				"properties": [
 					{
 						"name": "street",
 						"readOptional": true,
 						"type": {
 							"charLen": 200,
-							"name": "Text"
+							"kind": "Text"
 						}
 					},
 					{
@@ -59,7 +59,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 100,
-							"name": "Text"
+							"kind": "Text"
 						}
 					},
 					{
@@ -67,7 +67,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 100,
-							"name": "Text"
+							"kind": "Text"
 						}
 					},
 					{
@@ -75,7 +75,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 10,
-							"name": "Text"
+							"kind": "Text"
 						}
 					},
 					{
@@ -83,7 +83,7 @@
 						"readOptional": true,
 						"type": {
 							"charLen": 100,
-							"name": "Text"
+							"kind": "Text"
 						}
 					}
 				]
@@ -93,35 +93,35 @@
 			"name": "gender",
 			"readOptional": true,
 			"type": {
-				"name": "Text"
+				"kind": "Text"
 			}
 		},
 		{
 			"name": "loyalty_program_member",
 			"readOptional": true,
 			"type": {
-				"name": "Boolean"
+				"kind": "Boolean"
 			}
 		},
 		{
 			"name": "preferred_contact_method",
 			"readOptional": true,
 			"type": {
-				"name": "Text"
+				"kind": "Text"
 			}
 		},
 		{
 			"name": "account_creation_date",
 			"readOptional": true,
 			"type": {
-				"name": "DateTime"
+				"kind": "DateTime"
 			}
 		},
 		{
 			"name": "last_purchase_date",
 			"readOptional": true,
 			"type": {
-				"name": "DateTime"
+				"kind": "DateTime"
 			}
 		}
 	]

@@ -1,6 +1,6 @@
 type Role = 'Both' | 'Source' | 'Destination';
 
-type TypeName =
+type TypeKind =
 	| 'Boolean'
 	| 'Int'
 	| 'Uint'
@@ -53,25 +53,25 @@ type Type =
 	| MapType;
 
 interface BooleanType {
-	name: 'Boolean';
+	kind: 'Boolean';
 }
 
 interface IntType {
-	name: 'Int';
+	kind: 'Int';
 	bitSize: IntBitSize;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface UintType {
-	name: 'Uint';
+	kind: 'Uint';
 	bitSize: IntBitSize;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface FloatType {
-	name: 'Float';
+	kind: 'Float';
 	bitSize: FloatBitSize;
 	real?: boolean;
 	minimum?: number;
@@ -79,7 +79,7 @@ interface FloatType {
 }
 
 interface DecimalType {
-	name: 'Decimal';
+	kind: 'Decimal';
 	minimum?: number;
 	maximum?: number;
 	precision?: number;
@@ -87,38 +87,38 @@ interface DecimalType {
 }
 
 interface DateTimeType {
-	name: 'DateTime';
+	kind: 'DateTime';
 	layout?: string;
 }
 
 interface DateType {
-	name: 'Date';
+	kind: 'Date';
 	layout?: string;
 }
 
 interface TimeType {
-	name: 'Time';
+	kind: 'Time';
 }
 
 interface YearType {
-	name: 'Year';
+	kind: 'Year';
 }
 
 interface UUIDType {
-	name: 'UUID';
+	kind: 'UUID';
 }
 
 interface JSONType {
-	name: 'JSON';
+	kind: 'JSON';
 	charLen?: number;
 }
 
 interface InetType {
-	name: 'Inet';
+	kind: 'Inet';
 }
 
 interface TextType {
-	name: 'Text';
+	kind: 'Text';
 	byteLen?: number;
 	charLen?: number;
 	regexp?: string;
@@ -126,7 +126,7 @@ interface TextType {
 }
 
 interface ArrayType {
-	name: 'Array';
+	kind: 'Array';
 	minElements?: number;
 	maxElements?: number;
 	uniqueElements?: boolean;
@@ -134,16 +134,16 @@ interface ArrayType {
 }
 
 interface ObjectType {
-	name: 'Object';
+	kind: 'Object';
 	properties?: Property[];
 }
 
 interface MapType {
-	name: 'Map';
+	kind: 'Map';
 	elementType?: Type;
 }
 
-const typeNameToIconName: Record<TypeName, string> = {
+const typeKindToIconName: Record<TypeKind, string> = {
 	Boolean: 'type-bold',
 	Int: '123',
 	Uint: '123',
@@ -162,7 +162,7 @@ const typeNameToIconName: Record<TypeName, string> = {
 	Map: 'braces-asterisk',
 };
 
-export { typeNameToIconName };
+export { typeKindToIconName };
 export default Type;
 export type {
 	Property,
@@ -174,7 +174,7 @@ export type {
 	DecimalType,
 	FloatType,
 	Role,
-	TypeName,
+	TypeKind,
 	IntBitSize,
 	FloatBitSize,
 	MapType,

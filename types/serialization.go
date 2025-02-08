@@ -72,8 +72,8 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 
 // marshalType marshals t as JSON and writes it to b.
 func marshalType(b *bytes.Buffer, t Type) {
-	b.WriteString(`{"name":"`)
-	b.WriteString(t.Name())
+	b.WriteString(`{"kind":"`)
+	b.WriteString(t.KindName())
 	b.WriteString(`"`)
 	switch t.kind {
 	case IntKind:
@@ -300,7 +300,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
 
-	var name string
+	var kind string
 	var bitSize int
 	var minimum, maximum json.Number
 	var real bool
@@ -342,13 +342,13 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 
 		switch key {
-		case "name":
-			if name != "" {
-				return Type{}, errors.New("repeated 'name' key")
+		case "kind":
+			if kind != "" {
+				return Type{}, errors.New("repeated 'kind' key")
 			}
-			name = tok.(string)
-			if !IsValidPropertyName(name) {
-				return Type{}, errors.New("invalid type name")
+			kind = tok.(string)
+			if !IsValidPropertyName(kind) {
+				return Type{}, errors.New("invalid type kind")
 			}
 		case "bitSize":
 			if bitSize != 0 {
@@ -560,13 +560,13 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var t Type
 
-	if name == "" {
-		return Type{}, errors.New("missing 'name' key")
+	if kind == "" {
+		return Type{}, errors.New("missing 'kind' key")
 	}
-	t.kind, _ = KindByName(name)
+	t.kind, _ = KindByName(kind)
 	if t.kind == InvalidKind {
 		t.generic = true
-		t.vl = name
+		t.vl = kind
 	}
 	if bitSize == 0 {
 		if t.kind == IntKind || t.kind == UintKind || t.kind == FloatKind {

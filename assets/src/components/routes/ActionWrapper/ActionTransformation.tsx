@@ -1648,7 +1648,7 @@ const FullscreenTransformation = ({
 							return null;
 						}
 					}
-					if (p.type.name === 'Object') {
+					if (p.type.kind === 'Object') {
 						return (
 							<TransformationNestedProperties
 								key={p.name}
@@ -2028,7 +2028,7 @@ const FullscreenTransformation = ({
 										}
 									}
 
-									if (p.type.name === 'Object') {
+									if (p.type.kind === 'Object') {
 										return (
 											<TransformationNestedProperties
 												key={p.name}
@@ -2203,7 +2203,7 @@ const TransformationNestedProperties = ({
 			>
 				{(isExpanded || showSearchedChildren) &&
 					typ.properties.map((p) => {
-						if (p.type.name === 'Object') {
+						if (p.type.kind === 'Object') {
 							return (
 								<TransformationNestedProperties
 									key={p.name}
@@ -2385,7 +2385,7 @@ const TransformationProperty = ({
 					<span className='fullscreen-transformation__property-type'>
 						<span>
 							{language === ''
-								? property.type.name
+								? property.type.kind
 								: language === 'Python'
 									? toPythonType(property.type, property.nullable)
 									: toJavascriptType(property.type, property.nullable)}
@@ -2463,7 +2463,7 @@ function isElementVisibleInLeftPanel(element: Element, container: Element) {
 function toJavascriptType(type: Type, nullable: boolean) {
 	// TODO: add additional information (property values, property
 	// length).
-	const name = type.name;
+	const name = type.kind;
 
 	let t: string;
 	switch (name) {
@@ -2528,7 +2528,7 @@ function toPythonType(type: Type, nullable: boolean) {
 	// length).
 
 	let t: string;
-	switch (type.name) {
+	switch (type.kind) {
 		case 'Boolean':
 			t = 'bool';
 			break;

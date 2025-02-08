@@ -31,41 +31,41 @@ func TestPropertySerialization(t *testing.T) {
 		},
 		{
 			Property: Property{Name: "a", Type: Text()},
-			Expected: `{"name":"a","type":{"name":"Text"},"description":""}`,
+			Expected: `{"name":"a","type":{"kind":"Text"},"description":""}`,
 		},
 		{
 			Property: Property{Name: "a", Type: Text()},
-			Expected: `{"name":"a","type":{"name":"Text"},"description":""}`,
+			Expected: `{"name":"a","type":{"kind":"Text"},"description":""}`,
 		},
 		{
 			Property: Property{Name: "a", Type: Text(), Description: "some description"},
-			Expected: `{"name":"a","type":{"name":"Text"},"description":"some description"}`,
+			Expected: `{"name":"a","type":{"kind":"Text"},"description":"some description"}`,
 		},
 		{
 			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), Description: "some description"},
 			Expected: `{"name":"a","placeholder":"<placeholder>",` +
-				`"type":{"name":"Text"},"description":"some description"}`,
+				`"type":{"kind":"Text"},"description":"some description"}`,
 		},
 		{
 			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), Description: "some description"},
 			Expected: `{"name":"a","placeholder":"<placeholder>",` +
-				`"type":{"name":"Text"},"description":"some description"}`,
+				`"type":{"kind":"Text"},"description":"some description"}`,
 		},
 		{
 			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), CreateRequired: true, UpdateRequired: true, Description: "some description"},
 			Expected: `{"name":"a","placeholder":"<placeholder>",` +
-				`"type":{"name":"Text"},"createRequired":true,"updateRequired":true,"description":"some description"}`,
+				`"type":{"kind":"Text"},"createRequired":true,"updateRequired":true,"description":"some description"}`,
 		},
 		{
 			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), CreateRequired: true, Nullable: true, Description: "some description"},
 			Expected: `{"name":"a","placeholder":"<placeholder>",` +
-				`"type":{"name":"Text"},"createRequired":true,` +
+				`"type":{"kind":"Text"},"createRequired":true,` +
 				`"nullable":true,"description":"some description"}`,
 		},
 		{
 			Property: Property{Name: "a", Placeholder: "<placeholder>", Type: Text(), UpdateRequired: true, ReadOptional: true, Nullable: true, Description: "some description"},
 			Expected: `{"name":"a","placeholder":"<placeholder>",` +
-				`"type":{"name":"Text"},"updateRequired":true,"readOptional":true,` +
+				`"type":{"kind":"Text"},"updateRequired":true,"readOptional":true,` +
 				`"nullable":true,"description":"some description"}`,
 		},
 	}
@@ -121,11 +121,11 @@ func TestPropertyDeserialization(t *testing.T) {
 			Err:  "unexpected end of JSON input",
 		},
 		{
-			JSON:     `{"name":"a","description":"","type":{"name":"Text"}}`,
+			JSON:     `{"name":"a","description":"","type":{"kind":"Text"}}`,
 			Property: Property{Name: "a", Type: Text()},
 		},
 		{
-			JSON:     `{"name":"a","description":"","type":{"name":"Int","bitSize":32}}`,
+			JSON:     `{"name":"a","description":"","type":{"kind":"Int","bitSize":32}}`,
 			Property: Property{Name: "a", Type: Int(32)},
 		},
 		{
@@ -133,7 +133,7 @@ func TestPropertyDeserialization(t *testing.T) {
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},
 		{
-			JSON:     `{"name":"a","type":{"name":"custom"}}`,
+			JSON:     `{"name":"a","type":{"kind":"custom"}}`,
 			Property: Property{Name: "a", Type: Parameter("custom")},
 		},
 	}
@@ -162,14 +162,14 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 		OutJSON  string
 	}{
 		{
-			`{"name":"Apple","type":{"name":"Text"},"description":""}`,
+			`{"name":"Apple","type":{"kind":"Text"},"description":""}`,
 			Property{Name: "Apple", Type: Text()},
-			`{"name":"Apple","type":{"name":"Text"},"description":""}`,
+			`{"name":"Apple","type":{"kind":"Text"},"description":""}`,
 		},
 		{
-			`{"name":"Apple","type":{"name":"Text","values":["g","c"]},"description":"Some description..."}`,
+			`{"name":"Apple","type":{"kind":"Text","values":["g","c"]},"description":"Some description..."}`,
 			Property{Name: "Apple", Type: Text().WithValues("g", "c"), Description: "Some description..."},
-			`{"name":"Apple","type":{"name":"Text","values":["g","c"]},"description":"Some description..."}`,
+			`{"name":"Apple","type":{"kind":"Text","values":["g","c"]},"description":"Some description..."}`,
 		},
 	}
 	for _, test := range tests {
@@ -200,82 +200,82 @@ func TestTypeSerialization(t *testing.T) {
 		Type Type
 	}{
 		{
-			Data: `{"name":"Text"}`,
+			Data: `{"kind":"Text"}`,
 			Type: Text(),
 		}, {
-			Data: `{"name":"Text","charLen":10}`,
+			Data: `{"kind":"Text","charLen":10}`,
 			Type: Text().WithCharLen(10),
 		}, {
-			Data: `{"name":"Text","byteLen":24}`,
+			Data: `{"kind":"Text","byteLen":24}`,
 			Type: Text().WithByteLen(24),
 		}, {
-			Data: `{"name":"Text","byteLen":80,"charLen":100}`,
+			Data: `{"kind":"Text","byteLen":80,"charLen":100}`,
 			Type: Text().WithByteLen(80).WithCharLen(100),
 		}, {
-			Data: `{"name":"Text","values":["a","b"]}`,
+			Data: `{"kind":"Text","values":["a","b"]}`,
 			Type: Text().WithValues("a", "b"),
 		}, {
-			Data: `{"name":"Text","charLen":10000}`,
+			Data: `{"kind":"Text","charLen":10000}`,
 			Type: Text().WithCharLen(10000),
 		}, {
-			Data: `{"name":"Text","regexp":"\\d+$"}`,
+			Data: `{"kind":"Text","regexp":"\\d+$"}`,
 			Type: Text().WithRegexp(regexp.MustCompile(`\d+$`)),
 		}, {
-			Data: `{"name":"Int","bitSize":8,"minimum":10}`,
+			Data: `{"kind":"Int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {
-			Data: `{"name":"Float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
+			Data: `{"kind":"Float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
 			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
 		}, {
-			Data: `{"name":"Float","bitSize":32,"minimum":3.99,"maximum":5.31}`,
+			Data: `{"kind":"Float","bitSize":32,"minimum":3.99,"maximum":5.31}`,
 			Type: Float(32).WithFloatRange(3.99, 5.31),
 		}, {
-			Data: `{"name":"Float","bitSize":64,"real":true}`,
+			Data: `{"kind":"Float","bitSize":64,"real":true}`,
 			Type: Float(64).AsReal(),
 		}, {
-			Data: `{"name":"Decimal","precision":1}`,
+			Data: `{"kind":"Decimal","precision":1}`,
 			Type: Decimal(1, 0),
 		}, {
-			Data: `{"name":"Decimal","minimum":-3.9936173,"maximum":8.00002312,"precision":9,"scale":8}`,
+			Data: `{"kind":"Decimal","minimum":-3.9936173,"maximum":8.00002312,"precision":9,"scale":8}`,
 			Type: Decimal(9, 8).WithDecimalRange(
 				decimal.MustParse("-3.9936173"),
 				decimal.MustParse("8.00002312"),
 			),
 		}, {
-			Data: `{"name":"Decimal","precision":10}`,
+			Data: `{"kind":"Decimal","precision":10}`,
 			Type: Decimal(10, 0),
 		}, {
-			Data: `{"name":"Decimal","precision":10,"scale":8}`,
+			Data: `{"kind":"Decimal","precision":10,"scale":8}`,
 			Type: Decimal(10, 8),
 		}, {
-			Data: `{"name":"DateTime"}`,
+			Data: `{"kind":"DateTime"}`,
 			Type: DateTime(),
 		}, {
-			Data: `{"name":"Date"}`,
+			Data: `{"kind":"Date"}`,
 			Type: Date(),
 		}, {
-			Data: `{"name":"Text","values":["b","a","c"]}`,
+			Data: `{"kind":"Text","values":["b","a","c"]}`,
 			Type: Text().WithValues("b", "a", "c"),
 		}, {
-			Data: `{"name":"Array","elementType":{"name":"Text"}}`,
+			Data: `{"kind":"Array","elementType":{"kind":"Text"}}`,
 			Type: Array(Text()),
 		}, {
-			Data: `{"name":"Array","elementType":{"name":"Int","bitSize":32}}`,
+			Data: `{"kind":"Array","elementType":{"kind":"Int","bitSize":32}}`,
 			Type: Array(Int(32)),
 		}, {
-			Data: `{"name":"Array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"name":"Decimal","precision":1}}`,
+			Data: `{"kind":"Array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"kind":"Decimal","precision":1}}`,
 			Type: Array(Decimal(1, 0)).WithMinElements(2).WithMaxElements(8).WithUnique(),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"},"description":""},{"name":"size","type":{"name":"Decimal","precision":1},"description":""}]}`,
+			Data: `{"kind":"Object","properties":[{"name":"email","type":{"kind":"Text"},"description":""},{"name":"size","type":{"kind":"Decimal","precision":1},"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text()}, {Name: "size", Type: Decimal(1, 0)}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"email","type":{"name":"Text"},"nullable":true,"description":""}]}`,
+			Data: `{"kind":"Object","properties":[{"name":"email","type":{"kind":"Text"},"nullable":true,"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: Text(), Nullable: true}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"birthday","type":{"name":"Date"},"description":""}]}`,
+			Data: `{"kind":"Object","properties":[{"name":"birthday","type":{"kind":"Date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Type: Date()}}),
 		}, {
-			Data: `{"name":"Object","properties":[{"name":"birthday","placeholder":"mm/dd/yyyy","type":{"name":"Date"},"description":""}]}`,
+			Data: `{"kind":"Object","properties":[{"name":"birthday","placeholder":"mm/dd/yyyy","type":{"kind":"Date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Placeholder: "mm/dd/yyyy", Type: Date()}}),
 		},
 	}

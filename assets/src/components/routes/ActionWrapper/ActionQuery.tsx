@@ -50,7 +50,7 @@ const ActionQuery = () => {
 		}
 		const columns: GridColumn[] = [];
 		for (const prop of res.schema.properties!) {
-			columns.push({ name: prop.name, type: prop.type.name });
+			columns.push({ name: prop.name, type: prop.type.kind });
 		}
 		const rows: GridRow[] = [];
 		for (const row of res.rows) {

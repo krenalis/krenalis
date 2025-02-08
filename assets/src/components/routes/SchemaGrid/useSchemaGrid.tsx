@@ -70,7 +70,7 @@ const getRows = (
 const buildRow = (property: TransformedProperty, primarySource?: TransformedConnection | null) => {
 	const typeCell = enrichPropertyType(property.full.type);
 	let primarySourceCell: ReactNode;
-	if (property.full.type.name !== 'Object' && property.full.type.name !== 'Array') {
+	if (property.full.type.kind !== 'Object' && property.full.type.kind !== 'Array') {
 		if (primarySource) {
 			primarySourceCell = (
 				<div className='schema-grid__primary-source'>

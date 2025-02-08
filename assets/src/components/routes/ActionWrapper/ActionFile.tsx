@@ -571,7 +571,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 		}
 		const columns: GridColumn[] = [];
 		for (const prop of res.schema.properties!) {
-			columns.push({ name: prop.name, type: prop.type.name });
+			columns.push({ name: prop.name, type: prop.type.kind });
 		}
 		const areExcelLike = areColumnsExcelLike(columns);
 		if (areExcelLike) {

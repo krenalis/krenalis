@@ -450,8 +450,8 @@ func (t Type) Generic() bool {
 	return t.generic
 }
 
-// Name returns the name of t. t must be valid or a generic type.
-func (t Type) Name() string {
+// KindName returns the kind name of t. t must be valid or a generic type.
+func (t Type) KindName() string {
 	if t.kind == InvalidKind {
 		if t.generic {
 			return t.vl.(string)

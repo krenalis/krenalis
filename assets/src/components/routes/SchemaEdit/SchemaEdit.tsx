@@ -10,7 +10,7 @@ import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { EditableProperty, newPropertyToEdit } from './SchemaEdit.helpers';
-import { TypeName } from '../../../lib/api/types/types';
+import { TypeKind } from '../../../lib/api/types/types';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 
@@ -30,8 +30,8 @@ const SchemaEdit = () => {
 		setPropertyToEdit({ key: propertyKey, ...property });
 	};
 
-	const onRemoveClick = (propertyKey: string, propertyName: string, typeName: TypeName) => {
-		setPropertyToRemove({ key: propertyKey, name: propertyName, type: typeName });
+	const onRemoveClick = (propertyKey: string, propertyName: string, typeKind: TypeKind) => {
+		setPropertyToRemove({ key: propertyKey, name: propertyName, type: typeKind });
 	};
 
 	const {
