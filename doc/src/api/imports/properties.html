@@ -72,7 +72,7 @@
     {% end if %}
     <span class="api-property-description">
       {{ unsafeconv.ToMarkdown(p.description.(string)) }}
-      {% if t := p["type"].(map[string]any); t.name == "Text" %}
+      {% if t := p["type"].(map[string]any); t.kind == "Text" %}
         {% if values, ok := t.values.([]any); ok %}
           {%%
             last := len(values) - 1
@@ -96,10 +96,10 @@
       if name != "" {
         propertyName = name + "." + propertyName
       }
-      if t := p["type"].(map[string]any); t.name == "Object" {
+      if t := p["type"].(map[string]any); t.kind == "Object" {
         show Properties("", propertyName, t.properties.([]any), inReturns)
-      } else if t := p["type"].(map[string]any); t.name == "Array" {
-        if t := t.elementType.(map[string]any); t.name == "Object" {
+      } else if t := p["type"].(map[string]any); t.kind == "Array" {
+        if t := t.elementType.(map[string]any); t.kind == "Object" {
           show Properties("", "", t.properties.([]any), inReturns)
         }
       }
