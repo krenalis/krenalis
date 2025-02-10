@@ -26,6 +26,7 @@ import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
+import { enrichPropertyType } from '../../helpers/enrichPropertyType';
 
 const TYPE_KINDS: TypeKind[] = [
 	'boolean',
@@ -738,7 +739,7 @@ const PropertyDialog = ({
 					) : (
 						<div className='property-dialog__type'>
 							<div className='property-dialog__type-label'>Type</div>
-							<div className='property-dialog__type-value'>{property.type?.kind}</div>
+							<div className='property-dialog__type-value'>{enrichPropertyType(property.type)}</div>
 						</div>
 					)}
 					<SlTextarea
