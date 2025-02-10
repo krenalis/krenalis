@@ -125,7 +125,7 @@ const Member = () => {
 			setIsSaving(false);
 			setIsLoadingMember(true);
 			showStatus({ variant: 'success', icon: icons.OK, text: 'Member information saved successfully' });
-			redirect('members');
+			redirect('organization/members');
 		}, 300);
 	};
 
