@@ -364,6 +364,12 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	}, []);
 
 	useEffect(() => {
+		if (isEditing) {
+			fetchPath(action.path);
+		}
+	}, []);
+
+	useEffect(() => {
 		const fetchSheets = async () => {
 			pathRef.current.lastSheetFetch = pathRef.current.lastUpdate;
 			let res: SheetsResponse;
@@ -440,19 +446,23 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			return;
 		}
 		getAbsolutePathTimeoutID.current = window.setTimeout(async () => {
-			let res: AbsolutePathResponse;
-			try {
-				res = await api.workspaces.connections.absolutePath(connection.id, path);
-			} catch (err) {
-				if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
-					setAbsolutePathError(err.message);
-					return;
-				}
-				handleError(err);
+			await fetchPath(path);
+		}, 300);
+	};
+
+	const fetchPath = async (path: string) => {
+		let res: AbsolutePathResponse;
+		try {
+			res = await api.workspaces.connections.absolutePath(connection.id, path);
+		} catch (err) {
+			if (err instanceof UnprocessableError && err.code === 'InvalidPath') {
+				setAbsolutePathError(err.message);
 				return;
 			}
-			setAbsolutePath(res.path);
-		}, 300);
+			handleError(err);
+			return;
+		}
+		setAbsolutePath(res.path);
 	};
 
 	const onUpdateSheet = (e) => {
