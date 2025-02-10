@@ -52,10 +52,10 @@ type databaseConnector interface {
 	// value is nil.
 	//
 	// value is the time value to quote, and typ specifies its type, which can be
-	// DateTime, Date, Text, or JSON:
+	// datetime, date, text, or json:
 	//
-	//   - For DateTime and Date types, value is a time.Time.
-	//   - For Text and JSON types, value is a string.
+	//   - For datetime and date types, value is a time.Time.
+	//   - For text and json types, value is a string.
 	QuoteTime(value any, typ types.Type) string
 }
 

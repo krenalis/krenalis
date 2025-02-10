@@ -30,12 +30,12 @@ When exporting to an app, **two different types of conflicts** can occur, which 
 
 The comparison is done by comparing the string representations of the user property values in Meergo with the string representations of the user property values in the app.
 
-For this reason, it is also possible to compare properties with different types (e.g. `Text` and `UUID`, `Int` and `UInt`, etc…), as values with different types could still have the same string representation and match.
+For this reason, it is also possible to compare properties with different types (e.g. `text` and `uuid`, `int` and `uint`, etc…), as values with different types could still have the same string representation and match.
 
 **For example**
 
-* a Meergo user has a property `my_app_id` with type `UUID` and value `7315ad40-fbe9-4ae3-80eb-6fd06f22f1fd`
-* an user on the app has a property `custom_id` with type `Text` and value `7315ad40-fbe9-4ae3-80eb-6fd06f22f1fd`
+* a Meergo user has a property `my_app_id` with type `uuid` and value `7315ad40-fbe9-4ae3-80eb-6fd06f22f1fd`
+* an user on the app has a property `custom_id` with type `text` and value `7315ad40-fbe9-4ae3-80eb-6fd06f22f1fd`
 
 Even if the types of the two properties are different, the two values represented as strings are:
 
@@ -54,10 +54,10 @@ When exporting users to a database, both a **table name** and a **table key prop
 
 The table key property must be a property of the table, and it will be used as key for the insert / update queries on the database. It must have one of the following types:
 
-* `Int(n)`
-* `UInt(n)`
-* `UUID`
-* `Text`
+* `int(n)`
+* `uint(n)`
+* `uuid`
+* `text`
 
 A value for the table key property must be returned by the transformation, as, otherwise, would be impossible to match the user with the users on the database's table.
 
@@ -71,9 +71,9 @@ When exporting users to a file, the order of the users is indicated through an a
 
 This property must have one of these types:
 
-* `Int(n)`
-* `UInt(n)`
-* `Decimal(p,s)`, but only if scale `s` is 0
-* `UUID`
-* `Inet`
-* `Text`
+* `int(n)`
+* `uint(n)`
+* `decimal(p,s)`, but only if scale `s` is 0
+* `uuid`
+* `inet`
+* `text`

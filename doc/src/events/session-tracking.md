@@ -38,8 +38,8 @@ When a Meergo SDK sends an event, it includes two session fields. Here's an exam
 
 In transformations, access session information through the `context.session` object:
 
-* `context.session.id` with type `Int(64)`: representing the session identifier as sent by the website or application.
-* `context.session.start` with type `Boolean`: indicating whether the session started with this event.
+* `context.session.id` with type `int(64)`: representing the session identifier as sent by the website or application.
+* `context.session.start` with type `boolean`: indicating whether the session started with this event.
 
 ### Data warehouse
 

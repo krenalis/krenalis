@@ -25,7 +25,7 @@ import (
 // JavaScript array or a Python list, and appends it to b. The resulting value
 // can be included in a JSON string without escaping.
 //
-// schema must be an Object or invalid. If it is invalid, values is marshaled as
+// schema must be an object or invalid. If it is invalid, values is marshaled as
 // an array of empty objects.
 //
 // Unlike Unmarshal, Marshal does not validate the values against the schema.

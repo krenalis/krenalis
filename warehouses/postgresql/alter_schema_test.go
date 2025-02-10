@@ -27,7 +27,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 		expectedErr     error
 	}{
 		{
-			name: "Add a first level Text property",
+			name: "Add a first level text property",
 			userColumns: []meergo.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			},
@@ -83,7 +83,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			name: "Add a first level Array property",
+			name: "Add a first level array property",
 			userColumns: []meergo.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Array(types.Text()), Nullable: true},
@@ -97,7 +97,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			name: "Add a first level Text property",
+			name: "Add a first level text property",
 			userColumns: []meergo.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
@@ -111,7 +111,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			name: "Add a first level Object property",
+			name: "Add a first level object property",
 			userColumns: []meergo.Column{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "x_a", Type: types.Text(), Nullable: true},
@@ -127,7 +127,7 @@ func Test_alterSchemaQueries(t *testing.T) {
 			},
 		},
 		{
-			name: "Add two first level Text properties",
+			name: "Add two first level text properties",
 			userColumns: []meergo.Column{
 				{Name: "z", Type: types.Text(), Nullable: true},
 				{Name: "a", Type: types.Text(), Nullable: true},
@@ -287,10 +287,10 @@ func Test_typeToPostgresType(t *testing.T) {
 		typ      types.Type
 		expected string
 	}{
-		// Boolean.
+		// boolean.
 		{types.Boolean(), "boolean"},
 
-		// Int.
+		// int.
 		{types.Int(8), "smallint"},
 		{types.Int(16), "smallint"},
 		{types.Int(16).WithIntRange(0, 10), "smallint"},
@@ -299,7 +299,7 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Int(64), "bigint"},
 		{types.Int(64).WithIntRange(0, 10), "bigint"},
 
-		// Uint.
+		// uint.
 		{types.Uint(8), "smallint"},
 		{types.Uint(16), "integer"},
 		{types.Uint(16).WithUintRange(0, 10), "integer"},
@@ -308,7 +308,7 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Uint(64), "numeric(20, 0)"},
 		{types.Uint(64).WithUintRange(1, 200), "numeric(20, 0)"},
 
-		// Float.
+		// float.
 		{types.Float(32), "real"},
 		{types.Float(32).AsReal(), "real"},
 		{types.Float(32).WithFloatRange(0, 100), "real"},
@@ -316,32 +316,32 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Float(64).AsReal(), "double precision"},
 		{types.Float(64).WithFloatRange(0, 100), "double precision"},
 
-		// Decimal.
+		// decimal.
 		{types.Decimal(10, 3), "numeric(10, 3)"},
 		{types.Decimal(10, 3).WithDecimalRange(decimal.MustInt(0), decimal.MustInt(1000)), "numeric(10, 3)"},
 
-		// DateTime.
+		// datetime.
 		{types.DateTime(), "timestamp without time zone"},
 
-		// Date.
+		// date.
 		{types.Date(), "date"},
 
-		// Time.
+		// time.
 		{types.Time(), "time without time zone"},
 
-		// Year.
+		// year.
 		{types.Year(), "smallint"},
 
-		// UUID.
+		// uuid.
 		{types.UUID(), "uuid"},
 
-		// JSON.
+		// json.
 		{types.JSON(), "jsonb"},
 
-		// Inet.
+		// inet.
 		{types.Inet(), "inet"},
 
-		// Text.
+		// text.
 		{types.Text(), "character varying"},
 		{types.Text().WithByteLen(256), "character varying(256)"},
 		{types.Text().WithCharLen(300), "character varying(300)"},
@@ -349,12 +349,12 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Text().WithByteLen(5).WithCharLen(10), "character varying(5)"},
 		{types.Text().WithByteLen(500).WithCharLen(10), "character varying(10)"},
 
-		// Array.
+		// array.
 		{types.Array(types.Text()), "character varying[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
 		{types.Array(types.Uint(32)), "bigint[]"},
 
-		// Map.
+		// map.
 		{types.Map(types.Text()), "jsonb"},
 	}
 

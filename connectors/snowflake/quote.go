@@ -72,7 +72,7 @@ func quoteString(b *strings.Builder, s string) {
 }
 
 // quoteValue quotes v and writes it into b.
-// It only supports the DateTime, Date, JSON, and Text types, and for JSON only
+// It only supports the datetime, date, json, and text types, and for json only
 // a string value.
 func quoteValue(b *strings.Builder, v any, t types.Type) {
 	switch t.Kind() {

@@ -59,11 +59,11 @@ type mappingExpr struct {
 // expressions. inSchema and outSchema represent the input and output schemas,
 // respectively.
 //
-// If inPlace is true, a transformation is permitted to modify Array, Object,
-// and Map values directly within the value being transformed.
+// If inPlace is true, a transformation is permitted to modify array, object,
+// and map values directly within the value being transformed.
 //
-// If layouts is not nil, it specifies the layouts used to format DateTime,
-// Date, and Time values as strings.
+// If layouts is not nil, it specifies the layouts used to format datetime,
+// date, and time values as strings.
 //
 // The source type can be the invalid type if expressions do not contain paths.
 // It returns a types.PathNotExistError error if a path in expressions does not
@@ -73,13 +73,13 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		return nil, errors.New("there are no expressions")
 	}
 	if k := inSchema.Kind(); k != types.ObjectKind && k != types.InvalidKind {
-		return nil, errors.New("inSchema is not an Object and is not the invalid schema")
+		return nil, errors.New("inSchema is not an object and is not the invalid schema")
 	}
 	if k := outSchema.Kind(); k != types.ObjectKind {
 		if k == types.InvalidKind {
 			return nil, errors.New("outSchema is the invalid schema")
 		}
-		return nil, errors.New("outSchema is not an Object")
+		return nil, errors.New("outSchema is not an object")
 	}
 	// Compile the expressions.
 	mappingExpressions := make([]mappingExpr, len(expressions))
@@ -116,7 +116,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 // guaranteed to be unique. If no property are present, it returns an empty
 // slice.
 //
-// If the expressions contain a map or JSON indexing, Properties does not return
+// If the expressions contain a map or json indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (mapping *Mapping) InPaths() []string {

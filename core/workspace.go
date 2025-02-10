@@ -849,7 +849,7 @@ func (this *Workspace) DeleteEventListener(listener string) {
 // must contain at least one property.
 //
 // order specifies the property by which to sort the events. It cannot be of
-// type JSON or Object. If not provided, the events are sorted by their ID.
+// type json or object. If not provided, the events are sorted by their ID.
 // orderDesc controls whether the events should be sorted in descending order,
 // when true, or ascending order.
 //
@@ -1379,7 +1379,7 @@ func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UI
 //
 // identifiers specify the identity resolution identifiers in the specified
 // order. An identifier must be a property in the user schema with a type of
-// Int, Uint, UUID, Inet, Text, or Decimal with zero scale. Identifiers cannot
+// int, uint, uuid, inet, text, or decimal with zero scale. Identifiers cannot
 // be repeated.
 //
 // It returns an errors.UnprocessableError error with code:
@@ -1576,7 +1576,7 @@ type User struct {
 // 0 < limit <= 1000 and only the given properties. properties cannot be empty.
 //
 // order is the name of the property by which to sort the returned users and
-// cannot have type JSON, Array, Object, or Map; when not provided, the users
+// cannot have type json, array, object, or map; when not provided, the users
 // are ordered by their last change time.
 //
 // orderDesc control whether the returned users should be ordered in descending

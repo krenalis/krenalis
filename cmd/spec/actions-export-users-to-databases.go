@@ -43,7 +43,7 @@ func init() {
 		Description: "The name of the table column that contains a value identifying a user within the table. This column must be included in the output schema.\n\n" +
 			"Typically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\n" +
 			"If a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\n" +
-			"The type of this column must match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`.",
+			"The type of this column must match one of the following Meergo types: `int`, `uint`, `uuid`, or `text`.",
 	}
 	transformationParameter := types.Property{
 		Name: "transformation",
@@ -286,7 +286,7 @@ func init() {
 							Description: "The name of the table column that contains a value identifying a user within the table.\n\n" +
 								"Typically, this is the column used as the table's primary key. However, it can also be a column with a unique constraint, or one that is guaranteed to contain only unique values.\n\n" +
 								"If a row with the same value in this column already exists, it will be updated; otherwise, a new row will be created for the exported user.\n\n" +
-								"The type of this column match one of the following Meergo types: `Int`, `Uint`, `UUID`, or `Text`.",
+								"The type of this column match one of the following Meergo types: `int`, `uint`, `uuid`, or `text`.",
 						},
 						{
 							Name: "transformation",

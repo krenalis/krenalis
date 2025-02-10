@@ -1435,7 +1435,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			return nil, errors.BadRequest("a transformation has been provided but out schema is not valid")
 		}
 		if outSchema.Kind() != types.ObjectKind {
-			return nil, errors.BadRequest("out schema is not an Object")
+			return nil, errors.BadRequest("out schema is not an object")
 		}
 
 		action := &state.Action{

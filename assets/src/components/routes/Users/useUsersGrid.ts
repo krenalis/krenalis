@@ -54,7 +54,7 @@ const useUsersGrid = (
 		const userColumns: GridColumn[] = [];
 		userColumns.push({
 			name: 'Last Change Time',
-			type: 'DateTime',
+			type: 'datetime',
 		});
 		for (const p of usersProperties) {
 			if (p.isUsed) {

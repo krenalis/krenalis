@@ -101,7 +101,7 @@ func TestDiff(t *testing.T) {
 			expectedOps: []meergo.AlterOperation{},
 		},
 		{
-			name: "One property added at first level (type Text)",
+			name: "One property added at first level (type text)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
@@ -114,7 +114,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "One property added at first level (type Int(32), Nullable)",
+			name: "One property added at first level (type int(32), Nullable)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 			}),
@@ -479,7 +479,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Dropping of Object properties",
+			name: "Dropping of object properties",
 			fromSchema: types.Object([]types.Property{
 				{Name: "v", Type: types.Text(), Nullable: true},
 				{Name: "x", Type: types.Object([]types.Property{
@@ -502,7 +502,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "One non-nullable Object added at first level",
+			name: "One non-nullable object added at first level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "c", Type: types.Text(), Nullable: true},
 			}),
@@ -559,7 +559,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Renaming of an Object property",
+			name: "Renaming of an object property",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Text(), Nullable: true},
 				{Name: "b", Type: types.Object([]types.Property{
@@ -602,7 +602,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Changing order of properties with type Object",
+			name: "Changing order of properties with type object",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text(), Nullable: true},
@@ -626,7 +626,7 @@ func TestDiff(t *testing.T) {
 			expectedOps: []meergo.AlterOperation{},
 		},
 		{
-			name: "Changing order of properties within Objects",
+			name: "Changing order of properties within objects",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text(), Nullable: true},
@@ -657,7 +657,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Property renamed and added again with the same name and same type (Int(64))",
+			name: "Property renamed and added again with the same name and same type (int(64))",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.Int(64), Nullable: true},
 			}),
@@ -672,7 +672,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Property renamed and added again with the same name and same type (Object)",
+			name: "Property renamed and added again with the same name and same type (object)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Int(64), Nullable: true},
@@ -692,7 +692,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Property renamed and added again with the same name, but different type. Within an Object property",
+			name: "Property renamed and added again with the same name, but different type. Within an object property",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Int(64), Nullable: true},
@@ -711,7 +711,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Rename an Object property and create a new property with the same name (but different type)",
+			name: "Rename an object property and create a new property with the same name (but different type)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text(), Nullable: true},
@@ -727,7 +727,7 @@ func TestDiff(t *testing.T) {
 			expectedOps: []meergo.AlterOperation{},
 		},
 		{
-			name: "Rename an Object property while adding a new property to it",
+			name: "Rename an object property while adding a new property to it",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text()},
@@ -740,10 +740,10 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths:     map[string]any{"x2": "x"},
-			expectedErr: "it is not possible to rename an Object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
+			expectedErr: "it is not possible to rename an object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
 		},
 		{
-			name: "Rename an Object property while deleting a property of it",
+			name: "Rename an object property while deleting a property of it",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text()},
@@ -756,10 +756,10 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths:     map[string]any{"x2": "x"},
-			expectedErr: "it is not possible to rename an Object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
+			expectedErr: "it is not possible to rename an object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
 		},
 		{
-			name: "Rename an Object property while renaming a new property of it",
+			name: "Rename an object property while renaming a new property of it",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.Text()},
@@ -771,7 +771,7 @@ func TestDiff(t *testing.T) {
 				})},
 			}),
 			rePaths:     map[string]any{"x2": "x", "x2.a2": "x.a"},
-			expectedErr: "it is not possible to rename an Object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
+			expectedErr: "it is not possible to rename an object property (\"x\", renamed to \"x2\") and simultaneously make changes to its descendant properties",
 		},
 	}
 

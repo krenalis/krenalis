@@ -71,7 +71,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 		b.WriteByte('"')
 		quoteString(b, string(v))
 		b.WriteByte('"')
-	// TODO(marco): SET can be implemented as an Array(Type), but the driver only returns the first element of the set.
+	// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 	//case []any:
 	//	b.WriteByte('"')
 	//	for i, s := range v {

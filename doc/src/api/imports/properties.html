@@ -5,23 +5,23 @@
   dataType = func(typ any) string {
     t := typ.(map[string]any)
     switch kind := t.kind.(string); kind {
-    case "Int":
+    case "int":
       if t.bitSize == 32.0 {
         return "int"
       }
       return sprintf("%.0f bit int", t.bitSize)
-    case "Uint":
+    case "uint":
       if t.bitSize == 32.0 {
         return "unsigned int"
       }
       return sprintf("%.0f bit unsigned int", t.bitSize)
-    case "Decimal":
+    case "decimal":
       return sprintf("decimal(%.0f, %.0f)", t.precision, t.scale)
-    case "Text":
+    case "text":
       return "string"
-    case "Array":
+    case "array":
       return sprintf("array of %s", dataType(t.elementType))
-    case "Map":
+    case "map":
       return sprintf("object with %s values", dataType(t.elementType))
     case "UIValues":
       return "object"
@@ -72,7 +72,7 @@
     {% end if %}
     <span class="api-property-description">
       {{ unsafeconv.ToMarkdown(p.description.(string)) }}
-      {% if t := p["type"].(map[string]any); t.kind == "Text" %}
+      {% if t := p["type"].(map[string]any); t.kind == "text" %}
         {% if values, ok := t.values.([]any); ok %}
           {%%
             last := len(values) - 1
@@ -96,10 +96,10 @@
       if name != "" {
         propertyName = name + "." + propertyName
       }
-      if t := p["type"].(map[string]any); t.kind == "Object" {
+      if t := p["type"].(map[string]any); t.kind == "object" {
         show Properties("", propertyName, t.properties.([]any), inReturns)
-      } else if t := p["type"].(map[string]any); t.kind == "Array" {
-        if t := t.elementType.(map[string]any); t.kind == "Object" {
+      } else if t := p["type"].(map[string]any); t.kind == "array" {
+        if t := t.elementType.(map[string]any); t.kind == "object" {
           show Properties("", "", t.properties.([]any), inReturns)
         }
       }

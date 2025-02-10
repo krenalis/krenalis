@@ -262,7 +262,7 @@ func Test_PropertyByPath(t *testing.T) {
 		err      error
 	}{
 		{
-			name: "path with single component - property (of type Text) exists",
+			name: "path with single component - property (of type text) exists",
 			t: Object([]Property{
 				{Name: "first_name", Type: Text()},
 			}),
@@ -280,7 +280,7 @@ func Test_PropertyByPath(t *testing.T) {
 			err:      errors.New("property path \"email\" does not exist"),
 		},
 		{
-			name: "path with single component - property (of type Object) exists",
+			name: "path with single component - property (of type object) exists",
 			t: Object([]Property{
 				{Name: "billing_address", Type: Object([]Property{
 					{Name: "street", Type: Text()},
@@ -294,7 +294,7 @@ func Test_PropertyByPath(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "path with two components - property (of type Text) exists",
+			name: "path with two components - property (of type text) exists",
 			t: Object([]Property{
 				{Name: "billing_address", Type: Object([]Property{
 					{Name: "street", Type: Text()},
@@ -319,7 +319,7 @@ func Test_PropertyByPath(t *testing.T) {
 			err: errors.New("property path \"billing_address.city\" does not exist"),
 		},
 		{
-			name: "path with three components - property (Text within an Object within an Object) exists",
+			name: "path with three components - property (text within an object within an object) exists",
 			t: Object([]Property{
 				{Name: "movie", Type: Object([]Property{
 					{Name: "director", Type: Object([]Property{
@@ -333,7 +333,7 @@ func Test_PropertyByPath(t *testing.T) {
 			err:      nil,
 		},
 		{
-			name: "path with four components - second component of path is not an Object",
+			name: "path with four components - second component of path is not an object",
 			t: Object([]Property{
 				{Name: "movie", Type: Object([]Property{
 					{Name: "writer", Type: Text()},
@@ -344,7 +344,7 @@ func Test_PropertyByPath(t *testing.T) {
 			err:      errors.New("property path \"movie.writer.address\" does not exist"),
 		},
 		{
-			name: "path with three components - second component of path is not an Object",
+			name: "path with three components - second component of path is not an object",
 			t: Object([]Property{
 				{Name: "movie", Type: Object([]Property{
 					{Name: "director", Type: Object([]Property{
@@ -491,7 +491,7 @@ func Test_SubsetByPathFunc(t *testing.T) {
 			}),
 		},
 		{
-			name: "Two top level properties, one is an Array(Text)",
+			name: "Two top level properties, one is an array(text)",
 			f:    func(path string) bool { return path == "a" || path == "c" },
 			expected: Object([]Property{
 				{Name: "a", Type: Text()},
@@ -535,7 +535,7 @@ func Test_SubsetByPathFunc(t *testing.T) {
 			}),
 		},
 		{
-			name: "Top level property of type Array(Object)",
+			name: "Top level property of type array(object)",
 			f:    func(path string) bool { return path == "e" },
 			expected: Object([]Property{
 				{Name: "e", Type: Array(Object([]Property{
@@ -545,12 +545,12 @@ func Test_SubsetByPathFunc(t *testing.T) {
 			}),
 		},
 		{
-			name:     "Referencing an internal Array(Object) property is considered a not found",
+			name:     "Referencing an internal array(object) property is considered a not found",
 			f:        func(path string) bool { return path == "e.a" },
 			expected: Type{},
 		},
 		{
-			name: "Referencing a top-level Object and its children, which has Placeholder, CreateRequired, etc...",
+			name: "Referencing a top-level object and its children, which has Placeholder, CreateRequired, etc...",
 			f:    func(path string) bool { return strings.HasPrefix(path, "f") },
 			expected: Object([]Property{
 				{Name: "f", Type: Object([]Property{
@@ -587,7 +587,7 @@ func Test_SubsetFunc(t *testing.T) {
 		}))},
 	})
 
-	t.Run("Valid Object expected (1)", func(t *testing.T) {
+	t.Run("Valid object expected (1)", func(t *testing.T) {
 		expected := Object([]Property{
 			{Name: "a", Type: Text()},
 			{Name: "c", Type: Array(Text())},
@@ -600,7 +600,7 @@ func Test_SubsetFunc(t *testing.T) {
 		}
 	})
 
-	t.Run("Valid Object expected (2)", func(t *testing.T) {
+	t.Run("Valid object expected (2)", func(t *testing.T) {
 		expected := Object([]Property{
 			{Name: "a", Type: Text()},
 			{Name: "b", Type: Object([]Property{
@@ -625,7 +625,7 @@ func Test_SubsetFunc(t *testing.T) {
 		}
 	})
 
-	t.Run("Original Object expected", func(t *testing.T) {
+	t.Run("Original object expected", func(t *testing.T) {
 		got := SubsetFunc(o, func(p Property) bool {
 			return true
 		})

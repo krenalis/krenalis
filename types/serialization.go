@@ -601,13 +601,13 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	} else {
 		if t.kind != DecimalKind {
-			return Type{}, errors.New("unexpected precision for non-Decimal type")
+			return Type{}, errors.New("unexpected precision for non-decimal type")
 		}
 		t.p = int32(precision)
 	}
 	if hasScale {
 		if t.kind != DecimalKind {
-			return Type{}, errors.New("unexpected scale for non-Decimal type")
+			return Type{}, errors.New("unexpected scale for non-decimal type")
 		}
 		if precision == 0 {
 			return Type{}, errors.New("scale also requires precision")
@@ -830,37 +830,37 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	if hasReal {
 		if t.kind != FloatKind {
-			return Type{}, errors.New("unexpected real for non-Float type")
+			return Type{}, errors.New("unexpected real for non-float type")
 		}
 		t.real = real
 	}
 	if re != nil {
 		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected regular expression for non-Text type")
+			return Type{}, errors.New("unexpected regular expression for non-text type")
 		}
 		t.vl = re
 	}
 	if values != nil {
 		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected values for non-Text type")
+			return Type{}, errors.New("unexpected values for non-text type")
 		}
 		t.vl = values
 	}
 	if byteLen > 0 {
 		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected length in bytes for non-Text type")
+			return Type{}, errors.New("unexpected length in bytes for non-text type")
 		}
 		t.p = int32(byteLen)
 	}
 	if charLen > 0 {
 		if t.kind != TextKind {
-			return Type{}, errors.New("unexpected length in characters for non-Text types")
+			return Type{}, errors.New("unexpected length in characters for non-text types")
 		}
 		t.s = int32(charLen)
 	}
 	if elementType.Valid() || elementType.Generic() {
 		if t.kind != ArrayKind && t.kind != MapKind {
-			return Type{}, errors.New("unexpected element type for non-Array and non-Map type")
+			return Type{}, errors.New("unexpected element type for non-array and non-map type")
 		}
 		t.generic = elementType.generic
 		t.vl = elementType
@@ -871,13 +871,13 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	if hasMinElements {
 		if t.kind != ArrayKind {
-			return Type{}, errors.New("unexpected minElements for non-Array type")
+			return Type{}, errors.New("unexpected minElements for non-array type")
 		}
 		t.p = int32(minElements)
 	}
 	if maxElements < MaxElements {
 		if t.kind != ArrayKind {
-			return Type{}, errors.New("unexpected maxElements for non-Array type")
+			return Type{}, errors.New("unexpected maxElements for non-array type")
 		}
 		if maxElements < minElements {
 			return Type{}, errors.New("maxElements must be greater or equal to minElements")
@@ -888,10 +888,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	if hasUniqueElements {
 		if t.kind != ArrayKind {
-			return Type{}, errors.New("unexpected uniqueElements for non-Array type")
+			return Type{}, errors.New("unexpected uniqueElements for non-array type")
 		}
 		if k := t.vl.(Type).kind; k == JSONKind || k == ArrayKind || k == MapKind || k == ObjectKind {
-			return Type{}, errors.New("unexpected uniqueElements for elements with type JSON, Array, Map, or Object")
+			return Type{}, errors.New("unexpected uniqueElements for elements with type json, array, map, or object")
 		}
 		t.unique = uniqueElements
 	}
@@ -901,7 +901,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 	} else {
 		if t.kind != ObjectKind {
-			return Type{}, errors.New("unexpected properties for non-Object type")
+			return Type{}, errors.New("unexpected properties for non-object type")
 		}
 		for _, p := range properties {
 			if p.Type.generic {

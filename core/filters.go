@@ -232,8 +232,8 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	return filter
 }
 
-// parseDecimal parses a Decimal from s and returns the parsed Decimal value and
-// true. If s is not a valid Decimal, it returns 0 and false.
+// parseDecimal parses a decimal from s and returns the parsed decimal value and
+// true. If s is not a valid decimal, it returns 0 and false.
 func parseDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
@@ -255,9 +255,9 @@ func parseDecimalDigits(s string) int {
 	return i
 }
 
-// parseFloat parses a Float(n) from s with the provided bit size and returns
-// the parsed Float value and true. If s is not a valid Float, it returns 0
-// and false. bitSize can be 32 for Float(32) or 64 for Float(64).
+// parseFloat parses a float(n) from s with the provided bit size and returns
+// the parsed float value and true. If s is not a valid float, it returns 0
+// and false. bitSize can be 32 for float(32) or 64 for float(64).
 func parseFloat(s string, bitSize int) (float64, bool) {
 	if s == "0" {
 		return 0, true
@@ -312,8 +312,8 @@ func isFloatingPoint(s string) bool {
 	return i == len(s)
 }
 
-// parseInt parses an Int(64) from s and returns the Int(64) value and true.
-// If s is not a valid Int(64), it returns 0 and false.
+// parseInt parses an int(64) from s and returns the int(64) value and true.
+// If s is not a valid int(64), it returns 0 and false.
 func parseInt(s string) (int, bool) {
 	if len(s) == 0 {
 		return 0, false
@@ -365,8 +365,8 @@ func parseYear(s string) (int, bool) {
 	return year, true
 }
 
-// parseUint parses an Uint(64) from s and returns the Uint(64) value and true.
-// If s is not a valid Uint(64), it returns 0 and false.
+// parseUint parses an uint(64) from s and returns the uint(64) value and true.
+// If s is not a valid uint(64), it returns 0 and false.
 func parseUint(s string) (uint, bool) {
 	if len(s) == 0 {
 		return 0, false
@@ -391,7 +391,7 @@ func parseUint(s string) (uint, bool) {
 
 // retrieveFilterProperty retrieves a property located at a specific path within
 // a schema and returns the property along with its path. If the path points to
-// a JSON property, it returns the path to that JSON property.
+// a json property, it returns the path to that json property.
 // path must be a valid property path.
 func retrieveFilterProperty(schema types.Type, path string) (types.Property, string, error) {
 	p, err := types.PropertyByPath(schema, path)
@@ -444,38 +444,38 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 
 		// Validate the operator and its kind.
 		//
-		// is                          : Int, Uint, Float, Decimal, DateTime, Date, Time, Year, UUID, JSON, Inet, Text
-		// is not                      : Int, Uint, Float, Decimal, DateTime, Date, Time, Year, UUID, JSON, Inet, Text
-		// is less than                : Int, Uint, Float, Decimal, JSON, Text
-		// is less than or equal to    : Int, Uint, Float, Decimal, JSON, Text
-		// is greater than             : Int, Uint, Float, Decimal, JSON, Text
-		// is greater than or equal to : Int, Uint, Float, Decimal, JSON, Text
-		// is between                  : Int, Uint, Float, Decimal, Year, DateTime, Date, Time, JSON, Text
-		// is not between              : Int, Uint, Float, Decimal, Year, DateTime, Date, Time, JSON, Text
-		// contains                    : JSON, Text, Array [^1]
-		// does not contain            : JSON, Text, Array [^1]
-		// is one of                   : Int, Uint, Float, Decimal, Year, DateTime, Date, Time, JSON, Text
-		// is not one of               : Int, Uint, Float, Decimal, Year, DateTime, Date, Time, JSON, Text
-		// starts with                 : JSON, Text
-		// ends with                   : JSON, Text
-		// is before                   : DateTime, Date, Time, Year
-		// is on or before             : DateTime, Date, Time, Year
-		// is after                    : DateTime, Date, Time, Year
-		// is on or after              : DateTime, Date, Time, Year
-		// is true                     : Boolean, JSON
-		// is false                    : Boolean, JSON
+		// is                          : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, text
+		// is not                      : int, uint, float, decimal, datetime, date, time, year, uuid, json, inet, text
+		// is less than                : int, uint, float, decimal, json, text
+		// is less than or equal to    : int, uint, float, decimal, json, text
+		// is greater than             : int, uint, float, decimal, json, text
+		// is greater than or equal to : int, uint, float, decimal, json, text
+		// is between                  : int, uint, float, decimal, year, datetime, date, time, json, text
+		// is not between              : int, uint, float, decimal, year, datetime, date, time, json, text
+		// contains                    : json, text, array [^1]
+		// does not contain            : json, text, array [^1]
+		// is one of                   : int, uint, float, decimal, year, datetime, date, time, json, text
+		// is not one of               : int, uint, float, decimal, year, datetime, date, time, json, text
+		// starts with                 : json, text
+		// ends with                   : json, text
+		// is before                   : datetime, date, time, year
+		// is on or before             : datetime, date, time, year
+		// is after                    : datetime, date, time, year
+		// is on or after              : datetime, date, time, year
+		// is true                     : boolean, json
+		// is false                    : boolean, json
 		// is null                     : All types
 		// is not null                 : All types
-		// exists                      : JSON
-		// does not exist              : JSON
+		// exists                      : json
+		// does not exist              : json
 		//
-		// [1]: Array(T) is supported if T is a type that is supported by the 'is' operator.
+		// [1]: array(T) is supported if T is a type that is supported by the 'is' operator.
 		//
 		switch op {
 		case OpIs, OpIsNot:
 			switch kind {
 			case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-				return nil, fmt.Errorf("operator %q cannot be used with Boolean properties", op)
+				return nil, fmt.Errorf("operator %q cannot be used with boolean properties", op)
 			}
 		case OpIsBetween, OpIsNotBetween, OpIsOneOf, OpIsNotOneOf:
 			switch kind {
@@ -496,7 +496,7 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			case types.ArrayKind:
 				switch k := p.Type.Elem().Kind(); k {
 				case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-					return nil, fmt.Errorf("operator %q cannot be used with Array(%s) properties", op, k)
+					return nil, fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
 				}
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
@@ -519,11 +519,11 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 			}
 		case OpIsNull, OpIsNotNull:
 			if !p.Nullable && kind != types.JSONKind {
-				return nil, fmt.Errorf("operator %q can only be used with nullable or JSON properties", op)
+				return nil, fmt.Errorf("operator %q can only be used with nullable or json properties", op)
 			}
 		case OpExists, OpDoesNotExist:
 			if path == cond.Property {
-				return nil, fmt.Errorf("operator %q can only be used with a JSON property that includes a JSON path", op)
+				return nil, fmt.Errorf("operator %q can only be used with a json property that includes a json path", op)
 			}
 		default:
 			return nil, fmt.Errorf("operator %q is not valid", op)

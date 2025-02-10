@@ -121,7 +121,7 @@ The `AppInfo` type describes information about the app connector:
 - `WebhooksPer`: indicates if webhooks are per account, connection, or connector.
 - `OAuth`: OAuth 2.0 configuration. To be filled in only if OAuth is required. See [OAuth documentation](app/oauth).
 - `BackoffPolicy`: Backoff policy. It controls retry timing using provided strategies or custom ones. See [Backoff documentation](app/backoff).
-- `Layouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
+- `Layouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the app. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterApp` function that, executed during package initialization, registers the app connector:

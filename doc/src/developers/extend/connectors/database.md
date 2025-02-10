@@ -90,7 +90,7 @@ The `DatabaseInfo` type describes information about the database connector:
 
 - `Name`: short name, typically the name of the DBMS. For example, "PostgreSQL", "MySQL", "Snowflake", etc.
 - `SampleQuery`: sample query displayed in the query editor when creating a new database source action.
-- `TimeLayouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
+- `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Icon`: icon in SVG format representing the DBMS. Since it's embedded in HTML pages, it's best to be minimized.
 
 This information is passed to the `RegisterDatabase` function that, executed during package initialization, registers the database connector:
@@ -218,7 +218,7 @@ QuoteTime(value any, typ types.Type) string
 
 Meergo calls the `QuoteTime` method to construct the value for the `last_change_time` placeholder, used in a query to implement a cursor that returns rows starting from a specified time.
 
-The `last_change_time` placeholder can either be `NULL` or a timestamp representation. The `QuoteTime` method receives the value and its type, which can be one of `DateTime`, `Date`, `JSON`, or `Text`. For `DateTime` and `Date` types, the value is a `time.Time` object set to UTC. For `JSON` and `Text`, the value is a string. If the value is `nil`, `QuoteTime` returns `"NULL"` or the appropriate database representation.
+The `last_change_time` placeholder can either be `NULL` or a timestamp representation. The `QuoteTime` method receives the value and its type, which can be one of `datetime`, `date`, `json`, or `text`. For `datetime` and `date` types, the value is a `time.Time` object set to UTC. For `json` and `text`, the value is a string. If the value is `nil`, `QuoteTime` returns `"NULL"` or the appropriate database representation.
 
 #### Examples
 

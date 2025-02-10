@@ -129,7 +129,7 @@ func (d decorators) optional() bool {
 // For instance, the Expression `"foo" x " " true a.b` is parsed as `"foo" x`,
 // `" true" a.b`.
 type part struct {
-	// Value. If there is a path, value, if present, can only be of type Text.
+	// Value. If there is a path, value, if present, can only be of type text.
 	value any
 
 	// Property path or function name.
@@ -144,7 +144,7 @@ type part struct {
 	typ types.Type
 }
 
-// appendValue appends v to p.value, converting it to type Text is necessary,
+// appendValue appends v to p.value, converting it to type text is necessary,
 // and returns the appended value and its new type.
 // multipart reports whether p is a part of a multipart expression.
 func (p part) appendValue(v any, multipart bool) (any, types.Type) {
@@ -166,7 +166,7 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 		}
 		panic("unexpected value type")
 	}
-	// Convert the value to Text.
+	// Convert the value to text.
 	var s string
 	switch v := v.(type) {
 	case string:
@@ -252,7 +252,7 @@ Expression:
 					}
 				}
 				dot = false
-				// If there is a non-Text value, convert it to Text.
+				// If there is a non-text value, convert it to text.
 				switch p.typ.Kind() {
 				case types.BooleanKind:
 					p.value = strconv.FormatBool(p.value.(bool))

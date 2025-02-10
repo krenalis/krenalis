@@ -147,7 +147,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			rawIP, _, _ := strings.Cut(v, "/") // "127.0.0.1/32" -> "127.0.0.1"
 			ip, err := netip.ParseAddr(rawIP)
 			if err != nil {
-				return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an Inet type", v, name)
+				return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an inet type", v, name)
 			}
 			return ip.String(), nil
 		}

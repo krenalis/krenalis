@@ -24,24 +24,24 @@ In connectors, data types need to be defined for:
 
 Below are the data types and how to construct them using the `types` package functions.
 
-- [Boolean](#boolean) - boolean
-- [Int(n)](#intn) - signed integer
-- [Uint(n)](#uintn) - unsigned integer
-- [Float(n)](#floatn) - floating point number
-- [Decimal(p,s)](#decimalps) - decimal number
-- [DateTime](#datetime) - date and time
-- [Date](#date) - date
-- [Time](#time) - time
-- [Year](#year) - year
-- [UUID](#uuid) - UUID
-- [JSON](#json) - JSON
-- [Inet](#inet) - IP4 or IP6 address
-- [Text](#text) - text
-- [Array(T)](#arrayt) - array of T
-- [Object](#object) - object
-- [Map(T)](#mapt) - map of T
+- [boolean](#boolean) - boolean
+- [int(n)](#intn) - signed integer
+- [uint(n)](#uintn) - unsigned integer
+- [float(n)](#floatn) - floating point number
+- [decimal(p,s)](#decimalps) - decimal number
+- [datetime](#datetime) - date and time
+- [date](#date) - date
+- [time](#time) - time
+- [year](#year) - year
+- [uuid](#uuid) - UUID
+- [json](#json) - JSON
+- [inet](#inet) - IP4 or IP6 address
+- [text](#text) - text
+- [array(T)](#arrayt) - array of T
+- [object](#object) - object
+- [map(T)](#mapt) - map of T
 
-### Boolean
+### boolean
 
 Represents a boolean value.
 
@@ -49,7 +49,7 @@ Represents a boolean value.
 types.Boolean()
 ```
 
-### Int(n)
+### int(n)
 
 A signed integer with n bytes, where n can be 8, 16, 24, 32, or 64.
 
@@ -67,7 +67,7 @@ types.Int(8).WithIntRange(-20, 20)
 types.Int(32).WithIntRange(0, 100)
 ```
 
-### Uint(n)
+### uint(n)
 
 An unsigned integer with n bytes, where n can be 8, 16, 24, 32, or 64.
 
@@ -85,7 +85,7 @@ types.Uint(16).WithUintRange(0, 100)
 types.Uint(32).WithUintRange(1000, 2000)
 ```
 
-### Float(n)
+### float(n)
 
 A floating-point number with n bytes, n can be 32, or 64. Includes `+Inf`, `-Inf`, and `NaN` values.
 
@@ -106,7 +106,7 @@ types.Float(64).WithFloatRange(0, 56.481782)
 types.Float(64).AsReal()
 ```
 
-### Decimal(p,s)
+### decimal(p,s)
 
 A decimal number with precision `p` and scale `s`, where `p` ranges from 1 to 76, `s` from 0 to 37, and `s` is less than or equal to `p`.
 
@@ -128,7 +128,7 @@ max := decimal.MustInt(8.25)
 types.Decimal(5, 2).WithDecimalRange(min, max)
 ```
 
-### DateTime
+### datetime
 
 Represents a date and time within the range [1, 9999] with nanosecond precision and no timezone.
 
@@ -136,7 +136,7 @@ Represents a date and time within the range [1, 9999] with nanosecond precision 
 types.DateTime()
 ```
 
-### Date
+### date
 
 Represents a date within the range [1, 9999].
 
@@ -146,7 +146,7 @@ types.Date()
 
 
 
-### Time
+### time
 
 Represents a time of day with nanosecond precision and no timezone.
 
@@ -154,7 +154,7 @@ Represents a time of day with nanosecond precision and no timezone.
 types.Time()
 ```
 
-### Year
+### year
 
 Represents a year within the range [1, 9999].
 
@@ -162,7 +162,7 @@ Represents a year within the range [1, 9999].
 types.Year()
 ```
 
-### UUID
+### uuid
 
 Represents a UUID.
 
@@ -170,7 +170,7 @@ Represents a UUID.
 types.UUID()
 ```
 
-### JSON
+### json
 
 Represents JSON data.
 
@@ -178,7 +178,7 @@ Represents JSON data.
 types.JSON()
 ```
 
-### Inet
+### inet
 
 Represents an IP4 or IP6 address.
 
@@ -186,7 +186,7 @@ Represents an IP4 or IP6 address.
 types.Inet()
 ```
 
-### Text
+### text
 
 Represents UTF-8 encoded text.
 
@@ -217,7 +217,7 @@ You can combine maximum byte and character lengths:
 types.Text().WithByteLen(25).WithCharLen(20)
 ```
 
-### Array(T)
+### array(T)
 
 Represents an array of elements of type `T`.
 
@@ -251,7 +251,7 @@ types.Array(types.Decimal(10, 2)).WithMaxElements(10)
 types.Array(types.Text()).WithMinElements(5).WithMaxElements(15)
 ```
 
-Arrays can also be constrained to have unique values for their elements, except for arrays of `JSON`, `Array`, `Map`, and `Object`:
+Arrays can also be constrained to have unique values for their elements, except for arrays of `json`, `array`, `map`, and `object`:
 
 ```go
 // Array of 64-bit signed integers with unique values.
@@ -261,7 +261,7 @@ types.Array(types.Uint64()).WithUnique()
 types.Array(types.UUID()).WithUnique()
 ```
 
-### Object
+### object
 
 Represents an object with specified properties.
 
@@ -279,7 +279,7 @@ types.Object([]types.Property{
 })
 ```
 
-You can also use the `types.ObjectOf` function to construct an `Object`. Unlike `types.Object`, it does not panic if a property is invalid but returns an error instead:
+You can also use the `types.ObjectOf` function to construct an `object`. Unlike `types.Object`, it does not panic if a property is invalid but returns an error instead:
 
 ```go
 typ, err := types.ObjectOf([]types.Property{...})
@@ -290,7 +290,7 @@ if err != nil {
 
 #### Properties
 
-An Object property is defined as follows:
+An object property is defined as follows:
 
 ```go
 type Property struct {
@@ -314,9 +314,9 @@ type Property struct {
 * `Nullable`: Indicates whether the property can be null. In Go, this means it can be `nil`. In JavaScript, it can be `null`, and in Python, it can be `None`.
 * `Description`: A description providing additional information about the property's usage.
 
-### Map(T)
+### map(T)
 
-Represents a map with `Text` keys and values of type `T`.
+Represents a map with `text` keys and values of type `T`.
 
 ```go
 types.Map(T)

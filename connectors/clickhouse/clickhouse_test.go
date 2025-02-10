@@ -214,12 +214,12 @@ func Test_Merge_Query(t *testing.T) {
 					v = time.Date(vt.Year(), vt.Month(), vt.Day(), 0, 0, 0, 0, time.UTC)
 				}
 			case fmt.Stringer:
-				// Normalize the Decimal type in the same way as the normalization does.
+				// Normalize the decimal type in the same way as the normalization does.
 				// This avoids the explicit dependency on "github.com/shopspring/decimal" for the meergo module.
 				if typ := cols[i].MeergoType; typ.Kind() == types.DecimalKind {
 					v, err = decimal.Parse(vt.String(), typ.Precision(), typ.Scale())
 					if err != nil {
-						t.Fatalf("column %q: an error occurred parsing %v (%T) as Decimal: %s", table.Columns[i].Name, v, v, err)
+						t.Fatalf("column %q: an error occurred parsing %v (%T) as decimal: %s", table.Columns[i].Name, v, v, err)
 					}
 				}
 			}

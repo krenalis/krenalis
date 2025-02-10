@@ -649,7 +649,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// in the case of users with the same email but with
 					// different values for first_name, etc..., the tests may
 					// randomly fail based on how Meergo returned them. For this
-					// reason, here the users are sorted based on all their Text
+					// reason, here the users are sorted based on all their text
 					// properties, in ascending order.
 					slices.SortFunc(gotUsers, func(u1, u2 map[string]any) int {
 						for _, c := range columns {

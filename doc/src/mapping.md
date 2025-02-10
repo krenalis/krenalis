@@ -129,7 +129,7 @@ Here, `traits.address` evaluates to the JSON value `{"city":"Milan"}`. However, 
 └─────────────────────────────────┘
 ```
 
-the `first_name` output property will be missing from the mapping result if it cannot be `null`. As a special case, if the output property is of type `JSON` and cannot be `null`, it will be present with the JSON null value.
+the `first_name` output property will be missing from the mapping result if it cannot be `null`. As a special case, if the output property is of type `json` and cannot be `null`, it will be present with the JSON null value.
 
 Attempting to access a non-object JSON value as if it were an object results in an error, causing the entire mapping to fail. For example, the following mapping will return an error because `traits.phone` is not a JSON object:
 
@@ -187,7 +187,7 @@ and(null, true)   -> null
 and(null, false)  -> false
 ```
 
-The arguments of the `and` function should have type `Boolean`, and the result has type `Boolean`.
+The arguments of the `and` function should have type `boolean`, and the result has type `boolean`.
 
 #### **array** function
 
@@ -198,7 +198,7 @@ The `array` function returns an array with the passed arguments as elements. For
 └─────────────────────────────────┘
 ```
 
-The result of the `array` function has type `Array(JSON)`.
+The result of the `array` function has type `array(json)`.
 
 #### **coalesce** function
 
@@ -216,7 +216,7 @@ coalesce(null, 0)    -> 0
 coalesce(null, null) -> null
 ```
 
-The result of the `coalesce` function has type `JSON`.
+The result of the `coalesce` function has type `json`.
 
 #### **eq** function
 
@@ -235,11 +235,11 @@ eq('a', 5)    -> false
 eq('a', null) -> null
 ```
 
-The result of the `eq` function has type `Boolean`.
+The result of the `eq` function has type `boolean`.
 
 #### **if** function
 
-The `if` function evaluates the first boolean argument. If it is `true`, the function returns the second argument. If the first argument is `false` or `null`, the function returns the third argument. For example, if `hasCode` is `true`, the following code evaluates to the value of `code`; otherwise, it evaluates to an empty `Text` value.
+The `if` function evaluates the first boolean argument. If it is `true`, the function returns the second argument. If the first argument is `false` or `null`, the function returns the third argument. For example, if `hasCode` is `true`, the following code evaluates to the value of `code`; otherwise, it evaluates to an empty `text` value.
 ```
 ┌─────────────────────────────────┐
 │ if(hasCode, code, '')           │ ->  code
@@ -268,7 +268,7 @@ if(false, 5) -> null
 if(null, 5)  -> null
 ```
 
-The result of the `if` function has type `JSON`.
+The result of the `if` function has type `json`.
 
 #### **initcap** function
 
@@ -287,11 +287,11 @@ initcap('NEW YORK')       -> 'New York'
 initcap(null)             -> null
 ```
 
-The argument of the `initcap` function should have type `text`, and the result has type `Text`.
+The argument of the `initcap` function should have type `text`, and the result has type `text`.
 
 #### **json_parse** function
 
-The `json_parse` function parses its argument as JSON and returns the corresponding `JSON` value. For example:
+The `json_parse` function parses its argument as JSON and returns the corresponding `json` value. For example:
 ```
 ┌──────────────────────────────────────────────┐
 │ json_parse('{"city":"Milan","zip":"20100"}') │ ->  address
@@ -309,7 +309,7 @@ json_parse(null)        -> null
 
 If the input is not valid JSON, `json_parse` will produce an error, causing the entire mapping to fail.
 
-The argument of the `json_parse` function should have type `Text`, and the result has type `JSON`.
+The argument of the `json_parse` function should have type `text`, and the result has type `json`.
 
 #### **len** function
 
@@ -322,20 +322,20 @@ The `len` function returns the length of the given argument based on its type.
 
 The length is determined as follows:
 
-* `Text`: Returns the length in characters.
-* `Array`: Returns the number of elements.
-* `Map`: Returns the number of key-value pairs.
-* `Object`: Returns the number of present properties.
-* `Boolean`, `Int`, `Uint`, `Float`, `Decimal`, `DateTime`, `Date`, `Time`, `Year`, `UUID`, `Inet`: Returns the length of its string representation.
+* `text`: Returns the length in characters.
+* `array`: Returns the number of elements.
+* `map`: Returns the number of key-value pairs.
+* `object`: Returns the number of present properties.
+* `boolean`, `int`, `uint`, `float`, `decimal`, `datetime`, `date`, `time`, `year`, `uuid`, `inet`: Returns the length of its string representation.
 
-For `JSON` values:
+For `json` values:
  
-* `JSON` string: Returns the length in characters.
-* `JSON` object: Returns the number of key-value pairs.
-* `JSON` array: Returns the number of elements.
-* `JSON` boolean: Returns the length of its string representation.
-* `JSON` number: Returns the length of its string representation.
-* `JSON` null: Returns `0`.
+* JSON string: Returns the length in characters.
+* JSON object: Returns the number of key-value pairs.
+* JSON array: Returns the number of elements.
+* JSON boolean: Returns the length of its string representation.
+* JSON number: Returns the length of its string representation.
+* JSON null: Returns `0`.
 
 If the argument is `null`, the function also returns `0`. For example:
 ```
@@ -350,7 +350,7 @@ len(-722) -> 4
 len(88.0300) -> 5
 ```
 
-The result of the `len` function has type `Int(32)`.
+The result of the `len` function has type `int(32)`.
 
 #### **lower** function
 
@@ -367,7 +367,7 @@ lower("aBc") -> "abc"
 lower(null)  -> null
 ```
 
-The argument of the `lower` function should have type `text`, and the result has type `Text`.
+The argument of the `lower` function should have type `text`, and the result has type `text`.
 
 #### **ltrim** function
 
@@ -385,7 +385,7 @@ ltrim("\t   hello world\n") -> "hello world\n"
 ltrim(null)  -> null
 ```
 
-Both the argument and the result of the  `trim` function have type `Text`.
+Both the argument and the result of the  `trim` function have type `text`.
 
 #### **ne** function
 
@@ -404,7 +404,7 @@ ne('a', 5)    -> true
 ne('a', null) -> null
 ```
 
-The result of the `eq` function has type `Boolean`.
+The result of the `eq` function has type `boolean`.
 
 #### **not** function
 
@@ -422,7 +422,7 @@ not(false) -> true
 not(null)  -> null
 ```
 
-The argument of the `not` function should have type `Boolean`, and the result has type `Boolean`.
+The argument of the `not` function should have type `boolean`, and the result has type `boolean`.
 
 #### **or** function
 
@@ -442,7 +442,7 @@ or(null, true)   -> true
 or(null, false)  -> null
 ```
 
-The arguments of the `or` function should have type `Boolean`, and the result has type `Boolean`.
+The arguments of the `or` function should have type `boolean`, and the result has type `boolean`.
 
 #### **rtrim** function
 
@@ -460,7 +460,7 @@ rtrim("\t   hello world\n") -> "\t   hello world"
 rtrim(null)  -> null
 ```
 
-Both the argument and the result of the  `rtrim` function have type `Text`.
+Both the argument and the result of the `rtrim` function have type `text`.
 
 #### **substring** function
 
@@ -496,7 +496,7 @@ Note:
 - The length `length` can be zero but cannot be negative.
 - When `length` is greater than the number of characters remaining from `start` to the end of the string, the function returns the substring from `start` to the end of the string.
 
-The `start` and `length` arguments should be of type `integer`, and the `s` argument and the result are of type `Text`.
+The `start` and `length` arguments should be of type `integer`, and the `s` argument and the result are of type `text`.
 
 #### **trim** function
 
@@ -514,7 +514,7 @@ trim("\t   hello world\n") -> "hello world"
 trim(null)  -> null
 ```
 
-Both the argument and the result of the `trim` function have type `Text`.
+Both the argument and the result of the `trim` function have type `text`.
 
 #### **upper** function
 
@@ -531,4 +531,4 @@ upper("usa") -> "USA"
 upper(null)  -> null
 ```
 
-The argument of the `upper` function should have type `Text`, and the result has type `Text`.
+The argument of the `upper` function should have type `text`, and the result has type `text`.

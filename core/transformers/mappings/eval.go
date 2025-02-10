@@ -56,7 +56,7 @@ func (err *invalidConversionError) Error() string {
 // all the properties required for creation or the update must be present in the
 // returned value.
 //
-// Eval might replace JSON properties in the properties map with their
+// Eval might replace json properties in the properties map with their
 // unmarshalled values.
 func (expr *Expression) Eval(properties map[string]any, inPlace bool, purpose Purpose) (any, error) {
 	v, st, err := eval(expr.parts, properties)

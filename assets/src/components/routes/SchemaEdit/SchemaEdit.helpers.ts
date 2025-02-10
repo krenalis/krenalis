@@ -20,7 +20,7 @@ type EditableSchema = Record<string, EditableProperty>;
 
 // TODO: see comment on flattenSchema in transformedAction.ts.
 const transformSchema = (schema: ObjectType): EditableSchema | null => {
-	if (schema == null || schema.kind !== 'Object') return null;
+	if (schema == null || schema.kind !== 'object') return null;
 	const flattenSubProperties = (parentName: string, parentIndentation: number, properties: Property[]) => {
 		let flattenedSubProperties = {};
 		parentIndentation += 1;
@@ -32,7 +32,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 				root: name.substring(0, name.indexOf('.')),
 			};
 			flattenedSubProperties[name] = flattened;
-			if (property.type.kind === 'Object') {
+			if (property.type.kind === 'object') {
 				const flattenedProperties = flattenSubProperties(name, parentIndentation, property.type.properties!);
 				flattenedSubProperties = { ...flattenedSubProperties, ...flattenedProperties };
 			}
@@ -49,7 +49,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 			root: property.name,
 		};
 		transformed[property.name] = flattened;
-		if (property.type.kind === 'Object') {
+		if (property.type.kind === 'object') {
 			const flattenedSubProperties = flattenSubProperties(property.name, indentation, property.type.properties!);
 			transformed = { ...transformed, ...flattenedSubProperties };
 		}
@@ -59,7 +59,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 };
 
 const normalizeSchema = (schema: EditableSchema): ObjectType => {
-	const normalized: ObjectType = { kind: 'Object', properties: [] };
+	const normalized: ObjectType = { kind: 'object', properties: [] };
 	for (const k in schema) {
 		if (!schema.hasOwnProperty(k)) {
 			continue;
@@ -68,7 +68,7 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 		const isFirstLevelProperty = property.indentation === 0;
 		if (isFirstLevelProperty) {
 			const typ = property.type;
-			if (typ.kind === 'Object') {
+			if (typ.kind === 'object') {
 				// empty the properties, they will be populated with the
 				// edited subproperties.
 				typ.properties = [];
@@ -97,7 +97,7 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 				subProperties = typ.properties;
 			}
 			const typ = property.type;
-			if (typ.kind === 'Object') {
+			if (typ.kind === 'object') {
 				// empty the properties, they will be populated with the
 				// edited subproperties.
 				typ.properties = [];

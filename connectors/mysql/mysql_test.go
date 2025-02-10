@@ -66,7 +66,7 @@ func Test_Merge_Query(t *testing.T) {
 		{"MEDIUMBLOB", []byte("foo"), types.Text(), "foo"},
 		{"LONGBLOB", []byte("foo"), types.Text(), "foo"},
 		{"ENUM('x-small','small','medium','large','x-large')", []byte("small"), types.Text(), "small"},
-		// TODO(marco): SET can be implemented as an Array(Type), but the driver only returns the first element of the set.
+		// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 		//{"SET('one','two','three')", []byte("two,tree"), types.Array(types.Text()), []any{"two", "tree"}},
 	}
 

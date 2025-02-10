@@ -80,7 +80,7 @@ Use the `is true` operator if you want a JSON property to be the boolean `true`:
 
 #### Dates and times
 
-Write values representing date and time (`DateTime` property type) using one of the following ISO8601 formats:
+Write values representing date and time (`datetime` property type) using one of the following ISO8601 formats:
 
 * `YYYY-MM-DDThh:mm::ss`
 * `YYYY-MM-DDThh:mm::ss.nnnnnnnnn`
@@ -96,7 +96,7 @@ Write values representing date and time (`DateTime` property type) using one of 
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
-Write values representing dates (`Date` property type) using the format `YYYY-MM-DD`:
+Write values representing dates (`date` property type) using the format `YYYY-MM-DD`:
 
 ```
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐
@@ -107,7 +107,7 @@ Write values representing dates (`Date` property type) using the format `YYYY-MM
 └───────────────────────────┘ └────────────────┘ └────────────────────────────┘
 ```
 
-Write values representing a time in a day (`Time` property type) using the format `hh:mm:ss` or, for sub-second precision, `hh:mm:ss.nnnnnnnnn`:
+Write values representing a time in a day (`time` property type) using the format `hh:mm:ss` or, for sub-second precision, `hh:mm:ss.nnnnnnnnn`:
 
 ```
 ┌───────────────────────────┐ ┌────────────────┐ ┌────────────────────────────┐

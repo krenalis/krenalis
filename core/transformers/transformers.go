@@ -50,7 +50,7 @@ type Transformer struct {
 // New returns a new transformer that transforms values for the provided action.
 // provider is the transformer provider used for transformation functions and
 // should be nil for mappings. layouts, if not nil, represents the layouts used
-// to format DateTime, Date, and Time values as strings.
+// to format datetime, date, and time values as strings.
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
 // action.
@@ -111,7 +111,7 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 // alphabetically. The returned properties are guaranteed to be unique. If no
 // property are present, it returns an empty slice.
 //
-// If the expressions contain a map or JSON indexing, InPaths does not return
+// If the expressions contain a map or json indexing, InPaths does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (t *Transformer) InPaths() []string {

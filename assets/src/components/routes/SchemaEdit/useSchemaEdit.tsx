@@ -76,7 +76,7 @@ const useSchemaEdit = (
 			return;
 		}
 		// Remove meta properties from the schema.
-		const s: ObjectType = { kind: 'Object', properties: [] };
+		const s: ObjectType = { kind: 'object', properties: [] };
 		for (const p of schema.properties) {
 			if (!isMetaProperty(p.name)) {
 				s.properties.push(p);
@@ -190,7 +190,7 @@ const useSchemaEdit = (
 			}
 
 			// Update the 'root' field of the children properties.
-			if (property.type.kind === 'Object') {
+			if (property.type.kind === 'object') {
 				for (let k in s) {
 					if (!s.hasOwnProperty(k)) {
 						continue;
@@ -264,7 +264,7 @@ const useSchemaEdit = (
 
 	const onRemoveProperty = (propertyKey: string) => {
 		const schema = { ...editableSchema };
-		if (schema[propertyKey].type.kind === 'Object') {
+		if (schema[propertyKey].type.kind === 'object') {
 			for (const key of Object.keys(schema)) {
 				const isNested = key.startsWith(`${propertyKey}.`);
 				if (isNested) {
@@ -431,7 +431,7 @@ const getRows = (
 			for (const prefix of prefixes) {
 				m = m[prefix];
 			}
-			if (property.type.kind === 'Object') {
+			if (property.type.kind === 'object') {
 				const subMap = {};
 				subMap[propertyKey] = buildRow(
 					propertyKey,
@@ -453,7 +453,7 @@ const getRows = (
 				);
 			}
 		} else {
-			if (property.type.kind === 'Object') {
+			if (property.type.kind === 'object') {
 				const subMap = {};
 				subMap[propertyKey] = buildRow(
 					propertyKey,
@@ -509,7 +509,7 @@ const buildRow = (
 		</div>
 	);
 	let typeCell: ReactNode;
-	if (property.type.kind === 'Object') {
+	if (property.type.kind === 'object') {
 		typeCell = (
 			<div className='schema-edit__editable-object-cell'>
 				{property.type.kind}
@@ -528,7 +528,7 @@ const buildRow = (
 		typeCell = enrichPropertyType(property.type);
 	}
 	let primarySourceCell: ReactNode;
-	if (property.type.kind !== 'Object' && property.type.kind !== 'Array') {
+	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySourceConnection) {
 			primarySourceCell = (
 				<div className='schema-edit__primary-source'>
@@ -571,11 +571,11 @@ const validateEditableSchema = (editableSchema: EditableSchema) => {
 		}
 		const p = editableSchema[key];
 		const typ = p.type;
-		if (typ.kind === 'Object') {
+		if (typ.kind === 'object') {
 			// Check that it has at least one sub-property.
 			const subProperties = keys.filter((k) => k.startsWith(key) && k !== key);
 			if (subProperties.length === 0) {
-				throw new Error(`Object property "${p.name}" must have at least one sub property`);
+				throw new Error(`object property "${p.name}" must have at least one sub property`);
 			}
 		}
 	}

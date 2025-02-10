@@ -536,7 +536,7 @@ func Test_Unmarshal(t *testing.T) {
 
 // equalValues reports whether v1 and v2 are equal according to the type t.
 // v1 is supposed to conform to type t, and v2 is checked for equality with v1.
-// If t is a DateTime, Date, or Time type, v1 is truncated to a multiple of
+// If t is a datetime, date, or time type, v1 is truncated to a multiple of
 // timeTruncate.
 func equalValues(t types.Type, timeTruncate time.Duration, v1, v2 any) error {
 	if v1 == nil {

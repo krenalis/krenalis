@@ -38,26 +38,26 @@ import (
 //
 // The following are the expected JSON values for each type:
 //
-//   - Boolean: true or false
-//   - Int (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - Int (64 bits): a JSON String representing an integer
-//   - Uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - Uint (64 bits): a JSON String representing an integer
-//   - Float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
-//   - Decimal: a JSON String representing a JSON Number
-//   - DateTime: a JSON String representing a time in the ISO8601 format
-//   - Date: a JSON String representing a date in the ISO8601 format, formatted
+//   - boolean: true or false
+//   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
+//   - int (64 bits): a JSON String representing an integer
+//   - uint (8, 16, 24, and 32 bits): a JSON Number representing an integer
+//   - uint (64 bits): a JSON String representing an integer
+//   - float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
+//   - decimal: a JSON String representing a JSON Number
+//   - datetime: a JSON String representing a time in the ISO8601 format
+//   - date: a JSON String representing a date in the ISO8601 format, formatted
 //     as the Go time format "2006-01-02"
-//   - Time: a JSON String representing a time in the ISO8601 format, formatted
+//   - time: a JSON String representing a time in the ISO8601 format, formatted
 //     as the Go time format "15:04:05.999999999"
-//   - Year: a JSON Number representing an integer
-//   - UUID: a JSON String representing a UUID
-//   - JSON: a JSON value; JSON null is always interpreted as Value("null")
-//   - Inet: a JSON String representing an IP number
-//   - Text: a JSON String
-//   - Array: a JSON Array
-//   - Object: a JSON Object
-//   - Map: a JSON Object
+//   - year: a JSON Number representing an integer
+//   - uuid: a JSON String representing a UUID
+//   - json: a JSON value; JSON null is always interpreted as Value("null")
+//   - inet: a JSON String representing an IP number
+//   - text: a JSON String
+//   - array: a JSON Array
+//   - object: a JSON Object
+//   - map: a JSON Object
 func Decode[T any](r io.Reader, t Type) (T, error) {
 	if r == nil {
 		var zero T
@@ -82,7 +82,7 @@ func Decode[T any](r io.Reader, t Type) (T, error) {
 // Marshal encodes the given data, based on the provided schema, into JSON, and
 // returns it. schema must be a valid non-generic type.
 //
-// For JSON properties, both nil and json.Value("null") are marshaled as JSON
+// For json properties, both nil and json.Value("null") are marshaled as JSON
 // null.
 //
 // Unlike Decode, this function does not validate the data. Its behavior is

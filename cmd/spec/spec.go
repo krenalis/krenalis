@@ -186,7 +186,7 @@ var filterType = types.Object([]types.Property{
 				Name:           "property",
 				Type:           types.Text(),
 				CreateRequired: true,
-				Description:    "The name or path of the property. If the property has a JSON type, it can include a JSON path.",
+				Description:    "The name or path of the property. If the property has a `json` type, it can include a json path.",
 			},
 			{
 				Name:           "operator",

@@ -631,7 +631,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "a", Operator: OpIs, Values: []string{"true"}},
 				},
 			},
-			err: errors.New(`operator "is" cannot be used with Boolean properties`),
+			err: errors.New(`operator "is" cannot be used with boolean properties`),
 		},
 		{
 			filter: Filter{
@@ -640,7 +640,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "a", Operator: OpIsLessThan, Values: []string{"true"}},
 				},
 			},
-			err: errors.New(`operator "is less than" cannot be used with Boolean properties`),
+			err: errors.New(`operator "is less than" cannot be used with boolean properties`),
 		},
 		{
 			filter: Filter{
@@ -649,7 +649,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "l", Operator: OpContains, Values: []string{"true"}},
 				},
 			},
-			err: errors.New(`operator "contains" cannot be used with Array(Map) properties`),
+			err: errors.New(`operator "contains" cannot be used with array(map) properties`),
 		},
 		{
 			filter: Filter{
@@ -658,7 +658,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "a", Operator: OpDoesNotContain, Values: []string{"true"}},
 				},
 			},
-			err: errors.New(`operator "does not contain" cannot be used with Boolean properties`),
+			err: errors.New(`operator "does not contain" cannot be used with boolean properties`),
 		},
 		{
 			filter: Filter{
@@ -667,7 +667,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "a", Operator: OpIsBefore, Values: []string{"true"}},
 				},
 			},
-			err: errors.New(`operator "is before" cannot be used with Boolean properties`),
+			err: errors.New(`operator "is before" cannot be used with boolean properties`),
 		},
 		{
 			filter: Filter{
@@ -676,7 +676,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "b", Operator: OpIsTrue},
 				},
 			},
-			err: errors.New(`operator "is true" cannot be used with Text properties`),
+			err: errors.New(`operator "is true" cannot be used with text properties`),
 		},
 		{
 			filter: Filter{
@@ -685,7 +685,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "a", Operator: OpIsNull},
 				},
 			},
-			err: errors.New(`operator "is null" can only be used with nullable or JSON properties`),
+			err: errors.New(`operator "is null" can only be used with nullable or json properties`),
 		},
 		{
 			filter: Filter{
@@ -694,7 +694,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "b", Operator: OpExists},
 				},
 			},
-			err: errors.New(`operator "exists" can only be used with a JSON property that includes a JSON path`),
+			err: errors.New(`operator "exists" can only be used with a json property that includes a json path`),
 		},
 		{
 			filter: Filter{
@@ -748,7 +748,7 @@ func Test_validateFilter(t *testing.T) {
 					{Property: "c", Operator: OpIs, Values: []string{"75.0"}},
 				},
 			},
-			err: fmt.Errorf(`value of the "c" property is not a valid Int`),
+			err: fmt.Errorf(`value of the "c" property is not a valid int`),
 		},
 		{
 			filter: Filter{

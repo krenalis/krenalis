@@ -31,7 +31,7 @@ func TestConvert(t *testing.T) {
 		layouts  *state.TimeLayouts
 	}{
 
-		// Boolean.
+		// boolean.
 		{types.Boolean(), types.Boolean(), true, true, true, nil},
 		{types.Boolean(), types.Boolean(), false, false, true, nil},
 		{types.Int(8), types.Boolean(), 0, false, true, nil},
@@ -54,7 +54,7 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Boolean(), json.Value("false"), false, true, nil},
 		{types.JSON(), types.Boolean(), json.Value("true"), true, true, nil},
 
-		// Int8, Int16, Int24, Int32, and Int64.
+		// int.
 		{types.Int(32), types.Int(32), 831, 831, true, nil},
 		{types.Int(32), types.Int(8), -123, -123, true, nil},
 		{types.Int(32), types.Int(16), 2571, 2571, true, nil},
@@ -83,7 +83,7 @@ func TestConvert(t *testing.T) {
 		{types.Boolean(), types.Int(8), false, 0, true, nil},
 		{types.Boolean(), types.Int(8), true, 1, true, nil},
 
-		// Uint8, Uint16, Uint24, Uint32, and Uint64.
+		// uint.
 		{types.Int(32), types.Uint(32), 831, uint(831), true, nil},
 		{types.Int(32), types.Uint(8), 218, uint(218), true, nil},
 		{types.Int(32), types.Uint(16), 2571, uint(2571), true, nil},
@@ -100,7 +100,7 @@ func TestConvert(t *testing.T) {
 		{types.Boolean(), types.Uint(8), false, uint(0), true, nil},
 		{types.Boolean(), types.Uint(8), true, uint(1), true, nil},
 
-		// Float32 and Float64.
+		// float.
 		{types.Float(64), types.Float(64), 701.502830285, 701.502830285, true, nil},
 		{types.Float(64), types.Float(32), 3.918347105316932e+10, float64(float32(3.918347e+10)), true, nil},
 		{types.Float(32), types.Float(32), float64(float32(6316.0513)), float64(float32(6316.0513)), true, nil},
@@ -111,7 +111,7 @@ func TestConvert(t *testing.T) {
 		{types.Text(), types.Float(64), "767.5018382257", 767.5018382257, true, nil},
 		{types.JSON(), types.Float(64), json.Value("767.5018382257"), 767.5018382257, true, nil},
 
-		// Decimal.
+		// decimal.
 		{types.Int(32), types.Decimal(13, 3), math.MaxInt32, decimal.MustInt(math.MaxInt32), true, nil},
 		{types.Int(32), types.Decimal(10, 0), math.MinInt32, decimal.MustInt(math.MinInt32), true, nil},
 		{types.Uint(8), types.Decimal(3, 0), uint(math.MaxUint8), decimal.MustInt(math.MaxUint8), true, nil},
@@ -120,7 +120,7 @@ func TestConvert(t *testing.T) {
 		{types.Text(), types.Decimal(20, 10), "1048294.202936601", decimal.MustParse("1048294.202936601"), true, nil},
 		{types.JSON(), types.Decimal(20, 10), json.Value("1048294.202936601"), decimal.MustParse("1048294.202936601"), true, nil},
 
-		// DateTime.
+		// datetime.
 		{types.DateTime(), types.DateTime(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.Date(), types.DateTime(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), true, nil},
 		{types.Text(), types.DateTime(), "2023-05-24T09:01:57.49361409Z", time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
@@ -134,7 +134,7 @@ func TestConvert(t *testing.T) {
 		{types.Text(), types.DateTime(), "2023-05-24T09:01:57.49361409Z", "Wed, 24 May 2023 09:01:57 +0000", true, &state.TimeLayouts{DateTime: time.RFC1123Z}},
 		{types.DateTime(), types.DateTime(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
 
-		// Date.
+		// date.
 		{types.Date(), types.Date(), time.Date(2023, 24, 5, 0, 0, 0, 0, time.UTC), time.Date(2023, 24, 5, 0, 0, 0, 0, time.UTC), true, nil},
 		{types.DateTime(), types.Date(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), true, nil},
 		{types.Text(), types.Date(), "2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), true, nil},
@@ -143,7 +143,7 @@ func TestConvert(t *testing.T) {
 		{types.Text(), types.Date(), "2023-05-24", "05/24/2023", true, &state.TimeLayouts{Date: "01/02/2006"}},
 		{types.Date(), types.Date(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), true, nil},
 
-		// Time.
+		// time.
 		{types.Time(), types.Time(), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.DateTime(), types.Time(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.Text(), types.Time(), "09:01:57.49361409Z", time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
@@ -153,7 +153,7 @@ func TestConvert(t *testing.T) {
 		{types.Time(), types.Time(), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), "09:01:57.493614", true, &state.TimeLayouts{Time: "15:04:05.999999"}},
 		{types.Time(), types.Time(), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
 
-		// Year.
+		// year.
 		{types.Year(), types.Year(), 2023, 2023, true, nil},
 		{types.Int(16), types.Year(), 1, 1, true, nil},
 		{types.Uint(64), types.Year(), uint(9999), 9999, true, nil},
@@ -163,12 +163,12 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Year(), json.Value("2023.0"), 2023, true, nil},
 		{types.JSON(), types.Year(), json.Value("2023"), 2023, true, nil},
 
-		// UUID.
+		// uuid.
 		{types.UUID(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil},
 		{types.Text(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil},
 		{types.JSON(), types.UUID(), json.Value(`"123e4567-e89b-12d3-a456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil},
 
-		// JSON.
+		// json.
 		{types.Int(32), types.JSON(), nil, nil, true, nil},
 		{types.Int(32), types.JSON(), nil, json.Value(`null`), false, nil},
 		{types.JSON(), types.JSON(), json.Value(`{"foo":5}`), json.Value(`{"foo":5}`), true, nil},
@@ -181,12 +181,12 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.JSON(), json.Value(`{"foo":"boo"}`), json.Value(`{"foo":"boo"}`), true, nil},
 		{types.JSON(), types.JSON(), json.Value(`[1,2,3]`), json.Value(`[1,2,3]`), true, nil},
 
-		// Inet.
+		// inet.
 		{types.Inet(), types.Inet(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil},
 		{types.Text(), types.Inet(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true, nil},
 		{types.JSON(), types.Inet(), json.Value(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true, nil},
 
-		// Text.
+		// text.
 		{types.Int(32), types.Text(), nil, nil, true, nil},
 		{types.Text(), types.Text(), "foo", "foo", true, nil},
 		{types.Text(), types.Text().WithValues("foo", "boo"), "", nil, true, nil},
@@ -213,7 +213,7 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Text(), json.Value("true"), "true", true, nil},
 		{types.JSON(), types.Text(), json.Value("null"), nil, true, nil},
 
-		// Array.
+		// array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
 		{types.Array(types.Int(32)), types.Array(types.Int(8)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil},
 		{types.Array(types.Text()), types.Array(types.Text()), []any{"123e4567-e89b-12d3-a456-426614174000"}, []any{"123e4567-e89b-12d3-a456-426614174000"}, true, nil},
@@ -224,7 +224,7 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Array(types.Text()), json.Value(`"foo"`), []any{"foo"}, true, nil},
 		{types.JSON(), types.Array(types.Float(64)), json.Value(`15.07`), []any{15.07}, true, nil},
 
-		// Object.
+		// object.
 		{
 			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}, {Name: "boo", Type: types.Text(), Nullable: true}}),
 			types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}, {Name: "boo", Type: types.Text(), Nullable: true}}),
@@ -274,7 +274,7 @@ func TestConvert(t *testing.T) {
 			nil,
 		},
 
-		// Map.
+		// map.
 		{types.Map(types.Boolean()), types.Map(types.Boolean()), map[string]any{"a": true, "b": false}, map[string]any{"a": true, "b": false}, true, nil},
 		{types.Map(types.Int(16)), types.Map(types.Float(32)), map[string]any{"a": 4032, "b": -721}, map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
 		{types.JSON(), types.Map(types.Float(32)), json.Value(`{"a":4032,"b":-721}`), map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},

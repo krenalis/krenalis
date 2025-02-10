@@ -158,7 +158,7 @@ const SchemaEdit = () => {
 			>
 				<p>
 					The property <b>"{propertyToRemove?.name}"</b> will be deleted when you apply the changes.
-					{propertyToRemove?.type === 'Object'
+					{propertyToRemove?.type === 'object'
 						? ' Note that, since the property is an object, all its children properties will be deleted as well.'
 						: ''}
 				</p>

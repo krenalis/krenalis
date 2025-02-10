@@ -1,10 +1,10 @@
 {
-    "kind": "Object",
+    "kind": "object",
     "properties": [
         {
             "name": "email",
             "type": {
-                "kind": "Text",
+                "kind": "text",
                 "charLen": 300
             },
             "readOptional": true
@@ -12,33 +12,33 @@
         {
             "name": "dummy_id",
             "type": {
-                "kind": "Text"
+                "kind": "text"
             },
             "readOptional": true
         },
         {
             "name": "android",
             "type": {
-                "kind": "Object",
+                "kind": "object",
                 "properties": [
                     {
                         "name": "id",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     },
                     {
                         "name": "idfa",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     },
                     {
                         "name": "push_token",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     }
@@ -49,26 +49,26 @@
         {
             "name": "ios",
             "type": {
-                "kind": "Object",
+                "kind": "object",
                 "properties": [
                     {
                         "name": "id",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     },
                     {
                         "name": "idfa",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     },
                     {
                         "name": "push_token",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     }
@@ -79,7 +79,7 @@
         {
             "name": "first_name",
             "type": {
-                "kind": "Text",
+                "kind": "text",
                 "charLen": 300
             },
             "readOptional": true
@@ -87,7 +87,7 @@
         {
             "name": "last_name",
             "type": {
-                "kind": "Text",
+                "kind": "text",
                 "charLen": 300
             },
             "readOptional": true
@@ -95,26 +95,26 @@
         {
             "name": "gender",
             "type": {
-                "kind": "Text"
+                "kind": "text"
             },
             "readOptional": true
         },
         {
             "name": "food_preferences",
             "type": {
-                "kind": "Object",
+                "kind": "object",
                 "properties": [
                     {
                         "name": "drink",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     },
                     {
                         "name": "fruit",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     }
@@ -125,9 +125,9 @@
         {
             "name": "phone_numbers",
             "type": {
-                "kind": "Array",
+                "kind": "array",
                 "elementType": {
-                    "kind": "Text",
+                    "kind": "text",
                     "charLen": 300
                 }
             },
@@ -136,19 +136,19 @@
         {
             "name": "favorite_movie",
             "type": {
-                "kind": "Object",
+                "kind": "object",
                 "properties": [
                     {
                         "name": "title",
                         "type": {
-                            "kind": "Text"
+                            "kind": "text"
                         },
                         "readOptional": true
                     },
                     {
                         "name": "length",
                         "type": {
-                            "kind": "Float",
+                            "kind": "float",
                             "bitSize": 64
                         },
                         "readOptional": true
@@ -156,26 +156,26 @@
                     {
                         "name": "soundtrack",
                         "type": {
-                            "kind": "Object",
+                            "kind": "object",
                             "properties": [
                                 {
                                     "name": "title",
                                     "type": {
-                                        "kind": "Text"
+                                        "kind": "text"
                                     },
                                     "readOptional": true
                                 },
                                 {
                                     "name": "author",
                                     "type": {
-                                        "kind": "Text"
+                                        "kind": "text"
                                     },
                                     "readOptional": true
                                 },
                                 {
                                     "name": "length",
                                     "type": {
-                                        "kind": "Float",
+                                        "kind": "float",
                                         "bitSize": 64
                                     },
                                     "readOptional": true
@@ -183,7 +183,7 @@
                                 {
                                     "name": "genre",
                                     "type": {
-                                        "kind": "Text"
+                                        "kind": "text"
                                     },
                                     "readOptional": true
                                 }

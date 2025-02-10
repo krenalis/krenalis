@@ -90,7 +90,7 @@ The `FileInfo` type describes information about the file connector:
 - `AsDestination`: information about the file connector when it used as destination. This should be set only when the file connector can be used as a destination, otherwise should be nil.
   - `HasSettings`: indicates whether the connection has format settings when used as destination.
 - `HasSheets`
-- `TimeLayouts`: layouts for the `DateTime`, `Date`, and `Time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
+- `TimeLayouts`: layouts for the `datetime`, `date`, and `time` values when they are represented as strings. See [Time Layouts](data-values#time-layouts) in [Data Values](data-values) for more details.
 - `Extension`: main extension of the file type that the connector reads and/or writes. It's used as a placeholder in the input field, where the user indicates the file name to read or write.
 - `Icon`: icon in SVG format representing the file type. Since it's embedded in HTML pages, it's best to be minimized.
 

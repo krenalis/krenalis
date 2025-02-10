@@ -12,25 +12,25 @@ interface GridCellProps {
 const GridCell = ({ cell, className }: GridCellProps) => {
 	let value;
 	switch (cell.type) {
-		case 'JSON':
-		case 'Array':
-		case 'Object':
-		case 'Map':
+		case 'json':
+		case 'array':
+		case 'object':
+		case 'map':
 			value = JSONbig.stringify(cell.value);
 			break;
-		case 'DateTime':
+		case 'datetime':
 			if (cell.value != null) {
 				const date = toJSDate(cell.value as string);
 				value = date.toLocaleString();
 			}
 			break;
-		case 'Date':
+		case 'date':
 			if (cell.value != null) {
 				const date = toJSDate(cell.value as string);
 				value = date.toLocaleDateString();
 			}
 			break;
-		case 'Time':
+		case 'time':
 			value = cell.value;
 			break;
 		default:
@@ -41,7 +41,7 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 	return (
 		<div className={`${className}${cell.alignment != null ? ` grid__cell--${cell.alignment}` : ''}`}>
 			<div className='grid__cell-content'>
-				{cell.type === 'Object' ? <span className='grid__cell-content-object'> {value}</span> : value}
+				{cell.type === 'object' ? <span className='grid__cell-content-object'> {value}</span> : value}
 			</div>
 		</div>
 	);

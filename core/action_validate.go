@@ -135,7 +135,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 	if err := util.ValidateStringField("name", action.Name, 60); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	// Check that, if the schemas are valid, they have type Object.
+	// Check that, if the schemas are valid, they have type object.
 	if inSchema.Valid() && inSchema.Kind() != types.ObjectKind {
 		return errors.BadRequest("input schema, if provided, must be an object")
 	}
@@ -492,7 +492,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 		switch k := identityColumn.Type.Kind(); k {
 		case types.IntKind, types.UintKind, types.UUIDKind, types.JSONKind, types.TextKind:
 		default:
-			return errors.BadRequest("identity column %q has kind %s instead of Int, Uint, UUID, JSON, or Text", action.IdentityColumn, k)
+			return errors.BadRequest("identity column %q has kind %s instead of int, uint uuid, json, or text", action.IdentityColumn, k)
 		}
 		if identityColumn.ReadOptional {
 			return errors.BadRequest("identity column cannot be optional")
@@ -510,7 +510,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			case types.JSONKind, types.TextKind:
 				requiresLastChangeTimeFormat = true
 			default:
-				return errors.BadRequest("last change time column %q has kind %s instead of DateTime, Date, JSON, or Text", action.LastChangeTimeColumn, k)
+				return errors.BadRequest("last change time column %q has kind %s instead of datetime, date, json, or text", action.LastChangeTimeColumn, k)
 			}
 			usedInPaths = append(usedInPaths, action.LastChangeTimeColumn)
 		}
@@ -564,7 +564,7 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 			// Ok.
 		case types.DecimalKind:
 			if p.Type.Precision() != 0 {
-				return errors.BadRequest("the Decimal type of the order by property cannot have a precision greater than 0")
+				return errors.BadRequest("the decimal type of the order by property cannot have a precision greater than 0")
 			}
 		default:
 			return errors.BadRequest("order by property cannot have kind %s", p.Type.Kind())
@@ -727,14 +727,14 @@ func validateActionToSet(action ActionToSet, v validationState) error {
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an app.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only integers, UUIDs and texts are allowed.
+	// Only int, uint, uuid, and text types are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
-	// Only integers, UUIDs and texts are allowed.
+	// Only int, uint, uuid, and text types are allowed.
 	return k == types.IntKind || k == types.UintKind || k == types.UUIDKind || k == types.TextKind
 }
 
@@ -896,11 +896,11 @@ func validateLastChangeTimeFormat(format string) error {
 //   - each path must exist in the schema;
 //   - there can be no repeated paths, nor paths that are sub-paths of others
 //     (such as "x.a" and "x");
-//   - paths cannot "cross" Array and Map elements, but only Object, so it is
-//     possible to refer to Array and Map properties only as a whole, not to
+//   - paths cannot "cross" array and map elements, but only object, so it is
+//     possible to refer to array and map properties only as a whole, not to
 //     their specific elements.
 //
-// It panics if the schema is valid and is not an Object.
+// It panics if the schema is valid and is not an object.
 func validateTransformationFunctionPaths(io string, schema types.Type, paths []string, allowConstantTransformation bool) error {
 	if len(paths) == 0 {
 		if paths == nil {

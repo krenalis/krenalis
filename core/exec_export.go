@@ -380,10 +380,10 @@ func errMatchingPropertyConversion(in, ex string) error {
 // are the types of the internal and external properties, respectively.
 //
 // Supported conversions are:
-//   - Int to Int, Uint, and Text
-//   - Uint to Int, Uint, and Text
-//   - Text to Int, Uint, UUID, and Text
-//   - UUID to UUID and Text
+//   - int to int, uint, and text
+//   - uint to int, uint, and text
+//   - text to int, uint, uuid, and text
+//   - uuid to uuid and text
 //
 // It panics if v is nil or the types in and ex are not conforming to these
 // supported conversions. It returns an error if the converted value does not
@@ -487,11 +487,11 @@ func convertToExternal(v any, in, ex types.Type, inName, exName string) (any, er
 // matching property. v cannot be nil.
 func stringifyMatchingValue(v any) string {
 	switch v := v.(type) {
-	case int: // Int(n)
+	case int: // int(n)
 		return strconv.Itoa(v)
-	case uint: // Uint(n)
+	case uint: // uint(n)
 		return strconv.FormatUint(uint64(v), 10)
-	case string: // Text and UUID
+	case string: // text and uuid
 		return v
 	default:
 		panic(fmt.Sprintf("unexpected matching property value with type %T", v))

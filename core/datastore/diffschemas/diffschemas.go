@@ -37,10 +37,10 @@ import (
 func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]meergo.AlterOperation, error) {
 
 	if oldSchema.Kind() != types.ObjectKind {
-		panic("not an Object")
+		panic("not an object")
 	}
 	if newSchema.Kind() != types.ObjectKind {
-		panic("not an Object")
+		panic("not an object")
 	}
 
 	oldPropsByName := map[string]types.Property{}
@@ -121,7 +121,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
 				if !types.Equal(oldProp.Type, newProp.Type) {
-					return nil, fmt.Errorf("it is not possible to rename an Object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
+					return nil, fmt.Errorf("it is not possible to rename an object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
 
 				}
 				for _, c := range util.PropertiesToColumns(newProp.Type) {

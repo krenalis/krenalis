@@ -45,7 +45,7 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 		return nil, errors.BadRequest("schema must be valid")
 	}
 	if schema.Kind() != types.ObjectKind {
-		return nil, errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+		return nil, errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validateRePaths(rePaths); err != nil {
 		return nil, errors.BadRequest("invalid rePaths: %s", err)
@@ -79,7 +79,7 @@ func (this *Workspace) PreviewUserSchemaUpdate(ctx context.Context, schema types
 // "datastore/README.md".
 //
 // primarySources cannot specify a primary source for a property which has kind
-// Object or Array.
+// object or array.
 //
 // Moreover, schema cannot contain conflicting properties, meaning properties
 // whose representations as columns in the data warehouse would have the same
@@ -111,7 +111,7 @@ func (this *Workspace) UpdateUserSchema(ctx context.Context, schema types.Type, 
 		return errors.BadRequest("schema must be valid")
 	}
 	if schema.Kind() != types.ObjectKind {
-		return errors.BadRequest("expected schema with kind Object, got %s", schema.Kind())
+		return errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validatePrimarySources(schema, primarySources); err != nil {
 		return errors.BadRequest("primary sources are not valid: %w", err)
@@ -283,10 +283,10 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 		switch p.Type.Kind() {
 		case types.TextKind:
 			if p.Type.Values() != nil {
-				return fmt.Errorf("user schema properties with type Text cannot specify values")
+				return fmt.Errorf("user schema properties with type text cannot specify values")
 			}
 			if p.Type.Regexp() != nil {
-				return fmt.Errorf("user schema properties with type Text cannot specify regexp")
+				return fmt.Errorf("user schema properties with type text cannot specify regexp")
 			}
 		case types.ArrayKind:
 			k := p.Type.Elem().Kind()
@@ -294,13 +294,13 @@ func checkAllowedPropertyUserSchema(schema types.Type) error {
 				return fmt.Errorf("user schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 			if p.Type.Unique() {
-				return fmt.Errorf("user schema properties with type Array cannot specify unique elements")
+				return fmt.Errorf("user schema properties with type array cannot specify unique elements")
 			}
 			if p.Type.MinElements() != 0 {
-				return fmt.Errorf("user schema properties with type Array cannot specify minimum elements count")
+				return fmt.Errorf("user schema properties with type array cannot specify minimum elements count")
 			}
 			if p.Type.MaxElements() != types.MaxElements {
-				return fmt.Errorf("user schema properties with type Array cannot specify maximum elements count")
+				return fmt.Errorf("user schema properties with type array cannot specify maximum elements count")
 			}
 		case types.ObjectKind:
 			err := checkAllowedPropertyUserSchema(p.Type)

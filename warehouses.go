@@ -65,7 +65,7 @@ type WarehouseDriverNewFunc[T Warehouse] func(*WarehouseConfig) (T, error)
 type AlterOperation struct {
 	Operation AlterOperationType
 	Column    string     // For "Add", "Drop" and "Rename" operations.
-	Type      types.Type // For "Add" operations. Object properties are expanded into single "Add" operations, so Type can never have kind Object.
+	Type      types.Type // For "Add" operations. object properties are expanded into single "Add" operations, so Type can never have kind object.
 	NewColumn string     // For "Rename" operations.
 }
 
@@ -305,7 +305,7 @@ func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
 }
 
-// ValidateInt validates an Int value.
+// ValidateInt validates an int value.
 func ValidateInt(name string, t types.Type, n int) (any, error) {
 	min, max := t.IntRange()
 	if int64(n) < min || int64(n) > max {
@@ -314,7 +314,7 @@ func ValidateInt(name string, t types.Type, n int) (any, error) {
 	return n, nil
 }
 
-// ValidateUint validates an Uint value.
+// ValidateUint validates an uint value.
 func ValidateUint(name string, t types.Type, n uint) (any, error) {
 	min, max := t.UintRange()
 	if uint64(n) < min || uint64(n) > max {
@@ -323,7 +323,7 @@ func ValidateUint(name string, t types.Type, n uint) (any, error) {
 	return n, nil
 }
 
-// ValidateFloat validates a Float value.
+// ValidateFloat validates a float value.
 func ValidateFloat(name string, t types.Type, n float64) (any, error) {
 	if t.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
 		return nil, fmt.Errorf("data warehouse returned %f for column %s but its type does not allow it", n, name)
@@ -335,7 +335,7 @@ func ValidateFloat(name string, t types.Type, n float64) (any, error) {
 	return n, nil
 }
 
-// ValidateDecimal validates a Decimal value.
+// ValidateDecimal validates a decimal value.
 func ValidateDecimal(name string, t types.Type, n decimal.Decimal) (any, error) {
 	min, max := t.DecimalRange()
 	if n.Less(min) || n.Greater(max) {
@@ -344,16 +344,16 @@ func ValidateDecimal(name string, t types.Type, n decimal.Decimal) (any, error) 
 	return n, nil
 }
 
-// ValidateDecimalString validates a Decimal value represented as a string.
+// ValidateDecimalString validates a decimal value represented as a string.
 func ValidateDecimalString(name string, t types.Type, s string) (any, error) {
 	n, err := decimal.Parse(s, t.Precision(), t.Scale())
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Decimal value", s, name)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a decimal value", s, name)
 	}
 	return ValidateDecimal(name, t, n)
 }
 
-// ValidateDateTime validates a DateTime value.
+// ValidateDateTime validates a datetime value.
 func ValidateDateTime(name string, dt time.Time) (any, error) {
 	dt = dt.UTC()
 	if y := dt.Year(); y < 1 || y > 9999 {
@@ -362,7 +362,7 @@ func ValidateDateTime(name string, dt time.Time) (any, error) {
 	return dt, nil
 }
 
-// ValidateDate validates a Date value.
+// ValidateDate validates a date value.
 func ValidateDate(name string, d time.Time) (any, error) {
 	d = d.UTC()
 	if y := d.Year(); y < 1 || y > 9999 {
@@ -371,17 +371,17 @@ func ValidateDate(name string, d time.Time) (any, error) {
 	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC), nil
 }
 
-// ValidateTime validates a Time value.
+// ValidateTime validates a time value.
 func ValidateTime(t time.Time) (any, error) {
 	t = t.UTC()
 	return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
 }
 
-// ValidateTimeString validates a Time value represented as a string.
+// ValidateTimeString validates a time value represented as a string.
 func ValidateTimeString(name string, format string, s string) (any, error) {
 	t, err := time.Parse(format, s)
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Time type", s, name)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a time type", s, name)
 	}
 	t = t.UTC()
 	return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
@@ -390,7 +390,7 @@ func ValidateTimeString(name string, format string, s string) (any, error) {
 // ValidateYear validates a year value.
 func ValidateYear(name string, year int) (any, error) {
 	if year < types.MinYear || year > types.MaxYear {
-		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not a Year type", year, name)
+		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not a year type", year, name)
 	}
 	return year, nil
 }
@@ -399,21 +399,21 @@ func ValidateYear(name string, year int) (any, error) {
 func ValidateYearString(name string, year string) (any, error) {
 	y, err := strconv.Atoi(year)
 	if err != nil || y < types.MinYear || y > types.MaxYear {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Year type", year, name)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a year type", year, name)
 	}
 	return y, nil
 }
 
-// ValidateUUID validates an UUID value.
+// ValidateUUID validates a uuid value.
 func ValidateUUID(name string, s string) (any, error) {
 	u, err := uuid.Parse(s)
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a Time type", s, name)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a time type", s, name)
 	}
 	return u.String(), nil
 }
 
-// ValidateJSON validates a JSON value.
+// ValidateJSON validates a json value.
 func ValidateJSON(name string, v any) (any, error) {
 	var data []byte
 	switch v := v.(type) {
@@ -431,7 +431,7 @@ func ValidateJSON(name string, v any) (any, error) {
 		}
 	}
 	if data == nil {
-		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not a JSON type", name)
+		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not a json type", name)
 	}
 	if !json.Valid(data) {
 		return nil, fmt.Errorf("data warehouse returned an invalid JSON for column %s", name)
@@ -439,16 +439,16 @@ func ValidateJSON(name string, v any) (any, error) {
 	return json.Value(data), nil
 }
 
-// ValidateInet validates an Inet value.
+// ValidateInet validates an inet value.
 func ValidateInet(name string, s string) (any, error) {
 	ip, err := netip.ParseAddr(s)
 	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an Inet type", s, name)
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an inet type", s, name)
 	}
 	return ip.String(), nil
 }
 
-// ValidateText validates a Text value.
+// ValidateText validates a text value.
 func ValidateText(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s, which contains invalid UTF-8 characters", errors.Abbreviate(s, 20), name)

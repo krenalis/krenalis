@@ -2,15 +2,15 @@ import Type, { ArrayType, TextType, IntType, UintType, FloatType } from '../../l
 
 const enrichPropertyType = (type: Type) => {
 	let kind: string = type.kind;
-	if (kind === 'Array') {
+	if (kind === 'array') {
 		const typ = type as ArrayType;
-		kind = 'Array(' + typ.elementType?.kind + ')';
+		kind = 'array(' + typ.elementType?.kind + ')';
 	}
 	if ('values' in type) {
 		const typ = type as TextType;
 		kind += ' (' + typ.values?.map((e) => '"' + e + '"').join(', ') + ')';
 	}
-	if (kind === 'Int' || kind === 'Uint' || kind === 'Float') {
+	if (kind === 'int' || kind === 'uint' || kind === 'float') {
 		const typ = type as IntType | UintType | FloatType;
 		kind += `(${typ.bitSize})`;
 	}

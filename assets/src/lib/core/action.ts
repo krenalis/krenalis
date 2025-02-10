@@ -64,64 +64,64 @@ const FILTER_OPERATORS: FilterOperator[] = [
 ];
 
 const typesByFilterOperator: string[][] = [
-	['Int', 'Uint', 'Float', 'Decimal', 'DateTime', 'Date', 'Time', 'Year', 'UUID', 'JSON', 'Inet', 'Text'], // is
-	['Int', 'Uint', 'Float', 'Decimal', 'DateTime', 'Date', 'Time', 'Year', 'UUID', 'JSON', 'Inet', 'Text'], // is not
-	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is less than
-	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is less than or equal to
-	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is greater than
-	['Int', 'Uint', 'Float', 'Decimal', 'JSON', 'Text'], // is greater than or equal to
-	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is between
-	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is not between
-	['JSON', 'Text', 'Array'], // contains
-	['JSON', 'Text', 'Array'], // does not contain
-	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is one of
-	['Int', 'Uint', 'Float', 'Decimal', 'Year', 'DateTime', 'Date', 'Time', 'JSON', 'Text'], // is not one of
-	['JSON', 'Text'], // starts with
-	['JSON', 'Text'], // ends with
-	['DateTime', 'Date', 'Time', 'Year'], // is before
-	['DateTime', 'Date', 'Time', 'Year'], // is on or before
-	['DateTime', 'Date', 'Time', 'Year'], // is after
-	['DateTime', 'Date', 'Time', 'Year'], // is on or after
-	['Boolean', 'JSON'], // is true
-	['Boolean', 'JSON'], // is false
+	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'text'], // is
+	['int', 'uint', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'inet', 'text'], // is not
+	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is less than
+	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is less than or equal to
+	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is greater than
+	['int', 'uint', 'float', 'decimal', 'json', 'text'], // is greater than or equal to
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is between
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is not between
+	['json', 'text', 'array'], // contains
+	['json', 'text', 'array'], // does not contain
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is one of
+	['int', 'uint', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'text'], // is not one of
+	['json', 'text'], // starts with
+	['json', 'text'], // ends with
+	['datetime', 'date', 'time', 'year'], // is before
+	['datetime', 'date', 'time', 'year'], // is on or before
+	['datetime', 'date', 'time', 'year'], // is after
+	['datetime', 'date', 'time', 'year'], // is on or after
+	['boolean', 'json'], // is true
+	['boolean', 'json'], // is false
 	[
-		'Boolean',
-		'Int',
-		'Uint',
-		'Float',
-		'Decimal',
-		'DateTime',
-		'Date',
-		'Year',
-		'Time',
-		'UUID',
-		'JSON',
-		'Inet',
-		'Text',
-		'Array',
-		'Object',
-		'Map',
+		'boolean',
+		'int',
+		'uint',
+		'float',
+		'decimal',
+		'datetime',
+		'date',
+		'year',
+		'time',
+		'uuid',
+		'json',
+		'inet',
+		'text',
+		'array',
+		'object',
+		'map',
 	], // is null
 	[
-		'Boolean',
-		'Int',
-		'Uint',
-		'Float',
-		'Decimal',
-		'DateTime',
-		'Date',
-		'Year',
-		'Time',
-		'UUID',
-		'JSON',
-		'Inet',
-		'Text',
-		'Array',
-		'Object',
-		'Map',
+		'boolean',
+		'int',
+		'uint',
+		'float',
+		'decimal',
+		'datetime',
+		'date',
+		'year',
+		'time',
+		'uuid',
+		'json',
+		'inet',
+		'text',
+		'array',
+		'object',
+		'map',
 	], // is not null
-	['JSON'], // exists
-	['JSON'], // does not exist
+	['json'], // exists
+	['json'], // does not exist
 ];
 
 type TransformedExportMode = 'Create and update' | 'Create only' | 'Update only';
@@ -213,20 +213,20 @@ const getCompatibleFilterOperators = (property: TransformedProperty): number[] =
 	const operators: number[] = [];
 	for (const i of Object.keys(FILTER_OPERATORS)) {
 		// 'is null' and 'is not null' are compatible only with nullable
-		// properties or JSON type properties.
+		// properties or json type properties.
 		if (FILTER_OPERATORS[i] === 'is null' || FILTER_OPERATORS[i] === 'is not null') {
 			const isNullable = property.full.nullable === true;
-			const isJSON = property.type === 'JSON';
+			const isJSON = property.type === 'json';
 			if (!isNullable && !isJSON) {
 				continue;
 			}
 		}
 
 		// 'contains' and 'does not contain' should only be shown if the type of
-		// the Array element is supported by the 'is' operator.
+		// the array element is supported by the 'is' operator.
 		if (
 			(FILTER_OPERATORS[i] === 'contains' || FILTER_OPERATORS[i] === 'does not contain') &&
-			property.type === 'Array'
+			property.type === 'array'
 		) {
 			const elementType = (property.full.type as ArrayType).elementType;
 			const isOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === 'is');
@@ -290,7 +290,7 @@ const splitPropertyAndPath = (propertyName: string, flatSchema: TransformedMappi
 	}
 
 	const property = flatSchema[base];
-	const isJSON = property?.type === 'JSON';
+	const isJSON = property?.type === 'json';
 	if (!isJSON && path !== '') {
 		// handle cases where the user has typed an invalid subproperty and for
 		// this reason the subproperty name was incorrectly considered as a
@@ -373,7 +373,7 @@ const validateTransformation = (
 // 'transformActionMapping' set the values or set ''. This should only return
 // the list of flattened keys mapping to the full property object.
 const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
-	if (schema == null || schema.kind !== 'Object') return null;
+	if (schema == null || schema.kind !== 'object') return null;
 
 	const flattenProperty = (property: Property): TransformedProperty => {
 		const flat = {
@@ -385,7 +385,7 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 			size: null,
 			full: { ...property },
 		};
-		if (flat.type === 'Int' || flat.type === 'Uint' || flat.type === 'Float') {
+		if (flat.type === 'int' || flat.type === 'uint' || flat.type === 'float') {
 			const prop = property.type as IntType | UintType | FloatType;
 			flat.size = prop.bitSize;
 		}
@@ -401,7 +401,7 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 			flattened.indentation = parentIndentation;
 			flattened.root = name.substring(0, name.indexOf('.'));
 			flattenedSubProperties[name] = flattened;
-			if (property.type.kind === 'Object') {
+			if (property.type.kind === 'object') {
 				const flattenedProperties = flattenSubProperties(name, parentIndentation, property.type.properties!);
 				flattenedSubProperties = { ...flattenedSubProperties, ...flattenedProperties };
 			}
@@ -416,7 +416,7 @@ const flattenSchema = (schema: ObjectType): TransformedMapping | null => {
 		flattened.indentation = indentation;
 		flattened.root = property.name;
 		flattenedSchema[property.name] = flattened;
-		if (property.type.kind === 'Object') {
+		if (property.type.kind === 'object') {
 			const flattenedSubProperties = flattenSubProperties(property.name, indentation, property.type.properties!);
 			flattenedSchema = { ...flattenedSchema, ...flattenedSubProperties };
 		}
@@ -564,8 +564,8 @@ const transformInActionToSet = async (
 		(connection.isSource && connection.isEventBased && actionType.target === 'Users') ||
 		(connection.isDestination && connection.isApp && actionType.target === 'Events');
 	if (action.transformation.mapping != null) {
-		const inputSchema: ObjectType = { kind: 'Object', properties: [] };
-		const outputSchema: ObjectType = { kind: 'Object', properties: [] };
+		const inputSchema: ObjectType = { kind: 'object', properties: [] };
+		const outputSchema: ObjectType = { kind: 'object', properties: [] };
 		const mappingToSave = {};
 		const expressions: ExpressionToBeExtracted[] = [];
 
@@ -641,8 +641,8 @@ const transformInActionToSet = async (
 		inSchema = inputSchema;
 		outSchema = outputSchema;
 	} else if (action.transformation.function != null) {
-		const inputSchema: ObjectType = { kind: 'Object', properties: [] };
-		const outputSchema: ObjectType = { kind: 'Object', properties: [] };
+		const inputSchema: ObjectType = { kind: 'object', properties: [] };
+		const outputSchema: ObjectType = { kind: 'object', properties: [] };
 
 		const inPaths: string[] = [];
 		for (const p of selectedInPaths) {
@@ -861,7 +861,7 @@ const transformInActionToSet = async (
 	let filter: Filter = null;
 	if (action.filter != null) {
 		if (inSchema == null) {
-			inSchema = { kind: 'Object', properties: [] };
+			inSchema = { kind: 'object', properties: [] };
 		}
 
 		let f = { logical: action.filter.logical, conditions: [] };
@@ -878,7 +878,7 @@ const transformInActionToSet = async (
 				throw new Error(`Property "${propertyName}" does not exist`);
 			}
 
-			if (property.type === 'JSON' && path.trim() !== '') {
+			if (property.type === 'json' && path.trim() !== '') {
 				const isValid = isValidPropertyPath(path);
 				if (!isValid) {
 					throw new Error(`Property path "${path}" of filter condition is not valid`);
@@ -889,10 +889,10 @@ const transformInActionToSet = async (
 				throw new Error(`Operator of filter condition is required`);
 			}
 
-			let isJsonOrText = property.type === 'JSON' || property.type === 'Text';
-			if (property.type === 'Array') {
+			let isJsonOrText = property.type === 'json' || property.type === 'text';
+			if (property.type === 'array') {
 				const typ = property.full.type as ArrayType;
-				if (typ.elementType.kind === 'JSON' || typ.elementType.kind === 'Text') {
+				if (typ.elementType.kind === 'json' || typ.elementType.kind === 'text') {
 					isJsonOrText = true;
 				}
 			}
@@ -1270,7 +1270,7 @@ const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema
 		return false;
 	}
 	const type = p.type;
-	return type === 'JSON' || type === 'Text';
+	return type === 'json' || type === 'text';
 };
 
 const validateCustomLastChangeTimeFormat = (format: string) => {
@@ -1313,26 +1313,26 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 	}
 
 	for (const v of values) {
-		if (type.kind === 'Int') {
+		if (type.kind === 'int') {
 			throwIfInvalid(isInt(v), type.kind);
-		} else if (type.kind === 'Uint') {
+		} else if (type.kind === 'uint') {
 			throwIfInvalid(isUint(v), type.kind);
-		} else if (type.kind === 'Float') {
+		} else if (type.kind === 'float') {
 			throwIfInvalid(isFloat(v, type.bitSize), type.kind);
-		} else if (type.kind === 'Decimal') {
+		} else if (type.kind === 'decimal') {
 			throwIfInvalid(isDecimal(v), type.kind);
-		} else if (type.kind === 'DateTime') {
+		} else if (type.kind === 'datetime') {
 			throwIfInvalid(isDateTime(v), type.kind);
-		} else if (type.kind === 'Date') {
+		} else if (type.kind === 'date') {
 			throwIfInvalid(isDate(v), type.kind);
-		} else if (type.kind === 'Year') {
+		} else if (type.kind === 'year') {
 			throwIfInvalid(isYear(v), type.kind);
-		} else if (type.kind === 'UUID') {
+		} else if (type.kind === 'uuid') {
 			throwIfInvalid(isUUID(v), type.kind);
-		} else if (type.kind === 'Inet') {
+		} else if (type.kind === 'inet') {
 			throwIfInvalid(isInet(v), type.kind);
-		} else if (type.kind === 'Array') {
-			if (type.elementType.kind !== 'JSON' && type.elementType.kind !== 'Text') {
+		} else if (type.kind === 'array') {
+			if (type.elementType.kind !== 'json' && type.elementType.kind !== 'text') {
 				validateFilterConditionValues(type.elementType, [v], propertyName);
 			}
 		}
@@ -1341,7 +1341,7 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 
 const validateMatching = (inMatching: Property, outMatching: Property) => {
 	const inTyp = inMatching.type.kind;
-	if (inTyp !== 'Int' && inTyp !== 'Uint' && inTyp !== 'Text' && inTyp !== 'UUID') {
+	if (inTyp !== 'int' && inTyp !== 'uint' && inTyp !== 'text' && inTyp !== 'uuid') {
 		throw new Error(`Matching property cannot be of type "${inTyp}"`);
 	}
 
@@ -1350,20 +1350,20 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 	const exTyp = outMatching.type.kind;
 	const conversionError = new Error(`Matching property of type "${inTyp}" cannot be converted to type "${exTyp}"`);
 
-	if (inTyp === 'Int') {
-		if (exTyp !== 'Int' && exTyp !== 'Uint' && exTyp !== 'Text') {
+	if (inTyp === 'int') {
+		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'text') {
 			throw conversionError;
 		}
-	} else if (inTyp === 'Uint') {
-		if (exTyp !== 'Int' && exTyp !== 'Uint' && exTyp !== 'Text') {
+	} else if (inTyp === 'uint') {
+		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'text') {
 			throw conversionError;
 		}
-	} else if (inTyp === 'Text') {
-		if (exTyp !== 'Int' && exTyp !== 'Uint' && exTyp !== 'UUID' && exTyp !== 'Text') {
+	} else if (inTyp === 'text') {
+		if (exTyp !== 'int' && exTyp !== 'uint' && exTyp !== 'uuid' && exTyp !== 'text') {
 			throw conversionError;
 		}
-	} else if (inTyp === 'UUID') {
-		if (exTyp !== 'UUID' && exTyp !== 'Text') {
+	} else if (inTyp === 'uuid') {
+		if (exTyp !== 'uuid' && exTyp !== 'text') {
 			throw conversionError;
 		}
 	}
@@ -1374,10 +1374,10 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 		return false;
 	}
 
-	if (aType.kind === 'Int' || aType.kind === 'Uint') {
+	if (aType.kind === 'int' || aType.kind === 'uint') {
 		const t = bType as IntType | UintType;
 		return aType.bitSize === t.bitSize && aType.minimum === t.minimum && aType.maximum === t.maximum;
-	} else if (aType.kind === 'Text') {
+	} else if (aType.kind === 'text') {
 		const t = bType as TextType;
 		return (
 			aType.byteLen === t.byteLen &&

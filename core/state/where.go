@@ -153,7 +153,7 @@ func (op *WhereOperator) UnmarshalJSON(data []byte) error {
 }
 
 // JSONConditionValue represents a value in a Where condition that refers to a
-// JSON property.
+// json property.
 //
 // - String holds the raw value as a string.
 // - Number is non-nil if the String represents a numeric value.

@@ -148,50 +148,50 @@ var pythonDecoderOptions = decoderOptions{
 
 // Unmarshal decodes a JSON array of objects read from r into records,
 // validating it according to the schema of its elements, which must be an
-// Object or invalid. An invalid schema is treated as an object with no
+// object or invalid. An invalid schema is treated as an object with no
 // properties.
 //
 // For JavaScript, apart from null, the following are the expected JSON for each
 // schema type:
-//   - Boolean: true or false
-//   - Int (8, 16, 24, and 32 bits): a Number representing an integer
-//   - Int (64 bits): a String representing an integer
-//   - Uint (8, 16, 24, and 32 bits): a Number representing an integer
-//   - Uint (64 bits): a String representing an integer
-//   - Float: a Number or one of "NaN", "Infinity", and "-Infinity"
-//   - Decimal: a String representing a number
-//   - DateTime, Date, and Time: a String representing a time formatted as
+//   - boolean: true or false
+//   - int(8, 16, 24, and 32 bits): a Number representing an integer
+//   - int(64 bits): a String representing an integer
+//   - uint (8, 16, 24, and 32 bits): a Number representing an integer
+//   - uint (64 bits): a String representing an integer
+//   - float: a Number or one of "NaN", "Infinity", and "-Infinity"
+//   - decimal: a String representing a number
+//   - datetime, date, and time: a String representing a time formatted as
 //     "2006-01-02T15:04:05.000Z07:00"
-//   - Year: a Number representing an integer
-//   - UUID: a String representing a UUID
-//   - JSON: if preserveJSON is false: true, false, a Number, a String, an
-//     array, or an object; Otherwise a String representing a JSON value
-//   - Inet: a String representing an IP number
-//   - Text: a String
-//   - Array: an array
-//   - Object: an object
-//   - Map: an object
+//   - year: a Number representing an integer
+//   - uuid: a String representing a UUID
+//   - json: if preserveJSON is false: true, false, a Number, a String, an
+//     Array, or an Object; Otherwise a String representing a JSON value
+//   - inet: a String representing an IP number
+//   - text: a String
+//   - array: an array
+//   - object: an object
+//   - map: an object
 //
 // For Python, apart from null, the following are the expected JSON for each
 // schema type:
-//   - Boolean: true or false
-//   - Int: a Number representing an integer
-//   - Uint: a Number representing an integer
-//   - Float: a Number or one of "NaN", "Infinity", and "-Infinity"
-//   - Decimal: a String representing a number
-//   - DateTime: a String representing a time formatted as "2006-01-02
+//   - boolean: true or false
+//   - int a Number representing an integer
+//   - uint: a Number representing an integer
+//   - float: a Number or one of "NaN", "Infinity", and "-Infinity"
+//   - decimal: a String representing a number
+//   - datetime: a String representing a time formatted as "2006-01-02
 //     15:04:05.999999"
-//   - Date: a String representing a date formatted as "2006-01-02"
-//   - Time: a String representing a time formatted as "15:04:05.999999"
-//   - Year: a Number representing an integer
-//   - UUID: a String representing a UUID
-//   - Inet: a String representing an IP number
-//   - JSON: if preserveJSON is false: true, false, a Number, a String, an
-//     array, or an object; Otherwise a String representing a JSON value
-//   - Text: a String
-//   - Array: an array
-//   - Object: an object
-//   - Map: an object
+//   - date: a String representing a date formatted as "2006-01-02"
+//   - time: a String representing a time formatted as "15:04:05.999999"
+//   - year: a Number representing an integer
+//   - uuid: a String representing a UUID
+//   - inet: a String representing an IP number
+//   - json: if preserveJSON is false: true, false, a Number, a String, an
+//     Array, or an Object; Otherwise a String representing a JSON value
+//   - text: a String
+//   - array: an array
+//   - object: an object
+//   - map: an object
 func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.Language, preserveJSON bool) error {
 	if r == nil {
 		return errors.New("core/transformers: r is nil")

@@ -5,7 +5,7 @@ const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
 
-// formatText formats a Text value as a string.
+// formatText formats a text value as a string.
 const formatText = (text: string): string => {
 	if (!/^[\s"']/.test(text) && !/[\s"']$/.test(text)) {
 		return text;
@@ -23,7 +23,7 @@ const formatText = (text: string): string => {
 	return s;
 };
 
-// isDate checks whether the string s represents a valid Date value that can be
+// isDate checks whether the string s represents a valid date value that can be
 // used as a filter value.
 const isDate = (s: string): boolean => {
 	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -41,7 +41,7 @@ const isDate = (s: string): boolean => {
 	return MIN_YEAR <= year && year <= MAX_YEAR;
 };
 
-// isDateTime checks whether the string s represents a valid DateTime value that
+// isDateTime checks whether the string s represents a valid datetime value that
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
 	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
@@ -60,7 +60,7 @@ const isDateTime = (s: string): boolean => {
 	return MIN_YEAR <= year && year <= MAX_YEAR;
 };
 
-// isDecimal checks whether the string s represents a valid Decimal value that
+// isDecimal checks whether the string s represents a valid decimal value that
 // can be used as a filter value.
 const isDecimal = (s: string): boolean => {
 	if (s === '') {
@@ -104,13 +104,13 @@ const IPv4 = /^(?:25[0-5]|2[0-4]\d|1\d{2}|\d{1,2})(?:\.(?:25[0-5]|2[0-4]\d|1\d{2
 const IPv6 =
 	/^((?:[0-9a-f]{1,4}:){7}(?:[0-9a-f]{1,4}|:)|(?:[0-9a-f]{1,4}:){1,7}:|(?:[0-9a-f]{1,4}:){1,6}(?::[0-9a-f]{1,4}){1,1}|(?:[0-9a-f]{1,4}:){1,5}(?::[0-9a-f]{1,4}){1,2}|(?:[0-9a-f]{1,4}:){1,4}(?::[0-9a-f]{1,4}){1,3}|(?:[0-9a-f]{1,4}:){1,3}(?::[0-9a-f]{1,4}){1,4}|(?:[0-9a-f]{1,4}:){1,2}(?::[0-9a-f]{1,4}){1,5}|[0-9a-f]?(?::(?::[0-9a-f]{1,4}){1,6})|::(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})$/i;
 
-// isInet checks whether the string s represents a valid Inet value that can be
+// isInet checks whether the string s represents a valid inet value that can be
 // used as a filter value.
 const isInet = (s: string): boolean => {
 	return IPv4.test(s) || IPv6.test(s);
 };
 
-// isInt checks whether the string s represents a valid Int value that can be
+// isInt checks whether the string s represents a valid int value that can be
 // used as a filter value.
 const isInt = (s: string): boolean => {
 	let t = s;
@@ -124,7 +124,7 @@ const isInt = (s: string): boolean => {
 	return MIN_INT <= n && n <= MAX_INT;
 };
 
-// isYear checks whether the string s represents a valid Year value that can be
+// isYear checks whether the string s represents a valid year value that can be
 // used as a filter value.
 const isYear = (s: string): boolean => {
 	if (s === '' || s.length > 4) {
@@ -139,7 +139,7 @@ const isYear = (s: string): boolean => {
 	return MIN_YEAR <= year && year <= MAX_YEAR;
 };
 
-// isFloat checks whether the string s represents a valid Float value with the
+// isFloat checks whether the string s represents a valid float value with the
 // specified bit size, which can be either 32 or 64, and can be used as a filter
 // value.
 const isFloat = (s: string, bitSize: number): boolean => {
@@ -153,7 +153,7 @@ const isFloat = (s: string, bitSize: number): boolean => {
 	return n !== Infinity && n !== -Infinity;
 };
 
-// isTime checks whether the string s represents a valid Time value that can be
+// isTime checks whether the string s represents a valid time value that can be
 // used as a filter value.
 const isTime = (s: string): boolean => {
 	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?$/);
@@ -164,13 +164,13 @@ const isTime = (s: string): boolean => {
 	return 0 <= hour && hour <= 23 && 0 <= minute && minute <= 59 && 0 <= second && second <= 59;
 };
 
-// isUUID checks whether the string s represents a valid UUID value that can be
+// isUUID checks whether the string s represents a valid uuid value that can be
 // used as a filter value.
 const isUUID = (s: string): boolean => {
 	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-9][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 };
 
-// isUint checks whether the string s represents a valid Uint value that can be
+// isUint checks whether the string s represents a valid uint value that can be
 // used as a filter value.
 const isUint = (s: string): boolean => {
 	if (s.length === 0) {
@@ -211,9 +211,9 @@ const parseDecimalDigits = (s: string): number => {
 const EmptyTextError = new Error('text is empty');
 const InvalidTextError = new Error('text is not valid');
 
-// parseText parses s and returns the corresponding Text value.
-// If the resulting Text value is empty, it throws the EmptyTextError error.
-// If the resulting Text is not valid, it throws the InvalidTextError error.
+// parseText parses s and returns the corresponding text value.
+// If the resulting text value is empty, it throws the EmptyTextError error.
+// If the resulting text is not valid, it throws the InvalidTextError error.
 const parseText = (s: string): string => {
 	s = s.trim();
 	if (s === '') {

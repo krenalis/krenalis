@@ -1,25 +1,25 @@
 
 
-| from/to  | Boolean | Int  | Uint | Float | Decimal | DateTime | Date | Time | Year | UUID | JSON | Inet | Text | Array(T) | Object | Map(T) |
+| from/to  | boolean | int  | uint | float | decimal | datetime | date | time | year | uuid | json | inet | text | array(T) | object | map(T) |
 |----------|---------|------|------|-------|---------|----------|------|------|------|------|------|------|------|----------|--------|--------|
-| Boolean  | ✓       | [^1] | [^1] |       |         |          |      |      |      |      | ✓    |      | ✓    |          |        |        |
-| Int      | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      | ✓    |          |        |        |
-| Uint     | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      | ✓    |          |        |        |
-| Float    |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      | ✓    |          |        |        |
-| Decimal  |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      | ✓    |          |        |        |
-| DateTime |         |      |      |       |         | ✓        | ✓    | ✓    |      |      | ✓    |      | ✓    |          |        |        |
-| Date     |         |      |      |       |         | ✓        | ✓    |      |      |      | ✓    |      | ✓    |          |        |        |
-| Time     |         |      |      |       |         |          |      | ✓    |      |      | ✓    |      | ✓    |          |        |        |
-| Year     |         | ✓    | ✓    |       |         |          |      |      | ✓    |      | ✓    |      | ✓    |          |        |        |
-| UUID     |         |      |      |       |         |          |      |      |      | ✓    | ✓    |      | ✓    |          |        |        |
-| JSON     | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓        | ✓      | ✓      |
-| Inet     |         |      |      |       |         |          |      |      |      |      | ✓    | ✓    | ✓    |          |        |        |
-| Text     | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |          |        |        |
-| Array(T) |         |      |      |       |         |          |      |      |      |      | ✓    |      |      | ✓        |        |        |
-| Object   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      | ✓      |
-| Map(T)   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      | ✓      |
+| boolean  | ✓       | [^1] | [^1] |       |         |          |      |      |      |      | ✓    |      | ✓    |          |        |        |
+| int      | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      | ✓    |          |        |        |
+| uint     | [^1]    | ✓    | ✓    | ✓     | ✓       |          |      |      | ✓    |      | ✓    |      | ✓    |          |        |        |
+| float    |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      | ✓    |          |        |        |
+| decimal  |         | ✓    | ✓    | ✓     | ✓       |          |      |      |      |      | ✓    |      | ✓    |          |        |        |
+| datetime |         |      |      |       |         | ✓        | ✓    | ✓    |      |      | ✓    |      | ✓    |          |        |        |
+| date     |         |      |      |       |         | ✓        | ✓    |      |      |      | ✓    |      | ✓    |          |        |        |
+| time     |         |      |      |       |         |          |      | ✓    |      |      | ✓    |      | ✓    |          |        |        |
+| year     |         | ✓    | ✓    |       |         |          |      |      | ✓    |      | ✓    |      | ✓    |          |        |        |
+| uuid     |         |      |      |       |         |          |      |      |      | ✓    | ✓    |      | ✓    |          |        |        |
+| json     | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓        | ✓      | ✓      |
+| inet     |         |      |      |       |         |          |      |      |      |      | ✓    | ✓    | ✓    |          |        |        |
+| text     | ✓       | ✓    | ✓    | ✓     | ✓       | ✓        | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    | ✓    |          |        |        |
+| array(T) |         |      |      |       |         |          |      |      |      |      | ✓    |      |      | ✓        |        |        |
+| object   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      | ✓      |
+| map(T)   |         |      |      |       |         |          |      |      |      |      | ✓    |      |      |          | ✓      | ✓      |
 
-[^1]: Only for Int(8) and Uint(8).
+[^1]: Only for `int(8)` and `uint(8)`.
 
 Note: keep this table in sync with the `convertMatrix` global variable in this package,
 which holds information about valid conversions.

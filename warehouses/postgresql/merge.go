@@ -247,7 +247,7 @@ func newRowEncoder(columns []meergo.Column) (*rowEncoder, bool) {
 }
 
 // encode encodes a row to be used with a merge method. It removes zero bytes
-// from Text, JSON, Array(Text), Array(JSON), and Map values, and encodes Map
+// from text, json, array(text), array(json), and map values, and encodes map
 // values as JSON.
 func (enc rowEncoder) encode(row []any) error {
 	for i, t := range enc.ct {

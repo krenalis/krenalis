@@ -16,31 +16,31 @@ import (
 // NOTE: keep this in sync with the content of the file
 // 'core/transformers/mappings/Conversions.md'.
 var convertMatrix = [...]int32{
-	//                ┌─── Boolean
-	//                │ ┌────── Int
-	//                │ │ ┌──── Uint
-	//                │ │ │ ┌── Float
-	//                │ │ │ │  ┌─ DateTime
-	//                │ │ │ │  │   ┌─ Year
-	//                │ │ │ │  │   │  ┌── JSON
-	//                │ │ │ │  │   │  │   ┌── Array
+	//                ┌─── boolean
+	//                │ ┌────── int
+	//                │ │ ┌──── uint
+	//                │ │ │ ┌── float
+	//                │ │ │ │  ┌─ datetime
+	//                │ │ │ │  │   ┌─ year
+	//                │ │ │ │  │   │  ┌── json
+	//                │ │ │ │  │   │  │   ┌── array
 	//                │ │ │ │  │   │  │   │
-	/* Boolean  */ 0b_1_0_0_00_000_00_101_000,
-	/* Int      */ 0b_0_1_1_11_000_10_101_000,
-	/* Uint     */ 0b_0_1_1_11_000_10_101_000,
-	/* Float    */ 0b_0_1_1_11_000_00_101_000,
-	/* Decimal  */ 0b_0_1_1_11_000_00_101_000,
-	/* DateTime */ 0b_0_0_0_00_111_00_101_000,
-	/* Date     */ 0b_0_0_0_00_110_00_101_000,
-	/* Time     */ 0b_0_0_0_00_001_00_101_000,
-	/* Year     */ 0b_0_1_1_00_000_10_101_000,
-	/* UUID     */ 0b_0_0_0_00_000_01_101_000,
-	/* JSON     */ 0b_1_1_1_11_111_11_111_111,
-	/* Inet     */ 0b_0_0_0_00_000_00_111_000,
-	/* Text     */ 0b_1_1_1_11_111_11_111_000,
-	/* Array    */ 0b_0_0_0_00_000_00_100_100,
-	/* Object   */ 0b_0_0_0_00_000_00_100_011,
-	/* Map      */ 0b_0_0_0_00_000_00_100_011,
+	/* boolean  */ 0b_1_0_0_00_000_00_101_000,
+	/* int      */ 0b_0_1_1_11_000_10_101_000,
+	/* uint     */ 0b_0_1_1_11_000_10_101_000,
+	/* float    */ 0b_0_1_1_11_000_00_101_000,
+	/* decimal  */ 0b_0_1_1_11_000_00_101_000,
+	/* datetime */ 0b_0_0_0_00_111_00_101_000,
+	/* date     */ 0b_0_0_0_00_110_00_101_000,
+	/* time     */ 0b_0_0_0_00_001_00_101_000,
+	/* year     */ 0b_0_1_1_00_000_10_101_000,
+	/* uuid     */ 0b_0_0_0_00_000_01_101_000,
+	/* json     */ 0b_1_1_1_11_111_11_111_111,
+	/* inet     */ 0b_0_0_0_00_000_00_111_000,
+	/* text     */ 0b_1_1_1_11_111_11_111_000,
+	/* array    */ 0b_0_0_0_00_000_00_100_100,
+	/* object   */ 0b_0_0_0_00_000_00_100_011,
+	/* map      */ 0b_0_0_0_00_000_00_100_011,
 }
 
 // convertibleTo reports whether a value of type st can be converted to type dt.
@@ -49,10 +49,10 @@ func convertibleTo(st, dt types.Type) bool {
 	dk := dt.Kind()
 	mask := int32(1 << (types.MapKind - dk))
 	if convertMatrix[sk-1]&mask == 0 {
-		if sk == types.BooleanKind && dk == types.IntKind && dt.BitSize() == 8 { // Boolean is convertible to Int(8)
+		if sk == types.BooleanKind && dk == types.IntKind && dt.BitSize() == 8 { // boolean is convertible to int(8)
 			return true
 		}
-		if sk == types.IntKind && dk == types.BooleanKind && st.BitSize() == 8 { // Int(8) is convertible to Boolean.
+		if sk == types.IntKind && dk == types.BooleanKind && st.BitSize() == 8 { // int(8) is convertible to boolean.
 			return true
 		}
 		return false

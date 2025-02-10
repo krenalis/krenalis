@@ -44,10 +44,10 @@ const getRows = (
 		if (p.indentation !== 0) {
 			continue;
 		}
-		if (p.type === 'Object') {
+		if (p.type === 'object') {
 			const typ = p.full.type as ObjectType;
 			if (typ.properties == null) {
-				console.warn(`Object property ${p.full.name} of the warehouse schema has empty properties`);
+				console.warn(`object property ${p.full.name} of the warehouse schema has empty properties`);
 				continue;
 			}
 			const nestedRows: GridRow[] = [
@@ -70,7 +70,7 @@ const getRows = (
 const buildRow = (property: TransformedProperty, primarySource?: TransformedConnection | null) => {
 	const typeCell = enrichPropertyType(property.full.type);
 	let primarySourceCell: ReactNode;
-	if (property.full.type.kind !== 'Object' && property.full.type.kind !== 'Array') {
+	if (property.full.type.kind !== 'object' && property.full.type.kind !== 'array') {
 		if (primarySource) {
 			primarySourceCell = (
 				<div className='schema-grid__primary-source'>

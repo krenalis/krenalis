@@ -32,12 +32,12 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 var errInvalidConversion = errors.New("cannot convert")
 
 const (
-	// Range of Float values convertible to Int(64): [-9223372036854776000.0, 9223372036854775000.0].
+	// Range of float values convertible to int(64): [-9223372036854776000.0, 9223372036854775000.0].
 	// These are the same limits that PostgreSQL uses when converting a double precision value to a bigint.
 	minFloatConvertibleToInt64 = -9223372036854776000.0 // converted to -9223372036854775808
 	maxFloatConvertibleToInt64 = 9223372036854775000.0  // converted to 9223372036854774784
 
-	// Range of Float values convertible to Uint(64): [0, 18446744073709550000].
+	// Range of float values convertible to uint(64): [0, 18446744073709550000].
 	maxFloatConvertibleToUint64 = 18446744073709550000.0 // converted to 18446744073709549568
 )
 
@@ -51,11 +51,11 @@ var (
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
 //
-// If inPlace is true, the conversion is permitted to modify Array, Object, and
-// Map values directly within the value being converted.
+// If inPlace is true, the conversion is permitted to modify array, object, and
+// map values directly within the value being converted.
 //
-// layouts represents, if not nil, the layouts used to format DateTime, Date,
-// and Time values as strings.
+// layouts represents, if not nil, the layouts used to format datetime, date,
+// and time values as strings.
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present

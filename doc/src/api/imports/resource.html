@@ -37,9 +37,9 @@
   var requestToHTML func(t map[string]any, depth int) html
   requestToHTML = func(t map[string]any, depth int) html {
     switch t.kind {
-    case "Array":
+    case "array":
       return "[ " + requestToHTML(t.elementType.(map[string]any), depth) + " ]"
-    case "Object":
+    case "object":
       var s html = "{</div>\n"
       i := 0
       for property in t.properties.([]any) {
@@ -80,9 +80,9 @@
   var responseToJSON func(t map[string]any, depth int) json
   responseToJSON = func(t map[string]any, depth int) json {
     switch t.kind {
-    case "Array":
+    case "array":
       return "[ " + responseToJSON(t.elementType.(map[string]any), depth) + " ]"
-    case "Object":
+    case "object":
       var s json = "{\n"
       i := 0
       for property in t.properties.([]any) {
@@ -193,7 +193,7 @@
       {% if parameters := response.parameters.([]any); len(parameters) > 0 %}
       <div class="api-response-box">
         <div>Response</div>
-        <div>{{ responseToJSON(map[string]any{"kind": "Object", "properties": parameters, "placeholder": "..."}, 0) }}</div>
+        <div>{{ responseToJSON(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</div>
       </div>
       {% end if %}
       {% end if %}

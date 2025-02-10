@@ -177,114 +177,114 @@ func Test_Transform(t *testing.T) {
 		},
 
 		{
-			name:        `An empty string assigned to a JSON property -> the empty string as JSON`,
+			name:        `An empty string assigned to a json property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "''"},
 			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 		{
-			name:        `A non-empty string assigned to a JSON property -> the string as JSON`,
+			name:        `A non-empty string assigned to a json property -> the string as JSON`,
 			expressions: map[string]string{"C": "'boo'"},
 			expected:    map[string]any{"C": json.Value(`"boo"`)},
 		},
 		{
-			name:        `null assigned to a non-nullable JSON property -> the string as JSON`,
+			name:        `null assigned to a non-nullable json property -> the string as JSON`,
 			expressions: map[string]string{"C": "null"},
 			expected:    map[string]any{}, // TODO(marco): review.
 		},
 		{
-			name:        `A property without a value assigned to a non-nullable JSON property -> no properties`,
+			name:        `A property without a value assigned to a non-nullable json property -> no properties`,
 			expressions: map[string]string{"C": "a"},
 			expected:    map[string]any{},
 		},
 		{
-			name:        `A property with a nil value assigned to a non-nullable JSON property -> nil as JSON`,
+			name:        `A property with a nil value assigned to a non-nullable json property -> nil as JSON`,
 			expressions: map[string]string{"C": "c.z"},
 			properties:  map[string]any{"c.z": nil},
 			expected:    map[string]any{}, // TODO(marco): review.
 		},
 		{
-			name:        `A property with an empty string assigned to a non-nullable JSON property -> the empty string as JSON`,
+			name:        `A property with an empty string assigned to a non-nullable json property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "a"},
 			properties:  map[string]any{"a": ""},
 			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 
 		{
-			name:        `An empty string assigned to a nullable JSON property -> the empty string as JSON`,
+			name:        `An empty string assigned to a nullable json property -> the empty string as JSON`,
 			expressions: map[string]string{"D": "''"},
 			expected:    map[string]any{"D": json.Value(`""`)},
 		},
 		{
-			name:        `A non-empty string assigned to a nullable JSON property -> the string as JSON`,
+			name:        `A non-empty string assigned to a nullable json property -> the string as JSON`,
 			expressions: map[string]string{"D": "'boo'"},
 			expected:    map[string]any{"D": json.Value(`"boo"`)},
 		},
 		{
-			name:        `null assigned to a nullable JSON property -> nil`,
+			name:        `null assigned to a nullable json property -> nil`,
 			expressions: map[string]string{"D": "null"},
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A property without a value assigned to a non-nullable JSON property -> nil`,
+			name:        `A property without a value assigned to a non-nullable json property -> nil`,
 			expressions: map[string]string{"D": "a"},
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A property with a nil value assigned to a non-nullable JSON property -> nil`,
+			name:        `A property with a nil value assigned to a non-nullable json property -> nil`,
 			expressions: map[string]string{"D": "c.z"},
 			properties:  map[string]any{"c.z": nil},
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A property with an empty string assigned to a non-nullable JSON property -> the empty string as JSON`,
+			name:        `A property with an empty string assigned to a non-nullable json property -> the empty string as JSON`,
 			expressions: map[string]string{"C": "a"},
 			properties:  map[string]any{"a": ""},
 			expected:    map[string]any{"C": json.Value(`""`)},
 		},
 
 		{
-			name:        `A JSON property without a value assigned to a non-nullable JSON property -> no properties`,
+			name:        `A json property without a value assigned to a non-nullable json property -> no properties`,
 			expressions: map[string]string{"C": "d"},
 			expected:    map[string]any{},
 		},
 		{
-			name:        `A JSON property with a nil value assigned to a non-nullable JSON property -> no properties`,
+			name:        `A json property with a nil value assigned to a non-nullable json property -> no properties`,
 			expressions: map[string]string{"C": "e"},
 			properties:  map[string]any{"e": nil},
 			expected:    map[string]any{},
 		},
 		{
-			name:        `A JSON property with a JSON null value assigned to a non-nullable JSON property -> no properties`,
+			name:        `A json property with a JSON null value assigned to a non-nullable json property -> no properties`,
 			expressions: map[string]string{"C": "d"},
 			properties:  map[string]any{"d": json.Value(`null`)},
 			expected:    map[string]any{"C": json.Value(`null`)},
 		},
 		{
-			name:        `A JSON property without a value assigned to a nullable JSON property -> nil`,
+			name:        `A json property without a value assigned to a nullable json property -> nil`,
 			expressions: map[string]string{"D": "e"},
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A JSON property with a nil value assigned to a nullable JSON property -> nil`,
+			name:        `A json property with a nil value assigned to a nullable json property -> nil`,
 			expressions: map[string]string{"D": "e"},
 			properties:  map[string]any{"e": nil},
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A JSON property with a JSON null value assigned to a nullable JSON property -> no properties`,
+			name:        `A json property with a JSON null value assigned to a nullable json property -> no properties`,
 			expressions: map[string]string{"D": "e"},
 			properties:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{"D": json.Value(`null`)},
 		},
 
 		{
-			name:        `A JSON property with a JSON null value assigned to a non-nullable property -> no properties`,
+			name:        `A json property with a JSON null value assigned to a non-nullable property -> no properties`,
 			expressions: map[string]string{"A": "e"},
 			properties:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{},
 		},
 		{
-			name:        `A JSON property with a JSON null value assigned to a nullable property -> nil`,
+			name:        `A json property with a JSON null value assigned to a nullable property -> nil`,
 			expressions: map[string]string{"B": "e"},
 			properties:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{"B": nil},

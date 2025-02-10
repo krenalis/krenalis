@@ -87,10 +87,10 @@ type Action struct {
 // properties.
 //
 // Supported conversions:
-//   - Int to Int, Uint, Text
-//   - Uint to Int, Uint, Text
-//   - Text to Int, Uint, UUID, Text
-//   - UUID to UUID, Text
+//   - int to int, uint, text
+//   - uint to int, uint, text
+//   - text to int uint, uuid, text
+//   - uuid to uuid, text
 type Matching struct {
 	In  string `json:"in"`  // name of the property in the input schema
 	Out string `json:"out"` // name of the property in the output schema
@@ -1044,7 +1044,7 @@ type ActionToSet struct {
 	// parsing the value read from the last change time column.
 	//
 	// Represents a format when a LastChangeTimeColumn is provided and its
-	// corresponding property kind is JSON or Text, otherwise it is the empty
+	// corresponding property kind is json or text, otherwise it is the empty
 	// string.
 	//
 	// In case it is provided, accepted values are:

@@ -72,7 +72,7 @@ func Test_WorkspaceIdentifiers(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got no error")
 	}
-	expected = `unexpected HTTP status code 422: {"error":{"code":"TypeNotAllowed","message":"property \"phone_numbers\" has a type Array, which is not allowed for identifiers"}}`
+	expected = `unexpected HTTP status code 422: {"error":{"code":"TypeNotAllowed","message":"property \"phone_numbers\" has a type array, which is not allowed for identifiers"}}`
 	if err.Error() != expected {
 		t.Fatalf("expected error %q, got %q", expected, err)
 	}

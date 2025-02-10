@@ -495,7 +495,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.ArrayKind:
 		if s, ok := src.(string); ok {
-			// Snowflake only supports JSON as the item type. The driver returns the value as a JSON array.
+			// Snowflake only supports json as the item type. The driver returns the value as a JSON array.
 			if s != "" && s[0] == '[' && typ.Elem().Kind() == types.JSONKind {
 				v := json.Value(s)
 				if !json.Valid(v) {
@@ -583,7 +583,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 	case types.MapKind:
 		if s, ok := src.(string); ok {
-			// Snowflake only supports JSON as the value type. The driver returns the value as a JSON object.
+			// Snowflake only supports json as the value type. The driver returns the value as a JSON object.
 			if s != "" && s[0] == '{' && typ.Elem().Kind() == types.JSONKind {
 				v := json.Value(s)
 				if json.Valid(v) {

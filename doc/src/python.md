@@ -27,19 +27,19 @@ The table below outlines the various Meergo types and their corresponding repres
 
 | Meergo&nbsp;Type | Python&nbsp;Type    | Example                                        |
 |------------------|---------------------|------------------------------------------------|
-| `Boolean`        | `bool`              | `True`                                         |
-| `Int(n)`         | `int`               | `-2586`                                        |
-| `Uint(n)`        | `int`               | `4063`                                         |
-| `Float(n)`       | `float`             | `37.81`                                        |
-| `Decimal(p,s)`   | `decimal.Decimal`   | `Decimal('5930174.18')`                        |
-| `DateTime`       | `datetime.datetime` | `datetime(2024,1,15,8,51,49,822309)`           |
-| `Date`           | `datetime.date`     | `date(2024,1,15)`                              |
-| `Time`           | `datetime.time`     | `time(8,51,49,822309)`                         |
-| `Year`           | `int`               | `2024`                                         |
-| `UUID`           | `uuid.UUID`         | `UUID('f956622d-c421-4eca-8d20-efef87f9749c')` |
-| `JSON`           | `str`               | `'{"score":10}'`                               |
-| `Inet`           | `str`               | `'172.16.254.1'`                               |
-| `Text`           | `str`               | `'123 Main Street'`                            |
-| `Array`          | `list`              | `[472,182,604]`                                |
-| `Object`         | `dict`              | `{'fistName':'Emily','lastName':'Johnson'}`    |
-| `Map`            | `dict`              | `{'a':8073,'c':206}`                           |
+| `boolean`        | `bool`              | `True`                                         |
+| `int(n)`         | `int`               | `-2586`                                        |
+| `uint(n)`        | `int`               | `4063`                                         |
+| `float(n)`       | `float`             | `37.81`                                        |
+| `decimal(p,s)`   | `decimal.Decimal`   | `Decimal('5930174.18')`                        |
+| `datetime`       | `datetime.datetime` | `datetime(2024,1,15,8,51,49,822309)`           |
+| `date`           | `datetime.date`     | `date(2024,1,15)`                              |
+| `time`           | `datetime.time`     | `time(8,51,49,822309)`                         |
+| `year`           | `int`               | `2024`                                         |
+| `uuid`           | `uuid.UUID`         | `UUID('f956622d-c421-4eca-8d20-efef87f9749c')` |
+| `json`           | `str`               | `'{"score":10}'`                               |
+| `inet`           | `str`               | `'172.16.254.1'`                               |
+| `text`           | `str`               | `'123 Main Street'`                            |
+| `array`          | `list`              | `[472,182,604]`                                |
+| `object`         | `dict`              | `{'fistName':'Emily','lastName':'Johnson'}`    |
+| `map`            | `dict`              | `{'a':8073,'c':206}`                           |

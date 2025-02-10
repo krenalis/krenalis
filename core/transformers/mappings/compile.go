@@ -34,7 +34,7 @@ type Expression struct {
 // appearance order in the expression. The returned properties are guaranteed to
 // be unique. If no property are present, it returns nil.
 //
-// If the expression contains a map or JSON indexing, Properties does not return
+// If the expression contains a map or json indexing, Properties does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (expr *Expression) Properties() []string {
@@ -46,7 +46,7 @@ func (expr *Expression) Properties() []string {
 //
 // schema is the schema of the paths in the expression, dt is the destination
 // type, and layouts represents, if not nil, the layouts used to format
-// DateTime, Date, and Time values as strings.
+// datetime, date, and time values as strings.
 //
 // An invalid schema can be passed to compile an expression without paths.
 func Compile(expr string, schema, dt types.Type, layouts *state.TimeLayouts) (*Expression, error) {
@@ -54,7 +54,7 @@ func Compile(expr string, schema, dt types.Type, layouts *state.TimeLayouts) (*E
 		return nil, errors.New("expression is empty")
 	}
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
-		return nil, errors.New("schema is non an Object")
+		return nil, errors.New("schema is non an object")
 	}
 	if !dt.Valid() {
 		return nil, errors.New("destination type is the invalid type")
@@ -380,7 +380,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 				case types.JSONKind:
 				case types.ObjectKind, types.InvalidKind:
 					if decorators.optional() {
-						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path.slice(0, j+1))
+						return fmt.Errorf("invalid %s: operator '?' can be used only with json", p.path.slice(0, j+1))
 					}
 					if decorators.indexing() {
 						if !types.IsValidPropertyName(name) {
@@ -406,7 +406,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 					t = property.Type
 				case types.MapKind:
 					if p.path.decorators[j].optional() {
-						return fmt.Errorf("invalid %s: operator '?' can be used only with JSON", p.path.slice(0, j+1))
+						return fmt.Errorf("invalid %s: operator '?' can be used only with json", p.path.slice(0, j+1))
 					}
 					t = t.Elem()
 				default:
@@ -414,7 +414,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 				}
 			}
 			if concatenate && !convertibleTo(t, types.Text()) {
-				return fmt.Errorf("cannot convert %s (type %s) to Text", p.path, t)
+				return fmt.Errorf("cannot convert %s (type %s) to text", p.path, t)
 			}
 			properties[b.String()] = struct{}{}
 			expr[i].typ = t
@@ -466,7 +466,7 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, properties map
 		}
 		if concatenate {
 			if st := expr[i].typ; st.Valid() && !convertibleTo(st, types.Text()) {
-				return fmt.Errorf("cannot convert %s(...) (type %s) to Text", p.path, st)
+				return fmt.Errorf("cannot convert %s(...) (type %s) to text", p.path, st)
 			}
 		}
 	}

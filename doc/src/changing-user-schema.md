@@ -15,7 +15,7 @@ When changing the users schema, these operations are supported:
 * **adding** properties **at any level**
 * **dropping** properties **at any level**
 * **renaming** properties **at any level**
-* **reordering** properties **at top level** and **within Object properties**
+* **reordering** properties **at top level** and **within object properties**
 * **changing labels** and **descriptions** of properties **at any level**
 
 Any other operation (as changing a property type) is not supported.

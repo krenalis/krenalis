@@ -36,7 +36,7 @@ func (err *Error) Error() string {
 // Furthermore, if exportMode is not nil, t1 must include all properties in t2
 // that are required for creation or the update based on exportMode.
 //
-// An invalid schema is handled as if it were an Object without properties.
+// An invalid schema is handled as if it were an object without properties.
 func CheckAlignment(t1, t2 types.Type, exportMode *state.ExportMode) error {
 	if t1.Kind() == types.InvalidKind {
 		if t2.Kind() == types.InvalidKind {
@@ -70,7 +70,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 	k2 := t2.Kind()
 	if k1 == types.ObjectKind {
 		if k2 != types.ObjectKind {
-			return &Error{Msg: fmt.Sprintf("%q property's type has changed from Object to %s", name, t2)}
+			return &Error{Msg: fmt.Sprintf("%q property's type has changed from object to %s", name, t2)}
 		}
 		for _, p1 := range t1.Properties() {
 			path := p1.Name

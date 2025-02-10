@@ -293,7 +293,7 @@ func propertyType(t *sql.ColumnType) (types.Type, error) {
 		return types.Float(64), nil
 	case "ENUM":
 		return types.Text(), nil
-	// TODO(marco): SET can be implemented as an Array(Type), but the driver only returns the first element of the set.
+	// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 	//case "SET":
 	//return types.Array(types.Text()), nil
 	case "FLOAT":

@@ -1,22 +1,22 @@
 type Role = 'Both' | 'Source' | 'Destination';
 
 type TypeKind =
-	| 'Boolean'
-	| 'Int'
-	| 'Uint'
-	| 'Float'
-	| 'Decimal'
-	| 'DateTime'
-	| 'Date'
-	| 'Time'
-	| 'Year'
-	| 'UUID'
-	| 'JSON'
-	| 'Inet'
-	| 'Text'
-	| 'Array'
-	| 'Object'
-	| 'Map';
+	| 'boolean'
+	| 'int'
+	| 'uint'
+	| 'float'
+	| 'decimal'
+	| 'datetime'
+	| 'date'
+	| 'time'
+	| 'year'
+	| 'uuid'
+	| 'json'
+	| 'inet'
+	| 'text'
+	| 'array'
+	| 'object'
+	| 'map';
 
 type IntBitSize = 8 | 16 | 24 | 32 | 64;
 
@@ -53,25 +53,25 @@ type Type =
 	| MapType;
 
 interface BooleanType {
-	kind: 'Boolean';
+	kind: 'boolean';
 }
 
 interface IntType {
-	kind: 'Int';
+	kind: 'int';
 	bitSize: IntBitSize;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface UintType {
-	kind: 'Uint';
+	kind: 'uint';
 	bitSize: IntBitSize;
 	minimum?: number;
 	maximum?: number;
 }
 
 interface FloatType {
-	kind: 'Float';
+	kind: 'float';
 	bitSize: FloatBitSize;
 	real?: boolean;
 	minimum?: number;
@@ -79,7 +79,7 @@ interface FloatType {
 }
 
 interface DecimalType {
-	kind: 'Decimal';
+	kind: 'decimal';
 	minimum?: number;
 	maximum?: number;
 	precision?: number;
@@ -87,38 +87,38 @@ interface DecimalType {
 }
 
 interface DateTimeType {
-	kind: 'DateTime';
+	kind: 'datetime';
 	layout?: string;
 }
 
 interface DateType {
-	kind: 'Date';
+	kind: 'date';
 	layout?: string;
 }
 
 interface TimeType {
-	kind: 'Time';
+	kind: 'time';
 }
 
 interface YearType {
-	kind: 'Year';
+	kind: 'year';
 }
 
 interface UUIDType {
-	kind: 'UUID';
+	kind: 'uuid';
 }
 
 interface JSONType {
-	kind: 'JSON';
+	kind: 'json';
 	charLen?: number;
 }
 
 interface InetType {
-	kind: 'Inet';
+	kind: 'inet';
 }
 
 interface TextType {
-	kind: 'Text';
+	kind: 'text';
 	byteLen?: number;
 	charLen?: number;
 	regexp?: string;
@@ -126,7 +126,7 @@ interface TextType {
 }
 
 interface ArrayType {
-	kind: 'Array';
+	kind: 'array';
 	minElements?: number;
 	maxElements?: number;
 	uniqueElements?: boolean;
@@ -134,32 +134,32 @@ interface ArrayType {
 }
 
 interface ObjectType {
-	kind: 'Object';
+	kind: 'object';
 	properties?: Property[];
 }
 
 interface MapType {
-	kind: 'Map';
+	kind: 'map';
 	elementType?: Type;
 }
 
 const typeKindToIconName: Record<TypeKind, string> = {
-	Boolean: 'type-bold',
-	Int: '123',
-	Uint: '123',
-	Float: '123',
-	Decimal: '123',
-	DateTime: 'calendar-date',
-	Date: 'calendar-date',
-	Time: 'clock',
-	Year: '123',
-	UUID: 'fonts',
-	JSON: 'filetype-json',
-	Inet: 'fonts',
-	Text: 'fonts',
-	Array: 'input-cursor',
-	Object: 'braces',
-	Map: 'braces-asterisk',
+	boolean: 'type-bold',
+	int: '123',
+	uint: '123',
+	float: '123',
+	decimal: '123',
+	datetime: 'calendar-date',
+	date: 'calendar-date',
+	time: 'clock',
+	year: '123',
+	uuid: 'fonts',
+	json: 'filetype-json',
+	inet: 'fonts',
+	text: 'fonts',
+	array: 'input-cursor',
+	object: 'braces',
+	map: 'braces-asterisk',
 };
 
 export { typeKindToIconName };

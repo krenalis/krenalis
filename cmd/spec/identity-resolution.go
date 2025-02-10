@@ -78,7 +78,7 @@ func init() {
 						Placeholder: `[ "customer_id", "email" ]`,
 						Description: "The identifiers of the identity resolution, ordered from the highest precedence to the lowest precedence.\n\n" +
 							"An identifier must be a property path that refers to a property of the user schema of the workspace. " +
-							"The referred property must have type `Int`, `Uint`, `UUID`, `Inet`, `Text`, or `Decimal` with zero scale. Identifiers cannot be repeated.\n\n" +
+							"The referred property must have type `int`, `uint`, `uuid`, `inet`, `text`, or `decimal` with zero scale. Identifiers cannot be repeated.\n\n" +
 							"Not specifying any identifier means performing identity resolution without comparing any identifiers.",
 					},
 				},

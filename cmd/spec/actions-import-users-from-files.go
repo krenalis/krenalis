@@ -71,7 +71,7 @@ func init() {
 		CreateRequired: true,
 		Placeholder:    `"email"`,
 		Description: "The column that uniquely identifies each user in the file. It serves as the single, unique identifier for each user record, ensuring that each user can be distinctly referenced.\n\n" +
-			"Only columns with types corresponding to the following Meergo types can be used as an identity: `Int`, `Uint`, `UUID`, `JSON`, and `Text`.",
+			"Only columns with types corresponding to the following Meergo types can be used as an identity: `int`, `uint`, `uuid`, `json`, and `text`.",
 	}
 	lastChangeTimeParameter := types.Property{
 		Name:        "lastChangeTimeColumn",
@@ -79,7 +79,7 @@ func init() {
 		Placeholder: `"updated_at"`,
 		Description: "The column that stores the date when a user record was last updated. It tracks the most recent modification made to the user’s data, helping to identify when changes occurred.\n\n" +
 			"The value of this column is used for incremental imports, where only records that have been modified since the last import need to be processed.\n\n" +
-			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `Date`, `DateTime`, `JSON`, and `Text`.",
+			"Only columns with types corresponding to the following Meergo types can be used as the last change time: `datetime`, `date`, `json`, and `text`.",
 	}
 	lastChangeTimeFormatParameter := types.Property{
 		Name:           "lastChangeTimeFormat",
@@ -88,7 +88,7 @@ func init() {
 		Placeholder:    `"ISO8601"`,
 		Description: "The format of the value in the last change time column. It can be set to `\"ISO8601\"` if the column value follows the ISO 8601 format, and if the format is `\"Excel\"`, can also be set to `\"Excel\"`. " +
 			"Otherwise, it should follow a format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).\n\n" +
-			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `JSON` or `Text`.",
+			"This field is only required if the `lastChangeTimeColumn` is provided, is not empty, and has a type `json` or `text`.",
 	}
 	incrementalParameter := types.Property{
 		Name:        "incremental",
@@ -369,7 +369,7 @@ func init() {
 							Type:        types.Text(),
 							Nullable:    true,
 							Placeholder: `"ISO8601"`,
-							Description: "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `Date` or `DateTime`.\n\n" +
+							Description: "The format of the value in the last change time column. It is null if no such column exists or if the corresponding Meergo type is `datetime` or `date`.\n\n" +
 								"It is `\"ISO8601\"` if the column value follows the ISO 8601 format. " +
 								"It is `\"Excel\"` if the format is `\"Excel\"` and the column value follows the Excel format. " +
 								"Otherwise, it follows the format accepted by the [Python strftime function](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).",

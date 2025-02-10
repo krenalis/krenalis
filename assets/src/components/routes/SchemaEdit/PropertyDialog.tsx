@@ -28,22 +28,22 @@ import getConnectorLogo from '../../helpers/getConnectorLogo';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 
 const TYPE_KINDS: TypeKind[] = [
-	'Boolean',
-	'Int',
-	'Uint',
-	'Float',
-	'Decimal',
-	'DateTime',
-	'Date',
-	'Time',
-	'Year',
-	'UUID',
-	'JSON',
-	'Inet',
-	'Text',
-	'Array',
-	'Object',
-	'Map',
+	'boolean',
+	'int',
+	'uint',
+	'float',
+	'decimal',
+	'datetime',
+	'date',
+	'time',
+	'year',
+	'uuid',
+	'json',
+	'inet',
+	'text',
+	'array',
+	'object',
+	'map',
 ];
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
@@ -126,25 +126,25 @@ const PropertyDialog = ({
 		const p = { ...property };
 		const kind = e.target.value as TypeKind;
 		const type: any = { kind: kind };
-		if (kind === 'Int' || kind === 'Uint') {
+		if (kind === 'int' || kind === 'uint') {
 			type.bitSize = 32;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
-		if (kind === 'Float') {
+		if (kind === 'float') {
 			type.bitSize = 64;
 			type.real = false;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
-		if (kind === 'Decimal') {
+		if (kind === 'decimal') {
 			type.scale = 0;
 			type.precision = 10;
 			setTimeout(() => precisionInputRef.current?.select(), 50);
 		}
-		if (kind === 'Array') {
+		if (kind === 'array') {
 			type.elementType = { kind: '' };
 			setTimeout(() => elementTypeSelectRef.current?.focus(), 50);
 		}
-		if (kind === 'Map') {
+		if (kind === 'map') {
 			type.elementType = { kind: '' };
 			setTimeout(() => elementTypeSelectRef.current?.focus(), 50);
 		}
@@ -160,13 +160,13 @@ const PropertyDialog = ({
 
 	const onChangeBitSize = (e) => {
 		const p = { ...property };
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as IntType | UintType | FloatType;
 			elementTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
 			typ.elementType = elementTyp;
 			p.type = typ;
-		} else if (p.type.kind === 'Map') {
+		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as IntType | UintType | FloatType;
 			valueTyp.bitSize = Number(e.target.value) as IntBitSize | FloatBitSize;
@@ -182,13 +182,13 @@ const PropertyDialog = ({
 
 	const onInputPrecision = (e) => {
 		const p = { ...property };
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as DecimalType;
 			elementTyp.precision = Number(e.target.value);
 			typ.elementType = elementTyp;
 			p.type = typ;
-		} else if (p.type.kind === 'Map') {
+		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as DecimalType;
 			valueTyp.precision = Number(e.target.value);
@@ -207,13 +207,13 @@ const PropertyDialog = ({
 
 	const onInputScale = (e) => {
 		const p = { ...property };
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as DecimalType;
 			elementTyp.scale = Number(e.target.value);
 			typ.elementType = elementTyp;
 			p.type = typ;
-		} else if (p.type.kind === 'Map') {
+		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as DecimalType;
 			valueTyp.scale = Number(e.target.value);
@@ -232,13 +232,13 @@ const PropertyDialog = ({
 
 	const onRealChange = () => {
 		const p = { ...property };
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as FloatType;
 			elementTyp.real = !elementTyp.real;
 			typ.elementType = elementTyp;
 			p.type = typ;
-		} else if (p.type.kind === 'Map') {
+		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as FloatType;
 			valueTyp.real = !valueTyp.real;
@@ -256,20 +256,20 @@ const PropertyDialog = ({
 		const p = { ...property };
 		const kind = e.target.value as TypeKind;
 		const type: any = { kind: kind };
-		if (kind === 'Int' || kind === 'Uint') {
+		if (kind === 'int' || kind === 'uint') {
 			type.bitSize = 32;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
-		if (kind === 'Float') {
+		if (kind === 'float') {
 			type.bitSize = 64;
 			setTimeout(() => bitSizeSelectRef.current?.focus(), 50);
 		}
-		if (kind === 'Decimal') {
+		if (kind === 'decimal') {
 			type.scale = 0;
 			type.precision = 10;
 			setTimeout(() => precisionInputRef.current?.select(), 50);
 		}
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			(p.type as ArrayType).elementType = type;
 		} else {
 			(p.type as MapType).elementType = type;
@@ -304,7 +304,7 @@ const PropertyDialog = ({
 
 	const updateByteLength = (length: number | null) => {
 		const p = { ...property };
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as TextType;
 			if (length == null) {
@@ -314,7 +314,7 @@ const PropertyDialog = ({
 			}
 			typ.elementType = elementTyp;
 			p.type = typ;
-		} else if (p.type.kind === 'Map') {
+		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as TextType;
 			if (length == null) {
@@ -342,7 +342,7 @@ const PropertyDialog = ({
 
 	const updateCharLength = (length: number | null) => {
 		const p = { ...property };
-		if (p.type.kind === 'Array') {
+		if (p.type.kind === 'array') {
 			const typ = p.type as ArrayType;
 			const elementTyp = typ.elementType as TextType;
 			if (length == null) {
@@ -352,7 +352,7 @@ const PropertyDialog = ({
 			}
 			typ.elementType = elementTyp;
 			p.type = typ;
-		} else if (p.type.kind === 'Map') {
+		} else if (p.type.kind === 'map') {
 			const typ = p.type as MapType;
 			const valueTyp = typ.elementType as TextType;
 			if (length == null) {
@@ -414,14 +414,14 @@ const PropertyDialog = ({
 			return;
 		}
 		if (
-			property.type.kind === 'Decimal' ||
-			(property.type.kind === 'Array' && (property.type as ArrayType).elementType.kind === 'Decimal') ||
-			(property.type.kind === 'Map' && (property.type as MapType).elementType.kind === 'Decimal')
+			property.type.kind === 'decimal' ||
+			(property.type.kind === 'array' && (property.type as ArrayType).elementType.kind === 'decimal') ||
+			(property.type.kind === 'map' && (property.type as MapType).elementType.kind === 'decimal')
 		) {
 			const typ: DecimalType = (
-				property.type.kind === 'Array'
+				property.type.kind === 'array'
 					? property.type.elementType
-					: property.type.kind === 'Map'
+					: property.type.kind === 'map'
 						? property.type.elementType
 						: property.type
 			) as DecimalType;
@@ -451,8 +451,8 @@ const PropertyDialog = ({
 
 	let bitSizeSection = null;
 	if (property != null && property.type != null) {
-		const isArray = property.type.kind === 'Array';
-		const isMap = property.type.kind === 'Map';
+		const isArray = property.type.kind === 'array';
+		const isMap = property.type.kind === 'map';
 		const hasBitSize =
 			hasBitSizeConstraint(property.type.kind) ||
 			(isArray && hasBitSizeConstraint((property.type as ArrayType).elementType.kind)) ||
@@ -472,7 +472,7 @@ const PropertyDialog = ({
 					value={String(type.bitSize)}
 					onSlChange={onChangeBitSize}
 				>
-					{type.kind === 'Int' || type.kind === 'Uint'
+					{type.kind === 'int' || type.kind === 'uint'
 						? INT_BITSIZES.map((s) => (
 								<SlOption key={s} value={s}>
 									{s}
@@ -491,12 +491,12 @@ const PropertyDialog = ({
 	let precisionSection = null;
 	let scaleSection = null;
 	if (property != null && property.type != null) {
-		const isArray = property.type.kind === 'Array';
-		const isMap = property.type.kind === 'Map';
+		const isArray = property.type.kind === 'array';
+		const isMap = property.type.kind === 'map';
 		const hasDecimal =
-			property.type.kind === 'Decimal' ||
-			(isArray && (property.type as ArrayType).elementType.kind === 'Decimal') ||
-			(isMap && (property.type as MapType).elementType.kind === 'Decimal');
+			property.type.kind === 'decimal' ||
+			(isArray && (property.type as ArrayType).elementType.kind === 'decimal') ||
+			(isMap && (property.type as MapType).elementType.kind === 'decimal');
 		if (hasDecimal) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
@@ -533,12 +533,12 @@ const PropertyDialog = ({
 
 	let realSection = null;
 	if (property != null && property.type != null) {
-		const isArray = property.type.kind === 'Array';
-		const isMap = property.type.kind === 'Map';
+		const isArray = property.type.kind === 'array';
+		const isMap = property.type.kind === 'map';
 		const hasFloat =
-			property.type.kind === 'Float' ||
-			(isArray && (property.type as ArrayType).elementType.kind === 'Float') ||
-			(isMap && (property.type as MapType).elementType.kind === 'Float');
+			property.type.kind === 'float' ||
+			(isArray && (property.type as ArrayType).elementType.kind === 'float') ||
+			(isMap && (property.type as MapType).elementType.kind === 'float');
 		if (hasFloat) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
@@ -560,12 +560,12 @@ const PropertyDialog = ({
 
 	let lengthSection = null;
 	if (property != null && property.type != null) {
-		const isArray = property.type.kind === 'Array';
-		const isMap = property.type.kind === 'Map';
+		const isArray = property.type.kind === 'array';
+		const isMap = property.type.kind === 'map';
 		const hasText =
-			property.type.kind === 'Text' ||
-			(isArray && (property.type as ArrayType).elementType.kind === 'Text') ||
-			(isMap && (property.type as MapType).elementType.kind === 'Text');
+			property.type.kind === 'text' ||
+			(isArray && (property.type as ArrayType).elementType.kind === 'text') ||
+			(isMap && (property.type as MapType).elementType.kind === 'text');
 		if (hasText) {
 			const typ: any = isArray
 				? (property.type as ArrayType).elementType
@@ -669,7 +669,7 @@ const PropertyDialog = ({
 										</SlOption>
 									))}
 								</SlSelect>
-								{property.type?.kind === 'Array' && (
+								{property.type?.kind === 'array' && (
 									<span className='property-dialog__elementtype-section'>
 										<SlSelect
 											className='property-dialog__elementtype'
@@ -682,7 +682,7 @@ const PropertyDialog = ({
 											hoist={true}
 										>
 											{TYPE_KINDS.map((t) => {
-												if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
+												if (t !== 'array' && t !== 'map' && t !== 'object') {
 													return (
 														<SlOption key={t} value={t}>
 															<SlIcon slot='prefix' name={typeKindToIconName[t]} />
@@ -695,7 +695,7 @@ const PropertyDialog = ({
 										{lengthSection}
 									</span>
 								)}
-								{property.type?.kind === 'Map' && (
+								{property.type?.kind === 'map' && (
 									<span className='property-dialog__elementype-section'>
 										<SlSelect
 											className='property-dialog__elementype'
@@ -708,7 +708,7 @@ const PropertyDialog = ({
 											hoist={true}
 										>
 											{TYPE_KINDS.map((t) => {
-												if (t !== 'Array' && t !== 'Map' && t !== 'Object') {
+												if (t !== 'array' && t !== 'map' && t !== 'object') {
 													return (
 														<SlOption key={t} value={t}>
 															<SlIcon slot='prefix' name={typeKindToIconName[t]} />
@@ -725,7 +725,7 @@ const PropertyDialog = ({
 								{precisionSection}
 								{scaleSection}
 								{realSection}
-								{property.type?.kind !== 'Array' && property.type?.kind !== 'Map' && lengthSection}
+								{property.type?.kind !== 'array' && property.type?.kind !== 'map' && lengthSection}
 							</div>
 							{typeError !== '' && (
 								<div className='property-dialog__control-error'>
@@ -748,8 +748,8 @@ const PropertyDialog = ({
 						name='description'
 						onSlInput={onInputDescription}
 					/>
-					{property.type?.kind !== 'Object' &&
-						property.type?.kind !== 'Array' &&
+					{property.type?.kind !== 'object' &&
+						property.type?.kind !== 'array' &&
 						(sourceConnections.length === 0 ? (
 							<div className='property-dialog__no-primary-source'>
 								<div className='property-dialog__no-primary-source-label'>Primary Source</div>
@@ -800,7 +800,7 @@ const PropertyDialog = ({
 };
 
 const hasBitSizeConstraint = (kind: string) => {
-	return kind === 'Int' || kind === 'Uint' || kind === 'Float';
+	return kind === 'int' || kind === 'uint' || kind === 'float';
 };
 
 const checkDecimalType = (type: DecimalType) => {

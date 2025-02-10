@@ -1270,7 +1270,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Database,
-			err:                     "identity column \"id\" has kind Array instead of Int, Uint, UUID, JSON, or Text",
+			err:                     "identity column \"id\" has kind array instead of int, uint uuid, json, or text",
 		},
 		{
 			name: "BAD: Source/App/Users - cannot specify an identity column",
@@ -1578,7 +1578,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     `table name cannot be empty for destination database actions`,
 		},
 		{
-			name: "BAD: Source/App/Users - output schema is not an Object",
+			name: "BAD: Source/App/Users - output schema is not an object",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -1597,7 +1597,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     "out schema, if provided, must be an object",
 		},
 		{
-			name: "BAD: Source/App/Users - input schema is not an Object",
+			name: "BAD: Source/App/Users - input schema is not an object",
 			action: ActionToSet{
 				Name:     "Import users",
 				InSchema: types.Int(32),
@@ -1968,7 +1968,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "type Array cannot be used as table key",
+			err:                     "type array cannot be used as table key",
 		},
 		{
 			name: "BAD: Destination/Database/Users - unmapped property in input schema",
@@ -2274,7 +2274,7 @@ func Test_validateAction(t *testing.T) {
 			err:                     `two output action schema properties would have the same column name "email_out" in the data warehouse, case-insensitively`,
 		},
 		{
-			name: "BAD: Source/App/Users - output schema - which refers to users - cannot have a property with type Array(Object)",
+			name: "BAD: Source/App/Users - output schema - which refers to users - cannot have a property with type array(object)",
 			action: ActionToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -2299,7 +2299,7 @@ func Test_validateAction(t *testing.T) {
 			target:                  state.Users,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.App,
-			err:                     `output action schema property "many_values_out" cannot have type Array(Object)`,
+			err:                     `output action schema property "many_values_out" cannot have type array(object)`,
 		},
 		{
 			name: "BAD: Destination/App/Users - filter refers to a property not in input schema",
@@ -3160,7 +3160,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			expectedError: "input property \"a.e.z\" of transformation function does not exist in schema",
 		},
 		{
-			name: "Property path refers to an Array sub-property",
+			name: "Property path refers to an array sub-property",
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{
@@ -3183,7 +3183,7 @@ func Test_validateTransformationFunctionPaths(t *testing.T) {
 			expectedError: "input property \"a.array.g\" of transformation function does not exist in schema",
 		},
 		{
-			name: "Property path refers to an Array sub-property",
+			name: "Property path refers to an array sub-property",
 			io:   "input",
 			schema: types.Object([]types.Property{
 				{Name: "a", Type: types.Object([]types.Property{

@@ -175,16 +175,16 @@ func Test_substring(t *testing.T) {
 func Test_valueOf(t *testing.T) {
 
 	properties := map[string]any{
-		"a": 5, // Int
-		"b": map[string]any{ // Object
-			"c": "foo", // Text
-			"d": map[string]any{ // Map(Array(Int))
+		"a": 5, // int
+		"b": map[string]any{ // object
+			"c": "foo", // text
+			"d": map[string]any{ // map(array(int))
 				"e":  []any{1},
 				".e": []any{2},
 				"e]": []any{3},
 			},
 		},
-		"f": nil, // Text
+		"f": nil, // text
 		"g": json.Value("12.53"),
 		"h": json.Value(`{"i":true,"i?":5,"?i?":"boo","[i":"foo","i]":"zoo"}`),
 		"l": json.Value(`{"name":"Bob","email":"bob@axample.com"}`),

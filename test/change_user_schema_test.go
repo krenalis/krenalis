@@ -198,7 +198,7 @@ func TestChangeUserSchema(t *testing.T) {
 	}
 	p, _ := ws.UserSchema.Property("android")
 	if n := types.NumProperties(p.Type); n != 2 {
-		t.Fatalf("expected 2 properties in the \"android\" Object of the \"users\" schema, got %d", n)
+		t.Fatalf("expected 2 properties in the \"android\" object of the \"users\" schema, got %d", n)
 	}
 	if err := checkSchemaProperties(ws.UserSchema); err != nil {
 		t.Fatalf("invalid user schema: %s", err)

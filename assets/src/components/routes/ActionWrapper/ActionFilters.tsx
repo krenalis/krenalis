@@ -58,7 +58,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === currentOperator);
 		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value]);
 		const isCompatible = compatibleOperators.includes(currentOperatorIndex);
-		const isJson = flatInputSchema[value]?.type === 'JSON';
+		const isJson = flatInputSchema[value]?.type === 'json';
 
 		if (!isCompatible) {
 			// Select the first compatible operator.
@@ -92,7 +92,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 		const propertyName = a.filter!.conditions[id]['property'];
 		const [_, path] = splitPropertyAndPath(propertyName, flatInputSchema);
 		let newPropertyName = '';
-		if (path !== '' && flatInputSchema[value]?.type === 'JSON') {
+		if (path !== '' && flatInputSchema[value]?.type === 'json') {
 			newPropertyName = `${value}.${path}`;
 		} else {
 			newPropertyName = value;
@@ -241,7 +241,7 @@ const ActionFilters = forwardRef<any>((_, ref) => {
 
 			let property = flatInputSchema[base];
 			const isUnary = isUnaryOperator(condition.operator);
-			const isJSON = property?.type === 'JSON';
+			const isJSON = property?.type === 'json';
 			const isBetween = isBetweenOperator(condition.operator);
 			const isOneOf = isOneOfOperator(condition.operator);
 			const isInvalidProperty = property == null;

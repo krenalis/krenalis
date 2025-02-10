@@ -62,7 +62,7 @@ The `traits` method is utilized for accessing and modifying the group's traits. 
 To modify the group's traits, utilize the `traits` method with an argument:
 
 - To remove all traits, pass a `null` argument.
-- To update the traits, provide a non-null `Object`. Since traits are serialized with `JSON.stringify`, they must consist only of serializable values and should not contain cyclic references. In case of serialization errors, a warning will be logged in the console.
+- To update the traits, provide a non-null `object`. Since traits are serialized with `JSON.stringify`, they must consist only of serializable values and should not contain cyclic references. In case of serialization errors, a warning will be logged in the console.
 
 #### Syntax
 

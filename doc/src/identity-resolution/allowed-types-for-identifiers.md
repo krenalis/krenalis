@@ -6,12 +6,12 @@
 
 Here is a list of allowed types for the [identifiers](../identity-resolution#identifiers) used in the [Identity Resolution](../identity-resolution):
 
-* `Int(n)`       
-* `UInt(n)`      
-* `Decimal(p,s)`, but only if scale `s` is 0
-* `UUID`         
-* `Inet`         
-* `Text`         
+* `int(n)`       
+* `uint(n)`      
+* `decimal(p,s)`, but only if scale `s` is 0
+* `uuid`         
+* `inet`         
+* `text`         
 
 > Note that meta properties cannot be used as identifiers. This should be
 > documented in a consistent way.

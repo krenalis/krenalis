@@ -1648,7 +1648,7 @@ const FullscreenTransformation = ({
 							return null;
 						}
 					}
-					if (p.type.kind === 'Object') {
+					if (p.type.kind === 'object') {
 						return (
 							<TransformationNestedProperties
 								key={p.name}
@@ -2028,7 +2028,7 @@ const FullscreenTransformation = ({
 										}
 									}
 
-									if (p.type.kind === 'Object') {
+									if (p.type.kind === 'object') {
 										return (
 											<TransformationNestedProperties
 												key={p.name}
@@ -2203,7 +2203,7 @@ const TransformationNestedProperties = ({
 			>
 				{(isExpanded || showSearchedChildren) &&
 					typ.properties.map((p) => {
-						if (p.type.kind === 'Object') {
+						if (p.type.kind === 'object') {
 							return (
 								<TransformationNestedProperties
 									key={p.name}
@@ -2467,52 +2467,52 @@ function toJavascriptType(type: Type, nullable: boolean) {
 
 	let t: string;
 	switch (name) {
-		case 'Boolean':
+		case 'boolean':
 			t = 'boolean';
 			break;
-		case 'Int':
-		case 'Uint':
+		case 'int':
+		case 'uint':
 			if (type.bitSize === 8 || type.bitSize === 16 || type.bitSize === 24 || type.bitSize === 32) {
 				t = 'number';
 			} else {
 				t = 'bigint';
 			}
 			break;
-		case 'Float':
+		case 'float':
 			t = 'number';
 			break;
-		case 'Decimal':
+		case 'decimal':
 			t = 'string';
 			break;
-		case 'DateTime':
-		case 'Date':
-		case 'Time':
-		case 'Year':
+		case 'datetime':
+		case 'date':
+		case 'time':
+		case 'year':
 			t = 'Date';
 			break;
-		case 'UUID':
+		case 'uuid':
 			t = 'string';
 			break;
-		case 'JSON':
+		case 'json':
 			t = 'string';
 			break;
-		case 'Inet':
+		case 'inet':
 			t = 'string';
 			break;
-		case 'Text':
+		case 'text':
 			t = 'string';
 			break;
-		case 'Array':
+		case 'array':
 			t = 'Array';
 			break;
-		case 'Object':
+		case 'object':
 			t = 'Object';
 			break;
-		case 'Map':
+		case 'map':
 			t = 'Map';
 			break;
 		default:
-			console.error(`schema contains unknow property type ${name}`);
+			console.error(`schema contains unknown property type ${name}`);
 			'unknown property type';
 	}
 
@@ -2529,50 +2529,50 @@ function toPythonType(type: Type, nullable: boolean) {
 
 	let t: string;
 	switch (type.kind) {
-		case 'Boolean':
+		case 'boolean':
 			t = 'bool';
 			break;
-		case 'Int':
-		case 'Uint':
+		case 'int':
+		case 'uint':
 			t = 'int';
 			break;
-		case 'Float':
+		case 'float':
 			t = 'float';
 			break;
-		case 'Decimal':
+		case 'decimal':
 			t = 'decimal.Decimal';
 			break;
-		case 'DateTime':
+		case 'datetime':
 			t = 'datetime.datetime';
 			break;
-		case 'Date':
+		case 'date':
 			t = 'datetime.date';
 			break;
-		case 'Time':
+		case 'time':
 			t = 'datetime.time';
 			break;
-		case 'Year':
+		case 'year':
 			t = 'int';
 			break;
-		case 'UUID':
+		case 'uuid':
 			t = 'uuid.UUID';
 			break;
-		case 'JSON':
+		case 'json':
 			t = 'str';
 			break;
-		case 'Inet':
+		case 'inet':
 			t = 'str';
 			break;
-		case 'Text':
+		case 'text':
 			t = 'str';
 			break;
-		case 'Array':
+		case 'array':
 			t = 'list';
 			break;
-		case 'Object':
+		case 'object':
 			t = 'dict';
 			break;
-		case 'Map':
+		case 'map':
 			t = 'dict';
 			break;
 		default:

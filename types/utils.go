@@ -40,14 +40,14 @@ func (err PathNotExistError) Error() string {
 // - If the role is Destination, ReadOptional is set to false.
 //
 // If all properties of t are already compatible with the specified role, the
-// function returns t unchanged. It panics if t is not of the Object type or if
+// function returns t unchanged. It panics if t is not of the object type or if
 // the role is neither Source nor Destination.
 func AsRole(t Type, role Role) Type {
 	if !t.Valid() {
 		panic("type is not valid")
 	}
 	if t.kind != ObjectKind {
-		panic("cannot return type as role for non-Object type")
+		panic("cannot return type as role for non-object type")
 	}
 	if role != Source && role != Destination {
 		panic("role is not valid")
@@ -142,19 +142,19 @@ func IsValidPropertyPath(path string) bool {
 }
 
 // NumProperties returns the count of properties in t.
-// Panics if t is not an Object type.
+// Panics if t is not an object type.
 func NumProperties(t Type) int {
 	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
+		panic("cannot get the properties of a non-object type")
 	}
 	return len(t.vl.([]Property))
 }
 
-// Properties returns the properties of the Object type t.
-// Panics if t is not an Object type.
+// Properties returns the properties of the object type t.
+// Panics if t is not an object type.
 func Properties(t Type) []Property {
 	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
+		panic("cannot get the properties of a non-object type")
 	}
 	properties := t.vl.([]Property)
 	pp := make([]Property, len(properties))
@@ -162,17 +162,17 @@ func Properties(t Type) []Property {
 	return pp
 }
 
-// PropertyByPath returns the property with the given path in the Object t.
+// PropertyByPath returns the property with the given path in the object t.
 // If the property does not exist, it returns the last valid property found (if
 // any), and a PathNotExistError error.
 //
-// Unlike Walk, it does not traverse through Arrays and Maps. If path is "x.y"
-// and the type of "x" is not an Object, it returns a PathNotExistError error.
+// Unlike Walk, it does not traverse through arrays and maps. If path is "x.y"
+// and the type of "x" is not an object, it returns a PathNotExistError error.
 //
-// It panics if t is not of type Object or if path is not a valid path.
+// It panics if t is not of type object or if path is not a valid path.
 func PropertyByPath(t Type, path string) (Property, error) {
 	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
+		panic("cannot get the properties of a non-object type")
 	}
 	var p *Property
 	name, rest := "", path
@@ -210,7 +210,7 @@ Rest:
 // names as the path.
 func PropertyByPathSlice(t Type, path []string) (Property, error) {
 	if t.kind != ObjectKind {
-		panic("cannot get the properties of a non-Object type")
+		panic("cannot get the properties of a non-object type")
 	}
 	var p *Property
 	last := len(path) - 1
@@ -248,15 +248,15 @@ Rest:
 }
 
 // PropertyExists reports whether property with the given path exists in the
-// Object t.
+// object t.
 //
-// If path is "x.y" and the property "x" has type Array(T) or Map(T), it reports
+// If path is "x.y" and the property "x" has type array(T) or map(T), it reports
 // whether T has the property "y".
 //
-// It panics if t is not of type Object or if path is not a valid path.
+// It panics if t is not of type object or if path is not a valid path.
 func PropertyExists(t Type, path string) bool {
 	if t.kind != ObjectKind {
-		panic("cannot check the properties of a non-Object type")
+		panic("cannot check the properties of a non-object type")
 	}
 	if !IsValidPropertyPath(path) {
 		panic("invalid property path")
@@ -289,11 +289,11 @@ Object:
 	}
 }
 
-// PropertyNames returns the names of the properties of the Object t.
-// Panics if t is not an Object type.
+// PropertyNames returns the names of the properties of the object t.
+// Panics if t is not an object type.
 func PropertyNames(t Type) []string {
 	if t.kind != ObjectKind {
-		panic("cannot get the property names of a non-Object type")
+		panic("cannot get the property names of a non-object type")
 	}
 	pp := t.vl.([]Property)
 	names := make([]string, len(pp))
@@ -312,7 +312,7 @@ func PropertyNames(t Type) []string {
 // It panics if t is not an object, or f is nil.
 func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 	if t.kind != ObjectKind {
-		panic("cannot get a subset of a non-Object type")
+		panic("cannot get a subset of a non-object type")
 	}
 
 	// depthOf returns the depth of path, starting at 1 (for top-level property
@@ -322,7 +322,7 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 	}
 
 	// Creates a list of all property paths that must actually result in the
-	// returned Object, which are ordered by position (for properties with the
+	// returned object, which are ordered by position (for properties with the
 	// same depth). The list also includes properties from the upper hierarchy,
 	// for which the f function did not return true, since they must also be
 	// returned, having to maintain the structure.
@@ -358,7 +358,7 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 				continue
 			}
 			property := propByPath[path]
-			// Properties that are not Objects do not need to be managed, as
+			// Properties that are not objects do not need to be managed, as
 			// they have no descendants to populate.
 			if property.Type.kind != ObjectKind {
 				continue
@@ -369,7 +369,7 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 			if _, ok := fReturnedTrue[path]; ok {
 				continue
 			}
-			// This is the case to handle, that is a property of type Object,
+			// This is the case to handle, that is a property of type object,
 			// with no children, that must be populated with descendants
 			// according to the order indicated in orderedToAdd.
 			var vl []Property
@@ -385,7 +385,7 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 	}
 
 	// Of all the properties to be returned, set aside the top-level ones, which
-	// will then be returned in an Object.
+	// will then be returned in an object.
 	var topLevelProps []Property
 	for _, path := range toAdd {
 		if depthOf(path) == 1 {
@@ -407,7 +407,7 @@ func SubsetByPathFunc(t Type, f func(path string) bool) Type {
 // It panics if t is not an object, or f is nil.
 func SubsetFunc(t Type, f func(p Property) bool) Type {
 	if t.kind != ObjectKind {
-		panic("cannot get a subset of a non-Object type")
+		panic("cannot get a subset of a non-object type")
 	}
 	var ps []Property
 	pp := t.vl.([]Property)
@@ -442,16 +442,16 @@ func SubsetFunc(t Type, f func(p Property) bool) Type {
 //	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
 //	}
 //
-// WalkAll - unlike WalkObjects - navigates into Array and Maps, so if a
-// property "x" has type Array(T) or Map(T) and T has the property "y", its path
+// WalkAll - unlike WalkObjects - navigates into array and maps, so if a
+// property "x" has type array(T) or map(T) and T has the property "y", its path
 // is "x.y".
 //
-// It panics if t is not an Object.
+// It panics if t is not an object.
 func WalkAll(t Type) iter.Seq2[string, Property] {
 	return walk(t, true)
 }
 
-// WalkObjects returns an iterator over all the Object properties in t in a
+// WalkObjects returns an iterator over all the object properties in t in a
 // depth-first order.
 //
 // For example:
@@ -460,16 +460,16 @@ func WalkAll(t Type) iter.Seq2[string, Property] {
 //	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
 //	}
 //
-// WalkObjects - unlike WalkAll - does not navigate through Array or Map
-// properties, navigating only through Object properties.
+// WalkObjects - unlike WalkAll - does not navigate through array or map
+// properties, navigating only through object properties.
 //
-// It panics if t is not an Object.
+// It panics if t is not an object.
 func WalkObjects(t Type) iter.Seq2[string, Property] {
 	return walk(t, false)
 }
 
 // asRole is a recursive function called by the Type.AsRole method. t must be an
-// Object type, and role must be either Source or Destination. It returns the
+// object type, and role must be either Source or Destination. It returns the
 // resulting type and a boolean indicating whether the returned type is
 // different from t.
 func asRole(t Type, role Role) (Type, bool) {
@@ -510,11 +510,11 @@ func asRole(t Type, role Role) (Type, bool) {
 
 // walk is the internal function underlying the exported functions WalkAll and
 // WalkObjects. descendIntoArrayMap determines whether navigation should descend
-// inside the Array and Map properties, thus navigating inside them, or not do
-// so and limit navigation to Objects only.
+// inside the array and map properties, thus navigating inside them, or not do
+// so and limit navigation to objects only.
 func walk(t Type, descendIntoArrayMap bool) iter.Seq2[string, Property] {
 	if t.kind != ObjectKind {
-		panic("cannot iterate over a non-Object type")
+		panic("cannot iterate over a non-object type")
 	}
 	return func(yield func(path string, property Property) bool) {
 		type entry struct {
