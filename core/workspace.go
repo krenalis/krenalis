@@ -1096,11 +1096,11 @@ func (this *Workspace) LatestIdentityResolution(ctx context.Context) (startTime,
 }
 
 // ListenedEvents returns the events listened to the specified listener and the
-// number of discarded events. If the listener does not exist, it returns an
+// number of omitted events. If the listener does not exist, it returns an
 // errors.NotFoundError.
 func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error) {
 	this.core.mustBeOpen()
-	observedEvents, discarded, err := this.core.events.observer.Events(listener)
+	observedEvents, omitted, err := this.core.events.observer.Events(listener)
 	if err != nil {
 		if err == collector.ErrEventListenerNotFound {
 			return nil, 0, errors.NotFound("event listener %q does not exist", listener)
@@ -1110,7 +1110,7 @@ func (this *Workspace) ListenedEvents(listener string) ([]json.Value, int, error
 	for i, event := range observedEvents {
 		observedEvents[i] = slices.Clone(event)
 	}
-	return observedEvents, discarded, nil
+	return observedEvents, omitted, nil
 }
 
 // Rename renames the workspace with the given new name.

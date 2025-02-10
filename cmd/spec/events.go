@@ -392,7 +392,7 @@ func init() {
 			},
 			{
 				Name:        "List observed events",
-				Description: "Returns the events captured by the specified listener along with the count of discarded events.",
+				Description: "Returns the events captured by the specified listener along with the count of omitted events.",
 				Method:      GET,
 				URL:         "/v0/events/listeners/:id",
 				Parameters: []types.Property{
@@ -407,10 +407,10 @@ func init() {
 							Description: "The observed events.",
 						},
 						{
-							Name:        "discarded",
+							Name:        "omitted",
 							Type:        types.Int(32),
 							Placeholder: "572",
-							Description: "The number of discarded events.",
+							Description: "The number of omitted events.",
 						},
 					},
 				},

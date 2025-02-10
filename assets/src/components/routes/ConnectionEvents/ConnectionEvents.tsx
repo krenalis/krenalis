@@ -10,7 +10,7 @@ import JSONbig from 'json-bigint';
 const ConnectionEvents = () => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
 	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
-	const [discarded, setDiscarded] = useState<number>(0);
+	const [omitted, setOmitted] = useState<number>(0);
 
 	const { connection: c } = useContext(ConnectionContext);
 
@@ -24,7 +24,7 @@ const ConnectionEvents = () => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener(collectEvents, setDiscarded, {
+	const { startListening } = useEventListener(collectEvents, setOmitted, {
 		logical: 'and',
 		conditions: [{ property: 'connection', operator: 'is one of', values: [String(c.id)] }],
 	});
@@ -72,10 +72,10 @@ const ConnectionEvents = () => {
 					</div>
 				</div>
 				<div className='connection-events__event-listener'>
-					{discarded > 0 && (
-						<div className='connection-events__discarded'>
-							<span className='connection-events__discarded-count'>{discarded}</span>
-							<span className='connection-events__discarded-text'>discarded</span>
+					{omitted > 0 && (
+						<div className='connection-events__omitted'>
+							<span className='connection-events__omitted-count'>{omitted}</span>
+							<span className='connection-events__omitted-text'>omitted</span>
 						</div>
 					)}
 					<div className='connection-events__event-list'>

@@ -28,7 +28,7 @@ type Event = Record<string, any>;
 
 interface EventListenerEventsResponse {
 	events: Event[];
-	discarded: number;
+	omitted: number;
 }
 
 interface CreateEventListenerResponse {

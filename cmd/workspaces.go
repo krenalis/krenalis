@@ -492,13 +492,13 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 }
 
 // ListenedEvents returns the events listen to by a specified listener and the
-// number of discarded events.
+// number of omitted events.
 func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.workspace(r)
 	if err != nil {
 		return nil, err
 	}
-	listenedEvents, discarded, err := ws.ListenedEvents(r.PathValue("id"))
+	listenedEvents, omitted, err := ws.ListenedEvents(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -507,8 +507,8 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 		events[i] = event
 	}
 	return map[string]any{
-		"events":    events,
-		"discarded": discarded,
+		"events":  events,
+		"omitted": omitted,
 	}, nil
 }
 

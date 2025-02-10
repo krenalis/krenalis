@@ -44,10 +44,10 @@ type Observer struct {
 type listener struct {
 	id         string
 	filter     *state.Where
-	sync.Mutex // for the events and discarded fields
+	sync.Mutex // for the events and omitted fields
 	events     []json.Value
 	times      []time.Time
-	discarded  int
+	omitted    int
 }
 
 // newObserver returns a new observer.
@@ -95,7 +95,7 @@ func (observer *Observer) DeleteListener(id string) {
 }
 
 // Events returns the observed events listen to by the specified listener and
-// the number of discarded events. If the listener does not exist, it returns
+// the number of omitted events. If the listener does not exist, it returns
 // the ErrEventListenerNotFound error.
 func (observer *Observer) Events(listenerID string) ([]json.Value, int, error) {
 	observer.RLock()
@@ -112,17 +112,17 @@ func (observer *Observer) Events(listenerID string) ([]json.Value, int, error) {
 	}
 	listener.Lock()
 	observedEvents := make([]json.Value, len(listener.events))
-	var discarded int
+	var omitted int
 	if len(listener.events) > 0 {
 		sort.Slice(listener.events, func(i, j int) bool { return listener.times[i].Before(listener.times[j]) })
 		copy(observedEvents, listener.events)
-		discarded = listener.discarded
+		omitted = listener.omitted
 		listener.events = listener.events[0:0]
 		listener.times = listener.times[0:0]
-		listener.discarded = 0
+		listener.omitted = 0
 	}
 	listener.Unlock()
-	return observedEvents, discarded, nil
+	return observedEvents, omitted, nil
 }
 
 // addEvent adds an event to the observed events.
@@ -144,8 +144,8 @@ func (observer *Observer) addEvent(event events.Event) {
 		listener.Lock()
 		var p int
 		if len(listener.events) == cap(listener.events) {
-			listener.discarded++
-			p = rand.IntN(len(listener.events) + listener.discarded)
+			listener.omitted++
+			p = rand.IntN(len(listener.events) + listener.omitted)
 			if p >= cap(listener.events) {
 				listener.Unlock()
 				continue
@@ -155,7 +155,7 @@ func (observer *Observer) addEvent(event events.Event) {
 			properties, _ = types.Marshal(event, events.Schema)
 			receivedAt = event["receivedAt"].(time.Time)
 		}
-		if listener.discarded == 0 {
+		if listener.omitted == 0 {
 			listener.events = append(listener.events, properties)
 			listener.times = append(listener.times, receivedAt)
 		} else {

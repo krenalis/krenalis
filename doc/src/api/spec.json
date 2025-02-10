@@ -13378,7 +13378,7 @@
                 },
                 {
                     "name": "List observed events",
-                    "description": "Returns the events captured by the specified listener along with the count of discarded events.",
+                    "description": "Returns the events captured by the specified listener along with the count of omitted events.",
                     "method": "GET",
                     "url": "/v0/events/listeners/:id",
                     "parameters": [
@@ -14027,13 +14027,13 @@
                                 "description": "The observed events."
                             },
                             {
-                                "name": "discarded",
+                                "name": "omitted",
                                 "placeholder": "572",
                                 "type": {
                                     "kind": "int",
                                     "bitSize": 32
                                 },
-                                "description": "The number of discarded events."
+                                "description": "The number of omitted events."
                             }
                         ]
                     },

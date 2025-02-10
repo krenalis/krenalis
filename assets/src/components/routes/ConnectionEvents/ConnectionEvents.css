@@ -55,7 +55,7 @@
 	border-left: 5px solid transparent;
 }
 
-.connection-events__discarded {
+.connection-events__omitted {
 	padding: 5px;
 	text-align: center;
 	opacity: 0.8;

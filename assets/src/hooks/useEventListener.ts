@@ -13,7 +13,7 @@ interface EventListenerEvent {
 
 const useEventListener = (
 	setEvents: (events: EventListenerEvent[]) => void,
-	setDiscarded?: React.Dispatch<React.SetStateAction<number>>,
+	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
 	filter?: Filter,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
@@ -78,7 +78,7 @@ const useEventListener = (
 					setEventID(newID);
 				}
 				setEvents(newly);
-				setDiscarded && setDiscarded((prevDiscarded) => prevDiscarded + res.discarded);
+				setOmitted && setOmitted((prevOmitted) => prevOmitted + res.omitted);
 			}, 2500);
 		};
 		startListener();
