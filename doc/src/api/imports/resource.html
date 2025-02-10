@@ -40,7 +40,7 @@
     case "array":
       return "[ " + requestToHTML(t.elementType.(map[string]any), depth) + " ]"
     case "object":
-      var s html = "{</div>\n"
+      var s html = "{</span></div>\n"
       i := 0
       for property in t.properties.([]any) {
         p := property.(map[string]any)
@@ -49,12 +49,12 @@
           continue
         }
         if i > 0 {
-          s += ",</div>\n"
+          s += ",</span></div>\n"
         }
         for i := 0; i < depth+1; i++ {
           s += "  "
         }
-        s += "<div>"
+        s += "<div><span>"
         for i := 0; i < depth+1; i++ {
           s += "&nbsp;&nbsp;&nbsp;&nbsp;"
         }
@@ -66,7 +66,7 @@
         }
         i++
       }
-      s += "</div>\n<div>"
+      s += "</span></div>\n<div><span>"
       for i := 0; i < depth; i++ {
         s += "&nbsp;&nbsp;&nbsp;&nbsp;"
       }
@@ -171,23 +171,18 @@
     <div>
       <div class="api-request-box">
         <div><span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}</div>
-        <div>
+        <code>
           <div>curl -X {{ endpoint.method }} https://api.meergo.com{{ endpoint.url }} \</div>
           {% body := bodyParameters(endpoint) %}
           {% if endpoint.writeKeyAuth %}
           <div>   -u &lt;YOUR_WRITE_KEY&gt;:{% if body %} \{% end %}</div>
           {% else %}
-          <div>   -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;"{% if body %} \{% end %}</div>
+          <div>   -H "<span>Authorization: Bearer &lt;YOUR_API_KEY&gt;</span>"{% if body %} \{% end %}</div>
           {% end %}
           {% if body %}
-          {% last := len(body)-1 %}
-          <div>   --json '{</div>
-          {% for i, p := range body %}
-          <div>&nbsp;&nbsp;&nbsp;&nbsp;"{{ p.name }}": {{ requestToHTML(p["type"].(map[string]any), 1) }}{% if i < last %},{% end %}</div>
-          {% end for %}
-          <div>   }'</div>
+          <div>   --json '<span>{{ requestToHTML(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</span>'</div>
           {% end if %}
-        </div>
+        </code>
       </div>
       {% if response, ok := endpoint.response.(map[string]any); ok %}
       {% if parameters := response.parameters.([]any); len(parameters) > 0 %}

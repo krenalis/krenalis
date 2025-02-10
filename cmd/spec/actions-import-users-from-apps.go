@@ -85,7 +85,6 @@ func init() {
 						Description:    "The paths of the properties that may be returned by the function. At least one path must be present.",
 					},
 				}),
-				Placeholder:    `null`,
 				UpdateRequired: true,
 				Nullable:       true,
 				Description:    "The transformation function. A JavaScript or Python function that given an app user, returns a user identity.",
