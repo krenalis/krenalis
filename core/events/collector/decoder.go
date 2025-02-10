@@ -277,11 +277,6 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 		d.sentAt = d.receivedAt
 	}
 
-	if d.writeKey == "" {
-		key, _, _ := r.BasicAuth()
-		d.writeKey = key
-	}
-
 	return nil
 }
 

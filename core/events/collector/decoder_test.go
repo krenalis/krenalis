@@ -29,7 +29,6 @@ import (
 func Test_Decoder(t *testing.T) {
 
 	writeKey := "vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"
-	_ = writeKey
 
 	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
 	browser := map[string]any{"name": "Chrome", "other": "", "version": "117.0"}

@@ -425,7 +425,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		// Authenticate with an API key.
 		if found {
 			if token == "" {
-				return errors.BadRequest("Authorization header is invalid. It should be in the format 'Authorization: Bearer <YOUR_API_KEY>'.")
+				return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
 			}
 			key, ok := c.state.APIKeyByToken(token)
 			if !ok {
@@ -491,12 +491,23 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Get the connection from the write key.
 		writeKey := dec.WriteKey()
-		if writeKey != "" {
-			connection, _ = c.connectionByKey(writeKey)
+		if writeKey == "" {
+			auth, ok := r.Header["Authorization"]
+			if !ok {
+				return errors.Unauthorized("the Authorization header is missing")
+			}
+			_, ok = strings.CutPrefix(auth[0], "Basic ")
+			if !ok {
+				return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
+			}
+			writeKey, _, ok = r.BasicAuth()
+			if !ok || writeKey == "" {
+				return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
+			}
 		}
+		connection, _ = c.connectionByKey(writeKey)
 		if connection == nil {
-			writeOK(w, origin)
-			return nil
+			return errors.Unauthorized("write key in the Authorization header of the request does not exist")
 		}
 	}
 
