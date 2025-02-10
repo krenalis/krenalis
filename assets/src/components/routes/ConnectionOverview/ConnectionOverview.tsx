@@ -126,9 +126,7 @@ const ConnectionOverview = () => {
 		switch (c.connector.type) {
 			case 'App':
 				if (c.role == 'Destination') {
-					if (selectedTarget == 'Users') {
-						steps = steps.filter((v) => v !== 'FILTER'); // No Filter.
-					} else {
+					if (selectedTarget == 'Events') {
 						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
 					}
 				}
@@ -529,7 +527,7 @@ const ConnectionOverview = () => {
 								return (
 									<div className='connection-overview__funnel-step' key={`funnel-passed-${i}`}>
 										<div className='connection-overview__funnel-title'>
-											{c.isDestination && c.isApp && s === 'FINALIZE'
+											{c.isDestination && c.isApp && !isUsersSelected && s === 'FINALIZE'
 												? 'Delivering'
 												: STEP_NAME_BY_IDENTIFIER[s]}
 										</div>
