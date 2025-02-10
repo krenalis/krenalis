@@ -408,6 +408,7 @@ const PropertyDialog = ({
 			validatePropertyName(property.name);
 		} catch (err) {
 			setNameError(err.message);
+			return;
 		}
 		if (property.type === null) {
 			setTypeError('Type cannot be empty');
