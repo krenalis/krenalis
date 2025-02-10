@@ -642,7 +642,14 @@ const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRa
 
 const computeFunnelData = (actionMetrics: ActionMetrics): FunnelData => {
 	if (actionMetrics == null) {
-		return null;
+		return [
+			{ passed: 0, failed: 0 },
+			{ passed: 0, failed: 0 },
+			{ passed: 0, failed: 0 },
+			{ passed: 0, failed: 0 },
+			{ passed: 0, failed: 0 },
+			{ passed: 0, failed: 0 },
+		];
 	}
 	const data = [];
 	for (let i = 0; i < 6; i++) {
