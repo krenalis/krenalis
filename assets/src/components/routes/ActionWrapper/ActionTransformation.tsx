@@ -634,7 +634,7 @@ const TransformationBox = ({
 	const hasNeverChangedTransformationType = useRef<boolean>(true);
 
 	const { connection } = useContext(ConnectionContext);
-	const { setSelectedInPaths, setSelectedOutPaths, isEditing } = useContext(actionContext);
+	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport } = useContext(actionContext);
 
 	useEffect(() => {
 		if (transformationType === 'mappings') {
@@ -739,6 +739,7 @@ const TransformationBox = ({
 		for (const k in action.transformation.mapping) {
 			const property = action.transformation.mapping[k];
 
+			const isIdentifier = isImport && workspace.identifiers.includes(k);
 			const isOutMatchingProperty = !!action.matching?.out && action.matching.out === k;
 			const showMatchingIn = isOutMatchingProperty && property.value === '';
 			const isTableKey = !!action.tableKey && action.tableKey === k;
@@ -831,7 +832,7 @@ const TransformationBox = ({
 						items={mappingItems}
 						onSelect={onSelectMappingItem}
 					>
-						{workspace.identifiers.includes(k) && (
+						{isIdentifier && (
 							<div className='action__transformation-property-icon' slot='prefix'>
 								<SlTooltip content='Used as identifier' hoist>
 									<SlIcon
@@ -2279,6 +2280,7 @@ const TransformationProperty = ({
 	isOutMatchingProperty,
 	tableKey,
 }: TransformationPropertyProps) => {
+	const { isImport } = useContext(ActionContext);
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 
 	let path = property.name;
@@ -2287,7 +2289,7 @@ const TransformationProperty = ({
 	}
 
 	const workspace = workspaces.find((w) => w.id === selectedWorkspace);
-	const isIdentifier = workspace.identifiers.includes(path);
+	const isIdentifier = isImport && workspace.identifiers.includes(path) && side === 'output';
 	const isSelected = selectedPaths.includes(path);
 	const hasSelectedChildren = selectedPaths.findIndex((p) => p.startsWith(`${path}.`)) !== -1;
 	const hasSelectedParent = selectedPaths.findIndex((p) => path.startsWith(`${p}.`)) !== -1;
