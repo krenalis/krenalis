@@ -80,7 +80,7 @@ func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (an
 
 // Member returns the current member.
 func (api api) Member(_ http.ResponseWriter, r *http.Request) (any, error) {
-	member, _, err := api.credentials(r)
+	_, member, err := api.memberCredentials(r)
 	if err != nil {
 		return nil, err
 	}
