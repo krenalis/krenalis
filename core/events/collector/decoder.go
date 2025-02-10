@@ -110,10 +110,10 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 			default:
 				_ = d.dec.SkipValue()
 				yield(nil, errors.BadRequest("expected an object for the event, but found %s instead", k))
+				continue
 			}
 			event, err := d.decodeEvent(connectionID, connectionType)
 			if err != nil {
-				_ = d.dec.SkipOut()
 				if err == errSkip {
 					continue
 				}
@@ -293,6 +293,13 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 
 	_ = d.dec.SkipToken() // Skip '{'.
 
+	skipOut := true
+	defer func() {
+		if skipOut {
+			_ = d.dec.SkipOut()
+		}
+	}()
+
 	var name string
 	var event = map[string]any{
 		"connection": connection,
@@ -305,8 +312,13 @@ func (d *decoder) decodeEvent(connection int, connectionType state.ConnectorType
 
 	for {
 		tok, _ = d.dec.ReadToken()
-		if tok.Kind() == '}' {
+		kind = tok.Kind()
+		if kind == '}' {
+			skipOut = false
 			break
+		}
+		if kind == json.Invalid {
+			return nil, errors.New("unexpected invalid token while decoding an event")
 		}
 		name = tok.String()
 		kind = d.dec.PeekKind()

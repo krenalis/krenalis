@@ -298,6 +298,12 @@ func Test_Decoder(t *testing.T) {
 			}},
 			skip: skip(),
 		},
+		{
+			body: `{"batch":[{}]}`,
+			expected: []expectedEvent{{
+				err: errors.BadRequest("property 'type' is required for a batch request"),
+			}},
+		},
 	}
 
 	for _, test := range tests {
@@ -339,6 +345,9 @@ func Test_Decoder(t *testing.T) {
 			i := 0
 			for got, err := range dec.Events(test.connection, connectionType) {
 				if i == len(test.expected) {
+					if err != nil {
+						t.Fatalf("when parsing an unexpected event, got error %q", err)
+					}
 					t.Fatalf("expected %d events, got more events", len(test.expected))
 				}
 				expected := test.expected[i]
