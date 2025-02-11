@@ -328,10 +328,12 @@ func (ew *EventWriter) flush() {
 			continue
 		}
 		if ew.ack != nil {
+			events := make([]AckEvent, len(rows))
 			for i, event := range rows {
-				id := event[0].(string)
-				ew.ack(actions[i], id, nil)
+				events[i].ID = event[0].(string)
+				events[i].Action = actions[i]
 			}
+			ew.ack(events, nil)
 		}
 		return
 	}

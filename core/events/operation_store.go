@@ -20,12 +20,18 @@ type PendingOperation struct {
 	Actions []int
 }
 
+// DoneEvent represents a done event.
+type DoneEvent struct {
+	Action int
+	ID     string
+}
+
 type OperationStore interface {
 
-	// Done marks the specified action on the given events as completed. Once Done
-	// has been called for every action associated with an event, the operation and
-	// its event are permanently removed from the store.
-	Done(action int, ids ...string)
+	// Done marks the specified event as completed. Once Done has been called
+	// for every action associated with an event, the operation and its event
+	// are permanently removed from the store.
+	Done(events ...DoneEvent)
 
 	// Pending returns an iterator to iterate over the pending operations.
 	// After completing the iteration, the caller should call the returned function
@@ -49,26 +55,32 @@ func NewPostgreStore(db *postgres.DB) *PostgreStore {
 }
 
 // Done marks the specified action on the given events as completed.
-func (store *PostgreStore) Done(action int, ids ...string) {
-	var b strings.Builder
-	b.WriteString(`UPDATE event_payloads SET actions = array_remove(actions, $1) WHERE id IN ('`)
-	for i, id := range ids {
-		if i > 0 {
-			b.WriteString(`','`)
+func (store *PostgreStore) Done(events ...DoneEvent) {
+	idsByAction := map[int][]string{}
+	for _, event := range events {
+		idsByAction[event.Action] = append(idsByAction[event.Action], event.ID)
+	}
+	for action, ids := range idsByAction {
+		var b strings.Builder
+		b.WriteString(`UPDATE event_payloads SET actions = array_remove(actions, $1) WHERE id IN ('`)
+		for i, id := range ids {
+			if i > 0 {
+				b.WriteString(`','`)
+			}
+			b.WriteString(id)
 		}
-		b.WriteString(id)
-	}
-	b.WriteString(`')`)
-	ctx := context.Background()
-	_, err := store.db.Exec(ctx, b.String(), action)
-	if err != nil {
-		slog.Error("cannot update event operations", "err", err)
-		return
-	}
-	_, err = store.db.Exec(ctx, "DELETE FROM event_payloads WHERE actions = '{}'")
-	if err != nil {
-		slog.Error("cannot delete event operations", "err", err)
-		return
+		b.WriteString(`')`)
+		ctx := context.Background()
+		_, err := store.db.Exec(ctx, b.String(), action)
+		if err != nil {
+			slog.Error("cannot update event operations", "err", err)
+			return
+		}
+		_, err = store.db.Exec(ctx, "DELETE FROM event_payloads WHERE actions = '{}'")
+		if err != nil {
+			slog.Error("cannot delete event operations", "err", err)
+			return
+		}
 	}
 }
 

@@ -124,14 +124,14 @@ func (processor *processor) worker() {
 					// The event is already present in the database. This happens if it was previously inserted but
 					// failed to signal that the event has been processed for this action.
 					// There's no need to route it to the dispatcher since the restoration procedure handles it.
-					processor.operationStore.Done(action.ID, event.properties["id"].(string))
+					processor.operationStore.Done(events.DoneEvent{Action: action.ID, ID: event.properties["id"].(string)})
 					continue
 				}
 				processor.metrics.FinalizeFailed(action.ID, 1, err.Error())
 				continue
 			}
 
-			processor.operationStore.Done(action.ID, event.properties["id"].(string))
+			processor.operationStore.Done(events.DoneEvent{Action: action.ID, ID: event.properties["id"].(string)})
 
 			processor.events.out <- event
 

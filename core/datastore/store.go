@@ -54,9 +54,15 @@ var ErrAlterInProgress = meergo.ErrAlterInProgress
 // Resolution is currently in progress on the data warehouse.
 var ErrIdentityResolutionInProgress = meergo.ErrIdentityResolutionInProgress
 
-// EventWriterAckFunc is the function called when an event have been written to
+// AckEvent represents an ack event.
+type AckEvent struct {
+	Action int
+	ID     string
+}
+
+// EventWriterAckFunc is the function called when events have been written to
 // the data warehouse.
-type EventWriterAckFunc func(action int, id string, err error)
+type EventWriterAckFunc func(events []AckEvent, err error)
 
 // EventIdentityWriterAckFunc is the function called when a batch of user
 // identities from events have been written to the data warehouse.

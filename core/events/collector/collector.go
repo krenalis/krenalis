@@ -221,7 +221,12 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // identityAck acknowledges when identities are written to the data warehouse.
 func (c *Collector) identityAck(action int, ids []string, err error) {
-	c.operationStore.Done(action, ids...)
+	doneEvents := make([]events.DoneEvent, len(ids))
+	for i, id := range ids {
+		doneEvents[i].Action = action
+		doneEvents[i].ID = id
+	}
+	c.operationStore.Done(doneEvents...)
 	if err != nil {
 		c.metrics.FinalizeFailed(action, len(ids), err.Error())
 		return
@@ -243,13 +248,19 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 }
 
 // eventAck acknowledges when an event is written to the data warehouse.
-func (c *Collector) eventAck(action int, id string, err error) {
-	c.operationStore.Done(action, id)
-	if err != nil {
-		c.metrics.FinalizeFailed(action, 1, err.Error())
-		return
+func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
+	doneEvents := make([]events.DoneEvent, len(evs))
+	for i, event := range evs {
+		doneEvents[i] = events.DoneEvent(event)
 	}
-	c.metrics.FinalizePassed(action, 1)
+	c.operationStore.Done(doneEvents...)
+	for _, event := range evs {
+		if err != nil {
+			c.metrics.FinalizeFailed(event.Action, 1, err.Error())
+			return
+		}
+		c.metrics.FinalizePassed(event.Action, 1)
+	}
 }
 
 // eventDestinations returns the destination actions to which events from source

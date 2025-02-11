@@ -217,7 +217,7 @@ dispatch:
 			q := queues[key]
 			q.Ack(event, event.err == nil)
 			if event.err == nil {
-				d.operationStore.Done(event.action.ID, event.id.String())
+				d.operationStore.Done(events.DoneEvent{Action: event.action.ID, ID: event.id.String()})
 				q.backoff = nil
 				readyQueues[key] = q
 				numEvents--
