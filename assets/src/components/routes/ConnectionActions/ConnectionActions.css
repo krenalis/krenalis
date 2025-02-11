@@ -67,6 +67,25 @@
 	justify-content: end;
 }
 
+.connection-actions__execution-info-title {
+	font-weight: 500;
+	font-size: 13px;
+}
+
+.connection-actions__execution-info ul {
+	padding-left: 17px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.connection-actions__buttons .feedback-button__tooltip-content {
+	min-width: 300px;
+}
+
+.connection-actions__buttons .feedback-button__tooltip-content--info {
+	padding-top: 27px;
+}
+
 .connection-actions__scheduler-button::part(base) {
 	min-width: 132px;
 	justify-content: left;
@@ -118,7 +137,7 @@
 }
 
 .connection-actions__link-to-overview {
-	margin-top: 5px;
+	margin-top: 10px;
 }
 
 .connection-actions__link {

@@ -114,23 +114,51 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			}
 		}
 
+		let link = `connections/${connection.id}/overview`;
+		if (execution.error) {
+			link += `?failed-execution-action=${actionID}`;
+		}
+		const overviewLink = (
+			<div className='connection-actions__link-to-overview'>
+				Go to{' '}
+				<Link path={link}>
+					<span className='connection-actions__link'>overview</span>
+				</Link>{' '}
+				for details
+			</div>
+		);
+
 		if (execution.error !== '') {
 			runButtonRefs.current[actionID].current!.error(
 				<>
 					{execution.error}
-					<div className='connection-actions__link-to-overview'>
-						Go to{' '}
-						<Link path={`connections/${connection.id}/overview?failed-execution-action=${actionID}`}>
-							<span className='connection-actions__link'>overview</span>
-						</Link>{' '}
-						for details
-					</div>
+					{overviewLink}
 				</>,
 			);
 			return;
 		}
 
-		runButtonRefs.current[actionID].current!.confirm();
+		const passed = execution.passed;
+		const failed = execution.failed;
+		const infoMessage = (
+			<div className='connection-actions__execution-info'>
+				<div className='connection-actions__execution-info-title'>
+					{connection.isSource ? 'Import' : 'Export'} completed
+				</div>
+				<ul>
+					<li>
+						{passed} {passed === 1 ? 'user' : 'users'} {connection.isSource ? 'imported' : 'exported'}
+					</li>
+					<li>
+						{failed === 0
+							? 'No errors occurred'
+							: `${failed} not ${connection.isSource ? 'imported' : 'exported'} due to errors`}
+					</li>
+				</ul>
+				{overviewLink}
+			</div>
+		);
+		runButtonRefs.current[actionID].current!.info(infoMessage);
 	};
 
 	const onSchedulerPeriodChange = async (e: any, actionID: number) => {
@@ -148,7 +176,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 		for (const key in runButtonRefs.current) {
 			const button = runButtonRefs.current[key].current;
 			if (button != null) {
-				button.hideError();
+				button.hideTooltip();
 			}
 		}
 		onSelectAction(action);

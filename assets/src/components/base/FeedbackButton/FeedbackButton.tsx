@@ -20,10 +20,11 @@ interface FeedbackButtonProps {
 
 interface FeedbackButtonRef {
 	confirm: () => void;
-	error: (errorContent: ReactNode) => void;
+	error: (message: ReactNode) => void;
+	info: (message: ReactNode) => void;
 	load: () => void;
 	stop: (cb?: (...args: any) => any) => void;
-	hideError: () => void;
+	hideTooltip: () => void;
 }
 
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
@@ -44,6 +45,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 	) => {
 		const [isLoading, setIsLoading] = useState<boolean>(false);
 		const [error, setError] = useState<ReactNode>(null);
+		const [info, setInfo] = useState<ReactNode>(null);
 
 		const buttonRef = useRef<SlButtonType>(null);
 		const loadingDurationRef = useRef<number>(0);
@@ -53,7 +55,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 
 		const isAnimating = useRef<boolean>(false);
 
-		const giveFeedback = (feedback: 'confirmation' | 'error', errorContent?: ReactNode) => {
+		const giveFeedback = (feedback: 'confirmation' | 'error' | 'info', message?: ReactNode) => {
 			if (isAnimating.current) {
 				return;
 			}
@@ -78,13 +80,17 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 					}, halfAnimation);
 				}, halfAnimation);
 			} else if (feedback === 'error') {
-				setError(errorContent);
+				setError(message);
+				isAnimating.current = false;
+			} else if (feedback === 'info') {
+				setInfo(message);
 				isAnimating.current = false;
 			}
 		};
 
 		const startLoading = () => {
 			setError(null);
+			setInfo(null);
 			loadingDurationRef.current = Date.now();
 			setIsLoading(true);
 		};
@@ -110,8 +116,11 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				confirm() {
 					stopLoading(() => giveFeedback('confirmation'));
 				},
-				error(errorContent: ReactNode) {
-					stopLoading(() => giveFeedback('error', errorContent));
+				error(message: ReactNode) {
+					stopLoading(() => giveFeedback('error', message));
+				},
+				info(message: ReactNode) {
+					stopLoading(() => giveFeedback('info', message));
 				},
 				load() {
 					startLoading();
@@ -119,8 +128,9 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				stop(cb?: (...args: any) => any) {
 					stopLoading(cb);
 				},
-				hideError() {
+				hideTooltip() {
 					setError(null);
+					setInfo(null);
 				},
 			}),
 			[],
@@ -145,23 +155,38 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		return (
 			<SlTooltip
 				className='feedback-button__tooltip'
-				open={error !== null ? true : false}
+				open={error !== null || info !== null ? true : false}
 				trigger='manual'
 				style={{ '--max-width': '400px' } as React.CSSProperties}
 				placement='bottom'
 				hoist={hoist}
 			>
-				{error !== null && (
-					<div slot='content' className='feedback-button__tooltip-content'>
+				{(error !== null || info !== null) && (
+					<div
+						slot='content'
+						className={`feedback-button__tooltip-content ${error !== null ? 'feedback-button__tooltip-content--error' : 'feedback-button__tooltip-content--info'}`}
+					>
 						<SlIcon
 							className='feedback-button__tooltip-icon-close'
 							name='x-lg'
-							onClick={() => setError(null)}
+							onClick={() => {
+								if (error !== null) {
+									setError(null);
+								} else {
+									setInfo(null);
+								}
+							}}
 						/>
-						<div>
+						{error !== null ? (
 							<SlIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
-						</div>
-						<div className='feedback-button__tooltip-error'>{error}</div>
+						) : (
+							<SlIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
+						)}
+						{error !== null ? (
+							<div className='feedback-button__tooltip-error'>{error}</div>
+						) : (
+							<div className='feedback-button__tooltip-info'>{info}</div>
+						)}
 					</div>
 				)}
 				{button}

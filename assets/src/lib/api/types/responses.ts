@@ -21,6 +21,8 @@ interface Execution {
 	action: number;
 	startTime: string;
 	endTime?: string;
+	passed: number;
+	failed: number;
 	error: string;
 }
 
