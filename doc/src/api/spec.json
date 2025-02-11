@@ -63,7 +63,7 @@
                             },
                             {
                                 "name": "passed",
-                                "placeholder": "602914",
+                                "placeholder": "[ [ 6029, 6029, 5974, 5974, 5974 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -78,7 +78,7 @@
                             },
                             {
                                 "name": "failed",
-                                "placeholder": "0",
+                                "placeholder": "[ [ 0, 0, 55, 0, 0 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -152,7 +152,7 @@
                             },
                             {
                                 "name": "passed",
-                                "placeholder": "602914",
+                                "placeholder": "[ [ 6029, 6029, 5974, 5974, 5974 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -167,7 +167,7 @@
                             },
                             {
                                 "name": "failed",
-                                "placeholder": "0",
+                                "placeholder": "[ [ 0, 0, 55, 0, 0 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -241,7 +241,7 @@
                             },
                             {
                                 "name": "passed",
-                                "placeholder": "602914",
+                                "placeholder": "[ [ 6029, 6029, 5974, 5974, 5974 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -256,7 +256,7 @@
                             },
                             {
                                 "name": "failed",
-                                "placeholder": "0",
+                                "placeholder": "[ [ 0, 0, 55, 0, 0 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -330,7 +330,7 @@
                             },
                             {
                                 "name": "passed",
-                                "placeholder": "602914",
+                                "placeholder": "[ [ 6029, 6029, 5974, 5974, 5974 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {
@@ -345,7 +345,7 @@
                             },
                             {
                                 "name": "failed",
-                                "placeholder": "0",
+                                "placeholder": "[ [ 0, 0, 55, 0, 0 ] ]",
                                 "type": {
                                     "kind": "array",
                                     "elementType": {

@@ -37,13 +37,13 @@ func init() {
 		{
 			Name:        "passed",
 			Type:        types.Array(types.Array(types.Int(32))),
-			Placeholder: `602914`,
+			Placeholder: `[ [ 6029, 6029, 5974, 5974, 5974 ] ]`,
 			Description: "The number of users or events that successfully passed each step on each hour within the start and end dates.",
 		},
 		{
 			Name:        "failed",
 			Type:        types.Array(types.Array(types.Int(32))),
-			Placeholder: `0`,
+			Placeholder: `[ [ 0, 0, 55, 0, 0 ] ]`,
 			Description: "The number of users or events that failed at each step on each hour within the start and end dates.",
 		},
 	}
