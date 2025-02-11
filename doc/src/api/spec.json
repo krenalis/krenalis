@@ -8321,21 +8321,27 @@
                                             },
                                             {
                                                 "name": "passed",
-                                                "placeholder": "22947",
+                                                "placeholder": "[ 6029, 6029, 5974, 5974, 5974 ]",
                                                 "type": {
-                                                    "kind": "int",
-                                                    "bitSize": 32
+                                                    "kind": "array",
+                                                    "elementType": {
+                                                        "kind": "int",
+                                                        "bitSize": 32
+                                                    }
                                                 },
-                                                "description": "The number of passed users or events."
+                                                "description": "The number of users or events that successfully passed each step. All values will be 0 if the execution has not yet finished."
                                             },
                                             {
                                                 "name": "failed",
-                                                "placeholder": "172",
+                                                "placeholder": "[ 0, 0, 55, 0, 0 ]",
                                                 "type": {
-                                                    "kind": "int",
-                                                    "bitSize": 32
+                                                    "kind": "array",
+                                                    "elementType": {
+                                                        "kind": "int",
+                                                        "bitSize": 32
+                                                    }
                                                 },
-                                                "description": "The number of failed users or events."
+                                                "description": "The number of users or events that failed at each step. All values will be 0 if the execution has not yet finished."
                                             },
                                             {
                                                 "name": "error",
@@ -8407,21 +8413,27 @@
                             },
                             {
                                 "name": "passed",
-                                "placeholder": "22947",
+                                "placeholder": "[ 6029, 6029, 5974, 5974, 5974 ]",
                                 "type": {
-                                    "kind": "int",
-                                    "bitSize": 32
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "int",
+                                        "bitSize": 32
+                                    }
                                 },
-                                "description": "The number of passed users or events."
+                                "description": "The number of users or events that successfully passed each step. All values will be 0 if the execution has not yet finished."
                             },
                             {
                                 "name": "failed",
-                                "placeholder": "172",
+                                "placeholder": "[ 0, 0, 55, 0, 0 ]",
                                 "type": {
-                                    "kind": "int",
-                                    "bitSize": 32
+                                    "kind": "array",
+                                    "elementType": {
+                                        "kind": "int",
+                                        "bitSize": 32
+                                    }
                                 },
-                                "description": "The number of failed users or events."
+                                "description": "The number of users or events that failed at each step. All values will be 0 if the execution has not yet finished."
                             },
                             {
                                 "name": "error",

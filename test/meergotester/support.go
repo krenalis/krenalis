@@ -592,7 +592,7 @@ func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
 				if exe.Error != "" {
 					c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exe.Action, exe.ID, exe.Error)
 				}
-				if exe.Failed > 0 && !allowFailed {
+				if !allowFailed && exe.Failed != [6]int{} {
 					c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exe.Action, exe.ID, exe.Failed)
 				}
 				return
@@ -613,7 +613,7 @@ func (c *Meergo) waitForExecutionsCompletion(allowFailed bool, ids ...int) {
 			if exe.Error != "" {
 				c.t.Fatalf("an error occurred when running action %d on connection %d: %s", exe.Action, exe.ID, exe.Error)
 			}
-			if exe.Failed > 0 && !allowFailed {
+			if !allowFailed && exe.Failed != [6]int{} {
 				c.t.Fatalf("an error occurred when running action %d on connection %d: %d failed", exe.Action, exe.ID, exe.Failed)
 			}
 		}

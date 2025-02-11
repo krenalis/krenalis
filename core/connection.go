@@ -1163,8 +1163,8 @@ type Execution struct {
 	Action    int        `json:"action"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    int        `json:"passed"`
-	Failed    int        `json:"failed"`
+	Passed    [6]int     `json:"passed"`
+	Failed    [6]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 

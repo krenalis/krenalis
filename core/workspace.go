@@ -961,12 +961,16 @@ func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error
 	}
 	var exe Execution
 	err := this.core.db.QueryRow(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error_message\n"+
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
+			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4,"+
+			" e.failed_5, e.error_message\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+
 			"WHERE c.workspace = $1 AND e.id = $2", this.workspace.ID, id).Scan(
-		&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed, &exe.Failed, &exe.Error)
+		&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
+		&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
+		&exe.Failed[5], &exe.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("action execution %d does not exist", id)
@@ -974,8 +978,8 @@ func (this *Workspace) Execution(ctx context.Context, id int) (*Execution, error
 		return nil, err
 	}
 	if exe.EndTime == nil {
-		exe.Passed = 0
-		exe.Failed = 0
+		exe.Passed = [6]int{}
+		exe.Failed = [6]int{}
 	}
 	return &exe, nil
 }
@@ -987,7 +991,8 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 
 	executions := []*Execution{}
 	err := this.core.db.QueryScan(ctx,
-		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed, e.failed, e.error_message\n"+
+		"SELECT e.id, e.action, e.start_time, e.end_time, e.passed_0, e.passed_1, e.passed_2, e.passed_3,"+
+			" e.passed_4, e.passed_5, e.failed_0, e.failed_1, e.failed_2, e.failed_3, e.failed_4, e.failed_5, e.error_message\n"+
 			"FROM actions_executions e\n"+
 			"INNER JOIN actions a ON a.id = e.action\n"+
 			"INNER JOIN connections c ON c.id = a.connection\n"+
@@ -996,7 +1001,9 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 			var err error
 			for rows.Next() {
 				var exe Execution
-				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed, &exe.Failed, &exe.Error); err != nil {
+				if err = rows.Scan(&exe.ID, &exe.Action, &exe.StartTime, &exe.EndTime, &exe.Passed[0], &exe.Passed[1], &exe.Passed[2], &exe.Passed[3],
+					&exe.Passed[4], &exe.Passed[5], &exe.Failed[0], &exe.Failed[1], &exe.Failed[2], &exe.Failed[3], &exe.Failed[4],
+					&exe.Failed[5], &exe.Error); err != nil {
 					return err
 				}
 				executions = append(executions, &exe)
@@ -1009,8 +1016,8 @@ func (this *Workspace) Executions(ctx context.Context) ([]*Execution, error) {
 
 	for _, exe := range executions {
 		if exe.EndTime == nil {
-			exe.Passed = 0
-			exe.Failed = 0
+			exe.Passed = [6]int{}
+			exe.Failed = [6]int{}
 		}
 	}
 

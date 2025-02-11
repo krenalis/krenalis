@@ -75,15 +75,15 @@ func init() {
 		},
 		{
 			Name:        "passed",
-			Type:        types.Int(32),
-			Placeholder: "22947",
-			Description: "The number of passed users or events.",
+			Type:        types.Array(types.Int(32)),
+			Placeholder: "[ 6029, 6029, 5974, 5974, 5974 ]",
+			Description: "The number of users or events that successfully passed each step. All values will be 0 if the execution has not yet finished.",
 		},
 		{
 			Name:        "failed",
-			Type:        types.Int(32),
-			Placeholder: "172",
-			Description: "The number of failed users or events.",
+			Type:        types.Array(types.Int(32)),
+			Placeholder: "[ 0, 0, 55, 0, 0 ]",
+			Description: "The number of users or events that failed at each step. All values will be 0 if the execution has not yet finished.",
 		},
 		{
 			Name:        "error",
