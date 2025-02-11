@@ -1,5 +1,6 @@
 {% import "specification.txt" %}
 {% import "properties.html" %}
+{% import "copy-api-request.html" %}
 
 {% macro Resource(id string) %}
 
@@ -170,7 +171,10 @@
     </div>
     <div>
       <div class="api-request-box">
-        <div><span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}</div>
+        <div>
+          <div><span class="api-method-{{ toLower(endpoint.method.(string)) }}">{{ endpoint.method }}</span> {{ endpoint.url }}</div>
+          {{ Copy() }}
+        </div>
         <code>
           <div>curl -X {{ endpoint.method }} https://api.meergo.com{{ endpoint.url }} \</div>
           {% body := bodyParameters(endpoint) %}

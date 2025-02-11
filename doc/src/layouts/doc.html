@@ -1,5 +1,6 @@
 {% import "/imports/meta.html" for Meta %}
 {% import highlight "/imports/highlight.html" %}
+{% import copyAPIRequest "/api/imports/copy-api-request.html" %}
 <!doctype html>
 <html lang="en" class="article">
 <head>
@@ -227,5 +228,6 @@
 </article>
 {{ render "/partials/footer.html" }}
 {{ highlight.JS() }}
+{{ copyAPIRequest.JS() }}
 </body>
 </html>
