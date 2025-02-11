@@ -58,6 +58,7 @@ func (c *Collector) writeIdentity(action *state.Action, identity events.Event) e
 			sa.mu.Lock()
 			if sa.identities == nil {
 				sa.mu.Unlock()
+				return
 			}
 			identities := sa.identities
 			sa.identities = nil
