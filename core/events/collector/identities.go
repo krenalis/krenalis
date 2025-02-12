@@ -34,6 +34,7 @@ func (c *Collector) writeIdentity(action *state.Action, identity events.Event) e
 		id, ok := identity["userId"].(string)
 		// Since there are no properties, do not store anonymous identities.
 		if !ok {
+			c.identityAck(action.ID, []string{identity["id"].(string)}, nil)
 			return nil
 		}
 		err := sa.writer.Write(datastore.Identity{
