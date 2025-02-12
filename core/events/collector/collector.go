@@ -281,23 +281,6 @@ func (c *Collector) eventDestinations(connection *state.Connection) []*state.Act
 	return actions
 }
 
-// hasEventDestinations reports whether source has an enabled linked destination
-// with an enabled action on events.
-func (c *Collector) hasEventDestinations(connection *state.Connection) bool {
-	for _, id := range connection.LinkedConnections {
-		c, ok := c.state.Connection(id)
-		if !ok {
-			continue
-		}
-		for _, action := range c.Actions() {
-			if action.Enabled && action.Target == state.Events {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // importEventsAction returns the action of the source connection that imports
 // events into the data warehouse, if there is one and if it is enabled;
 // otherwise, it returns nil and false.
@@ -308,17 +291,6 @@ func (c *Collector) importEventsAction(connection *state.Connection) (*state.Act
 		}
 	}
 	return nil, false
-}
-
-// hasImportUsersAction reports whether source has an enabled action that
-// import the users.
-func (c *Collector) hasImportUsersAction(connection *state.Connection) bool {
-	for _, a := range connection.Actions() {
-		if a.Enabled && a.Target == state.Users {
-			return true
-		}
-	}
-	return false
 }
 
 // reloadEvents reloads the operations from the operation store.
