@@ -109,7 +109,9 @@ func (d *decoder) Events(connectionID int, connectionType state.ConnectorType) i
 			case '{':
 			default:
 				_ = d.dec.SkipValue()
-				yield(nil, errors.BadRequest("expected an object for the event, but found %s instead", k))
+				if !yield(nil, errors.BadRequest("expected an object for the event, but found %s instead", k)) {
+					return
+				}
 				continue
 			}
 			event, err := d.decodeEvent(connectionID, connectionType)
