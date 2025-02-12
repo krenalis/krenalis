@@ -716,7 +716,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -1034,7 +1033,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -1404,7 +1402,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [
@@ -1631,7 +1628,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -1832,7 +1828,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -2176,7 +2171,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [
@@ -4421,7 +4415,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [
@@ -4676,7 +4669,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -4905,7 +4897,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -5182,7 +5173,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [
@@ -5481,7 +5471,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -5741,7 +5730,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -6053,7 +6041,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [
@@ -6409,7 +6396,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -6757,7 +6743,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -7083,7 +7068,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [
@@ -7392,7 +7376,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -7662,7 +7645,6 @@
                                     },
                                     {
                                         "name": "function",
-                                        "placeholder": "null",
                                         "type": {
                                             "kind": "object",
                                             "properties": [
@@ -7989,7 +7971,6 @@
                                         },
                                         {
                                             "name": "function",
-                                            "placeholder": "null",
                                             "type": {
                                                 "kind": "object",
                                                 "properties": [

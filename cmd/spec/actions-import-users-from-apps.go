@@ -313,7 +313,6 @@ func init() {
 											Description: "The paths of the properties that may be returned by the function. It contains at least one property path.",
 										},
 									}),
-									Placeholder: `null`,
 									Nullable:    true,
 									Description: "The transformation function. A JavaScript or Python function that given an app user, returns a user identity.",
 								},
