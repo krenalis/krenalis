@@ -192,7 +192,7 @@
       {% if parameters := response.parameters.([]any); len(parameters) > 0 %}
       <div class="api-response-box">
         <div>Response</div>
-        <div>{{ responseToJSON(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</div>
+        <div><pre><code class="language-json hljs">{{ responseToJSON(map[string]any{"kind": "object", "properties": parameters, "placeholder": "..."}, 0) }}</code></pre></div>
       </div>
       {% end if %}
       {% end if %}
