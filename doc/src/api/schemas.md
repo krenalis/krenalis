@@ -44,10 +44,10 @@ Note that a schema has the same representation as an [object type](#object).
 Below are the data types and their representations in JSON format:
 
 - [boolean](#boolean) - boolean
-- [int(n)](#intn) - signed integer
-- [uint(n)](#uintn) - unsigned integer
-- [float(n)](#floatn) - floating point number
-- [decimal(p,s)](#decimalps) - decimal number
+- [int](#int) - signed integer
+- [uint](#uint) - unsigned integer
+- [float](#float) - floating point number
+- [decimal](#decimal) - decimal number
 - [datetime](#datetime) - date and time
 - [date](#date) - date
 - [time](#time) - time
@@ -56,9 +56,9 @@ Below are the data types and their representations in JSON format:
 - [json](#json) - JSON
 - [inet](#inet) - IP4 or IP6 address
 - [text](#text) - text
-- [array(T)](#arrayt) - array of T
+- [array](#array) - array
 - [object](#object) - object
-- [map(T)](#mapt) - map of T
+- [map](#map) - map
 
 ### boolean
 
@@ -72,9 +72,9 @@ Represents a boolean value.
 
 Values are `true` and `false`.
 
-### int(n)
+### int
 
-A signed integer with n bytes, where n can be 8, 16, 24, 32, or 64.
+A signed integer with a specific bit size. The size can be 8, 16, 24, 32, or 64
 
 ```json
 {
@@ -96,9 +96,9 @@ You can limit integers to a minimum and maximum range, for example the following
 
 Examples of values are `12`, `-470`, `7308561`.
 
-### uint(n)
+### uint
 
-An unsigned integer with n bytes, where n can be 8, 16, 24, 32, or 64.
+An unsigned integer with a specific bit size. The size can be 8, 16, 24, 32, or 64
 
 ```json
 {
@@ -120,9 +120,9 @@ You can also set a minimum and maximum range for unsigned integers, for example 
 
 Examples of values are `63`, `0`, `947165402`.
 
-### float(n)
+### float
 
-A floating-point number with n bytes, n can be 32, or 64. Includes +Inf, -Inf, and NaN values.
+A floating-point number with a specific bit size, according to the IEEE 754 standard. The available sizes are 32 or 64 bits.
 
 ```json
 {
@@ -131,9 +131,7 @@ A floating-point number with n bytes, n can be 32, or 64. Includes +Inf, -Inf, a
 }
 ```
 
-Floats can have a minimum and maximum value and can be restricted to real numbers only.
-
-For example a 32-bit float with range [-20.5, 8]:
+Floats can have a minimum and maximum value and exclude special values such as NaN, Infinity, and -Infinity. For example a 32-bit float with range [-20.5, 8]:
 
 ```json
 {
@@ -155,7 +153,7 @@ For example a 64-bit float with range [-0, 56.481782]:
 }
 ```
 
-For example a 64-bit float, excluding +Inf, -Inf, and NaN:
+For example, a 64-bit float excluding special values such as NaN, Infinity, and -Infinity:
 
 ```json
 {
@@ -165,11 +163,11 @@ For example a 64-bit float, excluding +Inf, -Inf, and NaN:
 }
 ```
 
-Examples of values are `1.6892`, `-0.002516`, `441.015`.
+Examples of values are `1.6892`, `-0.002516`, `441.015`, `"NaN"`, `"Infinity"`, `"-Infinity"`.
 
-### decimal(p,s)
+### decimal
 
-A decimal number with a precision p and a scale s, where precision ranges from 1 to 76, scale from 0 to 37, and scale is less than or equal to precision.
+A decimal number with a precision and a scale, where precision ranges from 1 to 76, scale from 0 to 37, and scale is less than or equal to precision.
 
 ```json
 {
@@ -195,7 +193,7 @@ Examples of values are `5.12`, `893`, `1258.068`.
 
 ### datetime
 
-Represents a date and time within the range [1, 9999] with nanosecond precision and no timezone. Values are presented in ISO 8601 format.
+Represents a date and time within the range of years [1, 9999] with nanosecond precision and UTC timezone.
 
 ```json
 {
@@ -203,17 +201,21 @@ Represents a date and time within the range [1, 9999] with nanosecond precision 
 }
 ```
 
-Examples of values are `"2025-02-11T16:19:14.820364510Z"`, `"1975-12-05T09:55:12.048522068Z"`.
+Values are presented in ISO 8601 format. When passing a datetime value to the API endpoints, you can use any ISO 8601 format with any timezone; it will be automatically converted to UTC.
+
+Examples include `"2024-12-23T09:05:47Z"`, `"2025-02-11T16:19:14.3392Z"`, `"1975-12-05T09:55:12.048522068Z"`.
 
 ### date
 
-Represents a date within the range [1, 9999]. Values are presented in ISO 8601 format.
+Represents a date within the range of years [1, 9999].
 
 ```json
 {
   "kind": "date"
 }
 ```
+
+Values are presented in ISO 8601 format. When passing a date value to the API endpoints, you can use the ISO 8601 format `yyyy-mm-dd`.
 
 Examples of values are `"2025-02-11"`, `"1975-12-05"`.
 
@@ -227,7 +229,9 @@ Represents a time of day with nanosecond precision and no timezone. Values are p
 }
 ```
 
-Examples of values are `"16:19:14.820364510"`, `"09:55:12.048522068"`.
+Values are presented in ISO 8601 format. When passing a time value to the API endpoints, you can use the ISO 8601 formats `HH:mm:ss` and `HH:mm:ss.sssssssss`, with up to 9 decimal digits.
+
+Examples of values are `"16:19:14"`, `"20:06:58.921"`, `"09:55:12.048522068"`.
 
 ### year
 
@@ -255,7 +259,7 @@ Examples of values are `"ae3a0552-eff9-4456-8a2e-b94c64d03359"`, `"bbe0eda7-b672
 
 ### json
 
-Represents JSON data.
+Represents a JSON value.
 
 ```json
 {
@@ -340,9 +344,9 @@ You can combine maximum byte and character lengths. For example a text with a ma
 
 Examples of values are `"Everett Hayes"`, `"(555) 123-4567"`.
 
-### array(T)
+### array
 
-Represents an array of elements of type T. For example an array of text:
+Represents an array of elements of the same type. For example an array of text:
 
 ```json
 {
@@ -463,9 +467,9 @@ An object property has the following keys:
 | `nullable`        | `Boolean` |          | `false` | Indicates whether the property can be `null`.                                                                                                                       |
 | `description`     | `String`  |          | `""`    | A description providing additional information about the property's usage.                                                                                          |
 
-### map(T)
+### map
 
-Represents a map with text keys and values of type T. For example a map of text:
+Represents a map with text keys and values of the same type. For example a map of text:
 
 ```json
 {
