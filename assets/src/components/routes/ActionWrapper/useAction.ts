@@ -20,15 +20,9 @@ import {
 	ConnectorSettings,
 } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
-import { sleep } from '../../../utils/sleep';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 
-const useAction = (
-	connection: TransformedConnection,
-	providedActionType: ActionType,
-	providedAction: Action,
-	setIsSaveButtonLoading: React.Dispatch<React.SetStateAction<boolean>>,
-) => {
+const useAction = (connection: TransformedConnection, providedActionType: ActionType, providedAction: Action) => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [action, setAction] = useState<TransformedAction>();
 	const [settings, setSettings] = useState<ConnectorSettings>();
@@ -295,9 +289,6 @@ const useAction = (
 		}
 
 		sessionStorage.setItem('newActionID', String(id));
-		setIsSaveButtonLoading(true);
-		await sleep(200);
-		setIsSaveButtonLoading(false);
 		return null;
 	};
 

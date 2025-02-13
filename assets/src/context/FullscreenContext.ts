@@ -1,7 +1,7 @@
 import { createContext } from 'react';
 
 interface FullscreenContextType {
-	closeFullscreen: () => void;
+	closeFullscreen: (cb?: (...args: any) => void) => void;
 }
 
 const FullscreenContext = createContext<FullscreenContextType | undefined>(undefined);

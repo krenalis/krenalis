@@ -18,8 +18,11 @@ const Fullscreen = ({ onClose, isLoading, children }: FullscreenProps) => {
 		}
 	};
 
-	const closeFullscreen = () => {
+	const closeFullscreen = (cb?: (...args: any) => void) => {
 		setIsOpen(false);
+		if (cb != null) {
+			cb();
+		}
 	};
 
 	return (

@@ -18,7 +18,6 @@ import Section from '../../base/Section/Section';
 
 const Action = ({ actionType: providedActionType, action: providedAction }) => {
 	const [transformationType, setTransformationType] = useState<'mappings' | 'function' | ''>('');
-	const [isSaveButtonLoading, setIsSaveButtonLoading] = useState<boolean>(false);
 	const [showEmptyMatchingError, setShowEmptyMatchingError] = useState<boolean>(false);
 
 	const { connection } = useContext(ConnectionContext);
@@ -37,8 +36,8 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		});
 	};
 
-	const onClose = () => {
-		closeFullscreen();
+	const onClose = (cb?: (...args: any) => void) => {
+		closeFullscreen(cb);
 	};
 
 	const {
@@ -68,7 +67,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
-	} = useAction(connection, providedActionType, providedAction, setIsSaveButtonLoading);
+	} = useAction(connection, providedActionType, providedAction);
 
 	if (isLoading) {
 		return (
@@ -111,7 +110,6 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 				showEmptyMatchingError,
 				isTransformationHidden,
 				isTransformationDisabled,
-				isSaveButtonLoading,
 				setIsQueryChanged,
 				setIsFileChanged,
 				setIsFormatLoading: setIsFileConnectorLoading,
@@ -128,7 +126,7 @@ const Action = ({ actionType: providedActionType, action: providedAction }) => {
 			}}
 		>
 			<div className='action'>
-				<ActionHeader onClose={onClose} />
+				<ActionHeader />
 				<div className='action__body'>
 					{actionType!.fields.includes('Filter') && !isFileStorageImport && <ActionFilters />}
 					{actionType!.fields.includes('Query') && <ActionQuery />}

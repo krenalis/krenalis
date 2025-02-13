@@ -6,12 +6,9 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 
-interface ActionHeaderProps {
-	onClose: () => void;
-}
-
-const ActionHeader = ({ onClose }: ActionHeaderProps) => {
+const ActionHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
+	const [isSaving, setIsSaving] = useState<boolean>(false);
 
 	const { handleError } = useContext(AppContext);
 
@@ -24,8 +21,8 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 		isTransformationHidden,
 		isTransformationDisabled,
 		isEditing,
-		isSaveButtonLoading,
 		isSaveHidden,
+		onClose,
 	} = useContext(ActionContext);
 
 	const onUpdateName = (e) => {
@@ -35,12 +32,31 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 	};
 
 	const onSave = async () => {
-		const err = await saveAction();
-		if (err == null) {
-			onClose();
-		} else {
-			handleError(err);
+		if (isSaving) {
+			// prevent duplicated actions caused by multiple clicks.
+			return;
 		}
+		setIsSaving(true);
+		const err = await saveAction();
+		setTimeout(() => {
+			if (err == null) {
+				onClose(() => {
+					setTimeout(() => {
+						// use a timeout to prevent duplicated actions
+						// caused by clicks during the closing of the
+						// action page.
+						setIsSaving(false);
+					}, 500);
+				});
+			} else {
+				handleError(err);
+				setIsSaving(false);
+			}
+		}, 200);
+	};
+
+	const onCancel = () => {
+		onClose();
 	};
 
 	return (
@@ -67,15 +83,15 @@ const ActionHeader = ({ onClose }: ActionHeaderProps) => {
 				{!isNameEditable && <div className='action__header-description'>{actionType.description}</div>}
 			</div>
 			<div className={`action__header-buttons${isSaveHidden ? ' action__header-buttons--hidden' : ''}`}>
-				<SlButton className='action__header-cancel' variant='default' onClick={onClose}>
+				<SlButton className='action__header-cancel' variant='default' onClick={onCancel}>
 					Cancel
 				</SlButton>
 				<SlButton
 					className='action__header-save'
 					variant='primary'
-					disabled={isTransformationHidden || isTransformationDisabled}
+					disabled={isTransformationHidden || isTransformationDisabled || isSaving}
 					onClick={onSave}
-					loading={isSaveButtonLoading}
+					loading={isSaving}
 				>
 					{isEditing ? 'Save' : 'Add'}
 				</SlButton>

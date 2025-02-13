@@ -17,13 +17,12 @@ interface ActionContext {
 	isEditing: boolean;
 	isImport: boolean;
 	isTransformationFunctionSupported: boolean;
-	onClose: () => void;
+	onClose: (cb?: (...args: any) => void) => void;
 	transformationSectionRef: React.MutableRefObject<any>;
 	handleEmptyMatchingError: () => void;
 	showEmptyMatchingError: boolean;
 	isTransformationHidden: boolean;
 	isTransformationDisabled: boolean;
-	isSaveButtonLoading: boolean;
 	setIsQueryChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsFileChanged: React.Dispatch<React.SetStateAction<boolean>>;
 	setIsFormatLoading: React.Dispatch<React.SetStateAction<boolean>>;
