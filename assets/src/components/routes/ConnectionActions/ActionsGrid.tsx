@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import Grid from '../../base/Grid/Grid';
-import { SCHEDULE_PERIODS } from '../../../lib/core/action';
+import { hasFilters, SCHEDULE_PERIODS } from '../../../lib/core/action';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { UnprocessableError } from '../../../lib/api/errors';
@@ -22,6 +22,8 @@ import { Variant } from '../App/App.types';
 import getConnectorLogo from '../../helpers/getConnectorLogo';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Action' }, { name: 'Filter' }, { name: 'Enabled' }, { name: '' }];
+
+const FILTER_STEP = 2;
 
 interface ActionsGridProps {
 	newActionID: React.MutableRefObject<number>;
@@ -138,8 +140,17 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 			return;
 		}
 
-		const passed = execution.passed;
-		const failed = execution.failed;
+		const passed = execution.passed[5];
+		const failed = execution.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
+
+		const action = connection.actions.find((a) => a.id === actionID);
+
+		let filteredItem: ReactNode;
+		if (hasFilters(connection, action.target)) {
+			const filtered = execution.failed[FILTER_STEP];
+			filteredItem = <li>{filtered} filtered out</li>;
+		}
+
 		const infoMessage = (
 			<div className='connection-actions__execution-info'>
 				<div className='connection-actions__execution-info-title'>
@@ -149,6 +160,7 @@ const ActionsGrid = ({ newActionID, actions, onSelectAction }: ActionsGridProps)
 					<li>
 						{passed} {passed === 1 ? 'user' : 'users'} {connection.isSource ? 'imported' : 'exported'}
 					</li>
+					{filteredItem}
 					<li>
 						{failed === 0
 							? 'No errors occurred'

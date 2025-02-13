@@ -1151,6 +1151,12 @@ const computeDefaultAction = (
 	return action;
 };
 
+const hasFilters = (connection: TransformedConnection, target: ActionTarget) => {
+	// Filters are always allowed except for actions that import users
+	// from databases.
+	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'Users');
+};
+
 const computeActionTypeFields = (
 	connection: TransformedConnection,
 	actionType: ActionType,
@@ -1158,9 +1164,7 @@ const computeActionTypeFields = (
 ) => {
 	const fields: ActionTypeField[] = [];
 
-	// Filters are always allowed except for actions that import users
-	// from databases.
-	if (!(connection.role === 'Source' && connection.connector.type === 'Database' && actionType.target === 'Users')) {
+	if (hasFilters(connection, actionType.target)) {
 		fields.push('Filter');
 	}
 
@@ -1196,7 +1200,6 @@ const computeActionTypeFields = (
 		fields.push('Matching');
 		fields.push('UpdateOnDuplicates');
 		fields.push('ExportMode');
-		fields.push('Filter');
 	}
 
 	if (connection.connector.type === 'Database' && connection.role === 'Source') {
@@ -1205,7 +1208,6 @@ const computeActionTypeFields = (
 
 	if (connection.connector.type === 'FileStorage') {
 		if (connection.role === 'Destination') {
-			fields.push('Filter');
 			if (actionType.target === 'Users') {
 				fields.push('OrderBy');
 			}
@@ -1396,6 +1398,7 @@ export {
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	computeDefaultAction,
+	hasFilters,
 	computeActionTypeFields,
 	transformActionType,
 	transformAction,
