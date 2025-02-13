@@ -26,7 +26,7 @@ func init() {
 				Description: "Creates an event write key for a website, mobile, or server connection. " +
 					"Returns an error if the connection already has the maximum limit of 20 keys.",
 				Method: POST,
-				URL:    "/v0/connections/:id/event-write-keys",
+				URL:    "/v1/connections/:id/event-write-keys",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -56,7 +56,7 @@ func init() {
 				Name:        "List all event write keys",
 				Description: "Returns all event write keys for a website, mobile, or server connection.",
 				Method:      GET,
-				URL:         "/v0/connections/:id/event-write-keys",
+				URL:         "/v1/connections/:id/event-write-keys",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -85,7 +85,7 @@ func init() {
 				Name:        "Delete write key",
 				Description: "Deletes a write key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
 				Method:      DELETE,
-				URL:         "/v0/connections/:id/event-write-keys/:key",
+				URL:         "/v1/connections/:id/event-write-keys/:key",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

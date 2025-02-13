@@ -55,15 +55,13 @@ Using an event write key allows authentication exclusively for the following end
 - [Ingest event](/api/events#ingest-event)
 - [Ingest batch events](/api/events#ingest-batch-events)
 
-Event write keys use HTTP Base Authentication.
-
 </div>
 <div>
   <div class="api-request-box">
   <div>Authenticated request with an event write key</div>
         <div>
           <div>curl -X GET https://api.meergo.com/v0/api/events/batch \</div>
-          <div>   -u &lt;YOUR_EVENT_WRITE_KEY&gt;:</div>
+          <div>   -H "Authorization: Bearer &lt;YOUR_WRITE_KEY&gt;"</div>
         </div>
       </div>
   </div>

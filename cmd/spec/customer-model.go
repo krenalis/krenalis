@@ -28,7 +28,7 @@ func init() {
 				Name:        "Get schema",
 				Description: "Returns the user schema of the workspace.",
 				Method:      GET,
-				URL:         "/v0/users/schema",
+				URL:         "/v1/users/schema",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -46,7 +46,7 @@ func init() {
 				Name:        "Update schema",
 				Description: "Updates the user schema of the workspace.",
 				Method:      PUT,
-				URL:         "/v0/users/schema",
+				URL:         "/v1/users/schema",
 				Parameters: []types.Property{
 					{
 						Name:           "schema",
@@ -83,7 +83,7 @@ func init() {
 				Description: "Returns the SQL queries that would be executed on the warehouse to update the user schema.\n\n" +
 					"It does not make any changes to the schema or execute any queries on the warehouse.",
 				Method: PUT,
-				URL:    "/v0/users/schema/preview",
+				URL:    "/v1/users/schema/preview",
 				Parameters: []types.Property{
 					{
 						Name:           "schema",

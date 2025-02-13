@@ -118,7 +118,7 @@ func init() {
 				Name:        "Create workspace",
 				Description: "Creates a new workspace.",
 				Method:      POST,
-				URL:         "/v0/workspaces",
+				URL:         "/v1/workspaces",
 				Parameters: []types.Property{
 					nameParameter,
 					userSchemaParameter,
@@ -151,7 +151,7 @@ func init() {
 				Name:        "Test workspace creation",
 				Description: "Checks the process of creating a new workspace. It performs all the validations required for workspace creation, including verifying that the data warehouse can be initialized, without making any changes to the data warehouse or actually creating the workspace.",
 				Method:      POST,
-				URL:         "/v0/workspaces/test",
+				URL:         "/v1/workspaces/test",
 				Parameters: []types.Property{
 					nameParameter,
 					userSchemaParameter,
@@ -179,7 +179,7 @@ func init() {
 				Name:        "Update workspace",
 				Description: "Updates the current workspace.",
 				Method:      PUT,
-				URL:         "/v0/workspaces/current",
+				URL:         "/v1/workspaces/current",
 				Parameters: []types.Property{
 					nameParameter,
 					uiPreferencesParameter,
@@ -192,7 +192,7 @@ func init() {
 				Name:        "List all workspaces",
 				Description: "Lists all the workspaces of the organization.",
 				Method:      GET,
-				URL:         "/v0/workspaces",
+				URL:         "/v1/workspaces",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -217,7 +217,7 @@ func init() {
 				Name:        "Get workspace",
 				Description: "Returns the current workspace.",
 				Method:      GET,
-				URL:         "/v0/workspaces/current",
+				URL:         "/v1/workspaces/current",
 				Response: &Response{
 					Parameters: []types.Property{
 						idParameter,
@@ -238,7 +238,7 @@ func init() {
 				Name:        "Delete the workspace",
 				Description: "Deletes the current workspace.",
 				Method:      DELETE,
-				URL:         "/v0/workspaces/current",
+				URL:         "/v1/workspaces/current",
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 				},

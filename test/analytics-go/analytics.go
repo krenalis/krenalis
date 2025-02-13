@@ -283,8 +283,7 @@ func (c *client) send(msgs []message) {
 
 // Upload serialized batch message.
 func (c *client) upload(b []byte) error {
-	url := c.Endpoint + "/v1/batch"
-	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
+	req, err := http.NewRequest("POST", c.Endpoint, bytes.NewReader(b))
 	if err != nil {
 		c.errorf("creating request - %s", err)
 		return err
@@ -293,7 +292,7 @@ func (c *client) upload(b []byte) error {
 	req.Header.Add("User-Agent", "analytics-go (version: "+Version+")")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Content-Length", strconv.Itoa(len(b)))
-	req.SetBasicAuth(c.key, "")
+	req.Header.Add("Authorization", "Bearer "+c.key)
 
 	res, err := c.http.Do(req)
 

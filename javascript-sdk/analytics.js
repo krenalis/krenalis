@@ -55,9 +55,6 @@ class Analytics {
 		if (!isURL(endpoint)) {
 			throw new EndpointURLError(endpoint)
 		}
-		if (endpoint.slice(-1) !== '/') {
-			endpoint += '/'
-		}
 
 		this.#id = uuid()
 		this.#writeKey = writeKey

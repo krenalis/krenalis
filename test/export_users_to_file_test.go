@@ -127,7 +127,7 @@ func TestExportUsersToFile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/api/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
+		c.MustCall("PUT", "/api/v1/actions/"+strconv.Itoa(exportUsersActionID), meergotester.ActionToSet{
 			Name:    "Export users to the CSV on Filesystem",
 			Enabled: true,
 			Path:    exportedFilename,

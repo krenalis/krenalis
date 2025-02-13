@@ -123,7 +123,7 @@ func init() {
 				Name:        "Create action",
 				Description: "Create a source action to import users from an app.",
 				Method:      POST,
-				URL:         "/v0/actions",
+				URL:         "/v1/actions",
 				Parameters: []types.Property{
 					nameParameter,
 					{
@@ -173,7 +173,7 @@ func init() {
 				Name:        "Update action",
 				Description: "Update a source action that imports users from an app.",
 				Method:      PUT,
-				URL:         "/v0/actions/:id",
+				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -205,7 +205,7 @@ func init() {
 				Name:        "Get action",
 				Description: "Get a source action that imports users from an app.",
 				Method:      GET,
-				URL:         "/v0/actions/:id",
+				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

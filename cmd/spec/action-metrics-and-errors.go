@@ -58,7 +58,7 @@ func init() {
 				Name:        "Get metrics per dates",
 				Description: "Retrieves metrics for actions aggregated by day for a time interval between specified start and end dates.",
 				Method:      GET,
-				URL:         "/v0/actions/metrics/dates/:start/:end",
+				URL:         "/v1/actions/metrics/dates/:start/:end",
 				Parameters: []types.Property{
 					{
 						Name:           "start",
@@ -87,7 +87,7 @@ func init() {
 				Name:        "Get metrics per day",
 				Description: "Retrieves metrics for actions for a specified number of days up to the current time.",
 				Method:      GET,
-				URL:         "/v0/actions/metrics/days/:days",
+				URL:         "/v1/actions/metrics/days/:days",
 				Parameters: []types.Property{
 					{
 						Name:           "days",
@@ -108,7 +108,7 @@ func init() {
 				Name:        "Get metrics per hour",
 				Description: "Retrieves metrics for actions for a specified number of hours up to the current time.",
 				Method:      GET,
-				URL:         "/v0/actions/metrics/hours/:hours",
+				URL:         "/v1/actions/metrics/hours/:hours",
 				Parameters: []types.Property{
 					{
 						Name:           "hours",
@@ -129,7 +129,7 @@ func init() {
 				Name:        "Get metrics per minute",
 				Description: "Retrieves metrics for actions for a specified number of minutes up to the current time.",
 				Method:      GET,
-				URL:         "/v0/actions/metrics/minutes/:minutes",
+				URL:         "/v1/actions/metrics/minutes/:minutes",
 				Parameters: []types.Property{
 					{
 						Name:           "minutes",
@@ -150,7 +150,7 @@ func init() {
 				Name:        "Get errors",
 				Description: "Retrieves errors for actions for a time interval between specified start and end dates.",
 				Method:      GET,
-				URL:         "/v0/actions/errors/:start/:end",
+				URL:         "/v1/actions/errors/:start/:end",
 				Parameters: []types.Property{
 					{
 						Name:           "start",

@@ -22,7 +22,7 @@ func init() {
 				Name:        "Retrieve query schema",
 				Description: "It executes the provided query on a source database connection and returns the result schema along with the first rows.",
 				Method:      POST,
-				URL:         "/v0/connections/:id/query",
+				URL:         "/v1/connections/:id/query",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -71,7 +71,7 @@ func init() {
 				Name:        "Retrieve table schema",
 				Description: "Returns the schema of a specified database table of a destination database connection.",
 				Method:      GET,
-				URL:         "/v0/connections/:id/tables/:name",
+				URL:         "/v1/connections/:id/tables/:name",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

@@ -112,6 +112,7 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"GET    /connectors/{name}":                              api.Connector,
 		"GET    /events/listeners/{id}":                          workspace.ListenedEvents,
 		"GET    /events/schema":                                  api.EventSchema,
+		"GET    /events/settings/{write_key}":                    api.EventsSettings,
 		"GET    /identifiers-schema":                             workspace.IdentifiersSchema,
 		"GET    /identity-resolution/latest":                     workspace.LatestIdentityResolution,
 		"GET    /identity-resolution/settings":                   workspace.IdentityResolutionSettings,
@@ -141,8 +142,8 @@ func newAPIsServer(core *core.Core, sessionKey []byte, runsOnHTTPS bool) *apisSe
 		"POST   /connections/{id}/ui-event":                      connection.ServeUI, /* only UI */
 		"POST   /connections/{id}/users":                         connection.AppUsers,
 		"POST   /connections/{src}/links/{dst}":                  connection.LinkConnection,
-		"POST   /events":                                         workspace.Events,
-		"POST   /events/batch":                                   workspace.IngestEvents,
+		"POST   /events":                                         workspace.IngestEvents,
+		"POST   /events/retrive":                                 workspace.Events,
 		"POST   /events/listeners":                               workspace.CreateEventListener,
 		"POST   /events/{type}":                                  workspace.IngestEvents,
 		"POST   /expressions-properties":                         api.ExpressionsProperties, /* only UI */
@@ -234,11 +235,11 @@ func (s *apisServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = io.NopCloser(payload)
 	}
 
-	if !strings.HasPrefix(r.URL.Path, "/api/") {
+	if !strings.HasPrefix(r.URL.Path, "/api/v1/") {
 		http.NotFound(w, r)
 		return
 	}
-	r.URL.Path = r.URL.Path[len("/api"):]
+	r.URL.Path = r.URL.Path[len("/api/v1"):]
 
 	s.mux.ServeHTTP(w, r)
 }

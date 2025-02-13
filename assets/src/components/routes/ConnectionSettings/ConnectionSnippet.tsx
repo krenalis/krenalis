@@ -34,7 +34,7 @@ const ConnectionSnippet = () => {
 
 	const snippet = useMemo<string>(() => {
 		const r1 = SNIPPET.replace('"writekey"', `"${keys[0]}"`);
-		const r2 = r1.replace('"endpoint"', `"${window.location.origin}/api/v1/"`);
+		const r2 = r1.replace('"endpoint"', `"${window.location.origin}/api/v1/events"`);
 		return r2;
 	}, [SNIPPET, keys]);
 

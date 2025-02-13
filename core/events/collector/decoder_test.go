@@ -308,7 +308,7 @@ func Test_Decoder(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			requestURL, _ := url.Parse("https://example.com/api/v1/batch")
+			requestURL, _ := url.Parse("/events")
 			r := &http.Request{
 				Method: "POST",
 				Header: http.Header{

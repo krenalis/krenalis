@@ -183,48 +183,12 @@ func init() {
 			"These endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.",
 		Endpoints: []*Endpoint{
 			{
-				Name: "Ingest event",
-				Description: "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. " +
-					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
-				Method:       POST,
-				WriteKeyAuth: true,
-				URL:          "/v0/events/:type",
-				Parameters: []types.Property{
-					{
-						Name:           "type",
-						Type:           types.Text().WithValues("alias", "identify", "group", "page", "screen", "track"),
-						CreateRequired: true,
-						Description:    "The type of the event.",
-					},
-					{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
-					{Name: "category", Type: types.Text()},
-					{
-						Name: "context",
-						Type: eventContextType,
-					},
-					{Name: "event", Type: types.Text()},
-					{Name: "groupId", Type: types.Text()},
-					{Name: "messageId", Type: types.Text()},
-					{Name: "name", Type: types.Text()},
-					{Name: "properties", Type: types.JSON()},
-					{Name: "receivedAt", Type: types.DateTime()},
-					{Name: "sentAt", Type: types.DateTime()},
-					{Name: "originalTimestamp", Type: types.DateTime()},
-					{Name: "timestamp", Type: types.DateTime()},
-					{Name: "traits", Type: types.JSON()},
-					{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
-					{Name: "previousId", Type: types.Text()},
-					{Name: "userId", Type: types.Text()},
-					{Name: "integrations", Type: types.JSON(), Nullable: true},
-				},
-			},
-			{
-				Name: "Ingest batch events",
-				Description: "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and an event write key:\n" +
+				Name: "Ingest events",
+				Description: "Ingests events in batch. This endpoint supports authentication with both an API key and an event write key:\n" +
 					"* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n" +
 					"* For a server application, using an event write key is recommended if you don’t need access to other endpoints.",
 				Method: POST,
-				URL:    "/v0/events/batch",
+				URL:    "/v1/events",
 				Parameters: []types.Property{
 					{
 						Name:           "connection",
@@ -284,11 +248,47 @@ func init() {
 				},
 			},
 			{
+				Name: "Ingest event",
+				Description: "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. " +
+					"To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+				Method:       POST,
+				WriteKeyAuth: true,
+				URL:          "/v1/events/:type",
+				Parameters: []types.Property{
+					{
+						Name:           "type",
+						Type:           types.Text().WithValues("alias", "identify", "group", "page", "screen", "track"),
+						CreateRequired: true,
+						Description:    "The type of the event.",
+					},
+					{Name: "anonymousId", Type: types.Text(), Placeholder: `"3e93e10e-5ca0-4a8c-bef6-cf9197b37729"`},
+					{Name: "category", Type: types.Text()},
+					{
+						Name: "context",
+						Type: eventContextType,
+					},
+					{Name: "event", Type: types.Text()},
+					{Name: "groupId", Type: types.Text()},
+					{Name: "messageId", Type: types.Text()},
+					{Name: "name", Type: types.Text()},
+					{Name: "properties", Type: types.JSON()},
+					{Name: "receivedAt", Type: types.DateTime()},
+					{Name: "sentAt", Type: types.DateTime()},
+					{Name: "originalTimestamp", Type: types.DateTime()},
+					{Name: "timestamp", Type: types.DateTime()},
+					{Name: "traits", Type: types.JSON()},
+					{Name: "type", Type: types.Text().WithValues("alias", "identify", "group", "page", "screen", "track")},
+					{Name: "previousId", Type: types.Text()},
+					{Name: "userId", Type: types.Text()},
+					{Name: "integrations", Type: types.JSON(), Nullable: true},
+				},
+			},
+			{
 				Name: "Retrieve all events",
 				Description: "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. " +
 					"If a filter is provided, only events that match the filter criteria will be returned.",
 				Method: POST,
-				URL:    "/v0/events",
+				URL:    "/v1/events/retrive",
 				Parameters: []types.Property{
 					{
 						Name:           "properties",
@@ -346,7 +346,7 @@ func init() {
 				Name:        "Get event schema",
 				Description: "Return the event schema. The event schema is the same for all workspaces.",
 				Method:      GET,
-				URL:         "/v0/events/schema",
+				URL:         "/v1/events/schema",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -364,7 +364,7 @@ func init() {
 				Name:        "Create event listener",
 				Description: "Creates an event listener to the workspace that listens to events and returns its identifier.",
 				Method:      POST,
-				URL:         "/v0/events/listeners",
+				URL:         "/v1/events/listeners",
 				Parameters: []types.Property{
 					{
 						Name:        "size",
@@ -394,7 +394,7 @@ func init() {
 				Name:        "List observed events",
 				Description: "Returns the events captured by the specified listener along with the count of omitted events.",
 				Method:      GET,
-				URL:         "/v0/events/listeners/:id",
+				URL:         "/v1/events/listeners/:id",
 				Parameters: []types.Property{
 					idParameter,
 				},
@@ -423,7 +423,7 @@ func init() {
 				Name:        "Delete event listener",
 				Description: "Deletes an event listener. It does nothing if the event listener does not exist.",
 				Method:      DELETE,
-				URL:         "/v0/events/listeners/:id",
+				URL:         "/v1/events/listeners/:id",
 				Parameters: []types.Property{
 					idParameter,
 				},

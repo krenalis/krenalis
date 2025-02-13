@@ -22,7 +22,7 @@ func init() {
 				Name:        "List supported languages",
 				Description: "Returns a list of supported languages that can be used for transformation functions.",
 				Method:      GET,
-				URL:         "/v0/system/languages",
+				URL:         "/v1/system/languages",
 				Response: &Response{
 					Parameters: []types.Property{
 						{

@@ -61,7 +61,7 @@ func init() {
 				Description: "Retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. " +
 					"If a filter is provided, only users that match the filter criteria will be returned.",
 				Method: POST,
-				URL:    "/v0/users",
+				URL:    "/v1/users",
 				Parameters: []types.Property{
 					{
 						Name:           "properties",
@@ -154,7 +154,7 @@ func init() {
 				Name:        "Retrieve user traits",
 				Description: "Retrieves, from the workspace's data warehouse, the traits of a user given its ID.",
 				Method:      GET,
-				URL:         "/v0/users/:id/traits",
+				URL:         "/v1/users/:id/traits",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -186,7 +186,7 @@ func init() {
 					"This endpoint provides a streamlined, user-focused alternative to the [/events](/api/events#list-all-events) endpoint.\n" +
 					"While the [/events](/api/events#list-all-events) endpoint offers advanced filtering and sorting options, this endpoint is designed for simple access to a single user’s event history.",
 				Method: GET,
-				URL:    "/v0/users/:id/events",
+				URL:    "/v1/users/:id/events",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -228,7 +228,7 @@ func init() {
 				Name:        "Retrieve user identities",
 				Description: "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.",
 				Method:      GET,
-				URL:         "/v0/users/:id/identities",
+				URL:         "/v1/users/:id/identities",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

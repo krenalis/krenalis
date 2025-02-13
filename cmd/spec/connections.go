@@ -180,7 +180,7 @@ func init() {
 					"2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n" +
 					"3. Create the connection by passing the auth token as the `authToken` argument.",
 				Method: POST,
-				URL:    "/v0/connections",
+				URL:    "/v1/connections",
 				Parameters: []types.Property{
 					nameParameter,
 					roleParameter,
@@ -227,7 +227,7 @@ func init() {
 				Name:        "Get auth URL",
 				Description: "Gets the URL for an app connector that directs to the authorization page of the app.\n\n",
 				Method:      GET,
-				URL:         "/v0/connections/auth-url",
+				URL:         "/v1/connections/auth-url",
 				Parameters: []types.Property{
 					{
 						Name:           "connector",
@@ -269,7 +269,7 @@ func init() {
 				Name:        "Retrieve auth token",
 				Description: "Retrieves an authorization token that can be used to create a connection.",
 				Method:      GET,
-				URL:         "/v0/connections/auth-token",
+				URL:         "/v1/connections/auth-token",
 				Parameters: []types.Property{
 					{
 						Name:           "connector",
@@ -309,7 +309,7 @@ func init() {
 				Name:        "Update connection",
 				Description: "Updates a connection.",
 				Method:      PUT,
-				URL:         "/v0/connections/:id",
+				URL:         "/v1/connections/:id",
 				Parameters: []types.Property{
 					idParameter,
 					nameParameter,
@@ -326,7 +326,7 @@ func init() {
 				Name:        "List all connections",
 				Description: "Returns the workspace's connections, sorted by name.",
 				Method:      GET,
-				URL:         "/v0/connections",
+				URL:         "/v1/connections",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -344,7 +344,7 @@ func init() {
 				Name:        "Get connection",
 				Description: "Gets a connection.",
 				Method:      GET,
-				URL:         "/v0/connections/:id",
+				URL:         "/v1/connections/:id",
 				Parameters: []types.Property{
 					idParameter,
 				},
@@ -360,7 +360,7 @@ func init() {
 				Name:        "Retrieve user identities",
 				Description: "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.",
 				Method:      GET,
-				URL:         "/v0/connections/:id/identities",
+				URL:         "/v1/connections/:id/identities",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -409,7 +409,7 @@ func init() {
 				Name:        "Delete connection",
 				Description: "Deletes a connection.",
 				Method:      DELETE,
-				URL:         "/v0/connections/:id",
+				URL:         "/v1/connections/:id",
 				Parameters: []types.Property{
 					idParameter,
 				},

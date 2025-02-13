@@ -62,7 +62,7 @@ class API {
 	connectors: Connectors;
 
 	constructor(origin: string, workspaceID: number) {
-		const apiURL = origin + '/api';
+		const apiURL = origin + '/api/v1';
 		this.apiURL = apiURL;
 		this.workspaceID = workspaceID;
 		this.workspaces = new Workspaces(origin, apiURL, workspaceID);
@@ -589,7 +589,7 @@ class Users {
 	};
 
 	events = async (user: string): Promise<UserEventsResponse> => {
-		return await call(`${this.apiURL}/events`, http.POST, this.workspaceID, {
+		return await call(`${this.apiURL}/events/retrive`, http.POST, this.workspaceID, {
 			properties: [
 				'id',
 				'user',

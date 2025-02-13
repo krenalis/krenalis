@@ -154,7 +154,7 @@ func init() {
 				Name:        "List all connectors",
 				Description: "Returns the connectors, sorted by name.",
 				Method:      GET,
-				URL:         "/v0/connectors",
+				URL:         "/v1/connectors",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -169,7 +169,7 @@ func init() {
 				Name:        "Get connector",
 				Description: "Get a connector by name.",
 				Method:      GET,
-				URL:         "/v0/connectors/:name",
+				URL:         "/v1/connectors/:name",
 				Parameters: []types.Property{
 					{
 						Name:           "name",

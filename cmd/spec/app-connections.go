@@ -23,7 +23,7 @@ func init() {
 				Description: "Retrieves users directly from the app. These are the users as they appear in the app.\n\n" +
 					"For users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
 				Method: POST,
-				URL:    "/v0/connections/:id/users",
+				URL:    "/v1/connections/:id/users",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -72,7 +72,7 @@ func init() {
 				Name:        "Preview send event",
 				Description: "Returns a preview of an event as it would be sent to an app, but no event is actually sent.",
 				Method:      POST,
-				URL:         "/v0/connections/:id/preview-send-event",
+				URL:         "/v1/connections/:id/preview-send-event",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -122,7 +122,7 @@ func init() {
 				Name:        "Get user schemas",
 				Description: "Returns the source and destination user schema of a connection. The connection must be an app connection that supports users.",
 				Method:      GET,
-				URL:         "/v0/connections/:id/schemas/user",
+				URL:         "/v1/connections/:id/schemas/user",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -164,7 +164,7 @@ func init() {
 				Name:        "Get event schema",
 				Description: "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
 				Method:      GET,
-				URL:         "/v0/connections/:id/schemas/event/:type",
+				URL:         "/v1/connections/:id/schemas/event/:type",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

@@ -105,7 +105,7 @@ func TestExportZeroUsers(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c.MustCall("PUT", "/api/connections/"+strconv.Itoa(fsID), map[string]any{
+		c.MustCall("PUT", "/api/v1/connections/"+strconv.Itoa(fsID), map[string]any{
 			"name":        "Storage",
 			"compression": core.NoCompression,
 		}, nil)

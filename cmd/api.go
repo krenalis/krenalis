@@ -61,6 +61,12 @@ func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) 
 	return events.Schema, nil
 }
 
+// EventsSettings returns the events settings.
+func (api api) EventsSettings(w http.ResponseWriter, r *http.Request) (any, error) {
+	api.core.ServeEvents(w, r)
+	return nil, nil
+}
+
 // ExpressionsProperties returns all the unique properties contained inside a
 // list of expressions.
 func (api api) ExpressionsProperties(_ http.ResponseWriter, r *http.Request) (any, error) {

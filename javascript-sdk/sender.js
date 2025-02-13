@@ -24,7 +24,7 @@ class Sender {
 	constructor(writeKey, endpoint, queue) {
 		this.#queue = queue
 		this.#writeKey = JSON.stringify(writeKey)
-		this.#endpoint = endpoint + 'b'
+		this.#endpoint = endpoint
 		this.#post = this.#postFunc()
 		if (!queue.isEmpty()) {
 			this.#setTimeout(this.#send)

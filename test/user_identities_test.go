@@ -145,7 +145,7 @@ func Test_UserIdentities(t *testing.T) {
 	// Additional test: test that a call to '/identities' for an user which does not exist
 	// returns a NotFound error.
 	{
-		err := c.Call("GET", "/api/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil)
+		err := c.Call("GET", "/api/v1/users/7682c2a8-d85d-458b-9bd8-dc57cc12575a/identities", nil, nil)
 		if err == nil {
 			t.Fatalf("expected error, got nothing")
 		}

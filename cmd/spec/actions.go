@@ -105,7 +105,7 @@ func init() {
 				Name:        "Set status",
 				Description: "Sets the status of an action.",
 				Method:      PUT,
-				URL:         "/v0/actions/:id/status",
+				URL:         "/v1/actions/:id/status",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -131,7 +131,7 @@ func init() {
 				Name:        "Set schedule period",
 				Description: "Sets the frequency at which an action imports or exports users. The action must be enabled for the execution to run as scheduled. If the period is null, the scheduler will be disabled.",
 				Method:      PUT,
-				URL:         "/v0/actions/:id/schedule",
+				URL:         "/v1/actions/:id/schedule",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -160,7 +160,7 @@ func init() {
 					"It returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\n" +
 					"The action must be enabled.",
 				Method: POST,
-				URL:    "/v0/actions/:id/exec",
+				URL:    "/v1/actions/:id/exec",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -206,7 +206,7 @@ func init() {
 				Description: "Returns all action executions.\n\n" +
 					"Actions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
 				Method: GET,
-				URL:    "/v0/actions/executions",
+				URL:    "/v1/actions/executions",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -225,7 +225,7 @@ func init() {
 				Description: "Returns an action execution.\n\n" +
 					"Actions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
 				Method: GET,
-				URL:    "/v0/actions/executions/:id",
+				URL:    "/v1/actions/executions/:id",
 				Response: &Response{
 					Parameters: executionParameters,
 				},
@@ -237,7 +237,7 @@ func init() {
 				Name:        "Delete action",
 				Description: "Delete an action.",
 				Method:      DELETE,
-				URL:         "/v0/actions/:id",
+				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

@@ -37,7 +37,7 @@ func init() {
 				Name:        "Link connections",
 				Description: "Links a source to a destination. It succeeds if the connections are already linked.",
 				Method:      POST,
-				URL:         "/v0/connections/:src/links/:dst",
+				URL:         "/v1/connections/:src/links/:dst",
 				Parameters: []types.Property{
 					srcParameter,
 					dstParameter,
@@ -52,7 +52,7 @@ func init() {
 				Name:        "Unlink connections",
 				Description: "Unlinks a source from a destination. It succeeds if the connections are not linked.",
 				Method:      DELETE,
-				URL:         "/v0/connections/:src/links/:dst",
+				URL:         "/v1/connections/:src/links/:dst",
 				Parameters: []types.Property{
 					srcParameter,
 					dstParameter,

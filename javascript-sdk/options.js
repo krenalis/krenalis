@@ -196,7 +196,7 @@ class Options {
 				callback()
 			}
 		}
-		const url = `${endpoint}projects/${encodeURIComponent(writeKey)}/settings`
+		const url = `${endpoint}/settings/${encodeURIComponent(writeKey)}`
 		if (globalThis.fetch && typeof globalThis.fetch === 'function') {
 			fetch(url)
 				.then((response) => {

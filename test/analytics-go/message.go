@@ -56,7 +56,7 @@ func makeTimestamp(t time.Time, def time.Time) time.Time {
 	return t
 }
 
-// This structure represents objects sent to the /v1/batch endpoint. We don't
+// This structure represents objects sent to the /v1/events endpoint. We don't
 // export this type because it's only meant to be used internally to send groups
 // of messages in one API call.
 type batch struct {

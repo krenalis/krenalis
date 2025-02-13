@@ -24,7 +24,7 @@ func init() {
 				Name:        "Start identity resolution",
 				Description: "Starts identity resolution that resolves the identities of the workspace.",
 				Method:      POST,
-				URL:         "/v0/identity-resolution/start",
+				URL:         "/v1/identity-resolution/start",
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 					{422, InspectionMode, "data warehouse is in inspection mode"},
@@ -35,7 +35,7 @@ func init() {
 				Name:        "Retrieve latest identity resolution info",
 				Description: "Returns the start and end times of the latest identity resolution.",
 				Method:      GET,
-				URL:         "/v0/identity-resolution/latest",
+				URL:         "/v1/identity-resolution/latest",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -62,7 +62,7 @@ func init() {
 			{
 				Name:   "Update identity resolution settings",
 				Method: PUT,
-				URL:    "/v0/identity-resolution/settings",
+				URL:    "/v1/identity-resolution/settings",
 				Parameters: []types.Property{
 					{
 						Name:        "runOnBatchImport",
@@ -91,7 +91,7 @@ func init() {
 			{
 				Name:   "Get identity resolution settings",
 				Method: GET,
-				URL:    "/v0/identity-resolution/settings",
+				URL:    "/v1/identity-resolution/settings",
 				Response: &Response{
 					Parameters: []types.Property{
 						{

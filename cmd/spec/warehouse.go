@@ -42,7 +42,7 @@ func init() {
 				Name:        "Get warehouse",
 				Description: "Returns the name and the settings of the current workspace's warehouse.",
 				Method:      GET,
-				URL:         "/v0/warehouse",
+				URL:         "/v1/warehouse",
 				Response: &Response{
 					Parameters: []types.Property{
 						{
@@ -62,7 +62,7 @@ func init() {
 				Name:        "Update warehouse",
 				Description: "Updates the warehouse of the current workspace.",
 				Method:      PUT,
-				URL:         "/v0/warehouse",
+				URL:         "/v1/warehouse",
 				Parameters: []types.Property{
 					settingsParameter,
 					modeParameter,
@@ -80,7 +80,7 @@ func init() {
 					"If the settings are incorrect or the warehouse can’t be accessed with the given settings, an error will be returned. " +
 					"If no error occurs, the settings are valid.",
 				Method: PUT,
-				URL:    "/v0/warehouse/test",
+				URL:    "/v1/warehouse/test",
 				Parameters: []types.Property{
 					settingsParameter,
 				},
@@ -94,7 +94,7 @@ func init() {
 				Name:        "Update warehouse mode",
 				Description: "Updates the mode of the current workspace's data warehouse.",
 				Method:      PUT,
-				URL:         "/v0/warehouse/mode",
+				URL:         "/v1/warehouse/mode",
 				Parameters: []types.Property{
 					modeParameter,
 					cancelIncompatibleOperationsParameter,
@@ -108,7 +108,7 @@ func init() {
 				Description: "Repairs the current workspace's warehouse.\n\n" +
 					"This endpoint can be called when no identity resolution and alter schema operations are running on the data warehouse.",
 				Method: POST,
-				URL:    "/v0/warehouse/repair",
+				URL:    "/v1/warehouse/repair",
 				Errors: []Error{
 					{404, NotFound, "workspace does not exist"},
 				},
@@ -117,7 +117,7 @@ func init() {
 				Name:        "List warehouse types",
 				Description: "Returns a list of warehouse types than can be used for a workspace warehouse.",
 				Method:      GET,
-				URL:         "/v0/warehouse/types",
+				URL:         "/v1/warehouse/types",
 				Response: &Response{
 					Parameters: []types.Property{
 						{

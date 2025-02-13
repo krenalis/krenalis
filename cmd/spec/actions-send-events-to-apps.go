@@ -108,7 +108,7 @@ func init() {
 				Name:        "Create action",
 				Description: "Create a destination action that send events to an app.",
 				Method:      POST,
-				URL:         "/v0/actions",
+				URL:         "/v1/actions",
 				Parameters: []types.Property{
 					nameParameter,
 					{
@@ -165,7 +165,7 @@ func init() {
 				Name:        "Update action",
 				Description: "Update a destination action that send events to an app.",
 				Method:      PUT,
-				URL:         "/v0/actions/:id",
+				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",
@@ -195,7 +195,7 @@ func init() {
 				Name:        "Get action",
 				Description: "Get a destination action that send events to an app.",
 				Method:      GET,
-				URL:         "/v0/actions/:id",
+				URL:         "/v1/actions/:id",
 				Parameters: []types.Property{
 					{
 						Name:           "id",

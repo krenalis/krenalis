@@ -9,7 +9,7 @@ import Analytics from './analytics.js'
 const DEBUG = false
 
 const writeKey = 'rq6JJg5ENWK28NHfxSwJZmzeIvDC8GQO'
-const endpoint = 'https://example.com/api/v1/'
+const endpoint = 'https://example.com/api/v1/events/'
 
 Deno.test('Analytics', async (t) => {
 	// Prepare the execution environment.
@@ -134,7 +134,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	await t.step('reset function', async () => {
-		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		const a = newAnalytics({ sessions: { autoTrack: false } }, 'Preservation')
 		await a.ready()
 		a.startSession(137206)
@@ -218,7 +218,7 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('sessions with auto tracking', () => {
 		const time = new FakeTime()
-		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		fetch.install()
 		let a
 		try {
@@ -260,7 +260,7 @@ Deno.test('Analytics', async (t) => {
 			hash: url.hash,
 			origin: url.origin,
 		}
-		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		fetch.install()
 		let a
 		try {
@@ -303,7 +303,7 @@ Deno.test('Analytics', async (t) => {
 		const time = new FakeTime()
 		const a = await newAnalytics({ sessions: { autoTrack: false } }, null, 10)
 		time.tick(10)
-		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		fetch.install()
 		try {
 			assertEquals(a.getSessionId(), null)
@@ -350,7 +350,7 @@ Deno.test('Analytics', async (t) => {
 				await a.ready()
 
 				const time = new FakeTime()
-				const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+				const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 				fetch.install()
 
 				try {
@@ -458,7 +458,7 @@ Deno.test('Analytics', async (t) => {
 
 	await t.step('changing User ID, resets traits and Anonymous ID', async () => {
 		const time = new FakeTime()
-		const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 		fetch.install()
 		const a = newAnalytics({ sessions: { autoTrack: false } })
 		try {
@@ -483,7 +483,7 @@ Deno.test('Analytics', async (t) => {
 	await t.step('after hiding the page, the queue is immediately persisted in the localStorage', () => {
 		localStorage.clear()
 		const time = new FakeTime()
-		const sendBeacon = new fake.SendBeacon(writeKey, endpoint + 'b', DEBUG)
+		const sendBeacon = new fake.SendBeacon(writeKey, endpoint, DEBUG)
 		sendBeacon.install()
 		const a = newAnalytics()
 		try {
@@ -512,7 +512,7 @@ Deno.test('Analytics', async (t) => {
 	await t.step('after hiding the page, the queue is immediately flushed', async () => {
 		localStorage.clear()
 		const time = new FakeTime()
-		const fetch = new fake.Fetch(writeKey, endpoint + 'b', true, DEBUG)
+		const fetch = new fake.Fetch(writeKey, endpoint, true, DEBUG)
 		fetch.install()
 		const a = newAnalytics()
 		try {
@@ -529,7 +529,7 @@ Deno.test('Analytics', async (t) => {
 	})
 
 	// Execute the steps in the 'analytics_test_steps.js' module.
-	const fetch = new fake.Fetch(writeKey, endpoint + 'b', false, DEBUG)
+	const fetch = new fake.Fetch(writeKey, endpoint, false, DEBUG)
 	const randomUUID = new fake.RandomUUID('9587b6d1-ae92-4d3c-a8d9-87c3e9ce7ae3')
 	const navigator = new fake.Navigator()
 	const now = new Date('2024-01-01T00:00:00Z')

@@ -515,7 +515,7 @@ func (c *Meergo) createWorkspace(name string, userSchema types.Type, displayedPr
 	var response struct {
 		ID int `json:"id"`
 	}
-	err := c.call("POST", "/api/workspaces", req, &response)
+	err := c.call("POST", "/api/v1/workspaces", req, &response)
 	if err != nil {
 		return 0, err
 	}
@@ -527,7 +527,7 @@ func (c *Meergo) login() error {
 		"email":    "acme@open2b.com",
 		"password": "foopass2",
 	}
-	return c.call("POST", "/api/members/login", body, nil)
+	return c.call("POST", "/api/v1/members/login", body, nil)
 }
 
 func initializePostgreSQLDatabase(ctx context.Context, dbSetts *DBSettings) error {

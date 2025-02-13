@@ -180,8 +180,6 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/api/v1/"):
-			core.ServeEvents(w, r)
-		case strings.HasPrefix(r.URL.Path, "/api/"):
 			apisServer.ServeHTTP(w, r)
 			return
 		case strings.HasPrefix(r.URL.Path, "/webhook/"):

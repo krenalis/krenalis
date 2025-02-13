@@ -171,11 +171,12 @@ func (d *decoder) Reset(r *http.Request, skip skipFunc) error {
 	d.connection = 0
 	d.context = nil
 
-	d.typ = r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
-	switch d.typ {
-	case "batch", "b":
+	path, _ := strings.CutPrefix(r.URL.Path, "/events")
+	switch path {
+	case "":
 		d.typ = "batch"
-	case "alias", "group", "identify", "page", "screen", "track":
+	case "/alias", "/group", "/identify", "/page", "/screen", "/track":
+		d.typ = d.typ[1:]
 	default:
 		return errors.NotFound("")
 	}

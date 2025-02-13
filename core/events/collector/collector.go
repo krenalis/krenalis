@@ -173,7 +173,7 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
 	}()
-	var serveSettings = strings.HasPrefix(r.URL.Path, "/api/v1/projects/")
+	var serveSettings = strings.HasPrefix(r.URL.Path, "/events/settings/")
 	var err error
 	if serveSettings {
 		err = c.serveSettings(w, r)
@@ -342,12 +342,8 @@ func (c *Collector) serveSettings(w http.ResponseWriter, r *http.Request) error 
 	if r.Method != "GET" {
 		return errMethodNotAllowed
 	}
-	path, ok := strings.CutPrefix(r.URL.Path, "/api/v1/projects/")
-	if !ok {
-		return errNotFound
-	}
-	writeKey, ok := strings.CutSuffix(path, "/settings")
-	if !ok || strings.Contains(writeKey, "/") {
+	writeKey, _ := strings.CutPrefix(r.URL.Path, "/events/settings/")
+	if writeKey == "" || strings.Contains(writeKey, "/") {
 		return errNotFound
 	}
 	connection, ok := c.connectionByKey(writeKey)
@@ -396,6 +392,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	var err error
 	var dec *decoder
 	var connection *state.Connection
+	var usingWriteKey bool
 
 	if auth, ok := r.Header["Authorization"]; ok {
 
@@ -403,30 +400,30 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if len(auth) > 1 {
 			return errors.BadRequest("request contains multiple Authorization headers")
 		}
-		token, found := strings.CutPrefix(auth[0], "Bearer ")
+		token, ok := strings.CutPrefix(auth[0], "Bearer ")
+		if !ok || token == "" {
+			return errors.BadRequest(`Authorization header is invalid; use "Authorization: Bearer <KEY>" with an API key or an event write key`)
+		}
 
-		// Authenticate with an API key.
-		if found {
-			if token == "" {
-				return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
-			}
+		if len(token) == 43 {
+			// Authenticate with the API key in the header.
 			key, ok := c.state.APIKeyByToken(token)
 			if !ok {
-				return errors.Unauthorized("API key in the Authorization header of the request does not exist")
+				return errors.Unauthorized(`the API key in the Authorization header does not exist`)
 			}
 			if header, ok := r.Header["Meergo-Workspace"]; ok {
-				if key.Workspace > 0 {
-					return errors.BadRequest("Meergo-Workspace header cannot be provided with a workspace restricted key")
-				}
 				if len(header) > 1 {
-					return errors.BadRequest("request contains multiple Meergo-Warehouse headers")
+					return errors.BadRequest(`request contains multiple "Meergo-Warehouse" headers`)
+				}
+				if key.Workspace > 0 {
+					return errors.BadRequest(`"Meergo-Workspace" header cannot be provided with a workspace restricted key`)
 				}
 				var id int64
 				if header[0] != "" && header[0][0] != '+' {
 					id, _ = strconv.ParseInt(header[0], 10, 32)
 				}
 				if id <= 0 {
-					return errors.BadRequest("Meergo-Workspace header is invalid. It should be in the format 'Meergo-Workspace: <WORKSPACE_ID>'")
+					return errors.BadRequest(`"Meergo-Workspace" header is invalid; use "Meergo-Workspace: <WORKSPACE_ID>"`)
 				}
 				if _, ok = c.state.Workspace(int(id)); !ok {
 					return errors.NotFound("workspace %d does not exist", id)
@@ -438,9 +435,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			if dec.WriteKey() != "" {
-				return errors.BadRequest("property 'writeKey' cannot be provided when using API key authentication")
-			}
 			// Read the connection.
 			id, ok := dec.Connection()
 			if !ok {
@@ -451,46 +445,50 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			} else {
 				workspace, ok := c.state.Workspace(key.Workspace)
 				if !ok {
-					return errors.Unauthorized("API key in the Authorization header of the request does not exist")
+					return errors.Unauthorized("the API key in the Authorization header does not exist")
 				}
 				connection, _ = workspace.Connection(id)
 			}
 			if connection == nil {
 				return errors.Unprocessable("ConnectionNotExist", "connection %d does not exist", id)
 			}
+
+		} else {
+			// Authenticate with the event write key in the header.
+			connection, _ = c.connectionByKey(token)
+			if connection == nil {
+				return errors.Unauthorized("the event write key in the Authorization header does not exist")
+			}
+			usingWriteKey = true
 		}
 
 	}
 
-	// Authenticate with a write key.
-	if connection == nil {
-		// Decode the request.
+	// Decode the request if it hasn't been decoded already.
+	if dec == nil {
 		dec, err = newDecoder(r, c.skip)
 		if err != nil {
 			return err
 		}
-		if _, ok := dec.Connection(); ok {
-			return errors.BadRequest("property 'connection' cannot be provided when using write key authentication")
-		}
+	}
+
+	// Authenticate using the event write key in the body.
+	if connection == nil {
 		// Get the connection from the write key.
 		writeKey := dec.WriteKey()
 		if writeKey == "" {
-			auth, ok := r.Header["Authorization"]
-			if !ok {
-				return errors.Unauthorized("the Authorization header is missing")
-			}
-			_, ok = strings.CutPrefix(auth[0], "Basic ")
-			if !ok {
-				return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
-			}
-			writeKey, _, ok = r.BasicAuth()
-			if !ok || writeKey == "" {
-				return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_API_KEY>'")
-			}
+			return errors.Unauthorized("Authorization header is missing")
 		}
 		connection, _ = c.connectionByKey(writeKey)
 		if connection == nil {
-			return errors.Unauthorized("write key in the Authorization header of the request does not exist")
+			return errors.Unauthorized("the event write key in the request body does not exist")
+		}
+		usingWriteKey = true
+	}
+
+	if usingWriteKey {
+		if _, ok := dec.Connection(); ok {
+			return errors.BadRequest("property 'connection' cannot be provided when using an event write key for authentication")
 		}
 	}
 

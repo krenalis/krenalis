@@ -9,7 +9,7 @@
                     "name": "Get metrics per dates",
                     "description": "Retrieves metrics for actions aggregated by day for a time interval between specified start and end dates.",
                     "method": "GET",
-                    "url": "/v0/actions/metrics/dates/:start/:end",
+                    "url": "/v1/actions/metrics/dates/:start/:end",
                     "parameters": [
                         {
                             "name": "start",
@@ -105,7 +105,7 @@
                     "name": "Get metrics per day",
                     "description": "Retrieves metrics for actions for a specified number of days up to the current time.",
                     "method": "GET",
-                    "url": "/v0/actions/metrics/days/:days",
+                    "url": "/v1/actions/metrics/days/:days",
                     "parameters": [
                         {
                             "name": "days",
@@ -194,7 +194,7 @@
                     "name": "Get metrics per hour",
                     "description": "Retrieves metrics for actions for a specified number of hours up to the current time.",
                     "method": "GET",
-                    "url": "/v0/actions/metrics/hours/:hours",
+                    "url": "/v1/actions/metrics/hours/:hours",
                     "parameters": [
                         {
                             "name": "hours",
@@ -283,7 +283,7 @@
                     "name": "Get metrics per minute",
                     "description": "Retrieves metrics for actions for a specified number of minutes up to the current time.",
                     "method": "GET",
-                    "url": "/v0/actions/metrics/minutes/:minutes",
+                    "url": "/v1/actions/metrics/minutes/:minutes",
                     "parameters": [
                         {
                             "name": "minutes",
@@ -372,7 +372,7 @@
                     "name": "Get errors",
                     "description": "Retrieves errors for actions for a time interval between specified start and end dates.",
                     "method": "GET",
-                    "url": "/v0/actions/errors/:start/:end",
+                    "url": "/v1/actions/errors/:start/:end",
                     "parameters": [
                         {
                             "name": "start",
@@ -517,7 +517,7 @@
                     "name": "Create action",
                     "description": "Create a destination action that exports users to an app.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -846,7 +846,7 @@
                     "name": "Update action",
                     "description": "Update a destination action that exports users to an app.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -1145,7 +1145,7 @@
                     "name": "Get action",
                     "description": "Get a destination action that exports users to an app.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -1546,7 +1546,7 @@
                     "name": "Create action",
                     "description": "Create a destination action that exports users to a database.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -1758,7 +1758,7 @@
                     "name": "Update action",
                     "description": "Update a destination action that exports users to a database.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -1940,7 +1940,7 @@
                     "name": "Get action",
                     "description": "Get a destination action that exports users to a database.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -2316,7 +2316,7 @@
                     "name": "Create action",
                     "description": "Create a destination action that exports users to a file.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -2573,7 +2573,7 @@
                     "name": "Update action",
                     "description": "Update a destination action that exports users to a file.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -2781,7 +2781,7 @@
                     "name": "Get action",
                     "description": "Get a destination action that exports users to a file.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -3103,7 +3103,7 @@
                     "name": "Create action",
                     "description": "Create a source action that imports events into the data warehouse.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -3274,7 +3274,7 @@
                     "name": "Update action",
                     "description": "Update a source action that imports events into the data warehouse.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -3415,7 +3415,7 @@
                     "name": "Get action",
                     "description": "Get a source action that imports events into the data warehouse.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -3641,7 +3641,7 @@
                     "name": "Create action",
                     "description": "Create a source action to import users from an app.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -3933,7 +3933,7 @@
                     "name": "Update action",
                     "description": "Update a source action that imports users from an app.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -4195,7 +4195,7 @@
                     "name": "Get action",
                     "description": "Get a source action that imports users from an app.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -4559,7 +4559,7 @@
                     "name": "Create action",
                     "description": "Create a source action to import users from a database.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -4799,7 +4799,7 @@
                     "name": "Update action",
                     "description": "Update a source action to import users from database.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -5009,7 +5009,7 @@
                     "name": "Get action",
                     "description": "Get a source action that imports users from a database.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -5317,7 +5317,7 @@
                     "name": "Create action",
                     "description": "Create a source action that imports users from events.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -5588,7 +5588,7 @@
                     "name": "Update action",
                     "description": "Update a source action that imports users from events.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -5829,7 +5829,7 @@
                     "name": "Get action",
                     "description": "Get a source action that imports users from events.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -6148,7 +6148,7 @@
                     "name": "Create action",
                     "description": "Create a source action that imports users from a file.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -6531,7 +6531,7 @@
                     "name": "Update action",
                     "description": "Update a source action that imports users from a file.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -6865,7 +6865,7 @@
                     "name": "Get action",
                     "description": "Get a source action that imports users from a file.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -7212,7 +7212,7 @@
                     "name": "Create action",
                     "description": "Create a destination action that send events to an app.",
                     "method": "POST",
-                    "url": "/v0/actions",
+                    "url": "/v1/actions",
                     "parameters": [
                         {
                             "name": "name",
@@ -7503,7 +7503,7 @@
                     "name": "Update action",
                     "description": "Update a destination action that send events to an app.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -7749,7 +7749,7 @@
                     "name": "Get action",
                     "description": "Get a destination action that send events to an app.",
                     "method": "GET",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -8078,7 +8078,7 @@
                     "name": "Set status",
                     "description": "Sets the status of an action.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id/status",
+                    "url": "/v1/actions/:id/status",
                     "parameters": [
                         {
                             "name": "id",
@@ -8119,7 +8119,7 @@
                     "name": "Set schedule period",
                     "description": "Sets the frequency at which an action imports or exports users. The action must be enabled for the execution to run as scheduled. If the period is null, the scheduler will be disabled.",
                     "method": "PUT",
-                    "url": "/v0/actions/:id/schedule",
+                    "url": "/v1/actions/:id/schedule",
                     "parameters": [
                         {
                             "name": "id",
@@ -8173,7 +8173,7 @@
                     "name": "Execute action",
                     "description": "Starts an action execution to import its users into the data warehouse or export the user in the data warehouse to the app, applying the action's filter and transformation.\n\nIt returns immediately without waiting for the execution to complete. To track the progress, call the [Get execution](#get-execution) endpoint using the returned execution ID.\n\nThe action must be enabled.",
                     "method": "POST",
-                    "url": "/v0/actions/:id/exec",
+                    "url": "/v1/actions/:id/exec",
                     "parameters": [
                         {
                             "name": "id",
@@ -8252,7 +8252,7 @@
                     "name": "List all executions",
                     "description": "Returns all action executions.\n\nActions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
                     "method": "GET",
-                    "url": "/v0/actions/executions",
+                    "url": "/v1/actions/executions",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -8351,7 +8351,7 @@
                     "name": "Get execution",
                     "description": "Returns an action execution.\n\nActions executions are automatically triggered by the scheduler or can be started by calling the specific endpoint for the action.",
                     "method": "GET",
-                    "url": "/v0/actions/executions/:id",
+                    "url": "/v1/actions/executions/:id",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -8438,7 +8438,7 @@
                     "name": "Delete action",
                     "description": "Delete an action.",
                     "method": "DELETE",
-                    "url": "/v0/actions/:id",
+                    "url": "/v1/actions/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -8477,7 +8477,7 @@
                     "name": "Retrieve app users",
                     "description": "Retrieves users directly from the app. These are the users as they appear in the app.\n\nFor users that have already been imported into the workspace, refer to the [/users](/api/users) endpoint.",
                     "method": "POST",
-                    "url": "/v0/connections/:id/users",
+                    "url": "/v1/connections/:id/users",
                     "parameters": [
                         {
                             "name": "id",
@@ -8557,7 +8557,7 @@
                     "name": "Preview send event",
                     "description": "Returns a preview of an event as it would be sent to an app, but no event is actually sent.",
                     "method": "POST",
-                    "url": "/v0/connections/:id/preview-send-event",
+                    "url": "/v1/connections/:id/preview-send-event",
                     "parameters": [
                         {
                             "name": "id",
@@ -8643,7 +8643,7 @@
                     "name": "Get user schemas",
                     "description": "Returns the source and destination user schema of a connection. The connection must be an app connection that supports users.",
                     "method": "GET",
-                    "url": "/v0/connections/:id/schemas/user",
+                    "url": "/v1/connections/:id/schemas/user",
                     "parameters": [
                         {
                             "name": "id",
@@ -8705,7 +8705,7 @@
                     "name": "Get event schema",
                     "description": "Returns the schema for a specified event type in a connection. The connection must be a destination app connection that supports events.",
                     "method": "GET",
-                    "url": "/v0/connections/:id/schemas/event/:type",
+                    "url": "/v1/connections/:id/schemas/event/:type",
                     "parameters": [
                         {
                             "name": "id",
@@ -8770,7 +8770,7 @@
                     "name": "Create connection",
                     "description": "Creates a connection.\n\nFor connectors that require authorization, follow these steps to create the connection:\n\n1. [Get the auth URL](/api/connections#get-auth-url) and redirect the user to it.\n2. Once the user grants permission, [retrieve the auth token](/api/connections#retrieve-auth-token).\n3. Create the connection by passing the auth token as the `authToken` argument.",
                     "method": "POST",
-                    "url": "/v0/connections",
+                    "url": "/v1/connections",
                     "parameters": [
                         {
                             "name": "name",
@@ -8919,7 +8919,7 @@
                     "name": "Get auth URL",
                     "description": "Gets the URL for an app connector that directs to the authorization page of the app.\n\n",
                     "method": "GET",
-                    "url": "/v0/connections/auth-url",
+                    "url": "/v1/connections/auth-url",
                     "parameters": [
                         {
                             "name": "connector",
@@ -8979,7 +8979,7 @@
                     "name": "Retrieve auth token",
                     "description": "Retrieves an authorization token that can be used to create a connection.",
                     "method": "GET",
-                    "url": "/v0/connections/auth-token",
+                    "url": "/v1/connections/auth-token",
                     "parameters": [
                         {
                             "name": "connector",
@@ -9037,7 +9037,7 @@
                     "name": "Update connection",
                     "description": "Updates a connection.",
                     "method": "PUT",
-                    "url": "/v0/connections/:id",
+                    "url": "/v1/connections/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -9120,7 +9120,7 @@
                     "name": "List all connections",
                     "description": "Returns the workspace's connections, sorted by name.",
                     "method": "GET",
-                    "url": "/v0/connections",
+                    "url": "/v1/connections",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -9271,7 +9271,7 @@
                     "name": "Get connection",
                     "description": "Gets a connection.",
                     "method": "GET",
-                    "url": "/v0/connections/:id",
+                    "url": "/v1/connections/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -9470,7 +9470,7 @@
                     "name": "Retrieve user identities",
                     "description": "Retrieves user identities from the workspace's data warehouse, exactly as they were imported from a connection, before being unified with identities from other connections.",
                     "method": "GET",
-                    "url": "/v0/connections/:id/identities",
+                    "url": "/v1/connections/:id/identities",
                     "parameters": [
                         {
                             "name": "id",
@@ -9555,7 +9555,7 @@
                     "name": "Delete connection",
                     "description": "Deletes a connection.",
                     "method": "DELETE",
-                    "url": "/v0/connections/:id",
+                    "url": "/v1/connections/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -9594,7 +9594,7 @@
                     "name": "List all connectors",
                     "description": "Returns the connectors, sorted by name.",
                     "method": "GET",
-                    "url": "/v0/connectors",
+                    "url": "/v1/connectors",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -9825,7 +9825,7 @@
                     "name": "Get connector",
                     "description": "Get a connector by name.",
                     "method": "GET",
-                    "url": "/v0/connectors/:name",
+                    "url": "/v1/connectors/:name",
                     "parameters": [
                         {
                             "name": "name",
@@ -10066,7 +10066,7 @@
                     "name": "Get schema",
                     "description": "Returns the user schema of the workspace.",
                     "method": "GET",
-                    "url": "/v0/users/schema",
+                    "url": "/v1/users/schema",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -10094,7 +10094,7 @@
                     "name": "Update schema",
                     "description": "Updates the user schema of the workspace.",
                     "method": "PUT",
-                    "url": "/v0/users/schema",
+                    "url": "/v1/users/schema",
                     "parameters": [
                         {
                             "name": "schema",
@@ -10167,7 +10167,7 @@
                     "name": "Preview schema update",
                     "description": "Returns the SQL queries that would be executed on the warehouse to update the user schema.\n\nIt does not make any changes to the schema or execute any queries on the warehouse.",
                     "method": "PUT",
-                    "url": "/v0/users/schema/preview",
+                    "url": "/v1/users/schema/preview",
                     "parameters": [
                         {
                             "name": "schema",
@@ -10230,7 +10230,7 @@
                     "name": "Retrieve query schema",
                     "description": "It executes the provided query on a source database connection and returns the result schema along with the first rows.",
                     "method": "POST",
-                    "url": "/v0/connections/:id/query",
+                    "url": "/v1/connections/:id/query",
                     "parameters": [
                         {
                             "name": "id",
@@ -10308,7 +10308,7 @@
                     "name": "Retrieve table schema",
                     "description": "Returns the schema of a specified database table of a destination database connection.",
                     "method": "GET",
-                    "url": "/v0/connections/:id/tables/:name",
+                    "url": "/v1/connections/:id/tables/:name",
                     "parameters": [
                         {
                             "name": "id",
@@ -10368,7 +10368,7 @@
                     "name": "Create event write key",
                     "description": "Creates an event write key for a website, mobile, or server connection. Returns an error if the connection already has the maximum limit of 20 keys.",
                     "method": "POST",
-                    "url": "/v0/connections/:id/event-write-keys",
+                    "url": "/v1/connections/:id/event-write-keys",
                     "parameters": [
                         {
                             "name": "id",
@@ -10417,7 +10417,7 @@
                     "name": "List all event write keys",
                     "description": "Returns all event write keys for a website, mobile, or server connection.",
                     "method": "GET",
-                    "url": "/v0/connections/:id/event-write-keys",
+                    "url": "/v1/connections/:id/event-write-keys",
                     "parameters": [
                         {
                             "name": "id",
@@ -10464,7 +10464,7 @@
                     "name": "Delete write key",
                     "description": "Deletes a write key from a website, mobile, or server connection. If the connection has only one key, it cannot be deleted.",
                     "method": "DELETE",
-                    "url": "/v0/connections/:id/event-write-keys/:key",
+                    "url": "/v1/connections/:id/event-write-keys/:key",
                     "parameters": [
                         {
                             "name": "id",
@@ -10519,665 +10519,10 @@
             "description": "Events are received from websites, mobile apps, and servers. They can be stored in the workspace’s data warehouse and forwarded to apps.\n\nThese endpoints allow you to ingest events, retrieve events from the data warehouse, get the event schema, and manage event listeners.",
             "endpoints": [
                 {
-                    "name": "Ingest event",
-                    "description": "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+                    "name": "Ingest events",
+                    "description": "Ingests events in batch. This endpoint supports authentication with both an API key and an event write key:\n* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n* For a server application, using an event write key is recommended if you don’t need access to other endpoints.",
                     "method": "POST",
-                    "writeKeyAuth": true,
-                    "url": "/v0/events/:type",
-                    "parameters": [
-                        {
-                            "name": "type",
-                            "type": {
-                                "kind": "text",
-                                "values": [
-                                    "alias",
-                                    "identify",
-                                    "group",
-                                    "page",
-                                    "screen",
-                                    "track"
-                                ]
-                            },
-                            "createRequired": true,
-                            "description": "The type of the event."
-                        },
-                        {
-                            "name": "anonymousId",
-                            "placeholder": "\"3e93e10e-5ca0-4a8c-bef6-cf9197b37729\"",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "category",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "context",
-                            "type": {
-                                "kind": "object",
-                                "properties": [
-                                    {
-                                        "name": "app",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "name",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "version",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "build",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "namespace",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "browser",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "name",
-                                                    "type": {
-                                                        "kind": "text",
-                                                        "values": [
-                                                            "None",
-                                                            "Chrome",
-                                                            "Safari",
-                                                            "Edge",
-                                                            "Firefox",
-                                                            "Samsung Internet",
-                                                            "Opera",
-                                                            "Other"
-                                                        ]
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "other",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "version",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "campaign",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "name",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "source",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "medium",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "term",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "content",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "device",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "id",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "advertisingId",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "adTrackingEnabled",
-                                                    "type": {
-                                                        "kind": "boolean"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "manufacturer",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "model",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "name",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "type",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "token",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "ip",
-                                        "type": {
-                                            "kind": "inet"
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "library",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "name",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "version",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "locale",
-                                        "type": {
-                                            "kind": "text"
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "location",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "city",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "country",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "latitude",
-                                                    "type": {
-                                                        "kind": "float",
-                                                        "bitSize": 64
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "longitude",
-                                                    "type": {
-                                                        "kind": "float",
-                                                        "bitSize": 64
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "speed",
-                                                    "type": {
-                                                        "kind": "float",
-                                                        "bitSize": 64
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "network",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "bluetooth",
-                                                    "type": {
-                                                        "kind": "boolean"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "carrier",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "cellular",
-                                                    "type": {
-                                                        "kind": "boolean"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "wifi",
-                                                    "type": {
-                                                        "kind": "boolean"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "os",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "name",
-                                                    "type": {
-                                                        "kind": "text",
-                                                        "values": [
-                                                            "None",
-                                                            "Android",
-                                                            "Windows",
-                                                            "iOS",
-                                                            "macOS",
-                                                            "Linux",
-                                                            "Chrome OS",
-                                                            "Other"
-                                                        ]
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "version",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "page",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "path",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "referrer",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "search",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "title",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "url",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "referrer",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "id",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "type",
-                                                    "type": {
-                                                        "kind": "text"
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "screen",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "width",
-                                                    "type": {
-                                                        "kind": "int",
-                                                        "bitSize": 16
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "height",
-                                                    "type": {
-                                                        "kind": "int",
-                                                        "bitSize": 16
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "density",
-                                                    "type": {
-                                                        "kind": "decimal",
-                                                        "precision": 3,
-                                                        "scale": 2
-                                                    },
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "session",
-                                        "type": {
-                                            "kind": "object",
-                                            "properties": [
-                                                {
-                                                    "name": "id",
-                                                    "type": {
-                                                        "kind": "int",
-                                                        "bitSize": 64
-                                                    },
-                                                    "description": ""
-                                                },
-                                                {
-                                                    "name": "start",
-                                                    "type": {
-                                                        "kind": "boolean"
-                                                    },
-                                                    "readOptional": true,
-                                                    "description": ""
-                                                }
-                                            ]
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "timezone",
-                                        "type": {
-                                            "kind": "text"
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    },
-                                    {
-                                        "name": "userAgent",
-                                        "type": {
-                                            "kind": "text"
-                                        },
-                                        "readOptional": true,
-                                        "description": ""
-                                    }
-                                ]
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "event",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "groupId",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "messageId",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "name",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "properties",
-                            "type": {
-                                "kind": "json"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "receivedAt",
-                            "type": {
-                                "kind": "datetime"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "sentAt",
-                            "type": {
-                                "kind": "datetime"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "originalTimestamp",
-                            "type": {
-                                "kind": "datetime"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "timestamp",
-                            "type": {
-                                "kind": "datetime"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "traits",
-                            "type": {
-                                "kind": "json"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "type",
-                            "type": {
-                                "kind": "text",
-                                "values": [
-                                    "alias",
-                                    "identify",
-                                    "group",
-                                    "page",
-                                    "screen",
-                                    "track"
-                                ]
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "previousId",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "userId",
-                            "type": {
-                                "kind": "text"
-                            },
-                            "description": ""
-                        },
-                        {
-                            "name": "integrations",
-                            "type": {
-                                "kind": "json"
-                            },
-                            "nullable": true,
-                            "description": ""
-                        }
-                    ],
-                    "moreParameters": [],
-                    "response": null,
-                    "errors": []
-                },
-                {
-                    "name": "Ingest batch events",
-                    "description": "Ingests events in batch.\n\nThis endpoint supports authentication with both an API key and an event write key:\n* For a website or mobile app, you must exclusively use an event write key, as it only provides access to event ingestion endpoints.\n* For a server application, using an event write key is recommended if you don’t need access to other endpoints.",
-                    "method": "POST",
-                    "url": "/v0/events/batch",
+                    "url": "/v1/events",
                     "parameters": [
                         {
                             "name": "connection",
@@ -12365,10 +11710,665 @@
                     ]
                 },
                 {
+                    "name": "Ingest event",
+                    "description": "Ingests a single event.\n\n This endpoint supports authentication only with an **event write key**. To ingest events with an API key, use the [Ingest batch events](/api/events#ingest-batch-events) endpoint, which supports both authentication methods.",
+                    "method": "POST",
+                    "writeKeyAuth": true,
+                    "url": "/v1/events/:type",
+                    "parameters": [
+                        {
+                            "name": "type",
+                            "type": {
+                                "kind": "text",
+                                "values": [
+                                    "alias",
+                                    "identify",
+                                    "group",
+                                    "page",
+                                    "screen",
+                                    "track"
+                                ]
+                            },
+                            "createRequired": true,
+                            "description": "The type of the event."
+                        },
+                        {
+                            "name": "anonymousId",
+                            "placeholder": "\"3e93e10e-5ca0-4a8c-bef6-cf9197b37729\"",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "category",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "context",
+                            "type": {
+                                "kind": "object",
+                                "properties": [
+                                    {
+                                        "name": "app",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "name",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "build",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "namespace",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "browser",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "name",
+                                                    "type": {
+                                                        "kind": "text",
+                                                        "values": [
+                                                            "None",
+                                                            "Chrome",
+                                                            "Safari",
+                                                            "Edge",
+                                                            "Firefox",
+                                                            "Samsung Internet",
+                                                            "Opera",
+                                                            "Other"
+                                                        ]
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "other",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "campaign",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "name",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "source",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "medium",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "term",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "content",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "device",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "id",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "advertisingId",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "adTrackingEnabled",
+                                                    "type": {
+                                                        "kind": "boolean"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "manufacturer",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "model",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "name",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "type",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "token",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "ip",
+                                        "type": {
+                                            "kind": "inet"
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "library",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "name",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "locale",
+                                        "type": {
+                                            "kind": "text"
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "location",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "city",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "country",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "latitude",
+                                                    "type": {
+                                                        "kind": "float",
+                                                        "bitSize": 64
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "longitude",
+                                                    "type": {
+                                                        "kind": "float",
+                                                        "bitSize": 64
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "speed",
+                                                    "type": {
+                                                        "kind": "float",
+                                                        "bitSize": 64
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "network",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "bluetooth",
+                                                    "type": {
+                                                        "kind": "boolean"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "carrier",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "cellular",
+                                                    "type": {
+                                                        "kind": "boolean"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "wifi",
+                                                    "type": {
+                                                        "kind": "boolean"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "os",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "name",
+                                                    "type": {
+                                                        "kind": "text",
+                                                        "values": [
+                                                            "None",
+                                                            "Android",
+                                                            "Windows",
+                                                            "iOS",
+                                                            "macOS",
+                                                            "Linux",
+                                                            "Chrome OS",
+                                                            "Other"
+                                                        ]
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "version",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "page",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "path",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "referrer",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "search",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "title",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "url",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "referrer",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "id",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "type",
+                                                    "type": {
+                                                        "kind": "text"
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "screen",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "width",
+                                                    "type": {
+                                                        "kind": "int",
+                                                        "bitSize": 16
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "height",
+                                                    "type": {
+                                                        "kind": "int",
+                                                        "bitSize": 16
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "density",
+                                                    "type": {
+                                                        "kind": "decimal",
+                                                        "precision": 3,
+                                                        "scale": 2
+                                                    },
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "session",
+                                        "type": {
+                                            "kind": "object",
+                                            "properties": [
+                                                {
+                                                    "name": "id",
+                                                    "type": {
+                                                        "kind": "int",
+                                                        "bitSize": 64
+                                                    },
+                                                    "description": ""
+                                                },
+                                                {
+                                                    "name": "start",
+                                                    "type": {
+                                                        "kind": "boolean"
+                                                    },
+                                                    "readOptional": true,
+                                                    "description": ""
+                                                }
+                                            ]
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "timezone",
+                                        "type": {
+                                            "kind": "text"
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    },
+                                    {
+                                        "name": "userAgent",
+                                        "type": {
+                                            "kind": "text"
+                                        },
+                                        "readOptional": true,
+                                        "description": ""
+                                    }
+                                ]
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "event",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "groupId",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "messageId",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "name",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "properties",
+                            "type": {
+                                "kind": "json"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "receivedAt",
+                            "type": {
+                                "kind": "datetime"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "sentAt",
+                            "type": {
+                                "kind": "datetime"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "originalTimestamp",
+                            "type": {
+                                "kind": "datetime"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "timestamp",
+                            "type": {
+                                "kind": "datetime"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "traits",
+                            "type": {
+                                "kind": "json"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "type",
+                            "type": {
+                                "kind": "text",
+                                "values": [
+                                    "alias",
+                                    "identify",
+                                    "group",
+                                    "page",
+                                    "screen",
+                                    "track"
+                                ]
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "previousId",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "userId",
+                            "type": {
+                                "kind": "text"
+                            },
+                            "description": ""
+                        },
+                        {
+                            "name": "integrations",
+                            "type": {
+                                "kind": "json"
+                            },
+                            "nullable": true,
+                            "description": ""
+                        }
+                    ],
+                    "moreParameters": [],
+                    "response": null,
+                    "errors": []
+                },
+                {
                     "name": "Retrieve all events",
                     "description": "Retrieves events stored in the workspace's data warehouse, up to a maximum number of events defined by `limit`. You must specify which properties to include. If a filter is provided, only events that match the filter criteria will be returned.",
                     "method": "POST",
-                    "url": "/v0/events",
+                    "url": "/v1/events/retrive",
                     "parameters": [
                         {
                             "name": "properties",
@@ -13207,7 +13207,7 @@
                     "name": "Get event schema",
                     "description": "Return the event schema. The event schema is the same for all workspaces.",
                     "method": "GET",
-                    "url": "/v0/events/schema",
+                    "url": "/v1/events/schema",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -13235,7 +13235,7 @@
                     "name": "Create event listener",
                     "description": "Creates an event listener to the workspace that listens to events and returns its identifier.",
                     "method": "POST",
-                    "url": "/v0/events/listeners",
+                    "url": "/v1/events/listeners",
                     "parameters": [
                         {
                             "name": "size",
@@ -13371,7 +13371,7 @@
                     "name": "List observed events",
                     "description": "Returns the events captured by the specified listener along with the count of omitted events.",
                     "method": "GET",
-                    "url": "/v0/events/listeners/:id",
+                    "url": "/v1/events/listeners/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -14045,7 +14045,7 @@
                     "name": "Delete event listener",
                     "description": "Deletes an event listener. It does nothing if the event listener does not exist.",
                     "method": "DELETE",
-                    "url": "/v0/events/listeners/:id",
+                    "url": "/v1/events/listeners/:id",
                     "parameters": [
                         {
                             "name": "id",
@@ -14079,7 +14079,7 @@
                     "name": "Retrieve file",
                     "description": "Returns schema and first rows of a file.",
                     "method": "POST",
-                    "url": "/v0/connections/:id/files/:path",
+                    "url": "/v1/connections/:id/files/:path",
                     "parameters": [
                         {
                             "name": "id",
@@ -14209,7 +14209,7 @@
                     "name": "Read sheets",
                     "description": "Returns the list of sheets in a file, applicable to file formats that supports sheets.",
                     "method": "POST",
-                    "url": "/v0/connections/:id/files/:path/sheets",
+                    "url": "/v1/connections/:id/files/:path/sheets",
                     "parameters": [
                         {
                             "name": "id",
@@ -14318,7 +14318,7 @@
                     "name": "Get absolute path",
                     "description": "Returns the file path relative to the root of the file storage.\n\nWhile this absolute path isn’t used directly by other API endpoints, it can help confirm that the relative path points to the correct file.",
                     "method": "GET",
-                    "url": "/v0/connections/:id/files/:path/absolute",
+                    "url": "/v1/connections/:id/files/:path/absolute",
                     "parameters": [
                         {
                             "name": "id",
@@ -14388,7 +14388,7 @@
                     "name": "Start identity resolution",
                     "description": "Starts identity resolution that resolves the identities of the workspace.",
                     "method": "POST",
-                    "url": "/v0/identity-resolution/start",
+                    "url": "/v1/identity-resolution/start",
                     "parameters": [],
                     "moreParameters": [],
                     "response": null,
@@ -14414,7 +14414,7 @@
                     "name": "Retrieve latest identity resolution info",
                     "description": "Returns the start and end times of the latest identity resolution.",
                     "method": "GET",
-                    "url": "/v0/identity-resolution/latest",
+                    "url": "/v1/identity-resolution/latest",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -14457,7 +14457,7 @@
                     "name": "Update identity resolution settings",
                     "description": "",
                     "method": "PUT",
-                    "url": "/v0/identity-resolution/settings",
+                    "url": "/v1/identity-resolution/settings",
                     "parameters": [
                         {
                             "name": "runOnBatchImport",
@@ -14504,7 +14504,7 @@
                     "name": "Get identity resolution settings",
                     "description": "",
                     "method": "GET",
-                    "url": "/v0/identity-resolution/settings",
+                    "url": "/v1/identity-resolution/settings",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -14550,7 +14550,7 @@
                     "name": "Link connections",
                     "description": "Links a source to a destination. It succeeds if the connections are already linked.",
                     "method": "POST",
-                    "url": "/v0/connections/:src/links/:dst",
+                    "url": "/v1/connections/:src/links/:dst",
                     "parameters": [
                         {
                             "name": "src",
@@ -14597,7 +14597,7 @@
                     "name": "Unlink connections",
                     "description": "Unlinks a source from a destination. It succeeds if the connections are not linked.",
                     "method": "DELETE",
-                    "url": "/v0/connections/:src/links/:dst",
+                    "url": "/v1/connections/:src/links/:dst",
                     "parameters": [
                         {
                             "name": "src",
@@ -14651,7 +14651,7 @@
                     "name": "List supported languages",
                     "description": "Returns a list of supported languages that can be used for transformation functions.",
                     "method": "GET",
-                    "url": "/v0/system/languages",
+                    "url": "/v1/system/languages",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -14698,7 +14698,7 @@
                     "name": "Retrieve all users",
                     "description": "Retrieves users stored in the workspace's data warehouse, up to a maximum number of users defined by `limit`. You must specify which properties to include. If a filter is provided, only users that match the filter criteria will be returned.",
                     "method": "POST",
-                    "url": "/v0/users",
+                    "url": "/v1/users",
                     "parameters": [
                         {
                             "name": "properties",
@@ -14931,7 +14931,7 @@
                     "name": "Retrieve user traits",
                     "description": "Retrieves, from the workspace's data warehouse, the traits of a user given its ID.",
                     "method": "GET",
-                    "url": "/v0/users/:id/traits",
+                    "url": "/v1/users/:id/traits",
                     "parameters": [
                         {
                             "name": "id",
@@ -14979,7 +14979,7 @@
                     "name": "Retrieve user events",
                     "description": "Retrieves the most recent events for a user given their identifier. The events are read from the workspace's data warehouse and are listed in descending order, starting with the most recent ones.\n\nThis endpoint provides a streamlined, user-focused alternative to the [/events](/api/events#list-all-events) endpoint.\nWhile the [/events](/api/events#list-all-events) endpoint offers advanced filtering and sorting options, this endpoint is designed for simple access to a single user’s event history.",
                     "method": "GET",
-                    "url": "/v0/users/:id/events",
+                    "url": "/v1/users/:id/events",
                     "parameters": [
                         {
                             "name": "id",
@@ -15693,7 +15693,7 @@
                     "name": "Retrieve user identities",
                     "description": "Retrieves, from the workspace's data warehouse, the identities of a user given its identifier.",
                     "method": "GET",
-                    "url": "/v0/users/:id/identities",
+                    "url": "/v1/users/:id/identities",
                     "parameters": [
                         {
                             "name": "id",
@@ -15821,7 +15821,7 @@
                     "name": "Get warehouse",
                     "description": "Returns the name and the settings of the current workspace's warehouse.",
                     "method": "GET",
-                    "url": "/v0/warehouse",
+                    "url": "/v1/warehouse",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -15862,7 +15862,7 @@
                     "name": "Update warehouse",
                     "description": "Updates the warehouse of the current workspace.",
                     "method": "PUT",
-                    "url": "/v0/warehouse",
+                    "url": "/v1/warehouse",
                     "parameters": [
                         {
                             "name": "settings",
@@ -15919,7 +15919,7 @@
                     "name": "Test warehouse update",
                     "description": "Tests the update of the warehouse of the current workspace.\n\nIf the settings are incorrect or the warehouse can’t be accessed with the given settings, an error will be returned. If no error occurs, the settings are valid.",
                     "method": "PUT",
-                    "url": "/v0/warehouse/test",
+                    "url": "/v1/warehouse/test",
                     "parameters": [
                         {
                             "name": "settings",
@@ -15955,7 +15955,7 @@
                     "name": "Update warehouse mode",
                     "description": "Updates the mode of the current workspace's data warehouse.",
                     "method": "PUT",
-                    "url": "/v0/warehouse/mode",
+                    "url": "/v1/warehouse/mode",
                     "parameters": [
                         {
                             "name": "mode",
@@ -15993,7 +15993,7 @@
                     "name": "Repair warehouse",
                     "description": "Repairs the current workspace's warehouse.\n\nThis endpoint can be called when no identity resolution and alter schema operations are running on the data warehouse.",
                     "method": "POST",
-                    "url": "/v0/warehouse/repair",
+                    "url": "/v1/warehouse/repair",
                     "parameters": [],
                     "moreParameters": [],
                     "response": null,
@@ -16009,7 +16009,7 @@
                     "name": "List warehouse types",
                     "description": "Returns a list of warehouse types than can be used for a workspace warehouse.",
                     "method": "GET",
-                    "url": "/v0/warehouse/types",
+                    "url": "/v1/warehouse/types",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -16059,7 +16059,7 @@
                     "name": "Create workspace",
                     "description": "Creates a new workspace.",
                     "method": "POST",
-                    "url": "/v0/workspaces",
+                    "url": "/v1/workspaces",
                     "parameters": [
                         {
                             "name": "name",
@@ -16215,7 +16215,7 @@
                     "name": "Test workspace creation",
                     "description": "Checks the process of creating a new workspace. It performs all the validations required for workspace creation, including verifying that the data warehouse can be initialized, without making any changes to the data warehouse or actually creating the workspace.",
                     "method": "POST",
-                    "url": "/v0/workspaces/test",
+                    "url": "/v1/workspaces/test",
                     "parameters": [
                         {
                             "name": "name",
@@ -16357,7 +16357,7 @@
                     "name": "Update workspace",
                     "description": "Updates the current workspace.",
                     "method": "PUT",
-                    "url": "/v0/workspaces/current",
+                    "url": "/v1/workspaces/current",
                     "parameters": [
                         {
                             "name": "name",
@@ -16438,7 +16438,7 @@
                     "name": "List all workspaces",
                     "description": "Lists all the workspaces of the organization.",
                     "method": "GET",
-                    "url": "/v0/workspaces",
+                    "url": "/v1/workspaces",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -16591,7 +16591,7 @@
                     "name": "Get workspace",
                     "description": "Returns the current workspace.",
                     "method": "GET",
-                    "url": "/v0/workspaces/current",
+                    "url": "/v1/workspaces/current",
                     "parameters": [],
                     "moreParameters": [],
                     "response": {
@@ -16737,7 +16737,7 @@
                     "name": "Delete the workspace",
                     "description": "Deletes the current workspace.",
                     "method": "DELETE",
-                    "url": "/v0/workspaces/current",
+                    "url": "/v1/workspaces/current",
                     "parameters": [],
                     "moreParameters": [],
                     "response": null,
