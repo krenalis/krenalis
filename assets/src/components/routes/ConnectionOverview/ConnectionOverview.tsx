@@ -619,7 +619,7 @@ const computeActionMetricsData = (actionMetrics: ActionMetrics, range: metricsRa
 		let time = '';
 		if (range === 'last15Minutes') {
 			d.setMinutes(d.getMinutes() - counter);
-			time = `${d.getHours()}:${d.getMinutes()}`;
+			time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
 		} else if (range === 'last24Hours') {
 			d.setHours(d.getHours() - counter);
 			time = `${d.getHours()}:00`;
