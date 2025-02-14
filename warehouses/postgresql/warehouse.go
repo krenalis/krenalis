@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/meergo/meergo"
+	"github.com/meergo/meergo/metrics"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -141,6 +142,8 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where mee
 
 // Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table meergo.Table, rows [][]any, deleted []any) error {
+	metrics.Increment("warehouses.PostgreSQL.Merge.calls", 1)
+	metrics.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {
 		return err
@@ -167,6 +170,9 @@ var immutableMergeIdentitiesColumns = []string{
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []meergo.Column, rows []map[string]any) error {
+
+	metrics.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
+	metrics.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
 
 	pool, err := warehouse.connectionPool(ctx)
 	if err != nil {

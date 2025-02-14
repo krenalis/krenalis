@@ -16,12 +16,15 @@ import (
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
+	meergoMetrics "github.com/meergo/meergo/metrics"
 )
 
 var maxQueuedIdentities = 1000
 var maxQueuedEventIdentityTime = 200 * time.Millisecond
 
 func (c *Collector) writeIdentity(action *state.Action, identity events.Event) error {
+
+	meergoMetrics.Increment("Collector.writeIdentity.calls", 1)
 
 	a, ok := c.actions.Load(action.ID)
 	if !ok {
@@ -34,6 +37,7 @@ func (c *Collector) writeIdentity(action *state.Action, identity events.Event) e
 		id, ok := identity["userId"].(string)
 		// Since there are no properties, do not store anonymous identities.
 		if !ok {
+			meergoMetrics.Increment("Collector.writeIdentity.user_discarded_as_anonymous_and_without_transformation", 1)
 			c.identityAck(action.ID, []string{identity["id"].(string)}, nil)
 			return nil
 		}
@@ -85,6 +89,9 @@ func (c *Collector) writeIdentity(action *state.Action, identity events.Event) e
 
 func (c *Collector) transformAndWriteIdentities(action *actionIdentityWriter, identities []events.Event) {
 
+	meergoMetrics.Increment("Collector.transformAndWriteIdentities.calls", 1)
+	meergoMetrics.Increment("Collector.transformAndWriteIdentities.passed_identities", len(identities))
+
 	records := make([]transformers.Record, len(identities))
 	for i, identity := range identities {
 		records[i].Properties = identity
@@ -112,6 +119,7 @@ func (c *Collector) transformAndWriteIdentities(action *actionIdentityWriter, id
 		id, ok := identity["userId"].(string)
 		// Discard anonymous events with no properties.
 		if !ok && len(record.Properties) == 0 {
+			meergoMetrics.Increment("Collector.transformAndWriteIdentities.discarded_as_anonymous_and_without_properties", 1)
 			continue
 		}
 		// Write the identity on the data warehouse.

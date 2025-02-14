@@ -17,6 +17,7 @@ import (
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/schemas"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 )
 
@@ -94,6 +95,8 @@ func (iw *EventIdentityWriter) Write(identity Identity, ackID string) error {
 	if iw.closed {
 		panic("call Write on a closed identity writer")
 	}
+
+	metrics.Increment("EventIdentityWriter.Write.calls", 1)
 
 	switch iw.store.Mode() {
 	case state.Inspection:
@@ -199,6 +202,7 @@ func (iw *EventIdentityWriter) appendRow(key identityKey, row map[string]any, ac
 // flush flushes the rows, if any, into the data warehouse.
 // It must be called while holding the iw.mu mutex.
 func (iw *EventIdentityWriter) flush() {
+	metrics.Increment("EventIdentityWriter.flush.calls", 1)
 	if iw.rows == nil {
 		return
 	}

@@ -31,6 +31,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/json"
+	meergoMetrics "github.com/meergo/meergo/metrics"
 
 	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang"
@@ -249,6 +250,7 @@ func (c *Collector) connectionByKey(key string) (*state.Connection, bool) {
 
 // eventAck acknowledges when an event is written to the data warehouse.
 func (c *Collector) eventAck(evs []datastore.AckEvent, err error) {
+	meergoMetrics.Increment("Collector.eventAck.calls", 1)
 	doneEvents := make([]events.DoneEvent, len(evs))
 	for i, event := range evs {
 		doneEvents[i] = events.DoneEvent(event)
@@ -501,6 +503,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connectionType) {
+		meergoMetrics.Increment("Collector.serveEvents.decoded_events", 1)
 
 		if err != nil {
 			if eventErr == nil {
@@ -547,6 +550,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				c.metrics.ReceivePassed(action.ID, 1)
 				if !filters.Applies(action.Filter, event) {
 					c.metrics.FilterFailed(action.ID, 1)
+					meergoMetrics.Increment("Collector.serveEvents.discarded_user_identitites", 1)
 					continue
 				}
 				c.metrics.FilterPassed(action.ID, 1)
@@ -567,9 +571,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			c.metrics.ReceivePassed(action.ID, 1)
 			if !filters.Applies(action.Filter, event) {
 				c.metrics.FilterFailed(action.ID, 1)
+				meergoMetrics.Increment("Collector.serveEvents.events_to_dispatched.filter_failed", 1)
 				continue
 			}
 			c.metrics.FilterPassed(action.ID, 1)
+			meergoMetrics.Increment("Collector.serveEvents.events_to_dispatched.filter_passed", 1)
 			err = c.dispatcher.Dispatch(event, action)
 			if err != nil {
 				c.metrics.FinalizeFailed(action.ID, 1, err.Error())
@@ -727,6 +733,7 @@ func (c *Collector) onUpdateAction(n state.UpdateAction) {
 
 // Send a successful response to the client.
 func writeOK(w http.ResponseWriter, origin string) {
+	meergoMetrics.Increment("Collector.writeOK.calls", 1)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", "21")
 	w.Header().Set("Access-Control-Allow-Origin", origin)

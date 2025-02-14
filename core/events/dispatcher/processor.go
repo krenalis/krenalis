@@ -18,9 +18,10 @@ import (
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
+	meergoMetrics "github.com/meergo/meergo/metrics"
 )
 
-const pipeSize = 100
+const pipeSize = 50_000
 
 // ValidationError is the interface implemented by validation errors.
 type ValidationError interface {
@@ -110,6 +111,7 @@ func (processor *processor) worker() {
 				processor.metrics.FinalizeFailed(action.ID, 1, err.Error())
 				continue
 			}
+			meergoMetrics.Increment("processor.worker.event_request_created", 1)
 
 			// Persist the event request.
 			request, err := dumpEventRequest(event.request)

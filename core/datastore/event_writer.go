@@ -17,6 +17,7 @@ import (
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/decimal"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/metrics"
 )
 
 type EventWriter struct {
@@ -302,6 +303,8 @@ func (ew *EventWriter) Write(event events.Event, action int) error {
 
 func (ew *EventWriter) flush() {
 
+	metrics.Increment("EventWriter.flush.calls", 1)
+
 	ew.mu.Lock()
 	rows, actions := ew.rows, ew.actions
 	ew.rows, ew.actions = nil, nil
@@ -313,6 +316,7 @@ func (ew *EventWriter) flush() {
 
 	slog.Info("flush events", "count", len(rows))
 	for {
+		metrics.Increment("EventWriter.flush.for_loop_iterations", 1)
 		err := ew.store.warehouse().Merge(ew.close.ctx, eventsMergeTable, rows, nil)
 		if err != nil {
 			done := ew.close.ctx.Done()
@@ -333,6 +337,7 @@ func (ew *EventWriter) flush() {
 				events[i].ID = event[0].(string)
 				events[i].Action = actions[i]
 			}
+			metrics.Increment("EventWriter.ack_sents", 1)
 			ew.ack(events, nil)
 		}
 		return

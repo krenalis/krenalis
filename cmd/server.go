@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"expvar"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/meergo/meergo/core"
 	"github.com/meergo/meergo/core/state"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/telemetry"
 )
 
@@ -188,6 +190,8 @@ func Run(ctx context.Context, settings *Settings, assetsFS fs.FS) error {
 		case strings.HasPrefix(r.URL.Path, "/ui/") || strings.HasPrefix(r.URL.Path, "/javascript-sdk/"):
 			assets.ServeHTTP(w, r)
 			return
+		case metrics.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
+			expvar.Handler().ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 			return

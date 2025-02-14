@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/meergo/meergo/core/postgres"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 
 	"github.com/andybalholm/brotli"
@@ -56,6 +57,8 @@ func NewPostgreStore(db *postgres.DB) *PostgreStore {
 
 // Done marks the specified action on the given events as completed.
 func (store *PostgreStore) Done(events ...DoneEvent) {
+	metrics.Increment("PostgreStore.Done.calls", 1)
+	metrics.Increment("PostgreStore.Done.passed_events", len(events))
 	idsByAction := map[int][]string{}
 	for _, event := range events {
 		idsByAction[event.Action] = append(idsByAction[event.Action], event.ID)
@@ -82,10 +85,12 @@ func (store *PostgreStore) Done(events ...DoneEvent) {
 			return
 		}
 	}
+	store.setEventMetrics()
 }
 
 // Pending returns an iterator to iterate over the pending operations.
 func (store *PostgreStore) Pending(ctx context.Context) (iter.Seq[PendingOperation], func() error) {
+	store.setEventMetrics()
 	rows, err := store.db.Query(ctx, "SELECT actions, properties FROM event_payloads WHERE actions != '{}' ORDER BY received_at")
 	return func(yield func(PendingOperation) bool) {
 			if err != nil {
@@ -106,6 +111,7 @@ func (store *PostgreStore) Pending(ctx context.Context) (iter.Seq[PendingOperati
 				if !yield(op) {
 					return
 				}
+				store.setEventMetrics()
 			}
 		}, func() error {
 			return err
@@ -116,6 +122,8 @@ func (store *PostgreStore) Pending(ctx context.Context) (iter.Seq[PendingOperati
 // operations must not be empty, and all operations must share the same
 // connection and receivedAt properties.
 func (store *PostgreStore) Store(ctx context.Context, operations []PendingOperation) error {
+	metrics.Increment("PostgreStore.Store.calls", 1)
+	metrics.Increment("PostgreStore.Store.number_of_operations_passed", len(operations))
 	event := operations[0].Event
 	connection := strconv.Itoa(event["connection"].(int))
 	receivedAt := event["receivedAt"].(time.Time).Format(time.RFC3339Nano)
@@ -154,5 +162,21 @@ func (store *PostgreStore) Store(ctx context.Context, operations []PendingOperat
 	}
 	insert.WriteString(" ON CONFLICT (id) DO NOTHING")
 	_, err := store.db.Exec(ctx, insert.String(), properties...)
-	return err
+	if err != nil {
+		return err
+	}
+	store.setEventMetrics()
+	return nil
+}
+
+func (store *PostgreStore) setEventMetrics() {
+	if !metrics.Enabled {
+		return
+	}
+	var count int
+	err := store.db.QueryRow(context.Background(), "SELECT count(*) FROM event_payloads").Scan(&count)
+	if err != nil {
+		panic(err)
+	}
+	metrics.Set("PostgreStore.event_payloads_count", count)
 }

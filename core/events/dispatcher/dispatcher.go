@@ -21,6 +21,7 @@ import (
 	"github.com/meergo/meergo/core/postgres"
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
+	meergoMetrics "github.com/meergo/meergo/metrics"
 
 	"github.com/google/uuid"
 )
@@ -89,6 +90,7 @@ var errTooManyEvents = errors.New("too many events")
 // Returns errTooManyEvents if there are already too many events queued for
 // dispatch.
 func (d *Dispatcher) Dispatch(event events.Event, action *state.Action) error {
+	meergoMetrics.Increment("Dispatcher.Dispatch.calls", 1)
 	ev := &dispatchingEvent{
 		id:          uuid.MustParse(event["id"].(string)),
 		connection:  event["connection"].(int),
@@ -98,7 +100,9 @@ func (d *Dispatcher) Dispatch(event events.Event, action *state.Action) error {
 	}
 	select {
 	case d.processor.events.in <- ev:
+		meergoMetrics.Increment("Dispatcher.processor.written_event_in_events_in_channel", 1)
 	default:
+		meergoMetrics.Increment("Dispatcher.Dispatch.returned_errTooManyEvents'", 1)
 		return errTooManyEvents
 	}
 	return nil
@@ -154,6 +158,7 @@ dispatch:
 				d.events.in = nil // don't receive events anymore
 				continue
 			}
+			meergoMetrics.Increment("Dispatcher.dispatch.new_events_received", 1)
 			if debug {
 				slog.Debug("dispatcher: receive event", "id", event.id)
 			}

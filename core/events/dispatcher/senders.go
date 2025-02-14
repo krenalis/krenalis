@@ -13,6 +13,7 @@ import (
 	"log/slog"
 
 	"github.com/meergo/meergo/core/connectors"
+	meergoMetrics "github.com/meergo/meergo/metrics"
 )
 
 // startSenders starts some senders that read from the events channel and write
@@ -49,6 +50,7 @@ func startSenders(events <-chan *dispatchingEvent, sent chan<- *dispatchingEvent
 						}
 					}
 					sent <- event
+					meergoMetrics.Increment("sender.startSenders.event_written_on_sent_channel", 1)
 				case <-stop:
 					return
 				}
