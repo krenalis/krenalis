@@ -29,10 +29,10 @@ const debug = false
 
 type dispatchingEvent struct {
 	id          uuid.UUID
-	connection  int
+	connection  int // source connection.
 	anonymousId string
 	properties  map[string]any
-	action      *state.Action
+	action      *state.Action // destination action.
 	request     *meergo.EventRequest
 	err         error
 }
