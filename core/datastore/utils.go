@@ -14,6 +14,27 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// appendColumnsFromProperties appends to columns the columns corresponding to
+// the provided properties paths, based on the mapping defined in
+// columnByProperty, and returns the extended slice.
+func appendColumnsFromProperties(columns []meergo.Column, properties []string, columnByProperty map[string]meergo.Column) []meergo.Column {
+	for _, path := range properties {
+		column, ok := columnByProperty[path]
+		if ok {
+			columns = append(columns, column)
+			continue
+		}
+		n := len(path)
+		for property, column := range columnByProperty {
+			// Append columns of properties whose path starts with `path` followed by a "."
+			if len(property) > n && property[n] == '.' && property[:n] == path {
+				columns = append(columns, column)
+			}
+		}
+	}
+	return columns
+}
+
 // An unflatRowFunc function unflats a row read from the data warehouse into a
 // map[string]any value.
 type unflatRowFunc func(row []any) map[string]any
@@ -35,9 +56,10 @@ func columnsFromProperties(properties []string, columnByProperty map[string]meer
 			columns = append(columns, column)
 			continue
 		}
-		path += "."
+		n := len(path)
 		for property, column := range columnByProperty {
-			if strings.HasPrefix(property, path) {
+			// Append columns of properties whose path starts with `path` followed by a "."
+			if len(property) > n && property[n] == '.' && property[:n] == path {
 				pk.add(property, len(columns))
 				columns = append(columns, column)
 			}

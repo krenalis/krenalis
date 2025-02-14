@@ -48,13 +48,12 @@ func newFlatter(schema types.Type, columnByProperty map[string]meergo.Column) *f
 	return flatters[""]
 }
 
-// flat flats proprieties and updates the columns argument with the columns in
-// properties.
-func (f *flatter) flat(properties map[string]any, columns map[string]meergo.Column) {
-	f.flatRec(true, properties, properties, columns)
+// flat flats proprieties.
+func (f *flatter) flat(properties map[string]any) {
+	f.flatRec(true, properties, properties)
 }
 
-func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns map[string]meergo.Column) {
+func (f *flatter) flatRec(isRoot bool, root, properties map[string]any) {
 	for _, ff := range f.properties {
 		v, ok := properties[ff.name]
 		if !ok {
@@ -65,11 +64,8 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any, columns 
 				root[ff.column.Name] = v
 				delete(root, ff.name)
 			}
-			if _, ok := columns[ff.column.Name]; !ok {
-				columns[ff.column.Name] = ff.column
-			}
 		} else {
-			ff.flatRec(false, root, v.(map[string]any), columns)
+			ff.flatRec(false, root, v.(map[string]any))
 		}
 	}
 }

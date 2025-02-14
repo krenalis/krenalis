@@ -47,7 +47,7 @@ type BatchIdentityWriter struct {
 	execution  int
 	ack        IdentityWriterAckFunc
 	flatter    *flatter
-	columns    map[string]meergo.Column
+	columns    []meergo.Column
 	rows       []map[string]any
 	index      map[identityKey]int
 	ackIDs     []string
@@ -87,8 +87,7 @@ func (iw *BatchIdentityWriter) Close(ctx context.Context) error {
 	defer done()
 	iw.closed = true
 	if iw.rows != nil {
-		columns := identitiesMergeColumns(iw.columns)
-		err := iw.store.warehouse().MergeIdentities(ctx, columns, iw.rows)
+		err := iw.store.warehouse().MergeIdentities(ctx, iw.columns, iw.rows)
 		if err != nil {
 			return err
 		}
@@ -146,7 +145,7 @@ func (iw *BatchIdentityWriter) Write(identity Identity, ackID string) error {
 	}
 	key := identityKey{action: iw.action, identityID: identity.ID}
 	row := identity.Properties
-	iw.flatter.flat(row, iw.columns)
+	iw.flatter.flat(row)
 	row["__action__"] = key.action
 	row["__is_anonymous__"] = false
 	row["__identity_id__"] = key.identityID
