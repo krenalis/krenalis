@@ -65,6 +65,7 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 	}
 	state.Unfreeze()
 	if workspaces != nil {
+		p.close.Add(len(workspaces))
 		go func() {
 			for _, ws := range workspaces {
 				p.purgeWorkspace(ws, nil)
@@ -87,7 +88,9 @@ func (p *actionPurger) Close(ctx context.Context) {
 	// Stop the backoff.
 	p.mu.Lock()
 	for _, bo := range p.backoff {
-		bo.Stop()
+		if bo.Stop() {
+			p.close.Done()
+		}
 	}
 	p.mu.Unlock()
 	// Cancel p.close.ctx if ctx is cancelled.
@@ -108,6 +111,7 @@ func (p *actionPurger) onDeleteAction(n state.DeleteAction) {
 	if ws.Warehouse.Mode != state.Normal {
 		return
 	}
+	p.close.Add(1)
 	go p.purgeWorkspace(ws.ID, nil)
 }
 
@@ -123,6 +127,7 @@ func (p *actionPurger) onDeleteConnection(n state.DeleteConnection) {
 	}
 	for _, action := range c.Actions() {
 		if action.Target == state.Users {
+			p.close.Add(1)
 			go p.purgeWorkspace(ws.ID, nil)
 			return
 		}
@@ -137,6 +142,7 @@ func (p *actionPurger) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
 		return
 	}
+	p.close.Add(1)
 	go p.purgeWorkspace(n.Workspace, nil)
 }
 
@@ -148,6 +154,7 @@ func (p *actionPurger) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	if ws, _ := p.state.Workspace(n.Workspace); ws.NumActionsToPurge() == 0 {
 		return
 	}
+	p.close.Add(1)
 	go p.purgeWorkspace(n.Workspace, nil)
 }
 
@@ -155,7 +162,6 @@ func (p *actionPurger) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 // a workspace. bo is non-nil only when a purge is being retried.
 func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
 
-	p.close.Add(1)
 	defer p.close.Done()
 	if p.close.closed.Load() {
 		return
@@ -163,7 +169,9 @@ func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
 
 	p.mu.Lock()
 	if bo, ok := p.backoff[id]; ok {
-		bo.Stop()
+		if bo.Stop() {
+			p.close.Done()
+		}
 		delete(p.backoff, id)
 	}
 	p.mu.Unlock()
@@ -187,6 +195,7 @@ func (p *actionPurger) purgeWorkspace(id int, bo *backoff.Backoff) {
 			if bo == nil {
 				bo = backoff.New(backoffBase)
 			}
+			p.close.Add(1)
 			bo.AfterFunc(p.close.ctx, func(ctx context.Context) {
 				p.purgeWorkspace(id, bo)
 			})
