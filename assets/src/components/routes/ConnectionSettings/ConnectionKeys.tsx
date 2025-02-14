@@ -108,7 +108,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			<div className='connection-settings__keys-endpoint'>
 				<div className='connection-settings__keys-endpoint-copy'>
 					<SlInput readonly label='Endpoint' value={`${window.location.origin}/api/v1/events`} filled />
-					<SlCopyButton value={`${window.location.origin}/api/v1/`} />
+					<SlCopyButton value={`${window.location.origin}/api/v1/events`} />
 				</div>
 			</div>
 		</>
