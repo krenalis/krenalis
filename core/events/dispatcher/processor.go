@@ -8,10 +8,8 @@
 package dispatcher
 
 import (
-	"bytes"
 	"context"
 
-	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/core/connectors"
 	"github.com/meergo/meergo/core/events"
 	"github.com/meergo/meergo/core/metrics"
@@ -113,26 +111,6 @@ func (processor *processor) worker() {
 			}
 			meergoMetrics.Increment("processor.worker.event_request_created", 1)
 
-			// Persist the event request.
-			request, err := dumpEventRequest(event.request)
-			if err != nil {
-				processor.metrics.FinalizeFailed(action.ID, 1, err.Error())
-				continue
-			}
-			ctx := context.Background()
-			_, err = processor.db.Exec(ctx, "INSERT INTO event_dispatching (action, event, request) VALUES ($1, $2, $3)", event.action.ID, event.id, request)
-			if err != nil {
-				if postgres.IsDuplicateKeyValue(err) {
-					// The event is already present in the database. This happens if it was previously inserted but
-					// failed to signal that the event has been processed for this action.
-					// There's no need to route it to the dispatcher since the restoration procedure handles it.
-					processor.operationStore.Done(events.DoneEvent{Action: action.ID, ID: event.properties["id"].(string)})
-					continue
-				}
-				processor.metrics.FinalizeFailed(action.ID, 1, err.Error())
-				continue
-			}
-
 			processor.operationStore.Done(events.DoneEvent{Action: action.ID, ID: event.properties["id"].(string)})
 
 			processor.events.out <- event
@@ -142,19 +120,4 @@ func (processor *processor) worker() {
 		}
 	}
 
-}
-
-func dumpEventRequest(req *meergo.EventRequest) ([]byte, error) {
-	var b bytes.Buffer
-	b.WriteString(req.Method)
-	b.WriteString(" ")
-	b.WriteString(req.URL)
-	b.WriteByte('\n')
-	err := req.Header.Write(&b)
-	if err != nil {
-		return nil, err
-	}
-	b.WriteByte('\n')
-	b.Write(req.Body)
-	return b.Bytes(), nil
 }

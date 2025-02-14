@@ -180,13 +180,6 @@ CREATE TABLE election (
 
 INSERT INTO election (number, leader, date) VALUES (1, '00000000-0000-0000-0000-000000000000', '2023-01-01 00:00:00.000000');
 
-CREATE TABLE event_dispatching (
-    action integer NOT NULL REFERENCES actions ON DELETE CASCADE,
-    event bytea NOT NULL,
-    request bytea,
-    PRIMARY KEY (action, event)
-);
-
 CREATE TABLE event_payloads (
     id uuid NOT NULL,
     connection integer NOT NULL REFERENCES connections ON DELETE CASCADE,
