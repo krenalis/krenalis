@@ -64,13 +64,9 @@ func newActionPurger(state *state.State, datastore *datastore.Datastore) *action
 		}
 	}
 	state.Unfreeze()
-	if workspaces != nil {
-		p.close.Add(len(workspaces))
-		go func() {
-			for _, ws := range workspaces {
-				p.purgeWorkspace(ws, nil)
-			}
-		}()
+	for _, ws := range workspaces {
+		p.close.Add(1)
+		go p.purgeWorkspace(ws, nil)
 	}
 
 	return p
