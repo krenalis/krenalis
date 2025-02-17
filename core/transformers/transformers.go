@@ -16,6 +16,8 @@ import (
 	"github.com/meergo/meergo/core/transformers/mappings"
 	"github.com/meergo/meergo/core/util"
 	"github.com/meergo/meergo/types"
+
+	meergoMetrics "github.com/meergo/meergo/metrics"
 )
 
 // Purpose represents the purpose of a record transformation.
@@ -106,6 +108,9 @@ func New(action *state.Action, provider Provider, layouts *state.TimeLayouts) (*
 // function does not exist, and a FunctionExecutionError error if an error
 // occurs during function execution.
 func (t *Transformer) Transform(ctx context.Context, records []Record) error {
+
+	meergoMetrics.Increment("Transformer.Transform.calls", 1)
+	meergoMetrics.Increment("Transformer.Transform.passed_records", len(records))
 
 	// Transform using the mapping.
 	if t.mapping != nil {

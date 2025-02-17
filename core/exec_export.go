@@ -24,6 +24,7 @@ import (
 	"github.com/meergo/meergo/core/state"
 	"github.com/meergo/meergo/core/transformers"
 	"github.com/meergo/meergo/core/util"
+	meergoMetrics "github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 )
 
@@ -34,6 +35,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	action := this.action
 	store := this.connection.store
 	connector := action.Connection().Connector()
+	meergoMetrics.Increment("Action.exportUsers.calls", 1)
 
 	// alreadyExportedKeys keeps track of the keys of users exported to the
 	// database during this export, indexed by their table key value (which can
@@ -100,6 +102,7 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	var writer connectors.Writer
 
 	ack := func(ids []string, err error) {
+		meergoMetrics.Increment("Action.exportUsers.ack.calls", 1)
 		if err != nil {
 			this.core.metrics.FinalizeFailed(action.ID, len(ids), err.Error())
 			return
@@ -149,6 +152,8 @@ func (this *Action) exportUsers(ctx context.Context) error {
 	transformationRecords := make([]transformers.Record, 0, 100)
 
 	for record := range records.All(ctx) {
+
+		meergoMetrics.Increment("Action.exportUsers.iterations_over_records_All", 1)
 
 		if record.Err != nil {
 			this.core.metrics.ReceiveFailed(action.ID, 1, record.Err.Error())
