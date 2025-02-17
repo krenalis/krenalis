@@ -13,7 +13,6 @@ import (
 	_ "embed"
 	"errors"
 	"io"
-	"log"
 	"maps"
 	"math/rand/v2"
 	"net/http"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/meergo/meergo"
 	"github.com/meergo/meergo/json"
+	"github.com/meergo/meergo/metrics"
 	"github.com/meergo/meergo/types"
 )
 
@@ -288,16 +288,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 
 	for _, record := range records.All() {
 
-		// Prepare the properties to log.
-		properties, err := json.Marshal(record.Properties)
-		if err != nil {
-			return err
-		}
-
 		var id string
 		if record.ID == "" {
 			// Add a new users into the in-memory users.
-			log.Printf("[info] Dummy: CreateUser(%v)", string(properties))
+			metrics.Increment("Dummy.Upsert.users_created", 1)
 			user := maps.Clone(record.Properties)
 			id = newDummyId()
 			user["dummyId"] = id
@@ -322,10 +316,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 			// Update the in-memory users.
 			user, ok := allUsers[record.ID]
 			if !ok {
-				log.Printf("[info] Dummy: UpdateUser(%q, %v): user not found", record.ID, string(properties))
+				metrics.Increment("Dummy.Upsert.updated_users_not_found", 1)
 				continue
 			}
-			log.Printf("[info] Dummy: UpdateUser(%q, %v)", record.ID, string(properties))
+			metrics.Increment("Dummy.Upsert.updated_users", 1)
 			maps.Copy(user, record.Properties)
 			id = record.ID
 		}
