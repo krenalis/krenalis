@@ -52,8 +52,8 @@ Event write keys are managed through the Meergo UI for each relevant source conn
 
 Using an event write key allows authentication exclusively for the following endpoints:
 
+- [Ingest events](/api/events#ingest-events)
 - [Ingest event](/api/events#ingest-event)
-- [Ingest batch events](/api/events#ingest-batch-events)
 
 </div>
 <div>
