@@ -15,7 +15,7 @@ const ActionUpdateOnDuplicates = () => {
 		action.exportMode.includes('Update') && (
 			<div className='action__update-on-duplicates'>
 				<SlCheckbox checked={action.updateOnDuplicates!} onSlChange={onChangeUpdateOnDuplicates}>
-					If multiple app users match a single user, update them anyway
+					If multiple app users match a single user in Meergo, update them anyway
 				</SlCheckbox>
 			</div>
 		)
