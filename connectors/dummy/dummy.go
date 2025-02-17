@@ -189,7 +189,8 @@ func init() {
 }
 
 type innerSettings struct {
-	URLForDispatchingEvents string
+	UserExportFailPercentage int // in [0, 100]
+	URLForDispatchingEvents  string
 }
 
 // Schema returns the schema of the specified target in the specified role.
@@ -268,7 +269,21 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 
 	ui := &meergo.UI{
 		Fields: []meergo.Component{
-			&meergo.Input{Name: "URLForDispatchingEvents", Label: "URL for dispatching events", Role: meergo.Destination, Placeholder: "https://example.com"},
+			&meergo.Input{
+				Name:            "UserExportFailPercentage",
+				Type:            "number",
+				Label:           "Percentage that the export of every single user may fail",
+				Placeholder:     "10",
+				HelpText:        "0 does not fail any user exports. 100 fails them all.",
+				OnlyIntegerPart: true,
+				Role:            meergo.Destination,
+			},
+			&meergo.Input{
+				Name:        "URLForDispatchingEvents",
+				Label:       "URL for dispatching events",
+				Placeholder: "https://example.com",
+				Role:        meergo.Destination,
+			},
 		},
 		Settings: settings,
 	}
@@ -287,6 +302,13 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 	defer usersLock.Unlock()
 
 	for _, record := range records.All() {
+
+		metrics.Increment("Dummy.Upsert.records_read_from_iterator", 1)
+
+		if dummy.userExportRandomlyFails() {
+			metrics.Increment("Dummy.Upsert.export_failed", 1)
+			return errors.New("writing of user record failed (due to a causal failure probability configured in Dummy)")
+		}
 
 		var id string
 		if record.ID == "" {
@@ -338,6 +360,9 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	if err != nil {
 		return err
 	}
+	if s.UserExportFailPercentage < 0 || s.UserExportFailPercentage > 100 {
+		return meergo.NewInvalidsettingsError("percentage must be in range [0, 100]")
+	}
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -348,4 +373,17 @@ func (dummy *Dummy) saveSettings(ctx context.Context, settings json.Value) error
 	}
 	dummy.settings = &s
 	return nil
+}
+
+// userExportRandomlyFails determines whether exporting (i.e., writing to Dummy)
+// a user should randomly fail, based on the settings.
+func (dummy *Dummy) userExportRandomlyFails() bool {
+	switch failPerc := dummy.settings.UserExportFailPercentage; failPerc {
+	case 0:
+		return false
+	case 100:
+		return true
+	default:
+		return rand.IntN(100) < failPerc
+	}
 }
