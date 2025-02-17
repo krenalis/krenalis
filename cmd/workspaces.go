@@ -437,7 +437,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	var limit = 100
 	query := r.URL.Query()
 	if v, ok := query["first"]; ok {
-		first, _ = strconv.Atoi(v[0])
+		first, err = strconv.Atoi(v[0])
 		if err != nil {
 			return nil, errors.BadRequest("first is not valid")
 		}
