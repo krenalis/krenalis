@@ -647,6 +647,23 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings []byte) 
 	return nil
 }
 
+// UnsetIdentityProperties unsets values for the specified identity properties
+// for the given action. properties contains the property paths and must not be
+// empty. If the provided action does not exist, it does nothing.
+func (store *Store) UnsetIdentityProperties(ctx context.Context, action int, properties []string) error {
+	store.mustBeOpen()
+	if len(properties) == 0 {
+		return errors.New("core/datastore: invalid empty properties")
+	}
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	columns := appendColumnsFromProperties(nil, properties, store.userColumnByProperty())
+	return store.warehouse().UnsetIdentityColumns(ctx, action, columns)
+}
+
 // UserIdentities returns the user identities according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the

@@ -294,6 +294,28 @@ func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	return err
 }
 
+// UnsetIdentityColumns unsets values for the specified identity columns for the
+// given action.
+func (warehouse *PostgreSQL) UnsetIdentityColumns(ctx context.Context, action int, columns []meergo.Column) error {
+	var b strings.Builder
+	b.WriteString("UPDATE \"_user_identities\" SET ")
+	for i, column := range columns {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(quoteIdent(column.Name))
+		b.WriteString(" = NULL")
+	}
+	b.WriteString(" WHERE \"__action__\" = ")
+	b.WriteString(strconv.Itoa(action))
+	pool, err := warehouse.connectionPool(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = pool.Exec(ctx, b.String())
+	return err
+}
+
 // connection returns the PostgreSQL connection pool.
 func (warehouse *PostgreSQL) connectionPool(ctx context.Context) (*pgxpool.Pool, error) {
 	warehouse.mu.Lock()

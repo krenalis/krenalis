@@ -98,6 +98,8 @@ func (state *State) keep() {
 			state.updateAction(n)
 		case "UpdateConnection":
 			state.updateConnection(n)
+		case "UpdateIdentityPropertiesToUnset":
+			state.updateIdentityPropertiesToUnset(n)
 		case "UpdateIdentityResolutionSettings":
 			state.updateIdentityResolutionSettings(n)
 		case "UpdateUserSchema":
@@ -330,6 +332,9 @@ func (state *State) createAction(n notification) {
 		LastChangeTimeColumn: e.LastChangeTimeColumn,
 		LastChangeTimeFormat: e.LastChangeTimeFormat,
 		Incremental:          true,
+	}
+	if c.Role == Source && e.Target == Users {
+		action.propertiesToUnset = []string{}
 	}
 	if e.Filter != nil {
 		action.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
@@ -1026,6 +1031,7 @@ type UpdateAction struct {
 	LastChangeTimeColumn string
 	LastChangeTimeFormat string
 	Incremental          bool
+	PropertiesToUnset    []string
 }
 
 // updateAction updates an action.
@@ -1041,6 +1047,7 @@ func (state *State) updateAction(n notification) {
 	}
 	state.replaceAction(e.ID, func(a *Action) {
 		a.format = format
+		a.propertiesToUnset = e.PropertiesToUnset
 		a.Name = e.Name
 		a.Enabled = e.Enabled
 		a.InSchema = e.InSchema
@@ -1088,6 +1095,26 @@ func (state *State) updateConnection(n notification) {
 		c.WebsiteHost = e.WebsiteHost
 	})
 	dispatchNotification(state, e)
+}
+
+// UpdateIdentityPropertiesToUnset is the event sent when the identity
+// properties to unset of an action are updated.
+type UpdateIdentityPropertiesToUnset struct {
+	Action     int
+	Properties []string // Always non-nil.
+}
+
+// updateIdentityPropertiesToUnset updates the identity properties to unset of
+// an action.
+func (state *State) updateIdentityPropertiesToUnset(n notification) {
+	e := UpdateIdentityPropertiesToUnset{}
+	if !decodeNotification(n, &e) {
+		return
+	}
+	a := state.actions[e.Action]
+	a.mu.Lock()
+	a.propertiesToUnset = e.Properties
+	a.mu.Unlock()
 }
 
 // UpdateIdentityResolutionSettings is the event sent when the identity

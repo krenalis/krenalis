@@ -310,6 +310,28 @@ func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	return nil
 }
 
+// UnsetIdentityColumns unsets values for the specified identity columns for the
+// given action.
+func (warehouse *Snowflake) UnsetIdentityColumns(ctx context.Context, action int, columns []meergo.Column) error {
+	var b strings.Builder
+	b.WriteString("UPDATE \"_USER_IDENTITIES\" SET ")
+	for i, column := range columns {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(quoteIdent(column.Name))
+		b.WriteString(" = NULL")
+	}
+	b.WriteString(" WHERE \"__ACTION__\" = ")
+	b.WriteString(strconv.Itoa(action))
+	db := warehouse.openDB()
+	_, err := db.ExecContext(ctx, b.String())
+	if err != nil {
+		return snowflake(err)
+	}
+	return err
+}
+
 // connector returns a gosnowflake.Connector from the settings.
 func (s *sfSettings) connector() gosnowflake.Connector {
 	account := s.Account

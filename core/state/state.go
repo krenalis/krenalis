@@ -1065,6 +1065,7 @@ type Action struct {
 	connection           *Connection
 	format               *Connector
 	execution            *ActionExecution
+	propertiesToUnset    []string // is not nil only for source actions on users.
 	Target               Target
 	Name                 string
 	Enabled              bool
@@ -1192,6 +1193,15 @@ func (action *Action) Execution() (*ActionExecution, bool) {
 	ex := action.execution
 	action.mu.Unlock()
 	return ex, ex != nil
+}
+
+// PropertiesToUnset returns the identity properties of the action that should
+// be unset. It is non-nil for source actions on users.
+func (action *Action) PropertiesToUnset() []string {
+	action.mu.Lock()
+	c := action.propertiesToUnset
+	action.mu.Unlock()
+	return c
 }
 
 // Format returns the format connector of the action.

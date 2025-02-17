@@ -371,7 +371,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 			"transformation_language, transformation_version, transformation_preserve_json, transformation_in_paths,\n"+
 			"transformation_out_paths, query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode,\n"+
 			"matching_in, matching_out, update_on_duplicates, table_name, table_key, identity_column,\n"+
-			"last_change_time_column, last_change_time_format, health\n"+
+			"last_change_time_column, last_change_time_format, health, properties_to_unset\n"+
 			"FROM actions",
 			func(rows *postgres.Rows) error {
 				for rows.Next() {
@@ -388,7 +388,7 @@ func (state *State) load(connectorsOAuth map[string]*ConnectorOAuth) error {
 						&action.Path, &action.Sheet, &action.Compression, &action.OrderBy, &action.FormatSettings, &action.ExportMode,
 						&action.Matching.In, &action.Matching.Out, &action.UpdateOnDuplicates, &action.TableName,
 						&action.TableKey, &action.IdentityColumn, &action.LastChangeTimeColumn,
-						&action.LastChangeTimeFormat, &action.Health)
+						&action.LastChangeTimeFormat, &action.Health, &action.propertiesToUnset)
 					if err != nil {
 						return err
 					}

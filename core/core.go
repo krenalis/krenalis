@@ -61,7 +61,7 @@ type Core struct {
 		operationStore events.OperationStore
 	}
 	transformerProvider transformers.Provider
-	actionPurger        *actionPurger
+	actionCleaner       *actionCleaner
 	actionScheduler     *actionScheduler
 	smtp                *SMTPConfig
 	close               struct {
@@ -206,8 +206,8 @@ func New(conf *Config) (*Core, error) {
 	}
 	core.events.observer = core.events.collector.Observer()
 
-	// Create the action purger.
-	core.actionPurger = newActionPurger(core.state, core.datastore)
+	// Create the action cleaner.
+	core.actionCleaner = newActionCleaner(core.state, core.datastore)
 
 	// Create the action scheduler.
 	core.actionScheduler = newActionScheduler(core)
@@ -307,8 +307,8 @@ func (core *Core) Close() {
 	core.actionScheduler.Close()
 	// Wait for the completion of actions initiated via API.
 	core.close.Wait()
-	// Close the action purger.
-	core.actionPurger.Close(context.Background())
+	// Close the action cleaner.
+	core.actionCleaner.Close(context.Background())
 	// Close event collector, event dispatcher, metrics, datastore, and state.
 	core.events.collector.Close()
 	core.events.dispatcher.Close()

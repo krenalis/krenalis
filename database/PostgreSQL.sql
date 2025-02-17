@@ -111,6 +111,7 @@ CREATE TABLE actions (
     incremental boolean NOT NULL DEFAULT FALSE,
     cursor timestamp(6) NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     health health NOT NULL DEFAULT 'Healthy',
+    properties_to_unset varchar[] DEFAULT NULL,
     PRIMARY KEY (id)
 );
 

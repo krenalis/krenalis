@@ -752,11 +752,12 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 		"transformation_out_paths = $12, query = $13, format = $14, path = $15, sheet = $16, " +
 		"compression = $17, order_by = $18, format_settings = $19, export_mode = $20, matching_in = $21, " +
 		"matching_out = $22, update_on_duplicates = $23, table_name = $24, table_key = $25, " +
-		"identity_column = $26, last_change_time_column = $27, last_change_time_format = $28, incremental = $29"
+		"identity_column = $26, last_change_time_column = $27, last_change_time_format = $28, incremental = $29, " +
+		"properties_to_unset = $30"
 	if (c.Role == state.Source && !action.Incremental) || shouldReload(this.action, &n) {
 		update += ", cursor = '0001-01-01 00:00:00+00'"
 	}
-	update += "\nWHERE id = $30"
+	update += "\nWHERE id = $31"
 
 	err = this.core.state.Transaction(ctx, func(tx *state.Tx) error {
 		var function state.TransformationFunction
@@ -776,12 +777,30 @@ func (this *Action) Update(ctx context.Context, action ActionToSet) error {
 			}
 			function = *n.Transformation.Function
 		}
+		if c.Role == state.Source && this.action.Target == state.Users {
+			var prevOutPaths []string
+			err := tx.QueryRow(ctx, "SELECT transformation_out_paths, properties_to_unset "+
+				"FROM actions WHERE id = $1", n.ID).Scan(&prevOutPaths, &n.PropertiesToUnset)
+			if err != nil {
+				return err
+			}
+			hasPath := make(map[string]struct{}, len(n.Transformation.OutPaths))
+			for _, path := range n.Transformation.OutPaths {
+				hasPath[path] = struct{}{}
+			}
+			for _, path := range prevOutPaths {
+				if _, ok := hasPath[path]; !ok && !slices.Contains(n.PropertiesToUnset, path) {
+					n.PropertiesToUnset = append(n.PropertiesToUnset, path)
+				}
+			}
+		}
 		result, err := tx.Exec(ctx, update,
 			n.Name, n.Enabled, rawInSchema, rawOutSchema, string(n.Filter), mapping,
 			function.Source, function.Language, function.Version, function.PreserveJSON, n.Transformation.InPaths,
 			n.Transformation.OutPaths, n.Query, formatName, n.Path, n.Sheet, n.Compression, n.OrderBy,
 			string(n.FormatSettings), n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates, n.TableName,
-			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.ID,
+			n.TableKey, n.IdentityColumn, n.LastChangeTimeColumn, n.LastChangeTimeFormat, n.Incremental, n.PropertiesToUnset,
+			n.ID,
 		)
 		if err != nil {
 			return err

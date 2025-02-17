@@ -117,3 +117,7 @@ func (dw warehouse) Settings() []byte {
 func (dw warehouse) Truncate(ctx context.Context, table string) error {
 	return unavailableError(dw.inner.Truncate(ctx, table))
 }
+
+func (dw warehouse) UnsetIdentityColumns(ctx context.Context, action int, columns []meergo.Column) error {
+	return unavailableError(dw.inner.UnsetIdentityColumns(ctx, action, columns))
+}

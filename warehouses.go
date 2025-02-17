@@ -228,6 +228,11 @@ type Warehouse interface {
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error
+
+	// UnsetIdentityColumns unsets values for the specified identity columns for the
+	// given action. columns must not be empty. If the provided action does not
+	// exist, it does nothing.
+	UnsetIdentityColumns(ctx context.Context, action int, columns []Column) error
 }
 
 // RowQuery represents the query for the Query method.
