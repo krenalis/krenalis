@@ -298,16 +298,19 @@ var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName
 // Upsert updates or creates records in the app for the specified target.
 func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
 
+	recordsError := make(meergo.RecordsError, 0)
+
 	usersLock.Lock()
 	defer usersLock.Unlock()
 
-	for _, record := range records.All() {
+	for i, record := range records.All() {
 
 		metrics.Increment("Dummy.Upsert.records_read_from_iterator", 1)
 
 		if dummy.userExportRandomlyFails() {
 			metrics.Increment("Dummy.Upsert.export_failed", 1)
-			return errors.New("writing of user record failed (due to a causal failure probability configured in Dummy)")
+			recordsError[i] = errors.New("writing of user record failed (due to a causal failure probability configured in Dummy)")
+			continue
 		}
 
 		var id string
@@ -339,6 +342,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 			user, ok := allUsers[record.ID]
 			if !ok {
 				metrics.Increment("Dummy.Upsert.updated_users_not_found", 1)
+				recordsError[i] = errors.New("the user to update does not exist in Dummy")
 				continue
 			}
 			metrics.Increment("Dummy.Upsert.updated_users", 1)
@@ -348,6 +352,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 
 		usersLastChangeTimes[id] = time.Now().UTC().Truncate(time.Microsecond)
 
+	}
+
+	if len(recordsError) > 0 {
+		return recordsError
 	}
 
 	return nil
