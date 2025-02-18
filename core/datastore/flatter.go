@@ -62,10 +62,12 @@ func (f *flatter) flatRec(isRoot bool, root, properties map[string]any) {
 		if ff.properties == nil {
 			if !isRoot {
 				root[ff.column.Name] = v
-				delete(root, ff.name)
 			}
 		} else {
 			ff.flatRec(false, root, v.(map[string]any))
+			if isRoot {
+				delete(properties, ff.name)
+			}
 		}
 	}
 }
@@ -85,11 +87,13 @@ func (f *flatter) flatSyncRec(isRoot bool, root, properties map[string]any, colu
 		if ff.properties == nil {
 			if !isRoot {
 				root[ff.column.Name] = v
-				delete(root, ff.name)
 			}
 			columns.LoadOrStore(ff.column.Name, ff.column)
 		} else {
 			ff.flatSyncRec(false, root, v.(map[string]any), columns)
+			if isRoot {
+				delete(properties, ff.name)
+			}
 		}
 	}
 }
