@@ -563,6 +563,7 @@ const transformInActionToSet = async (
 	const allowsConstantTransformation =
 		(connection.isSource && connection.isEventBased && actionType.target === 'Users') ||
 		(connection.isDestination && connection.isApp && actionType.target === 'Events');
+
 	if (action.transformation.mapping != null) {
 		const inputSchema: ObjectType = { kind: 'object', properties: [] };
 		const outputSchema: ObjectType = { kind: 'object', properties: [] };
@@ -572,21 +573,20 @@ const transformInActionToSet = async (
 		const keys = Object.keys(action.transformation.mapping);
 		for (const k of keys) {
 			// The property must be mapped if it is required and it is a
-			// first-level property, or one of its siblings has been
+			// first-level property, or if one of its siblings has been
 			// mapped.
-			const p = action.transformation.mapping[k];
-			if (p.value === '') {
+			const pair = action.transformation.mapping[k];
+			const isFirstLevel = pair.indentation === 0;
+			if (pair.value === '') {
 				const hasRequired =
 					action.exportMode != null &&
-					((p.createRequired && action.exportMode.includes('Create')) ||
-						(p.updateRequired && action.exportMode.includes('Update')));
-
-				const isFirstLevel = p.indentation === 0;
+					((pair.createRequired && action.exportMode.includes('Create')) ||
+						(pair.updateRequired && action.exportMode.includes('Update')));
 
 				const siblings: string[] = [];
 				for (const key of keys) {
-					const prop = action.transformation.mapping[key];
-					if (prop.root === p.root && prop.indentation === p.indentation && key !== k) {
+					const p = action.transformation.mapping[key];
+					if (p.root === pair.root && p.indentation === pair.indentation && key !== k) {
 						siblings.push(key);
 					}
 				}
@@ -594,50 +594,49 @@ const transformInActionToSet = async (
 					siblings.findIndex((k) => action.transformation.mapping[k].value !== '') !== -1;
 
 				const isRequired = hasRequired && (isFirstLevel || hasMappedSiblings);
-				const isInMatching = action.matching != null && action.matching.out === k;
+				const isInMatching = action.matching != null && action.matching.out === k; // Check if is used in the matching properties.
 				if (isRequired && !isInMatching) {
 					throw new Error(`Property "${k}" is required. Indicate an expression for this property.`);
 				}
 				continue;
 			}
-			if (p.error && p.error !== '') {
+
+			// Check if there are UI errors in the mapping.
+			if (pair.error && pair.error !== '') {
 				throw new Error(`Please fix the errors in the mapping`);
 			}
-			const property = flattenedOutputSchema![k];
-			const fullProperty = property.full;
-			const parentProperty = flattenedOutputSchema![property.root!].full;
+
+			const mapped = flattenedOutputSchema![k].full;
 			expressions.push({
-				value: p.value,
-				type: fullProperty!.type,
+				value: pair.value,
+				type: mapped!.type,
 			});
-			mappingToSave[k] = p.value;
-			const isKeyPropertyAlreadyInSchema = outputSchema.properties!.find((p) => p.name === parentProperty!.name);
-			if (!isKeyPropertyAlreadyInSchema) {
-				outputSchema.properties!.push(parentProperty);
-			}
+
+			mappingToSave[k] = pair.value;
+
+			addPropertyToSchema(k, mapped, outputSchema, flattenedOutputSchema, isFirstLevel);
 		}
-		let inputProperties: string[];
+
+		let inputPaths: string[];
 		try {
-			inputProperties = await api.expressionsProperties(expressions, actionType.inputSchema);
+			inputPaths = await api.expressionsProperties(expressions, actionType.inputSchema);
 		} catch (err) {
 			throw err;
 		}
-		for (const prop of inputProperties) {
-			const parentName = prop.split('.')[0];
-			const isPropertyAlreadyInSchema = inputSchema.properties!.find((p) => p.name === parentName);
-			if (!isPropertyAlreadyInSchema) {
-				const fullProperty = flattenedInputSchema![parentName].full;
-				inputSchema.properties!.push(fullProperty);
-			}
-		}
-		if (inputProperties.length === 0 && !allowsConstantTransformation) {
+		if (inputPaths.length === 0 && !allowsConstantTransformation) {
 			throw new Error(
 				'There are no properties in the mapping expressions; use at least one property in an expression',
 			);
 		}
+		for (const path of inputPaths) {
+			const property = flattenedInputSchema[path].full;
+			addPropertyToSchema(path, property, inputSchema, flattenedInputSchema, !path.includes('.'));
+		}
+
 		if (expressions.length > 0) {
 			mapping = mappingToSave;
 		}
+
 		inSchema = inputSchema;
 		outSchema = outputSchema;
 	} else if (action.transformation.function != null) {
@@ -647,12 +646,9 @@ const transformInActionToSet = async (
 		const inPaths: string[] = [];
 		for (const p of selectedInPaths) {
 			// Add the property to the input schema of the action.
-			const property = flattenedInputSchema![p];
-			const parentProperty = flattenedInputSchema![property.root!].full;
-			const alreadyInSchema = inputSchema.properties!.find((p) => p.name === parentProperty!.name);
-			if (!alreadyInSchema) {
-				inputSchema.properties!.push(parentProperty);
-			}
+			const property = flattenedInputSchema![p].full;
+			addPropertyToSchema(p, property, inputSchema, flattenedInputSchema, !p.includes('.'));
+
 			// Add the property to the input properties of the
 			// transformation function.
 			const isParentSelected = selectedInPaths.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
@@ -669,12 +665,9 @@ const transformInActionToSet = async (
 		const outPaths: string[] = [];
 		for (const p of selectedOutPaths) {
 			// Add the property to the output schema of the action.
-			const property = flattenedOutputSchema![p];
-			const parentProperty = flattenedOutputSchema![property.root!].full;
-			const alreadyInSchema = outputSchema.properties!.find((p) => p.name === parentProperty!.name);
-			if (!alreadyInSchema) {
-				outputSchema.properties!.push(parentProperty);
-			}
+			const property = flattenedOutputSchema![p].full;
+			addPropertyToSchema(p, property, outputSchema, flattenedOutputSchema, !p.includes('.'));
+
 			// Add the property to the output properties of the
 			// transformation function.
 			const isParentSelected = selectedOutPaths.findIndex((prop) => p.startsWith(`${prop}.`)) !== -1;
@@ -841,7 +834,7 @@ const transformInActionToSet = async (
 			if (!isAlreadyInSchema) {
 				const lastChangeTimeColumn = flattenedInputSchema[action.lastChangeTimeColumn];
 				if (lastChangeTimeColumn == null) {
-					throw new Error('LastChangeTimeColumn must be a valid column');
+					throw new Error('Last change time must be a valid column');
 				}
 				inSchema.properties.push(lastChangeTimeColumn.full);
 			}
@@ -875,7 +868,7 @@ const transformInActionToSet = async (
 			const property = flattenedInputSchema[base];
 
 			if (property == null) {
-				throw new Error(`Property "${propertyName}" does not exist`);
+				throw new Error(`Property "${propertyName}" of filter condition does not exist`);
 			}
 
 			if (property.type === 'json' && path.trim() !== '') {
@@ -1222,6 +1215,76 @@ const computeActionTypeFields = (
 	return fields;
 };
 
+const addPropertyToSchema = (
+	path: string,
+	property: Property,
+	schema: ObjectType,
+	fullSchema: TransformedMapping,
+	isFirstLevel: boolean,
+) => {
+	if (isFirstLevel) {
+		const isAlreadyInSchema = schema.properties!.find((p) => p.name === property!.name);
+		if (!isAlreadyInSchema) {
+			// Push the property in the schema.
+			schema.properties!.push(property);
+		}
+	} else {
+		const flat = flattenSchema(schema);
+		const isAlreadyInSchema = flat[path] != null;
+
+		if (!isAlreadyInSchema) {
+			// Push the property's hierachy in the schema.
+			const { ancestors } = getHierarchicalPaths(path, fullSchema);
+
+			let insertedAncestors: string[] = [];
+			let closestInsertedAncestor: string | null;
+			let missingAncestors: string[] = [];
+			for (const a of [...ancestors].reverse()) {
+				const p = flat[a];
+				const isClosestAlreadyFound = closestInsertedAncestor != null;
+				if (p != null && !isClosestAlreadyFound) {
+					closestInsertedAncestor = a;
+				} else {
+					if (isClosestAlreadyFound) {
+						insertedAncestors.unshift(a);
+					} else {
+						missingAncestors.unshift(a);
+					}
+				}
+			}
+
+			if (closestInsertedAncestor != null) {
+				const missingHierarchy = buildHierarchy([...missingAncestors, path], fullSchema);
+
+				let hierarchy: Property = missingHierarchy;
+				for (const a of [...insertedAncestors, closestInsertedAncestor].reverse()) {
+					const p = flat[a].full;
+					const typ = p.type as ObjectType;
+					if (a === closestInsertedAncestor) {
+						// Push the hierarchy of the missing ancestors
+						// inside the closest inserted ancestor.
+						typ.properties.push(hierarchy);
+					} else {
+						// Replace the property with the updated one
+						// containing the updated hierarchy.
+						const i = typ.properties.findIndex((p) => p.name === hierarchy.name);
+						typ.properties.splice(i, 1, hierarchy);
+					}
+					hierarchy = p;
+				}
+
+				// Replace the first level property.
+				const i = schema.properties.findIndex((p) => p.name === hierarchy.name);
+				schema.properties.splice(i, 1, hierarchy);
+			} else {
+				// Push the entire hierarchy.
+				const hierarchy = buildHierarchy([...ancestors, path], fullSchema);
+				schema.properties.push(hierarchy);
+			}
+		}
+	}
+};
+
 interface hierarchicalPaths {
 	ancestors: string[];
 	descendants: string[];
@@ -1249,9 +1312,9 @@ const getHierarchicalPaths = (path: string, mapping: TransformedMapping): hierar
 	};
 };
 
-// getSliblingPaths returns the sibling paths of the property with
+// getSiblingPaths returns the sibling paths of the property with
 // the given path.
-const getSliblingPaths = (path: string, mapping: TransformedMapping): string[] => {
+const getSiblingPaths = (path: string, mapping: TransformedMapping): string[] => {
 	const { root, indentation } = mapping[path];
 	const siblings: string[] = [];
 	for (const p in mapping) {
@@ -1260,6 +1323,25 @@ const getSliblingPaths = (path: string, mapping: TransformedMapping): string[] =
 		}
 	}
 	return siblings;
+};
+
+const buildHierarchy = (paths: string[], flatSchema: TransformedMapping): Property => {
+	let hierarchy: Property;
+	let i = 0;
+	for (const p of [...paths].reverse()) {
+		const full = flatSchema[p].full;
+		if (full.type.kind === 'object') {
+			if (i !== 0) {
+				// empty the properties.
+				const typ = full.type as ObjectType;
+				typ.properties = [hierarchy];
+				full.type = typ;
+			}
+		}
+		hierarchy = full;
+		i++;
+	}
+	return hierarchy;
 };
 
 const doesLastChangeTimeColumnNeedFormat = (lastChangeTimeColumn: string, schema: ObjectType): boolean => {
@@ -1409,7 +1491,7 @@ export {
 	isOneOfOperator,
 	splitPropertyAndPath,
 	getHierarchicalPaths,
-	getSliblingPaths,
+	getSiblingPaths,
 	doesLastChangeTimeColumnNeedFormat,
 	getTransformationFunctionParameterName,
 	validateMatching,
