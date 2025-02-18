@@ -1560,15 +1560,21 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	if req.Body != nil {
 		b.WriteByte('\n')
 		ct := req.Header.Get("Content-Type")
+		bodyWritten := false
 		switch ct {
 		case "application/json":
-			err = b.EncodeIndent(req.Body, "", "\t")
-			if err != nil {
-				return nil, err
+			indented, err := json.Indent(req.Body, "", "    ")
+			if err == nil {
+				b.Write(indented)
+				bodyWritten = true
 			}
 		case "application/x-ndjson":
-			b.Write(req.Body)
-		default:
+			if utf8.Valid(req.Body) {
+				b.Write(req.Body)
+				bodyWritten = true
+			}
+		}
+		if !bodyWritten {
 			_, _ = fmt.Fprintf(&b, "[%d bytes body]", len(req.Body))
 		}
 	}
