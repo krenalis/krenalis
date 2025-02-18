@@ -14,6 +14,7 @@ import (
 	"errors"
 	"io"
 	"maps"
+	"math"
 	"math/rand/v2"
 	"net/http"
 	"slices"
@@ -27,6 +28,15 @@ import (
 	"github.com/meergo/meergo/types"
 )
 
+// Constants for simulating the HTTP delay.
+// The enabling of the delay is controlled by a connector setting.
+const (
+	httpDelayStdDev = 1.1
+	httpDelayMean   = 0.02
+	httpDelayMin    = 0.05 // seconds
+	httpDelayMax    = 10   // seconds
+)
+
 // Connector icon.
 var icon = "<svg></svg>"
 
@@ -36,6 +46,7 @@ func init() {
 		AsSource: &meergo.AsAppSource{
 			Description: "Import users from Dummy",
 			Targets:     meergo.Users,
+			HasSettings: true,
 		},
 		AsDestination: &meergo.AsAppDestination{
 			Description: "Export users and send events to Dummy",
@@ -108,6 +119,7 @@ func (dummy *Dummy) EventRequest(ctx context.Context, event meergo.Event, eventT
 
 // EventTypes returns the event types of the connector's instance.
 func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error) {
+	dummy.simulateHTTPDelay()
 	return []*meergo.EventType{
 		{
 			ID:          "send_add_to_cart",
@@ -139,6 +151,7 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 
 // Records returns the records of the specified target.
 func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, _ []string, _ string, _ types.Type) ([]meergo.Record, string, error) {
+	dummy.simulateHTTPDelay()
 	select {
 	case <-ctx.Done():
 		return nil, "", ctx.Err()
@@ -191,10 +204,12 @@ func init() {
 type innerSettings struct {
 	UserExportFailPercentage int // in [0, 100]
 	URLForDispatchingEvents  string
+	SimulateHTTPDelay        bool
 }
 
 // Schema returns the schema of the specified target in the specified role.
 func (dummy *Dummy) Schema(ctx context.Context, target meergo.Targets, role meergo.Role, eventType string) (types.Type, error) {
+	dummy.simulateHTTPDelay()
 	if target == meergo.Users {
 		var properties []types.Property
 		if role == meergo.Source {
@@ -284,6 +299,11 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 				Placeholder: "https://example.com",
 				Role:        meergo.Destination,
 			},
+			&meergo.Checkbox{
+				Name:  "SimulateHTTPDelay",
+				Label: "Pretend that Dummy operates via HTTP calls, introducing fictitious delays",
+				Role:  meergo.Both,
+			},
 		},
 		Settings: settings,
 	}
@@ -297,6 +317,8 @@ var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName
 
 // Upsert updates or creates records in the app for the specified target.
 func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records meergo.Records) error {
+
+	dummy.simulateHTTPDelay()
 
 	recordsError := make(meergo.RecordsError, 0)
 
@@ -359,6 +381,20 @@ func (dummy *Dummy) Upsert(ctx context.Context, target meergo.Targets, records m
 	}
 
 	return nil
+}
+
+// simulateHTTPDelay simulates an HTTP delay. If the settings indicates not to
+// simulate delay, this method does nothing.
+func (dummy *Dummy) simulateHTTPDelay() {
+	if !dummy.settings.SimulateHTTPDelay {
+		return
+	}
+	// Determine the delay (in seconds).
+	delay := rand.NormFloat64()*httpDelayStdDev + httpDelayMean
+	delay = math.Max(httpDelayMin, delay)
+	delay = math.Min(httpDelayMax, delay)
+	// Sleep.
+	time.Sleep(time.Duration(delay * 10e9))
 }
 
 // saveSettings saves the settings.

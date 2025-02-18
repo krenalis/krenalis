@@ -55,6 +55,7 @@ const addDummySource = async (page: Page): Promise<number> => {
 					strategy: null,
 					websiteHost: '',
 					sendingMode: null,
+					settings: {},
 					linkedConnections: null,
 				},
 				'',
