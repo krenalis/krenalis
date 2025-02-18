@@ -673,6 +673,28 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 }
 
+// identitiesMergeColumns returns the columns to be used during the identities
+// merge operation, both when importing in batch.
+func identitiesMergeColumns(iwColumns map[string]meergo.Column) []meergo.Column {
+	columns := make([]meergo.Column, 7+len(iwColumns))
+	columns[0] = meergo.Column{Name: "__action__", Type: types.Int(32)}
+	columns[1] = meergo.Column{Name: "__is_anonymous__", Type: types.Boolean()}
+	columns[2] = meergo.Column{Name: "__identity_id__", Type: types.Text()}
+	columns[3] = meergo.Column{Name: "__connection__", Type: types.Int(32)}
+	columns[4] = meergo.Column{Name: "__anonymous_ids__", Type: types.Array(types.Text()), Nullable: true}
+	columns[5] = meergo.Column{Name: "__last_change_time__", Type: types.DateTime()}
+	columns[6] = meergo.Column{Name: "__execution__", Type: types.Int(32), Nullable: true}
+	i := 7
+	for _, column := range iwColumns {
+		columns[i] = column
+		i++
+	}
+	slices.SortFunc(columns[7:], func(a, b meergo.Column) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+	return columns
+}
+
 func toSliceAny[T any](s []T) []any {
 	sa := make([]any, len(s))
 	for i := range s {
