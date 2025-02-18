@@ -151,6 +151,7 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*meergo.EventType, error)
 
 // Records returns the records of the specified target.
 func (dummy *Dummy) Records(ctx context.Context, _ meergo.Targets, lastChangeTime time.Time, ids, _ []string, _ string, _ types.Type) ([]meergo.Record, string, error) {
+	metrics.Increment("Dummy.Records.calls", 1)
 	dummy.simulateHTTPDelay()
 	select {
 	case <-ctx.Done():
@@ -395,6 +396,7 @@ func (dummy *Dummy) simulateHTTPDelay() {
 	delay = math.Min(httpDelayMax, delay)
 	// Sleep.
 	time.Sleep(time.Duration(delay * 10e9))
+	metrics.Increment("Dummy.simulateHTTPDelay.simulated_delays", 1)
 }
 
 // saveSettings saves the settings.
