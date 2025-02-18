@@ -118,7 +118,7 @@ func newEventIdentityWriter(store *Store, actionID int, ack EventIdentityWriterA
 //
 // TODO(Gianluca): if these errors returned from Close seem strange, it's
 // because we still need to discuss the issue
-// https://github.com/meergo/meergo/issues/1002 and understand precisely what
+// https://github.com/meergo/meergo/issues/1224 and understand precisely what
 // model we want to implement for the operations and compatible methods.
 func (iw *EventIdentityWriter) Close(ctx context.Context) error {
 	if iw.closed {

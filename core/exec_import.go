@@ -106,7 +106,7 @@ func (this *Action) importUsers(ctx context.Context) error {
 	// TODO(Gianluca): calling Close may return error in case the warehouse mode
 	// does not allow the closing (that is the flushing of users). However,
 	// before handling that error, we should instead address
-	// https://github.com/meergo/meergo/issues/1002.
+	// https://github.com/meergo/meergo/issues/1224.
 	defer iw.Close(ctx)
 
 	users := make([]connectors.Record, 0, 100)
