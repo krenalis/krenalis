@@ -27,6 +27,7 @@ import (
 // IdentityResolutionSettings returns the identity resolution settings of the
 // workspace.
 func (this *Workspace) IdentityResolutionSettings() (bool, []string) {
+	this.core.mustBeOpen()
 	ws := this.workspace
 	return ws.ResolveIdentitiesOnBatchImport, ws.Identifiers
 }

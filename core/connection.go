@@ -331,6 +331,7 @@ func (this *Connection) ActionSchemas(ctx context.Context, target Target, eventT
 //
 // Refer to the specifications in the file "core/Actions.csv" for more details.
 func (this *Connection) ActionTypes(ctx context.Context) ([]ActionType, error) {
+	this.core.mustBeOpen()
 	var actionTypes []ActionType
 	c := this.connection
 	connector := c.Connector()
