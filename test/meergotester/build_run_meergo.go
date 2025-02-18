@@ -15,9 +15,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/meergo/meergo/cmd"
+
+	"gopkg.in/yaml.v3"
 )
 
 // buildMeergo builds Meergo.
